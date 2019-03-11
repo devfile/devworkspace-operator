@@ -1,0 +1,3 @@
+version: "1"
+domain: che.eclipse.org
+repo: github.com/che-incubator/che-workspace-crd-controller

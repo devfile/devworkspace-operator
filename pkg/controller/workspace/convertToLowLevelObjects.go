@@ -18,11 +18,11 @@ import (
 
 var (
 	defaultImagePullPolicy    = corev1.PullAlways
-	defaultApiEndpoint        = "http://che-che.192.168.42.174.nip.io/api"
+	defaultApiEndpoint        = "http://localhost:9999/api"
 	cheOriginalName           = "che-wksp"
 	authEnabled               = "false"
 	servicePortProtocol       = corev1.ProtocolTCP
-	serviceAccount            = ""
+	serviceAccount            = "che-workspace"
 	sidecarDefaultMemoryLimit = "128M"
 	pvcStorageSize            = "1Gi"
 )
@@ -48,7 +48,7 @@ func convertToCoreObjects(workspace *workspacev1beta1.Workspace) (*workspaceProp
 	workspaceProperties := workspaceProperties{
 		namespace:     workspace.Namespace,
 		workspaceId:   "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""),
-		workspaceName: workspace.Spec.DevFile.Name,
+		workspaceName: workspace.Name,
 		started:       workspace.Spec.Started,
 	}
 
@@ -178,7 +178,6 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 			limitOrDefault = containerDef.MemoryLimit
 		}
 
-		log.Info("limit for container", "container", containerDef.Name, "limit", containerDef.MemoryLimit)
 		limit, err := resource.ParseQuantity(limitOrDefault)
 		if err != nil {
 			return nil, err
@@ -232,7 +231,9 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 					containerDef.Name),
 				Namespace: names.namespace,
 				Annotations: map[string]string{
-					"org.eclipse.che.machine.name": join("/", cheOriginalName, containerDef.Name),
+					"org.eclipse.che.machine.name":   join("/", cheOriginalName, containerDef.Name),
+					"org.eclipse.che.machine.source": "tool",
+					"org.eclipse.che.machine.plugin": strings.Split(*tool.Id, ":")[0],
 				},
 				Labels: map[string]string{
 					"che.workspace_id": names.workspaceId,
@@ -258,7 +259,7 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 		port := endpointDef.TargetPort
 
 		serverAnnotationName := func(attrName string) string {
-			return join(".", "org.eclipse.che.server", endpointDef.Name, "attributes")
+			return join(".", "org.eclipse.che.server", attrName)
 		}
 		serverAnnotationAttributes := func() string {
 			attrMap := map[string]string{}
@@ -394,6 +395,33 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspacev1be
 					AutomountServiceAccountToken:  &autoMountServiceAccount,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
+					Containers: []corev1.Container{
+						corev1.Container{
+							Image:           "dfestal/che-rest-apis",
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							Name:            "che-rest-apis",
+							Ports: []corev1.ContainerPort{
+								corev1.ContainerPort{
+									ContainerPort: 9999,
+									Protocol:      corev1.ProtocolTCP,
+								},
+							},
+							Env: []corev1.EnvVar{
+								corev1.EnvVar{
+									Name:  "CHE_WORKSPACE_NAME",
+									Value: wkspProps.workspaceName,
+								},
+								corev1.EnvVar{
+									Name:  "CHE_WORKSPACE_ID",
+									Value: wkspProps.workspaceId,
+								},
+								corev1.EnvVar{
+									Name:  "CHE_WORKSPACE_NAMESPACE",
+									Value: wkspProps.namespace,
+								},
+							},
+						},
+					},
 				},
 			},
 		},

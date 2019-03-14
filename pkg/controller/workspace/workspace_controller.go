@@ -232,7 +232,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			Namespace: workspaceProperties.namespace,
 			LabelSelector: labels.SelectorFromSet(labels.Set{
 				"che.workspace_id": workspaceProperties.workspaceId,
-			}),
+			}), // TODO Change this to look for objects owned by the workspace CR
 		}, list)
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		for i := 0; i < items.Len(); i++ {

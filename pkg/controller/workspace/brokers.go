@@ -21,6 +21,7 @@ import (
 	stdLog "log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ProcessPlugin(meta *model.PluginMeta) (*model.ToolingConf, error) {
@@ -35,18 +36,29 @@ func ProcessPlugin(meta *model.PluginMeta) (*model.ToolingConf, error) {
 	archivePath := filepath.Join(workDir, "testArchive.tar.gz")
 	pluginPath := filepath.Join(workDir, "testArchive")
 
-	// Download an archive
-	printDebug("Downloading archive '%s' for plugin '%s:%s' to '%s'", url, meta.ID, meta.Version, archivePath)
-	err = download(url, archivePath)
-	if err != nil {
-		return nil, err
-	}
+	if strings.HasSuffix(url, "/che-plugin.yaml") {
+		// Download an the yaml file
+		os.Mkdir(pluginPath, os.ModePerm)
+		pluginFilePath := pluginPath + "/che-plugin.yaml"
+		printDebug("Downloading plugin descriptor '%s' for plugin '%s:%s' to '%s'", url, meta.ID, meta.Version, pluginFilePath)
+		err = download(url, pluginFilePath)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Download an archive
+		printDebug("Downloading archive '%s' for plugin '%s:%s' to '%s'", url, meta.ID, meta.Version, archivePath)
+		err = download(url, archivePath)
+		if err != nil {
+			return nil, err
+		}
 
-	// Untar it
-	printDebug("Untarring archive '%s' for plugin '%s:%s' to '%s'", url, meta.ID, meta.Version, archivePath)
-	err = untar(archivePath, pluginPath)
-	if err != nil {
-		return nil, err
+		// Untar it
+		printDebug("Untarring archive '%s' for plugin '%s:%s' to '%s'", url, meta.ID, meta.Version, archivePath)
+		err = untar(archivePath, pluginPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	printDebug("Resolving Che plugins for '%s:%s'", meta.ID, meta.Version)

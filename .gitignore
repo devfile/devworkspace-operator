@@ -24,3 +24,6 @@ config/devfiles
 *.swp
 *.swo
 *~
+che-rest-apis/quarkus.log
+che-rest-apis/.settings
+che-rest-apis/target

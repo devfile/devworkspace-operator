@@ -12,10 +12,8 @@ public class ApiResourceTest {
     @Test
     public void testHelloEndpoint() {
         given()
-          .when().get("/api")
+          .when().get("/api/workspace/unknownId")
           .then()
-             .statusCode(200)
-             .body(is("hello"));
+             .statusCode(404);
     }
-
 }

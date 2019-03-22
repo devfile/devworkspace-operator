@@ -8,7 +8,6 @@ import java.util.Arrays;
 import com.google.common.collect.Streams;
 import com.oracle.svm.core.annotate.AutomaticFeature;
 
-import org.eclipse.che.commons.logback.EnvironmentVariablesLogLevelPropagator;
 import org.graalvm.nativeimage.Feature;
 import org.graalvm.nativeimage.RuntimeReflection;
 import org.joda.time.DateTime;
@@ -101,15 +100,6 @@ class RuntimeReflectionRegistrationFeature implements Feature {
     }
     for (Class<?> memberClass : clazz.getDeclaredClasses()) {
       registerFully(memberClass);
-    }
-  }
-
-  private void registerFully(String className) {
-    try {
-      Class<?> clazz = Class.forName(className);
-      registerFully(clazz);
-    } catch(ClassNotFoundException e) {
-      throw new RuntimeException(e);
     }
   }
 }

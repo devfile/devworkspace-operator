@@ -15,6 +15,7 @@ package workspace
 import (
 	"errors"
 	"github.com/eclipse/che-plugin-broker/model"
+	"github.com/eclipse/che-plugin-broker/utils"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -37,7 +38,7 @@ func getPluginMeta(registryUrl string, pluginCompositeId string) (*model.PluginM
 
 	pluginMetaPath := filepath.Join(workDir, "meta.yaml")
 
-	err = download(registryUrl+"/plugins/"+parts[0]+"/"+parts[1]+"/meta.yaml", pluginMetaPath)
+	err = utils.New().Download(registryUrl+"/plugins/"+parts[0]+"/"+parts[1]+"/meta.yaml", pluginMetaPath)
 	if err != nil {
 		return nil, err
 	}

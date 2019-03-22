@@ -27,11 +27,15 @@ func (wc *WorkspaceConfig) update(configMap *corev1.ConfigMap) {
 }
 
 func (wc *WorkspaceConfig) getPluginRegistry() string {
-	return wc.configMap.Data["plugin.registry"]
+	return wc.getProperty("plugin.registry")
 }
 
 func (wc *WorkspaceConfig) getIngressGlobalDomain() string {
-	return wc.configMap.Data["ingress.global.domain"]
+	return wc.getProperty("ingress.global.domain")
+}
+
+func (wc *WorkspaceConfig) getProperty(name string) string {
+	return wc.configMap.Data[name]
 }
 
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {

@@ -10,6 +10,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	brokerCfg "github.com/eclipse/che-plugin-broker/cfg"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -65,6 +66,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+
+	brokerCfg.AuthEnabled = false
+	brokerCfg.DisablePushingToEndpoint = true
+	brokerCfg.UseLocalhostInPluginUrls = true
 
 	/*
 		for _, obj := range []runtime.Object{
@@ -227,6 +232,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		&appsv1.DeploymentList{},
 		&corev1.ServiceList{},
 		&extensionsv1beta1.IngressList{},
+		&corev1.ConfigMapList{},
 	} {
 		r.List(context.TODO(), &client.ListOptions{
 			Namespace: workspaceProperties.namespace,

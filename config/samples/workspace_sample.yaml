@@ -23,6 +23,12 @@ spec:
       - name: exec-plugin
         type: chePlugin
         id: che-machine-exec-plugin:0.0.1
+      - name: fortune
+        type: chePlugin
+        id: org.eclipse.che.samples.container-fortune:0.0.1
+      - name: xml
+        type: chePlugin
+        id: redhat.vscode-xml:0.3.0
     commands:
       - name: build
         actions:

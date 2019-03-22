@@ -24,9 +24,9 @@ import org.eclipse.che.account.spi.AccountImpl;
 import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.ValidationException;
 import org.eclipse.che.api.core.model.workspace.Runtime;
-import org.eclipse.che.api.core.model.workspace.WorkspaceConfig;
 import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.core.model.workspace.runtime.MachineStatus;
+import org.eclipse.che.api.core.model.workspace.runtime.ServerStatus;
 import org.eclipse.che.api.devfile.model.Devfile;
 import org.eclipse.che.api.devfile.server.Constants;
 import org.eclipse.che.api.devfile.server.DevfileException;
@@ -48,14 +48,10 @@ import org.eclipse.che.api.workspace.server.model.impl.RuntimeImpl;
 import org.eclipse.che.api.workspace.server.model.impl.ServerImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceConfigImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceImpl;
-import org.eclipse.che.api.core.model.workspace.runtime.ServerStatus;
-import org.eclipse.che.api.workspace.shared.dto.RuntimeDto;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static org.eclipse.che.api.devfile.server.Constants.KUBERNETES_TOOL_TYPE;
 
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
@@ -63,9 +59,6 @@ import io.kubernetes.client.Configuration;
 import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.apis.CustomObjectsApi;
 import io.kubernetes.client.apis.ExtensionsV1beta1Api;
-import io.kubernetes.client.custom.Quantity;
-import io.kubernetes.client.models.V1Pod;
-import io.kubernetes.client.models.V1PodList;
 import io.kubernetes.client.models.V1Service;
 import io.kubernetes.client.models.V1ServiceList;
 import io.kubernetes.client.models.V1beta1Ingress;
@@ -136,6 +129,7 @@ public class ApiService {
     }
 
     public WorkspaceDto getWorkspace(String workspaceId) {
+        LOGGER.debug("Getting workspace {} {}", workspaceId, this.workspaceId);
         if (!this.workspaceId.equals(workspaceId)) {
             String message = "The workspace " + workspaceId + " is not found (current workspace is " + this.workspaceId
                     + ")";

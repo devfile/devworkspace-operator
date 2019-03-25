@@ -173,8 +173,8 @@ func setupTools(names workspaceProperties, tools []workspacev1beta1.ToolSpec, de
 		case "kubernetes", "openshift":
 			//				err = setupK8sLikeTool(&tool, deployment)
 			break
-		case "dockerImage":
-			//				err = setupDockerImageTool(&tool, deployment)
+		case "dockerimage":
+			toolK8sObjects, err = setupDockerImageTool(names, &tool, &deployment.Spec.Template.Spec)
 			break
 		}
 		if err != nil {

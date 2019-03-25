@@ -52,6 +52,8 @@ type ToolSpec struct {
 	Selector     map[string]string `json:"selector,omitempty"`     // Describes the objects selector for the recipe type tools. Allows to pick-up only selected; items from k8s/openshift list
 	Type         DevfileName       `json:"type"`                   // Describes type of the tool, e.g. whether it is an plugin or editor or other type
 	Volumes      []Volume          `json:"volumes,omitempty"`      // Describes volumes which should be mount to tool
+	Command      *[]string         `json:"command,omitempty"`      // The command to run in the dockerimage tool instead of the default one provided in the image. Defaults to null, meaning use whatever is defined in the image.
+	Args         *[]string         `json:"args,omitempty"`         // The arguments to supply to the command running the dockerimage tool. The arguments are supplied either to the default command provided in the image or to the overridden command. Defaults to null, meaning use whatever is defined in the image.
 }
 
 // Describes dockerimage tool endpoint

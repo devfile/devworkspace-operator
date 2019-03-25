@@ -29,11 +29,15 @@ import org.eclipse.che.api.core.model.workspace.runtime.MachineStatus;
 import org.eclipse.che.api.core.model.workspace.runtime.ServerStatus;
 import org.eclipse.che.api.devfile.model.Devfile;
 import org.eclipse.che.api.devfile.server.Constants;
-import org.eclipse.che.api.devfile.server.DevfileException;
+import org.eclipse.che.api.devfile.server.exception.DevfileException;
+import org.eclipse.che.api.devfile.server.exception.DevfileFormatException;
 import org.eclipse.che.api.devfile.server.DevfileFactory;
+import org.eclipse.che.api.devfile.server.FileContentProvider;
 import org.eclipse.che.api.devfile.server.convert.CommandConverter;
 import org.eclipse.che.api.devfile.server.convert.DevfileConverter;
 import org.eclipse.che.api.devfile.server.convert.ProjectConverter;
+import org.eclipse.che.api.devfile.server.convert.tool.dockerimage.DockerimageToolProvisioner;
+import org.eclipse.che.api.devfile.server.convert.tool.dockerimage.DockerimageToolToWorkspaceApplier;
 import org.eclipse.che.api.devfile.server.convert.tool.editor.EditorToolProvisioner;
 import org.eclipse.che.api.devfile.server.convert.tool.editor.EditorToolToWorkspaceApplier;
 import org.eclipse.che.api.devfile.server.convert.tool.plugin.PluginProvisioner;
@@ -49,6 +53,8 @@ import org.eclipse.che.api.workspace.server.model.impl.ServerImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceConfigImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceImpl;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
+import org.eclipse.che.workspace.infrastructure.kubernetes.environment.KubernetesRecipeParser;
+import org.eclipse.che.workspace.infrastructure.kubernetes.environment.util.EntryPointParser;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,11 +91,17 @@ public class ApiService {
     ObjectMapper yamlObjectMapper = new ObjectMapper(new YAMLFactory());
     ObjectMapper jsonObjectMapper = new ObjectMapper(new JsonFactory());
     DevfileConverter devfileConverter = new DevfileConverter(new ProjectConverter(), new CommandConverter(),
-            ImmutableSet.of(new EditorToolProvisioner(), new PluginProvisioner()),
+            ImmutableSet.of(new EditorToolProvisioner(), new PluginProvisioner(), new DockerimageToolProvisioner(null)),
             ImmutableMap.of(Constants.EDITOR_TOOL_TYPE, new EditorToolToWorkspaceApplier(), Constants.PLUGIN_TOOL_TYPE,
-                    new PluginToolToWorkspaceApplier()));
+                    new PluginToolToWorkspaceApplier(),
+                    Constants.DOCKERIMAGE_TOOL_TYPE, new DockerimageToolToWorkspaceApplier("/projects", new EntryPointParser())));
     WorkspaceValidator workspaceValidator = new WorkspaceValidator();
-    DevfileIntegrityValidator devfileIntegrityValidator = new DevfileIntegrityValidator();
+    DevfileIntegrityValidator devfileIntegrityValidator = new DevfileIntegrityValidator(null) {
+        @Override
+        public void validateContentReferences(Devfile devfile, FileContentProvider provider)
+                throws DevfileFormatException {
+        }
+    };
 
     private WorkspaceDto workspaceDto;
 
@@ -255,7 +267,12 @@ public class ApiService {
 
     private WorkspaceDto convertToWorkspace(Devfile devfileObj) throws DevfileException, ServerException, ValidationException, ApiException {
         devfileIntegrityValidator.validateDevfile(devfileObj);
-        WorkspaceConfigImpl config = devfileConverter.devFileToWorkspaceConfig(devfileObj, null); // add the provider that will allow reading some k8s resource
+        WorkspaceConfigImpl config = devfileConverter.devFileToWorkspaceConfig(devfileObj, new FileContentProvider(){
+            @Override
+            public String fetchContent(String fileName) throws IOException, DevfileException {
+                return "";
+            }
+        }); // TODO: add the provider that will allow reading some k8s resource
         workspaceValidator.validateConfig(config);
         
         // Next 2 lines is to fix a bug in the containers plugin

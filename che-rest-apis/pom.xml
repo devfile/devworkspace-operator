@@ -8,10 +8,21 @@
   <properties>
     <surefire-plugin.version>2.22.0</surefire-plugin.version>
     <quarkus.version>0.11.0</quarkus.version>
+    <che.version>7.0.0-beta-3.0-SNAPSHOT</che.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
+  <repositories>
+    <repository>
+      <id>ForCheSnapshots</id>
+      <snapshots>
+        <enabled>true</enabled>
+        <updatePolicy>daily</updatePolicy>
+      </snapshots>
+      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+    </repository>
+  </repositories>
   <dependencyManagement>
     <dependencies>
       <dependency>
@@ -27,12 +38,12 @@
     <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-model</artifactId>
-      <version>7.0.0-beta-1.0</version>
+      <version>${che.version}</version>
     </dependency>
     <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-devfile</artifactId>
-      <version>7.0.0-beta-1.0</version>
+      <version>${che.version}</version>
       <exclusions>
         <exclusion>
           <groupId>io.swagger</groupId>
@@ -72,10 +83,6 @@
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.che.infrastructure</groupId>
-          <artifactId>infrastructure-kubernetes</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.eclipse.che.infrastructure</groupId>
           <artifactId>infrastructure-openshift</artifactId>
         </exclusion>
         <exclusion>
@@ -85,9 +92,96 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.che.infrastructure</groupId>
+      <artifactId>infrastructure-kubernetes</artifactId>
+      <version>${che.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.google.inject</groupId>
+          <artifactId>guice</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.inject.extensions</groupId>
+          <artifactId>guice-assisted-inject</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.google.inject.extensions</groupId>
+          <artifactId>guice-persist</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.opentracing</groupId>
+          <artifactId>opentracing-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.fabric8</groupId>
+          <artifactId>kubernetes-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.fabric8</groupId>
+          <artifactId>kubernetes-model</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-api-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-api-dto</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-api-workspace</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-api-workspace-shared</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-api-installer</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-api-installer-shared</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-api-system</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-commons-inject</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-commons-schedule</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.core</groupId>
+          <artifactId>che-core-db</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.infrastructure.docker</groupId>
+          <artifactId>docker-auth</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.infrastructure.docker</groupId>
+          <artifactId>docker-environment</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.che.multiuser</groupId>
+          <artifactId>che-multiuser-machine-authentication</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.persistence</groupId>
+          <artifactId>javax.persistence</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-workspace-shared</artifactId>
-      <version>7.0.0-beta-1.0</version>
+      <version>${che.version}</version>
       <exclusions>
         <exclusion>
           <groupId>io.swagger</groupId>
@@ -106,7 +200,7 @@
     <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-workspace</artifactId>
-      <version>7.0.0-beta-1.0</version>
+      <version>${che.version}</version>
       <exclusions>
         <exclusion>
           <groupId>io.swagger</groupId>
@@ -165,7 +259,7 @@
     <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-installer-shared</artifactId>
-      <version>7.0.0-beta-1.0</version>
+      <version>${che.version}</version>
       <exclusions>
         <exclusion>
           <groupId>org.eclipse.che.core</groupId>
@@ -190,7 +284,7 @@
     <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-core</artifactId>
-      <version>7.0.0-beta-1.0</version>
+      <version>${che.version}</version>
       <exclusions>
         <exclusion>
           <groupId>com.google.inject</groupId>

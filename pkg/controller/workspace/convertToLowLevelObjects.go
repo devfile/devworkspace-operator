@@ -14,10 +14,11 @@ import (
 )
 
 type workspaceProperties struct {
-	workspaceId   string
-	workspaceName string
-	namespace     string
-	started       bool
+	workspaceId    string
+	workspaceName  string
+	namespace      string
+	started        bool
+	cheApiExternal string
 }
 
 func convertToCoreObjects(workspace *workspacev1beta1.Workspace) (*workspaceProperties, []runtime.Object, error) {
@@ -42,16 +43,25 @@ func convertToCoreObjects(workspace *workspacev1beta1.Workspace) (*workspaceProp
 	if err != nil {
 		return &workspaceProperties, nil, err
 	}
+
 	err = setupPersistentVolumeClaim(workspace, mainDeployment)
 	if err != nil {
 		return &workspaceProperties, nil, err
 	}
-	k8sToolsObjects, err := setupTools(workspaceProperties, workspace.Spec.DevFile.Tools, mainDeployment)
+
+	cheRestApisK8sObjects, externalUrl, err := addCheRestApis(workspaceProperties, &mainDeployment.Spec.Template.Spec)
 	if err != nil {
 		return &workspaceProperties, nil, err
 	}
+	workspaceProperties.cheApiExternal = externalUrl
 
-	return &workspaceProperties, append(k8sToolsObjects, mainDeployment), nil
+	k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.DevFile.Components, mainDeployment)
+	if err != nil {
+		return &workspaceProperties, nil, err
+	}
+	k8sComponentsObjects = append(k8sComponentsObjects, cheRestApisK8sObjects...)
+
+	return &workspaceProperties, append(k8sComponentsObjects, mainDeployment), nil
 }
 
 func buildMainDeployment(wkspProps workspaceProperties, workspace *workspacev1beta1.Workspace) (*appsv1.Deployment, error) {
@@ -103,33 +113,7 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspacev1be
 					AutomountServiceAccountToken:  &autoMountServiceAccount,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					Containers: []corev1.Container{
-						corev1.Container{
-							Image:           "dfestal/che-rest-apis",
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Name:            "che-rest-apis",
-							Ports: []corev1.ContainerPort{
-								corev1.ContainerPort{
-									ContainerPort: 9999,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-							Env: []corev1.EnvVar{
-								corev1.EnvVar{
-									Name:  "CHE_WORKSPACE_NAME",
-									Value: wkspProps.workspaceName,
-								},
-								corev1.EnvVar{
-									Name:  "CHE_WORKSPACE_ID",
-									Value: wkspProps.workspaceId,
-								},
-								corev1.EnvVar{
-									Name:  "CHE_WORKSPACE_NAMESPACE",
-									Value: wkspProps.namespace,
-								},
-							},
-						},
-					},
+					Containers:                    []corev1.Container{},
 				},
 			},
 		},
@@ -156,31 +140,31 @@ func setupPersistentVolumeClaim(workspace *workspacev1beta1.Workspace, deploymen
 	return nil
 }
 
-func setupTools(names workspaceProperties, tools []workspacev1beta1.ToolSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
+func setupComponents(names workspaceProperties, components []workspacev1beta1.ComponentSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
 	pluginMetas := map[string][]model.PluginMeta{}
 	workspaceEnv := map[string]string{}
 
-	for _, tool := range tools {
-		var toolType = tool.Type
+	for _, component := range components {
+		var componentType = component.Type
 		var err error
-		var toolK8sObjects []runtime.Object
-		switch toolType {
+		var componentK8sObjects []runtime.Object
+		switch componentType {
 		case "cheEditor", "chePlugin":
-			toolK8sObjects, err = setupChePlugin(names, &tool, &deployment.Spec.Template.Spec, pluginMetas, workspaceEnv)
+			componentK8sObjects, err = setupChePlugin(names, &component, &deployment.Spec.Template.Spec, pluginMetas, workspaceEnv)
 			break
 		case "kubernetes", "openshift":
-			//				err = setupK8sLikeTool(&tool, deployment)
+			componentK8sObjects, err = setupK8sLikeComponent(names, &component, &deployment.Spec.Template.Spec)
 			break
 		case "dockerimage":
-			toolK8sObjects, err = setupDockerImageTool(names, &tool, &deployment.Spec.Template.Spec)
+			componentK8sObjects, err = setupDockerImageComponent(names, &component, &deployment.Spec.Template.Spec)
 			break
 		}
 		if err != nil {
 			return nil, err
 		}
-		k8sObjects = append(k8sObjects, toolK8sObjects...)
+		k8sObjects = append(k8sObjects, componentK8sObjects...)
 	}
 
 	addWorkspaceEnvVars(&deployment.Spec.Template.Spec, workspaceEnv)
@@ -193,44 +177,4 @@ func setupTools(names workspaceProperties, tools []workspacev1beta1.ToolSpec, de
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
 	return k8sObjects, nil
-}
-
-func commonEnvironmentVariables(names workspaceProperties) []corev1.EnvVar {
-	return []corev1.EnvVar{
-		corev1.EnvVar{
-			Name: "CHE_MACHINE_TOKEN",
-		},
-		corev1.EnvVar{
-			Name:  "CHE_PROJECTS_ROOT",
-			Value: "/projects",
-		},
-		corev1.EnvVar{
-			Name:  "CHE_API",
-			Value: defaultApiEndpoint,
-		},
-		corev1.EnvVar{
-			Name:  "CHE_API_INTERNAL",
-			Value: defaultApiEndpoint,
-		},
-		corev1.EnvVar{
-			Name:  "CHE_API_EXTERNAL",
-			Value: defaultApiEndpoint,
-		},
-		corev1.EnvVar{
-			Name:  "CHE_WORKSPACE_NAME",
-			Value: names.workspaceName,
-		},
-		corev1.EnvVar{
-			Name:  "CHE_WORKSPACE_ID",
-			Value: names.workspaceId,
-		},
-		corev1.EnvVar{
-			Name:  "CHE_AUTH_ENABLED",
-			Value: authEnabled,
-		},
-		corev1.EnvVar{
-			Name:  "CHE_WORKSPACE_NAMESPACE",
-			Value: names.namespace,
-		},
-	}
 }

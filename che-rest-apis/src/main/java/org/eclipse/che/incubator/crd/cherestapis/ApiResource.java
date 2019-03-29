@@ -13,6 +13,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 
@@ -22,23 +23,26 @@ public class ApiResource {
     @Inject
     ApiService apiService;
 
+    private Response addCorsHeader(Object o) {
+        return Response.ok(o).header("Access-Control-Allow-Origin", "*").build();
+    }
+
     @GET
     @Path("workspace/{key:.*}")
     @Produces(MediaType.APPLICATION_JSON)
-    public WorkspaceDto getByKey(@PathParam("key") String key,
+    public Response getByKey(@PathParam("key") String key,
             @QueryParam("includeInternalServers") String includeInternalServers)
             throws NotFoundException, ServerErrorException, ForbiddenException, BadRequestException {
-        return apiService.getWorkspace(key);
+        return addCorsHeader(apiService.getWorkspace(key));
     }
     
     @PUT
     @Path("workspace/{id}")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public WorkspaceDto update(
+    public Response update(
         @PathParam("id") String id,
         WorkspaceDto update) {
-      return apiService.getWorkspace(id);
-    }
-  
+      return addCorsHeader(apiService.getWorkspace(id));
+    }  
 }

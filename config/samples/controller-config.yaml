@@ -6,7 +6,7 @@ metadata:
 data:
   ingress.global.domain: 192.168.42.174.nip.io
   plugin.registry: https://che-plugin-registry.prod-preview.openshift.io
-  che.workspace.plugin_broker.image: eclipse/che-plugin-broker:v0.13.0
-  che.workspace.plugin_broker.theia.image: eclipse/che-theia-plugin-broker:v0.13.0
-  che.workspace.plugin_broker.init.image: eclipse/che-init-plugin-broker:v0.13.0
-  che.workspace.plugin_broker.vscode.image: eclipse/che-vscode-extension-broker:v0.13.0
+  che.workspace.plugin_broker.image: eclipse/che-plugin-broker:v0.15.0
+  che.workspace.plugin_broker.theia.image: eclipse/che-theia-plugin-broker:v0.15.0
+  che.workspace.plugin_broker.init.image: eclipse/che-init-plugin-broker:v0.15.0
+  che.workspace.plugin_broker.vscode.image: eclipse/che-vscode-extension-broker:v0.15.0

@@ -1,0 +1,149 @@
+apiVersion: workspace.che.eclipse.org/v1beta1
+kind: Workspace
+metadata:
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: petclinic-sample
+  namespace: crds
+spec:
+  started: true
+  devfile:
+    apiVersion: 0.0.1
+    metadata:
+      name: petclinic 
+    projects:
+      - name: petclinic
+        source:
+          type: git
+          location: 'https://github.com/spring-projects/spring-petclinic.git'
+    components:
+      - name: mvn-stack
+        type: dockerimage
+        image: maven:3.5.4-jdk-8
+        command: ['/bin/sh', '-c']
+        args: ['tail -f /dev/null']
+        volumes:
+          - name: maven-repo
+            containerPath: /root/.m2
+        endpoints:
+          - name: spring-boot
+            port: 8080
+            attributes:
+              path: /api
+              protocol: http
+              public: true
+        env:
+          - name: TERM
+            value: xterm
+        mountSources: true
+        memoryLimit: 1024M
+      - name: mysql
+        type: kubernetes
+        localContent: |
+          apiVersion: v1
+          kind: List
+          items:
+          - apiVersion: v1
+            kind: Pod
+            metadata:
+              name: petclinic
+              labels:
+                app.kubernetes.io/name: petclinic
+                app.kubernetes.io/component: webapp
+                app.kubernetes.io/part-of: petclinic
+            spec:
+              containers:
+              - name: server
+                image: mariolet/petclinic
+                ports:
+                - containerPort: 8080
+                  protocol: TCP
+                resources:
+                  limits:
+                    memory: 512Mi
+          - apiVersion: v1
+            kind: Pod
+            metadata:
+              name: petclinic
+              labels:
+                app.kubernetes.io/name: mysql
+                app.kubernetes.io/component: database
+                app.kubernetes.io/part-of: petclinic
+            spec:
+              containers:
+              - name: mysql
+                image: centos/mysql-57-centos7
+                env:
+                - name: MYSQL_USER
+                  value: petclinic
+                - name: MYSQL_PASSWORD
+                  value: petclinic
+                - name: MYSQL_ROOT_PASSWORD
+                  value: petclinic
+                - name: MYSQL_DATABASE
+                  value: petclinic
+                ports:
+                - containerPort: 3306
+                  protocol: TCP
+                resources:
+                  limits:
+                    memory: 512Mi
+          - kind: Service
+            apiVersion: v1
+            metadata:
+              name: mysql
+              labels:
+                app.kubernetes.io/name: mysql
+                app.kubernetes.io/component: database
+                app.kubernetes.io/part-of: petclinic
+            spec:
+              ports:
+                - name: mysql
+                  port: 3306
+                  targetPort: 3360
+              selector:
+                app.kubernetes.io/name: mysql
+                app.kubernetes.io/component: database
+                app.kubernetes.io/part-of: petclinic
+          - kind: Service
+            apiVersion: v1
+            metadata:
+              name: petclinic
+              labels:
+                app.kubernetes.io/name: petclinic
+                app.kubernetes.io/component: webapp
+                app.kubernetes.io/part-of: petclinic
+            spec:
+              ports:
+                - name: web
+                  port: 8080
+                  targetPort: 8080
+              selector:
+                app: petclinic
+                component: webapp
+        selector:
+          app.kubernetes.io/name: mysql
+          app.kubernetes.io/component: database
+          app.kubernetes.io/part-of: petclinic
+      - name: theia-ide
+        type: cheEditor
+        id: org.eclipse.che.editor.theia:next
+      - name: exec-plugin
+        type: chePlugin
+        id: che-machine-exec-plugin:0.0.1
+      - name: fortune
+        type: chePlugin
+        id: org.eclipse.che.samples.container-fortune:0.0.1
+    commands:
+      - name: build
+        actions:
+          - type: exec
+            component: mvn-stack
+            command: mvn package
+            workdir: /projects/petclinic
+      - name: run
+        actions:
+          - type: exec
+            component: mvn-stack
+            command: mvn spring-boot:run
+            workdir: /projects/petclinic

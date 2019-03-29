@@ -6,7 +6,7 @@ metadata:
   name: workspace-sample
   namespace: crds
 spec:
-  started: false
+  started: true
   devfile:
     apiVersion: 0.0.1
     metadata:
@@ -16,10 +16,10 @@ spec:
         source:
           type: git
           location: 'https://github.com/che-incubator/chectl.git'
-    tools:
+    components:
       - name: theia-ide
         type: cheEditor
-        id: org.eclipse.che.editor.theia:1.0.0
+        id: org.eclipse.che.editor.theia:next
       - name: exec-plugin
         type: chePlugin
         id: che-machine-exec-plugin:0.0.1
@@ -53,12 +53,12 @@ spec:
       - name: build
         actions:
           - type: exec
-            tool: theia-ide
+            component: theia-ide
             command: yarn
             workdir: /projects/chectl
       - name: test
         actions:
           - type: exec
-            tool: theia-ide
+            component: theia-ide
             command: yarn test
             workdir: /projects/chectl

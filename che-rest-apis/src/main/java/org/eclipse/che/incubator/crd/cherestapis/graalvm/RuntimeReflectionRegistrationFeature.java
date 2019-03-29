@@ -14,6 +14,8 @@ import org.joda.time.DateTime;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 
+import io.fabric8.kubernetes.api.model.KubernetesList;
+import io.fabric8.kubernetes.internal.KubernetesDeserializer;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.models.V1ClientIPConfig;
 import io.kubernetes.client.models.V1Initializer;
@@ -52,7 +54,8 @@ class RuntimeReflectionRegistrationFeature implements Feature {
       "org.eclipse.che.api.workspace.shared.dto",
       "org.eclipse.che.api.workspace.server.dto",
       "org.eclipse.che.api.core.model.workspace",
-      "org.eclipse.che.api.devfile.model")) {
+      "org.eclipse.che.api.devfile.model"
+      )) {
       Reflections reflections = new Reflections(prefix, new SubTypesScanner(false));
       Streams.concat(
         reflections.getSubTypesOf(Object.class).stream(),
@@ -83,6 +86,9 @@ class RuntimeReflectionRegistrationFeature implements Feature {
       registerFully(V1Initializers.class);
       registerFully(V1Initializer.class);
       registerFully(V1OwnerReference.class);
+
+      registerFully(KubernetesDeserializer.class);
+      registerFully(KubernetesList.class);
     }
   }
 

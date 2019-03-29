@@ -25,10 +25,22 @@ import (
 
 func getPluginMeta(registryUrl string, pluginCompositeId string) (*model.PluginMeta, error) {
 
-	parts := strings.Split(pluginCompositeId, ":")
-	if len(parts) != 2 {
-		return nil, errors.New("Tool Id should contain the plugin Id and the version separated by ':'")
+	repo := registryUrl + "/plugins"
+	var idAndVersion string
+	if repoEnd := strings.LastIndex(pluginCompositeId, "/"); repoEnd >= 0 {
+		repo = pluginCompositeId[0:repoEnd]
+		idAndVersion = pluginCompositeId[repoEnd+1:]
+	} else {
+		idAndVersion = pluginCompositeId
 	}
+
+	parts := strings.Split(idAndVersion, ":")
+	if len(parts) != 2 {
+		return nil, errors.New("Tool Id should contain the plugin Id and the version separated by ':', but was: " + pluginCompositeId)
+	}
+
+	id := parts[0]
+	version := parts[1]
 
 	workDir, err := ioutil.TempDir("", "che-plugin-registry")
 	if err != nil {
@@ -38,7 +50,7 @@ func getPluginMeta(registryUrl string, pluginCompositeId string) (*model.PluginM
 
 	pluginMetaPath := filepath.Join(workDir, "meta.yaml")
 
-	err = utils.New().Download(registryUrl+"/plugins/"+parts[0]+"/"+parts[1]+"/meta.yaml", pluginMetaPath)
+	err = utils.New().Download(repo+"/"+id+"/"+version+"/meta.yaml", pluginMetaPath)
 	if err != nil {
 		return nil, err
 	}

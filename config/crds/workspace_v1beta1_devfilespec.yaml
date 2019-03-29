@@ -27,18 +27,17 @@ spec:
                   properties:
                     command:
                       type: string
-                    tool:
+                    component:
                       description: The actual action command-line string
                       type: string
                     type:
-                      description: Describes tool to which given action relates
+                      description: Describes component to which given action relates
                       type: string
                     workdir:
                       description: Describes action type
                       type: string
                   required:
-                  - command
-                  - tool
+                  - component
                   - type
                   type: object
                 type: array
@@ -54,40 +53,22 @@ spec:
             - name
             type: object
           type: array
-        kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-          type: string
-        metadata:
-          type: object
-        projects:
-          description: Description of the predefined commands to be available in workspace
-          items:
-            properties:
-              name:
-                type: string
-              source:
-                properties:
-                  location:
-                    type: string
-                  type:
-                    description: Project's source location address. Should be URL
-                      for git and github located projects, or; file:// for zip.
-                    type: string
-                required:
-                - location
-                - type
-                type: object
-            required:
-            - name
-            - source
-            type: object
-          type: array
-        tools:
+        components:
           description: Description of the projects, containing names and sources locations
           items:
             properties:
+              args:
+                description: The command to run in the dockerimage component instead
+                  of the default one provided in the image. Defaults to null, meaning
+                  use whatever is defined in the image.
+                items:
+                  type: string
+                type: array
+              command:
+                description: Describes volumes which should be mount to component
+                items:
+                  type: string
+                type: array
               endpoints:
                 items:
                   properties:
@@ -125,7 +106,7 @@ spec:
                   type: object
                 type: array
               env:
-                description: Describes dockerimage tool endpoints
+                description: Describes dockerimage component endpoints
                 items:
                   properties:
                     name:
@@ -143,40 +124,40 @@ spec:
                   docker container
                 type: string
               image:
-                description: Describes the tool FQN
+                description: Describes the component FQN
                 type: string
               local:
-                description: Specifies the docker image that should be used for tool
+                description: Specifies the docker image that should be used for component
                 type: string
               localContent:
                 description: Describes location of Kubernetes list yaml file. Applicable
-                  only for 'kubernetes' and; 'openshift' type tools
+                  only for 'kubernetes' and; 'openshift' type components
                 type: string
               memoryLimit:
                 description: Inlined content of a file specified in field 'local'
                 type: string
               mountSources:
-                description: 'Describes memory limit for the tool. You can express
+                description: 'Describes memory limit for the component. You can express
                   memory as a plain integer or as a; fixed-point integer using one
                   of these suffixes: E, P, T, G, M, K. You can also use the; power-of-two
                   equivalents: Ei, Pi, Ti, Gi, Mi, Ki'
                 type: boolean
               name:
                 description: Describes whether projects sources should be mount to
-                  the tool. `CHE_PROJECTS_ROOT`; environment variable should contains
-                  a path where projects sources are mount
+                  the component. `CHE_PROJECTS_ROOT`; environment variable should
+                  contains a path where projects sources are mount
                 type: string
               selector:
-                description: Describes the name of the tool. Should be unique per
-                  tool set.
+                description: Describes the name of the component. Should be unique
+                  per component set.
                 type: object
               type:
-                description: Describes the objects selector for the recipe type tools.
+                description: Describes the objects selector for the recipe type components.
                   Allows to pick-up only selected; items from k8s/openshift list
                 type: string
               volumes:
-                description: Describes type of the tool, e.g. whether it is an plugin
-                  or editor or other type
+                description: Describes type of the component, e.g. whether it is an
+                  plugin or editor or other type
                 items:
                   properties:
                     containerPath:
@@ -193,8 +174,38 @@ spec:
             - type
             type: object
           type: array
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        projects:
+          description: Description of the predefined commands to be available in workspace
+          items:
+            properties:
+              name:
+                type: string
+              source:
+                properties:
+                  location:
+                    type: string
+                  type:
+                    description: Project's source location address. Should be URL
+                      for git and github located projects, or; file:// for zip.
+                    type: string
+                required:
+                - location
+                - type
+                type: object
+            required:
+            - name
+            - source
+            type: object
+          type: array
       required:
-      - tools
+      - components
   version: v1beta1
 status:
   acceptedNames:

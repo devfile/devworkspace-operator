@@ -34,12 +34,33 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:420c0dce7dd975ca4d39484535d4da627d21b88ccdf8695824fa2ccf852c1d6a"
-  name = "github.com/eclipse/che-plugin-broker"
-  packages = ["model"]
+  digest = "1:9c9f33afa55018341587f251191382f8ddc7503826edcbbba7d421827b7616b9"
+  name = "github.com/eclipse/che-go-jsonrpc"
+  packages = [
+    ".",
+    "event",
+    "jsonrpcws",
+  ]
   pruneopts = "T"
-  revision = "e65ac22ba802e2366ce109d369fc072bbcb6d735"
-  version = "v0.4.0"
+  revision = "8449a748a2cdfa68f54d2d72e2b02f539f1cd2c5"
+  version = "0.1.0"
+
+[[projects]]
+  digest = "1:fd1ba00a5b672c45b69ef02134c15c9b9b93ccc64b9e284acad5d5aef8db6b24"
+  name = "github.com/eclipse/che-plugin-broker"
+  packages = [
+    "brokers/che-plugin-broker",
+    "brokers/theia",
+    "brokers/vscode",
+    "cfg",
+    "common",
+    "model",
+    "storage",
+    "utils",
+  ]
+  pruneopts = "T"
+  revision = "207ca2c16f65bad5cd7ba1350eff4a139558226e"
+  version = "v0.15.1"
 
 [[projects]]
   digest = "1:7f98547edaaa86eeaba758dd915cb2ee9264568257febdaad73c6b697e19b561"
@@ -130,6 +151,7 @@
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
+    "cmp/cmpopts",
     "cmp/internal/diff",
     "cmp/internal/function",
     "cmp/internal/value",
@@ -165,6 +187,14 @@
   pruneopts = "T"
   revision = "7c663266750e7d82587642f65e60bc4083f1f84e"
   version = "v0.2.0"
+
+[[projects]]
+  digest = "1:80f394537967d97fcc0da30762843805c8aaea7d208c43c99d1fe988a8888f0d"
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  pruneopts = "T"
+  revision = "66b9c49e59c6c48f0ffce28c2d8b8a5678502c6d"
+  version = "v1.4.0"
 
 [[projects]]
   branch = "master"
@@ -315,6 +345,18 @@
   pruneopts = "T"
   revision = "65fb64232476ad9046e57c26cd0bff3d3a8dc6cd"
   version = "v1.4.3"
+
+[[projects]]
+  digest = "1:a61aad1f69d9b342e724828664ad94dcddd7a3f33a6d860940beb14c0d1603bc"
+  name = "github.com/openshift/api"
+  packages = [
+    "pkg/serialization",
+    "route/v1",
+    "template/v1",
+  ]
+  pruneopts = "T"
+  revision = "0d921e363e951d89f583292c60d013c318df64dc"
+  version = "v3.9.0"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -957,23 +999,36 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/eclipse/che-plugin-broker/brokers/che-plugin-broker",
+    "github.com/eclipse/che-plugin-broker/brokers/theia",
+    "github.com/eclipse/che-plugin-broker/brokers/vscode",
+    "github.com/eclipse/che-plugin-broker/cfg",
+    "github.com/eclipse/che-plugin-broker/common",
     "github.com/eclipse/che-plugin-broker/model",
+    "github.com/eclipse/che-plugin-broker/storage",
+    "github.com/eclipse/che-plugin-broker/utils",
     "github.com/emicklei/go-restful",
     "github.com/google/go-cmp/cmp",
+    "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/uuid",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
+    "github.com/openshift/api/route/v1",
+    "github.com/openshift/api/template/v1",
     "golang.org/x/net/context",
     "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
+    "k8s.io/api/rbac/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/labels",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/intstr",
     "k8s.io/client-go/kubernetes/scheme",
@@ -986,8 +1041,10 @@
     "sigs.k8s.io/controller-runtime/pkg/controller",
     "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil",
     "sigs.k8s.io/controller-runtime/pkg/envtest",
+    "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/manager",
+    "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/runtime/log",
     "sigs.k8s.io/controller-runtime/pkg/runtime/scheme",

@@ -3,6 +3,7 @@ package workspace
 import (
 	"encoding/json"
 	"errors"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
 	"github.com/eclipse/che-plugin-broker/model"
 	storage "github.com/eclipse/che-plugin-broker/storage"
+	"github.com/eclipse/che-plugin-broker/utils"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -119,43 +121,44 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			Image: brokerImage,
 			Args:  args,
 
-			ImagePullPolicy: corev1.PullAlways,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 			VolumeMounts:    volumes,
 		})
 	}
 	return k8sObjects, nil
 }
 
-func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, podSpec *corev1.PodSpec, pluginMetas map[string][]model.PluginMeta, workspaceEnv map[string]string) ([]runtime.Object, error) {
-	pluginMeta, err := getPluginMeta(workspaceConfig.getPluginRegistry(), *tool.Id)
+func setupChePlugin(names workspaceProperties, component *workspacev1beta1.ComponentSpec, podSpec *corev1.PodSpec, pluginMetas map[string][]model.PluginMeta, workspaceEnv map[string]string) ([]runtime.Object, error) {
+	pluginMeta, err := getPluginMeta(workspaceConfig.getPluginRegistry(), *component.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	var processPlugin func(meta model.PluginMeta, onlyMetadata bool) error
-	var storage *storage.Storage
+	var processPlugin func(meta model.PluginMeta) error
+	theStorage := storage.New()
+	theCommonBroker := commonBroker.NewBroker()
+	theIoUtil := utils.New()
+	theRand := commonBroker.NewRand()
+
 	isTheiaOrVsCodePlugin := false
 
 	var brokerImageProperty string
 
 	switch pluginMeta.Type {
 	case "Che Plugin", "Che Editor":
-		broker := mainBroker.NewBroker()
+		broker := mainBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage)
 		processPlugin = broker.ProcessPlugin
-		storage = broker.Storage
 		brokerImageProperty = "che.workspace.plugin_broker.image"
 		break
 	case "Theia plugin":
-		broker := theiaBroker.NewBroker()
+		broker := theiaBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage, theRand)
 		processPlugin = broker.ProcessPlugin
-		storage = broker.Storage
 		brokerImageProperty = "che.workspace.plugin_broker.theia.image"
 		isTheiaOrVsCodePlugin = true
 		break
 	case "VS Code extension":
-		broker := vscodeBroker.NewBroker()
+		broker := vscodeBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage, theRand, &http.Client{})
 		processPlugin = broker.ProcessPlugin
-		storage = broker.Storage
 		brokerImageProperty = "che.workspace.plugin_broker.vscode.image"
 		isTheiaOrVsCodePlugin = true
 		break
@@ -170,19 +173,23 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 	newTypePluginMetas := append(typePluginMetas, *pluginMeta)
 	pluginMetas[brokerImageProperty] = newTypePluginMetas
 
-	err = processPlugin(*pluginMeta, true)
+	err = processPlugin(*pluginMeta)
 	if err != nil {
 		return nil, err
 	}
 
-	plugins, err := storage.Plugins()
+	plugins, err := theStorage.Plugins()
 	if err != nil {
 		return nil, err
 	}
 
-	toolingConf := (*plugins)[0]
+	if len(*plugins) != 1 {
+		return nil, errors.New("There should be only one plugin definition for plugin " + pluginMeta.ID)
+	}
 
-	for _, envVar := range toolingConf.WorkspaceEnv {
+	componentingConf := (*plugins)[0]
+
+	for _, envVar := range componentingConf.WorkspaceEnv {
 		workspaceEnv[envVar.Name] = envVar.Value
 	}
 
@@ -191,18 +198,7 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 	containerByPort := map[int]corev1.Container{}
 	serviceByPort := map[int]corev1.Service{}
 
-	portAsString := func(port int) string {
-		return strconv.FormatInt(int64(port), 10)
-	}
-
-	servicePortName := func(port int) string {
-		return "srv-" + portAsString(port)
-	}
-	servicePortAndProtocol := func(port int) string {
-		return join("/", portAsString(port), strings.ToLower(string(servicePortProtocol)))
-	}
-
-	for _, containerDef := range toolingConf.Containers {
+	for _, containerDef := range componentingConf.Containers {
 
 		var containerPorts []corev1.ContainerPort
 		var servicePorts []corev1.ServicePort
@@ -274,7 +270,7 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 		var serviceName string
 		if isTheiaOrVsCodePlugin &&
 			len(containerDef.Ports) == 1 {
-			for _, endpointDef := range toolingConf.Endpoints {
+			for _, endpointDef := range componentingConf.Endpoints {
 				if endpointDef.TargetPort == containerDef.Ports[0].ExposedPort {
 					serviceName = endpointDef.Name
 					break
@@ -296,8 +292,8 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 				Namespace: names.namespace,
 				Annotations: map[string]string{
 					"org.eclipse.che.machine.name":   join("/", cheOriginalName, containerDef.Name),
-					"org.eclipse.che.machine.source": "tool",
-					"org.eclipse.che.machine.plugin": strings.Split(*tool.Id, ":")[0],
+					"org.eclipse.che.machine.source": "component",
+					"org.eclipse.che.machine.plugin": strings.Split(*component.Id, ":")[0],
 				},
 				Labels: map[string]string{
 					"che.workspace_id": names.workspaceId,
@@ -319,8 +315,14 @@ func setupChePlugin(names workspaceProperties, tool *workspacev1beta1.ToolSpec, 
 		}
 	}
 
-	for _, endpointDef := range toolingConf.Endpoints {
+	for _, endpointDef := range componentingConf.Endpoints {
 		port := endpointDef.TargetPort
+
+		if isTheiaOrVsCodePlugin &&
+			endpointDef.Attributes != nil &&
+			endpointDef.Attributes["protocol"] == "" {
+			endpointDef.Attributes["protocol"] = "ws"
+		}
 
 		serverAnnotationName := func(attrName string) string {
 			return join(".", "org.eclipse.che.server", attrName)
@@ -399,7 +401,12 @@ func addWorkspaceEnvVars(podSpec *corev1.PodSpec, workspaceEnv map[string]string
 	}
 
 	for index := range podSpec.Containers {
-		newContainerEnvs := append(podSpec.Containers[index].Env, newEnvs...)
-		podSpec.Containers[index].Env = newContainerEnvs
+		for _, envVar := range podSpec.Containers[index].Env {
+			if envVar.Name == "THEIA_PLUGINS" {
+				newContainerEnvs := append(podSpec.Containers[index].Env, newEnvs...)
+				podSpec.Containers[index].Env = newContainerEnvs
+				break
+			}
+		}
 	}
 }

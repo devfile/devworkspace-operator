@@ -24,12 +24,12 @@ func TestStorageWorkspace(t *testing.T) {
 		Spec: WorkspaceSpec{
 			DevFile: DevFileSpec{
 				Projects: []ProjectSpec{},
-				Tools: []ToolSpec{
-					ToolSpec{
+				Components: []ComponentSpec{
+					ComponentSpec{
 						Name: "coucou",
 						Type: "chePlugin",
 					},
-					ToolSpec{
+					ComponentSpec{
 						Name: "kiki",
 						Type: "cheEditor",
 					},
@@ -47,8 +47,8 @@ func TestStorageWorkspace(t *testing.T) {
 		},
 		Spec: WorkspaceSpec{
 			DevFile: DevFileSpec{
-				Projects: []ProjectSpec{},
-				Tools:    []ToolSpec{},
+				Projects:   []ProjectSpec{},
+				Components: []ComponentSpec{},
 			},
 		},
 	}

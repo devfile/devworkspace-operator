@@ -1,0 +1,132 @@
+package workspace
+
+import (
+	"errors"
+
+	routeV1 "github.com/openshift/api/route/v1"
+	templateV1 "github.com/openshift/api/template/v1"
+	"k8s.io/client-go/kubernetes/scheme"
+
+	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspacev1beta1.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
+	var k8sObjects []runtime.Object
+
+	theScheme := runtime.NewScheme()
+	scheme.AddToScheme(theScheme)
+	if component.Type == "openshift" {
+		templateV1.AddToScheme(theScheme)
+		routeV1.AddToScheme(theScheme)
+	}
+
+	decode := serializer.NewCodecFactory(theScheme).UniversalDeserializer().Decode
+
+	componentContent := ""
+	if component.Local != nil {
+
+	} else if component.LocalContent != nil {
+		componentContent = *component.LocalContent
+	}
+
+	obj, _, err := decode([]byte(componentContent), nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	objects := []runtime.Object{}
+	if list, isList := obj.(*corev1.List); isList {
+		items := list.Items
+		for _, item := range items {
+			if item.Object != nil {
+				objects = append(objects, item.Object)
+			} else {
+				decodedItem, _, err := decode(item.Raw, nil, nil)
+				if err != nil {
+					return nil, err
+				}
+				if decodedItem != nil {
+					objects = append(objects, decodedItem)
+				} else {
+					log.Info("Unknown object ignored in the `kubernetes` component: " + string(item.Raw))
+				}
+			}
+		}
+	} else {
+		objects = append(objects, obj)
+	}
+
+	selector := labels.SelectorFromSet(component.Selector)
+	for _, obj = range objects {
+		if objMeta, isMeta := obj.(metav1.Object); isMeta {
+			if selector.Matches(labels.Set(objMeta.GetLabels())) {
+				objMeta.SetNamespace(wkspProps.namespace)
+				k8sObjects = append(k8sObjects, obj)
+			}
+		}
+	}
+
+	// TODO: manage commands and args with pod name, container name, etc ...
+
+	for index, obj := range k8sObjects {
+		if objPod, isPod := obj.(*corev1.Pod); isPod {
+			var workspaceDeploymentName = wkspProps.workspaceId + "." + component.Name
+			var replicas int32 = 1
+			fromIntOne := intstr.FromInt(1)
+
+			podLabels := map[string]string{
+				"deployment":       workspaceDeploymentName,
+				"che.workspace_id": wkspProps.workspaceId,
+			}
+			for labelName, labelValue := range objPod.Labels {
+				if _, exists := podLabels[labelName]; exists {
+					return nil, errors.New("Label notreserved by Che: " + labelName)
+				}
+				podLabels[labelName] = labelValue
+			}
+
+			k8sObjects[index] = &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      workspaceDeploymentName,
+					Namespace: wkspProps.namespace,
+					Labels: map[string]string{
+						"che.workspace_id": wkspProps.workspaceId,
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Selector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"deployment":       workspaceDeploymentName,
+							"che.workspace_id": wkspProps.workspaceId,
+						},
+					},
+					Replicas: &replicas,
+					Strategy: appsv1.DeploymentStrategy{
+						Type: "RollingUpdate",
+						RollingUpdate: &appsv1.RollingUpdateDeployment{
+							MaxSurge:       &fromIntOne,
+							MaxUnavailable: &fromIntOne,
+						},
+					},
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:        objPod.Name,
+							Labels:      podLabels,
+							Annotations: objPod.Annotations,
+						},
+						Spec: objPod.Spec,
+					},
+				},
+			}
+		}
+	}
+
+	return k8sObjects, nil
+}

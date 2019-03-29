@@ -15,23 +15,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.ToolSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
+func setupDockerImageComponent(names workspaceProperties, component *workspacev1beta1.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
-
-	portAsString := func(port int) string {
-		return strconv.FormatInt(int64(port), 10)
-	}
-
-	servicePortName := func(port int) string {
-		return "srv-" + portAsString(port)
-	}
-	servicePortAndProtocol := func(port int) string {
-		return join("/", portAsString(port), strings.ToLower(string(servicePortProtocol)))
-	}
 
 	var containerPorts []corev1.ContainerPort
 	var servicePorts []corev1.ServicePort
-	for _, endpointDef := range tool.Endpoints {
+	for _, endpointDef := range component.Endpoints {
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			ContainerPort: int32(endpointDef.Port),
 			Protocol:      corev1.ProtocolTCP,
@@ -46,10 +35,10 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 
 	var limitOrDefault string
 
-	if *tool.MemoryLimit == "" {
+	if *component.MemoryLimit == "" {
 		limitOrDefault = "128M"
 	} else {
-		limitOrDefault = *tool.MemoryLimit
+		limitOrDefault = *component.MemoryLimit
 	}
 
 	limit, err := resource.ParseQuantity(limitOrDefault)
@@ -59,7 +48,7 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 
 	var volumeMounts []corev1.VolumeMount
 
-	for _, volDef := range tool.Volumes {
+	for _, volDef := range component.Volumes {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: volDef.ContainerPath,
 			Name:      "claim-che-workspace",
@@ -67,7 +56,7 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 		})
 	}
 
-	if tool.MountSources != nil && *tool.MountSources {
+	if component.MountSources != nil && *component.MountSources {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: "/projects",
 			Name:      "claim-che-workspace",
@@ -76,7 +65,7 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 	}
 
 	var envVars []corev1.EnvVar
-	for _, envVarDef := range tool.Env {
+	for _, envVarDef := range component.Env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  envVarDef.Name,
 			Value: envVarDef.Value,
@@ -84,11 +73,11 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 	}
 	envVars = append(envVars, corev1.EnvVar{
 		Name:  "CHE_MACHINE_NAME",
-		Value: cheOriginalName + "/" + tool.Name,
+		Value: component.Name,
 	})
 	container := corev1.Container{
-		Name:            tool.Name,
-		Image:           *tool.Image,
+		Name:            component.Name,
+		Image:           *component.Image,
 		ImagePullPolicy: defaultImagePullPolicy,
 		Ports:           containerPorts,
 		Resources: corev1.ResourceRequirements{
@@ -102,27 +91,27 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 		VolumeMounts: volumeMounts,
 		Env:          append(envVars, commonEnvironmentVariables(names)...),
 	}
-	if tool.Command != nil {
-		container.Command = *tool.Command
+	if component.Command != nil {
+		container.Command = *component.Command
 	}
-	if tool.Args != nil {
-		container.Args = *tool.Args
+	if component.Args != nil {
+		container.Args = *component.Args
 	}
 
 	podSpec.Containers = append(podSpec.Containers, container)
 
-	if len(tool.Endpoints) == 0 {
+	if len(component.Endpoints) == 0 {
 		return k8sObjects, nil
 	}
 
 	var serviceName string
 	alreadyOneEndpointDiscoverable := false
-	for _, endpointDef := range tool.Endpoints {
+	for _, endpointDef := range component.Endpoints {
 		if endpointDef.Attributes != nil &&
-		endpointDef.Attributes.Discoverable != nil &&
-		*endpointDef.Attributes.Discoverable {
+			endpointDef.Attributes.Discoverable != nil &&
+			*endpointDef.Attributes.Discoverable {
 			if alreadyOneEndpointDiscoverable {
-				return []runtime.Object{}, errors.New("There should be only 1 discoverable endpoint for a dockerImage tool")
+				return []runtime.Object{}, errors.New("There should be only 1 discoverable endpoint for a dockerImage component")
 			}
 			serviceName = endpointDef.Name
 			alreadyOneEndpointDiscoverable = true
@@ -134,7 +123,7 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 			"server",
 			strings.ReplaceAll(names.workspaceId, "workspace", ""),
 			cheOriginalName,
-			tool.Name)
+			component.Name)
 	}
 
 	service := corev1.Service{
@@ -142,9 +131,9 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 			Name:      serviceName,
 			Namespace: names.namespace,
 			Annotations: map[string]string{
-				"org.eclipse.che.machine.name":   join("/", cheOriginalName, tool.Name),
-				"org.eclipse.che.machine.source": "tool",
-				// TODO : do we need to add that it comes from a dockerImage tool ???
+				"org.eclipse.che.machine.name":   component.Name,
+				"org.eclipse.che.machine.source": "component",
+				// TODO : do we need to add that it comes from a dockerImage component ???
 			},
 			Labels: map[string]string{
 				"che.workspace_id": names.workspaceId,
@@ -161,7 +150,7 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 	}
 	k8sObjects = append(k8sObjects, &service)
 
-	for _, endpointDef := range tool.Endpoints {
+	for _, endpointDef := range component.Endpoints {
 		port := int(endpointDef.Port)
 
 		serverAnnotationName := func(attrName string) string {
@@ -207,7 +196,7 @@ func setupDockerImageTool(names workspaceProperties, tool *workspacev1beta1.Tool
 					"kubernetes.io/ingress.class":                "nginx",
 					"nginx.ingress.kubernetes.io/rewrite-target": "/",
 					"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-					"org.eclipse.che.machine.name":               join("/", cheOriginalName, container.Name),
+					"org.eclipse.che.machine.name":               component.Name,
 					serverAnnotationName("attributes"):           serverAnnotationAttributes(),
 					serverAnnotationName("port"):                 servicePortAndProtocol(port),
 					serverAnnotationName("protocol"):             protocol,

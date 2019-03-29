@@ -36,12 +36,15 @@ import org.eclipse.che.api.devfile.server.FileContentProvider;
 import org.eclipse.che.api.devfile.server.convert.CommandConverter;
 import org.eclipse.che.api.devfile.server.convert.DevfileConverter;
 import org.eclipse.che.api.devfile.server.convert.ProjectConverter;
-import org.eclipse.che.api.devfile.server.convert.tool.dockerimage.DockerimageToolProvisioner;
-import org.eclipse.che.api.devfile.server.convert.tool.dockerimage.DockerimageToolToWorkspaceApplier;
-import org.eclipse.che.api.devfile.server.convert.tool.editor.EditorToolProvisioner;
-import org.eclipse.che.api.devfile.server.convert.tool.editor.EditorToolToWorkspaceApplier;
-import org.eclipse.che.api.devfile.server.convert.tool.plugin.PluginProvisioner;
-import org.eclipse.che.api.devfile.server.convert.tool.plugin.PluginToolToWorkspaceApplier;
+import org.eclipse.che.api.devfile.server.convert.component.dockerimage.DockerimageComponentProvisioner;
+import org.eclipse.che.api.devfile.server.convert.component.dockerimage.DockerimageComponentToWorkspaceApplier;
+import org.eclipse.che.api.devfile.server.convert.component.editor.EditorComponentProvisioner;
+import org.eclipse.che.api.devfile.server.convert.component.editor.EditorComponentToWorkspaceApplier;
+import org.eclipse.che.api.devfile.server.convert.component.kubernetes.KubernetesComponentProvisioner;
+import org.eclipse.che.api.devfile.server.convert.component.kubernetes.KubernetesComponentToWorkspaceApplier;
+import org.eclipse.che.api.devfile.server.convert.component.kubernetes.KubernetesEnvironmentProvisioner;
+import org.eclipse.che.api.devfile.server.convert.component.plugin.PluginProvisioner;
+import org.eclipse.che.api.devfile.server.convert.component.plugin.PluginComponentToWorkspaceApplier;
 import org.eclipse.che.api.devfile.server.validator.DevfileIntegrityValidator;
 import org.eclipse.che.api.workspace.server.DtoConverter;
 import org.eclipse.che.api.workspace.server.WorkspaceValidator;
@@ -53,8 +56,8 @@ import org.eclipse.che.api.workspace.server.model.impl.ServerImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceConfigImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceImpl;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
+import org.eclipse.che.workspace.infrastructure.kubernetes.KubernetesClientFactory;
 import org.eclipse.che.workspace.infrastructure.kubernetes.environment.KubernetesRecipeParser;
-import org.eclipse.che.workspace.infrastructure.kubernetes.environment.util.EntryPointParser;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,21 +91,12 @@ public class ApiService {
     @ConfigProperty(name = "che.workspace.namespace")
     String workspaceNamespace;
 
-    ObjectMapper yamlObjectMapper = new ObjectMapper(new YAMLFactory());
-    ObjectMapper jsonObjectMapper = new ObjectMapper(new JsonFactory());
-    DevfileConverter devfileConverter = new DevfileConverter(new ProjectConverter(), new CommandConverter(),
-            ImmutableSet.of(new EditorToolProvisioner(), new PluginProvisioner(), new DockerimageToolProvisioner(null)),
-            ImmutableMap.of(Constants.EDITOR_TOOL_TYPE, new EditorToolToWorkspaceApplier(), Constants.PLUGIN_TOOL_TYPE,
-                    new PluginToolToWorkspaceApplier(),
-                    Constants.DOCKERIMAGE_TOOL_TYPE, new DockerimageToolToWorkspaceApplier("/projects", new EntryPointParser())));
-    WorkspaceValidator workspaceValidator = new WorkspaceValidator();
-    DevfileIntegrityValidator devfileIntegrityValidator = new DevfileIntegrityValidator(null) {
-        @Override
-        public void validateContentReferences(Devfile devfile, FileContentProvider provider)
-                throws DevfileFormatException {
-        }
-    };
-
+    private ObjectMapper yamlObjectMapper = new ObjectMapper(new YAMLFactory());
+    private ObjectMapper jsonObjectMapper = new ObjectMapper(new JsonFactory());
+    private DevfileConverter devfileConverter = null;
+    private WorkspaceValidator workspaceValidator = null;
+    private DevfileIntegrityValidator devfileIntegrityValidator = null;
+    
     private WorkspaceDto workspaceDto;
 
     @SuppressWarnings("unchecked")
@@ -110,13 +104,15 @@ public class ApiService {
         return (Map<String, Object>) obj;
     }
 
-    void onStart(@Observes StartupEvent ev) {
+    public void onStart(@Observes StartupEvent ev) {
         LOGGER.info("Loading SunEC library");
         try {
             System.loadLibrary("sunec");
         } catch (Throwable t) {
-            LOGGER.error("Error while loading the Java `sunec` dynamic library", t);
-            throw t;
+            if (! t.getMessage().contains("already loaded")) {
+                LOGGER.error("Error while loading the Java `sunec` dynamic library", t);
+                throw t;
+            }
         }
 
         try {
@@ -133,6 +129,7 @@ public class ApiService {
             LOGGER.info("Workspace Id: {}", workspaceId);
             LOGGER.info("Workspace Name: {}", workspaceName);
 
+            buildConverter();
             initWorkspace();
         } catch (RuntimeException e) {
             LOGGER.error("Che Api Service cannot start", e);
@@ -229,7 +226,8 @@ public class ApiService {
 
     private Runtime buildRuntimeFromK8sObjects() throws ApiException {
         Map<String, MachineImpl> machines = listWorkspaceServices()
-        .filter(service -> service.getMetadata().getAnnotations().containsKey("org.eclipse.che.machine.name"))
+        .filter(service -> service.getMetadata().getAnnotations() != null&&
+                            service.getMetadata().getAnnotations().containsKey("org.eclipse.che.machine.name"))
         .collect(ImmutableMap.toImmutableMap(
             service -> service.getMetadata().getAnnotations().get("org.eclipse.che.machine.name"),
             service -> new MachineImpl(
@@ -266,7 +264,11 @@ public class ApiService {
     }
 
     private WorkspaceDto convertToWorkspace(Devfile devfileObj) throws DevfileException, ServerException, ValidationException, ApiException {
-        devfileIntegrityValidator.validateDevfile(devfileObj);
+        try {
+            devfileIntegrityValidator.validateDevfile(devfileObj);
+        } catch(DevfileFormatException e) {
+            LOGGER.warn("Validation of the devfile failed", e);
+        }
         WorkspaceConfigImpl config = devfileConverter.devFileToWorkspaceConfig(devfileObj, new FileContentProvider(){
             @Override
             public String fetchContent(String fileName) throws IOException, DevfileException {
@@ -275,11 +277,14 @@ public class ApiService {
         }); // TODO: add the provider that will allow reading some k8s resource
         workspaceValidator.validateConfig(config);
         
-        // Next 2 lines is to fix a bug in the containers plugin
-        config.setDefaultEnv("default");
-        config.setEnvironments(ImmutableMap.of("default", new EnvironmentImpl(
-            new RecipeImpl("kubernetes", "application/x-yaml", "", ""),
-            Collections.emptyMap())));
+        // Next block is to fix a bug in the containers plugin
+        if (config.getEnvironments().size() == 0) {
+            config.setDefaultEnv("default");
+            config.setEnvironments(ImmutableMap.of("default", new EnvironmentImpl(
+                new RecipeImpl("kubernetes", "application/x-yaml", "", ""),
+                Collections.emptyMap())));
+        }
+
         WorkspaceImpl workspace = WorkspaceImpl.builder()
             .setId(workspaceId)
             .setConfig(config)
@@ -291,6 +296,24 @@ public class ApiService {
             .build();
 
         return DtoConverter.asDto(workspace);
+    }
+
+    private void buildConverter() {
+        KubernetesClientFactory clientFactory = new KubernetesClientFactory(null, true, 64, 5, 5, 5);
+        KubernetesRecipeParser kubernetesRecipeParser = new KubernetesRecipeParser(clientFactory);
+        KubernetesEnvironmentProvisioner kubernetesEnvironmentProvisioner = new KubernetesEnvironmentProvisioner(kubernetesRecipeParser);
+        devfileConverter = new DevfileConverter(new ProjectConverter(), new CommandConverter(),
+                ImmutableSet.of(
+                    new EditorComponentProvisioner(), 
+                    new PluginProvisioner(), 
+                    new DockerimageComponentProvisioner(null), 
+                    new KubernetesComponentProvisioner()),
+                ImmutableMap.of(Constants.EDITOR_COMPONENT_TYPE, new EditorComponentToWorkspaceApplier(),
+                    Constants.PLUGIN_COMPONENT_TYPE,new PluginComponentToWorkspaceApplier(),
+                    Constants.KUBERNETES_COMPONENT_TYPE,new KubernetesComponentToWorkspaceApplier(kubernetesRecipeParser, kubernetesEnvironmentProvisioner),
+                    Constants.DOCKERIMAGE_COMPONENT_TYPE, new DockerimageComponentToWorkspaceApplier("/projects", kubernetesEnvironmentProvisioner)));
+        workspaceValidator = new WorkspaceValidator();
+        devfileIntegrityValidator = new DevfileIntegrityValidator(kubernetesRecipeParser);
     }
 
     private void initWorkspace() {

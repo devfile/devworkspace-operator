@@ -70,6 +70,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	brokerCfg.AuthEnabled = false
 	brokerCfg.DisablePushingToEndpoint = true
 	brokerCfg.UseLocalhostInPluginUrls = true
+	brokerCfg.OnlyApplyMetadataActions = true
 
 	/*
 		for _, obj := range []runtime.Object{
@@ -95,11 +96,6 @@ var _ reconcile.Reconciler = &ReconcileWorkspace{}
 type ReconcileWorkspace struct {
 	client.Client
 	scheme *runtime.Scheme
-	config map[string]string
-}
-
-func (r *ReconcileWorkspace) getCheApi() string {
-	return r.config["che.api"]
 }
 
 // Reconcile reads that state of the cluster for a Workspace object and makes changes based on the state read
@@ -107,6 +103,9 @@ func (r *ReconcileWorkspace) getCheApi() string {
 // a Deployment as an example
 // Automatically generate RBAC rules to allow the Controller to read and write Deployments
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=workspace.che.eclipse.org,resources=workspaces,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=workspace.che.eclipse.org,resources=workspaces/status,verbs=get;update;patch
@@ -213,6 +212,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 				}
 			case (*corev1.Service):
 				{
+					(k8sObject).(*corev1.Service).Spec.ClusterIP = (found).(*corev1.Service).Spec.ClusterIP
 					(found).(*corev1.Service).Spec = (k8sObject).(*corev1.Service).Spec
 				}
 			}

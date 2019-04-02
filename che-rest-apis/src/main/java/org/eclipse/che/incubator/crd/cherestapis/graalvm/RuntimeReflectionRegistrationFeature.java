@@ -2,8 +2,13 @@ package org.eclipse.che.incubator.crd.cherestapis.graalvm;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import com.google.common.collect.Streams;
 import com.oracle.svm.core.annotate.AutomaticFeature;
@@ -14,8 +19,15 @@ import org.joda.time.DateTime;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 
+import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.KubernetesList;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.internal.KubernetesDeserializer;
+import io.fabric8.openshift.api.model.DeploymentConfig;
+import io.fabric8.openshift.api.model.Route;
+import io.fabric8.openshift.api.model.Template;
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.models.V1ClientIPConfig;
 import io.kubernetes.client.models.V1Initializer;
@@ -89,12 +101,49 @@ class RuntimeReflectionRegistrationFeature implements Feature {
 
       registerFully(KubernetesDeserializer.class);
       registerFully(KubernetesList.class);
+      registerFully(Pod.class);
+      registerFully(Service.class);
+      registerFully(Template.class);
+      registerFully(Route.class);
+      registerFully(Deployment.class);
+      registerFully(DeploymentConfig.class);
+      registerFully(ConfigMap.class);
+    }
+  }
+
+  private Set<Class<?>> classesAlreadyRegistered = new HashSet<>();
+  private Set<Type> typesAlreadyRegistered = new HashSet<>();
+
+  private void registerFully(Type type) {
+    if (typesAlreadyRegistered.contains(type)) {
+      return;
+    }
+    typesAlreadyRegistered.add(type);
+    if (type instanceof ParameterizedType) {
+      ParameterizedType parameterizedType = (ParameterizedType) type;
+      registerFully(parameterizedType.getRawType());
+      for (Type paramType : parameterizedType.getActualTypeArguments()) {
+        registerFully(paramType);
+      }
+    } else if (type instanceof GenericArrayType) {
+      GenericArrayType genericArrayType = (GenericArrayType) type;
+      registerFully(genericArrayType.getGenericComponentType());
+    }
+    else if (type instanceof Class<?>) {
+      registerFully((Class<?>) type);
     }
   }
 
   private void registerFully(Class<?> clazz) {
-    System.out.println("    =>  Registering class:" + clazz.getSimpleName());
+    if (classesAlreadyRegistered.contains(clazz)) {
+      return;
+    }
+    if (clazz.getPackage() == null || clazz.getPackage().getName() == null || clazz.getPackage().getName().startsWith("java")) {
+      return;
+    }
+    System.out.println("    =>  Registering class: " + clazz.getName());
     RuntimeReflection.register(clazz);
+    classesAlreadyRegistered.add(clazz);
     for (Constructor<?> constructor : clazz.getDeclaredConstructors()) {
       RuntimeReflection.register(constructor);
     }
@@ -103,9 +152,18 @@ class RuntimeReflectionRegistrationFeature implements Feature {
     }
     for (Field field : clazz.getDeclaredFields()) {
       RuntimeReflection.register(true, field);
+      registerFully(field.getGenericType());
     }
     for (Class<?> memberClass : clazz.getDeclaredClasses()) {
       registerFully(memberClass);
+    }
+    Class<?> superClass = clazz.getSuperclass();
+    if (superClass != null) {
+      registerFully(superClass);
+    }
+    Class<?> enclosingClass = clazz.getEnclosingClass();
+    if (enclosingClass != null) {
+      registerFully(enclosingClass);
     }
   }
 }

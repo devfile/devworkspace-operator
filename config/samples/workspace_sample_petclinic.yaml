@@ -39,7 +39,7 @@ spec:
         memoryLimit: 1024M
       - name: mysql
         type: kubernetes
-        localContent: |
+        referenceContent: |
           apiVersion: v1
           kind: List
           items:

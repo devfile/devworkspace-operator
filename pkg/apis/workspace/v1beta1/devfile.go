@@ -40,20 +40,20 @@ type ProjectSourceSpec struct {
 }
 
 type ComponentSpec struct {
-	Endpoints    []Endpoint        `json:"endpoints,omitempty"`    // Describes dockerimage component endpoints
-	Env          []Env             `json:"env,omitempty"`          // The environment variables list that should be set to docker container
-	Id           *string           `json:"id,omitempty"`           // Describes the component FQN
-	Image        *string           `json:"image,omitempty"`        // Specifies the docker image that should be used for component
-	Local        *string           `json:"local,omitempty"`        // Describes location of Kubernetes list yaml file. Applicable only for 'kubernetes' and; 'openshift' type components
-	LocalContent *string           `json:"localContent,omitempty"` // Inlined content of a file specified in field 'local'
-	MemoryLimit  *string           `json:"memoryLimit,omitempty"`  // Describes memory limit for the component. You can express memory as a plain integer or as a; fixed-point integer using one of these suffixes: E, P, T, G, M, K. You can also use the; power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki
-	MountSources *bool             `json:"mountSources,omitempty"` // Describes whether projects sources should be mount to the component. `CHE_PROJECTS_ROOT`; environment variable should contains a path where projects sources are mount
-	Name         string            `json:"name"`                   // Describes the name of the component. Should be unique per component set.
-	Selector     map[string]string `json:"selector,omitempty"`     // Describes the objects selector for the recipe type components. Allows to pick-up only selected; items from k8s/openshift list
-	Type         DevfileName       `json:"type"`                   // Describes type of the component, e.g. whether it is an plugin or editor or other type
-	Volumes      []Volume          `json:"volumes,omitempty"`      // Describes volumes which should be mount to component
-	Command      *[]string         `json:"command,omitempty"`      // The command to run in the dockerimage component instead of the default one provided in the image. Defaults to null, meaning use whatever is defined in the image.
-	Args         *[]string         `json:"args,omitempty"`         // The arguments to supply to the command running the dockerimage component. The arguments are supplied either to the default command provided in the image or to the overridden command. Defaults to null, meaning use whatever is defined in the image.
+	Endpoints        []Endpoint        `json:"endpoints,omitempty"`        // Describes dockerimage component endpoints
+	Env              []Env             `json:"env,omitempty"`              // The environment variables list that should be set to docker container
+	Id               *string           `json:"id,omitempty"`               // Describes the component FQN
+	Image            *string           `json:"image,omitempty"`            // Specifies the docker image that should be used for component
+	Reference        *string           `json:"reference,omitempty"`        // Describes location of Kubernetes list yaml file. Applicable only for 'kubernetes' and; 'openshift' type components
+	ReferenceContent *string           `json:"referenceContent,omitempty"` // Inlined content of a file specified in field 'local'
+	MemoryLimit      *string           `json:"memoryLimit,omitempty"`      // Describes memory limit for the component. You can express memory as a plain integer or as a; fixed-point integer using one of these suffixes: E, P, T, G, M, K. You can also use the; power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki
+	MountSources     *bool             `json:"mountSources,omitempty"`     // Describes whether projects sources should be mount to the component. `CHE_PROJECTS_ROOT`; environment variable should contains a path where projects sources are mount
+	Name             string            `json:"name"`                       // Describes the name of the component. Should be unique per component set.
+	Selector         map[string]string `json:"selector,omitempty"`         // Describes the objects selector for the recipe type components. Allows to pick-up only selected; items from k8s/openshift list
+	Type             DevfileName       `json:"type"`                       // Describes type of the component, e.g. whether it is an plugin or editor or other type
+	Volumes          []Volume          `json:"volumes,omitempty"`          // Describes volumes which should be mount to component
+	Command          *[]string         `json:"command,omitempty"`          // The command to run in the dockerimage component instead of the default one provided in the image. Defaults to null, meaning use whatever is defined in the image.
+	Args             *[]string         `json:"args,omitempty"`             // The arguments to supply to the command running the dockerimage component. The arguments are supplied either to the default command provided in the image or to the overridden command. Defaults to null, meaning use whatever is defined in the image.
 }
 
 // Describes dockerimage component endpoint

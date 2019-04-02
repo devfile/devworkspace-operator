@@ -90,13 +90,13 @@ func (in *ComponentSpec) DeepCopyInto(out *ComponentSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Local != nil {
-		in, out := &in.Local, &out.Local
+	if in.Reference != nil {
+		in, out := &in.Reference, &out.Reference
 		*out = new(string)
 		**out = **in
 	}
-	if in.LocalContent != nil {
-		in, out := &in.LocalContent, &out.LocalContent
+	if in.ReferenceContent != nil {
+		in, out := &in.ReferenceContent, &out.ReferenceContent
 		*out = new(string)
 		**out = **in
 	}

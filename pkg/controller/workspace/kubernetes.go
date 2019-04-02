@@ -30,10 +30,10 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspacev1
 	decode := serializer.NewCodecFactory(theScheme).UniversalDeserializer().Decode
 
 	componentContent := ""
-	if component.Local != nil {
+	if component.Reference != nil {
 
-	} else if component.LocalContent != nil {
-		componentContent = *component.LocalContent
+	} else if component.ReferenceContent != nil {
+		componentContent = *component.ReferenceContent
 	}
 
 	obj, _, err := decode([]byte(componentContent), nil, nil)

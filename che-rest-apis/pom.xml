@@ -383,7 +383,8 @@
                 </goals>
                 <configuration>
                   <additionalBuildArgs>
-                    <additionalBuildArgs>--allow-incomplete-classpath</additionalBuildArgs>
+                    <additionalBuildArg>--allow-incomplete-classpath</additionalBuildArg>
+                    <additionalBuildArg>--delay-class-initialization-to-runtime=org.eclipse.che.commons.lang.NameGenerator,java.util.logging.ConsoleHandler</additionalBuildArg>
                   </additionalBuildArgs>
                   <enableHttpUrlHandler>true</enableHttpUrlHandler>
                   <enableHttpsUrlHandler>true</enableHttpsUrlHandler>

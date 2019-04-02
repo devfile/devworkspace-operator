@@ -34,6 +34,7 @@ import org.eclipse.che.api.devfile.server.exception.DevfileFormatException;
 import org.eclipse.che.api.devfile.server.DevfileFactory;
 import org.eclipse.che.api.devfile.server.FileContentProvider;
 import org.eclipse.che.api.devfile.server.convert.CommandConverter;
+import org.eclipse.che.api.devfile.server.convert.DefaultEditorProvisioner;
 import org.eclipse.che.api.devfile.server.convert.DevfileConverter;
 import org.eclipse.che.api.devfile.server.convert.ProjectConverter;
 import org.eclipse.che.api.devfile.server.convert.component.dockerimage.DockerimageComponentProvisioner;
@@ -301,7 +302,7 @@ public class ApiService {
     private void buildConverter() {
         KubernetesClientFactory clientFactory = new KubernetesClientFactory(null, true, 64, 5, 5, 5);
         KubernetesRecipeParser kubernetesRecipeParser = new KubernetesRecipeParser(clientFactory);
-        KubernetesEnvironmentProvisioner kubernetesEnvironmentProvisioner = new KubernetesEnvironmentProvisioner(kubernetesRecipeParser);
+        KubernetesEnvironmentProvisioner kubernetesEnvironmentProvisioner = new KubernetesEnvironmentProvisioner(kubernetesRecipeParser);        
         devfileConverter = new DevfileConverter(new ProjectConverter(), new CommandConverter(),
                 ImmutableSet.of(
                     new EditorComponentProvisioner(), 
@@ -311,7 +312,8 @@ public class ApiService {
                 ImmutableMap.of(Constants.EDITOR_COMPONENT_TYPE, new EditorComponentToWorkspaceApplier(),
                     Constants.PLUGIN_COMPONENT_TYPE,new PluginComponentToWorkspaceApplier(),
                     Constants.KUBERNETES_COMPONENT_TYPE,new KubernetesComponentToWorkspaceApplier(kubernetesRecipeParser, kubernetesEnvironmentProvisioner),
-                    Constants.DOCKERIMAGE_COMPONENT_TYPE, new DockerimageComponentToWorkspaceApplier("/projects", kubernetesEnvironmentProvisioner)));
+                    Constants.DOCKERIMAGE_COMPONENT_TYPE, new DockerimageComponentToWorkspaceApplier("/projects", kubernetesEnvironmentProvisioner)),
+                new DefaultEditorProvisioner("", new String[]{}));
         workspaceValidator = new WorkspaceValidator();
         devfileIntegrityValidator = new DevfileIntegrityValidator(kubernetesRecipeParser);
     }

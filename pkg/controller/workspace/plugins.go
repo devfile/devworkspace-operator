@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	mainBroker "github.com/eclipse/che-plugin-broker/brokers/che-plugin-broker"
 	theiaBroker "github.com/eclipse/che-plugin-broker/brokers/theia"
 	vscodeBroker "github.com/eclipse/che-plugin-broker/brokers/vscode"
@@ -47,7 +47,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 
 	for _, def := range defs {
 		brokerImage := workspaceConfig.getProperty(def.imageName)
-		if brokerImage == "" {
+		if brokerImage == nil {
 			return nil, errors.New("Unknown broker docker image for : " + def.imageName)
 		}
 
@@ -118,7 +118,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 
 		podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
 			Name:  containerName,
-			Image: brokerImage,
+			Image: *brokerImage,
 			Args:  args,
 
 			ImagePullPolicy: corev1.PullIfNotPresent,
@@ -128,7 +128,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 	return k8sObjects, nil
 }
 
-func setupChePlugin(names workspaceProperties, component *workspacev1beta1.ComponentSpec, podSpec *corev1.PodSpec, pluginMetas map[string][]model.PluginMeta, workspaceEnv map[string]string) ([]runtime.Object, error) {
+func setupChePlugin(names workspaceProperties, component *workspaceApi.ComponentSpec, podSpec *corev1.PodSpec, pluginMetas map[string][]model.PluginMeta, workspaceEnv map[string]string) ([]runtime.Object, error) {
 	pluginMeta, err := getPluginMeta(workspaceConfig.getPluginRegistry(), *component.Id)
 	if err != nil {
 		return nil, err

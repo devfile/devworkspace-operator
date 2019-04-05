@@ -1,1 +1,1 @@
-# che-workspace-crd-controller
+# che-workspace-crd-operator

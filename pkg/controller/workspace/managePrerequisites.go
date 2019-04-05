@@ -1,7 +1,7 @@
 package workspace
 
 import (
-	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -9,12 +9,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func managePrerequisites(workspace *workspacev1beta1.Workspace) ([]runtime.Object, error) {
+func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, error) {
 	pvcStorageQuantity, err := resource.ParseQuantity(pvcStorageSize)
 	if err != nil {
 		return nil, err
 	}
-	storageClassName := "standard"
+
 	autoMountServiceAccount := true
 
 	k8sObjects := []runtime.Object{
@@ -32,7 +32,7 @@ func managePrerequisites(workspace *workspacev1beta1.Workspace) ([]runtime.Objec
 						"storage": pvcStorageQuantity,
 					},
 				},
-				StorageClassName: &storageClassName,
+				StorageClassName: workspaceConfig.getPVCStorageClassName(),
 			},
 		},
 		&corev1.ServiceAccount{
@@ -52,6 +52,19 @@ func managePrerequisites(workspace *workspacev1beta1.Workspace) ([]runtime.Objec
 					Resources: []string{"pods/exec"},
 					APIGroups: []string{""},
 					Verbs:     []string{"create"},
+				},
+			},
+		},
+		&rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "view-workspaces",
+				Namespace: workspace.Namespace,
+			},
+			Rules: []rbacv1.PolicyRule{
+				rbacv1.PolicyRule{
+					Resources: []string{"workspaces"},
+					APIGroups: []string{"workspace.che.eclipse.org"},
+					Verbs:     []string{"get", "list"},
 				},
 			},
 		},
@@ -80,6 +93,23 @@ func managePrerequisites(workspace *workspacev1beta1.Workspace) ([]runtime.Objec
 			RoleRef: rbacv1.RoleRef{
 				Kind: "Role",
 				Name: "exec",
+			},
+			Subjects: []rbacv1.Subject{
+				rbacv1.Subject{
+					Kind:      "ServiceAccount",
+					Name:      serviceAccount,
+					Namespace: workspace.Namespace,
+				},
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      serviceAccount + "-view-workspaces",
+				Namespace: workspace.Namespace,
+			},
+			RoleRef: rbacv1.RoleRef{
+				Kind: "Role",
+				Name: "view-workspaces",
 			},
 			Subjects: []rbacv1.Subject{
 				rbacv1.Subject{

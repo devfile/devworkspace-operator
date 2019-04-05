@@ -1,57 +1,110 @@
-// MY LICENSEdep
-
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"os"
+	"runtime"
 
-	"github.com/che-incubator/che-workspace-crd-controller/pkg/apis"
-	"github.com/che-incubator/che-workspace-crd-controller/pkg/controller"
-	"github.com/che-incubator/che-workspace-crd-controller/pkg/webhook"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/apis"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/webhook"
+
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"github.com/operator-framework/operator-sdk/pkg/leader"
+	"github.com/operator-framework/operator-sdk/pkg/log/zap"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
+	sdkVersion "github.com/operator-framework/operator-sdk/version"
+	"github.com/spf13/pflag"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
+// Change below variables to serve metrics on different host or port.
+var (
+	metricsHost       = "0.0.0.0"
+	metricsPort int32 = 8383
+)
+var log = logf.Log.WithName("cmd")
+
+func printVersion() {
+	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+}
+
 func main() {
-	var metricsAddr string
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	flag.Parse()
-	logf.SetLogger(logf.ZapLogger(false))
-	log := logf.Log.WithName("entrypoint")
+	// Add the zap logger flag set to the CLI. The flag set must
+	// be added before calling pflag.Parse().
+	pflag.CommandLine.AddFlagSet(zap.FlagSet())
+
+	// Add flags registered by imported packages (e.g. glog and
+	// controller-runtime)
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
+	pflag.Parse()
+
+	// Use a zap logr.Logger implementation. If none of the zap
+	// flags are configured (or if the zap flag set is not being
+	// used), this defaults to a production zap logger.
+	//
+	// The logger instantiated here can be changed to any logger
+	// implementing the logr.Logger interface. This logger will
+	// be propagated through the whole operator, generating
+	// uniform and structured logs.
+	logf.SetLogger(zap.Logger())
+
+	printVersion()
+
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		log.Error(err, "Failed to get watch namespace")
+		os.Exit(1)
+	}
 
 	// Get a config to talk to the apiserver
-	log.Info("setting up client for manager")
 	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "unable to set up client config")
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	ctx := context.TODO()
+
+	// Become the leader before proceeding
+	err = leader.Become(ctx, "che-workspace-crd-operator-lock")
+	if err != nil {
+		log.Error(err, "")
 		os.Exit(1)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	log.Info("setting up manager")
-	mgr, err := manager.New(cfg, manager.Options{MetricsBindAddress: metricsAddr})
+	mgr, err := manager.New(cfg, manager.Options{
+		Namespace:          namespace,
+		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
+	})
 	if err != nil {
-		log.Error(err, "unable to set up overall controller manager")
+		log.Error(err, "")
 		os.Exit(1)
 	}
 
 	log.Info("Registering Components.")
 
 	// Setup Scheme for all resources
-	log.Info("setting up scheme")
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		log.Error(err, "unable add APIs to scheme")
+		log.Error(err, "")
 		os.Exit(1)
 	}
 
 	// Setup all Controllers
-	log.Info("Setting up controller")
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "unable to register controllers to the manager")
+		log.Error(err, "")
 		os.Exit(1)
 	}
 
@@ -61,10 +114,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start the Cmd
+	// Create Service object to expose the metrics port.
+	_, err = metrics.ExposeMetricsPort(ctx, metricsPort)
+	if err != nil {
+		log.Info(err.Error())
+	}
+
 	log.Info("Starting the Cmd.")
+
+	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
-		log.Error(err, "unable to run the manager")
+		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
 }

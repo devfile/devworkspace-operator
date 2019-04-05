@@ -15,7 +15,7 @@ func commonEnvironmentVariables(wkspProps workspaceProperties) []corev1.EnvVar {
 		},
 		corev1.EnvVar{
 			Name:  "CHE_API",
-			Value: defaultApiEndpoint,
+			Value: wkspProps.cheApiExternal,
 		},
 		corev1.EnvVar{
 			Name:  "CHE_API_INTERNAL",

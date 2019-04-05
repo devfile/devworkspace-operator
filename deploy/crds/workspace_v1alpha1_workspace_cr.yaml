@@ -1,0 +1,7 @@
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: Workspace
+metadata:
+  name: example-workspace
+spec:
+  # Add fields here
+  size: 3

@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func setupDockerImageComponent(names workspaceProperties, component *workspacev1beta1.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
+func setupDockerImageComponent(names workspaceProperties, component *workspaceApi.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
 	var containerPorts []corev1.ContainerPort

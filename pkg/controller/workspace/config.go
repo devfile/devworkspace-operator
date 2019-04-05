@@ -27,15 +27,23 @@ func (wc *WorkspaceConfig) update(configMap *corev1.ConfigMap) {
 }
 
 func (wc *WorkspaceConfig) getPluginRegistry() string {
-	return wc.getProperty("plugin.registry")
+	return *wc.getProperty("plugin.registry")
 }
 
 func (wc *WorkspaceConfig) getIngressGlobalDomain() string {
-	return wc.getProperty("ingress.global.domain")
+	return *wc.getProperty("ingress.global.domain")
 }
 
-func (wc *WorkspaceConfig) getProperty(name string) string {
-	return wc.configMap.Data[name]
+func (wc *WorkspaceConfig) getPVCStorageClassName() *string {
+	return wc.getProperty("pvc.storageclass.name")
+}
+
+func (wc *WorkspaceConfig) getProperty(name string) *string {
+	val, exists := wc.configMap.Data[name]
+	if exists {
+		return &val
+	}
+	return nil
 }
 
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {

@@ -1,6 +1,4 @@
-// MY LICENSE
-
-package v1beta1
+package v1alpha1
 
 import (
 	"log"

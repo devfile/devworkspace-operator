@@ -1,9 +1,7 @@
-// MY LICENSEdep
-
 package controller
 
 import (
-	"github.com/che-incubator/che-workspace-crd-controller/pkg/controller/workspace"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace"
 )
 
 func init() {

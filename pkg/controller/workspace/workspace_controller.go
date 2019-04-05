@@ -1,5 +1,3 @@
-// MY LICENSEdep
-
 package workspace
 
 import (
@@ -9,7 +7,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
-	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	workspacev1alpha1 "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	brokerCfg "github.com/eclipse/che-plugin-broker/cfg"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -30,14 +28,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller")
+var log = logf.Log.WithName("controller_workspace")
 
 var configMapReference = client.ObjectKey{
-	Namespace: "default",
+	Namespace: "crds",
 	Name:      "che-workspace-crd-controller",
 }
 
-// Add creates a new Workspace Controller and adds it to the Manager with default RBAC. The Manager will set fields on the Controller
+// Add creates a new Workspace Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -56,8 +54,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to
-	err = c.Watch(&source.Kind{Type: &workspacev1beta1.Workspace{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource Workspace
+	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -80,7 +78,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		} {
 			err = c.Watch(&source.Kind{Type: obj}, &handler.EnqueueRequestForOwner{
 				IsController: true,
-				OwnerType:    &workspacev1beta1.Workspace{},
+				OwnerType:    &workspacev1alpha1.Workspace{},
 			})
 			if err != nil {
 				return err
@@ -94,33 +92,32 @@ var _ reconcile.Reconciler = &ReconcileWorkspace{}
 
 // ReconcileWorkspace reconciles a Workspace object
 type ReconcileWorkspace struct {
+	// This client, initialized using mgr.Client() above, is a split client
+	// that reads objects from the cache and writes to the apiserver
 	client.Client
 	scheme *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a Workspace object and makes changes based on the state read
 // and what is in the Workspace.Spec
-// a Deployment as an example
-// Automatically generate RBAC rules to allow the Controller to read and write Deployments
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;create;update;patch;delete
-// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=workspace.che.eclipse.org,resources=workspaces,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=workspace.che.eclipse.org,resources=workspaces/status,verbs=get;update;patch
+// Note:
+// The Controller will requeue the Request to be processed again if the returned error is non-nil or
+// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Reconciling Workspace")
+
 	// Fetch the Workspace instance
-	instance := &workspacev1beta1.Workspace{}
+	instance := &workspacev1alpha1.Workspace{}
 	err := r.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Object not found, return.  Created objects are automatically garbage collected.
-			// For additional cleanup logic use finalizers.
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		log.Info("Object could not be read", "name", request.NamespacedName)
 		return reconcile.Result{}, err
 	}
 
@@ -137,16 +134,18 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
 		}
 
-		log.Info("Managing K8s Pre-requisite Object", "namespace", prereqAsMetaObject.GetNamespace(), "kind", reflect.TypeOf(prereq).Elem().String(), "name", prereqAsMetaObject.GetName())
+		reqLogger.Info("Managing K8s Pre-requisite Object", "namespace", prereqAsMetaObject.GetNamespace(), "kind", reflect.TypeOf(prereq).Elem().String(), "name", prereqAsMetaObject.GetName())
 
 		found := reflect.New(reflect.TypeOf(prereq).Elem()).Interface().(runtime.Object)
 		err = r.Get(context.TODO(), types.NamespacedName{Name: prereqAsMetaObject.GetName(), Namespace: prereqAsMetaObject.GetNamespace()}, found)
 		if err != nil && errors.IsNotFound(err) {
-			log.Info("    => Creating "+reflect.TypeOf(prereqAsMetaObject).Elem().String(), "namespace", prereqAsMetaObject.GetNamespace(), "name", prereqAsMetaObject.GetName())
+			reqLogger.Info("    => Creating "+reflect.TypeOf(prereqAsMetaObject).Elem().String(), "namespace", prereqAsMetaObject.GetNamespace(), "name", prereqAsMetaObject.GetName())
 			err = r.Create(context.TODO(), prereq)
 			continue
 		} else if err != nil {
 			return reconcile.Result{}, err
+		} else {
+			err = r.Update(context.TODO(), prereq)
 		}
 	}
 
@@ -164,8 +163,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 		k8sObjectNames[k8sObjectAsMetaObject.GetName()] = struct{}{}
 
-		log.Info("Managing K8s Object", "namespace", k8sObjectAsMetaObject.GetNamespace(), "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
+		reqLogger.Info("Managing K8s Object", "namespace", k8sObjectAsMetaObject.GetNamespace(), "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 
+		// Set Workspace instance as the owner and controller
 		if err := controllerutil.SetControllerReference(instance, k8sObjectAsMetaObject, r.scheme); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -175,7 +175,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		found := reflect.New(reflect.TypeOf(k8sObject).Elem()).Interface().(runtime.Object)
 		err = r.Get(context.TODO(), types.NamespacedName{Name: k8sObjectAsMetaObject.GetName(), Namespace: k8sObjectAsMetaObject.GetNamespace()}, found)
 		if err != nil && errors.IsNotFound(err) {
-			log.Info("    => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("    => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Create(context.TODO(), k8sObject)
 			if err != nil {
 				return reconcile.Result{}, err
@@ -198,7 +198,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			cmpopts.IgnoreFields(appsv1.DeploymentStrategy{}, "RollingUpdate"),
 			cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "RevisionHistoryLimit", "ProgressDeadlineSeconds"),
 		}
-		log.Info("    => Differences: " + cmp.Diff(k8sObjectSpec, foundSpec, diffOpts...))
+		reqLogger.Info("    => Differences: " + cmp.Diff(k8sObjectSpec, foundSpec, diffOpts...))
 
 		if !cmp.Equal(k8sObjectSpec, foundSpec, diffOpts) {
 			switch found.(type) {
@@ -216,7 +216,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 					(found).(*corev1.Service).Spec = (k8sObject).(*corev1.Service).Spec
 				}
 			}
-			log.Info("    => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("    => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Update(context.TODO(), found)
 			if err != nil {
 				return reconcile.Result{}, err

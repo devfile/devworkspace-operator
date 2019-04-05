@@ -3,7 +3,7 @@ package workspace
 import (
 	"strings"
 
-	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/eclipse/che-plugin-broker/model"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,7 +21,7 @@ type workspaceProperties struct {
 	cheApiExternal string
 }
 
-func convertToCoreObjects(workspace *workspacev1beta1.Workspace) (*workspaceProperties, []runtime.Object, error) {
+func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperties, []runtime.Object, error) {
 
 	uid, err := uuid.Parse(string(workspace.ObjectMeta.UID))
 	if err != nil {
@@ -64,7 +64,7 @@ func convertToCoreObjects(workspace *workspacev1beta1.Workspace) (*workspaceProp
 	return &workspaceProperties, append(k8sComponentsObjects, mainDeployment), nil
 }
 
-func buildMainDeployment(wkspProps workspaceProperties, workspace *workspacev1beta1.Workspace) (*appsv1.Deployment, error) {
+func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
 	var workspaceDeploymentName = wkspProps.workspaceId + "." + cheOriginalName
 	var terminationGracePeriod int64
 	var replicas int32
@@ -125,7 +125,7 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspacev1be
 	return &deploy, nil
 }
 
-func setupPersistentVolumeClaim(workspace *workspacev1beta1.Workspace, deployment *appsv1.Deployment) error {
+func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *appsv1.Deployment) error {
 	var workspaceClaim = corev1.PersistentVolumeClaimVolumeSource{
 		ClaimName: "claim-che-workspace",
 	}
@@ -140,7 +140,7 @@ func setupPersistentVolumeClaim(workspace *workspacev1beta1.Workspace, deploymen
 	return nil
 }
 
-func setupComponents(names workspaceProperties, components []workspacev1beta1.ComponentSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
+func setupComponents(names workspaceProperties, components []workspaceApi.ComponentSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
 	pluginMetas := map[string][]model.PluginMeta{}

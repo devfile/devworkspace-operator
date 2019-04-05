@@ -1,8 +1,6 @@
-apiVersion: workspace.che.eclipse.org/v1beta1
+apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: petclinic-sample
   namespace: crds
 spec:
@@ -32,11 +30,13 @@ spec:
               path: /api
               protocol: http
               public: true
+              secured: true
+              discoverable: true
         env:
           - name: TERM
             value: xterm
         mountSources: true
-        memoryLimit: 1024M
+        memoryLimit: 500M
       - name: mysql
         type: kubernetes
         referenceContent: |
@@ -140,10 +140,17 @@ spec:
           - type: exec
             component: mvn-stack
             command: mvn package
-            workdir: /projects/petclinic
-      - name: run
+            workdir: /projects/spring-petclinic
+      - name: run spring
         actions:
           - type: exec
             component: mvn-stack
             command: mvn spring-boot:run
-            workdir: /projects/petclinic
+            workdir: /projects/spring-petclinic
+      - name: run mysql
+        attributes:
+          runType: sequential
+        actions:
+          - type: start
+            component: mysql
+            command: mvn spring-boot:run

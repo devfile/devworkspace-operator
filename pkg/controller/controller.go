@@ -1,5 +1,3 @@
-// MY LICENSEdep
-
 package controller
 
 import (

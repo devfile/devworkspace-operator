@@ -1,16 +1,17 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  creationTimestamp: null
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: workspaces.workspace.che.eclipse.org
 spec:
   group: workspace.che.eclipse.org
   names:
     kind: Workspace
+    listKind: WorkspaceList
     plural: workspaces
+    singular: workspace
   scope: Namespaced
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -60,6 +61,8 @@ spec:
                           type: object
                         type: array
                       attributes:
+                        additionalProperties:
+                          type: string
                         description: List of the actions of given command. Now the
                           only one command must be specified in list; but there are
                           plans to implement supporting multiple actions commands.
@@ -146,14 +149,6 @@ spec:
                       image:
                         description: Describes the component FQN
                         type: string
-                      local:
-                        description: Specifies the docker image that should be used
-                          for component
-                        type: string
-                      localContent:
-                        description: Describes location of Kubernetes list yaml file.
-                          Applicable only for 'kubernetes' and; 'openshift' type components
-                        type: string
                       memoryLimit:
                         description: Inlined content of a file specified in field
                           'local'
@@ -171,7 +166,17 @@ spec:
                           variable should contains a path where projects sources are
                           mount
                         type: string
+                      reference:
+                        description: Specifies the docker image that should be used
+                          for component
+                        type: string
+                      referenceContent:
+                        description: Describes location of Kubernetes list yaml file.
+                          Applicable only for 'kubernetes' and; 'openshift' type components
+                        type: string
                       selector:
+                        additionalProperties:
+                          type: string
                         description: Describes the name of the component. Should be
                           unique per component set.
                         type: object
@@ -243,10 +248,8 @@ spec:
           type: object
         status:
           type: object
-  version: v1beta1
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true

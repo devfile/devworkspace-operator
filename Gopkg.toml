@@ -1,41 +1,79 @@
+# Force dep to vendor the code generators, which aren't imported just used at dev time.
 required = [
-    "github.com/emicklei/go-restful",
-    "github.com/onsi/ginkgo", # for test framework
-    "github.com/onsi/gomega", # for test matchers
-    "k8s.io/client-go/plugin/pkg/client/auth/gcp", # for development against gcp
-    "k8s.io/code-generator/cmd/client-gen", # for go generate
-    "k8s.io/code-generator/cmd/deepcopy-gen", # for go generate
-    "sigs.k8s.io/controller-tools/cmd/controller-gen", # for crd/rbac generation
-    "sigs.k8s.io/controller-runtime/pkg/client/config",
-    "sigs.k8s.io/controller-runtime/pkg/controller",
-    "sigs.k8s.io/controller-runtime/pkg/handler",
-    "sigs.k8s.io/controller-runtime/pkg/manager",
-    "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
-    "sigs.k8s.io/controller-runtime/pkg/source",
-    "sigs.k8s.io/testing_frameworks/integration", # for integration testing
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
-    ]
+  "k8s.io/code-generator/cmd/defaulter-gen",
+  "k8s.io/code-generator/cmd/deepcopy-gen",
+  "k8s.io/code-generator/cmd/conversion-gen",
+  "k8s.io/code-generator/cmd/client-gen",
+  "k8s.io/code-generator/cmd/lister-gen",
+  "k8s.io/code-generator/cmd/informer-gen",
+  "k8s.io/kube-openapi/cmd/openapi-gen",
+  "k8s.io/gengo/args",
+  "sigs.k8s.io/controller-tools/pkg/crd/generator",
+]
+
+[[override]]
+  name = "k8s.io/code-generator"
+  # revision for tag "kubernetes-1.13.1"
+  revision = "c2090bec4d9b1fb25de3812f868accc2bc9ecbae"
+
+[[override]]
+  name = "k8s.io/kube-openapi"
+  revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
+
+[[override]]
+  name = "github.com/go-openapi/spec"
+  branch = "master"
+
+[[override]]
+  name = "sigs.k8s.io/controller-tools"
+  version = "=v0.1.8"
+
+[[override]]
+  name = "k8s.io/api"
+  # revision for tag "kubernetes-1.13.1"
+  revision = "05914d821849570fba9eacfb29466f2d8d3cd229"
+
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  # revision for tag "kubernetes-1.13.1"
+  revision = "0fe22c71c47604641d9aa352c785b7912c200562"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  # revision for tag "kubernetes-1.13.1"
+  revision = "2b1284ed4c93a43499e781493253e2ac5959c4fd"
+
+[[override]]
+  name = "k8s.io/client-go"
+  # revision for tag "kubernetes-1.13.1"
+  revision = "8d9ed539ba3134352c586810e749e58df4e94e4f"
+
+[[override]]
+  name = "github.com/coreos/prometheus-operator"
+  version = "=v0.26.0"
+
+[[override]]
+  name = "sigs.k8s.io/controller-runtime"
+  version = "=v0.1.10"
+
+[[constraint]]
+  name = "github.com/operator-framework/operator-sdk"
+  # The version rule is used for a specific release and the master branch for in between releases.
+  branch = "master" #osdk_branch_annotation
+  # version = "=v0.6.0" #osdk_version_annotation
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/eclipse/che-plugin-broker"
 
 [prune]
   go-tests = true
+  non-go = true
 
+  [[prune.project]]
+    name = "k8s.io/code-generator"
+    non-go = false
 
-# STANZAS BELOW ARE GENERATED AND MAY BE WRITTEN - DO NOT MODIFY BELOW THIS LINE.
-
-[[constraint]]
-  name="sigs.k8s.io/controller-runtime"
-  version="v0.1.1"
-
-[[constraint]]
-  name="sigs.k8s.io/controller-tools"
-  version="v0.1.1"
-
-# For dependency below: Refer to issue https://github.com/golang/dep/issues/1799
-[[override]]
-name = "gopkg.in/fsnotify.v1"
-source = "https://github.com/fsnotify/fsnotify.git"
-version="v1.4.7"
-
-[[constraint]]
-  name = "github.com/google/go-cmp"
-  version = "0.2.0"
+  [[prune.project]]
+    name = "k8s.io/gengo"
+    non-go = false

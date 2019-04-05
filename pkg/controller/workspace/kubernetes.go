@@ -7,7 +7,7 @@ import (
 	templateV1 "github.com/openshift/api/template/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 
-	workspacev1beta1 "github.com/che-incubator/che-workspace-crd-controller/pkg/apis/workspace/v1beta1"
+	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspacev1beta1.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
+func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceApi.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
 	theScheme := runtime.NewScheme()

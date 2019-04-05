@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	brokerCfg "github.com/eclipse/che-plugin-broker/cfg"
@@ -31,7 +32,7 @@ import (
 var log = logf.Log.WithName("controller_workspace")
 
 var configMapReference = client.ObjectKey{
-	Namespace: "crds",
+	Namespace: "",
 	Name:      "che-workspace-crd-controller",
 }
 
@@ -54,13 +55,26 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource Workspace
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{})
+	operatorNamespace, err := k8sutil.GetOperatorNamespace()
+	if err == nil {
+		configMapReference.Namespace = operatorNamespace
+	} else if err != k8sutil.ErrNoNamespace {
+		return err
+	} else {
+		watchNamespace, err := k8sutil.GetWatchNamespace()
+		if err != nil {
+			return err
+		}
+		configMapReference.Namespace = watchNamespace
+	}
+
+	err = watchWorkspaceConfig(c, mgr)
 	if err != nil {
 		return err
 	}
 
-	err = watchWorkspaceConfig(c, mgr.GetClient())
+	// Watch for changes to primary resource Workspace
+	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}

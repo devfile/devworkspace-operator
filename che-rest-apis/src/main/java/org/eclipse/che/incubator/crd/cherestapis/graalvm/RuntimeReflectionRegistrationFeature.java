@@ -6,18 +6,15 @@ import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.collect.Streams;
 import com.oracle.svm.core.annotate.AutomaticFeature;
 
+import org.eclipse.che.api.workspace.server.dto.DtoServerImpls.WorkspaceDtoImpl;
+import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 import org.graalvm.nativeimage.Feature;
 import org.graalvm.nativeimage.RuntimeReflection;
-import org.joda.time.DateTime;
-import org.reflections.Reflections;
-import org.reflections.scanners.SubTypesScanner;
 
 import io.fabric8.kubernetes.api.model.ConfigMap;
 import io.fabric8.kubernetes.api.model.KubernetesList;
@@ -28,33 +25,8 @@ import io.fabric8.kubernetes.internal.KubernetesDeserializer;
 import io.fabric8.openshift.api.model.DeploymentConfig;
 import io.fabric8.openshift.api.model.Route;
 import io.fabric8.openshift.api.model.Template;
-import io.kubernetes.client.custom.IntOrString;
-import io.kubernetes.client.models.V1ClientIPConfig;
-import io.kubernetes.client.models.V1Initializer;
-import io.kubernetes.client.models.V1Initializers;
-import io.kubernetes.client.models.V1ListMeta;
-import io.kubernetes.client.models.V1LoadBalancerIngress;
-import io.kubernetes.client.models.V1LoadBalancerStatus;
-import io.kubernetes.client.models.V1ObjectMeta;
-import io.kubernetes.client.models.V1OwnerReference;
-import io.kubernetes.client.models.V1Service;
 import io.kubernetes.client.models.V1ServiceList;
-import io.kubernetes.client.models.V1ServicePort;
-import io.kubernetes.client.models.V1ServiceSpec;
-import io.kubernetes.client.models.V1ServiceStatus;
-import io.kubernetes.client.models.V1SessionAffinityConfig;
-import io.kubernetes.client.models.V1beta1HTTPIngressPath;
-import io.kubernetes.client.models.V1beta1HTTPIngressRuleValue;
-import io.kubernetes.client.models.V1beta1Ingress;
-import io.kubernetes.client.models.V1beta1IngressBackend;
 import io.kubernetes.client.models.V1beta1IngressList;
-import io.kubernetes.client.models.V1beta1IngressRule;
-import io.kubernetes.client.models.V1beta1IngressSpec;
-import io.kubernetes.client.models.V1beta1IngressStatus;
-import io.kubernetes.client.models.V1beta1IngressTLS;
-
-import org.eclipse.che.api.workspace.server.dto.DtoServerImpls.WorkspaceDtoImpl;
-import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 
 @AutomaticFeature
 class RuntimeReflectionRegistrationFeature implements Feature {
@@ -62,26 +34,8 @@ class RuntimeReflectionRegistrationFeature implements Feature {
   public void beforeAnalysis(BeforeAnalysisAccess access) {
     System.out.println("Eclipse Che compatibility layer for GraalVM native image generation");
 
-/*      
-    for (String prefix : Arrays.asList(
-      "org.eclipse.che.api.core.rest.shared",
-      "org.eclipse.che.api.core.rest.shared.dto",
-      "org.eclipse.che.api.core.server.dto",
-      "org.eclipse.che.api.workspace.shared.dto",
-      "org.eclipse.che.api.workspace.server.dto",
-      "org.eclipse.che.api.core.model.workspace",
-      "org.eclipse.che.api.devfile.model"
-      )) {
-      Reflections reflections = new Reflections(prefix, new SubTypesScanner(false));
-      Streams.concat(
-        reflections.getSubTypesOf(Object.class).stream(),
-        reflections.getSubTypesOf(Enum.class).stream()
-      ).forEach(this::registerFully);
-    }
-*/
     registerFully(DevfileImpl.class);
     registerFully(WorkspaceDtoImpl.class);
-
 
     registerFully(V1ServiceList.class);
     registerFully(V1beta1IngressList.class);

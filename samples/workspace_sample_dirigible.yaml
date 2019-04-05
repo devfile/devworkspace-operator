@@ -1,8 +1,6 @@
-apiVersion: workspace.che.eclipse.org/v1beta1
+apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: workspace-sample
   namespace: crds
 spec:
@@ -16,7 +14,7 @@ spec:
         source:
           type: git
           location: 'https://github.com/che-incubator/chectl.git'
-    tools:
+    components:
       - name: theia-ide
         type: cheEditor
         id: org.eclipse.che.editor.dirigible:1.0.0
@@ -27,12 +25,12 @@ spec:
       - name: build
         actions:
           - type: exec
-            tool: theia-ide
+            component: theia-ide
             command: yarn
             workdir: /projects/chectl
       - name: test
         actions:
           - type: exec
-            tool: theia-ide
+            component: theia-ide
             command: yarn test
             workdir: /projects/chectl

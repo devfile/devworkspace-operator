@@ -1,8 +1,6 @@
-apiVersion: workspace.che.eclipse.org/v1beta1
+apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: workspace-sample
   namespace: crds
 spec:

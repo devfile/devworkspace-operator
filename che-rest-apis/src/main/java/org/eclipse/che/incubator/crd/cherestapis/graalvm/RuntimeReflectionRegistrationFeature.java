@@ -51,7 +51,10 @@ import io.kubernetes.client.models.V1beta1IngressList;
 import io.kubernetes.client.models.V1beta1IngressRule;
 import io.kubernetes.client.models.V1beta1IngressSpec;
 import io.kubernetes.client.models.V1beta1IngressStatus;
-import io.kubernetes.client.models.V1beta1IngressTLS;;
+import io.kubernetes.client.models.V1beta1IngressTLS;
+
+import org.eclipse.che.api.workspace.server.dto.DtoServerImpls.WorkspaceDtoImpl;
+import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 
 @AutomaticFeature
 class RuntimeReflectionRegistrationFeature implements Feature {
@@ -59,6 +62,7 @@ class RuntimeReflectionRegistrationFeature implements Feature {
   public void beforeAnalysis(BeforeAnalysisAccess access) {
     System.out.println("Eclipse Che compatibility layer for GraalVM native image generation");
 
+/*      
     for (String prefix : Arrays.asList(
       "org.eclipse.che.api.core.rest.shared",
       "org.eclipse.che.api.core.rest.shared.dto",
@@ -73,42 +77,23 @@ class RuntimeReflectionRegistrationFeature implements Feature {
         reflections.getSubTypesOf(Object.class).stream(),
         reflections.getSubTypesOf(Enum.class).stream()
       ).forEach(this::registerFully);
-      registerFully(V1ServiceList.class);
-      registerFully(V1Service.class);
-      registerFully(V1beta1IngressList.class);
-      registerFully(V1beta1Ingress.class);
-      registerFully(V1ListMeta.class);
-      registerFully(V1ObjectMeta.class);
-      registerFully(V1ServiceSpec.class);
-      registerFully(V1ServiceStatus.class);
-      registerFully(V1ServicePort.class);
-      registerFully(V1SessionAffinityConfig.class);
-      registerFully(V1ClientIPConfig.class);
-      registerFully(V1LoadBalancerStatus.class);
-      registerFully(V1LoadBalancerIngress.class);
-      registerFully(V1beta1IngressSpec.class);
-      registerFully(V1beta1IngressBackend.class);
-      registerFully(V1beta1IngressRule.class);
-      registerFully(V1beta1HTTPIngressPath.class);
-      registerFully(V1beta1IngressTLS.class);
-      registerFully(IntOrString.class);
-      registerFully(V1beta1HTTPIngressRuleValue.class);
-      registerFully(V1beta1IngressStatus.class);
-      registerFully(DateTime.class);
-      registerFully(V1Initializers.class);
-      registerFully(V1Initializer.class);
-      registerFully(V1OwnerReference.class);
-
-      registerFully(KubernetesDeserializer.class);
-      registerFully(KubernetesList.class);
-      registerFully(Pod.class);
-      registerFully(Service.class);
-      registerFully(Template.class);
-      registerFully(Route.class);
-      registerFully(Deployment.class);
-      registerFully(DeploymentConfig.class);
-      registerFully(ConfigMap.class);
     }
+*/
+    registerFully(DevfileImpl.class);
+    registerFully(WorkspaceDtoImpl.class);
+
+
+    registerFully(V1ServiceList.class);
+    registerFully(V1beta1IngressList.class);
+    registerFully(KubernetesDeserializer.class);
+    registerFully(KubernetesList.class);
+    registerFully(Pod.class);
+    registerFully(Service.class);
+    registerFully(Template.class);
+    registerFully(Route.class);
+    registerFully(Deployment.class);
+    registerFully(DeploymentConfig.class);
+    registerFully(ConfigMap.class);
   }
 
   private Set<Class<?>> classesAlreadyRegistered = new HashSet<>();

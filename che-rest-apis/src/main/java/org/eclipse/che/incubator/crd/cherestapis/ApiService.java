@@ -27,11 +27,9 @@ import org.eclipse.che.api.core.model.workspace.Runtime;
 import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.core.model.workspace.runtime.MachineStatus;
 import org.eclipse.che.api.core.model.workspace.runtime.ServerStatus;
-import org.eclipse.che.api.devfile.model.Devfile;
 import org.eclipse.che.api.devfile.server.Constants;
 import org.eclipse.che.api.devfile.server.exception.DevfileException;
 import org.eclipse.che.api.devfile.server.exception.DevfileFormatException;
-import org.eclipse.che.api.devfile.server.DevfileFactory;
 import org.eclipse.che.api.devfile.server.FileContentProvider;
 import org.eclipse.che.api.devfile.server.convert.CommandConverter;
 import org.eclipse.che.api.devfile.server.convert.DefaultEditorProvisioner;
@@ -63,6 +61,8 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
+
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.Configuration;
@@ -91,6 +91,10 @@ public class ApiService {
     @Inject
     @ConfigProperty(name = "che.workspace.namespace")
     String workspaceNamespace;
+
+    @Inject
+    @ConfigProperty(name = "che.workspace.crd.version", defaultValue = "v1alpha1")
+    String workspaceCrdVersion;
 
     private ObjectMapper yamlObjectMapper = new ObjectMapper(new YAMLFactory());
     private ObjectMapper jsonObjectMapper = new ObjectMapper(new JsonFactory());
@@ -151,7 +155,7 @@ public class ApiService {
 
     private Map<String, Object> readDevfileFromWorkspaceCustomResource() throws ApiException {
         CustomObjectsApi api = new CustomObjectsApi();
-        Map<String, Object> customResource = asMap(api.getNamespacedCustomObject("workspace.che.eclipse.org", "v1beta1",
+        Map<String, Object> customResource = asMap(api.getNamespacedCustomObject("workspace.che.eclipse.org", workspaceCrdVersion,
                 workspaceNamespace, "workspaces", workspaceName));
         if (customResource == null) {
             return null;
@@ -256,15 +260,14 @@ public class ApiService {
         );
     }
 
-    private Devfile parseDevFile(Map<String, Object> devfileMap) throws JsonProcessingException, IOException {
+    private DevfileImpl parseDevFile(Map<String, Object> devfileMap) throws JsonProcessingException, IOException {
         String devFileStr = yamlObjectMapper.writeValueAsString(devfileMap);
         LOGGER.debug("Devfile content for workspace {}: {}", workspaceName, devFileStr);
-        Devfile devfileObj = yamlObjectMapper.treeToValue(yamlObjectMapper.readTree(devFileStr), Devfile.class);
-        DevfileFactory.initializeMaps(devfileObj);
+        DevfileImpl devfileObj = yamlObjectMapper.treeToValue(yamlObjectMapper.readTree(devFileStr), DevfileImpl.class);
         return devfileObj;
     }
 
-    private WorkspaceDto convertToWorkspace(Devfile devfileObj) throws DevfileException, ServerException, ValidationException, ApiException {
+    private WorkspaceDto convertToWorkspace(DevfileImpl devfileObj) throws DevfileException, ServerException, ValidationException, ApiException {
         try {
             devfileIntegrityValidator.validateDevfile(devfileObj);
         } catch(DevfileFormatException e) {
@@ -336,7 +339,7 @@ public class ApiService {
             throw new RuntimeException("The Workspace custom resource was not found");
         }
 
-        Devfile devfileObj;
+        DevfileImpl devfileObj;
         try {
             devfileObj = parseDevFile(devfileMap);
         } catch (IOException e) {

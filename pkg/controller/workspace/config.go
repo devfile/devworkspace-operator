@@ -33,7 +33,7 @@ type WorkspaceConfig struct {
 }
 
 func (wc *WorkspaceConfig) update(configMap *corev1.ConfigMap) {
-	log.Info(join("", "Updating the configuration from config map '", configMap.Name, "' in namespace '", configMap.Namespace,"'"))
+	log.Info(join("", "Updating the configuration from config map '", configMap.Name, "' in namespace '", configMap.Namespace, "'"))
 	wc.configMap = configMap
 }
 
@@ -68,6 +68,7 @@ func (wc *WorkspaceConfig) getProperty(name string) *string {
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {
 	if meta.GetNamespace() != configMapReference.Namespace ||
 		meta.GetName() != configMapReference.Name {
+		log.Info(join("", "Available config map '", meta.GetNamespace(), "/", meta.GetName(), "' doesn't match the expected '", configMapReference.Name, "' ConfigMap in namespace '", configMapReference.Namespace, "'"))
 		return
 	}
 	if cm, isConfigMap := obj.(*corev1.ConfigMap); isConfigMap {
@@ -98,6 +99,7 @@ func watchWorkspaceConfig(ctr controller.Controller, mgr manager.Manager) error 
 	if err != nil {
 		return err
 	}
+	log.Info(join("", "Searching for config map '", configMapReference.Name, "' in namespace '", configMapReference.Namespace, "'"))
 	err = nonCachedClient.Get(context.TODO(), configMapReference, configMap)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -105,6 +107,8 @@ func watchWorkspaceConfig(ctr controller.Controller, mgr manager.Manager) error 
 		}
 		return err
 	}
+
+	log.Info(join("", "  => found config map '", configMap.GetObjectMeta().GetName(), "' in namespace '", configMap.GetObjectMeta().GetNamespace(), "'"))
 
 	updateConfigMap(nonCachedClient, configMap.GetObjectMeta(), configMap)
 

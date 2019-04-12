@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"strconv"
 	"errors"
 
 	routeV1 "github.com/openshift/api/route/v1"
@@ -75,19 +76,28 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 
 	// TODO: manage commands and args with pod name, container name, etc ...
 
+	podCound := 0
 	for index, obj := range k8sObjects {
 		if objPod, isPod := obj.(*corev1.Pod); isPod {
-			var workspaceDeploymentName = wkspProps.workspaceId + "." + component.Name
+			podCound ++
+			suffix := ""
+			if podCound > 1 {
+				suffix = "." + strconv.Itoa(podCound)
+			}
+			additionalDeploymentOriginalName := component.Name + suffix
+			var workspaceDeploymentName = wkspProps.workspaceId + "." + additionalDeploymentOriginalName
 			var replicas int32 = 1
 			fromIntOne := intstr.FromInt(1)
 
 			podLabels := map[string]string{
 				"deployment":       workspaceDeploymentName,
 				"che.workspace_id": wkspProps.workspaceId,
+				"che.original_name": additionalDeploymentOriginalName,
+				"che.workspace_name":  wkspProps.workspaceName,
 			}
 			for labelName, labelValue := range objPod.Labels {
 				if _, exists := podLabels[labelName]; exists {
-					return nil, errors.New("Label notreserved by Che: " + labelName)
+					return nil, errors.New("Label reserved by Che: " + labelName)
 				}
 				podLabels[labelName] = labelValue
 			}
@@ -105,6 +115,7 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 						MatchLabels: map[string]string{
 							"deployment":       workspaceDeploymentName,
 							"che.workspace_id": wkspProps.workspaceId,
+							"che.original_name": additionalDeploymentOriginalName,
 						},
 					},
 					Replicas: &replicas,

@@ -247,13 +247,6 @@ spec:
           - devfile
           type: object
         status:
-          properties:
-            ideUrl:
-              type: string
-            phase:
-              type: string
-            workspaceId:
-              type: string
           type: object
   version: v1alpha1
   versions:

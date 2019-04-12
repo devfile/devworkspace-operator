@@ -23,12 +23,39 @@ rules:
   verbs:
   - get
 - apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - watch
+  - list
+  - get
+  - create
+  - update
+- apiGroups:
+  - "rbac.authorization.k8s.io"
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  - watch
+  - list
+  - get
+  - create
+  - update
+- apiGroups:
   - apps
   resources:
   - deployments
   - daemonsets
   - replicasets
   - statefulsets
+  verbs:
+  - '*'
+- apiGroups:
+  - extensions
+  resources:
+  - ingresses
   verbs:
   - '*'
 - apiGroups:

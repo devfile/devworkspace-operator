@@ -1,0 +1,124 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[{"apiVersion":"workspace.che.eclipse.org/v1alpha1","kind":"Workspace","metadata":{"name": "example-workspace"},"spec":{"size":3}}]'
+    capabilities: Basic Install
+  name: che-workspace-crd-operator.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - kind: Workspace
+      name: workspaces.workspace.che.eclipse.org
+      version: v1alpha1
+  description: |
+    Start an Eclipse Che 7 workspace based on a Devfile description,
+    that provides all required information related to the project
+    development environment
+  displayName: Che Workspace CRD Operator
+  install:
+    spec:
+      deployments:
+      - name: che-workspace-crd-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: che-workspace-crd-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: che-workspace-crd-operator
+            spec:
+              containers:
+              - command:
+                - che-workspace-crd-operator
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: che-workspace-crd-operator
+                image: quay.io/che-incubator/che-workspace-crd-controller:latest
+                imagePullPolicy: Always
+                name: che-workspace-crd-operator
+                resources: {}
+              serviceAccountName: che-workspace-crd-operator
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - '*'
+        - apiGroups:
+          - extensions
+          resources:
+          - ingresses
+          verbs:
+          - '*'
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - apps
+          resourceNames:
+          - che-workspace-crd-operator
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - workspace.che.eclipse.org
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        serviceAccountName: che-workspace-crd-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  maturity: alpha
+  provider: {}
+  version: 0.0.1

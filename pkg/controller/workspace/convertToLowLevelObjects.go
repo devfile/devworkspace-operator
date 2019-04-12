@@ -106,6 +106,7 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.
 						"deployment":        workspaceDeploymentName,
 						"che.original_name": cheOriginalName,
 						"che.workspace_id":  wkspProps.workspaceId,
+						"che.workspace_name":  wkspProps.workspaceName,
 					},
 					Name: workspaceDeploymentName,
 				},

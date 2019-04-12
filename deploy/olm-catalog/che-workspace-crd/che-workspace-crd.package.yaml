@@ -1,0 +1,4 @@
+packageName: che-workspace-crd
+channels:
+- name: alpha
+  currentCSV: che-workspace-crd-operator.v0.0.1

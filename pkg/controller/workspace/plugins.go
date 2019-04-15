@@ -14,7 +14,6 @@ import (
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
 	"github.com/eclipse/che-plugin-broker/model"
 	storage "github.com/eclipse/che-plugin-broker/storage"
-	"github.com/eclipse/che-plugin-broker/utils"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -137,7 +136,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 	var processPlugin func(meta model.PluginMeta) error
 	theStorage := storage.New()
 	theCommonBroker := commonBroker.NewBroker()
-	theIoUtil := utils.New()
+	theIoUtil := NewCachingIoUtil()
 	theRand := commonBroker.NewRand()
 
 	isTheiaOrVsCodePlugin := false

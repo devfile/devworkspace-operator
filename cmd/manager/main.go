@@ -12,6 +12,7 @@ import (
 
 	"github.com/che-incubator/che-workspace-crd-operator/pkg/apis"
 	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace"
 	"github.com/che-incubator/che-workspace-crd-operator/pkg/webhook"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -93,6 +94,9 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	workspace.SetupDownloadCache()
+	defer workspace.CleanDownloadCache()
 
 	log.Info("Registering Components.")
 

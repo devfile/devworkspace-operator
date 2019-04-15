@@ -265,14 +265,14 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 		}
 	}
 	if !workspace.Spec.Started {
-		deploymentList := &appsv1.DeploymentList{}
+		podList := &corev1.PodList{}
 		err := r.List(context.TODO(), &client.ListOptions{
 			Namespace: workspace.GetNamespace(),
 			LabelSelector: labels.SelectorFromSet(labels.Set{
 				"che.workspace_id": workspace.Status.WorkspaceId,
 			}),
-		}, deploymentList)
-		if err == nil && len(deploymentList.Items) == 0 {
+		}, podList)
+		if err == nil && len(podList.Items) == 0 {
 			workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseStopped
 			setWorkspaceCondition(&workspace.Status, *newWorkspaceCondition(
 				workspacev1alpha1.WorkspaceConditionStopped,

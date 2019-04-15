@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 	"strings"
+	origLog "log"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -47,12 +48,12 @@ func Add(mgr manager.Manager) error {
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager) *ReconcileWorkspace {
 	return &ReconcileWorkspace{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	// Create a new controller
 	c, err := controller.New("workspace-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
@@ -116,7 +117,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	brokerCfg.UseLocalhostInPluginUrls = true
 	brokerCfg.OnlyApplyMetadataActions = true
 
+  origLog.SetOutput(r)
+
 	return nil
+}
+
+func (r *ReconcileWorkspace) Write(p []byte) (n int, err error) {
+	log.Info(string(p))
+	return len(p), nil
 }
 
 var _ reconcile.Reconciler = &ReconcileWorkspace{}
@@ -126,7 +134,7 @@ type ReconcileWorkspace struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client.Client
-	scheme *runtime.Scheme
+	scheme *runtime.Scheme	
 }
 
 type reconcileStatus struct {

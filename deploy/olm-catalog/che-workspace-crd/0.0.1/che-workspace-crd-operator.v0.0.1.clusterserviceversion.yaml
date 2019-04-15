@@ -174,8 +174,8 @@ spec:
           path: conditions
           x-descriptors:
             - 'urn:alm:descriptor:io.kubernetes.conditions'
-        - description: The status of each of the Pods started by the workspace
-          displayName: Member Status
+        - description: The status of the Pods started by the workspace
+          displayName: Member Pod Status
           path: members
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:podStatuses'

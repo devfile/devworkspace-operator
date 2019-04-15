@@ -59,7 +59,11 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 		}
 
 		key := commonBroker.NewRand().String(6)
-		containerName := key + "broker"
+		containerName := strings.ReplaceAll(
+			strings.TrimSuffix(
+				strings.TrimPrefix(def.imageName, "che.workspace.plugin_"),
+				".image"),
+			".", "-")
 		args := []string{
 			"-disable-push",
 			"-runtime-id",
@@ -71,8 +75,8 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 		}
 
 		if len(def.pluginMetas) > 0 {
-			configMapName := key + "broker-config-map"
-			configMapVolume := key + "broker-config-volume"
+			configMapName := key + containerName + "-config-map"
+			configMapVolume := key + containerName + "-config-volume"
 			configMapContent, err := json.MarshalIndent(def.pluginMetas, "", "")
 			if err != nil {
 				return nil, err

@@ -72,7 +72,10 @@ func (util *impl) Download(URL string, destPath string) error {
 			path = filepath.Join(downloadCache.tempDir, fileName)
 			if _, err := os.Stat(path); err != nil {
         if os.IsNotExist(err) {
-						util.delegate.Download(URL, path)
+						err = util.delegate.Download(URL, path)
+						if err != nil {
+							return err
+						}
 						downloadCache.filenamesPerUrl[URL] = path
             break
         } else {

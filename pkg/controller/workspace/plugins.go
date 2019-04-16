@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"github.com/eclipse/che-plugin-broker/utils"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -140,7 +141,8 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 	var processPlugin func(meta model.PluginMeta) error
 	theStorage := storage.New()
 	theCommonBroker := commonBroker.NewBroker()
-	theIoUtil := NewCachingIoUtil()
+	theCachingIoUtil := NewCachingIoUtil()
+	theIoUtil := utils.New()
 	theRand := commonBroker.NewRand()
 
 	isTheiaOrVsCodePlugin := false
@@ -160,7 +162,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		isTheiaOrVsCodePlugin = true
 		break
 	case "VS Code extension":
-		broker := vscodeBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage, theRand, &http.Client{})
+		broker := vscodeBroker.NewBrokerWithParams(theCommonBroker, theCachingIoUtil, theStorage, theRand, &http.Client{})
 		processPlugin = broker.ProcessPlugin
 		brokerImageProperty = "che.workspace.plugin_broker.vscode.image"
 		isTheiaOrVsCodePlugin = true

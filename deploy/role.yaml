@@ -1,5 +1,5 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: che-workspace-crd-operator
@@ -33,7 +33,7 @@ rules:
   - create
   - update
 - apiGroups:
-  - "rbac.authorization.k8s.io"
+  - rbac.authorization.k8s.io
   resources:
   - roles
   - rolebindings
@@ -59,6 +59,14 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - route.openshift.io
+  resources:
+  - routes
+  - routes/custom-host
+  verbs:
+  - create
+  - delete
+- apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
@@ -79,3 +87,9 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  resources:
+  - "pods/exec"
+  verbs:
+  - "create"

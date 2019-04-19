@@ -209,7 +209,6 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 			Spec: extensionsv1beta1.IngressSpec{
 				Rules: []extensionsv1beta1.IngressRule{
 					extensionsv1beta1.IngressRule{
-						Host: join(".", serviceNameAndPort, workspaceConfig.getIngressGlobalDomain()),
 						IngressRuleValue: extensionsv1beta1.IngressRuleValue{
 							HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
 								Paths: []extensionsv1beta1.HTTPIngressPath{
@@ -226,6 +225,8 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 				},
 			},
 		}
+		ingress.Spec.Rules[0].Host = ingressHostName(serviceNameAndPort, names)
+
 		k8sObjects = append(k8sObjects, &ingress)
 	}
 

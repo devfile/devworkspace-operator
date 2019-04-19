@@ -2,9 +2,9 @@ package workspace
 
 import (
 	"context"
+	origLog "log"
 	"reflect"
 	"strings"
-	origLog "log"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -65,15 +65,9 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 		configMapReference.Namespace = operatorNamespace
 	} else if err != k8sutil.ErrNoNamespace {
 		return err
-	} else {
-		watchNamespace, err := k8sutil.GetWatchNamespace()
-		if err != nil {
-			return err
-		}
-		configMapReference.Namespace = watchNamespace
 	}
 
-	err = watchWorkspaceConfig(c, mgr)
+	err = watchControllerConfig(c, mgr)
 	if err != nil {
 		return err
 	}
@@ -117,7 +111,14 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	brokerCfg.UseLocalhostInPluginUrls = true
 	brokerCfg.OnlyApplyMetadataActions = true
 
-  origLog.SetOutput(r)
+	origLog.SetOutput(r)
+
+	isOS, err := IsOpenShift()
+	if err != nil {
+		return err
+	}
+
+	controllerConfig.controllerIsOpenshift = isOS
 
 	return nil
 }
@@ -134,7 +135,7 @@ type ReconcileWorkspace struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client.Client
-	scheme *runtime.Scheme	
+	scheme *runtime.Scheme
 }
 
 type reconcileStatus struct {
@@ -206,15 +207,20 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		if err != nil && errors.IsNotFound(err) {
 			reqLogger.Info("    => Creating "+reflect.TypeOf(prereqAsMetaObject).Elem().String(), "namespace", prereqAsMetaObject.GetNamespace(), "name", prereqAsMetaObject.GetName())
 			err = r.Create(context.TODO(), prereq)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			continue
 		} else if err != nil {
 			reconcileStatus.failure = err.Error()
 			return reconcile.Result{}, err
 		} else {
 			if _, isPVC := found.(*corev1.PersistentVolumeClaim); !isPVC {
-				err = r.Update(context.TODO(), prereq)
-				if err != nil {
-					log.Error(err, "")
+				if _, isServiceAccount := found.(*corev1.ServiceAccount); !isServiceAccount {
+					err = r.Update(context.TODO(), prereq)
+					if err != nil {
+						log.Error(err, "")
+					}
 				}
 			}
 		}
@@ -267,22 +273,44 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, err
 		}
 
+		r.scheme.Default(k8sObject)
+
 		// Update the found object and write the result back if there are any changes
+
 		foundSpecValue := reflect.ValueOf(k8sObject).Elem().FieldByName("Spec")
 		k8sObjectSpecValue := reflect.ValueOf(found).Elem().FieldByName("Spec")
-		foundSpec := foundSpecValue.Interface()
-		k8sObjectSpec := k8sObjectSpecValue.Interface()
+
+		var foundToUse interface{} = found
+		var newToUse interface{} = k8sObject
+		if foundSpecValue.IsValid() {
+			foundToUse = foundSpecValue.Interface()
+			newToUse = k8sObjectSpecValue.Interface()
+		}
+
 		diffOpts := cmp.Options{
 			cmpopts.IgnoreUnexported(resource.Quantity{}),
-			cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "SessionAffinity"),
-			cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy"),
-			cmpopts.IgnoreFields(corev1.PodSpec{}, "DNSPolicy", "SecurityContext", "SchedulerName"),
+			cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "SessionAffinity", "Type"),
+			cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
+			cmpopts.IgnoreFields(corev1.PodSpec{}, "DNSPolicy", "SecurityContext", "SchedulerName", "DeprecatedServiceAccount", "RestartPolicy", "TerminationGracePeriodSeconds"),
 			cmpopts.IgnoreFields(appsv1.DeploymentStrategy{}, "RollingUpdate"),
 			cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "RevisionHistoryLimit", "ProgressDeadlineSeconds"),
+			cmpopts.IgnoreFields(corev1.ConfigMapVolumeSource{}, "DefaultMode"),
+			cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
+			cmp.FilterPath(
+				func(p cmp.Path) bool {
+					s := p.String()
+					return s == "Ports.Protocol"
+				},
+				cmp.Transformer("DefaultTcpProtocol", func(p corev1.Protocol) corev1.Protocol {
+					if p == "" {
+						return corev1.ProtocolTCP
+					}
+					return p
+				})),
 		}
-		reqLogger.Info("    => Differences: " + cmp.Diff(k8sObjectSpec, foundSpec, diffOpts...))
 
-		if !cmp.Equal(k8sObjectSpec, foundSpec, diffOpts) {
+		if !cmp.Equal(newToUse, foundToUse, diffOpts) {
+			reqLogger.Info("    => Differences: " + cmp.Diff(newToUse, foundToUse, diffOpts...))
 			switch found.(type) {
 			case (*appsv1.Deployment):
 				{
@@ -300,8 +328,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 					k8sObject.(*corev1.Service).Spec.ClusterIP = found.(*corev1.Service).Spec.ClusterIP
 					found.(*corev1.Service).Spec = k8sObject.(*corev1.Service).Spec
 				}
+			case (*corev1.ConfigMap):
+				{
+					found.(*corev1.ConfigMap).Data = k8sObject.(*corev1.ConfigMap).Data
+					found.(*corev1.ConfigMap).BinaryData = k8sObject.(*corev1.ConfigMap).BinaryData
+				}
 			}
-			reqLogger.Info("    => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("        => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Update(context.TODO(), found)
 			if err != nil {
 				reconcileStatus.failure = err.Error()

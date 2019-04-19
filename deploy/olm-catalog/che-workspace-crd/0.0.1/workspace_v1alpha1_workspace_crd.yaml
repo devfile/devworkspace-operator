@@ -247,6 +247,66 @@ spec:
           - devfile
           type: object
         status:
+          properties:
+            conditions:
+              description: Condition keeps track of all cluster conditions, if they
+                exist.
+              items:
+                properties:
+                  lastTransitionTime:
+                    description: Last time the condition transitioned from one status
+                      to another.
+                    format: date-time
+                    type: string
+                  message:
+                    description: Human-readable message indicating details about last
+                      transition.
+                    type: string
+                  reason:
+                    description: Unique, one-word, CamelCase reason for the condition's
+                      last transition.
+                    type: string
+                  status:
+                    description: Status is the status of the condition. Can be True,
+                      False, Unknown.
+                    type: string
+                  type:
+                    description: Type is the type of the condition.
+                    type: string
+                required:
+                - type
+                - status
+                type: object
+              type: array
+            ideUrl:
+              description: URL at which the Editor can be joined
+              type: string
+            members:
+              description: Members are the Workspace pods
+              properties:
+                ready:
+                  description: Ready are the workspace Pods that are ready The member
+                    names are based on the workspace pod deployment names
+                  items:
+                    type: string
+                  type: array
+                unready:
+                  description: Unready are the workspace Pods that are not ready to
+                    serve requests
+                  items:
+                    type: string
+                  type: array
+              type: object
+            phase:
+              description: Workspace status
+              type: string
+            workspaceId:
+              description: Id of the workspace
+              type: string
+          required:
+          - workspaceId
+          - phase
+          - members
           type: object
   version: v1alpha1
   versions:

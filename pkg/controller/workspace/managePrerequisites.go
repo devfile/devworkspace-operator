@@ -32,7 +32,7 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 						"storage": pvcStorageQuantity,
 					},
 				},
-				StorageClassName: workspaceConfig.getPVCStorageClassName(),
+				StorageClassName: controllerConfig.getPVCStorageClassName(),
 			},
 		},
 		&corev1.ServiceAccount{

@@ -65,7 +65,8 @@ type MembersStatus struct {
 	// The member names are based on the workspace pod
 	// deployment names
 	Ready []string `json:"ready,omitempty"`
-	// Unready are the etcd members not ready to serve requests
+	// Unready are the workspace Pods that are not
+	// ready to serve requests
 	Unready []string `json:"unready,omitempty"`
 }
 

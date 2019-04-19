@@ -135,6 +135,7 @@ metadata:
       ]
     capabilities: Basic Install
   name: che-workspace-crd-operator.v0.0.1
+  namespace: placeholder
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -179,6 +180,19 @@ spec:
           path: members
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:podStatuses'
+  keywords:
+    - codeready
+    - workspaces
+    - devtools
+    - developer
+    - ide
+    - che
+  provider:
+    name: Red Hat, Inc.
+    url: https://github.com/che-incubator/che-workspace-crd-operator/
+  maintainers:
+    - email: dfestal@redhat.com
+      name: David Festal
   description: |
     Start an Eclipse Che 7 workspace based on a Devfile description,
     that provides all required information related to the project
@@ -206,7 +220,7 @@ spec:
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:
-                      fieldPath: metadata.namespace
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
                 - name: POD_NAME
                   valueFrom:
                     fieldRef:
@@ -217,9 +231,22 @@ spec:
                 imagePullPolicy: Always
                 name: che-workspace-crd-operator
                 resources: {}
+                ports:
+                  - containerPort: 8383
+                    name: metrics
+                terminationMessagePolicy: FallbackToLogsOnError
               serviceAccountName: che-workspace-crd-operator
-      permissions:
+      clusterpermissions:
       - rules:
+        - apiGroups:
+            - '*'
+          resources:
+            - '*'
+          verbs:
+            - get
+            - list
+            - watch
+            - view
         - apiGroups:
           - ""
           resources:
@@ -239,6 +266,27 @@ spec:
           verbs:
           - get
         - apiGroups:
+          - ""
+          resources:
+          - serviceaccounts
+          verbs:
+          - watch
+          - list
+          - get
+          - create
+          - update
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - roles
+          - rolebindings
+          verbs:
+          - watch
+          - list
+          - get
+          - create
+          - update
+        - apiGroups:
           - apps
           resources:
           - deployments
@@ -253,6 +301,14 @@ spec:
           - ingresses
           verbs:
           - '*'
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          - routes/custom-host
+          verbs:
+          - create
+          - delete
         - apiGroups:
           - monitoring.coreos.com
           resources:
@@ -274,6 +330,12 @@ spec:
           - '*'
           verbs:
           - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - pods/exec
+          verbs:
+          - create
         serviceAccountName: che-workspace-crd-operator
     strategy: deployment
   installModes:
@@ -281,10 +343,9 @@ spec:
     type: OwnNamespace
   - supported: true
     type: SingleNamespace
-  - supported: true
+  - supported: false
     type: MultiNamespace
   - supported: true
     type: AllNamespaces
   maturity: alpha
-  provider: {}
   version: 0.0.1

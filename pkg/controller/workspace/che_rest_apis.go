@@ -12,7 +12,7 @@ func addCheRestApis(wkspProps workspaceProperties, podSpec *corev1.PodSpec) ([]r
 	cheRestApisPort := 9999
 	containerName := "che-rest-apis"
 	podSpec.Containers = append(podSpec.Containers, corev1.Container{
-		Image:           workspaceConfig.getCheRestApisDockerImage(),
+		Image:           controllerConfig.getCheRestApisDockerImage(),
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Name:            containerName,
 		Ports: []corev1.ContainerPort{
@@ -35,66 +35,64 @@ func addCheRestApis(wkspProps workspaceProperties, podSpec *corev1.PodSpec) ([]r
 				Value: wkspProps.namespace,
 			},
 		},
+		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 	})
 
 	serviceName, servicePort := containerName, servicePortName(cheRestApisPort)
 	serviceNameAndPort := join("-", serviceName, servicePort)
-	ingressHost := join(".", serviceNameAndPort, workspaceConfig.getIngressGlobalDomain())
+	ingressHost := ingressHostName(serviceNameAndPort, wkspProps)
 	ingressUrl := "http://" + ingressHost + "/api"
 
-	return []runtime.Object{
-		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        serviceName,
-				Namespace:   wkspProps.namespace,
-				Annotations: map[string]string{},
-				Labels: map[string]string{
-					"che.workspace_id": wkspProps.workspaceId,
-				},
+	service := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        serviceName,
+			Namespace:   wkspProps.namespace,
+			Annotations: map[string]string{},
+			Labels: map[string]string{
+				"che.workspace_id": wkspProps.workspaceId,
 			},
-			Spec: corev1.ServiceSpec{
-				Selector: map[string]string{
-					"che.original_name": cheOriginalName,
-					"che.workspace_id":  wkspProps.workspaceId,
-				},
-				Type: corev1.ServiceTypeClusterIP,
-				Ports: []corev1.ServicePort{
-					corev1.ServicePort{
-						Name:       servicePortName(cheRestApisPort),
-						Protocol:   servicePortProtocol,
-						Port:       int32(cheRestApisPort),
-						TargetPort: intstr.FromInt(cheRestApisPort),
-					},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"che.original_name": cheOriginalName,
+				"che.workspace_id":  wkspProps.workspaceId,
+			},
+			Type: corev1.ServiceTypeClusterIP,
+			Ports: []corev1.ServicePort{
+				corev1.ServicePort{
+					Name:       servicePortName(cheRestApisPort),
+					Protocol:   servicePortProtocol,
+					Port:       int32(cheRestApisPort),
+					TargetPort: intstr.FromInt(cheRestApisPort),
 				},
 			},
 		},
-		&extensionsv1beta1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      join("-", "ingress", wkspProps.workspaceId, containerName),
-				Namespace: wkspProps.namespace,
-				Annotations: map[string]string{
-					"kubernetes.io/ingress.class":                "nginx",
-					"nginx.ingress.kubernetes.io/rewrite-target": "/",
-					"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-					"org.eclipse.che.machine.name":               containerName,
-				},
-				Labels: map[string]string{
-					"che.original_name": serviceNameAndPort,
-					"che.workspace_id":  wkspProps.workspaceId,
-				},
+	}
+	ingress := extensionsv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      join("-", "ingress", wkspProps.workspaceId, containerName),
+			Namespace: wkspProps.namespace,
+			Annotations: map[string]string{
+				"kubernetes.io/ingress.class":                "nginx",
+				"nginx.ingress.kubernetes.io/rewrite-target": "/",
+				"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+				"org.eclipse.che.machine.name":               containerName,
 			},
-			Spec: extensionsv1beta1.IngressSpec{
-				Rules: []extensionsv1beta1.IngressRule{
-					extensionsv1beta1.IngressRule{
-						Host: ingressHost,
-						IngressRuleValue: extensionsv1beta1.IngressRuleValue{
-							HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
-								Paths: []extensionsv1beta1.HTTPIngressPath{
-									extensionsv1beta1.HTTPIngressPath{
-										Backend: extensionsv1beta1.IngressBackend{
-											ServiceName: serviceName,
-											ServicePort: intstr.FromString(servicePort),
-										},
+			Labels: map[string]string{
+				"che.original_name": serviceNameAndPort,
+				"che.workspace_id":  wkspProps.workspaceId,
+			},
+		},
+		Spec: extensionsv1beta1.IngressSpec{
+			Rules: []extensionsv1beta1.IngressRule{
+				extensionsv1beta1.IngressRule{
+					IngressRuleValue: extensionsv1beta1.IngressRuleValue{
+						HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
+							Paths: []extensionsv1beta1.HTTPIngressPath{
+								extensionsv1beta1.HTTPIngressPath{
+									Backend: extensionsv1beta1.IngressBackend{
+										ServiceName: serviceName,
+										ServicePort: intstr.FromString(servicePort),
 									},
 								},
 							},
@@ -103,5 +101,8 @@ func addCheRestApis(wkspProps workspaceProperties, podSpec *corev1.PodSpec) ([]r
 				},
 			},
 		},
-	}, ingressUrl, nil
+	}
+	ingress.Spec.Rules[0].Host = ingressHost
+
+	return []runtime.Object{&service, &ingress}, ingressUrl, nil
 }

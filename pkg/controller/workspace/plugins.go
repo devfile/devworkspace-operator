@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"sort"
 	"github.com/eclipse/che-plugin-broker/utils"
 	"encoding/json"
 	"errors"
@@ -38,15 +39,26 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 		},
 	}
 
+	additionalDefs := []initContainerDef{}
+
+	insertSortedAdditionalDef := func (def initContainerDef) {
+		index := sort.Search(len(additionalDefs), func(i int) bool { return additionalDefs[i].imageName > def.imageName })
+		additionalDefs = append(additionalDefs, initContainerDef{})
+		copy(additionalDefs[index+1:], additionalDefs[index:])
+		additionalDefs[index] = def
+	}
+
 	for brokerImageProperty, typePluginMetas := range pluginMetas {
-		defs = append(defs, initContainerDef{
+		insertSortedAdditionalDef(initContainerDef{
 			imageName:   brokerImageProperty,
 			pluginMetas: typePluginMetas,
 		})
 	}
 
+	defs = append(defs, additionalDefs...)
+
 	for _, def := range defs {
-		brokerImage := workspaceConfig.getProperty(def.imageName)
+		brokerImage := controllerConfig.getProperty(def.imageName)
 		if brokerImage == nil {
 			return nil, errors.New("Unknown broker docker image for : " + def.imageName)
 		}
@@ -59,7 +71,6 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			},
 		}
 
-		key := commonBroker.NewRand().String(6)
 		containerName := strings.ReplaceAll(
 			strings.TrimSuffix(
 				strings.TrimPrefix(def.imageName, "che.workspace.plugin_"),
@@ -76,8 +87,8 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 		}
 
 		if len(def.pluginMetas) > 0 {
-			configMapName := key + containerName + "-config-map"
-			configMapVolume := key + containerName + "-config-volume"
+			configMapName := containerName + "-config-map"
+			configMapVolume := containerName + "-config-volume"
 			configMapContent, err := json.MarshalIndent(def.pluginMetas, "", "")
 			if err != nil {
 				return nil, err
@@ -127,13 +138,14 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 
 			ImagePullPolicy: corev1.PullIfNotPresent,
 			VolumeMounts:    volumes,
+			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		})
 	}
 	return k8sObjects, nil
 }
 
 func setupChePlugin(names workspaceProperties, component *workspaceApi.ComponentSpec, podSpec *corev1.PodSpec, pluginMetas map[string][]model.PluginMeta, workspaceEnv map[string]string) ([]runtime.Object, error) {
-	pluginMeta, err := getPluginMeta(workspaceConfig.getPluginRegistry(), *component.Id)
+	pluginMeta, err := getPluginMeta(controllerConfig.getPluginRegistry(), *component.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -269,6 +281,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 			},
 			VolumeMounts: volumeMounts,
 			Env:          append(envVars, commonEnvironmentVariables(names)...),
+			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		}
 		podSpec.Containers = append(podSpec.Containers, container)
 
@@ -373,7 +386,6 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 			Spec: extensionsv1beta1.IngressSpec{
 				Rules: []extensionsv1beta1.IngressRule{
 					extensionsv1beta1.IngressRule{
-						Host: join(".", serviceNameAndPort, workspaceConfig.getIngressGlobalDomain()),
 						IngressRuleValue: extensionsv1beta1.IngressRuleValue{
 							HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
 								Paths: []extensionsv1beta1.HTTPIngressPath{
@@ -390,6 +402,8 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 				},
 			},
 		}
+		ingress.Spec.Rules[0].Host = ingressHostName(serviceNameAndPort, names)
+
 		k8sObjects = append(k8sObjects, &ingress)
 	}
 

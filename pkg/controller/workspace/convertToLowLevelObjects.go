@@ -103,10 +103,10 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"deployment":        workspaceDeploymentName,
-						"che.original_name": cheOriginalName,
-						"che.workspace_id":  wkspProps.workspaceId,
-						"che.workspace_name":  wkspProps.workspaceName,
+						"deployment":         workspaceDeploymentName,
+						"che.original_name":  cheOriginalName,
+						"che.workspace_id":   wkspProps.workspaceId,
+						"che.workspace_name": wkspProps.workspaceName,
 					},
 					Name: workspaceDeploymentName,
 				},
@@ -170,6 +170,7 @@ func setupComponents(names workspaceProperties, components []workspaceApi.Compon
 
 	addWorkspaceEnvVars(&deployment.Spec.Template.Spec, workspaceEnv)
 
+	precreateSubpathsInitContainer(names, &deployment.Spec.Template.Spec)
 	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginMetas)
 	if err != nil {
 		return nil, err
@@ -178,4 +179,28 @@ func setupComponents(names workspaceProperties, components []workspaceApi.Compon
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
 	return k8sObjects, nil
+}
+
+func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.PodSpec) {
+	podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
+		Name:  "precreate-subpaths",
+		Image: "registry.access.redhat.com/ubi7-dev-preview/ubi-minimal:7.6",
+		Command: []string{ "/usr/bin/mkdir" },
+		Args: []string{
+			"-p",
+			"-v",
+			"-m",
+			"777",
+			"/tmp/che-workspaces/" + names.workspaceId,
+		},
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		VolumeMounts: []corev1.VolumeMount{
+			corev1.VolumeMount{
+				MountPath: "/tmp/che-workspaces",
+				Name:      "claim-che-workspace",
+				ReadOnly:  false,
+			},
+		},
+		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+	})
 }

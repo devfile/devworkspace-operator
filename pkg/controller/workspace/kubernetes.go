@@ -136,6 +136,8 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 					},
 				},
 			}
+		} else if objMeta, isMeta := obj.(metav1.Object); isMeta {
+			objMeta.GetLabels()["che.workspace_id"] = wkspProps.workspaceId
 		}
 	}
 

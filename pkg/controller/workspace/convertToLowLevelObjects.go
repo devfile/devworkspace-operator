@@ -141,42 +141,56 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
+
+
 func setupComponents(names workspaceProperties, components []workspaceApi.ComponentSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
-	pluginMetas := map[string][]model.PluginMeta{}
-	workspaceEnv := map[string]string{}
+	pluginFQNs := []model.PluginFQN{}
+	
+	workspacePodAdditions := []corev1.PodSpec{}
 
 	for _, component := range components {
 		var componentType = component.Type
 		var err error
-		var componentK8sObjects []runtime.Object
+		var componentInstanceStatus *ComponentInstanceStatus
 		switch componentType {
 		case "cheEditor", "chePlugin":
-			componentK8sObjects, err = setupChePlugin(names, &component, &deployment.Spec.Template.Spec, pluginMetas, workspaceEnv)
+			componentInstanceStatus, err = setupChePlugin(names, &component)
+			if componentInstanceStatus.pluginFQN != nil {
+				pluginFQNs = append(pluginFQNs, *componentInstanceStatus.pluginFQN)
+			}
 			break
 		case "kubernetes", "openshift":
-			componentK8sObjects, err = setupK8sLikeComponent(names, &component, &deployment.Spec.Template.Spec)
+			componentInstanceStatus, err = setupK8sLikeComponent(names, &component, &deployment.Spec.Template.Spec)
 			break
 		case "dockerimage":
-			componentK8sObjects, err = setupDockerImageComponent(names, &component, &deployment.Spec.Template.Spec)
+			componentInstanceStatus, err = setupDockerImageComponent(names, &component, &deployment.Spec.Template.Spec)
 			break
 		}
 		if err != nil {
 			return nil, err
 		}
-		k8sObjects = append(k8sObjects, componentK8sObjects...)
+		k8sObjects = append(k8sObjects, componentInstanceStatus.externalObjects...)
+		if componentInstanceStatus.WorkspacePodAdditions != nil {
+			workspacePodAdditions = append(workspacePodAdditions, *componentInstanceStatus.WorkspacePodAdditions)
+		}
 	}
 
-	addWorkspaceEnvVars(&deployment.Spec.Template.Spec, workspaceEnv)
-
+	// Also fixes service labels
+	mergeWorkspaceAdditions(&deployment.Spec.Template.Spec, k8sObjects, workspacePodAdditions)
+	
 	precreateSubpathsInitContainer(names, &deployment.Spec.Template.Spec)
-	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginMetas)
+	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginFQNs)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
+
+	TODO merge the endpoints of components per machine, et create the WorkspaceExposer CR
+
+	TODO call the method on the WorkspaceExposer that returns the ingresses in k8sObjects
 
 	return k8sObjects, nil
 }
@@ -184,7 +198,7 @@ func setupComponents(names workspaceProperties, components []workspaceApi.Compon
 func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.PodSpec) {
 	podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
 		Name:  "precreate-subpaths",
-		Image: "registry.access.redhat.com/ubi7-dev-preview/ubi-minimal:7.6",
+		Image: "registry.access.redhat.com/ubi8/ubi-minimal",
 		Command: []string{ "/usr/bin/mkdir" },
 		Args: []string{
 			"-p",

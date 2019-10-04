@@ -169,12 +169,10 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Name = configMapReference.Name
 	cm.Namespace = configMapReference.Namespace
 	cm.Data = map[string]string{
-		"ingress.global.domain":                    "",
-		"plugin.registry":                          "https://che-plugin-registry.openshift.io",
-		"che.workspace.plugin_broker.image":        "eclipse/che-plugin-broker:v0.15.0",
-		"che.workspace.plugin_broker.theia.image":  "eclipse/che-theia-plugin-broker:v0.15.0",
-		"che.workspace.plugin_broker.init.image":   "eclipse/che-init-plugin-broker:v0.15.0",
-		"che.workspace.plugin_broker.vscode.image": "eclipse/che-vscode-extension-broker:v0.15.0",
+		"ingress.global.domain":                      "",
+		"plugin.registry":                            "https://che-plugin-registry.openshift.io/v3",
+		"che.workspace.plugin_broker.unified.image":  "quay.io/dfestal/che-unified-plugin-broker:v0.19.1",
+		"che.workspace.plugin_broker.init.image":     "quay.io/dfestal/che-init-plugin-broker:v0.19.1",
 	}
 }
 

@@ -7,8 +7,8 @@
   <version>1.0-SNAPSHOT</version>
   <properties>
     <surefire-plugin.version>2.22.0</surefire-plugin.version>
-    <quarkus.version>0.12.0</quarkus.version>
-    <che.version>7.0.0-beta-3.0-SNAPSHOT</che.version>
+    <quarkus.version>0.21.2</quarkus.version>
+    <che.version>7.1.0</che.version>
     <maven.compiler.source>1.8</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.target>1.8</maven.compiler.target>
@@ -45,6 +45,7 @@
       <artifactId>che-core-api-model</artifactId>
       <version>${che.version}</version>
     </dependency>
+<!--
     <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-devfile</artifactId>
@@ -88,6 +89,23 @@
         </exclusion>
       </exclusions>
     </dependency>
+  -->
+  <!--
+    <dependency>
+        <groupId>io.quarkus</groupId>
+        <artifactId>quarkus-kubernetes-client</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>io.fabric8</groupId>
+        <artifactId>kubernetes-client</artifactId>
+        <version>4.6.0</version>
+    </dependency>
+    <dependency>
+        <groupId>io.fabric8</groupId>
+        <artifactId>kubernetes-model</artifactId>
+        <version>4.6.0</version>
+    </dependency>
+
     <dependency>
       <groupId>org.eclipse.che.infrastructure</groupId>
       <artifactId>infrastructure-kubernetes</artifactId>
@@ -167,6 +185,7 @@
         </exclusion>
       </exclusions>
     </dependency>
+  -->
     <dependency>
       <groupId>org.eclipse.che.core</groupId>
       <artifactId>che-core-api-workspace-shared</artifactId>
@@ -384,7 +403,7 @@
                 <configuration>
                   <additionalBuildArgs>
                     <additionalBuildArg>--allow-incomplete-classpath</additionalBuildArg>
-                    <additionalBuildArg>--delay-class-initialization-to-runtime=org.eclipse.che.commons.lang.NameGenerator,java.util.logging.ConsoleHandler</additionalBuildArg>
+                    <additionalBuildArg>--initialize-at-run-time=org.eclipse.che.commons.lang.NameGenerator,java.util.logging.ConsoleHandler</additionalBuildArg>
                   </additionalBuildArgs>
                   <enableHttpUrlHandler>true</enableHttpUrlHandler>
                   <enableHttpsUrlHandler>true</enableHttpsUrlHandler>

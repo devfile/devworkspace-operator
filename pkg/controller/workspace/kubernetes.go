@@ -74,17 +74,20 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 		}
 	}
 
+	var componentName string
+
 	// TODO: manage commands and args with pod name, container name, etc ...
 
 	podCound := 0
 	for index, obj := range k8sObjects {
 		if objPod, isPod := obj.(*corev1.Pod); isPod {
+			componentName = objPod.Spec.Containers[0].Name
 			podCound ++
 			suffix := ""
 			if podCound > 1 {
 				suffix = "." + strconv.Itoa(podCound)
 			}
-			additionalDeploymentOriginalName := component.Name + suffix
+			additionalDeploymentOriginalName := componentName + suffix
 			var workspaceDeploymentName = wkspProps.workspaceId + "." + additionalDeploymentOriginalName
 			var replicas int32 = 1
 			fromIntOne := intstr.FromInt(1)

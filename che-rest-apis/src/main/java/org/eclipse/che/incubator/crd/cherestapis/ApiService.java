@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 
 import org.eclipse.che.account.spi.AccountImpl;
 import org.eclipse.che.api.core.ServerException;
@@ -27,36 +26,15 @@ import org.eclipse.che.api.core.model.workspace.Runtime;
 import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.core.model.workspace.runtime.MachineStatus;
 import org.eclipse.che.api.core.model.workspace.runtime.ServerStatus;
-import org.eclipse.che.api.devfile.server.Constants;
-import org.eclipse.che.api.devfile.server.exception.DevfileException;
-import org.eclipse.che.api.devfile.server.exception.DevfileFormatException;
-import org.eclipse.che.api.devfile.server.FileContentProvider;
-import org.eclipse.che.api.devfile.server.convert.CommandConverter;
-import org.eclipse.che.api.devfile.server.convert.DefaultEditorProvisioner;
-import org.eclipse.che.api.devfile.server.convert.DevfileConverter;
-import org.eclipse.che.api.devfile.server.convert.ProjectConverter;
-import org.eclipse.che.api.devfile.server.convert.component.dockerimage.DockerimageComponentProvisioner;
-import org.eclipse.che.api.devfile.server.convert.component.dockerimage.DockerimageComponentToWorkspaceApplier;
-import org.eclipse.che.api.devfile.server.convert.component.editor.EditorComponentProvisioner;
-import org.eclipse.che.api.devfile.server.convert.component.editor.EditorComponentToWorkspaceApplier;
-import org.eclipse.che.api.devfile.server.convert.component.kubernetes.KubernetesComponentProvisioner;
-import org.eclipse.che.api.devfile.server.convert.component.kubernetes.KubernetesComponentToWorkspaceApplier;
-import org.eclipse.che.api.devfile.server.convert.component.kubernetes.KubernetesEnvironmentProvisioner;
-import org.eclipse.che.api.devfile.server.convert.component.plugin.PluginProvisioner;
-import org.eclipse.che.api.devfile.server.convert.component.plugin.PluginComponentToWorkspaceApplier;
-import org.eclipse.che.api.devfile.server.validator.DevfileIntegrityValidator;
+import org.eclipse.che.api.workspace.server.devfile.exception.DevfileException;
+import org.eclipse.che.api.workspace.server.devfile.exception.DevfileFormatException;
+import org.eclipse.che.api.workspace.server.devfile.validator.DevfileIntegrityValidator;
 import org.eclipse.che.api.workspace.server.DtoConverter;
-import org.eclipse.che.api.workspace.server.WorkspaceValidator;
-import org.eclipse.che.api.workspace.server.model.impl.EnvironmentImpl;
 import org.eclipse.che.api.workspace.server.model.impl.MachineImpl;
-import org.eclipse.che.api.workspace.server.model.impl.RecipeImpl;
 import org.eclipse.che.api.workspace.server.model.impl.RuntimeImpl;
 import org.eclipse.che.api.workspace.server.model.impl.ServerImpl;
-import org.eclipse.che.api.workspace.server.model.impl.WorkspaceConfigImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceImpl;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
-import org.eclipse.che.workspace.infrastructure.kubernetes.KubernetesClientFactory;
-import org.eclipse.che.workspace.infrastructure.kubernetes.environment.KubernetesRecipeParser;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,12 +76,8 @@ public class ApiService {
 
     private ObjectMapper yamlObjectMapper = new ObjectMapper(new YAMLFactory());
     private ObjectMapper jsonObjectMapper = new ObjectMapper(new JsonFactory());
-    private DevfileConverter devfileConverter = null;
-    private WorkspaceValidator workspaceValidator = null;
     private DevfileIntegrityValidator devfileIntegrityValidator = null;
     
-    private WorkspaceDto workspaceDto;
-
     @SuppressWarnings("unchecked")
     private Map<String, Object> asMap(Object obj) {
         return (Map<String, Object>) obj;
@@ -134,8 +108,7 @@ public class ApiService {
             LOGGER.info("Workspace Id: {}", workspaceId);
             LOGGER.info("Workspace Name: {}", workspaceName);
 
-            buildConverter();
-            initWorkspace();
+            init();
         } catch (RuntimeException e) {
             LOGGER.error("Che Api Service cannot start", e);
             throw e;
@@ -143,17 +116,45 @@ public class ApiService {
     }
 
     public WorkspaceDto getWorkspace(String workspaceId) {
-        LOGGER.debug("Getting workspace {} {}", workspaceId, this.workspaceId);
+        LOGGER.info("Getting workspace {} {}", workspaceId, this.workspaceId);
         if (!this.workspaceId.equals(workspaceId)) {
             String message = "The workspace " + workspaceId + " is not found (current workspace is " + this.workspaceId
                     + ")";
             LOGGER.error(message);
             throw new NotFoundException(message);
         }
-        return workspaceDto;
+
+        String devfileYaml;
+        try {
+            devfileYaml = readDevfileFromWorkspaceCustomResource();
+        } catch(ApiException e) {
+            throw new RuntimeException("Problem while retrieving the Workspace custom resource", e);
+        } catch(JsonProcessingException e) {
+            throw new RuntimeException("The devfile is not valid yaml", e);
+        }
+        if (devfileYaml == null) {
+            throw new RuntimeException("The Workspace custom resource was not found");
+        }
+
+        DevfileImpl devfileObj;
+        try {
+            devfileObj = parseDevFile(devfileYaml);
+        } catch (IOException e) {
+            throw new RuntimeException("The devfile could not be parsed correcly: " + devfileYaml, e);
+        }
+
+        LOGGER.info("Convert to workspace");
+
+        try {
+            return convertToWorkspace(devfileObj);
+        } catch (ServerException | DevfileException | ValidationException e) {
+            throw new RuntimeException("The devfile could not be converted correcly to a workspace: " + devfileObj, e);
+        } catch(ApiException e) {
+            throw new RuntimeException("Problem while retrieving the Workspace runtime information from K8s objects", e);
+        }
     }
 
-    private Map<String, Object> readDevfileFromWorkspaceCustomResource() throws ApiException {
+    private String readDevfileFromWorkspaceCustomResource() throws ApiException, JsonProcessingException {
         CustomObjectsApi api = new CustomObjectsApi();
         Map<String, Object> customResource = asMap(api.getNamespacedCustomObject("workspace.che.eclipse.org", workspaceCrdVersion,
                 workspaceNamespace, "workspaces", workspaceName));
@@ -161,13 +162,10 @@ public class ApiService {
             return null;
         }
         Map<String, Object> devfileMap = asMap(asMap(customResource.get("spec")).get("devfile"));
-        String name = (String) asMap(devfileMap.remove("metadata")).get("name");
-        devfileMap.put("name", name);
-        String version = (String) devfileMap.remove("apiVersion");
-        if (version != null) {
-            devfileMap.put("specVersion", version);
+        if (devfileMap == null) {
+            return null;
         }
-        return devfileMap;
+        return yamlObjectMapper.writeValueAsString(devfileMap);
     }
 
     private String workspaceIdSelector() {
@@ -260,38 +258,25 @@ public class ApiService {
         );
     }
 
-    private DevfileImpl parseDevFile(Map<String, Object> devfileMap) throws JsonProcessingException, IOException {
-        String devFileStr = yamlObjectMapper.writeValueAsString(devfileMap);
-        LOGGER.debug("Devfile content for workspace {}: {}", workspaceName, devFileStr);
-        DevfileImpl devfileObj = yamlObjectMapper.treeToValue(yamlObjectMapper.readTree(devFileStr), DevfileImpl.class);
+    DevfileImpl parseDevFile(String devfileYaml) throws JsonProcessingException, IOException {
+        LOGGER.info("Devfile content for workspace {}: {}", workspaceName, devfileYaml);
+        DevfileImpl devfileObj = yamlObjectMapper.treeToValue(yamlObjectMapper.readTree(devfileYaml), DevfileImpl.class);
         return devfileObj;
     }
 
-    private WorkspaceDto convertToWorkspace(DevfileImpl devfileObj) throws DevfileException, ServerException, ValidationException, ApiException {
+    WorkspaceDto convertToWorkspace(DevfileImpl devfileObj) throws DevfileException, ServerException, ValidationException, ApiException {
+        LOGGER.info("validateDevfile");
         try {
             devfileIntegrityValidator.validateDevfile(devfileObj);
         } catch(DevfileFormatException e) {
             LOGGER.warn("Validation of the devfile failed", e);
         }
-        WorkspaceConfigImpl config = devfileConverter.devFileToWorkspaceConfig(devfileObj, new FileContentProvider(){
-            @Override
-            public String fetchContent(String fileName) throws IOException, DevfileException {
-                return "";
-            }
-        }); // TODO: add the provider that will allow reading some k8s resource
-        workspaceValidator.validateConfig(config);
-        
-        // Next block is to fix a bug in the containers plugin
-        if (config.getEnvironments().size() == 0) {
-            config.setDefaultEnv("default");
-            config.setEnvironments(ImmutableMap.of("default", new EnvironmentImpl(
-                new RecipeImpl("kubernetes", "application/x-yaml", "", ""),
-                Collections.emptyMap())));
-        }
 
+        LOGGER.info(" WorkspaceImpl.builder().build()");
         WorkspaceImpl workspace = WorkspaceImpl.builder()
             .setId(workspaceId)
-            .setConfig(config)
+            .setConfig(null)
+            .setDevfile(devfileObj)
             .setAccount(new AccountImpl("anonymous", "anonymous", "anonymous"))
             .setAttributes(Collections.emptyMap())
             .setTemporary(false)
@@ -302,56 +287,13 @@ public class ApiService {
         return DtoConverter.asDto(workspace);
     }
 
-    private void buildConverter() {
-        KubernetesClientFactory clientFactory = new KubernetesClientFactory(null, true, 64, 5, 5, 5);
-        KubernetesRecipeParser kubernetesRecipeParser = new KubernetesRecipeParser(clientFactory);
-        KubernetesEnvironmentProvisioner kubernetesEnvironmentProvisioner = new KubernetesEnvironmentProvisioner(kubernetesRecipeParser);        
-        devfileConverter = new DevfileConverter(new ProjectConverter(), new CommandConverter(),
-                ImmutableSet.of(
-                    new EditorComponentProvisioner(), 
-                    new PluginProvisioner(), 
-                    new DockerimageComponentProvisioner(null), 
-                    new KubernetesComponentProvisioner()),
-                ImmutableMap.of(Constants.EDITOR_COMPONENT_TYPE, new EditorComponentToWorkspaceApplier(),
-                    Constants.PLUGIN_COMPONENT_TYPE,new PluginComponentToWorkspaceApplier(),
-                    Constants.KUBERNETES_COMPONENT_TYPE,new KubernetesComponentToWorkspaceApplier(kubernetesRecipeParser, kubernetesEnvironmentProvisioner),
-                    Constants.DOCKERIMAGE_COMPONENT_TYPE, new DockerimageComponentToWorkspaceApplier("/projects", kubernetesEnvironmentProvisioner)),
-                new DefaultEditorProvisioner("", new String[]{}));
-        workspaceValidator = new WorkspaceValidator();
-        devfileIntegrityValidator = new DevfileIntegrityValidator(kubernetesRecipeParser);
-    }
-
-    private void initWorkspace() {
+    void init() {
+        devfileIntegrityValidator = new DevfileIntegrityValidator(ImmutableMap.of());
         try {
             ApiClient client = Config.defaultClient();
             Configuration.setDefaultApiClient(client);
         } catch(IOException e) {
             throw new RuntimeException("Kubernetes client cannot be created", e);
-        }
-
-        Map<String, Object> devfileMap;
-        try {
-            devfileMap = readDevfileFromWorkspaceCustomResource();
-        } catch(ApiException e) {
-            throw new RuntimeException("Problem while retrieving the Workspace custom resource", e);
-        }
-        if (devfileMap == null) {
-            throw new RuntimeException("The Workspace custom resource was not found");
-        }
-
-        DevfileImpl devfileObj;
-        try {
-            devfileObj = parseDevFile(devfileMap);
-        } catch (IOException e) {
-            throw new RuntimeException("The devfile could not be parsed correcly: " + devfileMap, e);
-        }
-
-        try {
-            workspaceDto = convertToWorkspace(devfileObj);
-        } catch (ServerException | DevfileException | ValidationException e) {
-            throw new RuntimeException("The devfile could not be converted correcly to a workspace: " + devfileObj, e);
-        } catch(ApiException e) {
-            throw new RuntimeException("Problem while retrieving the Workspace runtime information from K8s objects", e);
         }
     }
 

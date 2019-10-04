@@ -3,6 +3,7 @@ package workspace
 import (
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -33,6 +34,13 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 		})
 	}
 
+	var machineName string
+	if component.Alias == nil {
+		re := regexp.MustCompile(`[^-a-zA-Z0-9_]`)
+		machineName = re.ReplaceAllString(*component.Image, "-")
+	} else {
+		machineName = *component.Alias
+	}
 	var limitOrDefault string
 
 	if *component.MemoryLimit == "" {
@@ -73,10 +81,10 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 	}
 	envVars = append(envVars, corev1.EnvVar{
 		Name:  "CHE_MACHINE_NAME",
-		Value: component.Name,
+		Value: machineName,
 	})
 	container := corev1.Container{
-		Name:            component.Name,
+		Name:            machineName,
 		Image:           *component.Image,
 		ImagePullPolicy: defaultImagePullPolicy,
 		Ports:           containerPorts,
@@ -123,7 +131,7 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 			"server",
 			strings.ReplaceAll(names.workspaceId, "workspace", ""),
 			cheOriginalName,
-			component.Name)
+			machineName)
 	}
 
 	service := corev1.Service{
@@ -131,7 +139,7 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 			Name:      serviceName,
 			Namespace: names.namespace,
 			Annotations: map[string]string{
-				"org.eclipse.che.machine.name":   component.Name,
+				"org.eclipse.che.machine.name":   machineName,
 				"org.eclipse.che.machine.source": "component",
 				// TODO : do we need to add that it comes from a dockerImage component ???
 			},
@@ -196,7 +204,7 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 					"kubernetes.io/ingress.class":                "nginx",
 					"nginx.ingress.kubernetes.io/rewrite-target": "/",
 					"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-					"org.eclipse.che.machine.name":               component.Name,
+					"org.eclipse.che.machine.name":               machineName,
 					serverAnnotationName("attributes"):           serverAnnotationAttributes(),
 					serverAnnotationName("port"):                 servicePortAndProtocol(port),
 					serverAnnotationName("protocol"):             protocol,

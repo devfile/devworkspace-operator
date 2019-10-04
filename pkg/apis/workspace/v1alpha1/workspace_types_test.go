@@ -24,11 +24,11 @@ func TestStorageWorkspace(t *testing.T) {
 				Projects: []ProjectSpec{},
 				Components: []ComponentSpec{
 					ComponentSpec{
-						Name: "coucou",
+						Alias: "coucou",
 						Type: "chePlugin",
 					},
 					ComponentSpec{
-						Name: "kiki",
+						Alias: "kiki",
 						Type: "cheEditor",
 					},
 				},

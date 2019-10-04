@@ -10,8 +10,6 @@ spec:
     plural: workspaces
     singular: workspace
   scope: Namespaced
-  subresources:
-    status: {}
   validation:
     openAPIV3Schema:
       properties:
@@ -200,7 +198,6 @@ spec:
                           type: object
                         type: array
                     required:
-                    - name
                     - type
                     type: object
                   type: array
@@ -313,3 +310,7 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
+  # subresources describes the subresources for custom resources.
+  subresources:
+    # status enables the status subresource.
+    status: {}

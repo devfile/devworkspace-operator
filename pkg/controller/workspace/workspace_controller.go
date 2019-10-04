@@ -55,7 +55,10 @@ func newReconciler(mgr manager.Manager) *ReconcileWorkspace {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	// Create a new controller
-	c, err := controller.New("workspace-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("workspace-controller", mgr, controller.Options{
+		Reconciler: r,
+		MaxConcurrentReconciles: 1,
+	})
 	if err != nil {
 		return err
 	}
@@ -229,8 +232,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 	workspaceProperties, k8sObjects, err := convertToCoreObjects(instance)
 	reconcileStatus.wkspProps = workspaceProperties
 	if err != nil {
+		reqLogger.Error(err, "Error when converting to K8S objects")
 		reconcileStatus.failure = err.Error()
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
 	k8sObjectNames := map[string]struct{}{}
@@ -247,7 +251,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		// Set Workspace instance as the owner and controller
 		if err := controllerutil.SetControllerReference(instance, k8sObjectAsMetaObject, r.scheme); err != nil {
 			reconcileStatus.failure = err.Error()
-			return reconcile.Result{}, err
+			reqLogger.Error(err, "Error when setting controller reference")
+			return reconcile.Result{}, nil
 		}
 
 		// Check if the k8s Object already exists
@@ -258,8 +263,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			reqLogger.Info("    => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Create(context.TODO(), k8sObject)
 			if err != nil {
+				reqLogger.Error(err, "Error when creating K8S object: ", "k8sObject", k8sObject)
 				reconcileStatus.failure = err.Error()
-				return reconcile.Result{}, err
+				return reconcile.Result{}, nil
 			}
 			kind := k8sObject.GetObjectKind().GroupVersionKind().Kind
 			log.Info(kind)
@@ -269,8 +275,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			}
 			continue
 		} else if err != nil {
+			reqLogger.Error(err, "Error when getting K8S object: ", "k8sObject", k8sObjectAsMetaObject)
 			reconcileStatus.failure = err.Error()
-			return reconcile.Result{}, err
+			return reconcile.Result{}, nil
 		}
 
 		r.scheme.Default(k8sObject)
@@ -337,15 +344,17 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			reqLogger.Info("        => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Update(context.TODO(), found)
 			if err != nil {
+				reqLogger.Error(err, "Error when updating K8S object: ", "k8sObject", k8sObjectAsMetaObject)
 				reconcileStatus.failure = err.Error()
-				return reconcile.Result{}, err
+				return reconcile.Result{}, nil
 			}
 		}
 	}
 
 	if err != nil {
+		reqLogger.Error(err, "Error during reconcile")
 		reconcileStatus.failure = err.Error()
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
 	for _, list := range []runtime.Object{

@@ -11,20 +11,12 @@ import java.util.Set;
 
 import com.oracle.svm.core.annotate.AutomaticFeature;
 
+import org.eclipse.che.api.workspace.server.devfile.PreferencesDeserializer;
 import org.eclipse.che.api.workspace.server.dto.DtoServerImpls.WorkspaceDtoImpl;
 import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
-import org.graalvm.nativeimage.Feature;
-import org.graalvm.nativeimage.RuntimeReflection;
+import org.graalvm.nativeimage.hosted.Feature;
+import org.graalvm.nativeimage.hosted.RuntimeReflection;
 
-import io.fabric8.kubernetes.api.model.ConfigMap;
-import io.fabric8.kubernetes.api.model.KubernetesList;
-import io.fabric8.kubernetes.api.model.Pod;
-import io.fabric8.kubernetes.api.model.Service;
-import io.fabric8.kubernetes.api.model.apps.Deployment;
-import io.fabric8.kubernetes.internal.KubernetesDeserializer;
-import io.fabric8.openshift.api.model.DeploymentConfig;
-import io.fabric8.openshift.api.model.Route;
-import io.fabric8.openshift.api.model.Template;
 import io.kubernetes.client.models.V1ServiceList;
 import io.kubernetes.client.models.V1beta1IngressList;
 
@@ -36,18 +28,10 @@ class RuntimeReflectionRegistrationFeature implements Feature {
 
     registerFully(DevfileImpl.class);
     registerFully(WorkspaceDtoImpl.class);
+    registerFully(PreferencesDeserializer.class);
 
     registerFully(V1ServiceList.class);
     registerFully(V1beta1IngressList.class);
-    registerFully(KubernetesDeserializer.class);
-    registerFully(KubernetesList.class);
-    registerFully(Pod.class);
-    registerFully(Service.class);
-    registerFully(Template.class);
-    registerFully(Route.class);
-    registerFully(Deployment.class);
-    registerFully(DeploymentConfig.class);
-    registerFully(ConfigMap.class);
   }
 
   private Set<Class<?>> classesAlreadyRegistered = new HashSet<>();

@@ -1,18 +1,16 @@
 package workspace
 
 import (
-	"sort"
-	"github.com/eclipse/che-plugin-broker/utils"
 	"encoding/json"
 	"errors"
+	"github.com/eclipse/che-plugin-broker/utils"
 	"net/http"
 	"strconv"
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	mainBroker "github.com/eclipse/che-plugin-broker/brokers/che-plugin-broker"
-	theiaBroker "github.com/eclipse/che-plugin-broker/brokers/theia"
-	vscodeBroker "github.com/eclipse/che-plugin-broker/brokers/vscode"
+	unifiedBroker "github.com/eclipse/che-plugin-broker/brokers/unified"
+	vscodeBroker "github.com/eclipse/che-plugin-broker/brokers/unified/vscode"
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
 	"github.com/eclipse/che-plugin-broker/model"
 	storage "github.com/eclipse/che-plugin-broker/storage"
@@ -24,46 +22,31 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpec, pluginMetas map[string][]model.PluginMeta) ([]runtime.Object, error) {
+// TODO : change this because we don't expect plugin metas anymore, but plugin FQNs in the config maps
+func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpec, pluginFQNs []model.PluginFQN) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
 	type initContainerDef struct {
-		imageName   string
-		pluginMetas []model.PluginMeta
+		imageName  string
+		pluginFQNs []model.PluginFQN
 	}
 
-	defs := []initContainerDef{
+	for _, def := range []initContainerDef{
 		initContainerDef{
-			imageName:   "che.workspace.plugin_broker.init.image",
-			pluginMetas: []model.PluginMeta{},
+			imageName:  "che.workspace.plugin_broker.init.image",
+			pluginFQNs: []model.PluginFQN{},
 		},
-	}
-
-	additionalDefs := []initContainerDef{}
-
-	insertSortedAdditionalDef := func (def initContainerDef) {
-		index := sort.Search(len(additionalDefs), func(i int) bool { return additionalDefs[i].imageName > def.imageName })
-		additionalDefs = append(additionalDefs, initContainerDef{})
-		copy(additionalDefs[index+1:], additionalDefs[index:])
-		additionalDefs[index] = def
-	}
-
-	for brokerImageProperty, typePluginMetas := range pluginMetas {
-		insertSortedAdditionalDef(initContainerDef{
-			imageName:   brokerImageProperty,
-			pluginMetas: typePluginMetas,
-		})
-	}
-
-	defs = append(defs, additionalDefs...)
-
-	for _, def := range defs {
+		initContainerDef{
+			imageName:  "che.workspace.plugin_broker.unified.image",
+			pluginFQNs: pluginFQNs,
+		},
+	} {
 		brokerImage := controllerConfig.getProperty(def.imageName)
 		if brokerImage == nil {
 			return nil, errors.New("Unknown broker docker image for : " + def.imageName)
 		}
 
-		volumes := []corev1.VolumeMount{
+		volumeMounts := []corev1.VolumeMount{
 			corev1.VolumeMount{
 				MountPath: "/plugins/",
 				Name:      "claim-che-workspace",
@@ -81,15 +64,23 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			"-runtime-id",
 			join(":",
 				names.workspaceId,
-				"",
+				"default",
 				"anonymous",
 			),
+			"--registry-address",
+			controllerConfig.getPluginRegistry(),
 		}
 
-		if len(def.pluginMetas) > 0 {
-			configMapName := containerName + "-config-map"
-			configMapVolume := containerName + "-config-volume"
-			configMapContent, err := json.MarshalIndent(def.pluginMetas, "", "")
+		if len(def.pluginFQNs) > 0 {
+
+			// TODO: Voir comment le unified broker est défini dans le yaml
+			// et le définir de la même manière ici.
+			// Voir aussi comment ça se fait qu'on ne met pas de volume =>
+			//    => log du côté operator pour voir ce qu'il y a dans les PluginFQNs
+
+			configMapName := containerName + "-broker-config-map"
+			configMapVolume := containerName + "-broker-config-volume"
+			configMapContent, err := json.MarshalIndent(pluginFQNs, "", "")
 			if err != nil {
 				return nil, err
 			}
@@ -108,7 +99,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			}
 			k8sObjects = append(k8sObjects, &configMap)
 
-			volumes = append(volumes, corev1.VolumeMount{
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				MountPath: "/broker-config/",
 				Name:      configMapVolume,
 				ReadOnly:  true,
@@ -136,87 +127,85 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			Image: *brokerImage,
 			Args:  args,
 
-			ImagePullPolicy: corev1.PullIfNotPresent,
-			VolumeMounts:    volumes,
+			ImagePullPolicy:          corev1.PullIfNotPresent,
+			VolumeMounts:             volumeMounts,
 			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		})
 	}
 	return k8sObjects, nil
 }
 
-func setupChePlugin(names workspaceProperties, component *workspaceApi.ComponentSpec, podSpec *corev1.PodSpec, pluginMetas map[string][]model.PluginMeta, workspaceEnv map[string]string) ([]runtime.Object, error) {
-	pluginMeta, err := getPluginMeta(controllerConfig.getPluginRegistry(), *component.Id)
-	if err != nil {
-		return nil, err
-	}
-
-	var processPlugin func(meta model.PluginMeta) error
+func setupChePlugin(names workspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	theStorage := storage.New()
 	theCommonBroker := commonBroker.NewBroker()
 	theCachingIoUtil := NewCachingIoUtil()
 	theIoUtil := utils.New()
 	theRand := commonBroker.NewRand()
+	theHttpClient := &http.Client{}
+	theUnifiedBroker := unifiedBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage, theRand, theHttpClient, true)
+
+	pluginFQN := model.PluginFQN{}
+	idParts := strings.Split(*component.Id, "/")
+	idPartsLen := len(idParts)
+	if idPartsLen < 3 {
+		return nil, errors.New("Invalid component ID: " + *component.Id)
+	}
+	pluginFQN.ID = strings.Join(idParts[idPartsLen-3:3], "/")
+	if idPartsLen > 3 {
+		pluginFQN.Registry = strings.Join(idParts[0:idPartsLen-3], "/")
+	}
+
+	pluginMeta, err := theUnifiedBroker.GetPluginMeta(pluginFQN, controllerConfig.getPluginRegistry())
+	if err != nil {
+		return nil, err
+	}
 
 	isTheiaOrVsCodePlugin := false
 
-	var brokerImageProperty string
-
+	var chePlugin model.ChePlugin
 	switch pluginMeta.Type {
 	case "Che Plugin", "Che Editor":
-		broker := mainBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage)
-		processPlugin = broker.ProcessPlugin
-		brokerImageProperty = "che.workspace.plugin_broker.image"
+		chePlugin = unifiedBroker.ConvertMetaToPlugin(*pluginMeta)
 		break
 	case "Theia plugin":
-		broker := theiaBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage, theRand)
-		processPlugin = broker.ProcessPlugin
-		brokerImageProperty = "che.workspace.plugin_broker.theia.image"
-		isTheiaOrVsCodePlugin = true
-		break
+		fallthrough
 	case "VS Code extension":
-		broker := vscodeBroker.NewBrokerWithParams(theCommonBroker, theCachingIoUtil, theStorage, theRand, &http.Client{})
-		processPlugin = broker.ProcessPlugin
-		brokerImageProperty = "che.workspace.plugin_broker.vscode.image"
+		broker := vscodeBroker.NewBrokerWithParams(theCommonBroker, theCachingIoUtil, theStorage, theRand, &http.Client{}, true)
+		broker.ProcessPlugin(*pluginMeta)
+		plugins, err := theStorage.Plugins()
+		if err != nil {
+			return nil, err
+		}
+
+		if len(plugins) != 1 {
+			return nil, errors.New("There should be only one plugin definition for plugin " + pluginMeta.ID)
+		}
+
+		chePlugin = (plugins)[0]
 		isTheiaOrVsCodePlugin = true
 		break
 	default:
 		return nil, errors.New("Unknown plugin type: " + pluginMeta.Type)
 	}
 
-	typePluginMetas, isThere := pluginMetas[brokerImageProperty]
-	if !isThere {
-		typePluginMetas = []model.PluginMeta{}
-	}
-	newTypePluginMetas := append(typePluginMetas, *pluginMeta)
-	pluginMetas[brokerImageProperty] = newTypePluginMetas
-
-	err = processPlugin(*pluginMeta)
-	if err != nil {
-		return nil, err
-	}
-
-	plugins, err := theStorage.Plugins()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(*plugins) != 1 {
-		return nil, errors.New("There should be only one plugin definition for plugin " + pluginMeta.ID)
-	}
-
-	componentingConf := (*plugins)[0]
-
-	for _, envVar := range componentingConf.WorkspaceEnv {
-		workspaceEnv[envVar.Name] = envVar.Value
-	}
-
 	var k8sObjects []runtime.Object
+
+	componentInstanceStatus := &ComponentInstanceStatus {
+		pluginFQN: &pluginFQN,
+	}
+	if len(chePlugin.Containers) == 0 {
+		return componentInstanceStatus, nil
+	}
+
+	podSpec := &corev1.PodSpec{} 
+	componentInstanceStatus.machineName = machineName(component)
+
+	TODO : remplir les runtime attributes et le reste du componentInstance
 
 	containerByPort := map[int]corev1.Container{}
 	serviceByPort := map[int]corev1.Service{}
 
-	for _, containerDef := range componentingConf.Containers {
-
+	for _, containerDef := range chePlugin.Containers {
 		var containerPorts []corev1.ContainerPort
 		var servicePorts []corev1.ServicePort
 		for _, portDef := range containerDef.Ports {
@@ -279,61 +268,50 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 					"memory": limit,
 				},
 			},
-			VolumeMounts: volumeMounts,
-			Env:          append(envVars, commonEnvironmentVariables(names)...),
+			VolumeMounts:             volumeMounts,
+			Env:                      append(envVars, commonEnvironmentVariables(names)...),
 			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		}
 		podSpec.Containers = append(podSpec.Containers, container)
 
-		var serviceName string
-		if isTheiaOrVsCodePlugin &&
-			len(containerDef.Ports) == 1 {
-			for _, endpointDef := range componentingConf.Endpoints {
-				if endpointDef.TargetPort == containerDef.Ports[0].ExposedPort {
-					serviceName = endpointDef.Name
-					break
-				}
+		serviceName := join("-",
+			"server",
+			strings.ReplaceAll(names.workspaceId, "workspace", ""),
+			cheOriginalName,
+			containerDef.Name)
+
+		if len(servicePorts) > 0 {
+			service := corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      serviceName,
+					Namespace: names.namespace,
+					Annotations: map[string]string{
+						"org.eclipse.che.machine.name":   join("/", cheOriginalName, containerDef.Name),
+						"org.eclipse.che.machine.source": "component",
+						"org.eclipse.che.machine.plugin": strings.Split(*component.Id, ":")[0],
+					},
+					Labels: map[string]string{
+						"che.workspace_id": names.workspaceId,
+					},
+				},
+				Spec: corev1.ServiceSpec{
+					Selector: map[string]string{
+						"che.original_name": cheOriginalName,
+						"che.workspace_id":  names.workspaceId,
+					},
+					Type:  corev1.ServiceTypeClusterIP,
+					Ports: servicePorts,
+				},
 			}
-		}
-
-		if serviceName == "" {
-			serviceName = join("-",
-				"server",
-				strings.ReplaceAll(names.workspaceId, "workspace", ""),
-				cheOriginalName,
-				containerDef.Name)
-		}
-
-		service := corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
-				Namespace: names.namespace,
-				Annotations: map[string]string{
-					"org.eclipse.che.machine.name":   join("/", cheOriginalName, containerDef.Name),
-					"org.eclipse.che.machine.source": "component",
-					"org.eclipse.che.machine.plugin": strings.Split(*component.Id, ":")[0],
-				},
-				Labels: map[string]string{
-					"che.workspace_id": names.workspaceId,
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Selector: map[string]string{
-					"che.original_name": cheOriginalName,
-					"che.workspace_id":  names.workspaceId,
-				},
-				Type:  corev1.ServiceTypeClusterIP,
-				Ports: servicePorts,
-			},
-		}
-		k8sObjects = append(k8sObjects, &service)
-		for _, portDef := range containerDef.Ports {
-			containerByPort[portDef.ExposedPort] = container
-			serviceByPort[portDef.ExposedPort] = service
+			k8sObjects = append(k8sObjects, &service)
+			for _, portDef := range containerDef.Ports {
+				containerByPort[portDef.ExposedPort] = container
+				serviceByPort[portDef.ExposedPort] = service
+			}
 		}
 	}
 
-	for _, endpointDef := range componentingConf.Endpoints {
+	for _, endpointDef := range chePlugin.Endpoints {
 		port := endpointDef.TargetPort
 
 		if isTheiaOrVsCodePlugin &&
@@ -408,24 +386,4 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 	}
 
 	return k8sObjects, nil
-}
-
-func addWorkspaceEnvVars(podSpec *corev1.PodSpec, workspaceEnv map[string]string) {
-	newEnvs := []corev1.EnvVar{}
-	for key, value := range workspaceEnv {
-		newEnvs = append(newEnvs, corev1.EnvVar{
-			Name:  key,
-			Value: value,
-		})
-	}
-
-	for index := range podSpec.Containers {
-		for _, envVar := range podSpec.Containers[index].Env {
-			if envVar.Name == "THEIA_PLUGINS" {
-				newContainerEnvs := append(podSpec.Containers[index].Env, newEnvs...)
-				podSpec.Containers[index].Env = newContainerEnvs
-				break
-			}
-		}
-	}
 }

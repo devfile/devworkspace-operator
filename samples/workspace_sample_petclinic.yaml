@@ -2,20 +2,20 @@ apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
   name: petclinic-sample
-  namespace: crds
+  namespace: crd-poc
 spec:
   started: true
   devfile:
-    apiVersion: 0.0.1
+    apiVersion: 1.0.0
     metadata:
-      name: petclinic 
+      name: petclinic-sample
     projects:
       - name: petclinic
         source:
           type: git
           location: 'https://github.com/spring-projects/spring-petclinic.git'
     components:
-      - name: mvn-stack
+      - alias: mvn-stack
         type: dockerimage
         image: maven:3.5.4-jdk-8
         command: ['/bin/sh', '-c']
@@ -30,14 +30,12 @@ spec:
               path: /api
               protocol: http
               public: true
-              secured: true
-              discoverable: true
         env:
           - name: TERM
             value: xterm
         mountSources: true
         memoryLimit: 500M
-      - name: mysql
+      - alias: mysql
         type: kubernetes
         referenceContent: |
           apiVersion: v1
@@ -125,15 +123,14 @@ spec:
           app.kubernetes.io/name: mysql
           app.kubernetes.io/component: database
           app.kubernetes.io/part-of: petclinic
-      - name: theia-ide
+      - alias: theia-ide
         type: cheEditor
-        id: org.eclipse.che.editor.theia:next
-      - name: exec-plugin
+        id: eclipse/che-theia/7.1.0
+      - type: chePlugin
+        id: eclipse/che-machine-exec-plugin/7.1.0
+      - alias: jdt.ls
         type: chePlugin
-        id: che-machine-exec-plugin:0.0.1
-      - name: fortune
-        type: chePlugin
-        id: org.eclipse.che.samples.container-fortune:0.0.1
+        id: redhat/java/0.46.0
     commands:
       - name: build
         actions:

@@ -62,24 +62,29 @@ func NewCachingIoUtil() utils.IoUtil {
 	}
 }
 
-func (util *impl) Download(URL string, destPath string) error {
+func (util *impl) Download(URL string, destPath string, useContentDisposition bool) (string, error) {
 	downloadCache.mux.Lock()
 	defer downloadCache.mux.Unlock()
 	path, exists := downloadCache.filenamesPerUrl[URL]
 	if !exists {
 		for {
-			fileName := downloadCache.random.String(10)
-			path = filepath.Join(downloadCache.tempDir, fileName)
+			cacheDirName := downloadCache.random.String(10)
+			cacheDir := filepath.Join(downloadCache.tempDir, cacheDirName)
+			os.MkdirAll(cacheDir, 755)
+			destDir, destFilename := filepath.Split(filepath.Clean(destPath))
+			path = filepath.Join(cacheDir, destFilename)
 			if _, err := os.Stat(path); err != nil {
         if os.IsNotExist(err) {
-						err = util.delegate.Download(URL, path)
+						path, err := util.delegate.Download(URL, path, useContentDisposition)
 						if err != nil {
-							return err
+							return "", err
 						}
+						_, destFilename = filepath.Split(path)
+						destPath = filepath.Join(destDir, destFilename)
 						downloadCache.filenamesPerUrl[URL] = path
             break
         } else {
-					return err
+					return "", err
 				}
 			}
 		}
@@ -87,9 +92,15 @@ func (util *impl) Download(URL string, destPath string) error {
 		log.Info(join ("",
 		"Retrieving URL '",
 		URL,
-		"' from the local cache"))
+		"' from the local cache:",
+		path))
 	}
-	return util.CopyFile(path, destPath)
+
+	return destPath, util.CopyFile(path, destPath)
+}
+
+func (util *impl) MkDir(dir string) error {
+	return util.delegate.MkDir(dir)
 }
 
 func (util *impl) Fetch(URL string) ([]byte, error) {

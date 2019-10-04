@@ -1,0 +1,88 @@
+apiVersion: "1.0.0"
+commands:
+- actions:
+  - command: "mvn package"
+    component: "mvn-stack"
+    type: "exec"
+    workdir: "/projects/spring-petclinic"
+  name: "build"
+- actions:
+  - command: "mvn spring-boot:run"
+    component: "mvn-stack"
+    type: "exec"
+    workdir: "/projects/spring-petclinic"
+  name: "run spring"
+- actions:
+  - command: "mvn spring-boot:run"
+    component: "mysql"
+    type: "start"
+  attributes:
+    runType: "sequential"
+  name: "run mysql"
+components:
+- alias: "mvn-stack"
+  args:
+  - "tail -f /dev/null"
+  command:
+  - "/bin/sh"
+  - "-c"
+  endpoints:
+  - attributes:
+      discoverable: true
+      path: "/api"
+      protocol: "http"
+      public: true
+      secured: true
+    name: "spring-boot"
+    port: 8080.0
+  env:
+  - name: "TERM"
+    value: "xterm"
+  image: "maven:3.5.4-jdk-8"
+  memoryLimit: "500M"
+  mountSources: true
+  type: "dockerimage"
+  volumes:
+  - containerPath: "/root/.m2"
+    name: "maven-repo"
+- alias: "mysql"
+  referenceContent: "apiVersion: v1\nkind: List\nitems:\n- apiVersion: v1\n  kind:\
+    \ Pod\n  metadata:\n    name: petclinic\n    labels:\n      app.kubernetes.io/name:\
+    \ petclinic\n      app.kubernetes.io/component: webapp\n      app.kubernetes.io/part-of:\
+    \ petclinic\n  spec:\n    containers:\n    - name: server\n      image: mariolet/petclinic\n\
+    \      ports:\n      - containerPort: 8080\n        protocol: TCP\n      resources:\n\
+    \        limits:\n          memory: 512Mi\n- apiVersion: v1\n  kind: Pod\n  metadata:\n\
+    \    name: petclinic\n    labels:\n      app.kubernetes.io/name: mysql\n     \
+    \ app.kubernetes.io/component: database\n      app.kubernetes.io/part-of: petclinic\n\
+    \  spec:\n    containers:\n    - name: mysql\n      image: centos/mysql-57-centos7\n\
+    \      env:\n      - name: MYSQL_USER\n        value: petclinic\n      - name:\
+    \ MYSQL_PASSWORD\n        value: petclinic\n      - name: MYSQL_ROOT_PASSWORD\n\
+    \        value: petclinic\n      - name: MYSQL_DATABASE\n        value: petclinic\n\
+    \      ports:\n      - containerPort: 3306\n        protocol: TCP\n      resources:\n\
+    \        limits:\n          memory: 512Mi\n- kind: Service\n  apiVersion: v1\n\
+    \  metadata:\n    name: mysql\n    labels:\n      app.kubernetes.io/name: mysql\n\
+    \      app.kubernetes.io/component: database\n      app.kubernetes.io/part-of:\
+    \ petclinic\n  spec:\n    ports:\n      - name: mysql\n        port: 3306\n  \
+    \      targetPort: 3360\n    selector:\n      app.kubernetes.io/name: mysql\n\
+    \      app.kubernetes.io/component: database\n      app.kubernetes.io/part-of:\
+    \ petclinic\n- kind: Service\n  apiVersion: v1\n  metadata:\n    name: petclinic\n\
+    \    labels:\n      app.kubernetes.io/name: petclinic\n      app.kubernetes.io/component:\
+    \ webapp\n      app.kubernetes.io/part-of: petclinic\n  spec:\n    ports:\n  \
+    \    - name: web\n        port: 8080\n        targetPort: 8080\n    selector:\n\
+    \      app: petclinic\n      component: webapp\n"
+  selector:
+    app.kubernetes.io/component: "database"
+    app.kubernetes.io/name: "mysql"
+    app.kubernetes.io/part-of: "petclinic"
+  type: "kubernetes"
+- id: "eclipse/che-theia/latest"
+  type: "cheEditor"
+- id: "eclipse/che-machine-exec-plugin/latest"
+  type: "chePlugin"
+metadata:
+  name: "petclinic"
+projects:
+- name: "petclinic"
+  source:
+    location: "https://github.com/spring-projects/spring-petclinic.git"
+    type: "git"

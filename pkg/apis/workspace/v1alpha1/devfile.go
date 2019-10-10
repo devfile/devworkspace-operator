@@ -26,6 +26,8 @@ type CommandActionSpec struct {
 	Component string  `json:"component"`         // Describes component to which given action relates
 	Type      string  `json:"type"`              // Describes action type
 	Workdir   *string `json:"workdir,omitempty"` // Working directory where the command should be executed
+	Reference *string `json:"reference,omitempty"` // Working directory where the command should be executed
+	ReferenceContent   *string `json:"referenceContent,omitempty"` // Working directory where the command should be executed
 }
 
 type ProjectSpec struct {
@@ -77,7 +79,7 @@ type ComponentSpec struct {
 	Reference        *string           `json:"reference,omitempty"`        // Describes location of Kubernetes list yaml file. Applicable only for 'kubernetes' and; 'openshift' type components
 	ReferenceContent *string           `json:"referenceContent,omitempty"` // Inlined content of a file specified in field 'local'
 	MemoryLimit      *string           `json:"memoryLimit,omitempty"`      // Describes memory limit for the component. You can express memory as a plain integer or as a; fixed-point integer using one of these suffixes: E, P, T, G, M, K. You can also use the; power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki
-	MountSources     *bool             `json:"mountSources,omitempty"`     // Describes whether projects sources should be mount to the component. `CHE_PROJECTS_ROOT`; environment variable should contains a path where projects sources are mount
+	MountSources     bool              `json:"mountSources,omitempty"`     // Describes whether projects sources should be mount to the component. `CHE_PROJECTS_ROOT`; environment variable should contains a path where projects sources are mount
 	Alias            *string           `json:"name,omitempty"`             // Describes the name of the component. Should be unique per component set.
 	Selector         map[string]string `json:"selector,omitempty"`         // Describes the objects selector for the recipe type components. Allows to pick-up only selected; items from k8s/openshift list
 	Type             DevfileName       `json:"type"`                       // Describes type of the component, e.g. whether it is an plugin or editor or other type

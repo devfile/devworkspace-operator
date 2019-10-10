@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"errors"
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
@@ -55,7 +56,7 @@ func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperti
 	}
 	workspaceProperties.cheApiExternal = externalUrl
 
-	k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.DevFile.Components, mainDeployment)
+	k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.DevFile, mainDeployment)
 	if err != nil {
 		return &workspaceProperties, nil, err
 	}
@@ -141,14 +142,13 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-
-
-func setupComponents(names workspaceProperties, components []workspaceApi.ComponentSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
+func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
+	components := devfile.Components
 	var k8sObjects []runtime.Object
 
 	pluginFQNs := []model.PluginFQN{}
-	
-	workspacePodAdditions := []corev1.PodSpec{}
+
+	workspacePodAdditions := []corev1.PodTemplateSpec{}
 
 	for _, component := range components {
 		var componentType = component.Type
@@ -162,10 +162,10 @@ func setupComponents(names workspaceProperties, components []workspaceApi.Compon
 			}
 			break
 		case "kubernetes", "openshift":
-			componentInstanceStatus, err = setupK8sLikeComponent(names, &component, &deployment.Spec.Template.Spec)
+			componentInstanceStatus, err = setupK8sLikeComponent(names, &component)
 			break
 		case "dockerimage":
-			componentInstanceStatus, err = setupDockerImageComponent(names, &component, &deployment.Spec.Template.Spec)
+			componentInstanceStatus, err = setupDockerImageComponent(names, devfile.Commands, &component)
 			break
 		}
 		if err != nil {
@@ -177,29 +177,37 @@ func setupComponents(names workspaceProperties, components []workspaceApi.Compon
 		}
 	}
 
-	// Also fixes service labels
-	mergeWorkspaceAdditions(&deployment.Spec.Template.Spec, k8sObjects, workspacePodAdditions)
-	
+	mergeWorkspaceAdditions(deployment, workspacePodAdditions, k8sObjects)
+
 	precreateSubpathsInitContainer(names, &deployment.Spec.Template.Spec)
 	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginFQNs)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
-	TODO merge the endpoints of components per machine, et create the WorkspaceExposer CR
+	
+	//TODO merge the endpoints of components per machine, et create the WorkspaceExposer CR
 
-	TODO call the method on the WorkspaceExposer that returns the ingresses in k8sObjects
+	//TODO call the method on the WorkspaceExposer that returns the ingresses (+ some services or other objects ?)
+	// in k8sObjects
+
+	// TODO create the annotation with the runtime json, so tha the api server can return it.
+	// => also create servers in the machines, etc etc ... must be done at the end since it
+	// needs to have the urls found in the WorkspaceExposureStatus
 
 	return k8sObjects, nil
 }
 
+// Penser au admission controller pour ajouter le nom du user dnas le workspace ? E tout cas ajouter le nom du
+// users dans la custom resource du workspace. + la classe de workspace exposure.
+
 func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.PodSpec) {
 	podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
-		Name:  "precreate-subpaths",
-		Image: "registry.access.redhat.com/ubi8/ubi-minimal",
-		Command: []string{ "/usr/bin/mkdir" },
+		Name:    "precreate-subpaths",
+		Image:   "registry.access.redhat.com/ubi8/ubi-minimal",
+		Command: []string{"/usr/bin/mkdir"},
 		Args: []string{
 			"-p",
 			"-v",
@@ -217,4 +225,63 @@ func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.P
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 	})
+}
+
+func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, workspacePodAdditions []corev1.PodTemplateSpec, k8sObjects []runtime.Object) error {
+	workspacePodTemplate := workspaceDeployment.Spec.Template
+	containers := map[string]corev1.Container{}
+	initContainers := map[string]corev1.Container{}
+	volumes := map[string]corev1.Volume{}
+	pullSecrets := map[string]corev1.LocalObjectReference{}
+
+	for _, addition := range workspacePodAdditions {
+		for annotKey, annotValue := range addition.Annotations {
+			workspacePodTemplate.Annotations[annotKey] = annotValue
+		}
+
+		for labelKey, labelValue := range addition.Labels {
+			workspacePodTemplate.Labels[labelKey] = labelValue
+		}
+
+		for _, container := range addition.Spec.Containers {
+			if _, exists := containers[container.Name]; exists {
+				return errors.New("Duplicate conainers in the workspace definition: " + container.Name)
+			}
+			containers[container.Name] = container
+			workspacePodTemplate.Spec.Containers = append(workspacePodTemplate.Spec.Containers, container)
+		}
+
+		for _, container := range addition.Spec.InitContainers {
+			if _, exists := initContainers[container.Name]; exists {
+				return errors.New("Duplicate init conainers in the workspace definition: " + container.Name)
+			}
+			initContainers[container.Name] = container
+			workspacePodTemplate.Spec.InitContainers = append(workspacePodTemplate.Spec.InitContainers, container)
+		}
+
+		for _, volume := range addition.Spec.Volumes {
+			if _, exists := volumes[volume.Name]; exists {
+				return errors.New("Duplicate volumes in the workspace definition: " + volume.Name)
+			}
+			volumes[volume.Name] = volume
+			workspacePodTemplate.Spec.Volumes = append(workspacePodTemplate.Spec.Volumes, volume)
+		}
+
+		for _, pullSecret := range addition.Spec.ImagePullSecrets {
+			if _, exists := pullSecrets[pullSecret.Name]; exists {
+				continue
+			}
+			pullSecrets[pullSecret.Name] = pullSecret
+			workspacePodTemplate.Spec.ImagePullSecrets = append(workspacePodTemplate.Spec.ImagePullSecrets, pullSecret)
+		}
+
+		workspacePodTemplate.Labels[DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
+	}
+	for _, externalObject := range k8sObjects {
+		service, isAService := externalObject.(*corev1.Service)
+		if isAService {
+			service.Spec.Selector[DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
+		}
+	}
+	return nil
 }

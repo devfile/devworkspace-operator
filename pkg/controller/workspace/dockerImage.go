@@ -1,38 +1,25 @@
 package workspace
 
 import (
-	"encoding/json"
-	"errors"
+	"github.com/eclipse/che-plugin-broker/model"
 	"regexp"
 	"strconv"
-	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
 )
 
-func setupDockerImageComponent(names workspaceProperties, component *workspaceApi.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
-	var k8sObjects []runtime.Object
-
-	var containerPorts []corev1.ContainerPort
-	var servicePorts []corev1.ServicePort
-	for _, endpointDef := range component.Endpoints {
-		containerPorts = append(containerPorts, corev1.ContainerPort{
-			ContainerPort: int32(endpointDef.Port),
-			Protocol:      corev1.ProtocolTCP,
-		})
-		servicePorts = append(servicePorts, corev1.ServicePort{
-			Name:       servicePortName(int(endpointDef.Port)),
-			Protocol:   servicePortProtocol,
-			Port:       int32(endpointDef.Port),
-			TargetPort: intstr.FromInt(int(endpointDef.Port)),
-		})
+func setupDockerImageComponent(names workspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+	componentInstanceStatus := &ComponentInstanceStatus{
 	}
+
+	podTemplate := &corev1.PodTemplateSpec{}
+	var k8sObjects []runtime.Object
+	componentInstanceStatus.WorkspacePodAdditions = podTemplate
+	componentInstanceStatus.externalObjects = k8sObjects
 
 	var machineName string
 	if component.Alias == nil {
@@ -41,6 +28,9 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 	} else {
 		machineName = *component.Alias
 	}
+
+	var exposedPorts []int = EndpointPortsToInts(component.Endpoints)
+
 	var limitOrDefault string
 
 	if *component.MemoryLimit == "" {
@@ -54,23 +44,7 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 		return nil, err
 	}
 
-	var volumeMounts []corev1.VolumeMount
-
-	for _, volDef := range component.Volumes {
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			MountPath: volDef.ContainerPath,
-			Name:      "claim-che-workspace",
-			SubPath:   names.workspaceId + "/" + volDef.Name + "/",
-		})
-	}
-
-	if component.MountSources != nil && *component.MountSources {
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			MountPath: "/projects",
-			Name:      "claim-che-workspace",
-			SubPath:   names.workspaceId + "/projects/",
-		})
-	}
+	volumeMounts := createVolumeMounts(names, component.MountSources, component.Volumes, []model.Volume{})
 
 	var envVars []corev1.EnvVar
 	for _, envVarDef := range component.Env {
@@ -87,7 +61,7 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 		Name:            machineName,
 		Image:           *component.Image,
 		ImagePullPolicy: defaultImagePullPolicy,
-		Ports:           containerPorts,
+		Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
 				"memory": limit,
@@ -106,13 +80,55 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 		container.Args = *component.Args
 	}
 
-	podSpec.Containers = append(podSpec.Containers, container)
+// TODO selector, etc ....
 
-	if len(component.Endpoints) == 0 {
-		return k8sObjects, nil
+	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
+
+	for _, service := range createK8sServicesForMachines(names, machineName, exposedPorts) {
+		k8sObjects = append(k8sObjects, &service)
 	}
 
-	var serviceName string
+	machineAttributes := map[string]string {}
+	if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
+		machineAttributes[MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		machineAttributes[MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+	}
+	machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = RECIPE_CONTAINER_SOURCE
+	componentInstanceStatus.machines[machineName] = MachineDescription {
+		machineAttributes: machineAttributes,
+    ports: exposedPorts,
+	}
+	
+	for _, command := range commands {
+		if len(command.Actions) == 0 {
+			continue
+		}
+		action := command.Actions[0]
+		if component.Alias == nil ||
+		  action.Component != *component.Alias {
+			continue
+		}
+		attributes := map[string]string{
+			COMMAND_WORKING_DIRECTORY_ATTRIBUTE: emptyIfNil(action.Workdir),
+			COMMAND_ACTION_REFERENCE_ATTRIBUTE:  emptyIfNil(action.Reference),
+			COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE:  emptyIfNil(action.ReferenceContent),
+			COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
+			COMPONENT_ALIAS_COMMAND_ATTRIBUTE:   action.Component,
+		}
+		for attrName, attrValue := range command.Attributes {
+			attributes[attrName] = attrValue
+		}
+		componentInstanceStatus.contributedRuntimeCommands = append(componentInstanceStatus.contributedRuntimeCommands,
+			CheWorkspaceCommand{
+				Name:        command.Name,
+				CommandLine: emptyIfNil(action.Command),
+				Type:        action.Type,
+				Attributes: attributes,
+			})
+	}
+
+/*
+var serviceName string
 	alreadyOneEndpointDiscoverable := false
 	for _, endpointDef := range component.Endpoints {
 		if endpointDef.Attributes != nil &&
@@ -125,6 +141,8 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 			alreadyOneEndpointDiscoverable = true
 		}
 	}
+
+// Gérer les 
 
 	if serviceName == "" {
 		serviceName = join("-",
@@ -140,8 +158,7 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 			Namespace: names.namespace,
 			Annotations: map[string]string{
 				"org.eclipse.che.machine.name":   machineName,
-				"org.eclipse.che.machine.source": "component",
-				// TODO : do we need to add that it comes from a dockerImage component ???
+				"org.eclipse.che.machine.source": "recipe",
 			},
 			Labels: map[string]string{
 				"che.workspace_id": names.workspaceId,
@@ -158,6 +175,7 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 	}
 	k8sObjects = append(k8sObjects, &service)
 
+	/*
 	for _, endpointDef := range component.Endpoints {
 		port := int(endpointDef.Port)
 
@@ -234,9 +252,9 @@ func setupDockerImageComponent(names workspaceProperties, component *workspaceAp
 			},
 		}
 		ingress.Spec.Rules[0].Host = ingressHostName(serviceNameAndPort, names)
-
 		k8sObjects = append(k8sObjects, &ingress)
 	}
+*/
 
-	return k8sObjects, nil
+	return componentInstanceStatus, nil
 }

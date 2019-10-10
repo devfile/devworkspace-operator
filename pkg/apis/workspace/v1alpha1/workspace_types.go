@@ -12,6 +12,7 @@ import (
 
 // Workspace is the Schema for the workspaces API
 // +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
 type Workspace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -35,38 +36,6 @@ type WorkspaceList struct {
 	Items           []Workspace `json:"items"`
 }
 
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// WorkspaceExposure is the Schema for the workspaces API
-// +k8s:openapi-gen=true
-type WorkspaceExposure struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   WorkspaceExposureSpec   `json:"spec,omitempty"`
-	Status WorkspaceExposureStatus `json:"status,omitempty"`
-}
-
-// WorkspaceExposureSpec defines the desired state of Workspace network exposure
-type WorkspaceExposureSpec struct {
-	Started bool        `json:"started"`
-}
-
-// WorkspaceExposureStatus defines the observed state of WorkspaceExposure
-type WorkspaceExposureStatus struct {
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// WorkspaceExposureList contains a list of WorkspaceExposure
-type WorkspaceExposureList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []WorkspaceExposure `json:"items"`
-}
-
-
 func init() {
-	SchemeBuilder.Register(&Workspace{}, &WorkspaceList{}, &WorkspaceExposure{}, &WorkspaceExposureList{})
+	SchemeBuilder.Register(&Workspace{}, &WorkspaceList{})
 }

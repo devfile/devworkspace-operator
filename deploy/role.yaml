@@ -85,11 +85,12 @@ rules:
   - workspace.che.eclipse.org
   resources:
   - '*'
+  - workspaceexposures
   verbs:
   - '*'
 - apiGroups:
   - ""
   resources:
-  - "pods/exec"
+  - pods/exec
   verbs:
-  - "create"
+  - create

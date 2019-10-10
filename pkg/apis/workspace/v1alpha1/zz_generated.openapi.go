@@ -11,8 +11,10 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.Workspace":         schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
-		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposure": schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref),
+		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.Workspace":               schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
+		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposure":       schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref),
+		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref),
+		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref),
 	}
 }
 
@@ -63,7 +65,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Workspace is the Schema for the workspaces API",
+				Description: "WorkspaceExposure is the Schema for the workspaceexposures API",
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -99,5 +101,81 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref common.ReferenceCa
 		},
 		Dependencies: []string{
 			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec", "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkspaceExposureSpec defines the desired state of WorkspaceExposure",
+				Properties: map[string]spec.Schema{
+					"exposureClass": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Class of the exposure: this drives which Workspace exposer controller will manage this exposure",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"exposed": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Should the workspace be exposed ?",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services by machine name",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ServiceDescription"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"exposureClass", "exposed", "services"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ServiceDescription"},
+	}
+}
+
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkspaceExposureStatus defines the observed state of WorkspaceExposure",
+				Properties: map[string]spec.Schema{
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Workspace Exposure status",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"exposedEndpoints": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ExposedEndpoint"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"phase", "exposedEndpoints"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ExposedEndpoint"},
 	}
 }

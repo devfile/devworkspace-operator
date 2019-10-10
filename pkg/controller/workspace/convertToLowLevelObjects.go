@@ -148,6 +148,8 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 
 	pluginFQNs := []model.PluginFQN{}
 
+	componentInstanceStatuses := []ComponentInstanceStatus {}
+
 	workspacePodAdditions := []corev1.PodTemplateSpec{}
 
 	for _, component := range components {
@@ -172,12 +174,10 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 			return nil, err
 		}
 		k8sObjects = append(k8sObjects, componentInstanceStatus.externalObjects...)
-		if componentInstanceStatus.WorkspacePodAdditions != nil {
-			workspacePodAdditions = append(workspacePodAdditions, *componentInstanceStatus.WorkspacePodAdditions)
-		}
+		componentInstanceStatuses = append(componentInstanceStatuses, *componentInstanceStatus)
 	}
 
-	mergeWorkspaceAdditions(deployment, workspacePodAdditions, k8sObjects)
+	mergeWorkspaceAdditions(deployment, componentInstanceStatuses, k8sObjects)
 
 	precreateSubpathsInitContainer(names, &deployment.Spec.Template.Spec)
 	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginFQNs)
@@ -187,7 +187,10 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
-	
+	workspaceExposure := buildWorkspaceExposure(componentInstanceStatuses)
+
+	workspaceExposure, err = manageExposure(workspaceExposure)
+
 	//TODO merge the endpoints of components per machine, et create the WorkspaceExposer CR
 
 	//TODO call the method on the WorkspaceExposer that returns the ingresses (+ some services or other objects ?)
@@ -198,6 +201,14 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 	// needs to have the urls found in the WorkspaceExposureStatus
 
 	return k8sObjects, nil
+}
+
+func buildWorkspaceExposure(componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceExposure {
+
+}
+
+func manageExposure(workspaceExposure *workspaceApi.WorkspaceExposure) (*workspaceApi.WorkspaceExposure, error) {
+	
 }
 
 // Penser au admission controller pour ajouter le nom du user dnas le workspace ? E tout cas ajouter le nom du
@@ -227,7 +238,14 @@ func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.P
 	})
 }
 
-func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, workspacePodAdditions []corev1.PodTemplateSpec, k8sObjects []runtime.Object) error {
+func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentInstanceStatuses []ComponentInstanceStatus, k8sObjects []runtime.Object) error {
+	workspacePodAdditions := []corev1.PodTemplateSpec {}
+	for _, componentInstanceStatus := range componentInstanceStatuses {
+		if componentInstanceStatus.WorkspacePodAdditions == nil {
+			continue
+		}
+		workspacePodAdditions = append(workspacePodAdditions, *componentInstanceStatus.WorkspacePodAdditions)
+	}
 	workspacePodTemplate := workspaceDeployment.Spec.Template
 	containers := map[string]corev1.Container{}
 	initContainers := map[string]corev1.Container{}

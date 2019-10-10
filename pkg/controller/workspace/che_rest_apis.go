@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
 )
 
 func addCheRestApis(wkspProps workspaceProperties, podSpec *corev1.PodSpec) ([]runtime.Object, string, error) {
@@ -38,7 +39,7 @@ func addCheRestApis(wkspProps workspaceProperties, podSpec *corev1.PodSpec) ([]r
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 	})
 
-	serviceName, servicePort := containerName, servicePortName(cheRestApisPort)
+	serviceName, servicePort := containerName, k8sModelUtils.ServicePortName(cheRestApisPort)
 	serviceNameAndPort := join("-", serviceName, servicePort)
 	ingressHost := ingressHostName(serviceNameAndPort, wkspProps)
 	ingressUrl := "http://" + ingressHost + "/api"
@@ -60,7 +61,7 @@ func addCheRestApis(wkspProps workspaceProperties, podSpec *corev1.PodSpec) ([]r
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				corev1.ServicePort{
-					Name:       servicePortName(cheRestApisPort),
+					Name:       k8sModelUtils.ServicePortName(cheRestApisPort),
 					Protocol:   servicePortProtocol,
 					Port:       int32(cheRestApisPort),
 					TargetPort: intstr.FromInt(cheRestApisPort),

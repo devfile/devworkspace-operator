@@ -46,6 +46,14 @@ spec:
                             component:
                               description: The actual action command-line string
                               type: string
+                            reference:
+                              description: Working directory where the command should
+                                be executed
+                              type: string
+                            referenceContent:
+                              description: Working directory where the command should
+                                be executed
+                              type: string
                             type:
                               description: Describes component to which given action
                                 relates
@@ -310,7 +318,3 @@ spec:
   - name: v1alpha1
     served: true
     storage: true
-  # subresources describes the subresources for custom resources.
-  subresources:
-    # status enables the status subresource.
-    status: {}

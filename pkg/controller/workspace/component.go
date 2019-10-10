@@ -20,11 +20,16 @@ type ComponentInstanceSpec struct {
 	component      workspacev1alpha1.ComponentSpec
 }
 
+type MachineDescription struct {
+	machineAttributes               map[string]string
+	ports                           []int
+}
+
 type ComponentInstanceStatus struct {
-	machineName           string
-	machineAttributes     map[string]string
-	WorkspacePodAdditions *corev1.PodSpec
-	externalObjects       []runtime.Object
-	pluginFQN             *model.PluginFQN
-	endpoints             []workspacev1alpha1.Endpoint
+	machines                        map[string]MachineDescription
+	contributedRuntimeCommands      []CheWorkspaceCommand
+	WorkspacePodAdditions           *corev1.PodTemplateSpec
+	externalObjects                 []runtime.Object
+	pluginFQN                       *model.PluginFQN
+	endpoints                       []workspacev1alpha1.Endpoint
 }

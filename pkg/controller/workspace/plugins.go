@@ -3,23 +3,24 @@ package workspace
 import (
 	"encoding/json"
 	"errors"
-	"github.com/eclipse/che-plugin-broker/utils"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/eclipse/che-plugin-broker/utils"
+
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	pluginModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/plugins"
 	unifiedBroker "github.com/eclipse/che-plugin-broker/brokers/unified"
 	vscodeBroker "github.com/eclipse/che-plugin-broker/brokers/unified/vscode"
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
 	"github.com/eclipse/che-plugin-broker/model"
 	storage "github.com/eclipse/che-plugin-broker/storage"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // TODO : change this because we don't expect plugin metas anymore, but plugin FQNs in the config maps
@@ -188,38 +189,22 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		return nil, errors.New("Unknown plugin type: " + pluginMeta.Type)
 	}
 
-	var k8sObjects []runtime.Object
-
-	componentInstanceStatus := &ComponentInstanceStatus {
+	componentInstanceStatus := &ComponentInstanceStatus{
 		pluginFQN: &pluginFQN,
 	}
 	if len(chePlugin.Containers) == 0 {
 		return componentInstanceStatus, nil
 	}
 
-	podSpec := &corev1.PodSpec{} 
-	componentInstanceStatus.machineName = machineName(component)
-
-	TODO : remplir les runtime attributes et le reste du componentInstance
-
-	containerByPort := map[int]corev1.Container{}
-	serviceByPort := map[int]corev1.Service{}
+	podTemplate := &corev1.PodTemplateSpec{}
+	var k8sObjects []runtime.Object
+	componentInstanceStatus.WorkspacePodAdditions = podTemplate
+	componentInstanceStatus.externalObjects = k8sObjects
 
 	for _, containerDef := range chePlugin.Containers {
-		var containerPorts []corev1.ContainerPort
-		var servicePorts []corev1.ServicePort
-		for _, portDef := range containerDef.Ports {
-			containerPorts = append(containerPorts, corev1.ContainerPort{
-				ContainerPort: int32(portDef.ExposedPort),
-				Protocol:      corev1.ProtocolTCP,
-			})
-			servicePorts = append(servicePorts, corev1.ServicePort{
-				Name:       servicePortName(portDef.ExposedPort),
-				Protocol:   servicePortProtocol,
-				Port:       int32(portDef.ExposedPort),
-				TargetPort: intstr.FromInt(portDef.ExposedPort),
-			})
-		}
+		machineName := containerDef.Name
+
+		var exposedPorts []int = pluginModelUtils.ExposedPortsToInts(containerDef.Ports)
 
 		var limitOrDefault string
 
@@ -234,15 +219,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 			return nil, err
 		}
 
-		var volumeMounts []corev1.VolumeMount
-
-		for _, volDef := range containerDef.Volumes {
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				MountPath: volDef.MountPath,
-				Name:      "claim-che-workspace",
-				SubPath:   names.workspaceId + "/" + volDef.Name + "/",
-			})
-		}
+		volumeMounts := createVolumeMounts(names, containerDef.MountSources, []workspaceApi.Volume{}, containerDef.Volumes)
 
 		var envVars []corev1.EnvVar
 		for _, envVarDef := range containerDef.Env {
@@ -253,13 +230,13 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		}
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "CHE_MACHINE_NAME",
-			Value: cheOriginalName + "/" + containerDef.Name,
+			Value: machineName,
 		})
 		container := corev1.Container{
-			Name:            containerDef.Name,
+			Name:            machineName,
 			Image:           containerDef.Image,
 			ImagePullPolicy: defaultImagePullPolicy,
-			Ports:           containerPorts,
+			Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					"memory": limit,
@@ -272,105 +249,114 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 			Env:                      append(envVars, commonEnvironmentVariables(names)...),
 			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		}
-		podSpec.Containers = append(podSpec.Containers, container)
+		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
-		serviceName := join("-",
-			"server",
-			strings.ReplaceAll(names.workspaceId, "workspace", ""),
-			cheOriginalName,
-			containerDef.Name)
-
-		if len(servicePorts) > 0 {
-			service := corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: names.namespace,
-					Annotations: map[string]string{
-						"org.eclipse.che.machine.name":   join("/", cheOriginalName, containerDef.Name),
-						"org.eclipse.che.machine.source": "component",
-						"org.eclipse.che.machine.plugin": strings.Split(*component.Id, ":")[0],
-					},
-					Labels: map[string]string{
-						"che.workspace_id": names.workspaceId,
-					},
-				},
-				Spec: corev1.ServiceSpec{
-					Selector: map[string]string{
-						"che.original_name": cheOriginalName,
-						"che.workspace_id":  names.workspaceId,
-					},
-					Type:  corev1.ServiceTypeClusterIP,
-					Ports: servicePorts,
-				},
-			}
+		for _, service := range createK8sServicesForMachines(names, machineName, exposedPorts) {
 			k8sObjects = append(k8sObjects, &service)
-			for _, portDef := range containerDef.Ports {
-				containerByPort[portDef.ExposedPort] = container
-				serviceByPort[portDef.ExposedPort] = service
-			}
 		}
+
+		machineAttributes := map[string]string{}
+		if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
+			machineAttributes[MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+			machineAttributes[MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		}
+		machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = TOOL_CONTAINER_SOURCE
+		machineAttributes[PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
+
+		componentInstanceStatus.machines[machineName] = MachineDescription{
+			machineAttributes: machineAttributes,
+			ports:             exposedPorts,
+		}
+
+		for _, command := range containerDef.Commands {
+			componentInstanceStatus.contributedRuntimeCommands = append(componentInstanceStatus.contributedRuntimeCommands,
+				CheWorkspaceCommand{
+					Name:        command.Name,
+					CommandLine: strings.Join(command.Command, " "),
+					Type:        "custom",
+					Attributes: map[string]string{
+						COMMAND_WORKING_DIRECTORY_ATTRIBUTE: command.WorkingDir,
+						COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
+					},
+				})
+		}
+
+		// TODO Manage devfile commands associated to this component ?
 	}
 
+	componentInstanceStatus.endpoints = modelEndpointsToDevfileEndpoints(chePlugin.Endpoints)
+
 	for _, endpointDef := range chePlugin.Endpoints {
-		port := endpointDef.TargetPort
 
 		if isTheiaOrVsCodePlugin &&
 			endpointDef.Attributes != nil &&
 			endpointDef.Attributes["protocol"] == "" {
-			endpointDef.Attributes["protocol"] = "ws"
+//			endpointDef.Attributes["protocol"] = "ws" TODO: check this is really required
 		}
+	}
 
-		serverAnnotationName := func(attrName string) string {
-			return join(".", "org.eclipse.che.server", attrName)
-		}
-		serverAnnotationAttributes := func() string {
-			attrMap := map[string]string{}
+	/*
+		for _, endpointDef := range chePlugin.Endpoints {
+			port := endpointDef.TargetPort
 
-			for k, v := range endpointDef.Attributes {
-				if k == "protocol" {
-					continue
+			if isTheiaOrVsCodePlugin &&
+				endpointDef.Attributes != nil &&
+				endpointDef.Attributes["protocol"] == "" {
+				endpointDef.Attributes["protocol"] = "ws"
+			}
+
+			serverAnnotationName := func(attrName string) string {
+				return join(".", "org.eclipse.che.server", attrName)
+			}
+			serverAnnotationAttributes := func() string {
+				attrMap := map[string]string{}
+
+				for k, v := range endpointDef.Attributes {
+					if k == "protocol" {
+						continue
+					}
+					attrMap[k] = v
 				}
-				attrMap[k] = v
+				attrMap["internal"] = strconv.FormatBool(!endpointDef.Public)
+				res, err := json.Marshal(attrMap)
+				if err != nil {
+					return "{}"
+				}
+				return string(res)
 			}
-			attrMap["internal"] = strconv.FormatBool(!endpointDef.Public)
-			res, err := json.Marshal(attrMap)
-			if err != nil {
-				return "{}"
-			}
-			return string(res)
-		}
 
-		serviceName, servicePort := serviceByPort[port].Name, servicePortName(port)
-		serviceNameAndPort := join("-", serviceName, servicePort)
+			serviceName, servicePort := serviceByPort[port].Name, servicePortName(port)
+			serviceNameAndPort := join("-", serviceName, servicePort)
 
-		ingress := extensionsv1beta1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      join("-", "ingress", names.workspaceId, endpointDef.Name),
-				Namespace: names.namespace,
-				Annotations: map[string]string{
-					"kubernetes.io/ingress.class":                "nginx",
-					"nginx.ingress.kubernetes.io/rewrite-target": "/",
-					"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-					"org.eclipse.che.machine.name":               join("/", cheOriginalName, containerByPort[port].Name),
-					serverAnnotationName("attributes"):           serverAnnotationAttributes(),
-					serverAnnotationName("port"):                 servicePortAndProtocol(port),
-					serverAnnotationName("protocol"):             endpointDef.Attributes["protocol"],
+			ingress := extensionsv1beta1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      join("-", "ingress", names.workspaceId, endpointDef.Name),
+					Namespace: names.namespace,
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class":                "nginx",
+						"nginx.ingress.kubernetes.io/rewrite-target": "/",
+						"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+						"org.eclipse.che.machine.name":               join("/", cheOriginalName, containerByPort[port].Name),
+						serverAnnotationName("attributes"):           serverAnnotationAttributes(),
+						serverAnnotationName("port"):                 servicePortAndProtocol(port),
+						serverAnnotationName("protocol"):             endpointDef.Attributes["protocol"],
+					},
+					Labels: map[string]string{
+						"che.original_name": serviceNameAndPort,
+						"che.workspace_id":  names.workspaceId,
+					},
 				},
-				Labels: map[string]string{
-					"che.original_name": serviceNameAndPort,
-					"che.workspace_id":  names.workspaceId,
-				},
-			},
-			Spec: extensionsv1beta1.IngressSpec{
-				Rules: []extensionsv1beta1.IngressRule{
-					extensionsv1beta1.IngressRule{
-						IngressRuleValue: extensionsv1beta1.IngressRuleValue{
-							HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
-								Paths: []extensionsv1beta1.HTTPIngressPath{
-									extensionsv1beta1.HTTPIngressPath{
-										Backend: extensionsv1beta1.IngressBackend{
-											ServiceName: serviceName,
-											ServicePort: intstr.FromString(servicePort),
+				Spec: extensionsv1beta1.IngressSpec{
+					Rules: []extensionsv1beta1.IngressRule{
+						extensionsv1beta1.IngressRule{
+							IngressRuleValue: extensionsv1beta1.IngressRuleValue{
+								HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
+									Paths: []extensionsv1beta1.HTTPIngressPath{
+										extensionsv1beta1.HTTPIngressPath{
+											Backend: extensionsv1beta1.IngressBackend{
+												ServiceName: serviceName,
+												ServicePort: intstr.FromString(servicePort),
+											},
 										},
 									},
 								},
@@ -378,12 +364,12 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 						},
 					},
 				},
-			},
+			}
+			ingress.Spec.Rules[0].Host = ingressHostName(serviceNameAndPort, names)
+
+			k8sObjects = append(k8sObjects, &ingress)
 		}
-		ingress.Spec.Rules[0].Host = ingressHostName(serviceNameAndPort, names)
+	*/
 
-		k8sObjects = append(k8sObjects, &ingress)
-	}
-
-	return k8sObjects, nil
+	return componentInstanceStatus, nil
 }

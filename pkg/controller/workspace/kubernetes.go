@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceApi.ComponentSpec, podSpec *corev1.PodSpec) ([]runtime.Object, error) {
+func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	var k8sObjects []runtime.Object
 
 	theScheme := runtime.NewScheme()
@@ -144,5 +144,5 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 		}
 	}
 
-	return k8sObjects, nil
+	return nil, nil
 }

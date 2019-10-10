@@ -30,15 +30,15 @@ const (
 
 type CheWorkspaceServer struct {
 	Attributes map[string]string                         `json:"attributes,omitempty"`
-	Status     CheWorkspaceServerStatus                   `json:"status"`
+	Status     CheWorkspaceServerStatus                  `json:"status"`
 	URL        *string                                   `json:"url,omitempty"`
 }
 
 type CheWorkspaceCommand struct {
+	Name        string           `json:"name"`
+	Type        string           `json:"type"`
+	CommandLine string           `json:"commandLine"`
 	Attributes  map[string]string `json:"attributes,omitempty"` 
-	CommandLine *string           `json:"commandLine,omitempty"`
-	Name        *string           `json:"name,omitempty"`       
-	Type        *string           `json:"type,omitempty"`       
 }
 
 type CheCoreRESTLink struct {

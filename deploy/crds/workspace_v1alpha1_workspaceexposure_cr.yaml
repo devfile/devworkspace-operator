@@ -1,0 +1,7 @@
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: WorkspaceExposure
+metadata:
+  name: example-workspaceexposure
+spec:
+  # Add fields here
+  size: 3

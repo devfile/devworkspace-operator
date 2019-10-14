@@ -36,6 +36,10 @@ spec:
               description: 'Class of the exposure: this drives which Workspace exposer
                 controller will manage this exposure'
               type: string
+            ingressGlobalDomain:
+              description: ingress global domain (corresponds to the Openshift route
+                suffix)
+              type: string
             services:
               additionalProperties:
                 properties:
@@ -90,6 +94,7 @@ spec:
           required:
           - exposureClass
           - exposed
+          - ingressGlobalDomain
           - services
           type: object
         status:

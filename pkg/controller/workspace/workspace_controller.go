@@ -229,7 +229,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 	}
 
-	workspaceProperties, k8sObjects, err := convertToCoreObjects(instance)
+	workspaceProperties, workspaceExposure, k8sObjects, err := convertToCoreObjects(instance)
 	reconcileStatus.wkspProps = workspaceProperties
 	if err != nil {
 		reqLogger.Error(err, "Error when converting to K8S objects")
@@ -239,7 +239,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 
 	k8sObjectNames := map[string]struct{}{}
 
-	for _, k8sObject := range k8sObjects {
+	for _, k8sObject := range append(k8sObjects, workspaceExposure) {
 		k8sObjectAsMetaObject, isMeta := k8sObject.(metav1.Object)
 		if !isMeta {
 			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
@@ -284,8 +284,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 
 		// Update the found object and write the result back if there are any changes
 
-		foundSpecValue := reflect.ValueOf(k8sObject).Elem().FieldByName("Spec")
-		k8sObjectSpecValue := reflect.ValueOf(found).Elem().FieldByName("Spec")
+		foundSpecValue := reflect.ValueOf(found).Elem().FieldByName("Spec")
+		k8sObjectSpecValue := reflect.ValueOf(k8sObject).Elem().FieldByName("Spec")
 
 		var foundToUse interface{} = found
 		var newToUse interface{} = k8sObject
@@ -316,8 +316,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 				})),
 		}
 
-		if !cmp.Equal(newToUse, foundToUse, diffOpts) {
-			reqLogger.Info("    => Differences: " + cmp.Diff(newToUse, foundToUse, diffOpts...))
+		if !cmp.Equal(foundToUse, newToUse, diffOpts) {
+			reqLogger.Info("    => Differences: " + cmp.Diff(foundToUse, newToUse, diffOpts...))
 			switch found.(type) {
 			case (*appsv1.Deployment):
 				{
@@ -339,6 +339,10 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 				{
 					found.(*corev1.ConfigMap).Data = k8sObject.(*corev1.ConfigMap).Data
 					found.(*corev1.ConfigMap).BinaryData = k8sObject.(*corev1.ConfigMap).BinaryData
+				}
+			case (*workspacev1alpha1.WorkspaceExposure):
+				{
+					found.(*workspacev1alpha1.WorkspaceExposure).Spec = k8sObject.(*workspacev1alpha1.WorkspaceExposure).Spec
 				}
 			}
 			reqLogger.Info("        => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())

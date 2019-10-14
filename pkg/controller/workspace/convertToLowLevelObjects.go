@@ -20,13 +20,14 @@ type workspaceProperties struct {
 	namespace      string
 	started        bool
 	cheApiExternal string
+	exposureClass  string
 }
 
-func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperties, []runtime.Object, error) {
+func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperties, *workspaceApi.WorkspaceExposure, []runtime.Object, error) {
 
 	uid, err := uuid.Parse(string(workspace.ObjectMeta.UID))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	workspaceProperties := workspaceProperties{
@@ -34,35 +35,47 @@ func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperti
 		workspaceId:   "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""),
 		workspaceName: workspace.Name,
 		started:       workspace.Spec.Started,
+		exposureClass: workspace.Spec.ExposureClass,
 	}
 
 	if !workspaceProperties.started {
-		return &workspaceProperties, []runtime.Object{}, nil
+		return &workspaceProperties, &workspaceApi.WorkspaceExposure{
+			ObjectMeta: metav1.ObjectMeta {
+				Name: workspaceProperties.workspaceId,
+				Namespace: workspaceProperties.namespace,
+			},
+			Spec: workspaceApi.WorkspaceExposureSpec {
+				Exposed: workspaceProperties.started,
+				ExposureClass: workspaceProperties.exposureClass,
+				IngressGlobalDomain: controllerConfig.getIngressGlobalDomain(),
+				Services: map[string]workspaceApi.ServiceDescription {},
+			},
+		}, []runtime.Object{}, nil
 	}
 
 	mainDeployment, err := buildMainDeployment(workspaceProperties, workspace)
 	if err != nil {
-		return &workspaceProperties, nil, err
+		return &workspaceProperties, nil, nil, err
 	}
 
 	err = setupPersistentVolumeClaim(workspace, mainDeployment)
 	if err != nil {
-		return &workspaceProperties, nil, err
+		return &workspaceProperties, nil, nil, err
 	}
 
 	cheRestApisK8sObjects, externalUrl, err := addCheRestApis(workspaceProperties, &mainDeployment.Spec.Template.Spec)
 	if err != nil {
-		return &workspaceProperties, nil, err
+		return &workspaceProperties, nil, nil, err
 	}
 	workspaceProperties.cheApiExternal = externalUrl
 
-	k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.DevFile, mainDeployment)
+	workspaceExposure, k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.Devfile, mainDeployment)
 	if err != nil {
-		return &workspaceProperties, nil, err
+		return &workspaceProperties, nil, nil, err
 	}
 	k8sComponentsObjects = append(k8sComponentsObjects, cheRestApisK8sObjects...)
 
-	return &workspaceProperties, append(k8sComponentsObjects, mainDeployment), nil
+	return &workspaceProperties, workspaceExposure, append(k8sComponentsObjects, mainDeployment), nil
 }
 
 func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
@@ -142,15 +155,13 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) ([]runtime.Object, error) {
+func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceExposure, []runtime.Object, error) {
 	components := devfile.Components
-	var k8sObjects []runtime.Object
+	k8sObjects := []runtime.Object {}
 
 	pluginFQNs := []model.PluginFQN{}
 
-	componentInstanceStatuses := []ComponentInstanceStatus {}
-
-	workspacePodAdditions := []corev1.PodTemplateSpec{}
+	componentInstanceStatuses := []ComponentInstanceStatus{}
 
 	for _, component := range components {
 		var componentType = component.Type
@@ -159,8 +170,8 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 		switch componentType {
 		case "cheEditor", "chePlugin":
 			componentInstanceStatus, err = setupChePlugin(names, &component)
-			if componentInstanceStatus.pluginFQN != nil {
-				pluginFQNs = append(pluginFQNs, *componentInstanceStatus.pluginFQN)
+			if componentInstanceStatus.PluginFQN != nil {
+				pluginFQNs = append(pluginFQNs, *componentInstanceStatus.PluginFQN)
 			}
 			break
 		case "kubernetes", "openshift":
@@ -171,9 +182,9 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 			break
 		}
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		k8sObjects = append(k8sObjects, componentInstanceStatus.externalObjects...)
+		k8sObjects = append(k8sObjects, componentInstanceStatus.ExternalObjects...)
 		componentInstanceStatuses = append(componentInstanceStatuses, *componentInstanceStatus)
 	}
 
@@ -182,33 +193,52 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 	precreateSubpathsInitContainer(names, &deployment.Spec.Template.Spec)
 	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginFQNs)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
-	workspaceExposure := buildWorkspaceExposure(componentInstanceStatuses)
-
-	workspaceExposure, err = manageExposure(workspaceExposure)
-
-	//TODO merge the endpoints of components per machine, et create the WorkspaceExposer CR
-
-	//TODO call the method on the WorkspaceExposer that returns the ingresses (+ some services or other objects ?)
-	// in k8sObjects
+	workspaceExposure := buildWorkspaceExposure(names, componentInstanceStatuses)
 
 	// TODO create the annotation with the runtime json, so tha the api server can return it.
 	// => also create servers in the machines, etc etc ... must be done at the end since it
 	// needs to have the urls found in the WorkspaceExposureStatus
 
-	return k8sObjects, nil
+	return workspaceExposure, k8sObjects, nil
 }
 
-func buildWorkspaceExposure(componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceExposure {
-
-}
-
-func manageExposure(workspaceExposure *workspaceApi.WorkspaceExposure) (*workspaceApi.WorkspaceExposure, error) {
-	
+func buildWorkspaceExposure(wkspProperties workspaceProperties, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceExposure {
+	services := map[string]workspaceApi.ServiceDescription{}
+	for _, componentInstanceStatus := range componentInstanceStatuses {
+		for machineName, machine := range componentInstanceStatus.Machines {
+			machineEndpoints := []workspaceApi.Endpoint{}
+			for _, port := range machine.ports {
+				port64 := int64(port)
+				for _, endpoint := range componentInstanceStatus.Endpoints {
+					if endpoint.Port != port64 {
+						continue
+					}
+					machineEndpoints = append(machineEndpoints, endpoint)
+				}
+			}
+			services[machineName] = workspaceApi.ServiceDescription{
+				ServiceName: machineServiceName(wkspProperties, machineName),
+				Endpoints:   machineEndpoints,
+			}
+		}
+	}
+	return &workspaceApi.WorkspaceExposure{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      wkspProperties.workspaceId,
+			Namespace: wkspProperties.namespace,
+		},
+		Spec: workspaceApi.WorkspaceExposureSpec{
+			Exposed:             wkspProperties.started,
+			ExposureClass:       wkspProperties.exposureClass,
+			IngressGlobalDomain: controllerConfig.getIngressGlobalDomain(),
+			Services:            services,
+		},
+	}
 }
 
 // Penser au admission controller pour ajouter le nom du user dnas le workspace ? E tout cas ajouter le nom du
@@ -239,14 +269,14 @@ func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.P
 }
 
 func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentInstanceStatuses []ComponentInstanceStatus, k8sObjects []runtime.Object) error {
-	workspacePodAdditions := []corev1.PodTemplateSpec {}
+	workspacePodAdditions := []corev1.PodTemplateSpec{}
 	for _, componentInstanceStatus := range componentInstanceStatuses {
 		if componentInstanceStatus.WorkspacePodAdditions == nil {
 			continue
 		}
 		workspacePodAdditions = append(workspacePodAdditions, *componentInstanceStatus.WorkspacePodAdditions)
 	}
-	workspacePodTemplate := workspaceDeployment.Spec.Template
+	workspacePodTemplate := &workspaceDeployment.Spec.Template
 	containers := map[string]corev1.Container{}
 	initContainers := map[string]corev1.Container{}
 	volumes := map[string]corev1.Volume{}
@@ -292,9 +322,8 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			pullSecrets[pullSecret.Name] = pullSecret
 			workspacePodTemplate.Spec.ImagePullSecrets = append(workspacePodTemplate.Spec.ImagePullSecrets, pullSecret)
 		}
-
-		workspacePodTemplate.Labels[DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 	}
+	workspacePodTemplate.Labels[DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 	for _, externalObject := range k8sObjects {
 		service, isAService := externalObject.(*corev1.Service)
 		if isAService {

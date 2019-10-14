@@ -26,10 +26,10 @@ type MachineDescription struct {
 }
 
 type ComponentInstanceStatus struct {
-	machines                        map[string]MachineDescription
-	contributedRuntimeCommands      []CheWorkspaceCommand
+	Machines                        map[string]MachineDescription
+	ContributedRuntimeCommands      []CheWorkspaceCommand
 	WorkspacePodAdditions           *corev1.PodTemplateSpec
-	externalObjects                 []runtime.Object
-	pluginFQN                       *model.PluginFQN
-	endpoints                       []workspacev1alpha1.Endpoint
+	ExternalObjects                 []runtime.Object
+	PluginFQN                       *model.PluginFQN
+	Endpoints                       []workspacev1alpha1.Endpoint
 }

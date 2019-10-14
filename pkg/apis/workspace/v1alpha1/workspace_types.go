@@ -22,9 +22,11 @@ type Workspace struct {
 }
 
 // WorkspaceSpec defines the desired state of Workspace
+// +k8s:openapi-gen=true
 type WorkspaceSpec struct {
-	Started bool        `json:"started"`
-	DevFile DevFileSpec `json:"devfile"`
+	Started bool          `json:"started"`
+	ExposureClass string  `json:"exposureClass,omitempty"`
+	Devfile DevFileSpec   `json:"devfile"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

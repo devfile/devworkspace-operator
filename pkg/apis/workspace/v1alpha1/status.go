@@ -71,6 +71,7 @@ type MembersStatus struct {
 }
 
 // WorkspaceStatus defines the observed state of Workspace
+// +k8s:openapi-gen=false
 type WorkspaceStatus struct {
 	// Id of the workspace
 	WorkspaceId string   `json:"workspaceId"`

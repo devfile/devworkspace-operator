@@ -11,8 +11,8 @@
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/manager/",
       "env": {
-        "WATCH_NAMESPACE": "crds",
-        "CONTROLLER_CONGIG_MAP_NAMESPACE": "crds",
+        "WATCH_NAMESPACE": "crd-poc",
+        "CONTROLLER_CONGIG_MAP_NAMESPACE": "crd-poc",
       },
       "args": []
     },

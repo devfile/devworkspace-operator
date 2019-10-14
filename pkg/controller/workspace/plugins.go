@@ -190,16 +190,18 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 	}
 
 	componentInstanceStatus := &ComponentInstanceStatus{
-		pluginFQN: &pluginFQN,
+		Machines: map[string]MachineDescription{},
+		Endpoints: []workspaceApi.Endpoint {},
+		ContributedRuntimeCommands: []CheWorkspaceCommand {},
+		PluginFQN: &pluginFQN,
 	}
 	if len(chePlugin.Containers) == 0 {
 		return componentInstanceStatus, nil
 	}
 
 	podTemplate := &corev1.PodTemplateSpec{}
-	var k8sObjects []runtime.Object
 	componentInstanceStatus.WorkspacePodAdditions = podTemplate
-	componentInstanceStatus.externalObjects = k8sObjects
+	componentInstanceStatus.ExternalObjects = []runtime.Object {}
 
 	for _, containerDef := range chePlugin.Containers {
 		machineName := containerDef.Name
@@ -252,7 +254,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
 		for _, service := range createK8sServicesForMachines(names, machineName, exposedPorts) {
-			k8sObjects = append(k8sObjects, &service)
+			componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 		}
 
 		machineAttributes := map[string]string{}
@@ -263,13 +265,13 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = TOOL_CONTAINER_SOURCE
 		machineAttributes[PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
 
-		componentInstanceStatus.machines[machineName] = MachineDescription{
+		componentInstanceStatus.Machines[machineName] = MachineDescription{
 			machineAttributes: machineAttributes,
 			ports:             exposedPorts,
 		}
 
 		for _, command := range containerDef.Commands {
-			componentInstanceStatus.contributedRuntimeCommands = append(componentInstanceStatus.contributedRuntimeCommands,
+			componentInstanceStatus.ContributedRuntimeCommands = append(componentInstanceStatus.ContributedRuntimeCommands,
 				CheWorkspaceCommand{
 					Name:        command.Name,
 					CommandLine: strings.Join(command.Command, " "),
@@ -284,7 +286,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		// TODO Manage devfile commands associated to this component ?
 	}
 
-	componentInstanceStatus.endpoints = modelEndpointsToDevfileEndpoints(chePlugin.Endpoints)
+	componentInstanceStatus.Endpoints = modelEndpointsToDevfileEndpoints(chePlugin.Endpoints)
 
 	for _, endpointDef := range chePlugin.Endpoints {
 

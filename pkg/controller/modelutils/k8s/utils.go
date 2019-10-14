@@ -13,6 +13,9 @@ func BuildContainerPorts(exposedPorts []int, protocol corev1.Protocol) []corev1.
 			Protocol: protocol,
 		})
 	}
+	if len(containerPorts) == 0 {
+		return nil
+	}
 	return containerPorts
 }
 

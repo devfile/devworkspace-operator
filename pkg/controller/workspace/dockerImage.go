@@ -14,12 +14,14 @@ import (
 
 func setupDockerImageComponent(names workspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	componentInstanceStatus := &ComponentInstanceStatus{
+		Machines: map[string]MachineDescription{},
+		Endpoints: []workspaceApi.Endpoint {},
+		ContributedRuntimeCommands: []CheWorkspaceCommand {},
 	}
 
 	podTemplate := &corev1.PodTemplateSpec{}
-	var k8sObjects []runtime.Object
 	componentInstanceStatus.WorkspacePodAdditions = podTemplate
-	componentInstanceStatus.externalObjects = k8sObjects
+	componentInstanceStatus.ExternalObjects = []runtime.Object{}
 
 	var machineName string
 	if component.Alias == nil {
@@ -85,7 +87,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
 	for _, service := range createK8sServicesForMachines(names, machineName, exposedPorts) {
-		k8sObjects = append(k8sObjects, &service)
+		componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 	}
 
 	machineAttributes := map[string]string {}
@@ -94,7 +96,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		machineAttributes[MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 	}
 	machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = RECIPE_CONTAINER_SOURCE
-	componentInstanceStatus.machines[machineName] = MachineDescription {
+	componentInstanceStatus.Machines[machineName] = MachineDescription {
 		machineAttributes: machineAttributes,
     ports: exposedPorts,
 	}
@@ -118,7 +120,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		for attrName, attrValue := range command.Attributes {
 			attributes[attrName] = attrValue
 		}
-		componentInstanceStatus.contributedRuntimeCommands = append(componentInstanceStatus.contributedRuntimeCommands,
+		componentInstanceStatus.ContributedRuntimeCommands = append(componentInstanceStatus.ContributedRuntimeCommands,
 			CheWorkspaceCommand{
 				Name:        command.Name,
 				CommandLine: emptyIfNil(action.Command),

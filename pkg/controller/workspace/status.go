@@ -83,7 +83,7 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 	for _, obj := range []runtime.Object{
 		&appsv1.Deployment{},
 		&corev1.Pod{},
-		&extensionsv1beta1.Ingress{},
+		&workspacev1alpha1.WorkspaceExposure{},
 	} {
 		var mapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}

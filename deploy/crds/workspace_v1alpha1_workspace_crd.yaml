@@ -87,6 +87,12 @@ spec:
                     locations
                   items:
                     properties:
+                      alias:
+                        description: Describes whether projects sources should be
+                          mount to the component. `CHE_PROJECTS_ROOT`; environment
+                          variable should contains a path where projects sources are
+                          mount
+                        type: string
                       args:
                         description: The command to run in the dockerimage component
                           instead of the default one provided in the image. Defaults
@@ -168,12 +174,6 @@ spec:
                           can also use the; power-of-two equivalents: Ei, Pi, Ti,
                           Gi, Mi, Ki'
                         type: boolean
-                      name:
-                        description: Describes whether projects sources should be
-                          mount to the component. `CHE_PROJECTS_ROOT`; environment
-                          variable should contains a path where projects sources are
-                          mount
-                        type: string
                       reference:
                         description: Specifies the docker image that should be used
                           for component
@@ -247,6 +247,8 @@ spec:
               required:
               - components
               type: object
+            exposureClass:
+              type: string
             started:
               type: boolean
           required:

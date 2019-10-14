@@ -15,6 +15,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposure":       schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref),
 		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref),
 		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref),
+		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceSpec":           schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref),
 	}
 }
 
@@ -124,6 +125,13 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 							Format:      "",
 						},
 					},
+					"ingressGlobalDomain": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ingress global domain (corresponds to the Openshift route suffix)",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Services by machine name",
@@ -138,7 +146,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"exposureClass", "exposed", "services"},
+				Required: []string{"exposureClass", "exposed", "ingressGlobalDomain", "services"},
 			},
 		},
 		Dependencies: []string{
@@ -177,5 +185,37 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref common.Refer
 		},
 		Dependencies: []string{
 			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ExposedEndpoint"},
+	}
+}
+
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkspaceSpec defines the desired state of Workspace",
+				Properties: map[string]spec.Schema{
+					"started": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"exposureClass": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"devfile": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.DevFileSpec"),
+						},
+					},
+				},
+				Required: []string{"started", "devfile"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.DevFileSpec"},
 	}
 }

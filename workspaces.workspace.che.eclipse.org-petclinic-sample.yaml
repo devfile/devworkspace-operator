@@ -13,7 +13,6 @@ metadata:
   uid: 24a571e3-deeb-11e9-9c0f-525400f5f0a2
 spec:
   devfile:
-    metadata
     apiVersion: 0.0.1
     commands:
     - actions:

@@ -1,18 +1,26 @@
 package workspace
 
 import (
-	"encoding/json"
 	"strconv"
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	"github.com/eclipse/che-plugin-broker/model"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 func join(sep string, parts ...string) string {
 	return strings.Join(parts, sep)
+}
+
+func BoolStringPtr(val bool) *string { 
+	var str string
+	if val {
+		str = "true"
+	} else {
+		str = "false"
+	}
+	return &str
 }
 
 func emptyIfNil(s *string) string {
@@ -34,23 +42,6 @@ func machineServiceName(wkspProps workspaceProperties, machineName string) strin
 
 func servicePortAndProtocol(port int) string {
 	return join("/", portAsString(port), strings.ToLower(string(servicePortProtocol)))
-}
-
-func modelEndpointsToDevfileEndpoints(pluginEndpoints []model.Endpoint) []workspaceApi.Endpoint {
-	devfileEndpoints := []workspaceApi.Endpoint{}
-	for _, pluginEndpoint := range pluginEndpoints {
-		attributes := workspaceApi.EndpointAttributes{}
-		if jsonValue, err := json.Marshal(pluginEndpoint); err == nil {
-			json.Unmarshal(jsonValue, &attributes)
-		}
-
-		devfileEndpoints = append(devfileEndpoints, workspaceApi.Endpoint{
-			Name:       pluginEndpoint.Name,
-			Attributes: &attributes,
-			Port:       int64(pluginEndpoint.TargetPort),
-		})
-	}
-	return devfileEndpoints
 }
 
 func EndpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {

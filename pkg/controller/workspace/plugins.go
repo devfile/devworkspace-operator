@@ -204,7 +204,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 			return nil, err
 		}
 
-		volumeMounts := createVolumeMounts(names, containerDef.MountSources, []workspaceApi.Volume{}, containerDef.Volumes)
+		volumeMounts := createVolumeMounts(names, &containerDef.MountSources, []workspaceApi.Volume{}, containerDef.Volumes)
 
 		var envVars []corev1.EnvVar
 		for _, envVarDef := range containerDef.Env {
@@ -240,6 +240,24 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 			componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 		}
 
+		for _, endpointDef := range chePlugin.Endpoints {
+			attributes := map[string]string{}
+			if endpointDef.Public {
+				attributes["public"] = "true"
+			} else {
+				attributes["public"] = "false"
+			}
+			for name, value := range endpointDef.Attributes {
+				attributes[name] = value
+			}
+			endpoint := workspaceApi.Endpoint {
+				Name: endpointDef.Name,
+				Port: int64(endpointDef.TargetPort),
+				Attributes: attributes,
+			}
+			componentInstanceStatus.Endpoints = append(componentInstanceStatus.Endpoints, endpoint)
+		}
+
 		machineAttributes := map[string]string{}
 		if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
 			machineAttributes[MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
@@ -268,18 +286,6 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 
 		// TODO Manage devfile commands associated to this component ?
 	}
-
-	componentInstanceStatus.Endpoints = modelEndpointsToDevfileEndpoints(chePlugin.Endpoints)
-
-	for _, endpointDef := range chePlugin.Endpoints {
-
-		if isTheiaOrVsCodePlugin &&
-			endpointDef.Attributes != nil &&
-			endpointDef.Attributes["protocol"] == "" {
-			//			endpointDef.Attributes["protocol"] = "ws" TODO: check this is really required
-		}
-	}
-
 	/*
 		for _, endpointDef := range chePlugin.Endpoints {
 			port := endpointDef.TargetPort

@@ -8,7 +8,7 @@ import (
 	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
 )
 
-func createVolumeMounts(workspaceProps workspaceProperties, mountSources bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
+func createVolumeMounts(workspaceProps workspaceProperties, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
 	var volumeMounts []corev1.VolumeMount
 	volumeName := "claim-che-workspace"
 
@@ -27,7 +27,7 @@ func createVolumeMounts(workspaceProps workspaceProperties, mountSources bool, d
 		})
 	}
 
-	if mountSources {
+	if mountSources != nil && *mountSources {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: "/projects",
 			Name:      volumeName,

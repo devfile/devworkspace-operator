@@ -90,6 +90,8 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 	}
 
+	componentInstanceStatus.Endpoints = component.Endpoints
+
 	machineAttributes := map[string]string {}
 	if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
 		machineAttributes[MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
@@ -107,7 +109,8 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		}
 		action := command.Actions[0]
 		if component.Alias == nil ||
-		  action.Component != *component.Alias {
+			action.Component == nil ||
+		  *action.Component != *component.Alias {
 			continue
 		}
 		attributes := map[string]string{
@@ -115,7 +118,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 			COMMAND_ACTION_REFERENCE_ATTRIBUTE:  emptyIfNil(action.Reference),
 			COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE:  emptyIfNil(action.ReferenceContent),
 			COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
-			COMPONENT_ALIAS_COMMAND_ATTRIBUTE:   action.Component,
+			COMPONENT_ALIAS_COMMAND_ATTRIBUTE:   *action.Component,
 		}
 		for attrName, attrValue := range command.Attributes {
 			attributes[attrName] = attrValue

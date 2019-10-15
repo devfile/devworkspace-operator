@@ -142,12 +142,13 @@ type ReconcileWorkspace struct {
 }
 
 type reconcileStatus struct {
-	changedWorkspaceObjects bool
-	createdWorkspaceObjects bool
-	failure                 string
-	cleanedWorkspaceObjects bool
-	wkspProps               *workspaceProperties
-	workspace               *workspacev1alpha1.Workspace
+	changedWorkspaceObjects   bool
+	createdWorkspaceObjects   bool
+	failure                   string
+	cleanedWorkspaceObjects   bool
+	wkspProps                 *workspaceProperties
+	workspace                 *workspacev1alpha1.Workspace
+	componentInstanceStatuses []ComponentInstanceStatus
 }
 
 // Reconcile reads that state of the cluster for a Workspace object and makes changes based on the state read
@@ -229,7 +230,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 	}
 
-	workspaceProperties, workspaceExposure, k8sObjects, err := convertToCoreObjects(instance)
+	workspaceProperties, workspaceExposure, componentInstanceStatuses, k8sObjects, err := convertToCoreObjects(instance)
 	reconcileStatus.wkspProps = workspaceProperties
 	if err != nil {
 		reqLogger.Error(err, "Error when converting to K8S objects")
@@ -237,6 +238,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, nil
 	}
 
+	reconcileStatus.componentInstanceStatuses = componentInstanceStatuses
 	k8sObjectNames := map[string]struct{}{}
 
 	for _, k8sObject := range append(k8sObjects, workspaceExposure) {
@@ -254,6 +256,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			reqLogger.Error(err, "Error when setting controller reference")
 			return reconcile.Result{}, nil
 		}
+
+		k8sObjectAsMetaObject.SetLabels(map[string]string { "che.workspace_id": workspaceProperties.workspaceId })
 
 		// Check if the k8s Object already exists
 

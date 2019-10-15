@@ -511,9 +511,19 @@ func (in *WorkspaceExposureStatus) DeepCopyInto(out *WorkspaceExposureStatus) {
 	*out = *in
 	if in.ExposedEndpoints != nil {
 		in, out := &in.ExposedEndpoints, &out.ExposedEndpoints
-		*out = make([]ExposedEndpoint, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = make(map[string][]ExposedEndpoint, len(*in))
+		for key, val := range *in {
+			var outVal []ExposedEndpoint
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = make([]ExposedEndpoint, len(*in))
+				for i := range *in {
+					(*in)[i].DeepCopyInto(&(*out)[i])
+				}
+			}
+			(*out)[key] = outVal
 		}
 	}
 	return

@@ -17,9 +17,6 @@ import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
 
-import io.kubernetes.client.models.V1ServiceList;
-import io.kubernetes.client.models.V1beta1IngressList;
-
 @AutomaticFeature
 class RuntimeReflectionRegistrationFeature implements Feature {
 
@@ -29,9 +26,6 @@ class RuntimeReflectionRegistrationFeature implements Feature {
     registerFully(DevfileImpl.class);
     registerFully(WorkspaceDtoImpl.class);
     registerFully(PreferencesDeserializer.class);
-
-    registerFully(V1ServiceList.class);
-    registerFully(V1beta1IngressList.class);
   }
 
   private Set<Class<?>> classesAlreadyRegistered = new HashSet<>();

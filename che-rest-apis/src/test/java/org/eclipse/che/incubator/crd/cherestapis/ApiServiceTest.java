@@ -40,7 +40,7 @@ public class ApiServiceTest {
         InputStream stream = this.getClass().getResourceAsStream("devfiles/petclinic-sample.yaml");
         String devfileYaml = IOUtils.toString(stream);
         DevfileImpl devfile = service.parseDevFile(devfileYaml);
-        WorkspaceDto workspace = service.convertToWorkspace(devfile);
+        WorkspaceDto workspace = service.convertToWorkspace(devfile, null);
         Assertions.assertEquals(workspace.getConfig().getName(), "petclinic");
     }
 }

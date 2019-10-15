@@ -2,10 +2,7 @@ package org.eclipse.che.incubator.crd.cherestapis;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
@@ -14,7 +11,6 @@ import javax.ws.rs.NotFoundException;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.google.common.collect.ImmutableMap;
@@ -24,15 +20,10 @@ import org.eclipse.che.api.core.ServerException;
 import org.eclipse.che.api.core.ValidationException;
 import org.eclipse.che.api.core.model.workspace.Runtime;
 import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
-import org.eclipse.che.api.core.model.workspace.runtime.MachineStatus;
-import org.eclipse.che.api.core.model.workspace.runtime.ServerStatus;
 import org.eclipse.che.api.workspace.server.devfile.exception.DevfileException;
 import org.eclipse.che.api.workspace.server.devfile.exception.DevfileFormatException;
 import org.eclipse.che.api.workspace.server.devfile.validator.DevfileIntegrityValidator;
 import org.eclipse.che.api.workspace.server.DtoConverter;
-import org.eclipse.che.api.workspace.server.model.impl.MachineImpl;
-import org.eclipse.che.api.workspace.server.model.impl.RuntimeImpl;
-import org.eclipse.che.api.workspace.server.model.impl.ServerImpl;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceImpl;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
@@ -44,13 +35,7 @@ import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.ApiException;
 import io.kubernetes.client.Configuration;
-import io.kubernetes.client.apis.CoreV1Api;
 import io.kubernetes.client.apis.CustomObjectsApi;
-import io.kubernetes.client.apis.ExtensionsV1beta1Api;
-import io.kubernetes.client.models.V1Service;
-import io.kubernetes.client.models.V1ServiceList;
-import io.kubernetes.client.models.V1beta1Ingress;
-import io.kubernetes.client.models.V1beta1IngressList;
 import io.kubernetes.client.util.Config;
 import io.quarkus.runtime.StartupEvent;
 
@@ -77,7 +62,7 @@ public class ApiService {
     private ObjectMapper yamlObjectMapper = new ObjectMapper(new YAMLFactory());
     private ObjectMapper jsonObjectMapper = new ObjectMapper(new JsonFactory());
     private DevfileIntegrityValidator devfileIntegrityValidator = null;
-    
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> asMap(Object obj) {
         return (Map<String, Object>) obj;
@@ -88,7 +73,7 @@ public class ApiService {
         try {
             System.loadLibrary("sunec");
         } catch (Throwable t) {
-            if (! t.getMessage().contains("already loaded")) {
+            if (!t.getMessage().contains("already loaded")) {
                 LOGGER.error("Error while loading the Java `sunec` dynamic library", t);
                 throw t;
             }
@@ -124,12 +109,18 @@ public class ApiService {
             throw new NotFoundException(message);
         }
 
-        String devfileYaml;
+        String devfileYaml = null;
+        String runtimeAnnotation = null;
         try {
-            devfileYaml = readDevfileFromWorkspaceCustomResource();
-        } catch(ApiException e) {
+            Map<String, Object> workspaceCustomResource = retrieveWorkspaceCustomResource();
+            if (workspaceCustomResource != null) {
+                Map<String, Object> workspaceAnnotations = asMap(asMap(workspaceCustomResource.get("metadata")).get("annotations"));
+                runtimeAnnotation = (String) workspaceAnnotations.get("org.eclipse.che.workspace/runtime");
+                devfileYaml = readDevfileFromWorkspaceCustomResource(workspaceCustomResource);
+            }
+        } catch (ApiException e) {
             throw new RuntimeException("Problem while retrieving the Workspace custom resource", e);
-        } catch(JsonProcessingException e) {
+        } catch (JsonProcessingException e) {
             throw new RuntimeException("The devfile is not valid yaml", e);
         }
         if (devfileYaml == null) {
@@ -142,22 +133,29 @@ public class ApiService {
         } catch (IOException e) {
             throw new RuntimeException("The devfile could not be parsed correcly: " + devfileYaml, e);
         }
+        
+        Runtime runtimeObj = null;
+        if (runtimeAnnotation != null) {
+            try {
+                runtimeObj = parseRuntime(runtimeAnnotation);
+            } catch (IOException e) {
+                throw new RuntimeException("The devfile could not be parsed correcly: " + devfileYaml, e);
+            }
+        }
 
         LOGGER.info("Convert to workspace");
 
         try {
-            return convertToWorkspace(devfileObj);
+            return convertToWorkspace(devfileObj, runtimeObj);
         } catch (ServerException | DevfileException | ValidationException e) {
             throw new RuntimeException("The devfile could not be converted correcly to a workspace: " + devfileObj, e);
-        } catch(ApiException e) {
-            throw new RuntimeException("Problem while retrieving the Workspace runtime information from K8s objects", e);
+        } catch (ApiException e) {
+            throw new RuntimeException("Problem while retrieving the Workspace runtime information from K8s objects",
+                    e);
         }
     }
 
-    private String readDevfileFromWorkspaceCustomResource() throws ApiException, JsonProcessingException {
-        CustomObjectsApi api = new CustomObjectsApi();
-        Map<String, Object> customResource = asMap(api.getNamespacedCustomObject("workspace.che.eclipse.org", workspaceCrdVersion,
-                workspaceNamespace, "workspaces", workspaceName));
+    private String readDevfileFromWorkspaceCustomResource(Map<String, Object> customResource) throws ApiException, JsonProcessingException {
         if (customResource == null) {
             return null;
         }
@@ -168,94 +166,9 @@ public class ApiService {
         return yamlObjectMapper.writeValueAsString(devfileMap);
     }
 
-    private String workspaceIdSelector() {
-        return "che.workspace_id = " + workspaceId;
-    }
-
-    private Stream<V1Service> listWorkspaceServices() {
-        CoreV1Api coreApi = new CoreV1Api();
-
-        V1ServiceList services;
-        try {
-            services = coreApi.listNamespacedService(workspaceNamespace, Boolean.TRUE, null, null, null,
-                    workspaceIdSelector(), 30, null, 1000, Boolean.FALSE);
-            return services.getItems().stream();
-        } catch (ApiException e) {
-            LOGGER.error("Problem while retrieving the workspace services", e);
-            return Collections.<V1Service>emptyList().stream();
-        }
-    }
-
-    private Stream<V1beta1Ingress> listWorkspaceIngresses() {
-        ExtensionsV1beta1Api extensionsApi = new ExtensionsV1beta1Api();
-        try {
-            V1beta1IngressList ingresses = extensionsApi.listNamespacedIngress(workspaceNamespace, Boolean.TRUE, null,
-                    null, null, workspaceIdSelector(), 100, null, 1000, Boolean.FALSE);
-            return ingresses.getItems().stream();
-        } catch (ApiException e) {
-            LOGGER.error("Problem while retrieving the workspace ingresses", e);
-            return Collections.<V1beta1Ingress>emptyList().stream();
-        }
-    }
-
-    private String serverName(V1beta1Ingress ingress) {
-        return ingress.getMetadata().getName().replace("ingress-" + workspaceId + "-", "");
-    }
-
-    private String serverUrl(V1beta1Ingress ingress) {
-        return ingress.getMetadata().getAnnotations().get("org.eclipse.che.server.protocol")
-        + "://" + ingress.getSpec().getRules().get(0).getHost();
-    }
-
-    private Map<String, String> serverAttributes(V1beta1Ingress ingress) {
-        Map<String, String> attributes = new HashMap<>();
-        String attributesAnnotation = ingress.getMetadata().getAnnotations().get("org.eclipse.che.server.attributes");
-        if (attributesAnnotation != null) {
-            try {
-                JsonNode jsonNode = jsonObjectMapper.readTree(attributesAnnotation);
-                jsonNode.fields().forEachRemaining(field -> {
-                    attributes.put(field.getKey(), field.getValue().asText());
-                });
-            } catch(IOException e) {
-                LOGGER.error("Problem while parsing ingress attributes annotation for ingress" + ingress.getMetadata().getName(), e);
-            } 
-        }
-        String portAnnotation = ingress.getMetadata().getAnnotations().get("org.eclipse.che.server.port");
-        if (portAnnotation != null) {
-            attributes.put("port", portAnnotation.split("/")[0]);
-        }
-        return attributes;
-    }
-
-    private Runtime buildRuntimeFromK8sObjects() throws ApiException {
-        Map<String, MachineImpl> machines = listWorkspaceServices()
-        .filter(service -> service.getMetadata().getAnnotations() != null&&
-                            service.getMetadata().getAnnotations().containsKey("org.eclipse.che.machine.name"))
-        .collect(ImmutableMap.toImmutableMap(
-            service -> service.getMetadata().getAnnotations().get("org.eclipse.che.machine.name"),
-            service -> new MachineImpl(
-                    service.getMetadata().getAnnotations().entrySet().stream()
-                        .filter(entry -> entry.getKey().startsWith("org.eclipse.che.machine.") 
-                                && ! entry.getKey().equals("org.eclipse.che.machine.name"))
-                        .collect(Collectors.toMap(
-                            entry -> entry.getKey().replace("org.eclipse.che.machine.", ""),
-                            entry -> entry.getValue())),
-                    listWorkspaceIngresses()
-                        .filter(ingress -> 
-                            service.getMetadata().getAnnotations().get("org.eclipse.che.machine.name").equals(
-                                ingress.getMetadata().getAnnotations().get("org.eclipse.che.machine.name")))
-                        .collect(ImmutableMap.toImmutableMap(
-                            ingress -> serverName(ingress),
-                            ingress -> new ServerImpl(serverUrl(ingress), ServerStatus.UNKNOWN, serverAttributes(ingress))
-                        )),
-                    MachineStatus.RUNNING
-                )
-        ));
-        return new RuntimeImpl(
-            "default",
-            machines,
-            "anonymous"
-        );
+    private Map<String, Object> retrieveWorkspaceCustomResource() throws ApiException {
+        return asMap(new CustomObjectsApi().getNamespacedCustomObject("workspace.che.eclipse.org", workspaceCrdVersion, workspaceNamespace,
+                "workspaces", workspaceName));
     }
 
     DevfileImpl parseDevFile(String devfileYaml) throws JsonProcessingException, IOException {
@@ -264,7 +177,13 @@ public class ApiService {
         return devfileObj;
     }
 
-    WorkspaceDto convertToWorkspace(DevfileImpl devfileObj) throws DevfileException, ServerException, ValidationException, ApiException {
+    Runtime parseRuntime(String runtimeJson) throws JsonProcessingException, IOException {
+        LOGGER.info("Runtime content for workspace {}: {}", workspaceName, runtimeJson);
+        Runtime runtimeObj = jsonObjectMapper.treeToValue(yamlObjectMapper.readTree(runtimeJson), Runtime.class);
+        return runtimeObj;
+    }
+
+    WorkspaceDto convertToWorkspace(DevfileImpl devfileObj, Runtime runtimeObj) throws DevfileException, ServerException, ValidationException, ApiException {
         LOGGER.info("validateDevfile");
         try {
             devfileIntegrityValidator.validateDevfile(devfileObj);
@@ -280,7 +199,7 @@ public class ApiService {
             .setAccount(new AccountImpl("anonymous", "anonymous", "anonymous"))
             .setAttributes(Collections.emptyMap())
             .setTemporary(false)
-            .setRuntime(buildRuntimeFromK8sObjects())
+            .setRuntime(runtimeObj)
             .setStatus(WorkspaceStatus.RUNNING)
             .build();
 

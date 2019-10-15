@@ -36,7 +36,7 @@ const (
 // WorkspaceCondition contains details for the current condition of this workspace.
 type WorkspaceCondition struct {
 	// Type is the type of the condition.
-	Type WorkspaceConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=PodConditionType"`
+	Type WorkspaceConditionType `json:"type"`
 	// Status is the status of the condition.
 	// Can be True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`

@@ -31,7 +31,7 @@ type ExposedEndpoint struct {
 	// Url of the exposed endpoint
 	Url             string `json:"url,omitEmpty"`
 	// Attributes of the exposed endpoint
-	Attributes      EndpointAttributes `json:"attributes,omitEmpty"`
+	Attributes      map[string]string `json:"attributes,omitEmpty"`
 }
 
 // WorkspaceExposurePhase is a label for the condition of a workspace exposure at the current time.

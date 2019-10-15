@@ -218,6 +218,13 @@ func buildWorkspaceExposure(wkspProperties workspaceProperties, componentInstanc
 					if endpoint.Port != port64 {
 						continue
 					}
+					if endpoint.Attributes == nil {
+						endpoint.Attributes = map[string]string{}
+					}
+					// public is the default.
+					if _, exists := endpoint.Attributes["public"]; !exists {
+						endpoint.Attributes["public"] = "true"
+					}
 					machineEndpoints = append(machineEndpoints, endpoint)
 				}
 			}

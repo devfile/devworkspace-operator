@@ -49,27 +49,8 @@ spec:
                     items:
                       properties:
                         attributes:
-                          properties:
-                            discoverable:
-                              description: 'Identifies server as secure or non-secure.
-                                Requests to secure servers will be authenticated and
-                                must contain machine token - default: false'
-                              type: boolean
-                            path:
-                              description: Defines protocol that should be used for
-                                communication with endpoint. Is used for endpoint
-                                URL evaluation"
-                              type: string
-                            protocol:
-                              description: 'Identifies endpoint as accessible by its
-                                name. - default: false'
-                              type: string
-                            public:
-                              type: boolean
-                            secure:
-                              description: 'Identifies endpoint as workspace internally
-                                or externally accessible - default: true'
-                              type: boolean
+                          additionalProperties:
+                            type: string
                           type: object
                         name:
                           type: string
@@ -103,27 +84,9 @@ spec:
               items:
                 properties:
                   attributes:
+                    additionalProperties:
+                      type: string
                     description: Attributes of the exposed endpoint
-                    properties:
-                      discoverable:
-                        description: 'Identifies server as secure or non-secure. Requests
-                          to secure servers will be authenticated and must contain
-                          machine token - default: false'
-                        type: boolean
-                      path:
-                        description: Defines protocol that should be used for communication
-                          with endpoint. Is used for endpoint URL evaluation"
-                        type: string
-                      protocol:
-                        description: 'Identifies endpoint as accessible by its name.
-                          - default: false'
-                        type: string
-                      public:
-                        type: boolean
-                      secure:
-                        description: 'Identifies endpoint as workspace internally
-                          or externally accessible - default: true'
-                        type: boolean
                     type: object
                   url:
                     description: Url of the exposed endpoint

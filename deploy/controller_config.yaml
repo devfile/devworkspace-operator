@@ -3,7 +3,8 @@ kind: ConfigMap
 metadata:
   name: che-workspace-crd-controller
 data:
-  ingress.global.domain: 192.168.42.174.nip.io
-  plugin.registry: https://che-plugin-registry.openshift.io/v3
-  che.workspace.plugin_broker.unified.image: quay.io/dfestal/che-unified-plugin-broker:v0.20
-  che.workspace.plugin_broker.init.image: quay.io/dfestal/che-init-plugin-broker:v0.20
+  ingress.global.domain: 192.168.39.101.nip.io
+  plugin.registry: http://che-plugin-registry-crd-poc.192.168.39.101.nip.io/v3
+  che.workspace.plugin_broker.unified.image: eclipse/che-unified-plugin-broker:v0.20
+  che.workspace.plugin_broker.init.image: eclipse/che-init-plugin-broker:v0.20
+  cherestapis.image.name: quay.io/dfestal/che-workspace-crd-rest-apis:newone

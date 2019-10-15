@@ -81,27 +81,29 @@ spec:
         status:
           properties:
             exposedEndpoints:
-              items:
-                properties:
-                  attributes:
-                    additionalProperties:
+              additionalProperties:
+                items:
+                  properties:
+                    attributes:
+                      additionalProperties:
+                        type: string
+                      description: Attributes of the exposed endpoint
+                      type: object
+                    name:
+                      description: Name of the exposed endpoint
                       type: string
-                    description: Attributes of the exposed endpoint
-                    type: object
-                  url:
-                    description: Url of the exposed endpoint
-                    type: string
-                required:
-                - url
-                - attributes
-                type: object
-              type: array
+                    url:
+                      description: Url of the exposed endpoint
+                      type: string
+                  required:
+                  - name
+                  - url
+                  type: object
+                type: array
+              type: object
             phase:
               description: Workspace Exposure status
               type: string
-          required:
-          - phase
-          - exposedEndpoints
           type: object
   version: v1alpha1
   versions:

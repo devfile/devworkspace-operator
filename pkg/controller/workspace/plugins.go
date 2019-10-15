@@ -267,8 +267,8 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		machineAttributes[PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
 
 		componentInstanceStatus.Machines[machineName] = MachineDescription{
-			machineAttributes: machineAttributes,
-			ports:             exposedPorts,
+			MachineAttributes: machineAttributes,
+			Ports:             exposedPorts,
 		}
 
 		for _, command := range containerDef.Commands {

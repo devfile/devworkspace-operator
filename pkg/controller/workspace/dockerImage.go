@@ -99,8 +99,8 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 	}
 	machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = RECIPE_CONTAINER_SOURCE
 	componentInstanceStatus.Machines[machineName] = MachineDescription {
-		machineAttributes: machineAttributes,
-    ports: exposedPorts,
+		MachineAttributes: machineAttributes,
+    Ports: exposedPorts,
 	}
 	
 	for _, command := range commands {

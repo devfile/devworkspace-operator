@@ -17,21 +17,23 @@ type WorkspaceExposureSpec struct {
 	// ingress global domain (corresponds to the Openshift route suffix)
 	IngressGlobalDomain string `json:"ingressGlobalDomain"`
 	// Services by machine name
-	Services map[string]ServiceDescription `json:"services,omitEmpty"`
+	Services map[string]ServiceDescription `json:"services"`
 }
 
 type ServiceDescription struct {
 	// Service name of the machine-related service
-	ServiceName          string `json:"serviceName,omitEmpty"`
+	ServiceName          string `json:"serviceName"`
 	// Endpoints that correspond to this machine-related service
-	Endpoints            []Endpoint `json:"endpoints,omitEmpty"`
+	Endpoints            []Endpoint `json:"endpoints"`
 }
 
 type ExposedEndpoint struct {
+	// Name of the exposed endpoint
+	Name            string            `json:"name"`
 	// Url of the exposed endpoint
-	Url             string `json:"url,omitEmpty"`
+	Url             string            `json:"url"`
 	// Attributes of the exposed endpoint
-	Attributes      map[string]string `json:"attributes,omitEmpty"`
+	Attributes      map[string]string `json:"attributes,omitempty"`
 }
 
 // WorkspaceExposurePhase is a label for the condition of a workspace exposure at the current time.
@@ -49,8 +51,8 @@ const (
 // +k8s:openapi-gen=true
 type WorkspaceExposureStatus struct {
 	// Workspace Exposure status
-	Phase WorkspaceExposurePhase `json:"phase,omitEmpty"`
-	ExposedEndpoints []ExposedEndpoint `json:"exposedEndpoints,omitEmpty"`
+	Phase WorkspaceExposurePhase `json:"phase,omitempty"`
+	ExposedEndpoints map[string][]ExposedEndpoint `json:"exposedEndpoints,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

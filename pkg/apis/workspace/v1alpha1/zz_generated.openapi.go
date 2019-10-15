@@ -169,18 +169,24 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref common.Refer
 					},
 					"exposedEndpoints": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
+							Type: []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ExposedEndpoint"),
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ExposedEndpoint"),
+												},
+											},
+										},
 									},
 								},
 							},
 						},
 					},
 				},
-				Required: []string{"phase", "exposedEndpoints"},
 			},
 		},
 		Dependencies: []string{

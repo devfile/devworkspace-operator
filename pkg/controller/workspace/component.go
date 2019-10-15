@@ -16,20 +16,20 @@ type ComponentInstance struct {
 }
 
 type ComponentInstanceSpec struct {
-	componentClass string
-	component      workspacev1alpha1.ComponentSpec
+	ComponentClass string                           `json:"componentClass"`
+	component      workspacev1alpha1.ComponentSpec  `json:"component"`
 }
 
 type MachineDescription struct {
-	machineAttributes               map[string]string
-	ports                           []int
+	MachineAttributes               map[string]string  `json:"machineAttributes,omitempty"`
+	Ports                           []int              `json:"ports,omitempty"`
 }
 
 type ComponentInstanceStatus struct {
-	Machines                        map[string]MachineDescription
-	ContributedRuntimeCommands      []CheWorkspaceCommand
-	WorkspacePodAdditions           *corev1.PodTemplateSpec
-	ExternalObjects                 []runtime.Object
-	PluginFQN                       *model.PluginFQN
-	Endpoints                       []workspacev1alpha1.Endpoint
+	Machines                        map[string]MachineDescription  `json:"machines,omitempty"`
+	ContributedRuntimeCommands      []CheWorkspaceCommand          `json:"contributedRuntimeCommands,omitempty"`
+	WorkspacePodAdditions           *corev1.PodTemplateSpec        `json:"-"`
+	ExternalObjects                 []runtime.Object               `json:"-"`
+	PluginFQN                       *model.PluginFQN               `json:"-"`
+	Endpoints                       []workspacev1alpha1.Endpoint   `json:"-"`
 }

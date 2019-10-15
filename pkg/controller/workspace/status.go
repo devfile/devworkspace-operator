@@ -20,7 +20,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	//	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -122,12 +121,15 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 					if _, isPod := evt.ObjectNew.(*corev1.Pod); isPod {
 						return true
 					}
+					if _, isWorkspaceExposure := evt.ObjectNew.(*workspacev1alpha1.WorkspaceExposure); isWorkspaceExposure {
+						return true
+					}
 				}
 				return false
 			},
 			CreateFunc: func(evt event.CreateEvent) bool {
 				if checkOwner(evt.Meta) {
-					if _, isIngress := evt.Object.(*extensionsv1beta1.Ingress); isIngress {
+					if _, isWorkspaceExposure := evt.Object.(*workspacev1alpha1.WorkspaceExposure); isWorkspaceExposure {
 						return true
 					}
 				}
@@ -209,7 +211,89 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 		if err != nil {
 			log.Error(err, "")
 		}
+		
+		statusesAnnotation, err := json.Marshal(rs.componentInstanceStatuses)
+		if err != nil {
+			log.Error(err, "")
+		}
+		rs.workspace.Annotations["org.eclipse.che.workspace/componentstatuses"] = string(statusesAnnotation)
+		err = r.Update(context.Background(), rs.workspace)
+		if err != nil {
+			log.Error(err, "")
+		}
 	}
+}
+
+func (r *ReconcileWorkspace) updateFromWorkspaceExposure(exposure *workspacev1alpha1.WorkspaceExposure, workspace *workspacev1alpha1.Workspace) error {
+	if exposure.Status.Phase != workspacev1alpha1.WorkspaceExposureExposed {
+		return nil
+	}
+
+	statusesAnnotation := workspace.Annotations["org.eclipse.che.workspace/componentstatuses"]
+	if statusesAnnotation == "" {
+		log.Error(nil, "statusesAnnotation is empty !")
+	}
+
+	statuses := []ComponentInstanceStatus{}
+	err := json.Unmarshal([]byte(statusesAnnotation), statuses)
+	if err != nil {
+		log.Error(err, "")
+	}
+
+	commands := []CheWorkspaceCommand {}
+	machines := map[string]CheWorkspaceMachine {}
+
+	for _, status := range statuses {
+		commands = append(commands, status.ContributedRuntimeCommands...)
+		for machineName, description := range status.Machines {
+			machineExposedEndpoints := exposure.Status.ExposedEndpoints[machineName]
+			machineServers := map[string]CheWorkspaceServer{}
+			for _, endpoint := range machineExposedEndpoints {
+				machineServer := CheWorkspaceServer {
+					Status: UnknownServerStatus,
+					URL: &endpoint.Url,
+					Attributes: map[string]string{},
+				}
+				for name, val := range endpoint.Attributes {
+					serverAttributeName := name
+					serverAttributeValue := val
+					if name == "public" {
+						serverAttributeName = "internal"
+						if val == "true" {
+							serverAttributeValue = "false"
+						} else {
+							serverAttributeValue = "true"
+						}
+					}
+					machineServer.Attributes[serverAttributeName] = serverAttributeValue
+				}
+				machineServers[endpoint.Name] = machineServer
+			}
+			machines[machineName] = CheWorkspaceMachine {
+				Servers: machineServers,
+				Attributes: description.MachineAttributes,
+			}
+		}
+	}
+
+	defaultEnv := "default"
+	runtime := CheWorkspaceRuntime{
+		ActiveEnv: &defaultEnv,
+		Commands: commands,
+		Machines: machines,
+	}
+
+	runtimeAnnotation, err := json.Marshal(runtime)
+	if err != nil {
+		return err
+	}
+	workspace.Annotations["org.eclipse.che.workspace/runtime"] = string(runtimeAnnotation)
+	err = r.Update(context.Background(), workspace)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1alpha1.Workspace) (reconcile.Result, error) {
@@ -217,7 +301,7 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 	workspace.Status.Members.Unready = []string {}
 	for _, list := range []runtime.Object{
 		&corev1.PodList{},
-		&extensionsv1beta1.IngressList{},
+		&workspacev1alpha1.WorkspaceExposureList{},
 	} {
 		r.List(context.TODO(), &client.ListOptions{
 			Namespace: workspace.GetNamespace(),
@@ -249,18 +333,8 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 					}
 				}
 			}
-			if itemIngress, isIngress := item.(*extensionsv1beta1.Ingress); isIngress {
-				attributes := itemIngress.GetAnnotations()["org.eclipse.che.server.attributes"]
-				if attributes != "" {
-					attrs := map[string]string{}
-					err := json.Unmarshal([]byte(attributes), &attrs)
-					if err == nil && attrs["type"] == "ide" {						
-						workspace.Status.IdeUrl = join("",
-							itemIngress.GetAnnotations()["org.eclipse.che.server.protocol"],
-							"://",
-							itemIngress.Spec.Rules[0].Host)
-					}
-				}
+			if itemExposure, isWorkspaceExposure := item.(*workspacev1alpha1.WorkspaceExposure); isWorkspaceExposure {
+				r.updateFromWorkspaceExposure(itemExposure, workspace)
 			}
 		}
 	}

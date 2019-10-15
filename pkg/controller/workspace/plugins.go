@@ -3,7 +3,6 @@ package workspace
 import (
 	"encoding/json"
 	"errors"
-	"net/http"
 	"strconv"
 	"strings"
 
@@ -12,11 +11,9 @@ import (
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
 	pluginModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/plugins"
-	unifiedBroker "github.com/eclipse/che-plugin-broker/brokers/unified"
-	vscodeBroker "github.com/eclipse/che-plugin-broker/brokers/unified/vscode"
+	metadataBroker "github.com/eclipse/che-plugin-broker/brokers/metadata"
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
 	"github.com/eclipse/che-plugin-broker/model"
-	storage "github.com/eclipse/che-plugin-broker/storage"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -137,13 +134,8 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 }
 
 func setupChePlugin(names workspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
-	theStorage := storage.New()
-	theCommonBroker := commonBroker.NewBroker()
-	theCachingIoUtil := NewCachingIoUtil()
 	theIoUtil := utils.New()
 	theRand := commonBroker.NewRand()
-	theHttpClient := &http.Client{}
-	theUnifiedBroker := unifiedBroker.NewBrokerWithParams(theCommonBroker, theIoUtil, theStorage, theRand, theHttpClient, true)
 
 	pluginFQN := model.PluginFQN{}
 	idParts := strings.Split(*component.Id, "/")
@@ -156,44 +148,35 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		pluginFQN.Registry = strings.Join(idParts[0:idPartsLen-3], "/")
 	}
 
-	pluginMeta, err := theUnifiedBroker.GetPluginMeta(pluginFQN, controllerConfig.getPluginRegistry())
+	pluginMeta, err := utils.GetPluginMeta(pluginFQN, controllerConfig.getPluginRegistry(), theIoUtil)
 	if err != nil {
 		return nil, err
 	}
 
-	isTheiaOrVsCodePlugin := false
+	pluginMetas := []model.PluginMeta{*pluginMeta}
+	err = utils.ResolveRelativeExtensionPaths(pluginMetas, controllerConfig.getPluginRegistry())
+	if err != nil {
+		return nil, err
+	}
+	err = utils.ValidateMetas(pluginMetas...)
+	if err != nil {
+		return nil, err
+	}
+	pluginMeta = &pluginMetas[0]
 
-	var chePlugin model.ChePlugin
-	switch pluginMeta.Type {
-	case "Che Plugin", "Che Editor":
-		chePlugin = unifiedBroker.ConvertMetaToPlugin(*pluginMeta)
-		break
-	case "Theia plugin":
-		fallthrough
-	case "VS Code extension":
-		broker := vscodeBroker.NewBrokerWithParams(theCommonBroker, theCachingIoUtil, theStorage, theRand, &http.Client{}, true)
-		broker.ProcessPlugin(*pluginMeta)
-		plugins, err := theStorage.Plugins()
-		if err != nil {
-			return nil, err
-		}
+	chePlugin := metadataBroker.ConvertMetaToPlugin(*pluginMeta)
 
-		if len(plugins) != 1 {
-			return nil, errors.New("There should be only one plugin definition for plugin " + pluginMeta.ID)
-		}
+	isTheiaOrVsCodePlugin := utils.IsTheiaOrVscodePlugin(*pluginMeta)
 
-		chePlugin = (plugins)[0]
-		isTheiaOrVsCodePlugin = true
-		break
-	default:
-		return nil, errors.New("Unknown plugin type: " + pluginMeta.Type)
+	if isTheiaOrVsCodePlugin && len(pluginMeta.Spec.Containers) > 0 {
+		metadataBroker.AddPluginRunnerRequirements(chePlugin, theRand, true)
 	}
 
 	componentInstanceStatus := &ComponentInstanceStatus{
-		Machines: map[string]MachineDescription{},
-		Endpoints: []workspaceApi.Endpoint {},
-		ContributedRuntimeCommands: []CheWorkspaceCommand {},
-		PluginFQN: &pluginFQN,
+		Machines:                   map[string]MachineDescription{},
+		Endpoints:                  []workspaceApi.Endpoint{},
+		ContributedRuntimeCommands: []CheWorkspaceCommand{},
+		PluginFQN:                  &pluginFQN,
 	}
 	if len(chePlugin.Containers) == 0 {
 		return componentInstanceStatus, nil
@@ -201,7 +184,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 
 	podTemplate := &corev1.PodTemplateSpec{}
 	componentInstanceStatus.WorkspacePodAdditions = podTemplate
-	componentInstanceStatus.ExternalObjects = []runtime.Object {}
+	componentInstanceStatus.ExternalObjects = []runtime.Object{}
 
 	for _, containerDef := range chePlugin.Containers {
 		machineName := containerDef.Name
@@ -293,7 +276,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		if isTheiaOrVsCodePlugin &&
 			endpointDef.Attributes != nil &&
 			endpointDef.Attributes["protocol"] == "" {
-//			endpointDef.Attributes["protocol"] = "ws" TODO: check this is really required
+			//			endpointDef.Attributes["protocol"] = "ws" TODO: check this is really required
 		}
 	}
 

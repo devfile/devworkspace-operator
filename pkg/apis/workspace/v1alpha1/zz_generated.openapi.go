@@ -132,6 +132,20 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 							Format:      "",
 						},
 					},
+					"workspacePodSelector": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Selector that shoud be used by created services to point to the workspace Pod",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 					"services": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Services by machine name",
@@ -146,7 +160,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"exposureClass", "exposed", "ingressGlobalDomain", "services"},
+				Required: []string{"exposureClass", "exposed", "ingressGlobalDomain", "workspacePodSelector", "services"},
 			},
 		},
 		Dependencies: []string{

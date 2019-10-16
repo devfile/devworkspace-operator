@@ -48,6 +48,10 @@ func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperti
 				Exposed: workspaceProperties.started,
 				ExposureClass: workspaceProperties.exposureClass,
 				IngressGlobalDomain: controllerConfig.getIngressGlobalDomain(),
+				WorkspacePodSelector: map[string]string{
+					"che.original_name": cheOriginalName,
+					"che.workspace_id":  workspaceProperties.workspaceId,
+				},
 				Services: map[string]workspaceApi.ServiceDescription {},
 			},
 		}, nil, []runtime.Object{}, nil
@@ -246,6 +250,10 @@ func buildWorkspaceExposure(wkspProperties workspaceProperties, componentInstanc
 			Exposed:             wkspProperties.started,
 			ExposureClass:       wkspProperties.exposureClass,
 			IngressGlobalDomain: controllerConfig.getIngressGlobalDomain(),
+			WorkspacePodSelector: map[string]string{
+				"che.original_name": cheOriginalName,
+				"che.workspace_id":  wkspProperties.workspaceId,
+			},
 			Services:            services,
 		},
 	}

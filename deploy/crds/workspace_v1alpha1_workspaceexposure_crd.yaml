@@ -72,10 +72,17 @@ spec:
                 type: object
               description: Services by machine name
               type: object
+            workspacePodSelector:
+              additionalProperties:
+                type: string
+              description: Selector that shoud be used by created services to point
+                to the workspace Pod
+              type: object
           required:
           - exposureClass
           - exposed
           - ingressGlobalDomain
+          - workspacePodSelector
           - services
           type: object
         status:

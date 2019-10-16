@@ -82,7 +82,7 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 	for _, obj := range []runtime.Object{
 		&appsv1.Deployment{},
 		&corev1.Pod{},
-		&workspacev1alpha1.WorkspaceExposure{},
+//		&workspacev1alpha1.WorkspaceExposure{},
 	} {
 		var mapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
@@ -207,16 +207,21 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 		}
 
 		log.Info("Status Update After Workspace Change : ", "status", rs.workspace.Status)
-		err := r.Status().Update(context.Background(), rs.workspace)
+		err := r.Status().Update(context.TODO(), rs.workspace)
 		if err != nil {
 			log.Error(err, "")
 		}
 		
-		statusesAnnotation, err := json.Marshal(rs.componentInstanceStatuses)
-		if err != nil {
-			log.Error(err, "")
+		if rs.componentInstanceStatuses == nil {
+			delete(rs.workspace.Annotations, "org.eclipse.che.workspace/componentstatuses")
+		} else {
+
+			statusesAnnotation, err := json.Marshal(rs.componentInstanceStatuses)
+			if err != nil {
+				log.Error(err, "")
+			}
+			rs.workspace.Annotations["org.eclipse.che.workspace/componentstatuses"] = string(statusesAnnotation)
 		}
-		rs.workspace.Annotations["org.eclipse.che.workspace/componentstatuses"] = string(statusesAnnotation)
 		err = r.Update(context.Background(), rs.workspace)
 		if err != nil {
 			log.Error(err, "")
@@ -225,70 +230,73 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 }
 
 func (r *ReconcileWorkspace) updateFromWorkspaceExposure(exposure *workspacev1alpha1.WorkspaceExposure, workspace *workspacev1alpha1.Workspace) error {
-	if exposure.Status.Phase != workspacev1alpha1.WorkspaceExposureExposed {
-		return nil
-	}
+	if exposure.Status.Phase != workspacev1alpha1.WorkspaceExposureReady {
+		delete(workspace.Annotations, "org.eclipse.che.workspace/runtime")
+	} else {
 
-	statusesAnnotation := workspace.Annotations["org.eclipse.che.workspace/componentstatuses"]
-	if statusesAnnotation == "" {
-		log.Error(nil, "statusesAnnotation is empty !")
-	}
-
-	statuses := []ComponentInstanceStatus{}
-	err := json.Unmarshal([]byte(statusesAnnotation), statuses)
-	if err != nil {
-		log.Error(err, "")
-	}
-
-	commands := []CheWorkspaceCommand {}
-	machines := map[string]CheWorkspaceMachine {}
-
-	for _, status := range statuses {
-		commands = append(commands, status.ContributedRuntimeCommands...)
-		for machineName, description := range status.Machines {
-			machineExposedEndpoints := exposure.Status.ExposedEndpoints[machineName]
-			machineServers := map[string]CheWorkspaceServer{}
-			for _, endpoint := range machineExposedEndpoints {
-				machineServer := CheWorkspaceServer {
-					Status: UnknownServerStatus,
-					URL: &endpoint.Url,
-					Attributes: map[string]string{},
-				}
-				for name, val := range endpoint.Attributes {
-					serverAttributeName := name
-					serverAttributeValue := val
-					if name == "public" {
-						serverAttributeName = "internal"
-						if val == "true" {
-							serverAttributeValue = "false"
-						} else {
-							serverAttributeValue = "true"
-						}
+		statusesAnnotation := workspace.Annotations["org.eclipse.che.workspace/componentstatuses"]
+		if statusesAnnotation == "" {
+			log.Error(nil, "statusesAnnotation is empty !")
+		}
+	
+		statuses := []ComponentInstanceStatus{}
+		err := json.Unmarshal([]byte(statusesAnnotation), &statuses)
+		if err != nil {
+			log.Error(err, "")
+		}
+	
+		commands := []CheWorkspaceCommand {}
+		machines := map[string]CheWorkspaceMachine {}
+	
+		for _, status := range statuses {
+			commands = append(commands, status.ContributedRuntimeCommands...)
+			for machineName, description := range status.Machines {
+				machineExposedEndpoints := exposure.Status.ExposedEndpoints[machineName]
+				machineServers := map[string]CheWorkspaceServer{}
+				for _, endpoint := range machineExposedEndpoints {
+					machineServer := CheWorkspaceServer {
+						Status: UnknownServerStatus,
+						URL: &endpoint.Url,
+						Attributes: map[string]string{},
 					}
-					machineServer.Attributes[serverAttributeName] = serverAttributeValue
+					for name, val := range endpoint.Attributes {
+						serverAttributeName := name
+						serverAttributeValue := val
+						if name == "public" {
+							serverAttributeName = "internal"
+							if val == "true" {
+								serverAttributeValue = "false"
+							} else {
+								serverAttributeValue = "true"
+							}
+						}
+						machineServer.Attributes[serverAttributeName] = serverAttributeValue
+					}
+					machineServers[endpoint.Name] = machineServer
 				}
-				machineServers[endpoint.Name] = machineServer
-			}
-			machines[machineName] = CheWorkspaceMachine {
-				Servers: machineServers,
-				Attributes: description.MachineAttributes,
+				machines[machineName] = CheWorkspaceMachine {
+					Servers: machineServers,
+					Attributes: description.MachineAttributes,
+				}
 			}
 		}
+	
+		defaultEnv := "default"
+		runtime := CheWorkspaceRuntime{
+			ActiveEnv: &defaultEnv,
+			Commands: commands,
+			Machines: machines,
+		}
+	
+		runtimeAnnotation, err := json.Marshal(runtime)
+		if err != nil {
+			return err
+		}
+		
+		workspace.Annotations["org.eclipse.che.workspace/runtime"] = string(runtimeAnnotation)
 	}
 
-	defaultEnv := "default"
-	runtime := CheWorkspaceRuntime{
-		ActiveEnv: &defaultEnv,
-		Commands: commands,
-		Machines: machines,
-	}
-
-	runtimeAnnotation, err := json.Marshal(runtime)
-	if err != nil {
-		return err
-	}
-	workspace.Annotations["org.eclipse.che.workspace/runtime"] = string(runtimeAnnotation)
-	err = r.Update(context.Background(), workspace)
+	err := r.Update(context.TODO(), workspace)
 	if err != nil {
 		return err
 	}
@@ -365,7 +373,7 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 		workspace.Status.IdeUrl = ""
 	}
 	log.Info("Status Update After Change To Owned Objects : ", "status", workspace.Status)
-	r.Status().Update(context.Background(), workspace)
+	r.Status().Update(context.TODO(), workspace)
 	return reconcile.Result{}, nil
 }
 

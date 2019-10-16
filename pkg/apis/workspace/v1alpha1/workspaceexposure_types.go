@@ -11,13 +11,15 @@ import (
 // +k8s:openapi-gen=true
 type WorkspaceExposureSpec struct {
 	// Class of the exposure: this drives which Workspace exposer controller will manage this exposure
-	ExposureClass    string `json:"exposureClass"`
+	ExposureClass            string              `json:"exposureClass"`
 	// Should the workspace be exposed ?
-	Exposed          bool `json:"exposed"`
+	Exposed                  bool                 `json:"exposed"`
 	// ingress global domain (corresponds to the Openshift route suffix)
-	IngressGlobalDomain string `json:"ingressGlobalDomain"`
+	IngressGlobalDomain      string                `json:"ingressGlobalDomain"`
+	// Selector that shoud be used by created services to point to the workspace Pod
+	WorkspacePodSelector     map[string]string     `json:"workspacePodSelector"`
 	// Services by machine name
-	Services map[string]ServiceDescription `json:"services"`
+	Services                  map[string]ServiceDescription `json:"services"`
 }
 
 type ServiceDescription struct {
@@ -41,9 +43,11 @@ type WorkspaceExposurePhase string
 
 // These are the valid statuses of pods.
 const (
-	WorkspaceExposureProcessing WorkspaceExposurePhase = "Processing"
+	WorkspaceExposureExposing WorkspaceExposurePhase = "Exposing"
 	WorkspaceExposureExposed WorkspaceExposurePhase = "Exposed"
+	WorkspaceExposureReady WorkspaceExposurePhase = "Ready"
 	WorkspaceExposureHidden WorkspaceExposurePhase = "Hidden"
+	WorkspaceExposureHiding WorkspaceExposurePhase = "Hiding"
 	WorkspaceExposureFailed   WorkspaceExposurePhase = "Failed"
 )
 

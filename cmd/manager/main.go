@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
 	"context"
 	"flag"
 	"fmt"
@@ -106,6 +107,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	log.Info("Expose Plugin Registry Port.")
+
+	// Create Service object to expose the embedded plugin registry.
+	_, err = registry.ExposeRegistryPort(ctx, 8080)
+	if err != nil {
+		log.Info(err.Error())
+	}
+
+	log.Info("Setting up Controllers.")
+
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
@@ -117,6 +128,8 @@ func main() {
 		log.Error(err, "unable to register webhooks to the manager")
 		os.Exit(1)
 	}
+
+	log.Info("Expose Metrics Port.")
 
 	// Create Service object to expose the metrics port.
 	_, err = metrics.ExposeMetricsPort(ctx, metricsPort)

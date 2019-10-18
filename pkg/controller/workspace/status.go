@@ -1,8 +1,10 @@
 package workspace
 
 import (
-	"time"
+	"github.com/go-logr/logr"
 	"encoding/json"
+	"time"
+
 	//	"strings"
 	"context"
 
@@ -51,7 +53,7 @@ func getOwningWorkspace(clt client.Client, obj metav1.Object, mgr manager.Manage
 				Namespace: obj.GetNamespace(),
 			}, workspace)
 			if err != nil {
-				if ! errors.IsNotFound(err) {
+				if !errors.IsNotFound(err) {
 					log.Error(err, "")
 				}
 				return nil
@@ -65,13 +67,13 @@ func getOwningWorkspace(clt client.Client, obj metav1.Object, mgr manager.Manage
 					Name:      deploymentName,
 					Namespace: obj.GetNamespace(),
 				}, deployment)
-					if err != nil {
-						if ! errors.IsNotFound(err) {
-							log.Error(err, "")
-						}
-						return nil
+				if err != nil {
+					if !errors.IsNotFound(err) {
+						log.Error(err, "")
 					}
-					return getOwningWorkspace(clt, deployment, mgr)
+					return nil
+				}
+				return getOwningWorkspace(clt, deployment, mgr)
 			}
 		}
 	}
@@ -82,7 +84,7 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 	for _, obj := range []runtime.Object{
 		&appsv1.Deployment{},
 		&corev1.Pod{},
-//		&workspacev1alpha1.WorkspaceExposure{},
+		&workspacev1alpha1.WorkspaceExposure{},
 	} {
 		var mapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
@@ -128,11 +130,6 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 				return false
 			},
 			CreateFunc: func(evt event.CreateEvent) bool {
-				if checkOwner(evt.Meta) {
-					if _, isWorkspaceExposure := evt.Object.(*workspacev1alpha1.WorkspaceExposure); isWorkspaceExposure {
-						return true
-					}
-				}
 				return false
 			},
 			DeleteFunc: func(evt event.DeleteEvent) bool {
@@ -158,7 +155,11 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 }
 
 func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatus) {
+	existingPhase := rs.workspace.Status.Phase
 	if rs != nil && rs.workspace != nil {
+		if rs.workspace.Status.AdditionalInfo == nil {
+			rs.workspace.Status.AdditionalInfo = map[string]string{}
+		}
 		modifiedStatus := false
 		if rs.failure != "" {
 			rs.workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseFailed
@@ -206,57 +207,60 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 			}
 		}
 
-		log.Info("Status Update After Workspace Change : ", "status", rs.workspace.Status)
-		err := r.Status().Update(context.TODO(), rs.workspace)
-		if err != nil {
-			log.Error(err, "")
-		}
-		
 		if rs.componentInstanceStatuses == nil {
-			delete(rs.workspace.Annotations, "org.eclipse.che.workspace/componentstatuses")
+			delete(rs.workspace.Status.AdditionalInfo, "org.eclipse.che.workspace/componentstatuses")
 		} else {
 
 			statusesAnnotation, err := json.Marshal(rs.componentInstanceStatuses)
 			if err != nil {
 				log.Error(err, "")
 			}
-			rs.workspace.Annotations["org.eclipse.che.workspace/componentstatuses"] = string(statusesAnnotation)
+			rs.workspace.Status.AdditionalInfo["org.eclipse.che.workspace/componentstatuses"] = string(statusesAnnotation)
 		}
-		err = r.Update(context.Background(), rs.workspace)
+
+		rs.ReqLogger.V(1).Info("Status Update After Workspace Change : ", "status", rs.workspace.Status)
+		err := r.Status().Update(context.TODO(), rs.workspace)
 		if err != nil {
 			log.Error(err, "")
+		}
+		if existingPhase != rs.workspace.Status.Phase {
+			rs.ReqLogger.Info("Phase: " + string(existingPhase) + " => " + string(rs.workspace.Status.Phase))
 		}
 	}
 }
 
 func (r *ReconcileWorkspace) updateFromWorkspaceExposure(exposure *workspacev1alpha1.WorkspaceExposure, workspace *workspacev1alpha1.Workspace) error {
+	if workspace.Status.AdditionalInfo == nil {
+		workspace.Status.AdditionalInfo = map[string]string {}
+	}
 	if exposure.Status.Phase != workspacev1alpha1.WorkspaceExposureReady {
-		delete(workspace.Annotations, "org.eclipse.che.workspace/runtime")
+		delete(workspace.Status.AdditionalInfo, "org.eclipse.che.workspace/runtime")
+		workspace.Status.IdeUrl = ""
 	} else {
 
-		statusesAnnotation := workspace.Annotations["org.eclipse.che.workspace/componentstatuses"]
+		statusesAnnotation := workspace.Status.AdditionalInfo["org.eclipse.che.workspace/componentstatuses"]
 		if statusesAnnotation == "" {
 			log.Error(nil, "statusesAnnotation is empty !")
 		}
-	
+
 		statuses := []ComponentInstanceStatus{}
 		err := json.Unmarshal([]byte(statusesAnnotation), &statuses)
 		if err != nil {
 			log.Error(err, "")
 		}
-	
-		commands := []CheWorkspaceCommand {}
-		machines := map[string]CheWorkspaceMachine {}
-	
+
+		commands := []CheWorkspaceCommand{}
+		machines := map[string]CheWorkspaceMachine{}
+
 		for _, status := range statuses {
 			commands = append(commands, status.ContributedRuntimeCommands...)
 			for machineName, description := range status.Machines {
 				machineExposedEndpoints := exposure.Status.ExposedEndpoints[machineName]
 				machineServers := map[string]CheWorkspaceServer{}
 				for _, endpoint := range machineExposedEndpoints {
-					machineServer := CheWorkspaceServer {
-						Status: UnknownServerStatus,
-						URL: &endpoint.Url,
+					machineServer := CheWorkspaceServer{
+						Status:     UnknownServerStatus,
+						URL:        &endpoint.Url,
 						Attributes: map[string]string{},
 					}
 					for name, val := range endpoint.Attributes {
@@ -273,40 +277,45 @@ func (r *ReconcileWorkspace) updateFromWorkspaceExposure(exposure *workspacev1al
 						machineServer.Attributes[serverAttributeName] = serverAttributeValue
 					}
 					machineServers[endpoint.Name] = machineServer
+					if endpoint.Attributes["type"] == "ide" {
+						workspace.Status.IdeUrl = endpoint.Url
+					}
 				}
-				machines[machineName] = CheWorkspaceMachine {
-					Servers: machineServers,
+				machines[machineName] = CheWorkspaceMachine{
+					Servers:    machineServers,
 					Attributes: description.MachineAttributes,
 				}
 			}
 		}
-	
+
 		defaultEnv := "default"
 		runtime := CheWorkspaceRuntime{
 			ActiveEnv: &defaultEnv,
-			Commands: commands,
-			Machines: machines,
+			Commands:  commands,
+			Machines:  machines,
 		}
-	
+
 		runtimeAnnotation, err := json.Marshal(runtime)
 		if err != nil {
 			return err
 		}
-		
-		workspace.Annotations["org.eclipse.che.workspace/runtime"] = string(runtimeAnnotation)
-	}
 
-	err := r.Update(context.TODO(), workspace)
-	if err != nil {
-		return err
+		workspace.Status.AdditionalInfo["org.eclipse.che.workspace/runtime"] = string(runtimeAnnotation)
 	}
 
 	return nil
 }
 
-func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1alpha1.Workspace) (reconcile.Result, error) {
-	workspace.Status.Members.Ready = []string {}
-	workspace.Status.Members.Unready = []string {}
+func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1alpha1.Workspace, reqLogger logr.Logger) (reconcile.Result, error) {
+	existingPhase := workspace.Status.Phase
+	reconcileResult := reconcile.Result{}
+
+	workspace.Status.Members.Ready = []string{}
+	workspace.Status.Members.Unready = []string{}
+	if workspace.Status.AdditionalInfo == nil {
+		workspace.Status.AdditionalInfo = map[string]string{}
+	}
+
 	for _, list := range []runtime.Object{
 		&corev1.PodList{},
 		&workspacev1alpha1.WorkspaceExposureList{},
@@ -325,19 +334,23 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 				if !originalNameFound {
 					podOriginalName = "Unknown"
 				}
-				if _, podCondition := getPodCondition(&itemPod.Status, corev1.PodReady);
-				podCondition != nil &&
-				podCondition.Status == corev1.ConditionTrue {
-					workspace.Status.Members.Ready = append(workspace.Status.Members.Ready, podOriginalName)
-				} else {
-					workspace.Status.Members.Unready = append(workspace.Status.Members.Unready, podOriginalName)
-				}
 				if podOriginalName == cheOriginalName {
-					copyPodConditions(&itemPod.Status, &workspace.Status)
-					clearCondition(&workspace.Status, workspacev1alpha1.WorkspaceConditionStopped)
-					_, workspaceCondition := getWorkspaceCondition(&workspace.Status, workspacev1alpha1.WorkspaceConditionReady)
-					if workspaceCondition != nil && workspaceCondition.Status == corev1.ConditionTrue {
-						workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseRunning
+					for _, container := range itemPod.Status.ContainerStatuses {
+						if container.Ready {
+							workspace.Status.Members.Ready = append(workspace.Status.Members.Ready, container.Name)
+						} else {
+							workspace.Status.Members.Unready = append(workspace.Status.Members.Unready, container.Name)
+						}
+					}
+					if workspace.Spec.Started {
+						copyPodConditions(&itemPod.Status, &workspace.Status)
+						clearCondition(&workspace.Status, workspacev1alpha1.WorkspaceConditionStopped)
+						_, workspaceCondition := getWorkspaceCondition(&workspace.Status, workspacev1alpha1.WorkspaceConditionReady)
+						if workspaceCondition != nil && workspaceCondition.Status == corev1.ConditionTrue {
+							workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseRunning
+						}
+					} else {
+						reconcileResult = reconcile.Result { Requeue: true, RequeueAfter: 1 }
 					}
 				}
 			}
@@ -369,22 +382,23 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 			)
 		}
 	}
-	if workspace.Status.Phase != workspacev1alpha1.WorkspacePhaseRunning {
-		workspace.Status.IdeUrl = ""
-	}
-	log.Info("Status Update After Change To Owned Objects : ", "status", workspace.Status)
+	log.V(1).Info("Status Update After Change To Owned Objects : ", "status", workspace.Status)
 	r.Status().Update(context.TODO(), workspace)
-	return reconcile.Result{}, nil
+
+	if existingPhase != workspace.Status.Phase {
+		reqLogger.Info("Phase: " + string(existingPhase) + " => " + string(workspace.Status.Phase))
+	}
+	return reconcileResult, nil
 }
 
-var podConditionTypeToWorkspaceConditionType = map[corev1.PodConditionType]workspacev1alpha1.WorkspaceConditionType {
-	corev1.PodScheduled: workspacev1alpha1.WorkspaceConditionScheduled,
+var podConditionTypeToWorkspaceConditionType = map[corev1.PodConditionType]workspacev1alpha1.WorkspaceConditionType{
+	corev1.PodScheduled:   workspacev1alpha1.WorkspaceConditionScheduled,
 	corev1.PodInitialized: workspacev1alpha1.WorkspaceConditionInitialized,
-	corev1.PodReady: workspacev1alpha1.WorkspaceConditionReady,
+	corev1.PodReady:       workspacev1alpha1.WorkspaceConditionReady,
 }
 
 func copyPodConditions(podStatus *corev1.PodStatus, workspaceStatus *workspacev1alpha1.WorkspaceStatus) {
-	for _, podConditionType := range []corev1.PodConditionType {
+	for _, podConditionType := range []corev1.PodConditionType{
 		corev1.PodScheduled,
 		corev1.PodInitialized,
 		corev1.PodReady,
@@ -451,7 +465,7 @@ func newWorkspaceCondition(condType workspacev1alpha1.WorkspaceConditionType, st
 	return &workspacev1alpha1.WorkspaceCondition{
 		Type:               condType,
 		Status:             status,
-		LastTransitionTime: metav1.Time {now},
+		LastTransitionTime: metav1.Time{now},
 		Reason:             reason,
 		Message:            message,
 	}

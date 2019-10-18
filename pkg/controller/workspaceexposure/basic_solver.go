@@ -152,6 +152,9 @@ func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string
 	for machineName, serviceDesc := range cr.Instance.Spec.Services {
 		machineExposedEndpoints := []workspacev1alpha1.ExposedEndpoint{}
 		for _, endpoint := range serviceDesc.Endpoints {
+			if endpoint.Attributes["public"] == "false" {
+				continue
+			}
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{
 				Attributes: endpoint.Attributes,
 				Name:       endpoint.Name,

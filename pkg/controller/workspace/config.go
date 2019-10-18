@@ -3,6 +3,7 @@
 package workspace
 
 import (
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
 	"strings"
 	"context"
 	"errors"
@@ -41,7 +42,11 @@ func (wc *ControllerConfig) update(configMap *corev1.ConfigMap) {
 }
 
 func (wc *ControllerConfig) getPluginRegistry() string {
-	return *wc.getProperty("plugin.registry")
+	optional := wc.getProperty("plugin.registry")
+	if optional != nil {
+		return *optional
+	}
+	return registry.EmbeddedPluginRegistryUrl
 }
 
 func (wc *ControllerConfig) getIngressGlobalDomain() string {
@@ -55,13 +60,21 @@ func (wc *ControllerConfig) getPVCStorageClassName() *string {
 func (wc *ControllerConfig) getCheRestApisDockerImage() string {
 	optional := wc.getProperty("cherestapis.image.name")
 	if optional == nil {
-		return "quay.io/che-incubator/che-workspace-crd-rest-apis:latest"
+		return "quay.io/che-incubator/che-workspace-crd-rest-apis:" + cheVersion
 	}
 	return *optional
 }
 
 func (wc *ControllerConfig) isOpenshift() bool {
 	return wc.controllerIsOpenshift
+}
+
+func (wc *ControllerConfig) getSidecarPullPolicy() string {
+	optional := wc.getProperty("sidecar.pull.policy")
+	if optional == nil {
+		return "IfNotPresent"
+	}
+	return *optional
 }
 
 func (wc *ControllerConfig) getProperty(name string) *string {
@@ -170,9 +183,8 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Namespace = configMapReference.Namespace
 	cm.Data = map[string]string{
 		"ingress.global.domain":                      "",
-		"plugin.registry":                            "https://che-plugin-registry.openshift.io/v3",
-		"che.workspace.plugin_broker.unified.image":  "quay.io/dfestal/che-unified-plugin-broker:v0.19.1",
-		"che.workspace.plugin_broker.init.image":     "quay.io/dfestal/che-init-plugin-broker:v0.19.1",
+		"che.workspace.plugin_broker.unified.image":  "eclipse/che-unified-plugin-broker:v0.20",
+		"che.workspace.plugin_broker.init.image":     "eclipse/che-init-plugin-broker:v0.20",
 	}
 }
 

@@ -220,7 +220,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		container := corev1.Container{
 			Name:            machineName,
 			Image:           containerDef.Image,
-			ImagePullPolicy: defaultImagePullPolicy,
+			ImagePullPolicy: corev1.PullPolicy(controllerConfig.getSidecarPullPolicy()),
 			Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
@@ -249,6 +249,9 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 			}
 			for name, value := range endpointDef.Attributes {
 				attributes[name] = value
+			}
+			if attributes["protocol"] == "" {
+				attributes["protocol"] = "http"
 			}
 			endpoint := workspaceApi.Endpoint {
 				Name: endpointDef.Name,

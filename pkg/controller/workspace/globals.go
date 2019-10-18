@@ -5,7 +5,6 @@ import (
 )
 
 var (
-	defaultImagePullPolicy    = corev1.PullAlways
 	defaultApiEndpoint        = "http://localhost:9999/api"
 	cheOriginalName           = "workspace"
 	authEnabled               = "false"
@@ -13,4 +12,5 @@ var (
 	serviceAccount            = "che-workspace"
 	sidecarDefaultMemoryLimit = "128M"
 	pvcStorageSize            = "1Gi"
+	cheVersion                = "7.1.0"
 )

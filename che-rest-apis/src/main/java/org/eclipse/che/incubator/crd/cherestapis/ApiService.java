@@ -23,9 +23,12 @@ import org.eclipse.che.api.core.model.workspace.WorkspaceStatus;
 import org.eclipse.che.api.workspace.server.devfile.exception.DevfileException;
 import org.eclipse.che.api.workspace.server.devfile.exception.DevfileFormatException;
 import org.eclipse.che.api.workspace.server.devfile.validator.DevfileIntegrityValidator;
+import org.eclipse.che.api.workspace.server.dto.DtoServerImpls.RuntimeDtoImpl;
 import org.eclipse.che.api.workspace.server.DtoConverter;
 import org.eclipse.che.api.workspace.server.model.impl.WorkspaceImpl;
+import org.eclipse.che.api.workspace.shared.dto.RuntimeDto;
 import org.eclipse.che.api.workspace.shared.dto.WorkspaceDto;
+import org.eclipse.che.dto.server.DtoFactory;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,8 +117,13 @@ public class ApiService {
         try {
             Map<String, Object> workspaceCustomResource = retrieveWorkspaceCustomResource();
             if (workspaceCustomResource != null) {
-                Map<String, Object> workspaceAnnotations = asMap(asMap(workspaceCustomResource.get("metadata")).get("annotations"));
-                runtimeAnnotation = (String) workspaceAnnotations.get("org.eclipse.che.workspace/runtime");
+                Map<String, Object> status = asMap(workspaceCustomResource.get("status"));
+                if (status != null) {
+                    Map<String, Object> additionalFields = asMap(status.get("additionalFields"));
+                    if (additionalFields != null) {
+                        runtimeAnnotation = (String) additionalFields.get("org.eclipse.che.workspace/runtime");
+                    }
+                }
                 devfileYaml = readDevfileFromWorkspaceCustomResource(workspaceCustomResource);
             }
         } catch (ApiException e) {
@@ -177,9 +185,9 @@ public class ApiService {
         return devfileObj;
     }
 
-    Runtime parseRuntime(String runtimeJson) throws JsonProcessingException, IOException {
+    RuntimeDto parseRuntime(String runtimeJson) throws JsonProcessingException, IOException {
         LOGGER.info("Runtime content for workspace {}: {}", workspaceName, runtimeJson);
-        Runtime runtimeObj = jsonObjectMapper.treeToValue(yamlObjectMapper.readTree(runtimeJson), Runtime.class);
+        RuntimeDto runtimeObj = DtoFactory.getInstance().createDtoFromJson(runtimeJson, RuntimeDto.class);
         return runtimeObj;
     }
 

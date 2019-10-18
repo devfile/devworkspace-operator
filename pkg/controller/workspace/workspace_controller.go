@@ -1,6 +1,8 @@
 package workspace
 
 import (
+	"fmt"
+	"github.com/go-logr/logr"
 	"context"
 	origLog "log"
 	"reflect"
@@ -73,6 +75,10 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	err = watchControllerConfig(c, mgr)
 	if err != nil {
 		return err
+	}
+
+	if controllerConfig.getPluginRegistry() == "" {
+		return fmt.Errorf("No Che plugin registry setup. To use the embedded registry, you should not run the operator locally.")
 	}
 
 	err = watchStatus(c, mgr)
@@ -149,6 +155,7 @@ type reconcileStatus struct {
 	wkspProps                 *workspaceProperties
 	workspace                 *workspacev1alpha1.Workspace
 	componentInstanceStatuses []ComponentInstanceStatus
+	ReqLogger                 logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a Workspace object and makes changes based on the state read
@@ -158,7 +165,9 @@ type reconcileStatus struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reconcileStatus := &reconcileStatus{}
+	reconcileStatus := &reconcileStatus{
+		ReqLogger: reqLogger,
+	}
 
 	isStatusChange := false
 	if strings.HasPrefix(request.Name, ownedObjectEventPrefix) {
@@ -166,7 +175,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		isStatusChange = true
 	}
 
-	reqLogger.Info("Reconciling Workspace")
+	reqLogger.V(1).Info("Reconciling")
 
 	// Fetch the Workspace instance
 	instance := &workspacev1alpha1.Workspace{}
@@ -183,7 +192,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 	}
 
 	if isStatusChange {
-		return r.updateStatusFromOwnedObjects(instance)
+		return r.updateStatusFromOwnedObjects(instance, reqLogger)
 	}
 
 	var workspaceProperties *workspaceProperties
@@ -197,6 +206,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	reqLogger.Info("Managing K8s Pre-requisites")
 	for _, prereq := range prerequisites {
 		prereqAsMetaObject, isMeta := prereq.(metav1.Object)
 		if !isMeta {
@@ -204,7 +214,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
 		}
 
-		reqLogger.Info("Managing K8s Pre-requisite Object", "namespace", prereqAsMetaObject.GetNamespace(), "kind", reflect.TypeOf(prereq).Elem().String(), "name", prereqAsMetaObject.GetName())
+		reqLogger.V(1).Info("Managing K8s Pre-requisite", "kind", reflect.TypeOf(prereq).Elem().String(), "name", prereqAsMetaObject.GetName())
 
 		found := reflect.New(reflect.TypeOf(prereq).Elem()).Interface().(runtime.Object)
 		err = r.Get(context.TODO(), types.NamespacedName{Name: prereqAsMetaObject.GetName(), Namespace: prereqAsMetaObject.GetNamespace()}, found)
@@ -241,6 +251,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 	reconcileStatus.componentInstanceStatuses = componentInstanceStatuses
 	k8sObjectNames := map[string]struct{}{}
 
+	reqLogger.Info("Managing K8s Objects")
 	for _, k8sObject := range append(k8sObjects, workspaceExposure) {
 		k8sObjectAsMetaObject, isMeta := k8sObject.(metav1.Object)
 		if !isMeta {
@@ -248,7 +259,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 		k8sObjectNames[k8sObjectAsMetaObject.GetName()] = struct{}{}
 
-		reqLogger.Info("Managing K8s Object", "namespace", k8sObjectAsMetaObject.GetNamespace(), "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
+		reqLogger.V(1).Info("  - Managing K8s Object", "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 
 		// Set Workspace instance as the owner and controller
 		if err := controllerutil.SetControllerReference(instance, k8sObjectAsMetaObject, r.scheme); err != nil {
@@ -264,15 +275,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		found := reflect.New(reflect.TypeOf(k8sObject).Elem()).Interface().(runtime.Object)
 		err = r.Get(context.TODO(), types.NamespacedName{Name: k8sObjectAsMetaObject.GetName(), Namespace: k8sObjectAsMetaObject.GetNamespace()}, found)
 		if err != nil && errors.IsNotFound(err) {
-			reqLogger.Info("    => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("  => Creating " + reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Create(context.TODO(), k8sObject)
 			if err != nil {
 				reqLogger.Error(err, "Error when creating K8S object: ", "k8sObject", k8sObject)
 				reconcileStatus.failure = err.Error()
 				return reconcile.Result{}, nil
 			}
-			kind := k8sObject.GetObjectKind().GroupVersionKind().Kind
-			log.Info(kind)
 			if deployment, isDeployment := k8sObject.(*appsv1.Deployment); isDeployment &&
 				strings.HasSuffix(deployment.GetName(), "."+cheOriginalName) {
 				reconcileStatus.createdWorkspaceObjects = true
@@ -321,7 +330,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 
 		if !cmp.Equal(foundToUse, newToUse, diffOpts) {
-			reqLogger.Info("    => Differences: " + cmp.Diff(foundToUse, newToUse, diffOpts...))
+			reqLogger.V(1).Info("  => Differences: " + cmp.Diff(foundToUse, newToUse, diffOpts...))
 			switch found.(type) {
 			case (*appsv1.Deployment):
 				{
@@ -349,7 +358,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 					found.(*workspacev1alpha1.WorkspaceExposure).Spec = k8sObject.(*workspacev1alpha1.WorkspaceExposure).Spec
 				}
 			}
-			reqLogger.Info("        => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("  => Updating " +reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Update(context.TODO(), found)
 			if err != nil {
 				reqLogger.Error(err, "Error when updating K8S object: ", "k8sObject", k8sObjectAsMetaObject)
@@ -383,7 +392,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			if itemMeta, isMeta := item.(metav1.Object); isMeta {
 				if itemRuntime, isRuntime := item.(runtime.Object); isRuntime {
 					if _, present := k8sObjectNames[itemMeta.GetName()]; !present {
-						log.Info("    => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "namespace", itemMeta.GetNamespace(), "name", itemMeta.GetName())
+						log.Info("  => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "name", itemMeta.GetName())
 						r.Delete(context.TODO(), itemRuntime)
 						if _, isDeployment := itemRuntime.(*appsv1.Deployment); isDeployment &&
 							strings.HasSuffix(itemMeta.GetName(), "."+cheOriginalName) {

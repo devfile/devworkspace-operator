@@ -12,7 +12,6 @@ import java.util.Set;
 import com.oracle.svm.core.annotate.AutomaticFeature;
 
 import org.eclipse.che.api.workspace.server.devfile.PreferencesDeserializer;
-import org.eclipse.che.api.workspace.server.dto.DtoServerImpls.WorkspaceDtoImpl;
 import org.eclipse.che.api.workspace.server.model.impl.devfile.DevfileImpl;
 import org.graalvm.nativeimage.hosted.Feature;
 import org.graalvm.nativeimage.hosted.RuntimeReflection;
@@ -24,7 +23,8 @@ class RuntimeReflectionRegistrationFeature implements Feature {
     System.out.println("Eclipse Che compatibility layer for GraalVM native image generation");
 
     registerFully(DevfileImpl.class);
-    registerFully(WorkspaceDtoImpl.class);
+    registerFully(org.eclipse.che.api.workspace.server.dto.DtoServerImpls.class);
+    registerFully(org.eclipse.che.api.core.server.dto.DtoServerImpls.class);
     registerFully(PreferencesDeserializer.class);
   }
 

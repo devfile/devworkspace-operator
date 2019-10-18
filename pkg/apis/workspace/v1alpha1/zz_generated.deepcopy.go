@@ -607,6 +607,13 @@ func (in *WorkspaceStatus) DeepCopyInto(out *WorkspaceStatus) {
 		}
 	}
 	in.Members.DeepCopyInto(&out.Members)
+	if in.AdditionalInfo != nil {
+		in, out := &in.AdditionalInfo, &out.AdditionalInfo
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

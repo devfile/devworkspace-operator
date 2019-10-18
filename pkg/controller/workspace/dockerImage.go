@@ -62,7 +62,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 	container := corev1.Container{
 		Name:            machineName,
 		Image:           *component.Image,
-		ImagePullPolicy: defaultImagePullPolicy,
+		ImagePullPolicy: corev1.PullPolicy(controllerConfig.getSidecarPullPolicy()),
 		Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{

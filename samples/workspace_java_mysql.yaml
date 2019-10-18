@@ -7,8 +7,6 @@ spec:
   started: true
   devfile:
     apiVersion: 1.0.0
-    metadata:
-      generateName: java-mysql-
     projects:
       - name: web-java-spring-petclinic
         source:
@@ -56,7 +54,6 @@ spec:
             attributes:
               discoverable: "true"
               public: "false"
-              type: "untypebizarre"
         mountSources: true
       - alias: theia-ide
         type: cheEditor

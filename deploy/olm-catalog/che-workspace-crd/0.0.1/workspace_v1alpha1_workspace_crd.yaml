@@ -3,6 +3,19 @@ kind: CustomResourceDefinition
 metadata:
   name: workspaces.workspace.che.eclipse.org
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.workspaceId
+    name: Id
+    type: string
+  - JSONPath: .spec.started
+    name: Enabled
+    type: boolean
+  - JSONPath: .status.phase
+    name: Status
+    type: string
+  - JSONPath: .status.ideUrl
+    name: Url
+    type: string
   group: workspace.che.eclipse.org
   names:
     kind: Workspace
@@ -48,6 +61,14 @@ spec:
                             component:
                               description: The actual action command-line string
                               type: string
+                            reference:
+                              description: Working directory where the command should
+                                be executed
+                              type: string
+                            referenceContent:
+                              description: Working directory where the command should
+                                be executed
+                              type: string
                             type:
                               description: Describes component to which given action
                                 relates
@@ -56,7 +77,6 @@ spec:
                               description: Describes action type
                               type: string
                           required:
-                          - component
                           - type
                           type: object
                         type: array
@@ -79,6 +99,12 @@ spec:
                     locations
                   items:
                     properties:
+                      alias:
+                        description: Describes whether projects sources should be
+                          mount to the component. `CHE_PROJECTS_ROOT`; environment
+                          variable should contains a path where projects sources are
+                          mount
+                        type: string
                       args:
                         description: The command to run in the dockerimage component
                           instead of the default one provided in the image. Defaults
@@ -95,27 +121,8 @@ spec:
                         items:
                           properties:
                             attributes:
-                              properties:
-                                discoverable:
-                                  description: 'Identifies server as secure or non-secure.
-                                    Requests to secure servers will be authenticated
-                                    and must contain machine token - default: false'
-                                  type: boolean
-                                path:
-                                  description: Defines protocol that should be used
-                                    for communication with endpoint. Is used for endpoint
-                                    URL evaluation"
-                                  type: string
-                                protocol:
-                                  description: 'Identifies endpoint as accessible
-                                    by its name. - default: false'
-                                  type: string
-                                public:
-                                  type: boolean
-                                secure:
-                                  description: 'Identifies endpoint as workspace internally
-                                    or externally accessible - default: true'
-                                  type: boolean
+                              additionalProperties:
+                                type: string
                               type: object
                             name:
                               type: string
@@ -160,12 +167,6 @@ spec:
                           can also use the; power-of-two equivalents: Ei, Pi, Ti,
                           Gi, Mi, Ki'
                         type: boolean
-                      name:
-                        description: Describes whether projects sources should be
-                          mount to the component. `CHE_PROJECTS_ROOT`; environment
-                          variable should contains a path where projects sources are
-                          mount
-                        type: string
                       reference:
                         description: Specifies the docker image that should be used
                           for component
@@ -200,7 +201,6 @@ spec:
                           type: object
                         type: array
                     required:
-                    - name
                     - type
                     type: object
                   type: array
@@ -240,6 +240,8 @@ spec:
               required:
               - components
               type: object
+            exposureClass:
+              type: string
             started:
               type: boolean
           required:
@@ -248,6 +250,11 @@ spec:
           type: object
         status:
           properties:
+            additionalFields:
+              additionalProperties:
+                type: string
+              description: AdditionalInfo
+              type: object
             conditions:
               description: Condition keeps track of all cluster conditions, if they
                 exist.

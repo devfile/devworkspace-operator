@@ -41,6 +41,9 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 			"": &BasicSolver{
 				Client: mgr.GetClient(),
 			},
+			"openshift-oauth": &OpenshiftOAuthSolver{
+				Client: mgr.GetClient(),
+			},
 		},
 	}
 }
@@ -122,12 +125,16 @@ func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (recon
 		return reconcile.Result{}, err
 	}
 	
-	reqLogger.Info("Reconciling", "expected", instance.Spec.Exposed, "phase", instance.Status.Phase)
 
 	solver, found := r.solvers[instance.Spec.ExposureClass]
 	if !found {
+		reqLogger.Info("Reconciling Skipped: unsupported exposure class", "exposure", instance.Spec.ExposureClass)
 		return reconcile.Result{}, err
 	}
+
+	reqLogger = reqLogger.WithValues("ExposureClass", instance.Spec.ExposureClass)
+	
+	reqLogger.V(1).Info("Reconciling", "expected", instance.Spec.Exposed, "phase", instance.Status.Phase)
 
 	currentReconcile := CurrentReconcile {
 		Instance: instance,
@@ -233,7 +240,9 @@ func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err erro
 	if updateError != nil {
 		cr.ReqLogger.Error(err, "When trying to update the status phase to: " + string(nextPhase))
 	}
-	cr.ReqLogger.Info("Phase: " + string(existingPhase) + " => " + string(cr.Instance.Status.Phase))
+	if existingPhase != cr.Instance.Status.Phase {
+		cr.ReqLogger.Info("Phase: " + string(existingPhase) + " => " + string(cr.Instance.Status.Phase))
+	}
 	return reconcile.Result{Requeue: true}, err
 }
 
@@ -274,11 +283,14 @@ func DeleteExposureObjects(cr CurrentReconcile, objectTypes []runtime.Object) (r
 			}),
 		}, list)
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
+		if !items.IsValid() {
+			return reconcile.Result{}, nil
+		}
 		for i := 0; i < items.Len(); i++ {
 			item := items.Index(i).Addr().Interface()
 			if itemMeta, isMeta := item.(metav1.Object); isMeta {
 				if itemRuntime, isRuntime := item.(runtime.Object); isRuntime {
-					log.Info("    => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "namespace", itemMeta.GetNamespace(), "name", itemMeta.GetName())
+					log.Info("  => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "name", itemMeta.GetName())
 					err := cr.Reconcile.client.Delete(context.TODO(), itemRuntime)
 					if err != nil {
 						cr.ReqLogger.Error(err, "Error when creating K8S object own by the Workspace Exposure: ", "k8sObject", itemRuntime)
@@ -303,7 +315,7 @@ func CreateOrUpdate(cr CurrentReconcile, k8sObjects []runtime.Object, diffOpts c
 			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
 		}
 
-		reqLogger.Info("  - Managing", "namespace", k8sObjectAsMetaObject.GetNamespace(), "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
+		reqLogger.V(1).Info("  - Managing K8s Object", "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 
 		// Set Workspace instance as the owner and controller
 		if err := controllerutil.SetControllerReference(instance, k8sObjectAsMetaObject, r.scheme); err != nil {
@@ -321,7 +333,7 @@ func CreateOrUpdate(cr CurrentReconcile, k8sObjects []runtime.Object, diffOpts c
 		found := reflect.New(reflect.TypeOf(k8sObject).Elem()).Interface().(runtime.Object)
 		err := r.client.Get(context.TODO(), types.NamespacedName{Name: k8sObjectAsMetaObject.GetName(), Namespace: k8sObjectAsMetaObject.GetNamespace()}, found)
 		if err != nil && errors.IsNotFound(err) {
-			reqLogger.Info("    => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("  => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.client.Create(context.TODO(), k8sObject)
 			if err != nil {
 				reqLogger.Error(err, "Error when creating K8S object: ", "k8sObject", k8sObject)
@@ -348,9 +360,9 @@ func CreateOrUpdate(cr CurrentReconcile, k8sObjects []runtime.Object, diffOpts c
 		}
 
 		if !cmp.Equal(foundToUse, newToUse, diffOpts) {
-			reqLogger.V(1).Info("    => Differences: " + cmp.Diff(foundToUse, newToUse, diffOpts...))
+			reqLogger.V(1).Info("  => Differences: " + cmp.Diff(foundToUse, newToUse, diffOpts...))
 			replaceFun(found, k8sObject)
-			reqLogger.Info("        => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "namespace", k8sObjectAsMetaObject.GetNamespace(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("  => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.client.Update(context.TODO(), found)
 			if err != nil {
 				reqLogger.Error(err, "Error when updating K8S object: ", "k8sObject", k8sObjectAsMetaObject)

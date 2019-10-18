@@ -13,6 +13,10 @@ import (
 // Workspace is the Schema for the workspaces API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name=Id,type=string,JSONPath=.status.workspaceId
+// +kubebuilder:printcolumn:name=Enabled,type=boolean,JSONPath=.spec.started
+// +kubebuilder:printcolumn:name=Status,type=string,JSONPath=.status.phase
+// +kubebuilder:printcolumn:name=Url,type=string,JSONPath=.status.ideUrl
 type Workspace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

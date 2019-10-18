@@ -30,7 +30,7 @@ spec:
         app: che-plugin-registry
     spec:
       containers:
-      - image: amisevsk/che-plugin-registry:nightly-offline
+      - image: quay.io/che-incubator/che-workspace-crd-plugin-registry:7.1.0-offline
         imagePullPolicy: Always
         name: che-plugin-registry
         ports:

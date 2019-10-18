@@ -70,10 +70,8 @@ func IsOpenShift() (bool, error) {
 		return false, err
 	}
 	apiGroups := apiList.Groups
-	log.Info("In IsOpenshift", "apiGroups", apiGroups)
 	for i := 0; i < len(apiGroups); i++ {
 		if apiGroups[i].Name == "route.openshift.io" {
-			log.Info("In IsOpenshift => returning true, nil")
 			return true, nil
 		}
 	}

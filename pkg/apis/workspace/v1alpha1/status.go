@@ -1,8 +1,8 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -25,7 +25,7 @@ const (
 	WorkspaceConditionScheduled WorkspaceConditionType = "Scheduled"
 	// WorkspaceStopped means the workspace is stopped
 	WorkspaceConditionStopped WorkspaceConditionType = "Stopped"
-	
+
 	// Reason the explains why all the conditions might be false. Not ready nor stopped
 	WorkspaceConditionStoppingReason = "CleaningResourcesToStop"
 
@@ -74,7 +74,7 @@ type MembersStatus struct {
 // +k8s:openapi-gen=false
 type WorkspaceStatus struct {
 	// Id of the workspace
-	WorkspaceId string   `json:"workspaceId"`
+	WorkspaceId string `json:"workspaceId"`
 	// Workspace status
 	Phase WorkspacePhase `json:"phase"`
 	// Condition keeps track of all cluster conditions, if they exist.
@@ -82,6 +82,7 @@ type WorkspaceStatus struct {
 	// Members are the Workspace pods
 	Members MembersStatus `json:"members"`
 	// URL at which the Editor can be joined
-	IdeUrl string         `json:"ideUrl,omitempty"`
+	IdeUrl string `json:"ideUrl,omitempty"`
+	// AdditionalInfo
+	AdditionalInfo map[string]string `json:"additionalFields,omitempty"`
 }
-

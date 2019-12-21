@@ -21,15 +21,21 @@ type Workspace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
+	// Desired state of the workspace
 	Spec   WorkspaceSpec   `json:"spec,omitempty"`
+	// Observed state of the workspace
 	Status WorkspaceStatus `json:"status,omitempty"`
 }
 
 // WorkspaceSpec defines the desired state of Workspace
 // +k8s:openapi-gen=true
 type WorkspaceSpec struct {
+	// Whether the workspace should be started or stopped
 	Started bool          `json:"started"`
+	// Exposure class the defines how the workspace will be exposed toon the external network
 	ExposureClass string  `json:"exposureClass,omitempty"`
+	// Workspace Structure defined in the Devfile format syntax.
+	// For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/
 	Devfile DevFileSpec   `json:"devfile"`
 }
 

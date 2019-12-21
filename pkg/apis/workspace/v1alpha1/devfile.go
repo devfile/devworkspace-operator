@@ -10,8 +10,11 @@ import (
 type DevFileSpec struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// List of workspace-wide commands that can be associated to a given component, in order to run in the related container
 	Commands          []CommandSpec   `json:"commands,omitempty"` // Description of the predefined commands to be available in workspace
+	// List of projects that should be opened in the workspace
 	Projects          []ProjectSpec   `json:"projects,omitempty"` // Description of the projects, containing names and sources locations
+	// List of components (containers, plugins, ...) that will provide the workspace features
 	Components        []ComponentSpec `json:"components"`         // Description of the workspace components, such as editor and plugins
 }
 

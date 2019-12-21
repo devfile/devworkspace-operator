@@ -46,12 +46,14 @@ func schema_pkg_apis_workspace_v1alpha1_Workspace(ref common.ReferenceCallback) 
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceSpec"),
+							Description: "Desired state of the workspace",
+							Ref:         ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceStatus"),
+							Description: "Observed state of the workspace",
+							Ref:         ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceStatus"),
 						},
 					},
 				},
@@ -216,19 +218,22 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 				Properties: map[string]spec.Schema{
 					"started": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
+							Description: "Whether the workspace should be started or stopped",
+							Type:        []string{"boolean"},
+							Format:      "",
 						},
 					},
 					"exposureClass": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "Exposure class the defines how the workspace will be exposed toon the external network",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 					"devfile": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.DevFileSpec"),
+							Description: "Workspace Structure defined in the Devfile format syntax. For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/",
+							Ref:         ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.DevFileSpec"),
 						},
 					},
 				},

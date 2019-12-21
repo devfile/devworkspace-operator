@@ -1,0 +1,79 @@
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: Workspace
+metadata:
+  name: python-sample
+  namespace: ec2019
+spec:
+  started: true
+  devfile:
+    apiVersion: 1.0.0
+    metadata:
+      name: wksp-4xzm
+    projects:
+      - name: django-realworld-example-app
+        source:
+          location: 'https://github.com/che-samples/django-realworld-example-app'
+          type: git
+    components:
+      - alias: theia-ide
+        type: cheEditor
+        id: eclipse/che-theia/7.1.0
+      - type: chePlugin
+        id: eclipse/che-machine-exec-plugin/7.1.0
+      - type: chePlugin
+        id: ms-python/python/latest
+        memoryLimit: 512Mi
+      - alias: python
+        type: dockerimage
+        image: 'quay.io/eclipse/che-python-3.7:7.3.0'
+        endpoints:
+          - name: django
+            port: 7000
+        mountSources: true
+        memoryLimit: 512Mi
+    commands:
+      - name: install dependencies
+        actions:
+          - type: exec
+            workdir: '${CHE_PROJECTS_ROOT}/django-realworld-example-app'
+            command: pip install --user -r requirements.txt && pip install --user ptvsd
+            component: python
+      - name: migrate
+        actions:
+          - type: exec
+            workdir: '${CHE_PROJECTS_ROOT}/django-realworld-example-app'
+            command: python manage.py migrate
+            component: python
+      - name: run server
+        actions:
+          - type: exec
+            workdir: '${CHE_PROJECTS_ROOT}/django-realworld-example-app'
+            command: 'export DEBUG_MODE=False && python manage.py runserver 0.0.0.0:7000'
+            component: python
+      - name: run server in debug mode
+        actions:
+          - type: exec
+            workdir: '${CHE_PROJECTS_ROOT}/django-realworld-example-app'
+            command: >-
+              export DEBUG_MODE=True && python manage.py runserver 0.0.0.0:7000
+              --noreload --nothreading
+            component: python
+      - name: debug
+        actions:
+          - referenceContent: |
+              { "version": "0.2.0", "configurations": [
+                {
+                  "name": "Python: Remote Attach",
+                  "type": "python",
+                  "request": "attach",
+                  "port": 5678,
+                  "host": "0.0.0.0",
+                  "pathMappings": [
+                    {
+                        "localRoot": "${workspaceFolder}",
+                        "remoteRoot": "${workspaceFolder}"
+                    }
+                  ]
+                }]
+              }
+            type: vscode-launch

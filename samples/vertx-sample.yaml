@@ -1,0 +1,78 @@
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: Workspace
+metadata:
+  name: vertx-sample
+spec:
+  started: true
+  devfile:
+    apiVersion: 1.0.0
+    metadata:
+      name: wksp-out7
+    projects:
+      - name: java-web-vertx
+        source:
+          location: 'https://github.com/che-samples/web-java-vertx'
+          type: git
+    components:
+      - alias: theia-ide
+        type: cheEditor
+        id: eclipse/che-theia/7.1.0
+      - type: chePlugin
+        id: eclipse/che-machine-exec-plugin/7.1.0
+      - id: redhat/java/latest
+        type: chePlugin
+        memoryLimit: 1280MiB
+      - type: dockerimage
+        alias: maven
+        image: 'quay.io/eclipse/che-java8-maven:7.3.0'
+        endpoints:
+          - name: 8080/tcp
+            port: 8080
+        mountSources: true
+        memoryLimit: 512Mi
+        volumes:
+          - name: m2
+            containerPath: /home/user/.m2
+        env:
+          - value: >-
+              -XX:MaxRAMPercentage=50.0 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
+              -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
+              -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true
+              -Xms20m -Djava.security.egd=file:/dev/./urandom -Duser.home=/home/user
+            name: JAVA_OPTS
+          - value: $(JAVA_OPTS)
+            name: MAVEN_OPTS
+    commands:
+      - name: maven build
+        actions:
+          - workdir: '${CHE_PROJECTS_ROOT}/java-web-vertx'
+            type: exec
+            command: 'mvn -Duser.home=${HOME} clean install'
+            component: maven
+      - name: run app
+        actions:
+          - workdir: '${CHE_PROJECTS_ROOT}/java-web-vertx'
+            type: exec
+            command: >
+              JDBC_URL=jdbc:h2:/tmp/db \
+
+              java -jar -Xdebug
+              -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005 \
+
+              ./target/*fat.jar
+            component: maven
+      - name: Debug remote java application
+        actions:
+          - referenceContent: |
+              {
+              "version": "0.2.0",
+              "configurations": [
+                {
+                  "type": "java",
+                  "name": "Debug (Attach) - Remote",
+                  "request": "attach",
+                  "hostName": "localhost",
+                  "port": 5005
+                }]
+              }
+            type: vscode-launch

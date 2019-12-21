@@ -1,0 +1,79 @@
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: Workspace
+metadata:
+  name: go-sample
+spec:
+  started: false
+  devfile:
+    apiVersion: 1.0.0
+    commands:
+      - actions:
+          - command: go get -d && go run main.go
+            component: go-cli
+            type: exec
+            workdir: '${CHE_PROJECTS_ROOT}/src/github.com/golang/example/outyet'
+        name: run outyet
+      - actions:
+          - command: kill $(pidof go)
+            component: go-cli
+            type: exec
+        name: stop outyet
+      - actions:
+          - command: go test
+            component: go-cli
+            type: exec
+            workdir: '${CHE_PROJECTS_ROOT}/src/github.com/golang/example/outyet'
+        name: test outyet
+      - actions:
+          - command: 'go get -d && go run ${file}'
+            component: go-cli
+            type: exec
+            workdir: '${fileDirname}'
+        name: run current file
+      - actions:
+          - referenceContent: |
+              {
+                "version": "0.2.0",
+                "configurations": [
+                  {
+                    "name": "Debug current file",
+                    "type": "go",
+                    "request": "launch",
+                    "mode": "auto",
+                    "program": "${fileDirname}",
+                  },
+                ]
+              }
+            type: vscode-launch
+        name: Debug current file
+    components:
+      - alias: theia-ide
+        type: cheEditor
+        id: eclipse/che-theia/7.1.0
+      - type: chePlugin
+        id: eclipse/che-machine-exec-plugin/7.1.0
+      - alias: go-plugin
+        type: chePlugin
+        id: ms-vscode/go/0.11.0
+        memoryLimit: 512Mi
+      - alias: go-cli
+        type: dockerimage
+        image: 'quay.io/eclipse/che-golang-1.10:7.1.0'
+        endpoints:
+          - name: 8080/tcp
+            port: 8080
+        env:
+          - name: GOPATH
+            value: '/go:$(CHE_PROJECTS_ROOT)'
+          - name: GOCACHE
+            value: /tmp/.cache
+        memoryLimit: 128Mi
+        mountSources: true
+    metadata:
+      generateName: golang-
+    projects:
+      - name: example
+        source:
+          clonePath: src/github.com/golang/example/
+          location: 'https://github.com/golang/example.git'
+          type: git

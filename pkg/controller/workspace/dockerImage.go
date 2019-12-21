@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"strings"
 	"github.com/eclipse/che-plugin-broker/model"
 	"regexp"
 	"strconv"
@@ -52,7 +53,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 	for _, envVarDef := range component.Env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  envVarDef.Name,
-			Value: envVarDef.Value,
+			Value: strings.ReplaceAll(envVarDef.Value, "$(CHE_PROJECTS_ROOT)", "/projects"),
 		})
 	}
 	envVars = append(envVars, corev1.EnvVar{
@@ -114,7 +115,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 			continue
 		}
 		attributes := map[string]string{
-			COMMAND_WORKING_DIRECTORY_ATTRIBUTE: emptyIfNil(action.Workdir),
+			COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(emptyIfNil(action.Workdir), names),
 			COMMAND_ACTION_REFERENCE_ATTRIBUTE:  emptyIfNil(action.Reference),
 			COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE:  emptyIfNil(action.ReferenceContent),
 			COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
@@ -131,135 +132,6 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 				Attributes: attributes,
 			})
 	}
-
-/*
-var serviceName string
-	alreadyOneEndpointDiscoverable := false
-	for _, endpointDef := range component.Endpoints {
-		if endpointDef.Attributes != nil &&
-			endpointDef.Attributes.Discoverable != nil &&
-			*endpointDef.Attributes.Discoverable {
-			if alreadyOneEndpointDiscoverable {
-				return []runtime.Object{}, errors.New("There should be only 1 discoverable endpoint for a dockerImage component")
-			}
-			serviceName = endpointDef.Name
-			alreadyOneEndpointDiscoverable = true
-		}
-	}
-
-// Gérer les 
-
-	if serviceName == "" {
-		serviceName = join("-",
-			"server",
-			strings.ReplaceAll(names.workspaceId, "workspace", ""),
-			cheOriginalName,
-			machineName)
-	}
-
-	service := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
-			Namespace: names.namespace,
-			Annotations: map[string]string{
-				"org.eclipse.che.machine.name":   machineName,
-				"org.eclipse.che.machine.source": "recipe",
-			},
-			Labels: map[string]string{
-				"che.workspace_id": names.workspaceId,
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"che.original_name": cheOriginalName,
-				"che.workspace_id":  names.workspaceId,
-			},
-			Type:  corev1.ServiceTypeClusterIP,
-			Ports: servicePorts,
-		},
-	}
-	k8sObjects = append(k8sObjects, &service)
-
-	/*
-	for _, endpointDef := range component.Endpoints {
-		port := int(endpointDef.Port)
-
-		serverAnnotationName := func(attrName string) string {
-			return join(".", "org.eclipse.che.server", attrName)
-		}
-		protocol := "http"
-		serverAnnotationAttributes := func() string {
-			attrMap := map[string]string{}
-			if attributes := endpointDef.Attributes; attributes != nil {
-				if attributes.Discoverable != nil {
-					attrMap["discoverable"] = strconv.FormatBool(*attributes.Discoverable)
-				}
-				if attributes.Path != nil {
-					attrMap["path"] = *attributes.Path
-				}
-				if attributes.Public != nil {
-					attrMap["public"] = strconv.FormatBool(*attributes.Public)
-					attrMap["internal"] = strconv.FormatBool(!*attributes.Public)
-				}
-				if attributes.Secure != nil {
-					attrMap["secure"] = strconv.FormatBool(*attributes.Secure)
-				}
-				if attributes.Protocol != nil {
-					protocol = *attributes.Protocol
-				}
-				res, err := json.Marshal(attrMap)
-				if err != nil {
-					return "{}"
-				}
-				return string(res)
-			}
-			return "{}"
-		}
-
-		serviceName, servicePort := service.Name, servicePortName(port)
-		serviceNameAndPort := join("-", serviceName, servicePort)
-
-		ingress := extensionsv1beta1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      join("-", "ingress", names.workspaceId, endpointDef.Name),
-				Namespace: names.namespace,
-				Annotations: map[string]string{
-					"kubernetes.io/ingress.class":                "nginx",
-					"nginx.ingress.kubernetes.io/rewrite-target": "/",
-					"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-					"org.eclipse.che.machine.name":               machineName,
-					serverAnnotationName("attributes"):           serverAnnotationAttributes(),
-					serverAnnotationName("port"):                 servicePortAndProtocol(port),
-					serverAnnotationName("protocol"):             protocol,
-				},
-				Labels: map[string]string{
-					"che.original_name": serviceNameAndPort,
-					"che.workspace_id":  names.workspaceId,
-				},
-			},
-			Spec: extensionsv1beta1.IngressSpec{
-				Rules: []extensionsv1beta1.IngressRule{
-					extensionsv1beta1.IngressRule{
-						IngressRuleValue: extensionsv1beta1.IngressRuleValue{
-							HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
-								Paths: []extensionsv1beta1.HTTPIngressPath{
-									extensionsv1beta1.HTTPIngressPath{
-										Backend: extensionsv1beta1.IngressBackend{
-											ServiceName: serviceName,
-											ServicePort: intstr.FromString(servicePort),
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-		ingress.Spec.Rules[0].Host = ingressHostName(serviceNameAndPort, names)
-		k8sObjects = append(k8sObjects, &ingress)
-	}
-*/
 
 	return componentInstanceStatus, nil
 }

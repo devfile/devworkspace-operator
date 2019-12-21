@@ -2,7 +2,6 @@ apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
   name: java-mysql
-  namespace: crd-poc
 spec:
   started: true
   devfile:

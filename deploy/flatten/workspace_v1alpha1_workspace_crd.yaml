@@ -41,8 +41,11 @@ spec:
         metadata:
           type: object
         spec:
+          description: Desired state of the workspace
           properties:
             devfile:
+              description: 'Workspace Structure defined in the Devfile format syntax.
+                For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/'
               properties:
                 apiVersion:
                   description: 'APIVersion defines the versioned schema of this representation
@@ -51,6 +54,8 @@ spec:
                     info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
                   type: string
                 commands:
+                  description: List of workspace-wide commands that can be associated
+                    to a given component, in order to run in the related container
                   items:
                     properties:
                       actions:
@@ -95,8 +100,8 @@ spec:
                     type: object
                   type: array
                 components:
-                  description: Description of the projects, containing names and sources
-                    locations
+                  description: List of components (containers, plugins, ...) that
+                    will provide the workspace features
                   items:
                     properties:
                       alias:
@@ -213,8 +218,7 @@ spec:
                 metadata:
                   type: object
                 projects:
-                  description: Description of the predefined commands to be available
-                    in workspace
+                  description: List of projects that should be opened in the workspace
                   items:
                     properties:
                       name:
@@ -241,14 +245,18 @@ spec:
               - components
               type: object
             exposureClass:
+              description: Exposure class the defines how the workspace will be exposed
+                toon the external network
               type: string
             started:
+              description: Whether the workspace should be started or stopped
               type: boolean
           required:
           - started
           - devfile
           type: object
         status:
+          description: Observed state of the workspace
           properties:
             additionalFields:
               additionalProperties:

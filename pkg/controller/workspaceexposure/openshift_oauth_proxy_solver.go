@@ -129,86 +129,95 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 				var tls *routeV1.TLSConfig = nil
 				
 				if endpoint.Attributes["secure"] == "true" {
-					targetServiceName = proxyServiceName(serviceDesc, endpoint)
-					targetServicePort = "proxy"
-
-					proxyHttpPort := initialProxyHttpPort + proxyCount
-					proxyHttpPortString := strconv.FormatInt(int64(proxyHttpPort), 10)
-					proxyHttpsPort := initialProxyHttpsPort + proxyCount
-					proxyHttpsPortString := strconv.FormatInt(int64(proxyHttpsPort), 10)
-					targetPortString := strconv.FormatInt(int64(endpoint.Port), 10)
-
-					proxyDeployment.Spec.Template.Spec.Containers = append(proxyDeployment.Spec.Template.Spec.Containers, corev1.Container{
-						Name: "oauth-proxy-" + proxyCountString,
-						Ports: []corev1.ContainerPort {
-							corev1.ContainerPort{
-								Name: "public",
-								ContainerPort: int32(proxyHttpsPort),
-								Protocol: corev1.ProtocolTCP,
-							},
-						},
-						ImagePullPolicy: corev1.PullIfNotPresent,
-						VolumeMounts: []corev1.VolumeMount {
-							corev1.VolumeMount {
-								Name: "proxy-tls" + proxyCountString,
-								MountPath: "/etc/tls/private",
-							},
-						},
-						TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-						Image: "openshift/oauth-proxy:latest",
-						Args: []string {
-							"--https-address=:" + proxyHttpsPortString,
-							"--http-address=127.0.0.1:" + proxyHttpPortString,
-							"--provider=openshift",
-							"--openshift-service-account=" + proxyServiceAccountName(cr.Instance),
-							"--upstream=http://" + serviceDesc.ServiceName + ":" + targetPortString,
-							"--tls-cert=/etc/tls/private/tls.crt",
-							"--tls-key=/etc/tls/private/tls.key",
-							"--cookie-secret=SECRET",
-						},
-					})
-
-					var volumeDefaultMode int32 = 420
-					proxyDeployment.Spec.Template.Spec.Volumes = append(proxyDeployment.Spec.Template.Spec.Volumes, corev1.Volume {
-						Name: "proxy-tls" + proxyCountString,
-						VolumeSource: corev1.VolumeSource {
-							Secret: &corev1.SecretVolumeSource {
-								SecretName: "proxy-tls" + proxyCountString,
-								DefaultMode: &volumeDefaultMode,
-							},
-						},
-					})
-
-					proxyServiceAccount.Annotations["serviceaccounts.openshift.io/oauth-redirectreference." + proxyCountString] = 
-					`{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"`+
-					routeName(serviceDesc, endpoint) +
-					`"}}`
-				
-					objectsToCreate = append(objectsToCreate, &corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      targetServiceName,
-							Namespace: cr.Instance.Namespace,
-							Annotations: map[string]string {
-								"service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls" + proxyCountString,
-							},
-						},
-						Spec: corev1.ServiceSpec{
-							Selector: map[string]string {
-								"app": proxyDeploymentName(cr.Instance),
-							},
-							Type:     corev1.ServiceTypeClusterIP,
-							Ports: []corev1.ServicePort{
-								corev1.ServicePort{
-									Port:     int32(proxyHttpsPort),
+					if endpoint.Attributes["type"] == "terminal" {
+						tls = &routeV1.TLSConfig {
+							Termination: routeV1.TLSTerminationEdge,
+							InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
+						}
+					} else {
+						targetServiceName = proxyServiceName(serviceDesc, endpoint)
+						targetServicePort = "proxy"
+						tls = &routeV1.TLSConfig {
+							Termination: routeV1.TLSTerminationReencrypt,
+						}
+	
+						proxyHttpPort := initialProxyHttpPort + proxyCount
+						proxyHttpPortString := strconv.FormatInt(int64(proxyHttpPort), 10)
+						proxyHttpsPort := initialProxyHttpsPort + proxyCount
+						proxyHttpsPortString := strconv.FormatInt(int64(proxyHttpsPort), 10)
+						targetPortString := strconv.FormatInt(int64(endpoint.Port), 10)
+	
+						proxyDeployment.Spec.Template.Spec.Containers = append(proxyDeployment.Spec.Template.Spec.Containers, corev1.Container{
+							Name: "oauth-proxy-" + proxyCountString,
+							Ports: []corev1.ContainerPort {
+								corev1.ContainerPort{
+									Name: "public",
+									ContainerPort: int32(proxyHttpsPort),
 									Protocol: corev1.ProtocolTCP,
 								},
 							},
-						},
-					})
-					proxyCount ++
+							ImagePullPolicy: corev1.PullIfNotPresent,
+							VolumeMounts: []corev1.VolumeMount {
+								corev1.VolumeMount {
+									Name: "proxy-tls" + proxyCountString,
+									MountPath: "/etc/tls/private",
+								},
+							},
+							TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+							Image: "openshift/oauth-proxy:latest",
+							Args: []string {
+								"--https-address=:" + proxyHttpsPortString,
+								"--http-address=127.0.0.1:" + proxyHttpPortString,
+								"--provider=openshift",
+								"--openshift-service-account=" + proxyServiceAccountName(cr.Instance),
+								"--upstream=http://" + serviceDesc.ServiceName + ":" + targetPortString,
+								"--tls-cert=/etc/tls/private/tls.crt",
+								"--tls-key=/etc/tls/private/tls.key",
+								"--cookie-secret=SECRET",
+							},
+						})
+	
+						var volumeDefaultMode int32 = 420
+						proxyDeployment.Spec.Template.Spec.Volumes = append(proxyDeployment.Spec.Template.Spec.Volumes, corev1.Volume {
+							Name: "proxy-tls" + proxyCountString,
+							VolumeSource: corev1.VolumeSource {
+								Secret: &corev1.SecretVolumeSource {
+									SecretName: "proxy-tls" + proxyCountString,
+									DefaultMode: &volumeDefaultMode,
+								},
+							},
+						})
+	
+						proxyServiceAccount.Annotations["serviceaccounts.openshift.io/oauth-redirectreference." + proxyCountString] = 
+						`{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"`+
+						routeName(serviceDesc, endpoint) +
+						`"}}`
+					
+						objectsToCreate = append(objectsToCreate, &corev1.Service{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      targetServiceName,
+								Namespace: cr.Instance.Namespace,
+								Annotations: map[string]string {
+									"service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls" + proxyCountString,
+								},
+							},
+							Spec: corev1.ServiceSpec{
+								Selector: map[string]string {
+									"app": proxyDeploymentName(cr.Instance),
+								},
+								Type:     corev1.ServiceTypeClusterIP,
+								Ports: []corev1.ServicePort{
+									corev1.ServicePort{
+										Name: "proxy",
+										Port:     int32(proxyHttpsPort),
+										Protocol: corev1.ProtocolTCP,
+									},
+								},
+							},
+						})
+						proxyCount ++
+					}
 				}
-
-
 
 				objectsToCreate = append(objectsToCreate, &routeV1.Route{
 					ObjectMeta: metav1.ObjectMeta{
@@ -300,7 +309,7 @@ func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) m
 			}
 			protocol := endpoint.Attributes["protocol"]
 			if endpoint.Attributes["secure"] == "true" {
-				protocol = protocol + "s"
+			protocol = protocol + "s"
 			}
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{
 				Attributes: endpoint.Attributes,

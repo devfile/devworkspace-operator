@@ -162,7 +162,7 @@ spec:
           x-descriptors:
             - 'urn:alm:descriptor:com.tectonic.ui:booleanSwitch'
       statusDescriptors:
-        - description: Workspace Status
+        - description: Workspace status
           displayName: Status
           path: phase
           x-descriptors:
@@ -173,20 +173,15 @@ spec:
           x-descriptors:
             - 'urn:alm:descriptor:org.w3:link'
         - description: Workspace ID
-          displayName: Workspace ID
+          displayName: ID of the Workspace
           path: workspaceId
           x-descriptors:
             - 'urn:alm:descriptor:text'
-        - description: Conditions
+        - description: Conditions of the workspace activity
           displayName: Conditions
           path: conditions
           x-descriptors:
             - 'urn:alm:descriptor:io.kubernetes.conditions'
-        - description: The status of the Pods started by the workspace
-          displayName: Member Pod Status
-          path: members
-          x-descriptors:
-            - 'urn:alm:descriptor:com.tectonic.ui:podStatuses'
   keywords:
     - codeready
     - workspaces

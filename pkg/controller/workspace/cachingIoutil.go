@@ -138,3 +138,13 @@ func (util *impl) Untar(tarPath string, dest string) error {
 func (util *impl) CreateFile(file string, tr io.Reader) error {
 	return util.delegate.CreateFile(file, tr)
 }
+
+// GetFilesByGlob is a wrapper around filepath.Glob() to allow mocking in tests
+func (util *impl) GetFilesByGlob(glob string) ([]string, error) {
+	return util.delegate.GetFilesByGlob(glob)
+}
+
+// DeleteFiles is a wrapper around os.RemoveAll() to allow mocking in tests
+func (util *impl) RemoveAll(path string) error {
+	return util.delegate.RemoveAll(path)
+}

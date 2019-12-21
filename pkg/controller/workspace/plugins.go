@@ -169,7 +169,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 	isTheiaOrVsCodePlugin := utils.IsTheiaOrVscodePlugin(*pluginMeta)
 
 	if isTheiaOrVsCodePlugin && len(pluginMeta.Spec.Containers) > 0 {
-		metadataBroker.AddPluginRunnerRequirements(chePlugin, theRand, true)
+		metadataBroker.AddPluginRunnerRequirements(*pluginMeta, theRand, true)
 	}
 
 	componentInstanceStatus := &ComponentInstanceStatus{

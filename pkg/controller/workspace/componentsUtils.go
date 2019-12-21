@@ -1,6 +1,7 @@
 package workspace
 
 import (
+	"strings"
 	"github.com/eclipse/che-plugin-broker/model"
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -66,4 +67,11 @@ func createK8sServicesForMachines(wkspProps workspaceProperties, machineName str
 		services = append(services, service)
 	}
 	return services
+}
+
+func interpolate(someString string, wkspProps workspaceProperties) string {
+	for _, envVar := range commonEnvironmentVariables(wkspProps) {
+		someString = strings.ReplaceAll(someString, "${" + envVar.Name + "}", envVar.Value)
+	}
+	return someString
 }

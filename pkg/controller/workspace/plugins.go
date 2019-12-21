@@ -281,89 +281,12 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 					CommandLine: strings.Join(command.Command, " "),
 					Type:        "custom",
 					Attributes: map[string]string{
-						COMMAND_WORKING_DIRECTORY_ATTRIBUTE: command.WorkingDir,
+						COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, names),
 						COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
 					},
 				})
 		}
-
-		// TODO Manage devfile commands associated to this component ?
 	}
-	/*
-		for _, endpointDef := range chePlugin.Endpoints {
-			port := endpointDef.TargetPort
-
-			if isTheiaOrVsCodePlugin &&
-				endpointDef.Attributes != nil &&
-				endpointDef.Attributes["protocol"] == "" {
-				endpointDef.Attributes["protocol"] = "ws"
-			}
-
-			serverAnnotationName := func(attrName string) string {
-				return join(".", "org.eclipse.che.server", attrName)
-			}
-			serverAnnotationAttributes := func() string {
-				attrMap := map[string]string{}
-
-				for k, v := range endpointDef.Attributes {
-					if k == "protocol" {
-						continue
-					}
-					attrMap[k] = v
-				}
-				attrMap["internal"] = strconv.FormatBool(!endpointDef.Public)
-				res, err := json.Marshal(attrMap)
-				if err != nil {
-					return "{}"
-				}
-				return string(res)
-			}
-
-			serviceName, servicePort := serviceByPort[port].Name, servicePortName(port)
-			serviceNameAndPort := join("-", serviceName, servicePort)
-
-			ingress := extensionsv1beta1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      join("-", "ingress", names.workspaceId, endpointDef.Name),
-					Namespace: names.namespace,
-					Annotations: map[string]string{
-						"kubernetes.io/ingress.class":                "nginx",
-						"nginx.ingress.kubernetes.io/rewrite-target": "/",
-						"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-						"org.eclipse.che.machine.name":               join("/", cheOriginalName, containerByPort[port].Name),
-						serverAnnotationName("attributes"):           serverAnnotationAttributes(),
-						serverAnnotationName("port"):                 servicePortAndProtocol(port),
-						serverAnnotationName("protocol"):             endpointDef.Attributes["protocol"],
-					},
-					Labels: map[string]string{
-						"che.original_name": serviceNameAndPort,
-						"che.workspace_id":  names.workspaceId,
-					},
-				},
-				Spec: extensionsv1beta1.IngressSpec{
-					Rules: []extensionsv1beta1.IngressRule{
-						extensionsv1beta1.IngressRule{
-							IngressRuleValue: extensionsv1beta1.IngressRuleValue{
-								HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
-									Paths: []extensionsv1beta1.HTTPIngressPath{
-										extensionsv1beta1.HTTPIngressPath{
-											Backend: extensionsv1beta1.IngressBackend{
-												ServiceName: serviceName,
-												ServicePort: intstr.FromString(servicePort),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			}
-			ingress.Spec.Rules[0].Host = ingressHostName(serviceNameAndPort, names)
-
-			k8sObjects = append(k8sObjects, &ingress)
-		}
-	*/
 
 	return componentInstanceStatus, nil
 }

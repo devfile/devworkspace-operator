@@ -32,16 +32,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/component"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
-
-var log = logf.Log.WithName("controller_workspace")
-
-var configMapReference = client.ObjectKey{
-	Namespace: "",
-	Name:      "che-workspace-crd-controller",
-}
 
 // Add creates a new Workspace Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -67,17 +65,17 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 
 	operatorNamespace, err := k8sutil.GetOperatorNamespace()
 	if err == nil {
-		configMapReference.Namespace = operatorNamespace
+		ConfigMapReference.Namespace = operatorNamespace
 	} else if err != k8sutil.ErrNoNamespace {
 		return err
 	}
 
-	err = watchControllerConfig(c, mgr)
+	err = WatchControllerConfig(c, mgr)
 	if err != nil {
 		return err
 	}
 
-	if controllerConfig.getPluginRegistry() == "" {
+	if ControllerCfg.GetPluginRegistry() == "" {
 		return fmt.Errorf("No Che plugin registry setup. To use the embedded registry, you should not run the operator locally.")
 	}
 
@@ -90,19 +88,19 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			if e.MetaOld == nil {
-				log.Error(nil, "UpdateEvent has no old metadata", "event", e)
+				Log.Error(nil, "UpdateEvent has no old metadata", "event", e)
 				return false
 			}
 			if e.ObjectOld == nil {
-				log.Error(nil, "GenericEvent has no old runtime object to update", "event", e)
+				Log.Error(nil, "GenericEvent has no old runtime object to update", "event", e)
 				return false
 			}
 			if e.ObjectNew == nil {
-				log.Error(nil, "GenericEvent has no new runtime object for update", "event", e)
+				Log.Error(nil, "GenericEvent has no new runtime object for update", "event", e)
 				return false
 			}
 			if e.MetaNew == nil {
-				log.Error(nil, "UpdateEvent has no new metadata", "event", e)
+				Log.Error(nil, "UpdateEvent has no new metadata", "event", e)
 				return false
 			}
 			if e.MetaNew.GetGeneration() == e.MetaOld.GetGeneration() {
@@ -127,13 +125,13 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 		return err
 	}
 
-	controllerConfig.controllerIsOpenshift = isOS
+	ControllerCfg.ControllerIsOpenshift = isOS
 
 	return nil
 }
 
 func (r *ReconcileWorkspace) Write(p []byte) (n int, err error) {
-	log.Info(string(p))
+	Log.Info(string(p))
 	return len(p), nil
 }
 
@@ -152,7 +150,7 @@ type reconcileStatus struct {
 	createdWorkspaceObjects   bool
 	failure                   string
 	cleanedWorkspaceObjects   bool
-	wkspProps                 *workspaceProperties
+	wkspProps                 *WorkspaceProperties
 	workspace                 *workspacev1alpha1.Workspace
 	componentInstanceStatuses []ComponentInstanceStatus
 	ReqLogger                 logr.Logger
@@ -164,7 +162,7 @@ type reconcileStatus struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger := Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reconcileStatus := &reconcileStatus{
 		ReqLogger: reqLogger,
 	}
@@ -195,7 +193,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		return r.updateStatusFromOwnedObjects(instance, reqLogger)
 	}
 
-	var workspaceProperties *workspaceProperties
+	var workspaceProperties *WorkspaceProperties
 	reconcileStatus.workspace = instance
 
 	defer r.updateStatusAfterWorkspaceChange(reconcileStatus)
@@ -233,14 +231,14 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 				if _, isServiceAccount := found.(*corev1.ServiceAccount); !isServiceAccount {
 					err = r.Update(context.TODO(), prereq)
 					if err != nil {
-						log.Error(err, "")
+						Log.Error(err, "")
 					}
 				}
 			}
 		}
 	}
 
-	workspaceProperties, workspaceExposure, componentInstanceStatuses, k8sObjects, err := convertToCoreObjects(instance)
+	workspaceProperties, workspaceExposure, componentInstanceStatuses, k8sObjects, err := component.ConvertToCoreObjects(instance)
 	reconcileStatus.wkspProps = workspaceProperties
 	if err != nil {
 		reqLogger.Error(err, "Error when converting to K8S objects")
@@ -268,7 +266,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, nil
 		}
 
-		k8sObjectAsMetaObject.SetLabels(map[string]string { "che.workspace_id": workspaceProperties.workspaceId })
+		k8sObjectAsMetaObject.SetLabels(map[string]string { "che.workspace_id": workspaceProperties.WorkspaceId })
 
 		// Check if the k8s Object already exists
 
@@ -283,7 +281,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 				return reconcile.Result{}, nil
 			}
 			if deployment, isDeployment := k8sObject.(*appsv1.Deployment); isDeployment &&
-				strings.HasSuffix(deployment.GetName(), "."+cheOriginalName) {
+				strings.HasSuffix(deployment.GetName(), "."+CheOriginalName) {
 				reconcileStatus.createdWorkspaceObjects = true
 			}
 			continue
@@ -335,7 +333,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			case (*appsv1.Deployment):
 				{
 					found.(*appsv1.Deployment).Spec = k8sObject.(*appsv1.Deployment).Spec
-					if strings.HasSuffix(found.(*appsv1.Deployment).GetName(), "."+cheOriginalName) {
+					if strings.HasSuffix(found.(*appsv1.Deployment).GetName(), "."+CheOriginalName) {
 						reconcileStatus.changedWorkspaceObjects = true
 					}
 				}
@@ -381,9 +379,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		&corev1.ConfigMapList{},
 	} {
 		r.List(context.TODO(), &client.ListOptions{
-			Namespace: workspaceProperties.namespace,
+			Namespace: workspaceProperties.Namespace,
 			LabelSelector: labels.SelectorFromSet(labels.Set{
-				"che.workspace_id": workspaceProperties.workspaceId,
+				"che.workspace_id": workspaceProperties.WorkspaceId,
 			}),
 		}, list)
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
@@ -392,10 +390,10 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			if itemMeta, isMeta := item.(metav1.Object); isMeta {
 				if itemRuntime, isRuntime := item.(runtime.Object); isRuntime {
 					if _, present := k8sObjectNames[itemMeta.GetName()]; !present {
-						log.Info("  => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "name", itemMeta.GetName())
+						Log.Info("  => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "name", itemMeta.GetName())
 						r.Delete(context.TODO(), itemRuntime)
 						if _, isDeployment := itemRuntime.(*appsv1.Deployment); isDeployment &&
-							strings.HasSuffix(itemMeta.GetName(), "."+cheOriginalName) {
+							strings.HasSuffix(itemMeta.GetName(), "."+CheOriginalName) {
 							reconcileStatus.cleanedWorkspaceObjects = true
 						}
 					}

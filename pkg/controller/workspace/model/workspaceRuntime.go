@@ -1,4 +1,4 @@
-package workspace
+package model
 
 type CheWorkspaceRuntime struct {
 	ActiveEnv    *string                        `json:"activeEnv,omitempty"`

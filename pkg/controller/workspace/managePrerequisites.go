@@ -7,10 +7,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
 func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, error) {
-	pvcStorageQuantity, err := resource.ParseQuantity(pvcStorageSize)
+	pvcStorageQuantity, err := resource.ParseQuantity(PVCStorageSize)
 	if err != nil {
 		return nil, err
 	}
@@ -32,12 +35,12 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 						"storage": pvcStorageQuantity,
 					},
 				},
-				StorageClassName: controllerConfig.getPVCStorageClassName(),
+				StorageClassName: ControllerCfg.GetPVCStorageClassName(),
 			},
 		},
 		&corev1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccount,
+				Name:      ServiceAccount,
 				Namespace: workspace.Namespace,
 			},
 			AutomountServiceAccountToken: &autoMountServiceAccount,
@@ -70,7 +73,7 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccount + "-view",
+				Name:      ServiceAccount + "-view",
 				Namespace: workspace.Namespace,
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -80,14 +83,14 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 			Subjects: []rbacv1.Subject{
 				rbacv1.Subject{
 					Kind:      "ServiceAccount",
-					Name:      serviceAccount,
+					Name:      ServiceAccount,
 					Namespace: workspace.Namespace,
 				},
 			},
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccount + "-exec",
+				Name:      ServiceAccount + "-exec",
 				Namespace: workspace.Namespace,
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -97,14 +100,14 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 			Subjects: []rbacv1.Subject{
 				rbacv1.Subject{
 					Kind:      "ServiceAccount",
-					Name:      serviceAccount,
+					Name:      ServiceAccount,
 					Namespace: workspace.Namespace,
 				},
 			},
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceAccount + "-view-workspaces",
+				Name:      ServiceAccount + "-view-workspaces",
 				Namespace: workspace.Namespace,
 			},
 			RoleRef: rbacv1.RoleRef{
@@ -114,7 +117,7 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 			Subjects: []rbacv1.Subject{
 				rbacv1.Subject{
 					Kind:      "ServiceAccount",
-					Name:      serviceAccount,
+					Name:      ServiceAccount,
 					Namespace: workspace.Namespace,
 				},
 			},

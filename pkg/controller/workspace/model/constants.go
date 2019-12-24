@@ -1,4 +1,4 @@
-package workspace
+package model
 
 const (
 	MEMORY_LIMIT_ATTRIBUTE      = "memoryLimitBytes"

@@ -41,7 +41,7 @@ spec:
             attributes:
               path: /api
               protocol: http
-              public: true
+              public: "true"
         env:
           - name: TERM
             value: xterm

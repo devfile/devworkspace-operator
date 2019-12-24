@@ -1,4 +1,4 @@
-package workspace
+package component
 
 import (
 	"encoding/json"
@@ -18,10 +18,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	"fmt"
 )
 
 // TODO : change this because we don't expect plugin metas anymore, but plugin FQNs in the config maps
-func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpec, pluginFQNs []model.PluginFQN) ([]runtime.Object, error) {
+func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpec, pluginFQNs []model.PluginFQN) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
 	type initContainerDef struct {
@@ -39,7 +43,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			pluginFQNs: pluginFQNs,
 		},
 	} {
-		brokerImage := controllerConfig.getProperty(def.imageName)
+		brokerImage := ControllerCfg.GetProperty(def.imageName)
 		if brokerImage == nil {
 			return nil, errors.New("Unknown broker docker image for : " + def.imageName)
 		}
@@ -48,7 +52,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			corev1.VolumeMount{
 				MountPath: "/plugins/",
 				Name:      "claim-che-workspace",
-				SubPath:   names.workspaceId + "/plugins/",
+				SubPath:   names.WorkspaceId + "/plugins/",
 			},
 		}
 
@@ -60,13 +64,9 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 		args := []string{
 			"-disable-push",
 			"-runtime-id",
-			join(":",
-				names.workspaceId,
-				"default",
-				"anonymous",
-			),
+			fmt.Sprintf("%s:%s:%s", names.WorkspaceId, "default", "anonymous"),
 			"--registry-address",
-			controllerConfig.getPluginRegistry(),
+			ControllerCfg.GetPluginRegistry(),
 		}
 
 		if len(def.pluginFQNs) > 0 {
@@ -74,7 +74,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			// TODO: Voir comment le unified broker est défini dans le yaml
 			// et le définir de la même manière ici.
 			// Voir aussi comment ça se fait qu'on ne met pas de volume =>
-			//    => log du côté operator pour voir ce qu'il y a dans les PluginFQNs
+			//    => Log du côté operator pour voir ce qu'il y a dans les PluginFQNs
 
 			configMapName := containerName + "-broker-config-map"
 			configMapVolume := containerName + "-broker-config-volume"
@@ -86,9 +86,9 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 			configMap := corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      configMapName,
-					Namespace: names.namespace,
+					Namespace: names.Namespace,
 					Labels: map[string]string{
-						"che.workspace_id": names.workspaceId,
+						"che.workspace_id": names.WorkspaceId,
 					},
 				},
 				Data: map[string]string{
@@ -133,7 +133,7 @@ func setupPluginInitContainers(names workspaceProperties, podSpec *corev1.PodSpe
 	return k8sObjects, nil
 }
 
-func setupChePlugin(names workspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupChePlugin(names WorkspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	theIoUtil := utils.New()
 	theRand := commonBroker.NewRand()
 
@@ -148,13 +148,13 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		pluginFQN.Registry = strings.Join(idParts[0:idPartsLen-3], "/")
 	}
 
-	pluginMeta, err := utils.GetPluginMeta(pluginFQN, controllerConfig.getPluginRegistry(), theIoUtil)
+	pluginMeta, err := utils.GetPluginMeta(pluginFQN, ControllerCfg.GetPluginRegistry(), theIoUtil)
 	if err != nil {
 		return nil, err
 	}
 
 	pluginMetas := []model.PluginMeta{*pluginMeta}
-	err = utils.ResolveRelativeExtensionPaths(pluginMetas, controllerConfig.getPluginRegistry())
+	err = utils.ResolveRelativeExtensionPaths(pluginMetas, ControllerCfg.GetPluginRegistry())
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func setupChePlugin(names workspaceProperties, component *workspaceApi.Component
 		container := corev1.Container{
 			Name:            machineName,
 			Image:           containerDef.Image,
-			ImagePullPolicy: corev1.PullPolicy(controllerConfig.getSidecarPullPolicy()),
+			ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 			Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 			Resources: corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{

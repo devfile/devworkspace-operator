@@ -19,7 +19,9 @@ import (
 	"io/ioutil"
 	"os"
 	"io"
-	"path/filepath"	
+	"path/filepath"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
 )
 
 type cache struct {
@@ -89,11 +91,7 @@ func (util *impl) Download(URL string, destPath string, useContentDisposition bo
 			}
 		}
 	} else {
-		log.Info(join ("",
-		"Retrieving URL '",
-		URL,
-		"' from the local cache:",
-		path))
+		Log.Info("Retrieving URL '%s' from the local cache: %s", URL, path)
 	}
 
 	return destPath, util.CopyFile(path, destPath)

@@ -1,4 +1,4 @@
-package workspace
+package component
 
 import (
 	"strings"
@@ -7,9 +7,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
-func createVolumeMounts(workspaceProps workspaceProperties, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
+func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
 	var volumeMounts []corev1.VolumeMount
 	volumeName := "claim-che-workspace"
 
@@ -17,14 +19,14 @@ func createVolumeMounts(workspaceProps workspaceProperties, mountSources *bool, 
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: volDef.ContainerPath,
 			Name:      volumeName,
-			SubPath:   workspaceProps.workspaceId + "/" + volDef.Name + "/",
+			SubPath:   workspaceProps.WorkspaceId + "/" + volDef.Name + "/",
 		})
 	}
 	for _, volDef := range pluginVolumes {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: volDef.MountPath,
 			Name:      volumeName,
-			SubPath:   workspaceProps.workspaceId + "/" + volDef.Name + "/",
+			SubPath:   workspaceProps.WorkspaceId + "/" + volDef.Name + "/",
 		})
 	}
 
@@ -32,14 +34,14 @@ func createVolumeMounts(workspaceProps workspaceProperties, mountSources *bool, 
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: "/projects",
 			Name:      volumeName,
-			SubPath:   workspaceProps.workspaceId + "/projects/",
+			SubPath:   workspaceProps.WorkspaceId + "/projects/",
 		})
 	}
 
 	return volumeMounts
 }
 
-func createK8sServicesForMachines(wkspProps workspaceProperties, machineName string, exposedPorts []int) []corev1.Service {
+func createK8sServicesForMachines(wkspProps WorkspaceProperties, machineName string, exposedPorts []int) []corev1.Service {
 	services := []corev1.Service {}
 	servicePorts := k8sModelUtils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
 	serviceName := machineServiceName(wkspProps, machineName)
@@ -47,18 +49,18 @@ func createK8sServicesForMachines(wkspProps workspaceProperties, machineName str
 		service := corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
-				Namespace: wkspProps.namespace,
+				Namespace: wkspProps.Namespace,
 				Annotations: map[string]string{
 					"org.eclipse.che.machine.name":   machineName,
 				},
 				Labels: map[string]string{
-					"che.workspace_id": wkspProps.workspaceId,
+					"che.workspace_id": wkspProps.WorkspaceId,
 				},
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
-					"che.original_name": cheOriginalName,
-					"che.workspace_id":  wkspProps.workspaceId,
+					"che.original_name": CheOriginalName,
+					"che.workspace_id":  wkspProps.WorkspaceId,
 				},
 				Type:  corev1.ServiceTypeClusterIP,
 				Ports: servicePorts,
@@ -69,7 +71,7 @@ func createK8sServicesForMachines(wkspProps workspaceProperties, machineName str
 	return services
 }
 
-func interpolate(someString string, wkspProps workspaceProperties) string {
+func interpolate(someString string, wkspProps WorkspaceProperties) string {
 	for _, envVar := range commonEnvironmentVariables(wkspProps) {
 		someString = strings.ReplaceAll(someString, "${" + envVar.Name + "}", envVar.Value)
 	}

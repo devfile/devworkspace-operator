@@ -1,6 +1,6 @@
 // MY LICENSEdep
 
-package workspace
+package config
 
 import (
 	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
@@ -22,62 +22,73 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+
+	"fmt"
 )
 
-var controllerConfig ControllerConfig
+var ControllerCfg ControllerConfig
 
 var (
 	ConfigMapNameEnvVar      = "CONTROLLER_CONGIG_MAP_NAME"
 	ConfigMapNamespaceEnvVar = "CONTROLLER_CONGIG_MAP_NAMESPACE"
 )
 
+var ConfigMapReference = client.ObjectKey{
+	Namespace: "",
+	Name:      "che-workspace-crd-controller",
+}
+
 type ControllerConfig struct {
 	configMap             *corev1.ConfigMap
-	controllerIsOpenshift bool
+	ControllerIsOpenshift bool
 }
 
 func (wc *ControllerConfig) update(configMap *corev1.ConfigMap) {
-	log.Info(join("", "Updating the configuration from config map '", configMap.Name, "' in namespace '", configMap.Namespace, "'"))
+	Log.Info("Updating the configuration from config map '%s' in namespace '%s'", configMap.Name, configMap.Namespace)
 	wc.configMap = configMap
 }
 
-func (wc *ControllerConfig) getPluginRegistry() string {
-	optional := wc.getProperty("plugin.registry")
+func (wc *ControllerConfig) GetPluginRegistry() string {
+	optional := wc.GetProperty("plugin.registry")
 	if optional != nil {
 		return *optional
 	}
 	return registry.EmbeddedPluginRegistryUrl
 }
 
-func (wc *ControllerConfig) getIngressGlobalDomain() string {
-	return *wc.getProperty("ingress.global.domain")
+func (wc *ControllerConfig) GetIngressGlobalDomain() string {
+	return *wc.GetProperty("ingress.global.domain")
 }
 
-func (wc *ControllerConfig) getPVCStorageClassName() *string {
-	return wc.getProperty("pvc.storageclass.name")
+func (wc *ControllerConfig) GetPVCStorageClassName() *string {
+	return wc.GetProperty("pvc.storageclass.name")
 }
 
-func (wc *ControllerConfig) getCheRestApisDockerImage() string {
-	optional := wc.getProperty("cherestapis.image.name")
+func (wc *ControllerConfig) GetCheRestApisDockerImage() string {
+	optional := wc.GetProperty("cherestapis.image.name")
 	if optional == nil {
-		return "quay.io/che-incubator/che-workspace-crd-rest-apis:" + cheVersion
+		return "quay.io/che-incubator/che-workspace-crd-rest-apis:" + CheVersion
 	}
 	return *optional
 }
 
-func (wc *ControllerConfig) isOpenshift() bool {
-	return wc.controllerIsOpenshift
+func (wc *ControllerConfig) IsOpenshift() bool {
+	return wc.ControllerIsOpenshift
 }
 
-func (wc *ControllerConfig) getSidecarPullPolicy() string {
-	optional := wc.getProperty("sidecar.pull.policy")
+func (wc *ControllerConfig) GetSidecarPullPolicy() string {
+	optional := wc.GetProperty("sidecar.pull.policy")
 	if optional == nil {
 		return "IfNotPresent"
 	}
 	return *optional
 }
 
-func (wc *ControllerConfig) getProperty(name string) *string {
+func (wc *ControllerConfig) GetProperty(name string) *string {
 	val, exists := wc.configMap.Data[name]
 	if exists {
 		return &val
@@ -86,38 +97,38 @@ func (wc *ControllerConfig) getProperty(name string) *string {
 }
 
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {
-	if meta.GetNamespace() != configMapReference.Namespace ||
-		meta.GetName() != configMapReference.Name {
+	if meta.GetNamespace() != ConfigMapReference.Namespace ||
+		meta.GetName() != ConfigMapReference.Name {
 		return
 	}
 	if cm, isConfigMap := obj.(*corev1.ConfigMap); isConfigMap {
-		controllerConfig.update(cm)
+		ControllerCfg.update(cm)
 		return
 	}
 
 	configMap := &corev1.ConfigMap{}
-	err := client.Get(context.TODO(), configMapReference, configMap)
+	err := client.Get(context.TODO(), ConfigMapReference, configMap)
 	if err != nil {
-		log.Error(err, join("", "Cannot find the '", configMapReference.Name, "' ConfigMap in namespace '", configMapReference.Namespace, "'"))
+		Log.Error(err, fmt.Sprintf("Cannot find the '%s' ConfigMap in namespace '%s'", ConfigMapReference.Name, ConfigMapReference.Namespace))
 	}
-	controllerConfig.update(configMap)
+	ControllerCfg.update(configMap)
 }
 
-func watchControllerConfig(ctr controller.Controller, mgr manager.Manager) error {
+func WatchControllerConfig(ctr controller.Controller, mgr manager.Manager) error {
 	customConfig := false
 	configMapName, found := os.LookupEnv(ConfigMapNameEnvVar)
 	if found && len(configMapName) > 0 {
-		configMapReference.Name = configMapName
+		ConfigMapReference.Name = configMapName
 		customConfig = true
 	}
 	configMapNamespace, found := os.LookupEnv(ConfigMapNamespaceEnvVar)
 	if found && len(configMapNamespace) > 0 {
-		configMapReference.Namespace = configMapNamespace
+		ConfigMapReference.Namespace = configMapNamespace
 		customConfig = true
 	}
 
-	if configMapReference.Namespace == "" {
-		return errors.New(join("", "You should set the namespace of the controller config map through the '", ConfigMapNamespaceEnvVar, "' environment variable"))
+	if ConfigMapReference.Namespace == "" {
+		return errors.New(fmt.Sprintf("You should set the namespace of the controller config map through the '%s' environment variable", ConfigMapNamespaceEnvVar))
 	}
 
 	configMap := &corev1.ConfigMap{}
@@ -125,14 +136,14 @@ func watchControllerConfig(ctr controller.Controller, mgr manager.Manager) error
 	if err != nil {
 		return err
 	}
-	log.Info(join("", "Searching for config map '", configMapReference.Name, "' in namespace '", configMapReference.Namespace, "'"))
-	err = nonCachedClient.Get(context.TODO(), configMapReference, configMap)
+	Log.Info(fmt.Sprintf("Searching for config map '%s' in namespace '%s'", ConfigMapReference.Name, ConfigMapReference.Namespace))
+	err = nonCachedClient.Get(context.TODO(), ConfigMapReference, configMap)
 	if err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return err
 		}
 		if customConfig {
-			return errors.New(join("", "Cannot find the '", configMapReference.Name, "' ConfigMap in namespace '", configMapReference.Namespace, "'"))
+			return errors.New(fmt.Sprintf("Cannot find the '%s' ConfigMap in namespace '%s'", ConfigMapReference.Name, ConfigMapReference.Namespace))
 		}
 
 		buildDefaultConfigMap(configMap)
@@ -141,9 +152,9 @@ func watchControllerConfig(ctr controller.Controller, mgr manager.Manager) error
 		if err != nil {
 			return err
 		}
-		log.Info(join("", "  => created config map '", configMap.GetObjectMeta().GetName(), "' in namespace '", configMap.GetObjectMeta().GetNamespace(), "'"))
+		Log.Info(fmt.Sprintf("  => created config map '%s' in namespace '%s'", configMap.GetObjectMeta().GetName(), configMap.GetObjectMeta().GetNamespace()))
 	} else {
-		log.Info(join("", "  => found config map '", configMap.GetObjectMeta().GetName(), "' in namespace '", configMap.GetObjectMeta().GetNamespace(), "'"))
+		Log.Info(fmt.Sprintf("  => found config map '%s' in namespace '%s'", configMap.GetObjectMeta().GetName(), configMap.GetObjectMeta().GetNamespace()))
 	}
 
 	err = fillOpenshiftRouteSuffixIfNecessary(nonCachedClient, configMap)
@@ -179,8 +190,8 @@ func watchControllerConfig(ctr controller.Controller, mgr manager.Manager) error
 }
 
 func buildDefaultConfigMap(cm *corev1.ConfigMap) {
-	cm.Name = configMapReference.Name
-	cm.Namespace = configMapReference.Namespace
+	cm.Name = ConfigMapReference.Name
+	cm.Namespace = ConfigMapReference.Namespace
 	cm.Data = map[string]string{
 		"ingress.global.domain":                      "",
 		"che.workspace.plugin_broker.unified.image":  "eclipse/che-unified-plugin-broker:v0.20",

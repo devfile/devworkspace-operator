@@ -1,4 +1,4 @@
-package workspace
+package component
 
 import (
 	"strings"
@@ -11,9 +11,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
 )
 
-func setupDockerImageComponent(names workspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupDockerImageComponent(names WorkspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	componentInstanceStatus := &ComponentInstanceStatus{
 		Machines: map[string]MachineDescription{},
 		Endpoints: []workspaceApi.Endpoint {},
@@ -32,7 +35,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		machineName = *component.Alias
 	}
 
-	var exposedPorts []int = EndpointPortsToInts(component.Endpoints)
+	var exposedPorts []int = endpointPortsToInts(component.Endpoints)
 
 	var limitOrDefault string
 
@@ -63,7 +66,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 	container := corev1.Container{
 		Name:            machineName,
 		Image:           *component.Image,
-		ImagePullPolicy: corev1.PullPolicy(controllerConfig.getSidecarPullPolicy()),
+		ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 		Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{

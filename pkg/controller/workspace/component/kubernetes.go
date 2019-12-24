@@ -1,4 +1,4 @@
-package workspace
+package component
 
 import (
 	"strconv"
@@ -14,11 +14,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"github.com/prometheus/common/log"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
-func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	var k8sObjects []runtime.Object
 
 	theScheme := runtime.NewScheme()
@@ -68,7 +71,7 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 	for _, obj = range objects {
 		if objMeta, isMeta := obj.(metav1.Object); isMeta {
 			if selector.Matches(labels.Set(objMeta.GetLabels())) {
-				objMeta.SetNamespace(wkspProps.namespace)
+				objMeta.SetNamespace(wkspProps.Namespace)
 				k8sObjects = append(k8sObjects, obj)
 			}
 		}
@@ -88,15 +91,15 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 				suffix = "." + strconv.Itoa(podCound)
 			}
 			additionalDeploymentOriginalName := componentName + suffix
-			var workspaceDeploymentName = wkspProps.workspaceId + "." + additionalDeploymentOriginalName
+			var workspaceDeploymentName = wkspProps.WorkspaceId + "." + additionalDeploymentOriginalName
 			var replicas int32 = 1
 			fromIntOne := intstr.FromInt(1)
 
 			podLabels := map[string]string{
 				"deployment":       workspaceDeploymentName,
-				"che.workspace_id": wkspProps.workspaceId,
+				"che.workspace_id": wkspProps.WorkspaceId,
 				"che.original_name": additionalDeploymentOriginalName,
-				"che.workspace_name":  wkspProps.workspaceName,
+				"che.workspace_name":  wkspProps.WorkspaceName,
 			}
 			for labelName, labelValue := range objPod.Labels {
 				if _, exists := podLabels[labelName]; exists {
@@ -108,16 +111,16 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 			k8sObjects[index] = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workspaceDeploymentName,
-					Namespace: wkspProps.namespace,
+					Namespace: wkspProps.Namespace,
 					Labels: map[string]string{
-						"che.workspace_id": wkspProps.workspaceId,
+						"che.workspace_id": wkspProps.WorkspaceId,
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"deployment":       workspaceDeploymentName,
-							"che.workspace_id": wkspProps.workspaceId,
+							"che.workspace_id": wkspProps.WorkspaceId,
 							"che.original_name": additionalDeploymentOriginalName,
 						},
 					},
@@ -140,7 +143,7 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 				},
 			}
 		} else if objMeta, isMeta := obj.(metav1.Object); isMeta {
-			objMeta.GetLabels()["che.workspace_id"] = wkspProps.workspaceId
+			objMeta.GetLabels()["che.workspace_id"] = wkspProps.WorkspaceId
 		}
 	}
 

@@ -1,10 +1,12 @@
-package workspace
+package component
 
 import (
 	corev1 "k8s.io/api/core/v1"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
-func commonEnvironmentVariables(wkspProps workspaceProperties) []corev1.EnvVar {
+func commonEnvironmentVariables(wkspProps WorkspaceProperties) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		corev1.EnvVar{
 			Name: "CHE_MACHINE_TOKEN",
@@ -15,31 +17,31 @@ func commonEnvironmentVariables(wkspProps workspaceProperties) []corev1.EnvVar {
 		},
 		corev1.EnvVar{
 			Name:  "CHE_API",
-			Value: wkspProps.cheApiExternal,
+			Value: wkspProps.CheApiExternal,
 		},
 		corev1.EnvVar{
 			Name:  "CHE_API_INTERNAL",
-			Value: defaultApiEndpoint,
+			Value: DefaultApiEndpoint,
 		},
 		corev1.EnvVar{
 			Name:  "CHE_API_EXTERNAL",
-			Value: wkspProps.cheApiExternal,
+			Value: wkspProps.CheApiExternal,
 		},
 		corev1.EnvVar{
 			Name:  "CHE_WORKSPACE_NAME",
-			Value: wkspProps.workspaceName,
+			Value: wkspProps.WorkspaceName,
 		},
 		corev1.EnvVar{
 			Name:  "CHE_WORKSPACE_ID",
-			Value: wkspProps.workspaceId,
+			Value: wkspProps.WorkspaceId,
 		},
 		corev1.EnvVar{
 			Name:  "CHE_AUTH_ENABLED",
-			Value: authEnabled,
+			Value: AuthEnabled,
 		},
 		corev1.EnvVar{
 			Name:  "CHE_WORKSPACE_NAMESPACE",
-			Value: wkspProps.namespace,
+			Value: wkspProps.Namespace,
 		},
 	}
 }

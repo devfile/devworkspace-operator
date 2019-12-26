@@ -1,3 +1,4 @@
+# This is a sample how full running Workspace CR looks like
 apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:

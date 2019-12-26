@@ -2,7 +2,6 @@ apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
   name: python-sample
-  namespace: ec2019
 spec:
   started: true
   devfile:

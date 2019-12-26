@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: che-workspace-crd-operator
-  namespace: operators
+  namespace: devworkspace-controller
 spec:
   replicas: 1
   selector:
@@ -29,24 +29,3 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "che-workspace-crd-operator"
-        - image: quay.io/che-incubator/che-workspace-crd-plugin-registry:7.1.0-offline
-          imagePullPolicy: Always
-          name: che-plugin-registry
-          ports:
-            - containerPort: 8080
-              protocol: TCP
-          resources:
-            limits:
-              memory: 256Mi
-            requests:
-              memory: 16Mi
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          env:
-            - name: CHE_SIDECAR_CONTAINERS_REGISTRY_TAG
-              value: '7.1.0'
-      dnsPolicy: ClusterFirst
-      restartPolicy: Always
-      schedulerName: default-scheduler
-      securityContext: {}
-      terminationGracePeriodSeconds: 30

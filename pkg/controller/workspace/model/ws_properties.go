@@ -20,4 +20,3 @@ type WorkspaceProperties struct {
 	CheApiExternal string
 	ExposureClass  string
 }
-

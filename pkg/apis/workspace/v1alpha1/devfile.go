@@ -23,11 +23,11 @@ type DevFileSpec struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// List of workspace-wide commands that can be associated to a given component, in order to run in the related container
-	Commands          []CommandSpec   `json:"commands,omitempty"` // Description of the predefined commands to be available in workspace
+	Commands []CommandSpec `json:"commands,omitempty"` // Description of the predefined commands to be available in workspace
 	// List of projects that should be opened in the workspace
-	Projects          []ProjectSpec   `json:"projects,omitempty"` // Description of the projects, containing names and sources locations
+	Projects []ProjectSpec `json:"projects,omitempty"` // Description of the projects, containing names and sources locations
 	// List of components (containers, plugins, ...) that will provide the workspace features
-	Components        []ComponentSpec `json:"components"`         // Description of the workspace components, such as editor and plugins
+	Components []ComponentSpec `json:"components"` // Description of the workspace components, such as editor and plugins
 }
 
 type CommandSpec struct {
@@ -75,9 +75,9 @@ type ComponentSpec struct {
 
 // Describes dockerimage component endpoint
 type Endpoint struct {
-	Attributes map[string]string   `json:"attributes,omitempty"`
-	Name       string                     `json:"name"` // The endpoint name
-	Port       int64                      `json:"port"` // The endpoint port
+	Attributes map[string]string `json:"attributes,omitempty"`
+	Name       string            `json:"name"` // The endpoint name
+	Port       int64             `json:"port"` // The endpoint port
 }
 
 // Describes environment variable

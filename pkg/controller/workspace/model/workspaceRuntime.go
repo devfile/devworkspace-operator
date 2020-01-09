@@ -33,52 +33,54 @@ type CheWorkspaceMachine struct {
 }
 
 type CheWorkspaceMachineEventType string
+
 const (
-	FailedMachineEventType CheWorkspaceMachineEventType = "FAILED"
-	RunningMachineEventType CheWorkspaceMachineEventType = "RUNNING"
+	FailedMachineEventType   CheWorkspaceMachineEventType = "FAILED"
+	RunningMachineEventType  CheWorkspaceMachineEventType = "RUNNING"
 	StartingMachineEventType CheWorkspaceMachineEventType = "STARTING"
-	StoppedMachineEventType CheWorkspaceMachineEventType = "STOPPED"
+	StoppedMachineEventType  CheWorkspaceMachineEventType = "STOPPED"
 )
 
 type CheWorkspaceServer struct {
-	Attributes map[string]string                         `json:"attributes,omitempty"`
-	Status     CheWorkspaceServerStatus                  `json:"status"`
-	URL        *string                                   `json:"url,omitempty"`
+	Attributes map[string]string        `json:"attributes,omitempty"`
+	Status     CheWorkspaceServerStatus `json:"status"`
+	URL        *string                  `json:"url,omitempty"`
 }
 
 type CheWorkspaceCommand struct {
-	Name        string           `json:"name"`
-	Type        string           `json:"type"`
-	CommandLine string           `json:"commandLine"`
-	Attributes  map[string]string `json:"attributes,omitempty"` 
+	Name        string            `json:"name"`
+	Type        string            `json:"type"`
+	CommandLine string            `json:"commandLine"`
+	Attributes  map[string]string `json:"attributes,omitempty"`
 }
 
 type CheCoreRESTLink struct {
-	Consumes    *string                           `json:"consumes,omitempty"`   
-	Href        *string                           `json:"href,omitempty"`       
-	Method      *string                           `json:"method,omitempty"`     
-	Parameters  []CheCoreRESTLinkParameter        `json:"parameters"`           
-	Produces    *string                           `json:"produces,omitempty"`   
-	Rel         *string                           `json:"rel,omitempty"`        
+	Consumes    *string                           `json:"consumes,omitempty"`
+	Href        *string                           `json:"href,omitempty"`
+	Method      *string                           `json:"method,omitempty"`
+	Parameters  []CheCoreRESTLinkParameter        `json:"parameters"`
+	Produces    *string                           `json:"produces,omitempty"`
+	Rel         *string                           `json:"rel,omitempty"`
 	RequestBody *CheCoreRESTRequestBodyDescriptor `json:"requestBody,omitempty"`
 }
 
 type CheCoreRESTLinkParameter struct {
 	DefaultValue *string                       `json:"defaultValue,omitempty"`
-	Description  *string                       `json:"description,omitempty"` 
-	Name         *string                       `json:"name,omitempty"`        
-	Required     *bool                         `json:"required,omitempty"`    
-	Type         *CheCoreRESTLinkParameterType `json:"type,omitempty"`        
-	Valid        []string                      `json:"valid"`                 
+	Description  *string                       `json:"description,omitempty"`
+	Name         *string                       `json:"name,omitempty"`
+	Required     *bool                         `json:"required,omitempty"`
+	Type         *CheCoreRESTLinkParameterType `json:"type,omitempty"`
+	Valid        []string                      `json:"valid"`
 }
 
 type CheCoreRESTLinkParameterType string
+
 const (
-	Array CheCoreRESTLinkParameterType = "Array"
+	Array   CheCoreRESTLinkParameterType = "Array"
 	Boolean CheCoreRESTLinkParameterType = "Boolean"
-	Number CheCoreRESTLinkParameterType = "Number"
-	Object CheCoreRESTLinkParameterType = "Object"
-	String CheCoreRESTLinkParameterType = "String"
+	Number  CheCoreRESTLinkParameterType = "Number"
+	Object  CheCoreRESTLinkParameterType = "Object"
+	String  CheCoreRESTLinkParameterType = "String"
 )
 
 type CheCoreRESTRequestBodyDescriptor struct {
@@ -86,6 +88,7 @@ type CheCoreRESTRequestBodyDescriptor struct {
 }
 
 type CheWorkspaceServerStatus string
+
 const (
 	StoppedServerStatus CheWorkspaceServerStatus = "STOPPED"
 	RunningServerStatus CheWorkspaceServerStatus = "RUNNING"

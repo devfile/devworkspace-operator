@@ -13,9 +13,9 @@
 package workspace
 
 import (
+	"context"
 	"fmt"
 	"github.com/go-logr/logr"
-	"context"
 	origLog "log"
 	"reflect"
 	"strings"
@@ -49,8 +49,8 @@ import (
 	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/component"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
 )
 
 // Add creates a new Workspace Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -68,7 +68,7 @@ func newReconciler(mgr manager.Manager) *ReconcileWorkspace {
 func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	// Create a new controller
 	c, err := controller.New("workspace-controller", mgr, controller.Options{
-		Reconciler: r,
+		Reconciler:              r,
 		MaxConcurrentReconciles: 1,
 	})
 	if err != nil {
@@ -278,14 +278,14 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, nil
 		}
 
-		k8sObjectAsMetaObject.SetLabels(map[string]string { "che.workspace_id": workspaceProperties.WorkspaceId })
+		k8sObjectAsMetaObject.SetLabels(map[string]string{"che.workspace_id": workspaceProperties.WorkspaceId})
 
 		// Check if the k8s Object already exists
 
 		found := reflect.New(reflect.TypeOf(k8sObject).Elem()).Interface().(runtime.Object)
 		err = r.Get(context.TODO(), types.NamespacedName{Name: k8sObjectAsMetaObject.GetName(), Namespace: k8sObjectAsMetaObject.GetNamespace()}, found)
 		if err != nil && errors.IsNotFound(err) {
-			reqLogger.Info("  => Creating " + reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("  => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Create(context.TODO(), k8sObject)
 			if err != nil {
 				reqLogger.Error(err, "Error when creating K8S object: ", "k8sObject", k8sObject)
@@ -368,7 +368,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 					found.(*workspacev1alpha1.WorkspaceExposure).Spec = k8sObject.(*workspacev1alpha1.WorkspaceExposure).Spec
 				}
 			}
-			reqLogger.Info("  => Updating " +reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
+			reqLogger.Info("  => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
 			err = r.Update(context.TODO(), found)
 			if err != nil {
 				reqLogger.Error(err, "Error when updating K8S object: ", "k8sObject", k8sObjectAsMetaObject)

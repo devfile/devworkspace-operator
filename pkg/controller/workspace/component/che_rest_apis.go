@@ -13,16 +13,16 @@
 package component
 
 import (
+	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
 
+	"fmt"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
-	"fmt"
 )
 
 func addCheRestApis(wkspProps WorkspaceProperties, podSpec *corev1.PodSpec) ([]runtime.Object, string, error) {

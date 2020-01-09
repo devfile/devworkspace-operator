@@ -13,12 +13,12 @@
 package component
 
 import (
-	"strings"
-	"github.com/eclipse/che-plugin-broker/model"
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	"github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	"strings"
 
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
@@ -54,7 +54,7 @@ func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, 
 }
 
 func createK8sServicesForMachines(wkspProps WorkspaceProperties, machineName string, exposedPorts []int) []corev1.Service {
-	services := []corev1.Service {}
+	services := []corev1.Service{}
 	servicePorts := k8sModelUtils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
 	serviceName := machineServiceName(wkspProps, machineName)
 	if len(servicePorts) > 0 {
@@ -63,7 +63,7 @@ func createK8sServicesForMachines(wkspProps WorkspaceProperties, machineName str
 				Name:      serviceName,
 				Namespace: wkspProps.Namespace,
 				Annotations: map[string]string{
-					"org.eclipse.che.machine.name":   machineName,
+					"org.eclipse.che.machine.name": machineName,
 				},
 				Labels: map[string]string{
 					"che.workspace_id": wkspProps.WorkspaceId,
@@ -85,7 +85,7 @@ func createK8sServicesForMachines(wkspProps WorkspaceProperties, machineName str
 
 func interpolate(someString string, wkspProps WorkspaceProperties) string {
 	for _, envVar := range commonEnvironmentVariables(wkspProps) {
-		someString = strings.ReplaceAll(someString, "${" + envVar.Name + "}", envVar.Value)
+		someString = strings.ReplaceAll(someString, "${"+envVar.Name+"}", envVar.Value)
 	}
 	return someString
 }

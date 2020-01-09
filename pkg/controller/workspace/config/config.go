@@ -13,14 +13,14 @@
 package config
 
 import (
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
-	"strings"
 	"context"
 	"errors"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
 	"os"
+	"strings"
 
-	corev1 "k8s.io/api/core/v1"
 	routeV1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,9 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
 
 	"fmt"
 )
@@ -203,9 +203,9 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Name = ConfigMapReference.Name
 	cm.Namespace = ConfigMapReference.Namespace
 	cm.Data = map[string]string{
-		"ingress.global.domain":                      "",
-		"che.workspace.plugin_broker.unified.image":  "eclipse/che-unified-plugin-broker:v0.20",
-		"che.workspace.plugin_broker.init.image":     "eclipse/che-init-plugin-broker:v0.20",
+		"ingress.global.domain":                     "",
+		"che.workspace.plugin_broker.unified.image": "eclipse/che-unified-plugin-broker:v0.20",
+		"che.workspace.plugin_broker.init.image":    "eclipse/che-init-plugin-broker:v0.20",
 	}
 }
 
@@ -214,22 +214,22 @@ func fillOpenshiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	if err != nil {
 		return err
 	}
-	if ! isOS {
+	if !isOS {
 		return nil
 	}
-	testRoute := &routeV1.Route {
-		ObjectMeta: metav1.ObjectMeta {
+	testRoute := &routeV1.Route{
+		ObjectMeta: metav1.ObjectMeta{
 			Namespace: configMap.Namespace,
-			Name: "che-workspace-crd-test-route",
+			Name:      "che-workspace-crd-test-route",
 		},
-		Spec: routeV1.RouteSpec {
-				To: routeV1.RouteTargetReference {
-					Kind: "Service",
-					Name: "che-workspace-crd-test-route",
-				},
+		Spec: routeV1.RouteSpec{
+			To: routeV1.RouteTargetReference{
+				Kind: "Service",
+				Name: "che-workspace-crd-test-route",
 			},
+		},
 	}
-	
+
 	err = nonCachedClient.Create(context.TODO(), testRoute)
 	if err != nil {
 		return err

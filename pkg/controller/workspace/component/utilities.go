@@ -28,11 +28,11 @@ func emptyIfNil(s *string) string {
 }
 
 func machineServiceName(wkspProps WorkspaceProperties, machineName string) string {
-	return "server"+strings.ReplaceAll(wkspProps.WorkspaceId, "workspace", "") + "-" + machineName
+	return "server" + strings.ReplaceAll(wkspProps.WorkspaceId, "workspace", "") + "-" + machineName
 }
 
 func endpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {
-	ports := []int {}
+	ports := []int{}
 	for _, endpint := range endpoints {
 		ports = append(ports, int(endpint.Port))
 	}

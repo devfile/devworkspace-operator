@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
 	"context"
 	"flag"
 	"fmt"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
 	"os"
 	"runtime"
 

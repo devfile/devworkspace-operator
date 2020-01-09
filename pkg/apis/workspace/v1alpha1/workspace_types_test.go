@@ -37,11 +37,11 @@ func TestStorageWorkspace(t *testing.T) {
 				Components: []ComponentSpec{
 					ComponentSpec{
 						Alias: "coucou",
-						Type: "chePlugin",
+						Type:  "chePlugin",
 					},
 					ComponentSpec{
 						Alias: "kiki",
-						Type: "cheEditor",
+						Type:  "cheEditor",
 					},
 				},
 			},

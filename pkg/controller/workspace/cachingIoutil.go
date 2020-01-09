@@ -13,22 +13,22 @@
 package workspace
 
 import (
-	"sync"
-	"github.com/eclipse/che-plugin-broker/utils"
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
+	"github.com/eclipse/che-plugin-broker/utils"
+	"io"
 	"io/ioutil"
 	"os"
-	"io"
 	"path/filepath"
+	"sync"
 
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
 )
 
 type cache struct {
-	tempDir string
+	tempDir         string
 	filenamesPerUrl map[string]string
-	random commonBroker.Random
-	mux sync.Mutex
+	random          commonBroker.Random
+	mux             sync.Mutex
 }
 
 var downloadCache *cache
@@ -36,13 +36,13 @@ var downloadCache *cache
 func SetupDownloadCache() error {
 	downloadTempDir, err := ioutil.TempDir("", "che-plugin-broker-httpcache")
 	if err != nil {
-		 return err
+		return err
 	}
 
-	downloadCache = &cache {
-		tempDir: downloadTempDir,
-		random: commonBroker.NewRand(),
-		filenamesPerUrl: map[string]string {},
+	downloadCache = &cache{
+		tempDir:         downloadTempDir,
+		random:          commonBroker.NewRand(),
+		filenamesPerUrl: map[string]string{},
 	}
 	return nil
 }
@@ -76,16 +76,16 @@ func (util *impl) Download(URL string, destPath string, useContentDisposition bo
 			destDir, destFilename := filepath.Split(filepath.Clean(destPath))
 			path = filepath.Join(cacheDir, destFilename)
 			if _, err := os.Stat(path); err != nil {
-        if os.IsNotExist(err) {
-						path, err := util.delegate.Download(URL, path, useContentDisposition)
-						if err != nil {
-							return "", err
-						}
-						_, destFilename = filepath.Split(path)
-						destPath = filepath.Join(destDir, destFilename)
-						downloadCache.filenamesPerUrl[URL] = path
-            break
-        } else {
+				if os.IsNotExist(err) {
+					path, err := util.delegate.Download(URL, path, useContentDisposition)
+					if err != nil {
+						return "", err
+					}
+					_, destFilename = filepath.Split(path)
+					destPath = filepath.Join(destDir, destFilename)
+					downloadCache.filenamesPerUrl[URL] = path
+					break
+				} else {
 					return "", err
 				}
 			}

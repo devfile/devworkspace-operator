@@ -17,6 +17,8 @@ import (
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 	"github.com/eclipse/che-plugin-broker/model"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
@@ -24,8 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
 )
 
 func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperties, *workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
@@ -45,19 +45,19 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperti
 
 	if !workspaceProperties.Started {
 		return &workspaceProperties, &workspaceApi.WorkspaceExposure{
-			ObjectMeta: metav1.ObjectMeta {
-				Name: workspaceProperties.WorkspaceId,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      workspaceProperties.WorkspaceId,
 				Namespace: workspaceProperties.Namespace,
 			},
-			Spec: workspaceApi.WorkspaceExposureSpec {
-				Exposed: workspaceProperties.Started,
-				ExposureClass: workspaceProperties.ExposureClass,
+			Spec: workspaceApi.WorkspaceExposureSpec{
+				Exposed:             workspaceProperties.Started,
+				ExposureClass:       workspaceProperties.ExposureClass,
 				IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 				WorkspacePodSelector: map[string]string{
 					"che.original_name": CheOriginalName,
 					"che.workspace_id":  workspaceProperties.WorkspaceId,
 				},
-				Services: map[string]workspaceApi.ServiceDescription {},
+				Services: map[string]workspaceApi.ServiceDescription{},
 			},
 		}, nil, []runtime.Object{}, nil
 	}
@@ -166,7 +166,7 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 
 func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
 	components := devfile.Components
-	k8sObjects := []runtime.Object {}
+	k8sObjects := []runtime.Object{}
 
 	pluginFQNs := []model.PluginFQN{}
 
@@ -212,7 +212,7 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec
 
 	workspaceExposure := buildWorkspaceExposure(names, componentInstanceStatuses)
 
-// TODO store the annotation of the workspaceAPi: avec le defer ????
+	// TODO store the annotation of the workspaceAPi: avec le defer ????
 
 	return workspaceExposure, componentInstanceStatuses, k8sObjects, nil
 }
@@ -259,7 +259,7 @@ func buildWorkspaceExposure(wkspProperties WorkspaceProperties, componentInstanc
 				"che.original_name": CheOriginalName,
 				"che.workspace_id":  wkspProperties.WorkspaceId,
 			},
-			Services:            services,
+			Services: services,
 		},
 	}
 }

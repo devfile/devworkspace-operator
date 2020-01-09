@@ -13,14 +13,15 @@
 package component
 
 import (
-	"strconv"
 	"errors"
+	"strconv"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	templateV1 "github.com/openshift/api/template/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/prometheus/common/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"github.com/prometheus/common/log"
 
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
@@ -97,7 +97,7 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 	for index, obj := range k8sObjects {
 		if objPod, isPod := obj.(*corev1.Pod); isPod {
 			componentName = objPod.Spec.Containers[0].Name
-			podCound ++
+			podCound++
 			suffix := ""
 			if podCound > 1 {
 				suffix = "." + strconv.Itoa(podCound)
@@ -108,10 +108,10 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 			fromIntOne := intstr.FromInt(1)
 
 			podLabels := map[string]string{
-				"deployment":       workspaceDeploymentName,
-				"che.workspace_id": wkspProps.WorkspaceId,
-				"che.original_name": additionalDeploymentOriginalName,
-				"che.workspace_name":  wkspProps.WorkspaceName,
+				"deployment":         workspaceDeploymentName,
+				"che.workspace_id":   wkspProps.WorkspaceId,
+				"che.original_name":  additionalDeploymentOriginalName,
+				"che.workspace_name": wkspProps.WorkspaceName,
 			}
 			for labelName, labelValue := range objPod.Labels {
 				if _, exists := podLabels[labelName]; exists {
@@ -131,8 +131,8 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"deployment":       workspaceDeploymentName,
-							"che.workspace_id": wkspProps.WorkspaceId,
+							"deployment":        workspaceDeploymentName,
+							"che.workspace_id":  wkspProps.WorkspaceId,
 							"che.original_name": additionalDeploymentOriginalName,
 						},
 					},
@@ -160,10 +160,10 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 	}
 
 	componentInstanceStatus := &ComponentInstanceStatus{
-		Machines: map[string]MachineDescription{},
-		ExternalObjects: []runtime.Object {},
-		Endpoints: []workspaceApi.Endpoint {},
-		ContributedRuntimeCommands: []CheWorkspaceCommand {},
+		Machines:                   map[string]MachineDescription{},
+		ExternalObjects:            []runtime.Object{},
+		Endpoints:                  []workspaceApi.Endpoint{},
+		ContributedRuntimeCommands: []CheWorkspaceCommand{},
 	}
 
 	return componentInstanceStatus, nil

@@ -31,9 +31,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
 	"fmt"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
 // TODO : change this because we don't expect plugin metas anymore, but plugin FQNs in the config maps
@@ -265,9 +265,9 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 			if attributes["protocol"] == "" {
 				attributes["protocol"] = "http"
 			}
-			endpoint := workspaceApi.Endpoint {
-				Name: endpointDef.Name,
-				Port: int64(endpointDef.TargetPort),
+			endpoint := workspaceApi.Endpoint{
+				Name:       endpointDef.Name,
+				Port:       int64(endpointDef.TargetPort),
 				Attributes: attributes,
 			}
 			componentInstanceStatus.Endpoints = append(componentInstanceStatus.Endpoints, endpoint)

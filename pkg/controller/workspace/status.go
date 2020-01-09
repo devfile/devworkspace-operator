@@ -13,8 +13,8 @@
 package workspace
 
 import (
-	"github.com/go-logr/logr"
 	"encoding/json"
+	"github.com/go-logr/logr"
 	"time"
 
 	"context"
@@ -238,7 +238,7 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 
 func (r *ReconcileWorkspace) updateFromWorkspaceExposure(exposure *workspacev1alpha1.WorkspaceExposure, workspace *workspacev1alpha1.Workspace) error {
 	if workspace.Status.AdditionalInfo == nil {
-		workspace.Status.AdditionalInfo = map[string]string {}
+		workspace.Status.AdditionalInfo = map[string]string{}
 	}
 	if exposure.Status.Phase != workspacev1alpha1.WorkspaceExposureReady {
 		delete(workspace.Status.AdditionalInfo, "org.eclipse.che.workspace/runtime")
@@ -357,7 +357,7 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 							workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseRunning
 						}
 					} else {
-						reconcileResult = reconcile.Result { Requeue: true, RequeueAfter: 1 }
+						reconcileResult = reconcile.Result{Requeue: true, RequeueAfter: 1}
 					}
 				}
 			}

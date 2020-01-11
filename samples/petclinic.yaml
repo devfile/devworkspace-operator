@@ -1,8 +1,7 @@
 apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
-  name: petclinic-sample
-  namespace: crd-poc
+  name: petclinic
 spec:
   started: true
   devfile:
@@ -29,7 +28,7 @@ spec:
             attributes:
               path: /api
               protocol: http
-              public: true
+              public: "true"
         env:
           - name: TERM
             value: xterm

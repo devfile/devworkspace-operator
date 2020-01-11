@@ -10,13 +10,13 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package controller
+package model
 
-import (
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspaceexposure"
-)
-
-func init() {
-	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, workspaceexposure.Add)
+type WorkspaceProperties struct {
+	WorkspaceId    string
+	WorkspaceName  string
+	Namespace      string
+	Started        bool
+	CheApiExternal string
+	ExposureClass  string
 }

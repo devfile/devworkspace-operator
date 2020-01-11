@@ -1,24 +1,39 @@
-package workspace
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
+package component
 
 import (
-	"strconv"
 	"errors"
+	"strconv"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	templateV1 "github.com/openshift/api/template/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/prometheus/common/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
-func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	var k8sObjects []runtime.Object
 
 	theScheme := runtime.NewScheme()
@@ -68,7 +83,7 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 	for _, obj = range objects {
 		if objMeta, isMeta := obj.(metav1.Object); isMeta {
 			if selector.Matches(labels.Set(objMeta.GetLabels())) {
-				objMeta.SetNamespace(wkspProps.namespace)
+				objMeta.SetNamespace(wkspProps.Namespace)
 				k8sObjects = append(k8sObjects, obj)
 			}
 		}
@@ -82,21 +97,21 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 	for index, obj := range k8sObjects {
 		if objPod, isPod := obj.(*corev1.Pod); isPod {
 			componentName = objPod.Spec.Containers[0].Name
-			podCound ++
+			podCound++
 			suffix := ""
 			if podCound > 1 {
 				suffix = "." + strconv.Itoa(podCound)
 			}
 			additionalDeploymentOriginalName := componentName + suffix
-			var workspaceDeploymentName = wkspProps.workspaceId + "." + additionalDeploymentOriginalName
+			var workspaceDeploymentName = wkspProps.WorkspaceId + "." + additionalDeploymentOriginalName
 			var replicas int32 = 1
 			fromIntOne := intstr.FromInt(1)
 
 			podLabels := map[string]string{
-				"deployment":       workspaceDeploymentName,
-				"che.workspace_id": wkspProps.workspaceId,
-				"che.original_name": additionalDeploymentOriginalName,
-				"che.workspace_name":  wkspProps.workspaceName,
+				"deployment":         workspaceDeploymentName,
+				"che.workspace_id":   wkspProps.WorkspaceId,
+				"che.original_name":  additionalDeploymentOriginalName,
+				"che.workspace_name": wkspProps.WorkspaceName,
 			}
 			for labelName, labelValue := range objPod.Labels {
 				if _, exists := podLabels[labelName]; exists {
@@ -108,16 +123,16 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 			k8sObjects[index] = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workspaceDeploymentName,
-					Namespace: wkspProps.namespace,
+					Namespace: wkspProps.Namespace,
 					Labels: map[string]string{
-						"che.workspace_id": wkspProps.workspaceId,
+						"che.workspace_id": wkspProps.WorkspaceId,
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
-							"deployment":       workspaceDeploymentName,
-							"che.workspace_id": wkspProps.workspaceId,
+							"deployment":        workspaceDeploymentName,
+							"che.workspace_id":  wkspProps.WorkspaceId,
 							"che.original_name": additionalDeploymentOriginalName,
 						},
 					},
@@ -140,15 +155,15 @@ func setupK8sLikeComponent(wkspProps workspaceProperties, component *workspaceAp
 				},
 			}
 		} else if objMeta, isMeta := obj.(metav1.Object); isMeta {
-			objMeta.GetLabels()["che.workspace_id"] = wkspProps.workspaceId
+			objMeta.GetLabels()["che.workspace_id"] = wkspProps.WorkspaceId
 		}
 	}
 
 	componentInstanceStatus := &ComponentInstanceStatus{
-		Machines: map[string]MachineDescription{},
-		ExternalObjects: []runtime.Object {},
-		Endpoints: []workspaceApi.Endpoint {},
-		ContributedRuntimeCommands: []CheWorkspaceCommand {},
+		Machines:                   map[string]MachineDescription{},
+		ExternalObjects:            []runtime.Object{},
+		Endpoints:                  []workspaceApi.Endpoint{},
+		ContributedRuntimeCommands: []CheWorkspaceCommand{},
 	}
 
 	return componentInstanceStatus, nil

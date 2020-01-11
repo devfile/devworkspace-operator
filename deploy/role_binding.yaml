@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: che-workspace-crd-operator
-  namespace: operators
+  namespace: devworkspace-controller
 roleRef:
   kind: ClusterRole
   name: view
@@ -18,7 +18,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: che-workspace-crd-operator
-  namespace: operators
+  namespace: devworkspace-controller
 roleRef:
   kind: ClusterRole
   name: che-workspace-crd-operator

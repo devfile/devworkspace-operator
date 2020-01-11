@@ -1,18 +1,31 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package workspaceexposure
 
 import (
-	"k8s.io/apimachinery/pkg/labels"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"context"
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"github.com/go-logr/logr"
-	"context"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -21,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var log = logf.Log.WithName("controller_workspaceexposure")
@@ -37,7 +49,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileWorkspaceExposure{
 		client: mgr.GetClient(),
 		scheme: mgr.GetScheme(),
-		solvers: map[string]WorkspaceExposureSolver {
+		solvers: map[string]WorkspaceExposureSolver{
 			"": &BasicSolver{
 				Client: mgr.GetClient(),
 			},
@@ -95,16 +107,16 @@ var _ reconcile.Reconciler = &ReconcileWorkspaceExposure{}
 type ReconcileWorkspaceExposure struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client  client.Client
+	scheme  *runtime.Scheme
 	solvers map[string]WorkspaceExposureSolver
 }
 
 type CurrentReconcile struct {
-	Instance *workspacev1alpha1.WorkspaceExposure
+	Instance  *workspacev1alpha1.WorkspaceExposure
 	ReqLogger logr.Logger
 	Reconcile *ReconcileWorkspaceExposure
-	Solver WorkspaceExposureSolver
+	Solver    WorkspaceExposureSolver
 }
 
 func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (reconcile.Result, error) {
@@ -124,7 +136,6 @@ func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (recon
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	
 
 	solver, found := r.solvers[instance.Spec.ExposureClass]
 	if !found {
@@ -133,14 +144,14 @@ func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (recon
 	}
 
 	reqLogger = reqLogger.WithValues("ExposureClass", instance.Spec.ExposureClass)
-	
+
 	reqLogger.V(1).Info("Reconciling", "expected", instance.Spec.Exposed, "phase", instance.Status.Phase)
 
-	currentReconcile := CurrentReconcile {
-		Instance: instance,
+	currentReconcile := CurrentReconcile{
+		Instance:  instance,
 		ReqLogger: reqLogger,
 		Reconcile: r,
-		Solver: solver,
+		Solver:    solver,
 	}
 
 	switch instance.Spec.Exposed {
@@ -203,42 +214,42 @@ func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (recon
 
 func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err error, nextPhase workspacev1alpha1.WorkspaceExposurePhase) (reconcile.Result, error) {
 	existingPhase := cr.Instance.Status.Phase
-	updateWhileConflict := func(action func()error) error {
+	updateWhileConflict := func(action func() error) error {
 		for {
 			err := action()
 			if !errors.IsConflict(err) {
 				return err
 			}
 			if err2 := cr.Reconcile.client.Get(context.TODO(),
-				types.NamespacedName {
+				types.NamespacedName{
 					Namespace: cr.Instance.Namespace,
-					Name: cr.Instance.Name,
+					Name:      cr.Instance.Name,
 				},
 				cr.Instance,
 			); err2 != nil && !errors.IsNotFound(err) {
-				cr.ReqLogger.Error(err, "When trying to get workspace exposure " + cr.Instance.Name)
+				cr.ReqLogger.Error(err, "When trying to get workspace exposure "+cr.Instance.Name)
 				return err
 			}
 		}
 		return nil
 	}
-	
+
 	if err != nil {
-		updateError := updateWhileConflict(func()error {
+		updateError := updateWhileConflict(func() error {
 			cr.Instance.Status.Phase = workspacev1alpha1.WorkspaceExposureFailed
 			return cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
 		})
 		if updateError != nil {
-			cr.ReqLogger.Error(err, "When trying to update the status phase to: " + string(workspacev1alpha1.WorkspaceExposureFailed))
+			cr.ReqLogger.Error(err, "When trying to update the status phase to: "+string(workspacev1alpha1.WorkspaceExposureFailed))
 		}
 		return result, err
 	}
-	updateError := updateWhileConflict(func()error {
+	updateError := updateWhileConflict(func() error {
 		cr.Instance.Status.Phase = nextPhase
 		return cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
 	})
 	if updateError != nil {
-		cr.ReqLogger.Error(err, "When trying to update the status phase to: " + string(nextPhase))
+		cr.ReqLogger.Error(err, "When trying to update the status phase to: "+string(nextPhase))
 	}
 	if existingPhase != cr.Instance.Status.Phase {
 		cr.ReqLogger.Info("Phase: " + string(existingPhase) + " => " + string(cr.Instance.Status.Phase))
@@ -324,7 +335,7 @@ func CreateOrUpdate(cr CurrentReconcile, k8sObjects []runtime.Object, diffOpts c
 		}
 
 		// Set Workspace instance as the owner and controller
-		k8sObjectAsMetaObject.SetLabels(map[string]string {
+		k8sObjectAsMetaObject.SetLabels(map[string]string{
 			"org.eclipse.che.workspace.exposure.workspace_id": instance.Name,
 		})
 
@@ -373,4 +384,3 @@ func CreateOrUpdate(cr CurrentReconcile, k8sObjects []runtime.Object, diffOpts c
 
 	return reconcile.Result{}, nil
 }
-

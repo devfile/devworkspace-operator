@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2012-2018 Red Hat, Inc.
+// Copyright (c) 2012-2019 Red Hat, Inc.
 // This program and the accompanying materials are made
 // available under the terms of the Eclipse Public License 2.0
 // which is available at https://www.eclipse.org/legal/epl-2.0/
@@ -13,20 +13,22 @@
 package workspace
 
 import (
-	"sync"
-	"github.com/eclipse/che-plugin-broker/utils"
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
+	"github.com/eclipse/che-plugin-broker/utils"
+	"io"
 	"io/ioutil"
 	"os"
-	"io"
-	"path/filepath"	
+	"path/filepath"
+	"sync"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
 )
 
 type cache struct {
-	tempDir string
+	tempDir         string
 	filenamesPerUrl map[string]string
-	random commonBroker.Random
-	mux sync.Mutex
+	random          commonBroker.Random
+	mux             sync.Mutex
 }
 
 var downloadCache *cache
@@ -34,13 +36,13 @@ var downloadCache *cache
 func SetupDownloadCache() error {
 	downloadTempDir, err := ioutil.TempDir("", "che-plugin-broker-httpcache")
 	if err != nil {
-		 return err
+		return err
 	}
 
-	downloadCache = &cache {
-		tempDir: downloadTempDir,
-		random: commonBroker.NewRand(),
-		filenamesPerUrl: map[string]string {},
+	downloadCache = &cache{
+		tempDir:         downloadTempDir,
+		random:          commonBroker.NewRand(),
+		filenamesPerUrl: map[string]string{},
 	}
 	return nil
 }
@@ -74,26 +76,22 @@ func (util *impl) Download(URL string, destPath string, useContentDisposition bo
 			destDir, destFilename := filepath.Split(filepath.Clean(destPath))
 			path = filepath.Join(cacheDir, destFilename)
 			if _, err := os.Stat(path); err != nil {
-        if os.IsNotExist(err) {
-						path, err := util.delegate.Download(URL, path, useContentDisposition)
-						if err != nil {
-							return "", err
-						}
-						_, destFilename = filepath.Split(path)
-						destPath = filepath.Join(destDir, destFilename)
-						downloadCache.filenamesPerUrl[URL] = path
-            break
-        } else {
+				if os.IsNotExist(err) {
+					path, err := util.delegate.Download(URL, path, useContentDisposition)
+					if err != nil {
+						return "", err
+					}
+					_, destFilename = filepath.Split(path)
+					destPath = filepath.Join(destDir, destFilename)
+					downloadCache.filenamesPerUrl[URL] = path
+					break
+				} else {
 					return "", err
 				}
 			}
 		}
 	} else {
-		log.Info(join ("",
-		"Retrieving URL '",
-		URL,
-		"' from the local cache:",
-		path))
+		Log.Info("Retrieving URL '%s' from the local cache: %s", URL, path)
 	}
 
 	return destPath, util.CopyFile(path, destPath)
@@ -137,4 +135,14 @@ func (util *impl) Untar(tarPath string, dest string) error {
 
 func (util *impl) CreateFile(file string, tr io.Reader) error {
 	return util.delegate.CreateFile(file, tr)
+}
+
+// GetFilesByGlob is a wrapper around filepath.Glob() to allow mocking in tests
+func (util *impl) GetFilesByGlob(glob string) ([]string, error) {
+	return util.delegate.GetFilesByGlob(glob)
+}
+
+// DeleteFiles is a wrapper around os.RemoveAll() to allow mocking in tests
+func (util *impl) RemoveAll(path string) error {
+	return util.delegate.RemoveAll(path)
 }

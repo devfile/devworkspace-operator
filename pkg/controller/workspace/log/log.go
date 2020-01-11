@@ -10,13 +10,8 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package controller
+package workspace
 
-import (
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspaceexposure"
-)
+import logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-func init() {
-	// AddToManagerFuncs is a list of functions to create controllers and add them to a manager.
-	AddToManagerFuncs = append(AddToManagerFuncs, workspaceexposure.Add)
-}
+var Log = logf.Log.WithName("controller_workspace")

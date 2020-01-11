@@ -1,7 +1,4 @@
 FROM registry.access.redhat.com/ubi8/ubi
-RUN curl https://copr.fedorainfracloud.org/coprs/vbatts/bazel/repo/epel-7/vbatts-bazel-epel-7.repo > /etc/yum.repos.d/bazel.repo && \
-    yum install -y bazel && \
-    yum clean all
 
 ENV OPERATOR=/usr/local/bin/che-workspace-crd-operator \
     USER_UID=1001 \

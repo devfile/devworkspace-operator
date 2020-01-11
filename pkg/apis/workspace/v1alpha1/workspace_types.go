@@ -1,3 +1,15 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package v1alpha1
 
 import (
@@ -22,7 +34,7 @@ type Workspace struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Desired state of the workspace
-	Spec   WorkspaceSpec   `json:"spec,omitempty"`
+	Spec WorkspaceSpec `json:"spec,omitempty"`
 	// Observed state of the workspace
 	Status WorkspaceStatus `json:"status,omitempty"`
 }
@@ -31,12 +43,12 @@ type Workspace struct {
 // +k8s:openapi-gen=true
 type WorkspaceSpec struct {
 	// Whether the workspace should be started or stopped
-	Started bool          `json:"started"`
+	Started bool `json:"started"`
 	// Exposure class the defines how the workspace will be exposed toon the external network
-	ExposureClass string  `json:"exposureClass,omitempty"`
+	ExposureClass string `json:"exposureClass,omitempty"`
 	// Workspace Structure defined in the Devfile format syntax.
 	// For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/
-	Devfile DevFileSpec   `json:"devfile"`
+	Devfile DevFileSpec `json:"devfile"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -13,6 +13,7 @@ metadata:
   labels:
     app: che-plugin-registry
   name: che-plugin-registry
+  namespace: devworkspace-controller
 spec:
   replicas: 1
   revisionHistoryLimit: 2
@@ -40,3 +41,6 @@ spec:
             memory: 256Mi
           requests:
             memory: 16Mi
+        env:
+          - name: CHE_SIDECAR_CONTAINERS_REGISTRY_TAG
+            value: '7.1.0'

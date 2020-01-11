@@ -1,10 +1,24 @@
-package workspace
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
+package component
 
 import (
 	"errors"
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 	"github.com/eclipse/che-plugin-broker/model"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,45 +28,36 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-type workspaceProperties struct {
-	workspaceId    string
-	workspaceName  string
-	namespace      string
-	started        bool
-	cheApiExternal string
-	exposureClass  string
-}
-
-func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperties, *workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
+func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperties, *workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
 
 	uid, err := uuid.Parse(string(workspace.ObjectMeta.UID))
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
-	workspaceProperties := workspaceProperties{
-		namespace:     workspace.Namespace,
-		workspaceId:   "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""),
-		workspaceName: workspace.Name,
-		started:       workspace.Spec.Started,
-		exposureClass: workspace.Spec.ExposureClass,
+	workspaceProperties := WorkspaceProperties{
+		Namespace:     workspace.Namespace,
+		WorkspaceId:   "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""),
+		WorkspaceName: workspace.Name,
+		Started:       workspace.Spec.Started,
+		ExposureClass: workspace.Spec.ExposureClass,
 	}
 
-	if !workspaceProperties.started {
+	if !workspaceProperties.Started {
 		return &workspaceProperties, &workspaceApi.WorkspaceExposure{
-			ObjectMeta: metav1.ObjectMeta {
-				Name: workspaceProperties.workspaceId,
-				Namespace: workspaceProperties.namespace,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      workspaceProperties.WorkspaceId,
+				Namespace: workspaceProperties.Namespace,
 			},
-			Spec: workspaceApi.WorkspaceExposureSpec {
-				Exposed: workspaceProperties.started,
-				ExposureClass: workspaceProperties.exposureClass,
-				IngressGlobalDomain: controllerConfig.getIngressGlobalDomain(),
+			Spec: workspaceApi.WorkspaceExposureSpec{
+				Exposed:             workspaceProperties.Started,
+				ExposureClass:       workspaceProperties.ExposureClass,
+				IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 				WorkspacePodSelector: map[string]string{
-					"che.original_name": cheOriginalName,
-					"che.workspace_id":  workspaceProperties.workspaceId,
+					"che.original_name": CheOriginalName,
+					"che.workspace_id":  workspaceProperties.WorkspaceId,
 				},
-				Services: map[string]workspaceApi.ServiceDescription {},
+				Services: map[string]workspaceApi.ServiceDescription{},
 			},
 		}, nil, []runtime.Object{}, nil
 	}
@@ -71,7 +76,7 @@ func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperti
 	if err != nil {
 		return &workspaceProperties, nil, nil, nil, err
 	}
-	workspaceProperties.cheApiExternal = externalUrl
+	workspaceProperties.CheApiExternal = externalUrl
 
 	workspaceExposure, componentStatuses, k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.Devfile, mainDeployment)
 	if err != nil {
@@ -82,15 +87,15 @@ func convertToCoreObjects(workspace *workspaceApi.Workspace) (*workspaceProperti
 	return &workspaceProperties, workspaceExposure, componentStatuses, append(k8sComponentsObjects, mainDeployment), nil
 }
 
-func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
-	var workspaceDeploymentName = wkspProps.workspaceId + "." + cheOriginalName
+func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
+	var workspaceDeploymentName = wkspProps.WorkspaceId + "." + CheOriginalName
 	var terminationGracePeriod int64
 	var replicas int32
-	if wkspProps.started {
+	if wkspProps.Started {
 		replicas = 1
 	}
 
-	var autoMountServiceAccount = serviceAccount != ""
+	var autoMountServiceAccount = ServiceAccount != ""
 
 	fromIntOne := intstr.FromInt(1)
 
@@ -99,15 +104,15 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.
 			Name:      workspaceDeploymentName,
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				"che.workspace_id": wkspProps.workspaceId,
+				"che.workspace_id": wkspProps.WorkspaceId,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"deployment":        workspaceDeploymentName,
-					"che.original_name": cheOriginalName,
-					"che.workspace_id":  wkspProps.workspaceId,
+					"che.original_name": CheOriginalName,
+					"che.workspace_id":  wkspProps.WorkspaceId,
 				},
 			},
 			Replicas: &replicas,
@@ -122,9 +127,9 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"deployment":         workspaceDeploymentName,
-						"che.original_name":  cheOriginalName,
-						"che.workspace_id":   wkspProps.workspaceId,
-						"che.workspace_name": wkspProps.workspaceName,
+						"che.original_name":  CheOriginalName,
+						"che.workspace_id":   wkspProps.WorkspaceId,
+						"che.workspace_name": wkspProps.WorkspaceName,
 					},
 					Name: workspaceDeploymentName,
 				},
@@ -137,8 +142,8 @@ func buildMainDeployment(wkspProps workspaceProperties, workspace *workspaceApi.
 			},
 		},
 	}
-	if serviceAccount != "" {
-		deploy.Spec.Template.Spec.ServiceAccountName = serviceAccount
+	if ServiceAccount != "" {
+		deploy.Spec.Template.Spec.ServiceAccountName = ServiceAccount
 	}
 
 	return &deploy, nil
@@ -159,9 +164,9 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
+func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
 	components := devfile.Components
-	k8sObjects := []runtime.Object {}
+	k8sObjects := []runtime.Object{}
 
 	pluginFQNs := []model.PluginFQN{}
 
@@ -207,12 +212,12 @@ func setupComponents(names workspaceProperties, devfile workspaceApi.DevFileSpec
 
 	workspaceExposure := buildWorkspaceExposure(names, componentInstanceStatuses)
 
-// TODO store the annotation of the workspaceAPi: avec le defer ????
+	// TODO store the annotation of the workspaceAPi: avec le defer ????
 
 	return workspaceExposure, componentInstanceStatuses, k8sObjects, nil
 }
 
-func buildWorkspaceExposure(wkspProperties workspaceProperties, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceExposure {
+func buildWorkspaceExposure(wkspProperties WorkspaceProperties, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceExposure {
 	services := map[string]workspaceApi.ServiceDescription{}
 	for _, componentInstanceStatus := range componentInstanceStatuses {
 		for machineName, machine := range componentInstanceStatus.Machines {
@@ -243,18 +248,18 @@ func buildWorkspaceExposure(wkspProperties workspaceProperties, componentInstanc
 	}
 	return &workspaceApi.WorkspaceExposure{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      wkspProperties.workspaceId,
-			Namespace: wkspProperties.namespace,
+			Name:      wkspProperties.WorkspaceId,
+			Namespace: wkspProperties.Namespace,
 		},
 		Spec: workspaceApi.WorkspaceExposureSpec{
-			Exposed:             wkspProperties.started,
-			ExposureClass:       wkspProperties.exposureClass,
-			IngressGlobalDomain: controllerConfig.getIngressGlobalDomain(),
+			Exposed:             wkspProperties.Started,
+			ExposureClass:       wkspProperties.ExposureClass,
+			IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 			WorkspacePodSelector: map[string]string{
-				"che.original_name": cheOriginalName,
-				"che.workspace_id":  wkspProperties.workspaceId,
+				"che.original_name": CheOriginalName,
+				"che.workspace_id":  wkspProperties.WorkspaceId,
 			},
-			Services:            services,
+			Services: services,
 		},
 	}
 }
@@ -262,7 +267,7 @@ func buildWorkspaceExposure(wkspProperties workspaceProperties, componentInstanc
 // Penser au admission controller pour ajouter le nom du user dnas le workspace ? E tout cas ajouter le nom du
 // users dans la custom resource du workspace. + la classe de workspace exposure.
 
-func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.PodSpec) {
+func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.PodSpec) {
 	podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
 		Name:    "precreate-subpaths",
 		Image:   "registry.access.redhat.com/ubi8/ubi-minimal",
@@ -272,7 +277,7 @@ func precreateSubpathsInitContainer(names workspaceProperties, podSpec *corev1.P
 			"-v",
 			"-m",
 			"777",
-			"/tmp/che-workspaces/" + names.workspaceId,
+			"/tmp/che-workspaces/" + names.WorkspaceId,
 		},
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		VolumeMounts: []corev1.VolumeMount{

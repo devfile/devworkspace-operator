@@ -2,9 +2,10 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: che-workspace-crd-controller
+  namespace: devworkspace-controller
 data:
-  ingress.global.domain: 192.168.39.101.nip.io
-  plugin.registry: http://che-plugin-registry-crd-poc.192.168.39.101.nip.io/v3
+  ingress.global.domain: 192.168.99.100.nip.io
+  plugin.registry: http://che-plugin-registry.192.168.99.100.nip.io/v3
   che.workspace.plugin_broker.unified.image: eclipse/che-unified-plugin-broker:v0.20
   che.workspace.plugin_broker.init.image: eclipse/che-init-plugin-broker:v0.20
   cherestapis.image.name: quay.io/dfestal/che-workspace-crd-rest-apis:newone

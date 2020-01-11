@@ -3,7 +3,7 @@ kind: Workspace
 metadata:
   name: go-sample
 spec:
-  started: false
+  started: true
   devfile:
     apiVersion: 1.0.0
     commands:

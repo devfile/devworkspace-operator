@@ -1,23 +1,38 @@
-package workspace
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
+package component
 
 import (
-	"strings"
 	"github.com/eclipse/che-plugin-broker/model"
 	"regexp"
 	"strconv"
+	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
-func setupDockerImageComponent(names workspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupDockerImageComponent(names WorkspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	componentInstanceStatus := &ComponentInstanceStatus{
-		Machines: map[string]MachineDescription{},
-		Endpoints: []workspaceApi.Endpoint {},
-		ContributedRuntimeCommands: []CheWorkspaceCommand {},
+		Machines:                   map[string]MachineDescription{},
+		Endpoints:                  []workspaceApi.Endpoint{},
+		ContributedRuntimeCommands: []CheWorkspaceCommand{},
 	}
 
 	podTemplate := &corev1.PodTemplateSpec{}
@@ -32,7 +47,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		machineName = *component.Alias
 	}
 
-	var exposedPorts []int = EndpointPortsToInts(component.Endpoints)
+	var exposedPorts []int = endpointPortsToInts(component.Endpoints)
 
 	var limitOrDefault string
 
@@ -63,7 +78,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 	container := corev1.Container{
 		Name:            machineName,
 		Image:           *component.Image,
-		ImagePullPolicy: corev1.PullPolicy(controllerConfig.getSidecarPullPolicy()),
+		ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 		Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
@@ -83,7 +98,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		container.Args = *component.Args
 	}
 
-// TODO selector, etc ....
+	// TODO selector, etc ....
 
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
@@ -93,17 +108,17 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 
 	componentInstanceStatus.Endpoints = component.Endpoints
 
-	machineAttributes := map[string]string {}
+	machineAttributes := map[string]string{}
 	if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
 		machineAttributes[MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 		machineAttributes[MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 	}
 	machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = RECIPE_CONTAINER_SOURCE
-	componentInstanceStatus.Machines[machineName] = MachineDescription {
+	componentInstanceStatus.Machines[machineName] = MachineDescription{
 		MachineAttributes: machineAttributes,
-    Ports: exposedPorts,
+		Ports:             exposedPorts,
 	}
-	
+
 	for _, command := range commands {
 		if len(command.Actions) == 0 {
 			continue
@@ -111,15 +126,15 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 		action := command.Actions[0]
 		if component.Alias == nil ||
 			action.Component == nil ||
-		  *action.Component != *component.Alias {
+			*action.Component != *component.Alias {
 			continue
 		}
 		attributes := map[string]string{
-			COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(emptyIfNil(action.Workdir), names),
-			COMMAND_ACTION_REFERENCE_ATTRIBUTE:  emptyIfNil(action.Reference),
-			COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE:  emptyIfNil(action.ReferenceContent),
-			COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
-			COMPONENT_ALIAS_COMMAND_ATTRIBUTE:   *action.Component,
+			COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), names),
+			COMMAND_ACTION_REFERENCE_ATTRIBUTE:         emptyIfNil(action.Reference),
+			COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE: emptyIfNil(action.ReferenceContent),
+			COMMAND_MACHINE_NAME_ATTRIBUTE:             machineName,
+			COMPONENT_ALIAS_COMMAND_ATTRIBUTE:          *action.Component,
 		}
 		for attrName, attrValue := range command.Attributes {
 			attributes[attrName] = attrValue
@@ -129,7 +144,7 @@ func setupDockerImageComponent(names workspaceProperties, commands []workspaceAp
 				Name:        command.Name,
 				CommandLine: emptyIfNil(action.Command),
 				Type:        action.Type,
-				Attributes: attributes,
+				Attributes:  attributes,
 			})
 	}
 

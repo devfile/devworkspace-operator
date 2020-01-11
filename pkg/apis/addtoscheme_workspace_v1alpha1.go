@@ -1,8 +1,20 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package apis
 
 import (
 	apis "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	controller "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace"
+	utils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
 	routeV1 "github.com/openshift/api/route/v1"
 	templateV1 "github.com/openshift/api/template/v1"
 )
@@ -12,7 +24,7 @@ func init() {
 	AddToSchemes = append(AddToSchemes,
 		apis.SchemeBuilder.AddToScheme,
 	)
-	if isOS, err := controller.IsOpenShift(); isOS && err == nil {
+	if isOS, err := utils.IsOpenShift(); isOS && err == nil {
 		AddToSchemes = append(AddToSchemes,
 			routeV1.AddToScheme,
 			templateV1.AddToScheme,

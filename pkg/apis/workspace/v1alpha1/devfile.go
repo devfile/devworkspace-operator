@@ -1,3 +1,15 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package v1alpha1
 
 import (
@@ -11,11 +23,11 @@ type DevFileSpec struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// List of workspace-wide commands that can be associated to a given component, in order to run in the related container
-	Commands          []CommandSpec   `json:"commands,omitempty"` // Description of the predefined commands to be available in workspace
+	Commands []CommandSpec `json:"commands,omitempty"` // Description of the predefined commands to be available in workspace
 	// List of projects that should be opened in the workspace
-	Projects          []ProjectSpec   `json:"projects,omitempty"` // Description of the projects, containing names and sources locations
+	Projects []ProjectSpec `json:"projects,omitempty"` // Description of the projects, containing names and sources locations
 	// List of components (containers, plugins, ...) that will provide the workspace features
-	Components        []ComponentSpec `json:"components"`         // Description of the workspace components, such as editor and plugins
+	Components []ComponentSpec `json:"components"` // Description of the workspace components, such as editor and plugins
 }
 
 type CommandSpec struct {
@@ -63,9 +75,9 @@ type ComponentSpec struct {
 
 // Describes dockerimage component endpoint
 type Endpoint struct {
-	Attributes map[string]string   `json:"attributes,omitempty"`
-	Name       string                     `json:"name"` // The endpoint name
-	Port       int64                      `json:"port"` // The endpoint port
+	Attributes map[string]string `json:"attributes,omitempty"`
+	Name       string            `json:"name"` // The endpoint name
+	Port       int64             `json:"port"` // The endpoint port
 }
 
 // Describes environment variable

@@ -5,6 +5,9 @@ import (
 	"flag"
 	"fmt"
 	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/rest"
 	"os"
 	"runtime"
 
@@ -130,9 +133,11 @@ func main() {
 	}
 
 	log.Info("Expose Metrics Port.")
-
+	servicePorts := []v1.ServicePort{
+		{Port: metricsPort, Name: metrics.OperatorPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: metricsPort}},
+	}
 	// Create Service object to expose the metrics port.
-	_, err = metrics.ExposeMetricsPort(ctx, metricsPort)
+	_, err = metrics.CreateMetricsService(ctx, &rest.Config{}, servicePorts)
 	if err != nil {
 		log.Info(err.Error())
 	}

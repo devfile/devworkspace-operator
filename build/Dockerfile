@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/ubi
+FROM registry.access.redhat.com/ubi8-minimal:8.1-279
 
 ENV OPERATOR=/usr/local/bin/che-workspace-crd-operator \
     USER_UID=1001 \

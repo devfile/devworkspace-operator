@@ -165,7 +165,6 @@ spec:
           type: array
       required:
       - components
-      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1

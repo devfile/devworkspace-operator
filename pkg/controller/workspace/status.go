@@ -30,7 +30,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -327,12 +326,10 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 		&corev1.PodList{},
 		&workspacev1alpha1.WorkspaceExposureList{},
 	} {
-		r.List(context.TODO(), &client.ListOptions{
-			Namespace: workspace.GetNamespace(),
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				"che.workspace_id": workspace.Status.WorkspaceId,
-			}), // TODO Change this to look for objects owned by the workspace CR
-		}, list)
+		// TODO Change this to look for objects owned by the workspace CR
+		r.List(context.TODO(), list,
+			client.InNamespace(workspace.GetNamespace()),
+			client.MatchingLabels{"che.workspace_id": workspace.Status.WorkspaceId})
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		for i := 0; i < items.Len(); i++ {
 			item := items.Index(i).Addr().Interface()
@@ -368,12 +365,9 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 	}
 	if !workspace.Spec.Started {
 		podList := &corev1.PodList{}
-		err := r.List(context.TODO(), &client.ListOptions{
-			Namespace: workspace.GetNamespace(),
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				"che.workspace_id": workspace.Status.WorkspaceId,
-			}),
-		}, podList)
+		err := r.List(context.TODO(), podList,
+			client.InNamespace(workspace.GetNamespace()),
+			client.MatchingLabels{"che.workspace_id": workspace.Status.WorkspaceId})
 		if err == nil && len(podList.Items) == 0 {
 			workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseStopped
 			setWorkspaceCondition(&workspace.Status, *newWorkspaceCondition(

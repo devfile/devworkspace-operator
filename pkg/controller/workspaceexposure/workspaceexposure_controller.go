@@ -16,7 +16,6 @@ import (
 	"context"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -280,19 +279,18 @@ func updateExposedEndpoints(cr CurrentReconcile) (reconcile.Result, error) {
 type WorkspaceExposureSolver interface {
 	CreateOrUpdateExposureObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
 	CheckExposureObjects(currentReconcile CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceExposurePhase) (workspacev1alpha1.WorkspaceExposurePhase, reconcile.Result, error)
-	BuildExposedEndpoints(currentReconcile CurrentReconcile) map[string][]workspacev1alpha1.ExposedEndpoint
+	BuildExposedEndpoints(currentReconcile CurrentReconcile) map[string]workspacev1alpha1.ExposedEndpointList
 	DeleteExposureObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
 }
 
 func DeleteExposureObjects(cr CurrentReconcile, objectTypes []runtime.Object) (reconcile.Result, error) {
 	cr.ReqLogger.Info("Deleting K8s objects")
 	for _, list := range objectTypes {
-		cr.Reconcile.client.List(context.TODO(), &client.ListOptions{
-			Namespace: cr.Instance.Namespace,
-			LabelSelector: labels.SelectorFromSet(labels.Set{
+		cr.Reconcile.client.List(context.TODO(), list,
+			client.InNamespace(cr.Instance.Namespace),
+			client.MatchingLabels{
 				"org.eclipse.che.workspace.exposure.workspace_id": cr.Instance.Name,
-			}),
-		}, list)
+			})
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		if !items.IsValid() {
 			return reconcile.Result{}, nil

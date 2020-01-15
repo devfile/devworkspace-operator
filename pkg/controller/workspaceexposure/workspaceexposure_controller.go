@@ -258,7 +258,7 @@ func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err erro
 }
 
 func cleanExposedEndpoints(cr CurrentReconcile) (reconcile.Result, error) {
-	cr.Instance.Status.ExposedEndpoints = map[string][]workspacev1alpha1.ExposedEndpoint{}
+	cr.Instance.Status.ExposedEndpoints = map[string]workspacev1alpha1.ExposedEndpointList{}
 	err := cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
 	if err != nil {
 		log.Error(err, "When updating the exposure status with no endpoints")

@@ -55,9 +55,12 @@ const (
 // +k8s:openapi-gen=true
 type WorkspaceExposureStatus struct {
 	// Workspace Exposure status
-	Phase            WorkspaceExposurePhase       `json:"phase,omitempty"`
-	ExposedEndpoints map[string][]ExposedEndpoint `json:"exposedEndpoints,omitempty"`
+	Phase            WorkspaceExposurePhase         `json:"phase,omitempty"`
+	ExposedEndpoints map[string]ExposedEndpointList `json:"exposedEndpoints,omitempty"`
 }
+
+// +k8s:openapi-gen=true
+type ExposedEndpointList []ExposedEndpoint
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

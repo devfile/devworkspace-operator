@@ -24,6 +24,9 @@ require (
 	sigs.k8s.io/controller-runtime v0.3.0
 )
 
+// Ovveride OpenShift API to be compatible with Go 1.13
+replace github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible => github.com/openshift/api v0.0.0-20190424152011-77b8897ec79a
+
 // Pinned to kubernetes-1.15.4
 replace (
 	k8s.io/api => k8s.io/api v0.0.0-20190918195907-bd6ac527cfd2

@@ -308,8 +308,8 @@ func (solver *OpenshiftOAuthSolver) CheckExposureObjects(cr CurrentReconcile, ta
 	return targetPhase, reconcile.Result{}, nil
 }
 
-func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string][]workspacev1alpha1.ExposedEndpoint {
-	exposedEndpoints := map[string][]workspacev1alpha1.ExposedEndpoint{}
+func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string]workspacev1alpha1.ExposedEndpointList {
+	exposedEndpoints := map[string]workspacev1alpha1.ExposedEndpointList{}
 
 	for machineName, serviceDesc := range cr.Instance.Spec.Services {
 		machineExposedEndpoints := []workspacev1alpha1.ExposedEndpoint{}

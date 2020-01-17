@@ -11,11 +11,11 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.Workspace":               schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
-		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposure":       schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref),
-		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref),
-		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref),
-		"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceSpec":           schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.Workspace":               schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceExposure":       schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceSpec":           schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref),
 	}
 }
 
@@ -24,6 +24,7 @@ func schema_pkg_apis_workspace_v1alpha1_Workspace(ref common.ReferenceCallback) 
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "Workspace is the Schema for the workspaces API",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -47,20 +48,20 @@ func schema_pkg_apis_workspace_v1alpha1_Workspace(ref common.ReferenceCallback) 
 					"spec": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Desired state of the workspace",
-							Ref:         ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceSpec"),
+							Ref:         ref("./pkg/apis/workspace/v1alpha1.WorkspaceSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Observed state of the workspace",
-							Ref:         ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceStatus"),
+							Ref:         ref("./pkg/apis/workspace/v1alpha1.WorkspaceStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceSpec", "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/workspace/v1alpha1.WorkspaceSpec", "./pkg/apis/workspace/v1alpha1.WorkspaceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -69,6 +70,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref common.ReferenceCa
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkspaceExposure is the Schema for the workspaceexposures API",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -91,19 +93,19 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref common.ReferenceCa
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec"),
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus"),
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec", "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec", "./pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -112,6 +114,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkspaceExposureSpec defines the desired state of WorkspaceExposure",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"exposureClass": {
 						SchemaProps: spec.SchemaProps{
@@ -139,6 +142,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 							Description: "Selector that shoud be used by created services to point to the workspace Pod",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type:   []string{"string"},
@@ -153,9 +157,10 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 							Description: "Services by machine name",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ServiceDescription"),
+										Ref: ref("./pkg/apis/workspace/v1alpha1.ServiceDescription"),
 									},
 								},
 							},
@@ -166,7 +171,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 			},
 		},
 		Dependencies: []string{
-			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ServiceDescription"},
+			"./pkg/apis/workspace/v1alpha1.ServiceDescription"},
 	}
 }
 
@@ -175,6 +180,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref common.Refer
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkspaceExposureStatus defines the observed state of WorkspaceExposure",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"phase": {
 						SchemaProps: spec.SchemaProps{
@@ -187,13 +193,14 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref common.Refer
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Type: []string{"array"},
 										Items: &spec.SchemaOrArray{
 											Schema: &spec.Schema{
 												SchemaProps: spec.SchemaProps{
-													Ref: ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ExposedEndpoint"),
+													Ref: ref("./pkg/apis/workspace/v1alpha1.ExposedEndpoint"),
 												},
 											},
 										},
@@ -206,7 +213,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref common.Refer
 			},
 		},
 		Dependencies: []string{
-			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.ExposedEndpoint"},
+			"./pkg/apis/workspace/v1alpha1.ExposedEndpoint"},
 	}
 }
 
@@ -215,6 +222,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "WorkspaceSpec defines the desired state of Workspace",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"started": {
 						SchemaProps: spec.SchemaProps{
@@ -233,7 +241,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 					"devfile": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Workspace Structure defined in the Devfile format syntax. For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/",
-							Ref:         ref("github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.DevFileSpec"),
+							Ref:         ref("./pkg/apis/workspace/v1alpha1.DevFileSpec"),
 						},
 					},
 				},
@@ -241,6 +249,6 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1.DevFileSpec"},
+			"./pkg/apis/workspace/v1alpha1.DevFileSpec"},
 	}
 }

@@ -2,19 +2,9 @@
 
 ## Development
 
-### Dependencies
-
-Dependencies in the project are managed by Go Dep. After you added a dependency you need to run the following command to download dependencies to vendor repo and lock file and then commit changes:
-
-```
-dep ensure
-```
-
-Note that dep ensure doesn't automatically change Gopkg.toml which contains dependencies constraints. So, when a dependency is introduced or changed it should be reflected in Gopkg.toml.
-
 ### Build docker image
 
-Since it uses Go Dep, you need exact operator-sdk 0.10.0 version where Go Modules is not a default vendor.
+Since it uses Go Modules, you need operator-sdk 0.12.0+ version where Go Modules is a default vendor.
 
 To build docker image run the following command in the project's root
 

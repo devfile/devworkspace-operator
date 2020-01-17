@@ -27,6 +27,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
+      description: Workspace is the Schema for the workspaces API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -64,22 +65,14 @@ spec:
                             command:
                               type: string
                             component:
-                              description: The actual action command-line string
                               type: string
                             reference:
-                              description: Working directory where the command should
-                                be executed
                               type: string
                             referenceContent:
-                              description: Working directory where the command should
-                                be executed
                               type: string
                             type:
-                              description: Describes component to which given action
-                                relates
                               type: string
                             workdir:
-                              description: Describes action type
                               type: string
                           required:
                           - type
@@ -88,12 +81,8 @@ spec:
                       attributes:
                         additionalProperties:
                           type: string
-                        description: List of the actions of given command. Now the
-                          only one command must be specified in list; but there are
-                          plans to implement supporting multiple actions commands.
                         type: object
                       name:
-                        description: Additional command attributes
                         type: string
                     required:
                     - name
@@ -105,25 +94,18 @@ spec:
                   items:
                     properties:
                       alias:
-                        description: Describes whether projects sources should be
-                          mount to the component. `CHE_PROJECTS_ROOT`; environment
-                          variable should contains a path where projects sources are
-                          mount
                         type: string
                       args:
-                        description: The command to run in the dockerimage component
-                          instead of the default one provided in the image. Defaults
-                          to null, meaning use whatever is defined in the image.
                         items:
                           type: string
                         type: array
                       command:
-                        description: Describes volumes which should be mount to component
                         items:
                           type: string
                         type: array
                       endpoints:
                         items:
+                          description: Describes dockerimage component endpoint
                           properties:
                             attributes:
                               additionalProperties:
@@ -132,7 +114,6 @@ spec:
                             name:
                               type: string
                             port:
-                              description: The endpoint name
                               format: int64
                               type: integer
                           required:
@@ -141,13 +122,12 @@ spec:
                           type: object
                         type: array
                       env:
-                        description: Describes dockerimage component endpoints
                         items:
+                          description: Describes environment variable
                           properties:
                             name:
                               type: string
                             value:
-                              description: The environment variable name
                               type: string
                           required:
                           - name
@@ -155,46 +135,26 @@ spec:
                           type: object
                         type: array
                       id:
-                        description: The environment variables list that should be
-                          set to docker container
                         type: string
                       image:
-                        description: Describes the component FQN
                         type: string
                       memoryLimit:
-                        description: Inlined content of a file specified in field
-                          'local'
                         type: string
                       mountSources:
-                        description: 'Describes memory limit for the component. You
-                          can express memory as a plain integer or as a; fixed-point
-                          integer using one of these suffixes: E, P, T, G, M, K. You
-                          can also use the; power-of-two equivalents: Ei, Pi, Ti,
-                          Gi, Mi, Ki'
                         type: boolean
                       reference:
-                        description: Specifies the docker image that should be used
-                          for component
                         type: string
                       referenceContent:
-                        description: Describes location of Kubernetes list yaml file.
-                          Applicable only for 'kubernetes' and; 'openshift' type components
                         type: string
                       selector:
                         additionalProperties:
                           type: string
-                        description: Describes the name of the component. Should be
-                          unique per component set.
                         type: object
                       type:
-                        description: Describes the objects selector for the recipe
-                          type components. Allows to pick-up only selected; items
-                          from k8s/openshift list
                         type: string
                       volumes:
-                        description: Describes type of the component, e.g. whether
-                          it is an plugin or editor or other type
                         items:
+                          description: Describe volume that should be mount to component
                           properties:
                             containerPath:
                               type: string
@@ -224,13 +184,11 @@ spec:
                       name:
                         type: string
                       source:
+                        description: Describes the project's source - type and location
                         properties:
                           location:
                             type: string
                           type:
-                            description: Project's source location address. Should
-                              be URL for git and github located projects, or; file://
-                              for zip.
                             type: string
                         required:
                         - location
@@ -252,8 +210,8 @@ spec:
               description: Whether the workspace should be started or stopped
               type: boolean
           required:
-          - started
           - devfile
+          - started
           type: object
         status:
           description: Observed state of the workspace
@@ -267,6 +225,8 @@ spec:
               description: Condition keeps track of all cluster conditions, if they
                 exist.
               items:
+                description: WorkspaceCondition contains details for the current condition
+                  of this workspace.
                 properties:
                   lastTransitionTime:
                     description: Last time the condition transitioned from one status
@@ -289,8 +249,8 @@ spec:
                     description: Type is the type of the condition.
                     type: string
                 required:
-                - type
                 - status
+                - type
                 type: object
               type: array
             ideUrl:
@@ -319,9 +279,9 @@ spec:
               description: Id of the workspace
               type: string
           required:
-          - workspaceId
-          - phase
           - members
+          - phase
+          - workspaceId
           type: object
   version: v1alpha1
   versions:

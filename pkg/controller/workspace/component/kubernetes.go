@@ -21,7 +21,6 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	"github.com/prometheus/common/log"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
@@ -71,7 +71,7 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 				if decodedItem != nil {
 					objects = append(objects, decodedItem)
 				} else {
-					log.Info("Unknown object ignored in the `kubernetes` component: " + string(item.Raw))
+					Log.Info("Unknown object ignored in the `kubernetes` component: " + string(item.Raw))
 				}
 			}
 		}

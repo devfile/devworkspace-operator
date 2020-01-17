@@ -35,7 +35,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -390,12 +389,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		&extensionsv1beta1.IngressList{},
 		&corev1.ConfigMapList{},
 	} {
-		r.List(context.TODO(), &client.ListOptions{
-			Namespace: workspaceProperties.Namespace,
-			LabelSelector: labels.SelectorFromSet(labels.Set{
-				"che.workspace_id": workspaceProperties.WorkspaceId,
-			}),
-		}, list)
+		r.List(context.TODO(), list,
+			client.InNamespace(workspaceProperties.Namespace),
+			client.MatchingLabels{"che.workspace_id": workspaceProperties.WorkspaceId})
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		for i := 0; i < items.Len(); i++ {
 			item := items.Index(i).Addr().Interface()

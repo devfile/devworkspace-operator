@@ -158,8 +158,8 @@ func (solver *BasicSolver) CheckExposureObjects(cr CurrentReconcile, targetPhase
 	return targetPhase, reconcile.Result{}, nil
 }
 
-func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string][]workspacev1alpha1.ExposedEndpoint {
-	exposedEndpoints := map[string][]workspacev1alpha1.ExposedEndpoint{}
+func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string]workspacev1alpha1.ExposedEndpointList {
+	exposedEndpoints := map[string]workspacev1alpha1.ExposedEndpointList{}
 
 	for machineName, serviceDesc := range cr.Instance.Spec.Services {
 		machineExposedEndpoints := []workspacev1alpha1.ExposedEndpoint{}

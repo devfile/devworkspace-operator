@@ -14,6 +14,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
+      description: WorkspaceExposure is the Schema for the workspaceexposures API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -28,6 +29,7 @@ spec:
         metadata:
           type: object
         spec:
+          description: WorkspaceExposureSpec defines the desired state of WorkspaceExposure
           properties:
             exposed:
               description: Should the workspace be exposed ?
@@ -47,6 +49,7 @@ spec:
                     description: Endpoints that correspond to this machine-related
                       service
                     items:
+                      description: Describes dockerimage component endpoint
                       properties:
                         attributes:
                           additionalProperties:
@@ -55,7 +58,6 @@ spec:
                         name:
                           type: string
                         port:
-                          description: The endpoint name
                           format: int64
                           type: integer
                       required:
@@ -67,8 +69,8 @@ spec:
                     description: Service name of the machine-related service
                     type: string
                 required:
-                - serviceName
                 - endpoints
+                - serviceName
                 type: object
               description: Services by machine name
               type: object
@@ -79,13 +81,14 @@ spec:
                 to the workspace Pod
               type: object
           required:
-          - exposureClass
           - exposed
+          - exposureClass
           - ingressGlobalDomain
-          - workspacePodSelector
           - services
+          - workspacePodSelector
           type: object
         status:
+          description: WorkspaceExposureStatus defines the observed state of WorkspaceExposure
           properties:
             exposedEndpoints:
               additionalProperties:

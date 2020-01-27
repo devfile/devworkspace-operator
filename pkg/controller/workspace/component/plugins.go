@@ -22,7 +22,6 @@ import (
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
 	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
-	pluginModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/plugins"
 	metadataBroker "github.com/eclipse/che-plugin-broker/brokers/metadata"
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
 	"github.com/eclipse/che-plugin-broker/model"
@@ -83,10 +82,10 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 
 		if len(def.pluginFQNs) > 0 {
 
-			// TODO: Voir comment le unified broker est défini dans le yaml
-			// et le définir de la même manière ici.
-			// Voir aussi comment ça se fait qu'on ne met pas de volume =>
-			//    => Log du côté operator pour voir ce qu'il y a dans les PluginFQNs
+			// TODO: See how the unified broker is defined in the yaml
+			// and define it the same way here.
+			// See also how it is that we do not put volume =>
+			// => Log on the operator side to see what there is in PluginFQNs
 
 			configMapName := containerName + "-broker-config-map"
 			configMapVolume := containerName + "-broker-config-volume"
@@ -201,7 +200,7 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 	for _, containerDef := range chePlugin.Containers {
 		machineName := containerDef.Name
 
-		var exposedPorts []int = pluginModelUtils.ExposedPortsToInts(containerDef.Ports)
+		var exposedPorts []int = exposedPortsToInts(containerDef.Ports)
 
 		var limitOrDefault string
 
@@ -301,4 +300,12 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 	}
 
 	return componentInstanceStatus, nil
+}
+
+func exposedPortsToInts(exposedPorts []model.ExposedPort) []int {
+	ports := []int{}
+	for _, exposedPort := range exposedPorts {
+		ports = append(ports, exposedPort.ExposedPort)
+	}
+	return ports
 }

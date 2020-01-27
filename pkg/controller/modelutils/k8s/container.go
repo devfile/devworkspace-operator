@@ -13,13 +13,19 @@
 package utils
 
 import (
-	"github.com/eclipse/che-plugin-broker/model"
+	corev1 "k8s.io/api/core/v1"
 )
 
-func ExposedPortsToInts(exposedPorts []model.ExposedPort) []int {
-	ports := []int{}
+func BuildContainerPorts(exposedPorts []int, protocol corev1.Protocol) []corev1.ContainerPort {
+	containerPorts := []corev1.ContainerPort{}
 	for _, exposedPort := range exposedPorts {
-		ports = append(ports, exposedPort.ExposedPort)
+		containerPorts = append(containerPorts, corev1.ContainerPort{
+			ContainerPort: int32(exposedPort),
+			Protocol:      protocol,
+		})
 	}
-	return ports
+	if len(containerPorts) == 0 {
+		return nil
+	}
+	return containerPorts
 }

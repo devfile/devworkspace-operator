@@ -190,7 +190,7 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec
 			componentInstanceStatus, err = setupK8sLikeComponent(names, &component)
 			break
 		case "dockerimage":
-			componentInstanceStatus, err = setupDockerImageComponent(names, devfile.Commands, &component)
+			componentInstanceStatus, err = setupDockerimageComponent(names, devfile.Commands, &component)
 			break
 		}
 		if err != nil {

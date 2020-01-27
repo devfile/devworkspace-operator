@@ -18,11 +18,11 @@ import (
 )
 
 func IsOpenShift() (bool, error) {
-	kubeconfig, err := config.GetConfig()
+	kubeCfg, err := config.GetConfig()
 	if err != nil {
 		return false, err
 	}
-	discoveryClient, err := discovery.NewDiscoveryClientForConfig(kubeconfig)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(kubeCfg)
 	if err != nil {
 		return false, err
 	}

@@ -18,20 +18,6 @@ import (
 	"strconv"
 )
 
-func BuildContainerPorts(exposedPorts []int, protocol corev1.Protocol) []corev1.ContainerPort {
-	containerPorts := []corev1.ContainerPort{}
-	for _, exposedPort := range exposedPorts {
-		containerPorts = append(containerPorts, corev1.ContainerPort{
-			ContainerPort: int32(exposedPort),
-			Protocol:      protocol,
-		})
-	}
-	if len(containerPorts) == 0 {
-		return nil
-	}
-	return containerPorts
-}
-
 func ServicePortName(port int) string {
 	return "srv-" + strconv.FormatInt(int64(port), 10)
 }

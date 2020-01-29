@@ -202,8 +202,8 @@ spec:
               required:
               - components
               type: object
-            exposureClass:
-              description: Exposure class the defines how the workspace will be exposed
+            routingClass:
+              description: Routing class the defines how the workspace will be exposed
                 toon the external network
               type: string
             started:

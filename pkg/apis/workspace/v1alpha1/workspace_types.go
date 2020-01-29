@@ -44,8 +44,8 @@ type Workspace struct {
 type WorkspaceSpec struct {
 	// Whether the workspace should be started or stopped
 	Started bool `json:"started"`
-	// Exposure class the defines how the workspace will be exposed toon the external network
-	ExposureClass string `json:"exposureClass,omitempty"`
+	// Routing class the defines how the workspace will be exposed toon the external network
+	RoutingClass string `json:"routingClass,omitempty"`
 	// Workspace Structure defined in the Devfile format syntax.
 	// For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/
 	Devfile DevFileSpec `json:"devfile"`

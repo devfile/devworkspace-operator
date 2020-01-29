@@ -1,14 +1,14 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: workspaceexposures.workspace.che.eclipse.org
+  name: workspaceroutings.workspace.che.eclipse.org
 spec:
   group: workspace.che.eclipse.org
   names:
-    kind: WorkspaceExposure
-    listKind: WorkspaceExposureList
-    plural: workspaceexposures
-    singular: workspaceexposure
+    kind: WorkspaceRouting
+    listKind: WorkspaceRoutingList
+    plural: workspaceroutings
+    singular: workspacerouting
   scope: Namespaced
   subresources:
     status: {}
@@ -32,9 +32,9 @@ spec:
             exposed:
               description: Should the workspace be exposed ?
               type: boolean
-            exposureClass:
-              description: 'Class of the exposure: this drives which Workspace exposer
-                controller will manage this exposure'
+            routingClass:
+              description: 'Class of the routing: this drives which Workspace Routing
+                controller will manage this routing'
               type: string
             ingressGlobalDomain:
               description: ingress global domain (corresponds to the Openshift route
@@ -79,7 +79,7 @@ spec:
                 to the workspace Pod
               type: object
           required:
-          - exposureClass
+          - routingClass
           - exposed
           - ingressGlobalDomain
           - workspacePodSelector
@@ -109,7 +109,7 @@ spec:
                 type: array
               type: object
             phase:
-              description: Workspace Exposure status
+              description: Workspace Routing status
               type: string
           type: object
   version: v1alpha1

@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspaceexposure
+package workspacerouting
 
 import (
 	"strconv"
@@ -63,8 +63,8 @@ func ingressName(serviceDesc workspacev1alpha1.ServiceDescription, endpoint work
 	return serviceDesc.ServiceName + "-" + portString
 }
 
-func ingressHost(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint, exposure *workspacev1alpha1.WorkspaceExposure) string {
-	return ingressName(serviceDesc, endpoint) + "-" + exposure.Namespace + "." + exposure.Spec.IngressGlobalDomain
+func ingressHost(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint, routing *workspacev1alpha1.WorkspaceRouting) string {
+	return ingressName(serviceDesc, endpoint) + "-" + routing.Namespace + "." + routing.Spec.IngressGlobalDomain
 }
 
 func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1beta1.Ingress {
@@ -108,7 +108,7 @@ func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1be
 	return ingresses
 }
 
-func (solver *BasicSolver) CreateOrUpdateExposureObjects(cr CurrentReconcile) (reconcile.Result, error) {
+func (solver *BasicSolver) CreateOrUpdateRoutingObjects(cr CurrentReconcile) (reconcile.Result, error) {
 	k8sObjects := []runtime.Object{}
 
 	for _, discoverableService := range solver.CreateDiscoverableServices(cr) {
@@ -154,7 +154,7 @@ func (solver *BasicSolver) CreateOrUpdateExposureObjects(cr CurrentReconcile) (r
 	return reconcile.Result{}, nil
 }
 
-func (solver *BasicSolver) CheckExposureObjects(cr CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceExposurePhase) (workspacev1alpha1.WorkspaceExposurePhase, reconcile.Result, error) {
+func (solver *BasicSolver) CheckRoutingObjects(cr CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceRoutingPhase) (workspacev1alpha1.WorkspaceRoutingPhase, reconcile.Result, error) {
 	return targetPhase, reconcile.Result{}, nil
 }
 
@@ -180,8 +180,8 @@ func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string
 	return exposedEndpoints
 }
 
-func (solver *BasicSolver) DeleteExposureObjects(cr CurrentReconcile) (reconcile.Result, error) {
-	return DeleteExposureObjects(cr, []runtime.Object{
+func (solver *BasicSolver) DeleteRoutingObjects(cr CurrentReconcile) (reconcile.Result, error) {
+	return DeleteRoutingObjects(cr, []runtime.Object{
 		&corev1.ServiceList{},
 		&extensionsv1beta1.IngressList{},
 	})

@@ -249,7 +249,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 	}
 
-	workspaceProperties, workspaceExposure, componentInstanceStatuses, k8sObjects, err := component.ConvertToCoreObjects(instance)
+	workspaceProperties, workspaceRouting, componentInstanceStatuses, k8sObjects, err := component.ConvertToCoreObjects(instance)
 	reconcileStatus.wkspProps = workspaceProperties
 	if err != nil {
 		reqLogger.Error(err, "Error when converting to K8S objects")
@@ -261,7 +261,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 	k8sObjectNames := map[string]struct{}{}
 
 	reqLogger.Info("Managing K8s Objects")
-	for _, k8sObject := range append(k8sObjects, workspaceExposure) {
+	for _, k8sObject := range append(k8sObjects, workspaceRouting) {
 		k8sObjectAsMetaObject, isMeta := k8sObject.(metav1.Object)
 		if !isMeta {
 			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
@@ -362,9 +362,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 					found.(*corev1.ConfigMap).Data = k8sObject.(*corev1.ConfigMap).Data
 					found.(*corev1.ConfigMap).BinaryData = k8sObject.(*corev1.ConfigMap).BinaryData
 				}
-			case (*workspacev1alpha1.WorkspaceExposure):
+			case (*workspacev1alpha1.WorkspaceRouting):
 				{
-					found.(*workspacev1alpha1.WorkspaceExposure).Spec = k8sObject.(*workspacev1alpha1.WorkspaceExposure).Spec
+					found.(*workspacev1alpha1.WorkspaceRouting).Spec = k8sObject.(*workspacev1alpha1.WorkspaceRouting).Spec
 				}
 			}
 			reqLogger.Info("  => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())

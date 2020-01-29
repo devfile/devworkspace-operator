@@ -140,13 +140,13 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: WorkspaceExposure
-      name: workspaceexposures.workspace.che.eclipse.org
+    - kind: WorkspaceRouting
+      name: workspaceroutings.workspace.che.eclipse.org
       version: v1alpha1
       description: |
         Defines how Eclipse Che 7 workspace will be made available
         to the external network.
-      displayName: Che Workspace Exposure
+      displayName: Che Workspace Routing
     - kind: Workspace
       name: workspaces.workspace.che.eclipse.org
       version: v1alpha1

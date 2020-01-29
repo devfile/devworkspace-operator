@@ -7,11 +7,11 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// WorkspaceExposureSpec defines the desired state of WorkspaceExposure
+// WorkspaceRoutingSpec defines the desired state of WorkspaceRouting
 // +k8s:openapi-gen=true
-type WorkspaceExposureSpec struct {
-	// Class of the exposure: this drives which Workspace exposer controller will manage this exposure
-	ExposureClass string `json:"exposureClass"`
+type WorkspaceRoutingSpec struct {
+	// Class of the routing: this drives which Workspace exposer controller will manage this routing
+	RoutingClass string `json:"routingClass"`
 	// Should the workspace be exposed ?
 	Exposed bool `json:"exposed"`
 	// ingress global domain (corresponds to the Openshift route suffix)
@@ -38,24 +38,24 @@ type ExposedEndpoint struct {
 	Attributes map[string]string `json:"attributes,omitempty"`
 }
 
-// WorkspaceExposurePhase is a label for the condition of a workspace exposure at the current time.
-type WorkspaceExposurePhase string
+// WorkspaceRoutingPhase is a label for the condition of a workspace routing at the current time.
+type WorkspaceRoutingPhase string
 
 // These are the valid statuses of pods.
 const (
-	WorkspaceExposureExposing WorkspaceExposurePhase = "Exposing"
-	WorkspaceExposureExposed  WorkspaceExposurePhase = "Exposed"
-	WorkspaceExposureReady    WorkspaceExposurePhase = "Ready"
-	WorkspaceExposureHidden   WorkspaceExposurePhase = "Hidden"
-	WorkspaceExposureHiding   WorkspaceExposurePhase = "Hiding"
-	WorkspaceExposureFailed   WorkspaceExposurePhase = "Failed"
+	WorkspaceRoutingExposing WorkspaceRoutingPhase = "Exposing"
+	WorkspaceRoutingExposed  WorkspaceRoutingPhase = "Exposed"
+	WorkspaceRoutingReady    WorkspaceRoutingPhase = "Ready"
+	WorkspaceRoutingHidden   WorkspaceRoutingPhase = "Hidden"
+	WorkspaceRoutingHiding   WorkspaceRoutingPhase = "Hiding"
+	WorkspaceRoutingFailed   WorkspaceRoutingPhase = "Failed"
 )
 
-// WorkspaceExposureStatus defines the observed state of WorkspaceExposure
+// WorkspaceRoutingStatus defines the observed state of WorkspaceRouting
 // +k8s:openapi-gen=true
-type WorkspaceExposureStatus struct {
-	// Workspace Exposure status
-	Phase            WorkspaceExposurePhase         `json:"phase,omitempty"`
+type WorkspaceRoutingStatus struct {
+	// Workspace Routing status
+	Phase            WorkspaceRoutingPhase          `json:"phase,omitempty"`
 	ExposedEndpoints map[string]ExposedEndpointList `json:"exposedEndpoints,omitempty"`
 }
 
@@ -64,26 +64,26 @@ type ExposedEndpointList []ExposedEndpoint
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// WorkspaceExposure is the Schema for the workspaceexposures API
+// WorkspaceRouting is the Schema for the workspaceroutings API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-type WorkspaceExposure struct {
+type WorkspaceRouting struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   WorkspaceExposureSpec   `json:"spec,omitempty"`
-	Status WorkspaceExposureStatus `json:"status,omitempty"`
+	Spec   WorkspaceRoutingSpec   `json:"spec,omitempty"`
+	Status WorkspaceRoutingStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// WorkspaceExposureList contains a list of WorkspaceExposure
-type WorkspaceExposureList struct {
+// WorkspaceRoutingList contains a list of WorkspaceRouting
+type WorkspaceRoutingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []WorkspaceExposure `json:"items"`
+	Items           []WorkspaceRouting `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&WorkspaceExposure{}, &WorkspaceExposureList{})
+	SchemeBuilder.Register(&WorkspaceRouting{}, &WorkspaceRoutingList{})
 }

@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspaceexposure
+package workspacerouting
 
 import (
 	"context"
@@ -35,9 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_workspaceexposure")
+var log = logf.Log.WithName("controller_workspacerouting")
 
-// Add creates a new WorkspaceExposure Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new WorkspaceRouting Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -45,10 +45,10 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileWorkspaceExposure{
+	return &ReconcileWorkspaceRouting{
 		client: mgr.GetClient(),
 		scheme: mgr.GetScheme(),
-		solvers: map[string]WorkspaceExposureSolver{
+		solvers: map[string]WorkspaceRoutingSolver{
 			"": &BasicSolver{
 				Client: mgr.GetClient(),
 			},
@@ -62,13 +62,13 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("workspaceexposure-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("workspacerouting-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to primary resource WorkspaceExposure
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceExposure{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
+	// Watch for changes to primary resource WorkspaceRouting
+	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			if e.MetaOld == nil {
 				log.Error(nil, "UpdateEvent has no old metadata", "event", e)
@@ -99,30 +99,30 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileWorkspaceExposure implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileWorkspaceExposure{}
+// blank assignment to verify that ReconcileWorkspaceRouting implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileWorkspaceRouting{}
 
-// ReconcileWorkspaceExposure reconciles a WorkspaceExposure object
-type ReconcileWorkspaceExposure struct {
+// ReconcileWorkspaceRouting reconciles a WorkspaceRouting object
+type ReconcileWorkspaceRouting struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client  client.Client
 	scheme  *runtime.Scheme
-	solvers map[string]WorkspaceExposureSolver
+	solvers map[string]WorkspaceRoutingSolver
 }
 
 type CurrentReconcile struct {
-	Instance  *workspacev1alpha1.WorkspaceExposure
+	Instance  *workspacev1alpha1.WorkspaceRouting
 	ReqLogger logr.Logger
-	Reconcile *ReconcileWorkspaceExposure
-	Solver    WorkspaceExposureSolver
+	Reconcile *ReconcileWorkspaceRouting
+	Solver    WorkspaceRoutingSolver
 }
 
-func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 
-	// Fetch the WorkspaceExposure instance
-	instance := &workspacev1alpha1.WorkspaceExposure{}
+	// Fetch the WorkspaceRouting instance
+	instance := &workspacev1alpha1.WorkspaceRouting{}
 
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
@@ -136,13 +136,13 @@ func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (recon
 		return reconcile.Result{}, err
 	}
 
-	solver, found := r.solvers[instance.Spec.ExposureClass]
+	solver, found := r.solvers[instance.Spec.RoutingClass]
 	if !found {
-		reqLogger.Info("Reconciling Skipped: unsupported exposure class", "exposure", instance.Spec.ExposureClass)
+		reqLogger.Info("Reconciling Skipped: unsupported routing class", "routing", instance.Spec.RoutingClass)
 		return reconcile.Result{}, err
 	}
 
-	reqLogger = reqLogger.WithValues("ExposureClass", instance.Spec.ExposureClass)
+	reqLogger = reqLogger.WithValues("RoutingClass", instance.Spec.RoutingClass)
 
 	reqLogger.V(1).Info("Reconciling", "expected", instance.Spec.Exposed, "phase", instance.Status.Phase)
 
@@ -157,61 +157,61 @@ func (r *ReconcileWorkspaceExposure) Reconcile(request reconcile.Request) (recon
 	case true:
 		switch instance.Status.Phase {
 
-		case "", workspacev1alpha1.WorkspaceExposureHidden:
-			result, err := solver.CreateOrUpdateExposureObjects(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceExposureExposing)
+		case "", workspacev1alpha1.WorkspaceRoutingHidden:
+			result, err := solver.CreateOrUpdateRoutingObjects(currentReconcile)
+			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingExposing)
 
-		case workspacev1alpha1.WorkspaceExposureExposing:
-			nextPhase, result, err := solver.CheckExposureObjects(currentReconcile, workspacev1alpha1.WorkspaceExposureExposed)
+		case workspacev1alpha1.WorkspaceRoutingExposing:
+			nextPhase, result, err := solver.CheckRoutingObjects(currentReconcile, workspacev1alpha1.WorkspaceRoutingExposed)
 			return updatePhaseIfSuccess(currentReconcile, result, err, nextPhase)
 
-		case workspacev1alpha1.WorkspaceExposureExposed:
+		case workspacev1alpha1.WorkspaceRoutingExposed:
 			result, err := updateExposedEndpoints(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceExposureReady)
+			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingReady)
 
-		case workspacev1alpha1.WorkspaceExposureReady:
+		case workspacev1alpha1.WorkspaceRoutingReady:
 			return reconcile.Result{}, nil
 
-		case workspacev1alpha1.WorkspaceExposureFailed:
+		case workspacev1alpha1.WorkspaceRoutingFailed:
 			return reconcile.Result{}, nil
 
-		case workspacev1alpha1.WorkspaceExposureHiding:
-			nextPhase, result, err := solver.CheckExposureObjects(currentReconcile, workspacev1alpha1.WorkspaceExposureHidden)
+		case workspacev1alpha1.WorkspaceRoutingHiding:
+			nextPhase, result, err := solver.CheckRoutingObjects(currentReconcile, workspacev1alpha1.WorkspaceRoutingHidden)
 			return updatePhaseIfSuccess(currentReconcile, result, err, nextPhase)
 		}
 	case false:
 		switch instance.Status.Phase {
 		case "":
-			return updatePhaseIfSuccess(currentReconcile, reconcile.Result{}, nil, workspacev1alpha1.WorkspaceExposureHidden)
+			return updatePhaseIfSuccess(currentReconcile, reconcile.Result{}, nil, workspacev1alpha1.WorkspaceRoutingHidden)
 
-		case workspacev1alpha1.WorkspaceExposureHidden:
+		case workspacev1alpha1.WorkspaceRoutingHidden:
 			return reconcile.Result{}, nil
 
-		case workspacev1alpha1.WorkspaceExposureExposing, workspacev1alpha1.WorkspaceExposureExposed:
-			result, err := solver.DeleteExposureObjects(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceExposureHiding)
+		case workspacev1alpha1.WorkspaceRoutingExposing, workspacev1alpha1.WorkspaceRoutingExposed:
+			result, err := solver.DeleteRoutingObjects(currentReconcile)
+			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingHiding)
 
-		case workspacev1alpha1.WorkspaceExposureReady:
+		case workspacev1alpha1.WorkspaceRoutingReady:
 			result, err := cleanExposedEndpoints(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceExposureExposed)
+			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingExposed)
 
-		case workspacev1alpha1.WorkspaceExposureHiding:
-			nextPhase, result, err := solver.CheckExposureObjects(currentReconcile, workspacev1alpha1.WorkspaceExposureHidden)
+		case workspacev1alpha1.WorkspaceRoutingHiding:
+			nextPhase, result, err := solver.CheckRoutingObjects(currentReconcile, workspacev1alpha1.WorkspaceRoutingHidden)
 			return updatePhaseIfSuccess(currentReconcile, result, err, nextPhase)
 
-		case workspacev1alpha1.WorkspaceExposureFailed:
-			result, err := solver.DeleteExposureObjects(currentReconcile)
+		case workspacev1alpha1.WorkspaceRoutingFailed:
+			result, err := solver.DeleteRoutingObjects(currentReconcile)
 			if err != nil {
 				result, err = cleanExposedEndpoints(currentReconcile)
 			}
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceExposureHiding)
+			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingHiding)
 			return reconcile.Result{}, nil
 		}
 	}
 	return reconcile.Result{}, nil
 }
 
-func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err error, nextPhase workspacev1alpha1.WorkspaceExposurePhase) (reconcile.Result, error) {
+func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err error, nextPhase workspacev1alpha1.WorkspaceRoutingPhase) (reconcile.Result, error) {
 	existingPhase := cr.Instance.Status.Phase
 	updateWhileConflict := func(action func() error) error {
 		for {
@@ -226,7 +226,7 @@ func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err erro
 				},
 				cr.Instance,
 			); err2 != nil && !errors.IsNotFound(err) {
-				cr.ReqLogger.Error(err, "When trying to get workspace exposure "+cr.Instance.Name)
+				cr.ReqLogger.Error(err, "When trying to get workspace routing "+cr.Instance.Name)
 				return err
 			}
 		}
@@ -235,11 +235,11 @@ func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err erro
 
 	if err != nil {
 		updateError := updateWhileConflict(func() error {
-			cr.Instance.Status.Phase = workspacev1alpha1.WorkspaceExposureFailed
+			cr.Instance.Status.Phase = workspacev1alpha1.WorkspaceRoutingFailed
 			return cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
 		})
 		if updateError != nil {
-			cr.ReqLogger.Error(err, "When trying to update the status phase to: "+string(workspacev1alpha1.WorkspaceExposureFailed))
+			cr.ReqLogger.Error(err, "When trying to update the status phase to: "+string(workspacev1alpha1.WorkspaceRoutingFailed))
 		}
 		return result, err
 	}
@@ -260,7 +260,7 @@ func cleanExposedEndpoints(cr CurrentReconcile) (reconcile.Result, error) {
 	cr.Instance.Status.ExposedEndpoints = map[string]workspacev1alpha1.ExposedEndpointList{}
 	err := cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
 	if err != nil {
-		log.Error(err, "When updating the exposure status with no endpoints")
+		log.Error(err, "When updating the routing status with no endpoints")
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
@@ -270,26 +270,26 @@ func updateExposedEndpoints(cr CurrentReconcile) (reconcile.Result, error) {
 	cr.Instance.Status.ExposedEndpoints = cr.Solver.BuildExposedEndpoints(cr)
 	err := cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
 	if err != nil {
-		log.Error(err, "When updating the exposure status with exposed endpoints", "exposedEndpoints", cr.Instance.Status.ExposedEndpoints)
+		log.Error(err, "When updating the routing status with exposed endpoints", "exposedEndpoints", cr.Instance.Status.ExposedEndpoints)
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{}, nil
 }
 
-type WorkspaceExposureSolver interface {
-	CreateOrUpdateExposureObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
-	CheckExposureObjects(currentReconcile CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceExposurePhase) (workspacev1alpha1.WorkspaceExposurePhase, reconcile.Result, error)
+type WorkspaceRoutingSolver interface {
+	CreateOrUpdateRoutingObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
+	CheckRoutingObjects(currentReconcile CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceRoutingPhase) (workspacev1alpha1.WorkspaceRoutingPhase, reconcile.Result, error)
 	BuildExposedEndpoints(currentReconcile CurrentReconcile) map[string]workspacev1alpha1.ExposedEndpointList
-	DeleteExposureObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
+	DeleteRoutingObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
 }
 
-func DeleteExposureObjects(cr CurrentReconcile, objectTypes []runtime.Object) (reconcile.Result, error) {
+func DeleteRoutingObjects(cr CurrentReconcile, objectTypes []runtime.Object) (reconcile.Result, error) {
 	cr.ReqLogger.Info("Deleting K8s objects")
 	for _, list := range objectTypes {
 		cr.Reconcile.client.List(context.TODO(), list,
 			client.InNamespace(cr.Instance.Namespace),
 			client.MatchingLabels{
-				"org.eclipse.che.workspace.exposure.workspace_id": cr.Instance.Name,
+				"org.eclipse.che.workspace.routing.workspace_id": cr.Instance.Name,
 			})
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		if !items.IsValid() {
@@ -302,7 +302,7 @@ func DeleteExposureObjects(cr CurrentReconcile, objectTypes []runtime.Object) (r
 					log.Info("  => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "name", itemMeta.GetName())
 					err := cr.Reconcile.client.Delete(context.TODO(), itemRuntime)
 					if err != nil {
-						cr.ReqLogger.Error(err, "Error when creating K8S object own by the Workspace Exposure: ", "k8sObject", itemRuntime)
+						cr.ReqLogger.Error(err, "Error when creating K8S object own by the Workspace Routing: ", "k8sObject", itemRuntime)
 						return reconcile.Result{}, err
 					}
 				}
@@ -334,7 +334,7 @@ func CreateOrUpdate(cr CurrentReconcile, k8sObjects []runtime.Object, diffOpts c
 
 		// Set Workspace instance as the owner and controller
 		k8sObjectAsMetaObject.SetLabels(map[string]string{
-			"org.eclipse.che.workspace.exposure.workspace_id": instance.Name,
+			"org.eclipse.che.workspace.routing.workspace_id": instance.Name,
 		})
 
 		// Check if the k8s Object already exists

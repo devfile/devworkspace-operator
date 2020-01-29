@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspaceexposure
+package workspacerouting
 
 import (
 	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
@@ -66,16 +66,16 @@ func routeName(serviceDesc workspacev1alpha1.ServiceDescription, endpoint worksp
 	return serviceDesc.ServiceName + "-" + portString
 }
 
-func routeHost(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint, exposure *workspacev1alpha1.WorkspaceExposure) string {
-	return routeName(serviceDesc, endpoint) + "-" + exposure.Namespace + "." + exposure.Spec.IngressGlobalDomain
+func routeHost(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint, routing *workspacev1alpha1.WorkspaceRouting) string {
+	return routeName(serviceDesc, endpoint) + "-" + routing.Namespace + "." + routing.Spec.IngressGlobalDomain
 }
 
-func proxyServiceAccountName(exposure *workspacev1alpha1.WorkspaceExposure) string {
-	return exposure.Name + "-oauth-proxy"
+func proxyServiceAccountName(routing *workspacev1alpha1.WorkspaceRouting) string {
+	return routing.Name + "-oauth-proxy"
 }
 
-func proxyDeploymentName(exposure *workspacev1alpha1.WorkspaceExposure) string {
-	return exposure.Name + "-oauth-proxy"
+func proxyDeploymentName(routing *workspacev1alpha1.WorkspaceRouting) string {
+	return routing.Name + "-oauth-proxy"
 }
 
 func proxyServiceName(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint) string {
@@ -252,7 +252,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 	return objectsToCreate
 }
 
-func (solver *OpenshiftOAuthSolver) CreateOrUpdateExposureObjects(cr CurrentReconcile) (reconcile.Result, error) {
+func (solver *OpenshiftOAuthSolver) CreateOrUpdateRoutingObjects(cr CurrentReconcile) (reconcile.Result, error) {
 	k8sObjects := []runtime.Object{}
 
 	for _, discoverableService := range solver.CreateDiscoverableServices(cr) {
@@ -304,7 +304,7 @@ func (solver *OpenshiftOAuthSolver) CreateOrUpdateExposureObjects(cr CurrentReco
 	)
 }
 
-func (solver *OpenshiftOAuthSolver) CheckExposureObjects(cr CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceExposurePhase) (workspacev1alpha1.WorkspaceExposurePhase, reconcile.Result, error) {
+func (solver *OpenshiftOAuthSolver) CheckRoutingObjects(cr CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceRoutingPhase) (workspacev1alpha1.WorkspaceRoutingPhase, reconcile.Result, error) {
 	return targetPhase, reconcile.Result{}, nil
 }
 
@@ -334,8 +334,8 @@ func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) m
 	return exposedEndpoints
 }
 
-func (solver *OpenshiftOAuthSolver) DeleteExposureObjects(cr CurrentReconcile) (reconcile.Result, error) {
-	return DeleteExposureObjects(cr, []runtime.Object{
+func (solver *OpenshiftOAuthSolver) DeleteRoutingObjects(cr CurrentReconcile) (reconcile.Result, error) {
+	return DeleteRoutingObjects(cr, []runtime.Object{
 		&corev1.ServiceList{},
 		&routeV1.RouteList{},
 		&appsv1.Deployment{},

@@ -1,0 +1,23 @@
+@startuml devworkspace
+
+class DevWorkspace {
+  - metadata
+  - spec
+  - status
+}
+
+class Devfile {
+  - specVersion
+  - name
+  - commands
+  - tools
+  - projects
+}
+
+DevWorkspace "1" <-- Devfile
+
+class DevWorkspaceStatus {
+  - started
+}
+
+@enduml

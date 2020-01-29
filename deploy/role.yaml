@@ -84,7 +84,7 @@ rules:
   - workspace.che.eclipse.org
   resources:
   - '*'
-  - workspaceexposures
+  - workspaceroutings
   verbs:
   - '*'
 - apiGroups:

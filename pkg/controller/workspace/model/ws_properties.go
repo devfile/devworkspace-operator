@@ -18,5 +18,5 @@ type WorkspaceProperties struct {
 	Namespace      string
 	Started        bool
 	CheApiExternal string
-	ExposureClass  string
+	RoutingClass   string
 }

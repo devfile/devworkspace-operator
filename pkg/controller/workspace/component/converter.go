@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperties, *workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
+func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperties, *workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
 
 	uid, err := uuid.Parse(string(workspace.ObjectMeta.UID))
 	if err != nil {
@@ -40,18 +40,18 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperti
 		WorkspaceId:   "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""),
 		WorkspaceName: workspace.Name,
 		Started:       workspace.Spec.Started,
-		ExposureClass: workspace.Spec.ExposureClass,
+		RoutingClass:  workspace.Spec.RoutingClass,
 	}
 
 	if !workspaceProperties.Started {
-		return &workspaceProperties, &workspaceApi.WorkspaceExposure{
+		return &workspaceProperties, &workspaceApi.WorkspaceRouting{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      workspaceProperties.WorkspaceId,
 				Namespace: workspaceProperties.Namespace,
 			},
-			Spec: workspaceApi.WorkspaceExposureSpec{
+			Spec: workspaceApi.WorkspaceRoutingSpec{
 				Exposed:             workspaceProperties.Started,
-				ExposureClass:       workspaceProperties.ExposureClass,
+				RoutingClass:        workspaceProperties.RoutingClass,
 				IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 				WorkspacePodSelector: map[string]string{
 					"che.original_name": CheOriginalName,
@@ -78,13 +78,13 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperti
 	}
 	workspaceProperties.CheApiExternal = externalUrl
 
-	workspaceExposure, componentStatuses, k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.Devfile, mainDeployment)
+	workspaceRouting, componentStatuses, k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.Devfile, mainDeployment)
 	if err != nil {
 		return &workspaceProperties, nil, nil, nil, err
 	}
 	k8sComponentsObjects = append(k8sComponentsObjects, cheRestApisK8sObjects...)
 
-	return &workspaceProperties, workspaceExposure, componentStatuses, append(k8sComponentsObjects, mainDeployment), nil
+	return &workspaceProperties, workspaceRouting, componentStatuses, append(k8sComponentsObjects, mainDeployment), nil
 }
 
 func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
@@ -164,7 +164,7 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceExposure, []ComponentInstanceStatus, []runtime.Object, error) {
+func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
 	components := devfile.Components
 	k8sObjects := []runtime.Object{}
 
@@ -210,14 +210,14 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec
 
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
-	workspaceExposure := buildWorkspaceExposure(names, componentInstanceStatuses)
+	workspaceRouting := buildWorkspaceRouting(names, componentInstanceStatuses)
 
 	// TODO store the annotation of the workspaceAPi: avec le defer ????
 
-	return workspaceExposure, componentInstanceStatuses, k8sObjects, nil
+	return workspaceRouting, componentInstanceStatuses, k8sObjects, nil
 }
 
-func buildWorkspaceExposure(wkspProperties WorkspaceProperties, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceExposure {
+func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceRouting {
 	services := map[string]workspaceApi.ServiceDescription{}
 	for _, componentInstanceStatus := range componentInstanceStatuses {
 		for machineName, machine := range componentInstanceStatus.Machines {
@@ -246,14 +246,14 @@ func buildWorkspaceExposure(wkspProperties WorkspaceProperties, componentInstanc
 			}
 		}
 	}
-	return &workspaceApi.WorkspaceExposure{
+	return &workspaceApi.WorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      wkspProperties.WorkspaceId,
 			Namespace: wkspProperties.Namespace,
 		},
-		Spec: workspaceApi.WorkspaceExposureSpec{
+		Spec: workspaceApi.WorkspaceRoutingSpec{
 			Exposed:             wkspProperties.Started,
-			ExposureClass:       wkspProperties.ExposureClass,
+			RoutingClass:        wkspProperties.RoutingClass,
 			IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 			WorkspacePodSelector: map[string]string{
 				"che.original_name": CheOriginalName,
@@ -265,7 +265,7 @@ func buildWorkspaceExposure(wkspProperties WorkspaceProperties, componentInstanc
 }
 
 // Penser au admission controller pour ajouter le nom du user dnas le workspace ? E tout cas ajouter le nom du
-// users dans la custom resource du workspace. + la classe de workspace exposure.
+// users dans la custom resource du workspace. + la classe de workspace routing.
 
 func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.PodSpec) {
 	podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{

@@ -11,11 +11,11 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/workspace/v1alpha1.Workspace":               schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceExposure":       schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceSpec":           schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.Workspace":              schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceRouting":       schema_pkg_apis_workspace_v1alpha1_WorkspaceRouting(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceRoutingSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceRoutingStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingStatus(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceSpec":          schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref),
 	}
 }
 
@@ -65,11 +65,11 @@ func schema_pkg_apis_workspace_v1alpha1_Workspace(ref common.ReferenceCallback) 
 	}
 }
 
-func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceRouting(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "WorkspaceExposure is the Schema for the workspaceexposures API",
+				Description: "WorkspaceRouting is the Schema for the workspaceroutings API",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -93,32 +93,32 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposure(ref common.ReferenceCa
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec"),
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceRoutingSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus"),
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceRoutingStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/workspace/v1alpha1.WorkspaceExposureSpec", "./pkg/apis/workspace/v1alpha1.WorkspaceExposureStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"./pkg/apis/workspace/v1alpha1.WorkspaceRoutingSpec", "./pkg/apis/workspace/v1alpha1.WorkspaceRoutingStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
-func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "WorkspaceExposureSpec defines the desired state of WorkspaceExposure",
+				Description: "WorkspaceRoutingSpec defines the desired state of WorkspaceRouting",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"exposureClass": {
+					"routingClass": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Class of the exposure: this drives which Workspace exposer controller will manage this exposure",
+							Description: "Class of the routing: this drives which Workspace exposer controller will manage this routing",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -167,7 +167,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 						},
 					},
 				},
-				Required: []string{"exposureClass", "exposed", "ingressGlobalDomain", "workspacePodSelector", "services"},
+				Required: []string{"routingClass", "exposed", "ingressGlobalDomain", "workspacePodSelector", "services"},
 			},
 		},
 		Dependencies: []string{
@@ -175,16 +175,16 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureSpec(ref common.Referen
 	}
 }
 
-func schema_pkg_apis_workspace_v1alpha1_WorkspaceExposureStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "WorkspaceExposureStatus defines the observed state of WorkspaceExposure",
+				Description: "WorkspaceRoutingStatus defines the observed state of WorkspaceRouting",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"phase": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Workspace Exposure status",
+							Description: "Workspace Routing status",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -231,9 +231,9 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
-					"exposureClass": {
+					"routingClass": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Exposure class the defines how the workspace will be exposed toon the external network",
+							Description: "Routing class the defines how the workspace will be exposed toon the external network",
 							Type:        []string{"string"},
 							Format:      "",
 						},

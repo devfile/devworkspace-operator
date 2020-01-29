@@ -33,7 +33,7 @@ const (
 	// The projects volume has a standard name used in a couple of locations.
 	PROJECTS_VOLUME_NAME = "projects"
 
-	// Attribute of {@link Server} that specifies exposure of which port created the server
+	// Attribute of {@link Server} that specifies routing of which port created the server
 	SERVER_PORT_ATTRIBUTE = "port"
 
 	// Command attribute which indicates the working directory where the given command must be run

@@ -90,7 +90,7 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 	for _, obj := range []runtime.Object{
 		&appsv1.Deployment{},
 		&corev1.Pod{},
-		&workspacev1alpha1.WorkspaceExposure{},
+		&workspacev1alpha1.WorkspaceRouting{},
 	} {
 		var mapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
 			requests := []reconcile.Request{}
@@ -129,7 +129,7 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 					if _, isPod := evt.ObjectNew.(*corev1.Pod); isPod {
 						return true
 					}
-					if _, isWorkspaceExposure := evt.ObjectNew.(*workspacev1alpha1.WorkspaceExposure); isWorkspaceExposure {
+					if _, isWorkspaceRouting := evt.ObjectNew.(*workspacev1alpha1.WorkspaceRouting); isWorkspaceRouting {
 						return true
 					}
 				}
@@ -235,11 +235,11 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 	}
 }
 
-func (r *ReconcileWorkspace) updateFromWorkspaceExposure(exposure *workspacev1alpha1.WorkspaceExposure, workspace *workspacev1alpha1.Workspace) error {
+func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alpha1.WorkspaceRouting, workspace *workspacev1alpha1.Workspace) error {
 	if workspace.Status.AdditionalInfo == nil {
 		workspace.Status.AdditionalInfo = map[string]string{}
 	}
-	if exposure.Status.Phase != workspacev1alpha1.WorkspaceExposureReady {
+	if routing.Status.Phase != workspacev1alpha1.WorkspaceRoutingReady {
 		delete(workspace.Status.AdditionalInfo, "org.eclipse.che.workspace/runtime")
 		workspace.Status.IdeUrl = ""
 	} else {
@@ -261,7 +261,7 @@ func (r *ReconcileWorkspace) updateFromWorkspaceExposure(exposure *workspacev1al
 		for _, status := range statuses {
 			commands = append(commands, status.ContributedRuntimeCommands...)
 			for machineName, description := range status.Machines {
-				machineExposedEndpoints := exposure.Status.ExposedEndpoints[machineName]
+				machineExposedEndpoints := routing.Status.ExposedEndpoints[machineName]
 				machineServers := map[string]CheWorkspaceServer{}
 				for _, endpoint := range machineExposedEndpoints {
 					machineServer := CheWorkspaceServer{
@@ -324,7 +324,7 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 
 	for _, list := range []runtime.Object{
 		&corev1.PodList{},
-		&workspacev1alpha1.WorkspaceExposureList{},
+		&workspacev1alpha1.WorkspaceRoutingList{},
 	} {
 		// TODO Change this to look for objects owned by the workspace CR
 		r.List(context.TODO(), list,
@@ -358,8 +358,8 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 					}
 				}
 			}
-			if itemExposure, isWorkspaceExposure := item.(*workspacev1alpha1.WorkspaceExposure); isWorkspaceExposure {
-				r.updateFromWorkspaceExposure(itemExposure, workspace)
+			if itemRouting, isWorkspaceRouting := item.(*workspacev1alpha1.WorkspaceRouting); isWorkspaceRouting {
+				r.updateFromWorkspaceRouting(itemRouting, workspace)
 			}
 		}
 	}

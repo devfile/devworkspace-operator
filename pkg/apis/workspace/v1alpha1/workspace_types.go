@@ -44,11 +44,11 @@ type Workspace struct {
 type WorkspaceSpec struct {
 	// Whether the workspace should be started or stopped
 	Started bool `json:"started"`
-	// Routing class the defines how the workspace will be exposed toon the external network
+	// Routing class the defines how the workspace will be exposed to the external network
 	RoutingClass string `json:"routingClass,omitempty"`
 	// Workspace Structure defined in the Devfile format syntax.
 	// For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/
-	Devfile DevFileSpec `json:"devfile"`
+	Devfile DevfileSpec `json:"devfile"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

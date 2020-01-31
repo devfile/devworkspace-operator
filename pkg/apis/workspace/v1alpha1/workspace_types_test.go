@@ -32,14 +32,14 @@ func TestStorageWorkspace(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: WorkspaceSpec{
-			DevFile: DevFileSpec{
+			Devfile: DevfileSpec{
 				Projects: []ProjectSpec{},
 				Components: []ComponentSpec{
-					ComponentSpec{
+					{
 						Alias: "coucou",
 						Type:  "chePlugin",
 					},
-					ComponentSpec{
+					{
 						Alias: "kiki",
 						Type:  "cheEditor",
 					},
@@ -56,7 +56,7 @@ func TestStorageWorkspace(t *testing.T) {
 			Namespace: "default",
 		},
 		Spec: WorkspaceSpec{
-			DevFile: DevFileSpec{
+			Devfile: DevfileSpec{
 				Projects:   []ProjectSpec{},
 				Components: []ComponentSpec{},
 			},

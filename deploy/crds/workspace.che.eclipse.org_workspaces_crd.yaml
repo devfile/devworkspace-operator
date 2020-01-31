@@ -48,12 +48,6 @@ spec:
               description: 'Workspace Structure defined in the Devfile format syntax.
                 For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/'
               properties:
-                apiVersion:
-                  description: 'APIVersion defines the versioned schema of this representation
-                    of an object. Servers should convert recognized schemas to the
-                    latest internal value, and may reject unrecognized values. More
-                    info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
-                  type: string
                 commands:
                   description: List of workspace-wide commands that can be associated
                     to a given component, in order to run in the related container
@@ -89,8 +83,8 @@ spec:
                     type: object
                   type: array
                 components:
-                  description: List of components (containers, plugins, ...) that
-                    will provide the workspace features
+                  description: List of components (editor, plugins, containers, ...)
+                    that will provide the workspace features
                   items:
                     properties:
                       alias:
@@ -169,16 +163,15 @@ spec:
                     - type
                     type: object
                   type: array
-                kind:
-                  description: 'Kind is a string value representing the REST resource
-                    this object represents. Servers may infer this from the endpoint
-                    the client submits requests to. Cannot be updated. In CamelCase.
-                    More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
-                  type: string
                 metadata:
+                  properties:
+                    generateName:
+                      type: string
+                    name:
+                      type: string
                   type: object
                 projects:
-                  description: List of projects that should be opened in the workspace
+                  description: List of projects that should be imported into the workspace
                   items:
                     properties:
                       name:
@@ -204,7 +197,7 @@ spec:
               type: object
             routingClass:
               description: Routing class the defines how the workspace will be exposed
-                toon the external network
+                to the external network
               type: string
             started:
               description: Whether the workspace should be started or stopped

@@ -21,7 +21,21 @@ import (
 // Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 // Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// WorkspaceStatus defines the observed state of Workspace
+type WorkspaceStatus struct {
+	// Id of the workspace
+	WorkspaceId string `json:"workspaceId"`
+	// Workspace status
+	Phase WorkspacePhase `json:"phase"`
+	// Condition keeps track of all cluster conditions, if they exist.
+	Conditions []WorkspaceCondition `json:"conditions,omitempty"`
+	// Members are the Workspace pods
+	Members MembersStatus `json:"members"`
+	// URL at which the Editor can be joined
+	IdeUrl string `json:"ideUrl,omitempty"`
+	// AdditionalInfo
+	AdditionalInfo map[string]string `json:"additionalFields,omitempty"`
+}
 
 // WorkspaceConditionType is a valid value for WorkspaceCondition.Type
 type WorkspaceConditionType string
@@ -80,21 +94,4 @@ type MembersStatus struct {
 	// Unready are the workspace Pods that are not
 	// ready to serve requests
 	Unready []string `json:"unready,omitempty"`
-}
-
-// WorkspaceStatus defines the observed state of Workspace
-// +k8s:openapi-gen=false
-type WorkspaceStatus struct {
-	// Id of the workspace
-	WorkspaceId string `json:"workspaceId"`
-	// Workspace status
-	Phase WorkspacePhase `json:"phase"`
-	// Condition keeps track of all cluster conditions, if they exist.
-	Conditions []WorkspaceCondition `json:"conditions,omitempty"`
-	// Members are the Workspace pods
-	Members MembersStatus `json:"members"`
-	// URL at which the Editor can be joined
-	IdeUrl string `json:"ideUrl,omitempty"`
-	// AdditionalInfo
-	AdditionalInfo map[string]string `json:"additionalFields,omitempty"`
 }

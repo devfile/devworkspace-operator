@@ -14,7 +14,14 @@ package v1alpha1
 
 // This schema describes the structure of the devfile object
 type DevfileSpec struct {
+	// Devfile API version
+	APIVersion string `json:"apiVersion,omitempty"`
+
+	// Devfile metadata
 	DevfileMeta `json:"metadata,omitempty"`
+
+	// Devfile attributes, e.g. persistVolumes
+	DevfileAttributes `json:"attributes,omitempty"`
 
 	// List of projects that should be imported into the workspace
 	Projects []ProjectSpec `json:"projects,omitempty"` // Description of the projects, containing names and sources locations
@@ -29,6 +36,11 @@ type DevfileSpec struct {
 type DevfileMeta struct {
 	GenerateName string `json:"generateName,omitempty"`
 	Name         string `json:"name,omitempty"`
+}
+
+type DevfileAttributes struct {
+	PersistVolumes bool `json:"persistVolumes,omitempty"`
+	EditorFree     bool `json:"editorFree,omitempty"`
 }
 
 type ProjectSpec struct {

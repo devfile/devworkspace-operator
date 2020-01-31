@@ -4,12 +4,10 @@
 
 ### Build docker image
 
-Since it uses Go Modules, you need operator-sdk 0.12.0+ version where Go Modules is a default vendor.
-
 To build docker image run the following command in the project's root
 
 ```
-operator-sdk build quay.io/che-incubator/che-workspace-crd-controller:7.1.0
+docker build -t quay.io/che-incubator/che-workspace-crd-controller:7.1.0 -f ./build/Dockerfile .
 ```
 
 ### Run controller within K8s cluster

@@ -38,10 +38,11 @@ type MachineDescription struct {
 }
 
 type ComponentInstanceStatus struct {
-	Machines                   map[string]MachineDescription `json:"machines,omitempty"`
-	ContributedRuntimeCommands []CheWorkspaceCommand         `json:"contributedRuntimeCommands,omitempty"`
-	WorkspacePodAdditions      *corev1.PodTemplateSpec       `json:"-"`
-	ExternalObjects            []runtime.Object              `json:"-"`
-	PluginFQN                  *model.PluginFQN              `json:"-"`
-	Endpoints                  []workspacev1alpha1.Endpoint  `json:"-"`
+	Machines              map[string]MachineDescription `json:"machines,omitempty"`
+	WorkspacePodAdditions *corev1.PodTemplateSpec       `json:"-"`
+	ExternalObjects       []runtime.Object              `json:"-"`
+	PluginFQN             *model.PluginFQN              `json:"-"`
+	Endpoints             []workspacev1alpha1.Endpoint  `json:"-"`
+	//fields below are used to be propagated via Che REST API Emulator for workspace components
+	ContributedRuntimeCommands []CheWorkspaceCommand `json:"contributedRuntimeCommands,omitempty"`
 }

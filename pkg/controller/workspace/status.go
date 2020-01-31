@@ -14,6 +14,7 @@ package workspace
 
 import (
 	"encoding/json"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 	"github.com/go-logr/logr"
 	"time"
 
@@ -93,19 +94,19 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 		&workspacev1alpha1.WorkspaceRouting{},
 	} {
 		var mapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
-			requests := []reconcile.Request{}
+			var requests []reconcile.Request
 			if owningWorkspace := getOwningWorkspace(mgr.GetClient(), obj.Meta, mgr); owningWorkspace != nil {
 				requests = append(requests, reconcile.Request{
-					types.NamespacedName{
+					NamespacedName: types.NamespacedName{
 						Namespace: owningWorkspace.GetNamespace(),
 						Name:      ownedObjectEventPrefix + owningWorkspace.GetName(),
 					},
 				})
 			} else if pod, isPod := obj.Object.(*corev1.Pod); isPod {
-				workspaceName := pod.GetLabels()["che.workspace_name"]
+				workspaceName := pod.GetLabels()[WorkspaceNameLabel]
 				if workspaceName != "" {
 					requests = append(requests, reconcile.Request{
-						types.NamespacedName{
+						NamespacedName: types.NamespacedName{
 							Namespace: pod.GetNamespace(),
 							Name:      ownedObjectEventPrefix + workspaceName,
 						},
@@ -116,7 +117,7 @@ func watchStatus(ctr controller.Controller, mgr manager.Manager) error {
 		}
 
 		checkOwner := func(obj metav1.Object) bool {
-			if obj.GetLabels() != nil && obj.GetLabels()["che.workspace_id"] != "" {
+			if obj.GetLabels() != nil && obj.GetLabels()[WorkspaceIDLabel] != "" {
 				return true
 			}
 			return false
@@ -214,14 +215,14 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 		}
 
 		if rs.componentInstanceStatuses == nil {
-			delete(rs.workspace.Status.AdditionalInfo, "org.eclipse.che.workspace/componentstatuses")
+			delete(rs.workspace.Status.AdditionalInfo, ComponentStatusesAdditionalInfo)
 		} else {
 
 			statusesAnnotation, err := json.Marshal(rs.componentInstanceStatuses)
 			if err != nil {
 				Log.Error(err, "")
 			}
-			rs.workspace.Status.AdditionalInfo["org.eclipse.che.workspace/componentstatuses"] = string(statusesAnnotation)
+			rs.workspace.Status.AdditionalInfo[ComponentStatusesAdditionalInfo] = string(statusesAnnotation)
 		}
 
 		rs.ReqLogger.V(1).Info("Status Update After Workspace Change : ", "status", rs.workspace.Status)
@@ -240,39 +241,39 @@ func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alph
 		workspace.Status.AdditionalInfo = map[string]string{}
 	}
 	if routing.Status.Phase != workspacev1alpha1.WorkspaceRoutingReady {
-		delete(workspace.Status.AdditionalInfo, "org.eclipse.che.workspace/runtime")
+		delete(workspace.Status.AdditionalInfo, RuntimeAdditionalInfo)
 		workspace.Status.IdeUrl = ""
 	} else {
 
-		statusesAnnotation := workspace.Status.AdditionalInfo["org.eclipse.che.workspace/componentstatuses"]
+		statusesAnnotation := workspace.Status.AdditionalInfo[ComponentStatusesAdditionalInfo]
 		if statusesAnnotation == "" {
 			Log.Error(nil, "statusesAnnotation is empty !")
 		}
 
-		statuses := []ComponentInstanceStatus{}
+		var statuses []ComponentInstanceStatus
 		err := json.Unmarshal([]byte(statusesAnnotation), &statuses)
 		if err != nil {
 			Log.Error(err, "")
 		}
 
-		commands := []CheWorkspaceCommand{}
-		machines := map[string]CheWorkspaceMachine{}
+		var commands []model.CheWorkspaceCommand
+		machines := map[string]model.CheWorkspaceMachine{}
 
 		for _, status := range statuses {
 			commands = append(commands, status.ContributedRuntimeCommands...)
 			for machineName, description := range status.Machines {
 				machineExposedEndpoints := routing.Status.ExposedEndpoints[machineName]
-				machineServers := map[string]CheWorkspaceServer{}
+				machineServers := map[string]model.CheWorkspaceServer{}
 				for _, endpoint := range machineExposedEndpoints {
-					machineServer := CheWorkspaceServer{
-						Status:     UnknownServerStatus,
+					machineServer := model.CheWorkspaceServer{
+						Status:     model.UnknownServerStatus,
 						URL:        &endpoint.Url,
-						Attributes: map[string]string{},
+						Attributes: map[workspacev1alpha1.EndpointAttribute]string{},
 					}
 					for name, val := range endpoint.Attributes {
 						serverAttributeName := name
 						serverAttributeValue := val
-						if name == "public" {
+						if name == workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE {
 							serverAttributeName = "internal"
 							if val == "true" {
 								serverAttributeValue = "false"
@@ -283,11 +284,11 @@ func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alph
 						machineServer.Attributes[serverAttributeName] = serverAttributeValue
 					}
 					machineServers[endpoint.Name] = machineServer
-					if endpoint.Attributes["type"] == "ide" {
+					if endpoint.Attributes[workspacev1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "ide" {
 						workspace.Status.IdeUrl = endpoint.Url
 					}
 				}
-				machines[machineName] = CheWorkspaceMachine{
+				machines[machineName] = model.CheWorkspaceMachine{
 					Servers:    machineServers,
 					Attributes: description.MachineAttributes,
 				}
@@ -295,18 +296,18 @@ func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alph
 		}
 
 		defaultEnv := "default"
-		runtime := CheWorkspaceRuntime{
+		wsRuntime := model.CheWorkspaceRuntime{
 			ActiveEnv: &defaultEnv,
 			Commands:  commands,
 			Machines:  machines,
 		}
 
-		runtimeAnnotation, err := json.Marshal(runtime)
+		runtimeAnnotation, err := json.Marshal(wsRuntime)
 		if err != nil {
 			return err
 		}
 
-		workspace.Status.AdditionalInfo["org.eclipse.che.workspace/runtime"] = string(runtimeAnnotation)
+		workspace.Status.AdditionalInfo[RuntimeAdditionalInfo] = string(runtimeAnnotation)
 	}
 
 	return nil
@@ -327,14 +328,18 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 		&workspacev1alpha1.WorkspaceRoutingList{},
 	} {
 		// TODO Change this to look for objects owned by the workspace CR
-		r.List(context.TODO(), list,
+		err := r.List(context.TODO(), list,
 			client.InNamespace(workspace.GetNamespace()),
-			client.MatchingLabels{"che.workspace_id": workspace.Status.WorkspaceId})
+			client.MatchingLabels{WorkspaceIDLabel: workspace.Status.WorkspaceId})
+		if err != nil {
+			Log.Error(err, "Failed to list workspaceRoutings for workspace %s in namespace %s", workspace.GetName(), workspace.GetNamespace())
+			return reconcile.Result{Requeue: true, RequeueAfter: 1}, err
+		}
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		for i := 0; i < items.Len(); i++ {
 			item := items.Index(i).Addr().Interface()
 			if itemPod, isPod := item.(*corev1.Pod); isPod {
-				podOriginalName, originalNameFound := itemPod.GetLabels()["che.original_name"]
+				podOriginalName, originalNameFound := itemPod.GetLabels()[CheOriginalNameLabel]
 				if !originalNameFound {
 					podOriginalName = "Unknown"
 				}
@@ -359,7 +364,11 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 				}
 			}
 			if itemRouting, isWorkspaceRouting := item.(*workspacev1alpha1.WorkspaceRouting); isWorkspaceRouting {
-				r.updateFromWorkspaceRouting(itemRouting, workspace)
+				err := r.updateFromWorkspaceRouting(itemRouting, workspace)
+				if err != nil {
+					Log.Error(err, "Failed to propagate workspaceRouting into workspace %s in namespace %s", workspace.GetName(), workspace.GetNamespace())
+					return reconcile.Result{Requeue: true, RequeueAfter: 1}, err
+				}
 			}
 		}
 	}
@@ -367,7 +376,7 @@ func (r *ReconcileWorkspace) updateStatusFromOwnedObjects(workspace *workspacev1
 		podList := &corev1.PodList{}
 		err := r.List(context.TODO(), podList,
 			client.InNamespace(workspace.GetNamespace()),
-			client.MatchingLabels{"che.workspace_id": workspace.Status.WorkspaceId})
+			client.MatchingLabels{WorkspaceIDLabel: workspace.Status.WorkspaceId})
 		if err == nil && len(podList.Items) == 0 {
 			workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseStopped
 			setWorkspaceCondition(&workspace.Status, *newWorkspaceCondition(

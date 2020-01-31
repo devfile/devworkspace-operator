@@ -24,7 +24,7 @@ import (
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
-func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, error) {
+func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, error) {
 	pvcStorageQuantity, err := resource.ParseQuantity(PVCStorageSize)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 				Namespace: workspace.Namespace,
 			},
 			Rules: []rbacv1.PolicyRule{
-				rbacv1.PolicyRule{
+				{
 					Resources: []string{"pods/exec"},
 					APIGroups: []string{""},
 					Verbs:     []string{"create"},
@@ -76,7 +76,7 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 				Namespace: workspace.Namespace,
 			},
 			Rules: []rbacv1.PolicyRule{
-				rbacv1.PolicyRule{
+				{
 					Resources: []string{"workspaces"},
 					APIGroups: []string{"workspace.che.eclipse.org"},
 					Verbs:     []string{"get", "list"},
@@ -110,7 +110,7 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 				Name: "exec",
 			},
 			Subjects: []rbacv1.Subject{
-				rbacv1.Subject{
+				{
 					Kind:      "ServiceAccount",
 					Name:      ServiceAccount,
 					Namespace: workspace.Namespace,
@@ -127,7 +127,7 @@ func managePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, e
 				Name: "view-workspaces",
 			},
 			Subjects: []rbacv1.Subject{
-				rbacv1.Subject{
+				{
 					Kind:      "ServiceAccount",
 					Name:      ServiceAccount,
 					Namespace: workspace.Namespace,

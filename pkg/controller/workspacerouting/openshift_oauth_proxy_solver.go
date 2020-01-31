@@ -132,14 +132,14 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 	proxyCount := 0
 	for _, serviceDesc := range cr.Instance.Spec.Services {
 		for _, endpoint := range serviceDesc.Endpoints {
-			if endpoint.Attributes["public"] == "true" {
+			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "true" {
 				proxyCountString := strconv.FormatInt(int64(proxyCount), 10)
 				targetServiceName := serviceDesc.ServiceName
 				targetServicePort := k8sModelUtils.ServicePortName(int(endpoint.Port))
 				var tls *routeV1.TLSConfig = nil
 
-				if endpoint.Attributes["secure"] == "true" {
-					if endpoint.Attributes["type"] == "terminal" {
+				if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
+					if endpoint.Attributes[workspacev1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "terminal" {
 						tls = &routeV1.TLSConfig{
 							Termination:                   routeV1.TLSTerminationEdge,
 							InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
@@ -160,15 +160,15 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 						proxyDeployment.Spec.Template.Spec.Containers = append(proxyDeployment.Spec.Template.Spec.Containers, corev1.Container{
 							Name: "oauth-proxy-" + proxyCountString,
 							Ports: []corev1.ContainerPort{
-								corev1.ContainerPort{
+								{
 									Name:          "public",
 									ContainerPort: int32(proxyHttpsPort),
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							ImagePullPolicy: corev1.PullIfNotPresent,
+							ImagePullPolicy: corev1.PullAlways,
 							VolumeMounts: []corev1.VolumeMount{
-								corev1.VolumeMount{
+								{
 									Name:      "proxy-tls" + proxyCountString,
 									MountPath: "/etc/tls/private",
 								},
@@ -314,11 +314,11 @@ func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) m
 	for machineName, serviceDesc := range cr.Instance.Spec.Services {
 		machineExposedEndpoints := []workspacev1alpha1.ExposedEndpoint{}
 		for _, endpoint := range serviceDesc.Endpoints {
-			if endpoint.Attributes["public"] == "false" {
+			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "false" {
 				continue
 			}
-			protocol := endpoint.Attributes["protocol"]
-			if endpoint.Attributes["secure"] == "true" {
+			protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
+			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
 				protocol = protocol + "s"
 			}
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{

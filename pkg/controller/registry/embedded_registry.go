@@ -39,7 +39,7 @@ const (
 	PrometheusPortName = "metrics"
 )
 
-// ExposeRegistryPort creates a Kubernetes Service to expose the passed registry port.
+//ExposeRegistryPort creates a Kubernetes Service to expose the passed registry port.
 func ExposeRegistryPort(ctx context.Context, port int32) (*v1.Service, error) {
 	client, err := createClient()
 	if err != nil {

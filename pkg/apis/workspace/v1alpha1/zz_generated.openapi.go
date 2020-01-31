@@ -118,7 +118,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"routingClass": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Class of the routing: this drives which Workspace exposer controller will manage this routing",
+							Description: "Class of the routing: this drives which Workspace Routing controller will manage this routing",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -132,14 +132,14 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.Referenc
 					},
 					"ingressGlobalDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ingress global domain (corresponds to the Openshift route suffix)",
+							Description: "ingress global domain (corresponds to the OpenShift route suffix)",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"workspacePodSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Selector that shoud be used by created services to point to the workspace Pod",
+							Description: "Selector that should be used by created services to point to the workspace Pod",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -233,7 +233,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 					},
 					"routingClass": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Routing class the defines how the workspace will be exposed toon the external network",
+							Description: "Routing class the defines how the workspace will be exposed to the external network",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -241,7 +241,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 					"devfile": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Workspace Structure defined in the Devfile format syntax. For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/",
-							Ref:         ref("./pkg/apis/workspace/v1alpha1.DevFileSpec"),
+							Ref:         ref("./pkg/apis/workspace/v1alpha1.DevfileSpec"),
 						},
 					},
 				},
@@ -249,6 +249,6 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/workspace/v1alpha1.DevFileSpec"},
+			"./pkg/apis/workspace/v1alpha1.DevfileSpec"},
 	}
 }

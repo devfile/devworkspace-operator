@@ -34,13 +34,13 @@ spec:
             exposed:
               description: Should the workspace be exposed ?
               type: boolean
+            ingressGlobalDomain:
+              description: ingress global domain (corresponds to the OpenShift route
+                suffix)
+              type: string
             routingClass:
               description: 'Class of the routing: this drives which Workspace Routing
                 controller will manage this routing'
-              type: string
-            ingressGlobalDomain:
-              description: ingress global domain (corresponds to the Openshift route
-                suffix)
               type: string
             services:
               additionalProperties:
@@ -77,13 +77,13 @@ spec:
             workspacePodSelector:
               additionalProperties:
                 type: string
-              description: Selector that shoud be used by created services to point
+              description: Selector that should be used by created services to point
                 to the workspace Pod
               type: object
           required:
           - exposed
-          - routingClass
           - ingressGlobalDomain
+          - routingClass
           - services
           - workspacePodSelector
           type: object

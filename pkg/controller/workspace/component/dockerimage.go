@@ -13,7 +13,7 @@
 package component
 
 import (
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/che_rest"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/server"
 	"github.com/eclipse/che-plugin-broker/model"
 	"regexp"
 	"strconv"
@@ -109,10 +109,10 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 
 	machineAttributes := map[string]string{}
 	if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
-		machineAttributes[che_rest.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-		machineAttributes[che_rest.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		machineAttributes[server.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		machineAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 	}
-	machineAttributes[che_rest.CONTAINER_SOURCE_ATTRIBUTE] = che_rest.RECIPE_CONTAINER_SOURCE
+	machineAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.RECIPE_CONTAINER_SOURCE
 	componentInstanceStatus.Machines[machineName] = MachineDescription{
 		MachineAttributes: machineAttributes,
 		Ports:             exposedPorts,
@@ -129,11 +129,11 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 			continue
 		}
 		attributes := map[string]string{
-			che_rest.COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), names),
-			che_rest.COMMAND_ACTION_REFERENCE_ATTRIBUTE:         emptyIfNil(action.Reference),
-			che_rest.COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE: emptyIfNil(action.ReferenceContent),
-			che_rest.COMMAND_MACHINE_NAME_ATTRIBUTE:             machineName,
-			che_rest.COMPONENT_ALIAS_COMMAND_ATTRIBUTE:          *action.Component,
+			server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), names),
+			server.COMMAND_ACTION_REFERENCE_ATTRIBUTE:         emptyIfNil(action.Reference),
+			server.COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE: emptyIfNil(action.ReferenceContent),
+			server.COMMAND_MACHINE_NAME_ATTRIBUTE:             machineName,
+			server.COMPONENT_ALIAS_COMMAND_ATTRIBUTE:          *action.Component,
 		}
 		for attrName, attrValue := range command.Attributes {
 			attributes[attrName] = attrValue

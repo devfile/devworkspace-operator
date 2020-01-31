@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package che_rest
+package server
 
 const (
 	MEMORY_LIMIT_ATTRIBUTE   = "memoryLimitBytes"

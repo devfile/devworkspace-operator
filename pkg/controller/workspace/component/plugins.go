@@ -15,7 +15,7 @@ package component
 import (
 	"encoding/json"
 	"errors"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/che_rest"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/server"
 	"strconv"
 	"strings"
 
@@ -275,11 +275,11 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 
 		machineAttributes := map[string]string{}
 		if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
-			machineAttributes[che_rest.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-			machineAttributes[che_rest.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+			machineAttributes[server.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+			machineAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 		}
-		machineAttributes[che_rest.CONTAINER_SOURCE_ATTRIBUTE] = che_rest.TOOL_CONTAINER_SOURCE
-		machineAttributes[che_rest.PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
+		machineAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.TOOL_CONTAINER_SOURCE
+		machineAttributes[server.PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
 
 		componentInstanceStatus.Machines[machineName] = MachineDescription{
 			MachineAttributes: machineAttributes,
@@ -293,8 +293,8 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 					CommandLine: strings.Join(command.Command, " "),
 					Type:        "custom",
 					Attributes: map[string]string{
-						che_rest.COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, names),
-						che_rest.COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
+						server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, names),
+						server.COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
 					},
 				})
 		}

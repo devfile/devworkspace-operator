@@ -14,7 +14,7 @@ package component
 
 import (
 	"errors"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/che_rest"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/server"
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
@@ -73,7 +73,7 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperti
 		return &workspaceProperties, nil, nil, nil, err
 	}
 
-	cheRestApisK8sObjects, externalUrl, err := che_rest.AddCheRestApis(workspaceProperties, &mainDeployment.Spec.Template.Spec)
+	cheRestApisK8sObjects, externalUrl, err := server.AddCheRestApis(workspaceProperties, &mainDeployment.Spec.Template.Spec)
 	if err != nil {
 		return &workspaceProperties, nil, nil, nil, err
 	}
@@ -355,11 +355,11 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			workspacePodTemplate.Spec.ImagePullSecrets = append(workspacePodTemplate.Spec.ImagePullSecrets, pullSecret)
 		}
 	}
-	workspacePodTemplate.Labels[che_rest.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
+	workspacePodTemplate.Labels[server.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 	for _, externalObject := range k8sObjects {
 		service, isAService := externalObject.(*corev1.Service)
 		if isAService {
-			service.Spec.Selector[che_rest.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
+			service.Spec.Selector[server.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 		}
 	}
 	return nil

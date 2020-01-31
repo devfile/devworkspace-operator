@@ -15,6 +15,7 @@ package component
 import (
 	"encoding/json"
 	"errors"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/che_rest"
 	"strconv"
 	"strings"
 
@@ -45,11 +46,11 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 	}
 
 	for _, def := range []initContainerDef{
-		initContainerDef{
+		{
 			imageName:  "che.workspace.plugin_broker.init.image",
 			pluginFQNs: []model.PluginFQN{},
 		},
-		initContainerDef{
+		{
 			imageName:  "che.workspace.plugin_broker.unified.image",
 			pluginFQNs: pluginFQNs,
 		},
@@ -99,7 +100,7 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 					Name:      configMapName,
 					Namespace: names.Namespace,
 					Labels: map[string]string{
-						"che.workspace_id": names.WorkspaceId,
+						WorkspaceIDLabel: names.WorkspaceId,
 					},
 				},
 				Data: map[string]string{
@@ -136,7 +137,7 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 			Image: *brokerImage,
 			Args:  args,
 
-			ImagePullPolicy:          corev1.PullIfNotPresent,
+			ImagePullPolicy:          corev1.PullAlways,
 			VolumeMounts:             volumeMounts,
 			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		})
@@ -252,17 +253,17 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 		}
 
 		for _, endpointDef := range chePlugin.Endpoints {
-			attributes := map[string]string{}
+			attributes := map[workspaceApi.EndpointAttribute]string{}
 			if endpointDef.Public {
-				attributes["public"] = "true"
+				attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE] = "true"
 			} else {
-				attributes["public"] = "false"
+				attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE] = "false"
 			}
 			for name, value := range endpointDef.Attributes {
-				attributes[name] = value
+				attributes[workspaceApi.EndpointAttribute(name)] = value
 			}
-			if attributes["protocol"] == "" {
-				attributes["protocol"] = "http"
+			if attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] == "" {
+				attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = "http"
 			}
 			endpoint := workspaceApi.Endpoint{
 				Name:       endpointDef.Name,
@@ -274,11 +275,11 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 
 		machineAttributes := map[string]string{}
 		if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
-			machineAttributes[MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-			machineAttributes[MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+			machineAttributes[che_rest.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+			machineAttributes[che_rest.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 		}
-		machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = TOOL_CONTAINER_SOURCE
-		machineAttributes[PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
+		machineAttributes[che_rest.CONTAINER_SOURCE_ATTRIBUTE] = che_rest.TOOL_CONTAINER_SOURCE
+		machineAttributes[che_rest.PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
 
 		componentInstanceStatus.Machines[machineName] = MachineDescription{
 			MachineAttributes: machineAttributes,
@@ -292,8 +293,8 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 					CommandLine: strings.Join(command.Command, " "),
 					Type:        "custom",
 					Attributes: map[string]string{
-						COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, names),
-						COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
+						che_rest.COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, names),
+						che_rest.COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
 					},
 				})
 		}

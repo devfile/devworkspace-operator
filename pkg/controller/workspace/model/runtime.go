@@ -12,6 +12,10 @@
 
 package model
 
+import "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+
+//Runtime objects that is supposed to be serialized into additionalInfo of WorkspaceStatus
+//and then propagated to Workspace Components via Che Rest API Emulator
 type CheWorkspaceRuntime struct {
 	ActiveEnv    *string                        `json:"activeEnv,omitempty"`
 	Commands     []CheWorkspaceCommand          `json:"commands,omitempty"`
@@ -42,9 +46,9 @@ const (
 )
 
 type CheWorkspaceServer struct {
-	Attributes map[string]string        `json:"attributes,omitempty"`
-	Status     CheWorkspaceServerStatus `json:"status"`
-	URL        *string                  `json:"url,omitempty"`
+	Attributes map[v1alpha1.EndpointAttribute]string `json:"attributes,omitempty"`
+	Status     CheWorkspaceServerStatus              `json:"status"`
+	URL        *string                               `json:"url,omitempty"`
 }
 
 type CheWorkspaceCommand struct {

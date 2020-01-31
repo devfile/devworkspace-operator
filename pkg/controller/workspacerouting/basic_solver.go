@@ -71,7 +71,7 @@ func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1be
 	ingresses := []extensionsv1beta1.Ingress{}
 	for _, serviceDesc := range cr.Instance.Spec.Services {
 		for _, endpoint := range serviceDesc.Endpoints {
-			if endpoint.Attributes["public"] == "true" {
+			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "true" {
 				ingresses = append(ingresses, extensionsv1beta1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      ingressName(serviceDesc, endpoint),
@@ -164,13 +164,13 @@ func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string
 	for machineName, serviceDesc := range cr.Instance.Spec.Services {
 		machineExposedEndpoints := []workspacev1alpha1.ExposedEndpoint{}
 		for _, endpoint := range serviceDesc.Endpoints {
-			if endpoint.Attributes["public"] == "false" {
+			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "false" {
 				continue
 			}
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{
 				Attributes: endpoint.Attributes,
 				Name:       endpoint.Name,
-				Url:        endpoint.Attributes["protocol"] + "://" + ingressHost(serviceDesc, endpoint, cr.Instance),
+				Url:        endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] + "://" + ingressHost(serviceDesc, endpoint, cr.Instance),
 			}
 			machineExposedEndpoints = append(machineExposedEndpoints, exposedEndpoint)
 		}

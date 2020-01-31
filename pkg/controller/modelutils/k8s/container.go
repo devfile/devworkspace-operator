@@ -17,7 +17,7 @@ import (
 )
 
 func BuildContainerPorts(exposedPorts []int, protocol corev1.Protocol) []corev1.ContainerPort {
-	containerPorts := []corev1.ContainerPort{}
+	var containerPorts []corev1.ContainerPort
 	for _, exposedPort := range exposedPorts {
 		containerPorts = append(containerPorts, corev1.ContainerPort{
 			ContainerPort: int32(exposedPort),

@@ -14,6 +14,7 @@ package component
 
 import (
 	"errors"
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/che_rest"
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
@@ -54,8 +55,8 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperti
 				RoutingClass:        workspaceProperties.RoutingClass,
 				IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 				WorkspacePodSelector: map[string]string{
-					"che.original_name": CheOriginalName,
-					"che.workspace_id":  workspaceProperties.WorkspaceId,
+					CheOriginalNameLabel: CheOriginalName,
+					WorkspaceIDLabel:     workspaceProperties.WorkspaceId,
 				},
 				Services: map[string]workspaceApi.ServiceDescription{},
 			},
@@ -72,7 +73,7 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperti
 		return &workspaceProperties, nil, nil, nil, err
 	}
 
-	cheRestApisK8sObjects, externalUrl, err := addCheRestApis(workspaceProperties, &mainDeployment.Spec.Template.Spec)
+	cheRestApisK8sObjects, externalUrl, err := che_rest.AddCheRestApis(workspaceProperties, &mainDeployment.Spec.Template.Spec)
 	if err != nil {
 		return &workspaceProperties, nil, nil, nil, err
 	}
@@ -99,20 +100,22 @@ func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.
 
 	fromIntOne := intstr.FromInt(1)
 
+	var user int64 = 1234
+
 	deploy := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      workspaceDeploymentName,
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				"che.workspace_id": wkspProps.WorkspaceId,
+				WorkspaceIDLabel: wkspProps.WorkspaceId,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"deployment":        workspaceDeploymentName,
-					"che.original_name": CheOriginalName,
-					"che.workspace_id":  wkspProps.WorkspaceId,
+					"deployment":         workspaceDeploymentName,
+					CheOriginalNameLabel: CheOriginalName,
+					WorkspaceIDLabel:     wkspProps.WorkspaceId,
 				},
 			},
 			Replicas: &replicas,
@@ -127,9 +130,9 @@ func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"deployment":         workspaceDeploymentName,
-						"che.original_name":  CheOriginalName,
-						"che.workspace_id":   wkspProps.WorkspaceId,
-						"che.workspace_name": wkspProps.WorkspaceName,
+						CheOriginalNameLabel: CheOriginalName,
+						WorkspaceIDLabel:     wkspProps.WorkspaceId,
+						WorkspaceNameLabel:   wkspProps.WorkspaceName,
 					},
 					Name: workspaceDeploymentName,
 				},
@@ -138,6 +141,10 @@ func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
 					Containers:                    []corev1.Container{},
+					SecurityContext: &corev1.PodSecurityContext{
+						RunAsUser: &user,
+						FSGroup:   &user,
+					},
 				},
 			},
 		},
@@ -154,7 +161,7 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 		ClaimName: "claim-che-workspace",
 	}
 	deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
-		corev1.Volume{
+		{
 			Name: "claim-che-workspace",
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &workspaceClaim,
@@ -164,7 +171,7 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
+func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevfileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
 	components := devfile.Components
 	k8sObjects := []runtime.Object{}
 
@@ -177,7 +184,7 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec
 		var err error
 		var componentInstanceStatus *ComponentInstanceStatus
 		switch componentType {
-		case "cheEditor", "chePlugin":
+		case workspaceApi.CheEditor, workspaceApi.ChePlugin:
 			componentInstanceStatus, err = setupChePlugin(names, &component)
 			if err != nil {
 				return nil, nil, nil, err
@@ -186,10 +193,10 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec
 				pluginFQNs = append(pluginFQNs, *componentInstanceStatus.PluginFQN)
 			}
 			break
-		case "kubernetes", "openshift":
+		case workspaceApi.Kubernetes, workspaceApi.Openshift:
 			componentInstanceStatus, err = setupK8sLikeComponent(names, &component)
 			break
-		case "dockerimage":
+		case workspaceApi.Dockerimage:
 			componentInstanceStatus, err = setupDockerimageComponent(names, devfile.Commands, &component)
 			break
 		}
@@ -200,7 +207,10 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec
 		componentInstanceStatuses = append(componentInstanceStatuses, *componentInstanceStatus)
 	}
 
-	mergeWorkspaceAdditions(deployment, componentInstanceStatuses, k8sObjects)
+	err := mergeWorkspaceAdditions(deployment, componentInstanceStatuses, k8sObjects)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	precreateSubpathsInitContainer(names, &deployment.Spec.Template.Spec)
 	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginFQNs)
@@ -212,7 +222,7 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevFileSpec
 
 	workspaceRouting := buildWorkspaceRouting(names, componentInstanceStatuses)
 
-	// TODO store the annotation of the workspaceAPi: avec le defer ????
+	// TODO store the annotation of the workspaceAPi: with the defer ????
 
 	return workspaceRouting, componentInstanceStatuses, k8sObjects, nil
 }
@@ -229,11 +239,11 @@ func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstance
 						continue
 					}
 					if endpoint.Attributes == nil {
-						endpoint.Attributes = map[string]string{}
+						endpoint.Attributes = map[workspaceApi.EndpointAttribute]string{}
 					}
 					// public is the default.
-					if _, exists := endpoint.Attributes["public"]; !exists {
-						endpoint.Attributes["public"] = "true"
+					if _, exists := endpoint.Attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE]; !exists {
+						endpoint.Attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE] = "true"
 					}
 					machineEndpoints = append(machineEndpoints, endpoint)
 				}
@@ -256,17 +266,16 @@ func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstance
 			RoutingClass:        wkspProperties.RoutingClass,
 			IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 			WorkspacePodSelector: map[string]string{
-				"che.original_name": CheOriginalName,
-				"che.workspace_id":  wkspProperties.WorkspaceId,
+				CheOriginalNameLabel: CheOriginalName,
+				WorkspaceIDLabel:     wkspProperties.WorkspaceId,
 			},
 			Services: services,
 		},
 	}
 }
 
-// Penser au admission controller pour ajouter le nom du user dnas le workspace ? E tout cas ajouter le nom du
-// users dans la custom resource du workspace. + la classe de workspace routing.
-
+//TODO Think of the admission controller to add the name of the user in the workspace?
+// In any case add the name of the users in the custom resource of the workspace. + the workspace routing class.
 func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.PodSpec) {
 	podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
 		Name:    "precreate-subpaths",
@@ -279,7 +288,7 @@ func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.P
 			"777",
 			"/tmp/che-workspaces/" + names.WorkspaceId,
 		},
-		ImagePullPolicy: corev1.PullIfNotPresent,
+		ImagePullPolicy: corev1.PullAlways,
 		VolumeMounts: []corev1.VolumeMount{
 			corev1.VolumeMount{
 				MountPath: "/tmp/che-workspaces",
@@ -316,7 +325,7 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 
 		for _, container := range addition.Spec.Containers {
 			if _, exists := containers[container.Name]; exists {
-				return errors.New("Duplicate conainers in the workspace definition: " + container.Name)
+				return errors.New("Duplicate containers in the workspace definition: " + container.Name)
 			}
 			containers[container.Name] = container
 			workspacePodTemplate.Spec.Containers = append(workspacePodTemplate.Spec.Containers, container)
@@ -346,11 +355,11 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			workspacePodTemplate.Spec.ImagePullSecrets = append(workspacePodTemplate.Spec.ImagePullSecrets, pullSecret)
 		}
 	}
-	workspacePodTemplate.Labels[DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
+	workspacePodTemplate.Labels[che_rest.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 	for _, externalObject := range k8sObjects {
 		service, isAService := externalObject.(*corev1.Service)
 		if isAService {
-			service.Spec.Selector[DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
+			service.Spec.Selector[che_rest.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 		}
 	}
 	return nil

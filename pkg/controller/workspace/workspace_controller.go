@@ -136,7 +136,7 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 		return err
 	}
 
-	ControllerCfg.ControllerIsOpenshift = isOS
+	ControllerCfg.SetIsOpenShift(isOS)
 
 	return nil
 }
@@ -209,7 +209,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 
 	defer r.updateStatusAfterWorkspaceChange(reconcileStatus)
 
-	prerequisites, err := managePrerequisites(instance)
+	prerequisites, err := generatePrerequisites(instance)
 	if err != nil {
 		reconcileStatus.failure = err.Error()
 		return reconcile.Result{}, err
@@ -277,7 +277,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, nil
 		}
 
-		k8sObjectAsMetaObject.SetLabels(map[string]string{"che.workspace_id": workspaceProperties.WorkspaceId})
+		k8sObjectAsMetaObject.SetLabels(map[string]string{WorkspaceIDLabel: workspaceProperties.WorkspaceId})
 
 		// Check if the k8s Object already exists
 
@@ -391,7 +391,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 	} {
 		r.List(context.TODO(), list,
 			client.InNamespace(workspaceProperties.Namespace),
-			client.MatchingLabels{"che.workspace_id": workspaceProperties.WorkspaceId})
+			client.MatchingLabels{WorkspaceIDLabel: workspaceProperties.WorkspaceId})
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		for i := 0; i < items.Len(); i++ {
 			item := items.Index(i).Addr().Interface()

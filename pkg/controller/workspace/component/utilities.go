@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 )
 
@@ -41,10 +40,6 @@ func endpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {
 		ports = append(ports, int(endpint.Port))
 	}
 	return ports
-}
-
-func ingressHostName(name string, wkspProperties WorkspaceProperties) string {
-	return name + "-" + wkspProperties.Namespace + "." + ControllerCfg.GetIngressGlobalDomain()
 }
 
 func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
@@ -68,9 +63,9 @@ func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, 
 
 	if mountSources != nil && *mountSources {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			MountPath: "/projects",
+			MountPath: DefaultProjectsSourcesRoot,
 			Name:      volumeName,
-			SubPath:   workspaceProps.WorkspaceId + "/projects/",
+			SubPath:   workspaceProps.WorkspaceId + DefaultProjectsSourcesRoot,
 		})
 	}
 
@@ -90,13 +85,13 @@ func createK8sServicesForMachines(wkspProps WorkspaceProperties, machineName str
 					"org.eclipse.che.machine.name": machineName,
 				},
 				Labels: map[string]string{
-					"che.workspace_id": wkspProps.WorkspaceId,
+					WorkspaceIDLabel: wkspProps.WorkspaceId,
 				},
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
-					"che.original_name": CheOriginalName,
-					"che.workspace_id":  wkspProps.WorkspaceId,
+					CheOriginalNameLabel: CheOriginalName,
+					WorkspaceIDLabel:     wkspProps.WorkspaceId,
 				},
 				Type:  corev1.ServiceTypeClusterIP,
 				Ports: servicePorts,

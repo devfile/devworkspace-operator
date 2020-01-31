@@ -13,6 +13,7 @@
 package component
 
 import (
+	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/che_rest"
 	"github.com/eclipse/che-plugin-broker/model"
 	"regexp"
 	"strconv"
@@ -40,11 +41,11 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 	componentInstanceStatus.ExternalObjects = []runtime.Object{}
 
 	var machineName string
-	if component.Alias == nil {
+	if component.Alias == "" {
 		re := regexp.MustCompile(`[^-a-zA-Z0-9_]`)
 		machineName = re.ReplaceAllString(*component.Image, "-")
 	} else {
-		machineName = *component.Alias
+		machineName = component.Alias
 	}
 
 	var exposedPorts []int = endpointPortsToInts(component.Endpoints)
@@ -68,7 +69,7 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 	for _, envVarDef := range component.Env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  envVarDef.Name,
-			Value: strings.ReplaceAll(envVarDef.Value, "$(CHE_PROJECTS_ROOT)", "/projects"),
+			Value: strings.ReplaceAll(envVarDef.Value, "$(CHE_PROJECTS_ROOT)", DefaultProjectsSourcesRoot),
 		})
 	}
 	envVars = append(envVars, corev1.EnvVar{
@@ -98,8 +99,6 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 		container.Args = *component.Args
 	}
 
-	// TODO selector, etc ....
-
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
 	for _, service := range createK8sServicesForMachines(names, machineName, exposedPorts) {
@@ -110,10 +109,10 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 
 	machineAttributes := map[string]string{}
 	if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
-		machineAttributes[MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-		machineAttributes[MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		machineAttributes[che_rest.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		machineAttributes[che_rest.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 	}
-	machineAttributes[CONTAINER_SOURCE_ATTRIBUTE] = RECIPE_CONTAINER_SOURCE
+	machineAttributes[che_rest.CONTAINER_SOURCE_ATTRIBUTE] = che_rest.RECIPE_CONTAINER_SOURCE
 	componentInstanceStatus.Machines[machineName] = MachineDescription{
 		MachineAttributes: machineAttributes,
 		Ports:             exposedPorts,
@@ -124,17 +123,17 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 			continue
 		}
 		action := command.Actions[0]
-		if component.Alias == nil ||
+		if component.Alias == "" ||
 			action.Component == nil ||
-			*action.Component != *component.Alias {
+			*action.Component != component.Alias {
 			continue
 		}
 		attributes := map[string]string{
-			COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), names),
-			COMMAND_ACTION_REFERENCE_ATTRIBUTE:         emptyIfNil(action.Reference),
-			COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE: emptyIfNil(action.ReferenceContent),
-			COMMAND_MACHINE_NAME_ATTRIBUTE:             machineName,
-			COMPONENT_ALIAS_COMMAND_ATTRIBUTE:          *action.Component,
+			che_rest.COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), names),
+			che_rest.COMMAND_ACTION_REFERENCE_ATTRIBUTE:         emptyIfNil(action.Reference),
+			che_rest.COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE: emptyIfNil(action.ReferenceContent),
+			che_rest.COMMAND_MACHINE_NAME_ATTRIBUTE:             machineName,
+			che_rest.COMPONENT_ALIAS_COMMAND_ATTRIBUTE:          *action.Component,
 		}
 		for attrName, attrValue := range command.Attributes {
 			attributes[attrName] = attrValue

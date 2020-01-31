@@ -42,7 +42,7 @@ import (
 
 var ControllerCfg ControllerConfig
 
-var (
+const (
 	ConfigMapNameEnvVar      = "CONTROLLER_CONGIG_MAP_NAME"
 	ConfigMapNamespaceEnvVar = "CONTROLLER_CONGIG_MAP_NAMESPACE"
 )
@@ -53,8 +53,8 @@ var ConfigMapReference = client.ObjectKey{
 }
 
 type ControllerConfig struct {
-	configMap             *corev1.ConfigMap
-	ControllerIsOpenshift bool
+	configMap   *corev1.ConfigMap
+	isOpenShift bool
 }
 
 func (wc *ControllerConfig) update(configMap *corev1.ConfigMap) {
@@ -86,14 +86,18 @@ func (wc *ControllerConfig) GetCheRestApisDockerImage() string {
 	return *optional
 }
 
-func (wc *ControllerConfig) IsOpenshift() bool {
-	return wc.ControllerIsOpenshift
+func (wc *ControllerConfig) IsOpenShift() bool {
+	return wc.isOpenShift
+}
+
+func (wc *ControllerConfig) SetIsOpenShift(isOpenShift bool) {
+	wc.isOpenShift = isOpenShift
 }
 
 func (wc *ControllerConfig) GetSidecarPullPolicy() string {
 	optional := wc.GetProperty("sidecar.pull.policy")
 	if optional == nil {
-		return "IfNotPresent"
+		return "Always"
 	}
 	return *optional
 }
@@ -167,7 +171,7 @@ func WatchControllerConfig(ctr controller.Controller, mgr manager.Manager) error
 		Log.Info(fmt.Sprintf("  => found config map '%s' in namespace '%s'", configMap.GetObjectMeta().GetName(), configMap.GetObjectMeta().GetNamespace()))
 	}
 
-	err = fillOpenshiftRouteSuffixIfNecessary(nonCachedClient, configMap)
+	err = fillOpenShiftRouteSuffixIfNecessary(nonCachedClient, configMap)
 	if err != nil {
 		return err
 	}
@@ -209,7 +213,7 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	}
 }
 
-func fillOpenshiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMap *corev1.ConfigMap) error {
+func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMap *corev1.ConfigMap) error {
 	isOS, err := IsOpenShift()
 	if err != nil {
 		return err

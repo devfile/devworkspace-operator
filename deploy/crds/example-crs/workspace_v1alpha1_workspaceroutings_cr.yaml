@@ -1,7 +1,78 @@
 apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: WorkspaceRouting
 metadata:
-  name: example-workspacerouting
+  labels:
+    che.workspace_id: workspacee200e582a7ab43c6
+  name: workspacee200e582a7ab43c6
 spec:
-  # Add fields here
-  size: 3
+  exposed: true
+  ingressGlobalDomain: 192.168.99.100.nip.io
+  routingClass: ""
+  workspacePodSelector:
+    che.original_name: workspace
+    che.workspace_id: workspacee200e582a7ab43c6
+  services:
+    che-machine-exec:
+      endpoints:
+        - attributes:
+            cookiesAuthEnabled: "true"
+            discoverable: "false"
+            protocol: ws
+            public: "true"
+            secure: "true"
+            type: terminal
+          name: che-machine-exec
+          port: 4444
+      serviceName: servere200e582a7ab43c6-che-machine-exec
+    mysql:
+      endpoints:
+        - attributes:
+            discoverable: "true"
+            public: "false"
+          name: db
+          port: 3306
+      serviceName: servere200e582a7ab43c6-mysql
+    theia-ide:
+      endpoints:
+        - attributes:
+            cookiesAuthEnabled: "true"
+            discoverable: "false"
+            protocol: http
+            public: "true"
+            secure: "true"
+            type: ide
+          name: theia
+          port: 3100
+        - attributes:
+            discoverable: "false"
+            protocol: http
+            public: "true"
+            type: ide-dev
+          name: theia-dev
+          port: 3130
+        - attributes:
+            discoverable: "false"
+            protocol: http
+            public: "true"
+          name: theia-redirect-1
+          port: 13131
+        - attributes:
+            discoverable: "false"
+            protocol: http
+            public: "true"
+          name: theia-redirect-2
+          port: 13132
+        - attributes:
+            discoverable: "false"
+            protocol: http
+            public: "true"
+          name: theia-redirect-3
+          port: 13133
+      serviceName: servere200e582a7ab43c6-theia-ide
+    tools:
+      endpoints:
+        - attributes:
+            public: "true"
+          name: 8080/tcp
+          port: 8080
+      serviceName: servere200e582a7ab43c6-tools

@@ -46,23 +46,6 @@ const (
 	ConfigMapNamespaceEnvVar = "CONTROLLER_CONGIG_MAP_NAMESPACE"
 )
 
-const (
-	ServerImageName = "cherestapis.image.name"
-
-	SidecarPullPolicy = "sidecar.pull.policy"
-
-	PluginRegistryURL = "plugin.registry.url"
-
-	IngressGlobalDomain = "ingress.global.domain"
-
-	//WorkspacePVCName config property handles the PVC name that should be created and used for all workspaces within one kubernetes namespace
-	WorkspacePVCName             = "pvc.name"
-	WorkspacePVCStorageClassName = "pvc.storageclass.name"
-
-	UnifiedPluginBrokerImage = "che.workspace.plugin_broker.unified.image"
-	InitPluginBrokerImage    = "che.workspace.plugin_broker.init.image"
-)
-
 var ConfigMapReference = client.ObjectKey{
 	Namespace: "",
 	Name:      "che-workspace-crd-controller",
@@ -79,23 +62,23 @@ func (wc *ControllerConfig) update(configMap *corev1.ConfigMap) {
 }
 
 func (wc *ControllerConfig) GetWorkspacePVCName() string {
-	return wc.GetPropertyOrDefault(WorkspacePVCName, DefaultWorkspacePVCName)
+	return wc.GetPropertyOrDefault(workspacePVCName, defaultWorkspacePVCName)
 }
 
 func (wc *ControllerConfig) GetPluginRegistry() string {
-	return wc.GetPropertyOrDefault(PluginRegistryURL, registry.EmbeddedPluginRegistryUrl)
+	return wc.GetPropertyOrDefault(pluginRegistryURL, registry.EmbeddedPluginRegistryUrl)
 }
 
 func (wc *ControllerConfig) GetIngressGlobalDomain() string {
-	return wc.GetPropertyOrDefault(IngressGlobalDomain, DefaultIngressGlobalDomain)
+	return wc.GetPropertyOrDefault(ingressGlobalDomain, defaultIngressGlobalDomain)
 }
 
 func (wc *ControllerConfig) GetPVCStorageClassName() *string {
-	return wc.GetProperty(WorkspacePVCStorageClassName)
+	return wc.GetProperty(workspacePVCStorageClassName)
 }
 
 func (wc *ControllerConfig) GetCheRestApisDockerImage() string {
-	return wc.GetPropertyOrDefault(ServerImageName, DefaultServerImageName)
+	return wc.GetPropertyOrDefault(serverImageName, defaultServerImageName)
 }
 
 func (wc *ControllerConfig) IsOpenShift() bool {
@@ -107,7 +90,7 @@ func (wc *ControllerConfig) SetIsOpenShift(isOpenShift bool) {
 }
 
 func (wc *ControllerConfig) GetSidecarPullPolicy() string {
-	return wc.GetPropertyOrDefault(SidecarPullPolicy, DefaultSidecarPullPolicy)
+	return wc.GetPropertyOrDefault(sidecarPullPolicy, defaultSidecarPullPolicy)
 }
 
 func (wc *ControllerConfig) GetProperty(name string) *string {
@@ -224,9 +207,9 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Namespace = ConfigMapReference.Namespace
 
 	cm.Data = map[string]string{
-		IngressGlobalDomain:      DefaultIngressGlobalDomain,
-		UnifiedPluginBrokerImage: DefaultUnifiedPluginBrokerImage,
-		InitPluginBrokerImage:    DefaultInitPluginBrokerImage,
+		ingressGlobalDomain:      defaultIngressGlobalDomain,
+		unifiedPluginBrokerImage: defaultUnifiedPluginBrokerImage,
+		initPluginBrokerImage:    defaultInitPluginBrokerImage,
 	}
 }
 

@@ -261,7 +261,7 @@ func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alph
 
 		for _, status := range statuses {
 			commands = append(commands, status.ContributedRuntimeCommands...)
-			for machineName, description := range status.Machines {
+			for machineName, description := range status.Containers {
 				machineExposedEndpoints := routing.Status.ExposedEndpoints[machineName]
 				machineServers := map[string]model.CheWorkspaceServer{}
 				for _, endpoint := range machineExposedEndpoints {
@@ -290,7 +290,7 @@ func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alph
 				}
 				machines[machineName] = model.CheWorkspaceMachine{
 					Servers:    machineServers,
-					Attributes: description.MachineAttributes,
+					Attributes: description.Attributes,
 				}
 			}
 		}

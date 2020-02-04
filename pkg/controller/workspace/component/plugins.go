@@ -137,7 +137,7 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 			Image: *brokerImage,
 			Args:  args,
 
-			ImagePullPolicy:          corev1.PullAlways,
+			ImagePullPolicy:          corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 			VolumeMounts:             volumeMounts,
 			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		})

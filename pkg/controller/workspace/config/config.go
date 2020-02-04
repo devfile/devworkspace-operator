@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
 	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
 
 	"fmt"
@@ -45,6 +44,21 @@ var ControllerCfg ControllerConfig
 const (
 	ConfigMapNameEnvVar      = "CONTROLLER_CONGIG_MAP_NAME"
 	ConfigMapNamespaceEnvVar = "CONTROLLER_CONGIG_MAP_NAMESPACE"
+)
+
+const (
+	ServerImageName = "cherestapis.image.name"
+
+	SidecarPullPolicy = "sidecar.pull.policy"
+
+	PluginRegistryURL = "plugin.registry.url"
+
+	IngressGlobalDomain = "ingress.global.domain"
+
+	PVCStorageClassName = "pvc.storageclass.name"
+
+	UnifiedPluginBrokerImage = "che.workspace.plugin_broker.unified.image"
+	InitPluginBrokerImage    = "che.workspace.plugin_broker.init.image"
 )
 
 var ConfigMapReference = client.ObjectKey{
@@ -63,27 +77,19 @@ func (wc *ControllerConfig) update(configMap *corev1.ConfigMap) {
 }
 
 func (wc *ControllerConfig) GetPluginRegistry() string {
-	optional := wc.GetProperty("plugin.registry")
-	if optional != nil {
-		return *optional
-	}
-	return registry.EmbeddedPluginRegistryUrl
+	return wc.GetPropertyOrDefault(PluginRegistryURL, registry.EmbeddedPluginRegistryUrl)
 }
 
 func (wc *ControllerConfig) GetIngressGlobalDomain() string {
-	return *wc.GetProperty("ingress.global.domain")
+	return wc.GetPropertyOrDefault(IngressGlobalDomain, DefaultIngressGlobalDomain)
 }
 
 func (wc *ControllerConfig) GetPVCStorageClassName() *string {
-	return wc.GetProperty("pvc.storageclass.name")
+	return wc.GetProperty(PVCStorageClassName)
 }
 
 func (wc *ControllerConfig) GetCheRestApisDockerImage() string {
-	optional := wc.GetProperty("cherestapis.image.name")
-	if optional == nil {
-		return "quay.io/che-incubator/che-workspace-crd-rest-apis:" + CheVersion
-	}
-	return *optional
+	return wc.GetPropertyOrDefault(ServerImageName, DefaultServerImageName)
 }
 
 func (wc *ControllerConfig) IsOpenShift() bool {
@@ -95,11 +101,7 @@ func (wc *ControllerConfig) SetIsOpenShift(isOpenShift bool) {
 }
 
 func (wc *ControllerConfig) GetSidecarPullPolicy() string {
-	optional := wc.GetProperty("sidecar.pull.policy")
-	if optional == nil {
-		return "Always"
-	}
-	return *optional
+	return wc.GetPropertyOrDefault(SidecarPullPolicy, DefaultSidecarPullPolicy)
 }
 
 func (wc *ControllerConfig) GetProperty(name string) *string {
@@ -108,6 +110,14 @@ func (wc *ControllerConfig) GetProperty(name string) *string {
 		return &val
 	}
 	return nil
+}
+
+func (wc *ControllerConfig) GetPropertyOrDefault(name string, defaultValue string) string {
+	val, exists := wc.configMap.Data[name]
+	if exists {
+		return val
+	}
+	return defaultValue
 }
 
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {
@@ -206,10 +216,11 @@ func WatchControllerConfig(ctr controller.Controller, mgr manager.Manager) error
 func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Name = ConfigMapReference.Name
 	cm.Namespace = ConfigMapReference.Namespace
+
 	cm.Data = map[string]string{
-		"ingress.global.domain":                     "",
-		"che.workspace.plugin_broker.unified.image": "eclipse/che-unified-plugin-broker:v0.20",
-		"che.workspace.plugin_broker.init.image":    "eclipse/che-init-plugin-broker:v0.20",
+		IngressGlobalDomain:      DefaultIngressGlobalDomain,
+		UnifiedPluginBrokerImage: DefaultUnifiedPluginBrokerImage,
+		InitPluginBrokerImage:    DefaultInitPluginBrokerImage,
 	}
 }
 

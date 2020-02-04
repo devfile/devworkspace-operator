@@ -47,6 +47,4 @@ const (
 
 	//CheOriginalNameLabel is label key to original name
 	CheOriginalNameLabel = "che.original_name"
-
-	CheVersion = "7.1.0"
 )

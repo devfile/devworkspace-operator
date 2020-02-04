@@ -55,7 +55,9 @@ const (
 
 	IngressGlobalDomain = "ingress.global.domain"
 
-	PVCStorageClassName = "pvc.storageclass.name"
+	//WorkspacePVCName config property handles the PVC name that should be created and used for all workspaces within one kubernetes namespace
+	WorkspacePVCName             = "pvc.name"
+	WorkspacePVCStorageClassName = "pvc.storageclass.name"
 
 	UnifiedPluginBrokerImage = "che.workspace.plugin_broker.unified.image"
 	InitPluginBrokerImage    = "che.workspace.plugin_broker.init.image"
@@ -76,6 +78,10 @@ func (wc *ControllerConfig) update(configMap *corev1.ConfigMap) {
 	wc.configMap = configMap
 }
 
+func (wc *ControllerConfig) GetWorkspacePVCName() string {
+	return wc.GetPropertyOrDefault(WorkspacePVCName, DefaultWorkspacePVCName)
+}
+
 func (wc *ControllerConfig) GetPluginRegistry() string {
 	return wc.GetPropertyOrDefault(PluginRegistryURL, registry.EmbeddedPluginRegistryUrl)
 }
@@ -85,7 +91,7 @@ func (wc *ControllerConfig) GetIngressGlobalDomain() string {
 }
 
 func (wc *ControllerConfig) GetPVCStorageClassName() *string {
-	return wc.GetProperty(PVCStorageClassName)
+	return wc.GetProperty(WorkspacePVCStorageClassName)
 }
 
 func (wc *ControllerConfig) GetCheRestApisDockerImage() string {

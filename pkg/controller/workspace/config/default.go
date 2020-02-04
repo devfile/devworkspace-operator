@@ -8,4 +8,6 @@ const (
 	DefaultUnifiedPluginBrokerImage = "eclipse/che-unified-plugin-broker:v0.20"
 
 	DefaultIngressGlobalDomain = ""
+
+	DefaultWorkspacePVCName = "claim-che-workspace"
 )

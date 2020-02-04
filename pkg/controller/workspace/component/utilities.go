@@ -14,6 +14,7 @@ package component
 
 import (
 	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	config "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
 	"github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,9 +44,9 @@ func endpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {
 }
 
 func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
-	var volumeMounts []corev1.VolumeMount
-	volumeName := "claim-che-workspace"
+	volumeName := config.ControllerCfg.GetWorkspacePVCName()
 
+	var volumeMounts []corev1.VolumeMount
 	for _, volDef := range devfileVolumes {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: volDef.ContainerPath,

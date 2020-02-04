@@ -158,11 +158,11 @@ func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.
 
 func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *appsv1.Deployment) error {
 	var workspaceClaim = corev1.PersistentVolumeClaimVolumeSource{
-		ClaimName: "claim-che-workspace",
+		ClaimName: ControllerCfg.GetWorkspacePVCName(),
 	}
 	deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 		{
-			Name: "claim-che-workspace",
+			Name: ControllerCfg.GetWorkspacePVCName(),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &workspaceClaim,
 			},
@@ -292,7 +292,7 @@ func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.P
 		VolumeMounts: []corev1.VolumeMount{
 			corev1.VolumeMount{
 				MountPath: "/tmp/che-workspaces",
-				Name:      "claim-che-workspace",
+				Name:      ControllerCfg.GetWorkspacePVCName(),
 				ReadOnly:  false,
 			},
 		},

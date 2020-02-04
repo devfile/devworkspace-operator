@@ -35,7 +35,7 @@ func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object,
 	k8sObjects := []runtime.Object{
 		&corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "claim-che-workspace",
+				Name:      ControllerCfg.GetWorkspacePVCName(),
 				Namespace: workspace.Namespace,
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{

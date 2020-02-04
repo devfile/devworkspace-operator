@@ -230,9 +230,9 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevfileSpec
 func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceRouting {
 	services := map[string]workspaceApi.ServiceDescription{}
 	for _, componentInstanceStatus := range componentInstanceStatuses {
-		for machineName, machine := range componentInstanceStatus.Machines {
-			machineEndpoints := []workspaceApi.Endpoint{}
-			for _, port := range machine.Ports {
+		for containerName, container := range componentInstanceStatus.Containers {
+			containerEndpoints := []workspaceApi.Endpoint{}
+			for _, port := range container.Ports {
 				port64 := int64(port)
 				for _, endpoint := range componentInstanceStatus.Endpoints {
 					if endpoint.Port != port64 {
@@ -245,13 +245,13 @@ func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstance
 					if _, exists := endpoint.Attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE]; !exists {
 						endpoint.Attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE] = "true"
 					}
-					machineEndpoints = append(machineEndpoints, endpoint)
+					containerEndpoints = append(containerEndpoints, endpoint)
 				}
 			}
-			if len(machineEndpoints) > 0 {
-				services[machineName] = workspaceApi.ServiceDescription{
-					ServiceName: machineServiceName(wkspProperties, machineName),
-					Endpoints:   machineEndpoints,
+			if len(containerEndpoints) > 0 {
+				services[containerName] = workspaceApi.ServiceDescription{
+					ServiceName: containerServiceName(wkspProperties, containerName),
+					Endpoints:   containerEndpoints,
 				}
 			}
 		}

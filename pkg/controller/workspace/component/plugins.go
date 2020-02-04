@@ -185,7 +185,7 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 	}
 
 	componentInstanceStatus := &ComponentInstanceStatus{
-		Machines:                   map[string]MachineDescription{},
+		Containers:                 map[string]ContainerDescription{},
 		Endpoints:                  []workspaceApi.Endpoint{},
 		ContributedRuntimeCommands: []CheWorkspaceCommand{},
 		PluginFQN:                  &pluginFQN,
@@ -199,7 +199,7 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 	componentInstanceStatus.ExternalObjects = []runtime.Object{}
 
 	for _, containerDef := range chePlugin.Containers {
-		machineName := containerDef.Name
+		containerName := containerDef.Name
 
 		var exposedPorts []int = exposedPortsToInts(containerDef.Ports)
 
@@ -227,10 +227,10 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 		}
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  "CHE_MACHINE_NAME",
-			Value: machineName,
+			Value: containerName,
 		})
 		container := corev1.Container{
-			Name:            machineName,
+			Name:            containerName,
 			Image:           containerDef.Image,
 			ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 			Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
@@ -248,7 +248,7 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 		}
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
-		for _, service := range createK8sServicesForMachines(names, machineName, exposedPorts) {
+		for _, service := range createK8sServicesForContainers(names, containerName, exposedPorts) {
 			componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 		}
 
@@ -273,17 +273,17 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 			componentInstanceStatus.Endpoints = append(componentInstanceStatus.Endpoints, endpoint)
 		}
 
-		machineAttributes := map[string]string{}
+		containerAttributes := map[string]string{}
 		if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
-			machineAttributes[server.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-			machineAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+			containerAttributes[server.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+			containerAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 		}
-		machineAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.TOOL_CONTAINER_SOURCE
-		machineAttributes[server.PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
+		containerAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.TOOL_CONTAINER_SOURCE
+		containerAttributes[server.PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
 
-		componentInstanceStatus.Machines[machineName] = MachineDescription{
-			MachineAttributes: machineAttributes,
-			Ports:             exposedPorts,
+		componentInstanceStatus.Containers[containerName] = ContainerDescription{
+			Attributes: containerAttributes,
+			Ports:      exposedPorts,
 		}
 
 		for _, command := range containerDef.Commands {
@@ -294,7 +294,7 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 					Type:        "custom",
 					Attributes: map[string]string{
 						server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, names),
-						server.COMMAND_MACHINE_NAME_ATTRIBUTE:      machineName,
+						server.COMMAND_MACHINE_NAME_ATTRIBUTE:      containerName,
 					},
 				})
 		}

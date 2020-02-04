@@ -30,8 +30,8 @@ func emptyIfNil(s *string) string {
 	return ""
 }
 
-func machineServiceName(wkspProps WorkspaceProperties, machineName string) string {
-	return "server" + strings.ReplaceAll(wkspProps.WorkspaceId, "workspace", "") + "-" + machineName
+func containerServiceName(wkspProps WorkspaceProperties, containerName string) string {
+	return "server" + strings.ReplaceAll(wkspProps.WorkspaceId, "workspace", "") + "-" + containerName
 }
 
 func endpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {
@@ -72,17 +72,17 @@ func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, 
 	return volumeMounts
 }
 
-func createK8sServicesForMachines(wkspProps WorkspaceProperties, machineName string, exposedPorts []int) []corev1.Service {
+func createK8sServicesForContainers(wkspProps WorkspaceProperties, containerName string, exposedPorts []int) []corev1.Service {
 	services := []corev1.Service{}
 	servicePorts := k8sModelUtils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
-	serviceName := machineServiceName(wkspProps, machineName)
+	serviceName := containerServiceName(wkspProps, containerName)
 	if len(servicePorts) > 0 {
 		service := corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
 				Namespace: wkspProps.Namespace,
 				Annotations: map[string]string{
-					"org.eclipse.che.machine.name": machineName,
+					"org.eclipse.che.machine.name": containerName,
 				},
 				Labels: map[string]string{
 					WorkspaceIDLabel: wkspProps.WorkspaceId,

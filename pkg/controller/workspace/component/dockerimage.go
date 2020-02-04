@@ -31,7 +31,7 @@ import (
 
 func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	componentInstanceStatus := &ComponentInstanceStatus{
-		Machines:                   map[string]MachineDescription{},
+		Containers:                 map[string]ContainerDescription{},
 		Endpoints:                  []workspaceApi.Endpoint{},
 		ContributedRuntimeCommands: []CheWorkspaceCommand{},
 	}
@@ -40,12 +40,12 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 	componentInstanceStatus.WorkspacePodAdditions = podTemplate
 	componentInstanceStatus.ExternalObjects = []runtime.Object{}
 
-	var machineName string
+	var containerName string
 	if component.Alias == "" {
 		re := regexp.MustCompile(`[^-a-zA-Z0-9_]`)
-		machineName = re.ReplaceAllString(*component.Image, "-")
+		containerName = re.ReplaceAllString(*component.Image, "-")
 	} else {
-		machineName = component.Alias
+		containerName = component.Alias
 	}
 
 	var exposedPorts []int = endpointPortsToInts(component.Endpoints)
@@ -74,10 +74,10 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 	}
 	envVars = append(envVars, corev1.EnvVar{
 		Name:  "CHE_MACHINE_NAME",
-		Value: machineName,
+		Value: containerName,
 	})
 	container := corev1.Container{
-		Name:            machineName,
+		Name:            containerName,
 		Image:           *component.Image,
 		ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 		Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
@@ -101,21 +101,21 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
-	for _, service := range createK8sServicesForMachines(names, machineName, exposedPorts) {
+	for _, service := range createK8sServicesForContainers(names, containerName, exposedPorts) {
 		componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 	}
 
 	componentInstanceStatus.Endpoints = component.Endpoints
 
-	machineAttributes := map[string]string{}
+	containerAttributes := map[string]string{}
 	if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
-		machineAttributes[server.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-		machineAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		containerAttributes[server.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
+		containerAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 	}
-	machineAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.RECIPE_CONTAINER_SOURCE
-	componentInstanceStatus.Machines[machineName] = MachineDescription{
-		MachineAttributes: machineAttributes,
-		Ports:             exposedPorts,
+	containerAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.RECIPE_CONTAINER_SOURCE
+	componentInstanceStatus.Containers[containerName] = ContainerDescription{
+		Attributes: containerAttributes,
+		Ports:      exposedPorts,
 	}
 
 	for _, command := range commands {
@@ -132,7 +132,7 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 			server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), names),
 			server.COMMAND_ACTION_REFERENCE_ATTRIBUTE:         emptyIfNil(action.Reference),
 			server.COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE: emptyIfNil(action.ReferenceContent),
-			server.COMMAND_MACHINE_NAME_ATTRIBUTE:             machineName,
+			server.COMMAND_MACHINE_NAME_ATTRIBUTE:             containerName,
 			server.COMPONENT_ALIAS_COMMAND_ATTRIBUTE:          *action.Component,
 		}
 		for attrName, attrValue := range command.Attributes {

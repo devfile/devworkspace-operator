@@ -311,8 +311,8 @@ func (solver *OpenshiftOAuthSolver) CheckRoutingObjects(cr CurrentReconcile, tar
 func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string]workspacev1alpha1.ExposedEndpointList {
 	exposedEndpoints := map[string]workspacev1alpha1.ExposedEndpointList{}
 
-	for machineName, serviceDesc := range cr.Instance.Spec.Services {
-		machineExposedEndpoints := []workspacev1alpha1.ExposedEndpoint{}
+	for containerName, serviceDesc := range cr.Instance.Spec.Services {
+		containerExposedEndpoints := []workspacev1alpha1.ExposedEndpoint{}
 		for _, endpoint := range serviceDesc.Endpoints {
 			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "false" {
 				continue
@@ -326,9 +326,9 @@ func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) m
 				Name:       endpoint.Name,
 				Url:        protocol + "://" + routeHost(serviceDesc, endpoint, cr.Instance),
 			}
-			machineExposedEndpoints = append(machineExposedEndpoints, exposedEndpoint)
+			containerExposedEndpoints = append(containerExposedEndpoints, exposedEndpoint)
 		}
-		exposedEndpoints[machineName] = machineExposedEndpoints
+		exposedEndpoints[containerName] = containerExposedEndpoints
 	}
 
 	return exposedEndpoints

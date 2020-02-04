@@ -160,7 +160,7 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 	}
 
 	componentInstanceStatus := &ComponentInstanceStatus{
-		Machines:                   map[string]MachineDescription{},
+		Containers:                 map[string]ContainerDescription{},
 		ExternalObjects:            []runtime.Object{},
 		Endpoints:                  []workspaceApi.Endpoint{},
 		ContributedRuntimeCommands: []CheWorkspaceCommand{},

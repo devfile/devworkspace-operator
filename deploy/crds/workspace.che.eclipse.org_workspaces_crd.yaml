@@ -48,6 +48,17 @@ spec:
               description: 'Workspace Structure defined in the Devfile format syntax.
                 For more details see the Che 7 documentation: https://www.eclipse.org/che/docs/che-7/making-a-workspace-portable-using-a-devfile/'
               properties:
+                apiVersion:
+                  description: Devfile API version
+                  type: string
+                attributes:
+                  description: Devfile attributes, e.g. persistVolumes
+                  properties:
+                    editorFree:
+                      type: boolean
+                    persistVolumes:
+                      type: boolean
+                  type: object
                 commands:
                   description: List of workspace-wide commands that can be associated
                     to a given component, in order to run in the related container
@@ -164,6 +175,7 @@ spec:
                     type: object
                   type: array
                 metadata:
+                  description: Devfile metadata
                   properties:
                     generateName:
                       type: string

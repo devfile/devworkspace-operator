@@ -15,10 +15,12 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"github.com/go-logr/logr"
 	origLog "log"
+	"os"
 	"reflect"
 	"strings"
+
+	"github.com/go-logr/logr"
 
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -77,6 +79,9 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	operatorNamespace, err := k8sutil.GetOperatorNamespace()
 	if err == nil {
 		ConfigMapReference.Namespace = operatorNamespace
+	} else if err == k8sutil.ErrRunLocal {
+		ConfigMapReference.Namespace = os.Getenv("WATCH_NAMESPACE")
+		Log.Info(fmt.Sprintf("Running operator in local mode; watching namespace %s", ConfigMapReference.Namespace))
 	} else if err != k8sutil.ErrNoNamespace {
 		return err
 	}

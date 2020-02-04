@@ -20,11 +20,23 @@ docker build -t quay.io/che-incubator/che-workspace-crd-controller:7.1.0 -f ./bu
 
 ### Run controller locally
 1. `kubectl apply -f ./deploy/crds`
-2. Make sure right ingress domain is set in `./deploy/registry/local/ingress.yaml` and execute `kubectl apply -f ./deploy/registry/local`
-3. `operator-sdk up local --namespace <your namespace>`
+2. `kubectl create namespace devworkspace-controller`
+3. Make sure that the right domain is set in `./deploy/controller_config.yaml` and `./deploy/registry/local/ingress.yaml`
+4. `kubectl apply -f ./deploy/registry/local`
+5. `kubectl apply -f ./deploy/controller_config.yaml`
+6. `operator-sdk up local --namespace <your namespace>`
 
 ### Test run controller
 
 1. Take a look samples workspace configuration in `./samples` folder.
 2. Apply any of them by executing `kubectl apply -f ./samples/workspace_java_mysql.yaml -n <namespace>`
 3. As soon as workspace is started you're able to get IDE url by executing `kubectl get workspace -n <namespace>`
+
+### Run controller locally and debug
+This depends on `delve` being installed (`go get -u github.com/go-delve/delve/cmd/dlv`). Note that at the time of writing, executing `go get` in this repo's directory will update go.mod; these changes should be dropped before committing.
+
+Running the controller outside of the cluster depends on everything being in one namespace (e.g. `devworkspace-controller`).
+
+1. Follow steps 1-5 for running the controller locally above
+2. `operator-sdk up local --namespace <your namespace> --enable-delve`
+3. Connect debugger to `127.0.0.1:2345` (see config in `.vscode/launch.json`)

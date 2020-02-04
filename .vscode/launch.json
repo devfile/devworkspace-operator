@@ -17,8 +17,17 @@
       "args": []
     },
     {
+      "name": "Connect debug to local operator",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "${workspaceFolder}",
+      "port": 2345,
+      "host": "127.0.0.1"
+    },
+    {
       "type": "java",
-      "name": "Debug (Attach) - che-rest-ais",
+      "name": "Debug (Attach) - che-rest-apis",
       "request": "attach",
       "hostName": "localhost",
       "port": "5005"

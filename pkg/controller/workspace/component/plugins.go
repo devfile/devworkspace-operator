@@ -63,7 +63,7 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 		volumeMounts := []corev1.VolumeMount{
 			corev1.VolumeMount{
 				MountPath: "/plugins/",
-				Name:      "claim-che-workspace",
+				Name:      ControllerCfg.GetWorkspacePVCName(),
 				SubPath:   names.WorkspaceId + "/plugins/",
 			},
 		}

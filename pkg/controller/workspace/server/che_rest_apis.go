@@ -30,7 +30,7 @@ func AddCheRestApis(wkspProps WorkspaceProperties, podSpec *corev1.PodSpec) ([]r
 	containerName := "che-rest-apis"
 	podSpec.Containers = append(podSpec.Containers, corev1.Container{
 		Image:           ControllerCfg.GetCheRestApisDockerImage(),
-		ImagePullPolicy: corev1.PullAlways,
+		ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 		Name:            containerName,
 		Ports: []corev1.ContainerPort{
 			{

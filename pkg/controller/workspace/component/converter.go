@@ -288,9 +288,9 @@ func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.P
 			"777",
 			"/tmp/che-workspaces/" + names.WorkspaceId,
 		},
-		ImagePullPolicy: corev1.PullAlways,
+		ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 		VolumeMounts: []corev1.VolumeMount{
-			corev1.VolumeMount{
+			{
 				MountPath: "/tmp/che-workspaces",
 				Name:      ControllerCfg.GetWorkspacePVCName(),
 				ReadOnly:  false,

@@ -13,8 +13,8 @@
 package apis
 
 import (
-	apis "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	utils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
+	apis "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	utils "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
 	routeV1 "github.com/openshift/api/route/v1"
 	templateV1 "github.com/openshift/api/template/v1"
 )

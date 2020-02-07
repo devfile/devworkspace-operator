@@ -14,12 +14,12 @@ package component
 
 import (
 	"errors"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/server"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/server"
 	"strings"
 
-	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 	"github.com/eclipse/che-plugin-broker/model"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"

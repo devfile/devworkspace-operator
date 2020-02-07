@@ -4,7 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/registry"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/registry"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/rest"
@@ -14,9 +14,9 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/apis"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/webhook"
+	"github.com/che-incubator/che-workspace-operator/pkg/apis"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller"
+	"github.com/che-incubator/che-workspace-operator/pkg/webhook"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"

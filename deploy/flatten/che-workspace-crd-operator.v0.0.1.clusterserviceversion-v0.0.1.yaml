@@ -191,7 +191,7 @@ spec:
     - che
   provider:
     name: Red Hat, Inc.
-    url: https://github.com/che-incubator/che-workspace-crd-operator/
+    url: https://github.com/che-incubator/che-workspace-operator/
   maintainers:
     - email: dfestal@redhat.com
       name: David Festal

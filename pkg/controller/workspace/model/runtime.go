@@ -12,7 +12,7 @@
 
 package model
 
-import "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+import "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 
 //Runtime objects that is supposed to be serialized into additionalInfo of WorkspaceStatus
 //and then propagated to Workspace Components via Che Rest API Emulator

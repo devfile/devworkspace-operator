@@ -134,7 +134,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-  name: che-workspace-crd-operator.v0.0.1
+  name: che-workspace-controller.v0.0.1
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -199,25 +199,23 @@ spec:
     Start an Eclipse Che 7 workspace based on a Devfile description,
     that provides all required information related to the project
     development environment
-  displayName: Che Workspace CRD Operator
+  displayName: Che Workspace Controller
   install:
     spec:
       deployments:
-      - name: che-workspace-crd-operator
+      - name: che-workspace-controller
         spec:
           replicas: 1
           selector:
             matchLabels:
-              name: che-workspace-crd-operator
+              name: che-workspace-controller
           strategy: {}
           template:
             metadata:
               labels:
-                name: che-workspace-crd-operator
+                name: che-workspace-controller
             spec:
               containers:
-              - command:
-                - che-workspace-crd-operator
                 env:
                 - name: WATCH_NAMESPACE
                   valueFrom:
@@ -228,10 +226,10 @@ spec:
                     fieldRef:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
-                  value: che-workspace-crd-operator
+                  value: che-workspace-operator
                 image: quay.io/che-incubator/che-workspace-crd-controller:7.1.0
                 imagePullPolicy: Always
-                name: che-workspace-crd-operator
+                name: che-workspace-controller
                 resources: {}
                 ports:
                   - containerPort: 8383
@@ -247,7 +245,7 @@ spec:
                     memory: 256Mi
                   requests:
                     memory: 16Mi
-              serviceAccountName: che-workspace-crd-operator
+              serviceAccountName: che-workspace-controller
       clusterpermissions:
       - rules:
         - apiGroups:
@@ -331,7 +329,7 @@ spec:
         - apiGroups:
           - apps
           resourceNames:
-          - che-workspace-crd-operator
+          - che-workspace-controller
           resources:
           - deployments/finalizers
           verbs:
@@ -348,7 +346,7 @@ spec:
           - pods/exec
           verbs:
           - create
-        serviceAccountName: che-workspace-crd-operator
+        serviceAccountName: che-workspace-controller
     strategy: deployment
   installModes:
   - supported: true

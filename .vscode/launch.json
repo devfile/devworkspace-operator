@@ -12,7 +12,7 @@
       "program": "${workspaceFolder}/cmd/manager/",
       "env": {
         "WATCH_NAMESPACE": "crd-poc",
-        "CONTROLLER_CONGIG_MAP_NAMESPACE": "crd-poc",
+        "CONTROLLER_CONFIG_MAP_NAMESPACE": "crd-poc",
       },
       "args": []
     },

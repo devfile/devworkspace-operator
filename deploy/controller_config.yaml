@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: che-workspace-crd-controller
-  namespace: devworkspace-controller
+  name: che-workspace-controller
+  namespace: che-workspace-controller
 data:
   ingress.global.domain: 192.168.99.100.nip.io
   plugin.registry.url: http://che-plugin-registry.192.168.99.100.nip.io/v3

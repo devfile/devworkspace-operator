@@ -13,7 +13,7 @@ metadata:
   labels:
     app: che-plugin-registry
   name: che-plugin-registry
-  namespace: devworkspace-controller
+  namespace: che-workspace-controller
 spec:
   replicas: 1
   revisionHistoryLimit: 2

@@ -1,6 +1,6 @@
 FROM quay.io/operator-framework/upstream-registry-builder as builder
 
-COPY che-workspace-crd manifests/che-workspace-crd
+COPY che-workspace-operator manifests/che-workspace-crd
 RUN ./bin/initializer -o ./bundles.db
 
 FROM scratch

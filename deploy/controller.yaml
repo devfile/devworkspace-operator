@@ -1,24 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: che-workspace-crd-operator
-  namespace: devworkspace-controller
+  name: che-workspace-controller
+  namespace: che-workspace-controller
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: che-workspace-crd-operator
+      name: che-workspace-controller
   template:
     metadata:
       labels:
-        name: che-workspace-crd-operator
+        name: che-workspace-controller
     spec:
-      serviceAccountName: che-workspace-crd-operator
+      serviceAccountName: che-workspace-controller
       containers:
-        - name: che-workspace-crd-operator
+        - name: che-workspace-controller
           image: quay.io/che-incubator/che-workspace-crd-controller:7.1.0
-          command:
-          - che-workspace-crd-operator
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -28,4 +26,4 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "che-workspace-crd-operator"
+              value: "che-workspace-operator"

@@ -42,13 +42,13 @@ import (
 var ControllerCfg ControllerConfig
 
 const (
-	ConfigMapNameEnvVar      = "CONTROLLER_CONGIG_MAP_NAME"
-	ConfigMapNamespaceEnvVar = "CONTROLLER_CONGIG_MAP_NAMESPACE"
+	ConfigMapNameEnvVar      = "CONTROLLER_CONFIG_MAP_NAME"
+	ConfigMapNamespaceEnvVar = "CONTROLLER_CONFIG_MAP_NAMESPACE"
 )
 
 var ConfigMapReference = client.ObjectKey{
 	Namespace: "",
-	Name:      "che-workspace-crd-controller",
+	Name:      "che-workspace-controller",
 }
 
 type ControllerConfig struct {
@@ -224,12 +224,12 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	testRoute := &routeV1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: configMap.Namespace,
-			Name:      "che-workspace-crd-test-route",
+			Name:      "che-workspace-controller-test-route",
 		},
 		Spec: routeV1.RouteSpec{
 			To: routeV1.RouteTargetReference{
 				Kind: "Service",
-				Name: "che-workspace-crd-test-route",
+				Name: "che-workspace-controller-test-route",
 			},
 		},
 	}
@@ -241,7 +241,7 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	defer nonCachedClient.Delete(context.TODO(), testRoute)
 	host := testRoute.Spec.Host
 	if host != "" {
-		prefixToRemove := "che-workspace-crd-test-route-" + configMap.Namespace + "."
+		prefixToRemove := "che-workspace-controller-test-route-" + configMap.Namespace + "."
 		configMap.Data["ingress.global.domain"] = strings.TrimPrefix(host, prefixToRemove)
 	}
 

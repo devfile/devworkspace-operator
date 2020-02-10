@@ -227,7 +227,7 @@ spec:
                       fieldPath: metadata.name
                 - name: OPERATOR_NAME
                   value: che-workspace-operator
-                image: quay.io/che-incubator/che-workspace-crd-controller:7.1.0
+                image: quay.io/che-incubator/che-workspace-controller:nightly
                 imagePullPolicy: Always
                 name: che-workspace-controller
                 resources: {}

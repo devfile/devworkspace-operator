@@ -16,7 +16,7 @@ spec:
       serviceAccountName: che-workspace-controller
       containers:
         - name: che-workspace-controller
-          image: quay.io/che-incubator/che-workspace-crd-controller:7.1.0
+          image: quay.io/che-incubator/che-workspace-controller:nightly
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE

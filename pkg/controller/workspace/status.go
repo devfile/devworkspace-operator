@@ -14,7 +14,7 @@ package workspace
 
 import (
 	"encoding/json"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 	"github.com/go-logr/logr"
 	"time"
 
@@ -25,7 +25,7 @@ import (
 
 	"reflect"
 
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -42,8 +42,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/log"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
 var (

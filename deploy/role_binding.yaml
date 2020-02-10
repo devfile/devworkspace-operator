@@ -1,11 +1,11 @@
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: che-workspace-crd-operator-view-all
+  name: che-workspace-controller-view-all
 subjects:
 - kind: ServiceAccount
-  name: che-workspace-crd-operator
-  namespace: devworkspace-controller
+  name: che-workspace-controller
+  namespace: che-workspace-controller
 roleRef:
   kind: ClusterRole
   name: view
@@ -14,12 +14,12 @@ roleRef:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: che-workspace-crd-operator
+  name: che-workspace-controller
 subjects:
 - kind: ServiceAccount
-  name: che-workspace-crd-operator
-  namespace: devworkspace-controller
+  name: che-workspace-controller
+  namespace: che-workspace-controller
 roleRef:
   kind: ClusterRole
-  name: che-workspace-crd-operator
+  name: che-workspace-controller
   apiGroup: rbac.authorization.k8s.io

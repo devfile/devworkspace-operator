@@ -13,20 +13,20 @@
 package component
 
 import (
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/server"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/server"
 	"github.com/eclipse/che-plugin-broker/model"
 	"regexp"
 	"strconv"
 	"strings"
 
-	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
 func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {

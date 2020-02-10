@@ -13,15 +13,15 @@
 package workspace
 
 import (
-	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
 func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object, error) {

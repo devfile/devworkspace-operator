@@ -29,7 +29,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
+	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	brokerCfg "github.com/eclipse/che-plugin-broker/cfg"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,11 +47,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/component"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/log"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/utils"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/component"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/log"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
 )
 
 // Add creates a new Workspace Controller and adds it to the Manager. The Manager will set fields on the Controller

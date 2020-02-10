@@ -13,7 +13,7 @@
 package controller
 
 import (
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspacerouting"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspacerouting"
 )
 
 func init() {

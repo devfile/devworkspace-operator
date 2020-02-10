@@ -15,7 +15,7 @@ package component
 import (
 	corev1 "k8s.io/api/core/v1"
 
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
 func commonEnvironmentVariables(wkspProps WorkspaceProperties) []corev1.EnvVar {

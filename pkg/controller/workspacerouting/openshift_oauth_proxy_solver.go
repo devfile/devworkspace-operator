@@ -13,12 +13,12 @@
 package workspacerouting
 
 import (
-	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"strconv"
 
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
+	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	routeV1 "github.com/openshift/api/route/v1"

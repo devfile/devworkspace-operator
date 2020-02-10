@@ -1,4 +1,4 @@
-module github.com/che-incubator/che-workspace-crd-operator
+module github.com/che-incubator/che-workspace-operator
 
 go 1.12
 

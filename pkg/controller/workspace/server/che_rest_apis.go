@@ -13,7 +13,7 @@
 package server
 
 import (
-	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,8 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"fmt"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
 func AddCheRestApis(wkspProps WorkspaceProperties, podSpec *corev1.PodSpec) ([]runtime.Object, string, error) {

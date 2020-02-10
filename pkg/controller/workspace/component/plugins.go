@@ -15,14 +15,14 @@ package component
 import (
 	"encoding/json"
 	"errors"
-	"github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/server"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/server"
 	"strconv"
 	"strings"
 
 	"github.com/eclipse/che-plugin-broker/utils"
 
-	workspaceApi "github.com/che-incubator/che-workspace-crd-operator/pkg/apis/workspace/v1alpha1"
-	k8sModelUtils "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/modelutils/k8s"
+	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	metadataBroker "github.com/eclipse/che-plugin-broker/brokers/metadata"
 	commonBroker "github.com/eclipse/che-plugin-broker/common"
 	"github.com/eclipse/che-plugin-broker/model"
@@ -32,8 +32,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"fmt"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-crd-operator/pkg/controller/workspace/model"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
 // TODO : change this because we don't expect plugin metas anymore, but plugin FQNs in the config maps

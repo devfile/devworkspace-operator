@@ -20,8 +20,8 @@ function load_jenkins_vars() {
   if [ -e "jenkins-env.json" ]; then
     eval "$(./env-toolkit load -f jenkins-env.json \
             DEVSHIFT_TAG_LEN \
-            QUAY_ECLIPSE_CHE_USERNAME \
-            QUAY_ECLIPSE_CHE_PASSWORD \
+            QUAY_CHE_INCUBATOR_USERNAME \
+            QUAY_CHE_INCUBATOR_PASSWORD \
             GIT_COMMIT)"
   fi
 }
@@ -70,9 +70,9 @@ function build_and_push() {
   DOCKERFILE="Dockerfile"
   ORGANIZATION="che-incubator"
 
-  if [ -n "${QUAY_ECLIPSE_CHE_USERNAME}" ] && [ -n "${QUAY_ECLIPSE_CHE_PASSWORD}" ]; then
-    echo docker login -u "${QUAY_ECLIPSE_CHE_USERNAME}" -p "${QUAY_ECLIPSE_CHE_PASSWORD}" "${REGISTRY}"
-    docker login -u "${QUAY_ECLIPSE_CHE_USERNAME}" -p "${QUAY_ECLIPSE_CHE_PASSWORD}" "${REGISTRY}"
+  if [ -n "${QUAY_CHE_INCUBATOR_USERNAME}" ] && [ -n "${QUAY_CHE_INCUBATOR_PASSWORD}" ]; then
+    echo docker login -u "${QUAY_CHE_INCUBATOR_USERNAME}" -p "${QUAY_CHE_INCUBATOR_PASSWORD}" "${REGISTRY}"
+    docker login -u "${QUAY_CHE_INCUBATOR_USERNAME}" -p "${QUAY_CHE_INCUBATOR_PASSWORD}" "${REGISTRY}"
   else
     echo "Could not login, missing credentials for pushing to the '${ORGANIZATION}' organization"
   fi

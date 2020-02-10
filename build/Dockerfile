@@ -1,8 +1,15 @@
 FROM golang:1.13.7-alpine3.11 as builder
 
-COPY . /che-workspace-operator/
-WORKDIR /che-workspace-operator/
+WORKDIR /che-workspace-operator
 
+# Populate the module cache based on the go.{mod,sum} files.
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+# copy the rest of the sources code
+COPY . .
+# compile workspace controller binaries
 RUN CGO_ENABLED=0 GOOS=linux go build \
   -o _output/bin/che-workspace-controller \
   -gcflags all=-trimpath=/ \
@@ -10,8 +17,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
   cmd/manager/main.go
 
 FROM registry.access.redhat.com/ubi8-minimal:8.1-279
-
-# copy compilied opertator
 COPY --from=builder /che-workspace-operator/_output/bin/che-workspace-controller /usr/local/bin/che-workspace-controller
 
 ENV USER_UID=1001 \

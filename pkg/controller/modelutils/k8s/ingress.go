@@ -3,6 +3,6 @@ package utils
 import "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 import "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 
-func IngressHostName(name string, wkspProperties model.WorkspaceProperties) string {
-	return name + "-" + wkspProperties.Namespace + "." + config.ControllerCfg.GetIngressGlobalDomain()
+func IngressHostName(name string, wkspCtx model.WorkspaceContext) string {
+	return name + "-" + wkspCtx.Namespace + "." + config.ControllerCfg.GetIngressGlobalDomain()
 }

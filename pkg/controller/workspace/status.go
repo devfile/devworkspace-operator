@@ -185,8 +185,8 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 			clearCondition(&rs.workspace.Status, workspacev1alpha1.WorkspaceConditionStopped)
 			modifiedStatus = true
 		}
-		if rs.wkspProps != nil {
-			if rs.wkspProps.Started {
+		if rs.wkspCtx != nil {
+			if rs.wkspCtx.Started {
 				if rs.changedWorkspaceObjects || rs.createdWorkspaceObjects {
 					clearCondition(&rs.workspace.Status, workspacev1alpha1.WorkspaceConditionStopped)
 					rs.workspace.Status.Phase = workspacev1alpha1.WorkspacePhaseStarting
@@ -210,7 +210,7 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 				}
 			}
 			if modifiedStatus {
-				rs.workspace.Status.WorkspaceId = rs.wkspProps.WorkspaceId
+				rs.workspace.Status.WorkspaceId = rs.wkspCtx.WorkspaceId
 			}
 		}
 

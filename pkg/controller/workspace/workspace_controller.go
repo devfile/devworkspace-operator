@@ -166,7 +166,7 @@ type reconcileStatus struct {
 	createdWorkspaceObjects   bool
 	failure                   string
 	cleanedWorkspaceObjects   bool
-	wkspProps                 *WorkspaceProperties
+	wkspCtx                   *WorkspaceContext
 	workspace                 *workspacev1alpha1.Workspace
 	componentInstanceStatuses []ComponentInstanceStatus
 	ReqLogger                 logr.Logger
@@ -209,7 +209,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		return r.updateStatusFromOwnedObjects(instance, reqLogger)
 	}
 
-	var workspaceProperties *WorkspaceProperties
+	var wkspCtx *WorkspaceContext
 	reconcileStatus.workspace = instance
 
 	defer r.updateStatusAfterWorkspaceChange(reconcileStatus)
@@ -254,8 +254,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 	}
 
-	workspaceProperties, workspaceRouting, componentInstanceStatuses, k8sObjects, err := component.ConvertToCoreObjects(instance)
-	reconcileStatus.wkspProps = workspaceProperties
+	wkspCtx, workspaceRouting, componentInstanceStatuses, k8sObjects, err := component.ConvertToCoreObjects(instance)
+	reconcileStatus.wkspCtx = wkspCtx
 	if err != nil {
 		reqLogger.Error(err, "Error when converting to K8S objects")
 		reconcileStatus.failure = err.Error()
@@ -282,7 +282,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, nil
 		}
 
-		k8sObjectAsMetaObject.SetLabels(map[string]string{WorkspaceIDLabel: workspaceProperties.WorkspaceId})
+		k8sObjectAsMetaObject.SetLabels(map[string]string{WorkspaceIDLabel: wkspCtx.WorkspaceId})
 
 		// Check if the k8s Object already exists
 
@@ -395,8 +395,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		&corev1.ConfigMapList{},
 	} {
 		r.List(context.TODO(), list,
-			client.InNamespace(workspaceProperties.Namespace),
-			client.MatchingLabels{WorkspaceIDLabel: workspaceProperties.WorkspaceId})
+			client.InNamespace(wkspCtx.Namespace),
+			client.MatchingLabels{WorkspaceIDLabel: wkspCtx.WorkspaceId})
 		items := reflect.ValueOf(list).Elem().FieldByName("Items")
 		for i := 0; i < items.Len(); i++ {
 			item := items.Index(i).Addr().Interface()

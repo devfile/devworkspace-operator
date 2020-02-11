@@ -29,14 +29,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperties, *workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
+func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceContext, *workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
 
 	uid, err := uuid.Parse(string(workspace.ObjectMeta.UID))
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
 
-	workspaceProperties := WorkspaceProperties{
+	wkspCtx := WorkspaceContext{
 		Namespace:     workspace.Namespace,
 		WorkspaceId:   "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""),
 		WorkspaceName: workspace.Name,
@@ -44,55 +44,55 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceProperti
 		RoutingClass:  workspace.Spec.RoutingClass,
 	}
 
-	if !workspaceProperties.Started {
-		return &workspaceProperties, &workspaceApi.WorkspaceRouting{
+	if !wkspCtx.Started {
+		return &wkspCtx, &workspaceApi.WorkspaceRouting{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      workspaceProperties.WorkspaceId,
-				Namespace: workspaceProperties.Namespace,
+				Name:      wkspCtx.WorkspaceId,
+				Namespace: wkspCtx.Namespace,
 			},
 			Spec: workspaceApi.WorkspaceRoutingSpec{
-				Exposed:             workspaceProperties.Started,
-				RoutingClass:        workspaceProperties.RoutingClass,
+				Exposed:             wkspCtx.Started,
+				RoutingClass:        wkspCtx.RoutingClass,
 				IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 				WorkspacePodSelector: map[string]string{
 					CheOriginalNameLabel: CheOriginalName,
-					WorkspaceIDLabel:     workspaceProperties.WorkspaceId,
+					WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 				},
 				Services: map[string]workspaceApi.ServiceDescription{},
 			},
 		}, nil, []runtime.Object{}, nil
 	}
 
-	mainDeployment, err := buildMainDeployment(workspaceProperties, workspace)
+	mainDeployment, err := buildMainDeployment(wkspCtx, workspace)
 	if err != nil {
-		return &workspaceProperties, nil, nil, nil, err
+		return &wkspCtx, nil, nil, nil, err
 	}
 
 	err = setupPersistentVolumeClaim(workspace, mainDeployment)
 	if err != nil {
-		return &workspaceProperties, nil, nil, nil, err
+		return &wkspCtx, nil, nil, nil, err
 	}
 
-	cheRestApisK8sObjects, externalUrl, err := server.AddCheRestApis(workspaceProperties, &mainDeployment.Spec.Template.Spec)
+	cheRestApisK8sObjects, externalUrl, err := server.AddCheRestApis(wkspCtx, &mainDeployment.Spec.Template.Spec)
 	if err != nil {
-		return &workspaceProperties, nil, nil, nil, err
+		return &wkspCtx, nil, nil, nil, err
 	}
-	workspaceProperties.CheApiExternal = externalUrl
+	wkspCtx.CheApiExternal = externalUrl
 
-	workspaceRouting, componentStatuses, k8sComponentsObjects, err := setupComponents(workspaceProperties, workspace.Spec.Devfile, mainDeployment)
+	workspaceRouting, componentStatuses, k8sComponentsObjects, err := setupComponents(wkspCtx, workspace.Spec.Devfile, mainDeployment)
 	if err != nil {
-		return &workspaceProperties, nil, nil, nil, err
+		return &wkspCtx, nil, nil, nil, err
 	}
 	k8sComponentsObjects = append(k8sComponentsObjects, cheRestApisK8sObjects...)
 
-	return &workspaceProperties, workspaceRouting, componentStatuses, append(k8sComponentsObjects, mainDeployment), nil
+	return &wkspCtx, workspaceRouting, componentStatuses, append(k8sComponentsObjects, mainDeployment), nil
 }
 
-func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
-	var workspaceDeploymentName = wkspProps.WorkspaceId + "." + CheOriginalName
+func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
+	var workspaceDeploymentName = wkspCtx.WorkspaceId + "." + CheOriginalName
 	var terminationGracePeriod int64
 	var replicas int32
-	if wkspProps.Started {
+	if wkspCtx.Started {
 		replicas = 1
 	}
 
@@ -107,7 +107,7 @@ func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.
 			Name:      workspaceDeploymentName,
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				WorkspaceIDLabel: wkspProps.WorkspaceId,
+				WorkspaceIDLabel: wkspCtx.WorkspaceId,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -115,7 +115,7 @@ func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.
 				MatchLabels: map[string]string{
 					"deployment":         workspaceDeploymentName,
 					CheOriginalNameLabel: CheOriginalName,
-					WorkspaceIDLabel:     wkspProps.WorkspaceId,
+					WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 				},
 			},
 			Replicas: &replicas,
@@ -131,8 +131,8 @@ func buildMainDeployment(wkspProps WorkspaceProperties, workspace *workspaceApi.
 					Labels: map[string]string{
 						"deployment":         workspaceDeploymentName,
 						CheOriginalNameLabel: CheOriginalName,
-						WorkspaceIDLabel:     wkspProps.WorkspaceId,
-						WorkspaceNameLabel:   wkspProps.WorkspaceName,
+						WorkspaceIDLabel:     wkspCtx.WorkspaceId,
+						WorkspaceNameLabel:   wkspCtx.WorkspaceName,
 					},
 					Name: workspaceDeploymentName,
 				},
@@ -171,7 +171,7 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevfileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
+func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
 	components := devfile.Components
 	k8sObjects := []runtime.Object{}
 
@@ -185,7 +185,7 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevfileSpec
 		var componentInstanceStatus *ComponentInstanceStatus
 		switch componentType {
 		case workspaceApi.CheEditor, workspaceApi.ChePlugin:
-			componentInstanceStatus, err = setupChePlugin(names, &component)
+			componentInstanceStatus, err = setupChePlugin(wkspCtx, &component)
 			if err != nil {
 				return nil, nil, nil, err
 			}
@@ -194,10 +194,10 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevfileSpec
 			}
 			break
 		case workspaceApi.Kubernetes, workspaceApi.Openshift:
-			componentInstanceStatus, err = setupK8sLikeComponent(names, &component)
+			componentInstanceStatus, err = setupK8sLikeComponent(wkspCtx, &component)
 			break
 		case workspaceApi.Dockerimage:
-			componentInstanceStatus, err = setupDockerimageComponent(names, devfile.Commands, &component)
+			componentInstanceStatus, err = setupDockerimageComponent(wkspCtx, devfile.Commands, &component)
 			break
 		}
 		if err != nil {
@@ -212,22 +212,22 @@ func setupComponents(names WorkspaceProperties, devfile workspaceApi.DevfileSpec
 		return nil, nil, nil, err
 	}
 
-	precreateSubpathsInitContainer(names, &deployment.Spec.Template.Spec)
-	initContainersK8sObjects, err := setupPluginInitContainers(names, &deployment.Spec.Template.Spec, pluginFQNs)
+	precreateSubpathsInitContainer(wkspCtx, &deployment.Spec.Template.Spec)
+	initContainersK8sObjects, err := setupPluginInitContainers(wkspCtx, &deployment.Spec.Template.Spec, pluginFQNs)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
-	workspaceRouting := buildWorkspaceRouting(names, componentInstanceStatuses)
+	workspaceRouting := buildWorkspaceRouting(wkspCtx, componentInstanceStatuses)
 
 	// TODO store the annotation of the workspaceAPi: with the defer ????
 
 	return workspaceRouting, componentInstanceStatuses, k8sObjects, nil
 }
 
-func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceRouting {
+func buildWorkspaceRouting(wkspCtx WorkspaceContext, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceRouting {
 	services := map[string]workspaceApi.ServiceDescription{}
 	for _, componentInstanceStatus := range componentInstanceStatuses {
 		for containerName, container := range componentInstanceStatus.Containers {
@@ -250,7 +250,7 @@ func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstance
 			}
 			if len(containerEndpoints) > 0 {
 				services[containerName] = workspaceApi.ServiceDescription{
-					ServiceName: containerServiceName(wkspProperties, containerName),
+					ServiceName: containerServiceName(wkspCtx, containerName),
 					Endpoints:   containerEndpoints,
 				}
 			}
@@ -258,16 +258,16 @@ func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstance
 	}
 	return &workspaceApi.WorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      wkspProperties.WorkspaceId,
-			Namespace: wkspProperties.Namespace,
+			Name:      wkspCtx.WorkspaceId,
+			Namespace: wkspCtx.Namespace,
 		},
 		Spec: workspaceApi.WorkspaceRoutingSpec{
-			Exposed:             wkspProperties.Started,
-			RoutingClass:        wkspProperties.RoutingClass,
+			Exposed:             wkspCtx.Started,
+			RoutingClass:        wkspCtx.RoutingClass,
 			IngressGlobalDomain: ControllerCfg.GetIngressGlobalDomain(),
 			WorkspacePodSelector: map[string]string{
 				CheOriginalNameLabel: CheOriginalName,
-				WorkspaceIDLabel:     wkspProperties.WorkspaceId,
+				WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 			},
 			Services: services,
 		},
@@ -276,7 +276,7 @@ func buildWorkspaceRouting(wkspProperties WorkspaceProperties, componentInstance
 
 //TODO Think of the admission controller to add the name of the user in the workspace?
 // In any case add the name of the users in the custom resource of the workspace. + the workspace routing class.
-func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.PodSpec) {
+func precreateSubpathsInitContainer(wkspCtx WorkspaceContext, podSpec *corev1.PodSpec) {
 	podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
 		Name:    "precreate-subpaths",
 		Image:   "registry.access.redhat.com/ubi8/ubi-minimal",
@@ -286,7 +286,7 @@ func precreateSubpathsInitContainer(names WorkspaceProperties, podSpec *corev1.P
 			"-v",
 			"-m",
 			"777",
-			"/tmp/che-workspaces/" + names.WorkspaceId,
+			"/tmp/che-workspaces/" + wkspCtx.WorkspaceId,
 		},
 		ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
 		VolumeMounts: []corev1.VolumeMount{

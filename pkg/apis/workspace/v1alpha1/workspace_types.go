@@ -30,7 +30,11 @@ import (
 // +kubebuilder:printcolumn:name=Status,type=string,JSONPath=.status.phase
 // +kubebuilder:printcolumn:name=Url,type=string,JSONPath=.status.ideUrl
 type Workspace struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// Standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Desired state of the workspace

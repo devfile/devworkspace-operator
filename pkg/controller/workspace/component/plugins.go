@@ -37,7 +37,7 @@ import (
 )
 
 // TODO : change this because we don't expect plugin metas anymore, but plugin FQNs in the config maps
-func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpec, pluginFQNs []model.PluginFQN) ([]runtime.Object, error) {
+func setupPluginInitContainers(wkspCtx WorkspaceContext, podSpec *corev1.PodSpec, pluginFQNs []model.PluginFQN) ([]runtime.Object, error) {
 	var k8sObjects []runtime.Object
 
 	type initContainerDef struct {
@@ -64,7 +64,7 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 			corev1.VolumeMount{
 				MountPath: "/plugins/",
 				Name:      ControllerCfg.GetWorkspacePVCName(),
-				SubPath:   names.WorkspaceId + "/plugins/",
+				SubPath:   wkspCtx.WorkspaceId + "/plugins/",
 			},
 		}
 
@@ -76,7 +76,7 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 		args := []string{
 			"-disable-push",
 			"-runtime-id",
-			fmt.Sprintf("%s:%s:%s", names.WorkspaceId, "default", "anonymous"),
+			fmt.Sprintf("%s:%s:%s", wkspCtx.WorkspaceId, "default", "anonymous"),
 			"--registry-address",
 			ControllerCfg.GetPluginRegistry(),
 		}
@@ -98,9 +98,9 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 			configMap := corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      configMapName,
-					Namespace: names.Namespace,
+					Namespace: wkspCtx.Namespace,
 					Labels: map[string]string{
-						WorkspaceIDLabel: names.WorkspaceId,
+						WorkspaceIDLabel: wkspCtx.WorkspaceId,
 					},
 				},
 				Data: map[string]string{
@@ -145,7 +145,7 @@ func setupPluginInitContainers(names WorkspaceProperties, podSpec *corev1.PodSpe
 	return k8sObjects, nil
 }
 
-func setupChePlugin(names WorkspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupChePlugin(wkspCtx WorkspaceContext, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	theIoUtil := utils.New()
 	theRand := commonBroker.NewRand()
 
@@ -216,7 +216,7 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 			return nil, err
 		}
 
-		volumeMounts := createVolumeMounts(names, &containerDef.MountSources, []workspaceApi.Volume{}, containerDef.Volumes)
+		volumeMounts := createVolumeMounts(wkspCtx, &containerDef.MountSources, []workspaceApi.Volume{}, containerDef.Volumes)
 
 		var envVars []corev1.EnvVar
 		for _, envVarDef := range containerDef.Env {
@@ -243,12 +243,12 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 				},
 			},
 			VolumeMounts:             volumeMounts,
-			Env:                      append(envVars, commonEnvironmentVariables(names)...),
+			Env:                      append(envVars, commonEnvironmentVariables(wkspCtx)...),
 			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		}
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
-		for _, service := range createK8sServicesForContainers(names, containerName, exposedPorts) {
+		for _, service := range createK8sServicesForContainers(wkspCtx, containerName, exposedPorts) {
 			componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 		}
 
@@ -293,7 +293,7 @@ func setupChePlugin(names WorkspaceProperties, component *workspaceApi.Component
 					CommandLine: strings.Join(command.Command, " "),
 					Type:        "custom",
 					Attributes: map[string]string{
-						server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, names),
+						server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, wkspCtx),
 						server.COMMAND_MACHINE_NAME_ATTRIBUTE:      containerName,
 					},
 				})

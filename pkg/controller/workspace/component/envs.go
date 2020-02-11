@@ -18,7 +18,7 @@ import (
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
-func commonEnvironmentVariables(wkspProps WorkspaceProperties) []corev1.EnvVar {
+func commonEnvironmentVariables(wkspCtx WorkspaceContext) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name: "CHE_MACHINE_TOKEN",
@@ -29,7 +29,7 @@ func commonEnvironmentVariables(wkspProps WorkspaceProperties) []corev1.EnvVar {
 		},
 		{
 			Name:  "CHE_API",
-			Value: wkspProps.CheApiExternal,
+			Value: wkspCtx.CheApiExternal,
 		},
 		{
 			Name:  "CHE_API_INTERNAL",
@@ -37,15 +37,15 @@ func commonEnvironmentVariables(wkspProps WorkspaceProperties) []corev1.EnvVar {
 		},
 		{
 			Name:  "CHE_API_EXTERNAL",
-			Value: wkspProps.CheApiExternal,
+			Value: wkspCtx.CheApiExternal,
 		},
 		{
 			Name:  "CHE_WORKSPACE_NAME",
-			Value: wkspProps.WorkspaceName,
+			Value: wkspCtx.WorkspaceName,
 		},
 		{
 			Name:  "CHE_WORKSPACE_ID",
-			Value: wkspProps.WorkspaceId,
+			Value: wkspCtx.WorkspaceId,
 		},
 		{
 			Name:  "CHE_AUTH_ENABLED",
@@ -53,7 +53,7 @@ func commonEnvironmentVariables(wkspProps WorkspaceProperties) []corev1.EnvVar {
 		},
 		{
 			Name:  "CHE_WORKSPACE_NAMESPACE",
-			Value: wkspProps.Namespace,
+			Value: wkspCtx.Namespace,
 		},
 	}
 }

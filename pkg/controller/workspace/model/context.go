@@ -12,7 +12,7 @@
 
 package model
 
-type WorkspaceProperties struct {
+type WorkspaceContext struct {
 	WorkspaceId    string
 	WorkspaceName  string
 	Namespace      string

@@ -29,7 +29,7 @@ import (
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
-func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	componentInstanceStatus := &ComponentInstanceStatus{
 		Containers:                 map[string]ContainerDescription{},
 		Endpoints:                  []workspaceApi.Endpoint{},
@@ -63,7 +63,7 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 		return nil, err
 	}
 
-	volumeMounts := createVolumeMounts(names, component.MountSources, component.Volumes, []model.Volume{})
+	volumeMounts := createVolumeMounts(wkspCtx, component.MountSources, component.Volumes, []model.Volume{})
 
 	var envVars []corev1.EnvVar
 	for _, envVarDef := range component.Env {
@@ -90,7 +90,7 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 			},
 		},
 		VolumeMounts: volumeMounts,
-		Env:          append(envVars, commonEnvironmentVariables(names)...),
+		Env:          append(envVars, commonEnvironmentVariables(wkspCtx)...),
 	}
 	if component.Command != nil {
 		container.Command = *component.Command
@@ -101,7 +101,7 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
 
-	for _, service := range createK8sServicesForContainers(names, containerName, exposedPorts) {
+	for _, service := range createK8sServicesForContainers(wkspCtx, containerName, exposedPorts) {
 		componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
 	}
 
@@ -129,7 +129,7 @@ func setupDockerimageComponent(names WorkspaceProperties, commands []workspaceAp
 			continue
 		}
 		attributes := map[string]string{
-			server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), names),
+			server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE:        interpolate(emptyIfNil(action.Workdir), wkspCtx),
 			server.COMMAND_ACTION_REFERENCE_ATTRIBUTE:         emptyIfNil(action.Reference),
 			server.COMMAND_ACTION_REFERENCE_CONTENT_ATTRIBUTE: emptyIfNil(action.ReferenceContent),
 			server.COMMAND_MACHINE_NAME_ATTRIBUTE:             containerName,

@@ -31,8 +31,8 @@ func emptyIfNil(s *string) string {
 	return ""
 }
 
-func containerServiceName(wkspProps WorkspaceProperties, containerName string) string {
-	return "server" + strings.ReplaceAll(wkspProps.WorkspaceId, "workspace", "") + "-" + containerName
+func containerServiceName(wkspCtx WorkspaceContext, containerName string) string {
+	return "server" + strings.ReplaceAll(wkspCtx.WorkspaceId, "workspace", "") + "-" + containerName
 }
 
 func endpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {
@@ -43,7 +43,7 @@ func endpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {
 	return ports
 }
 
-func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
+func createVolumeMounts(wkspCtx WorkspaceContext, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
 	volumeName := config.ControllerCfg.GetWorkspacePVCName()
 
 	var volumeMounts []corev1.VolumeMount
@@ -51,14 +51,14 @@ func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, 
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: volDef.ContainerPath,
 			Name:      volumeName,
-			SubPath:   workspaceProps.WorkspaceId + "/" + volDef.Name + "/",
+			SubPath:   wkspCtx.WorkspaceId + "/" + volDef.Name + "/",
 		})
 	}
 	for _, volDef := range pluginVolumes {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: volDef.MountPath,
 			Name:      volumeName,
-			SubPath:   workspaceProps.WorkspaceId + "/" + volDef.Name + "/",
+			SubPath:   wkspCtx.WorkspaceId + "/" + volDef.Name + "/",
 		})
 	}
 
@@ -66,33 +66,33 @@ func createVolumeMounts(workspaceProps WorkspaceProperties, mountSources *bool, 
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			MountPath: DefaultProjectsSourcesRoot,
 			Name:      volumeName,
-			SubPath:   workspaceProps.WorkspaceId + DefaultProjectsSourcesRoot,
+			SubPath:   wkspCtx.WorkspaceId + DefaultProjectsSourcesRoot,
 		})
 	}
 
 	return volumeMounts
 }
 
-func createK8sServicesForContainers(wkspProps WorkspaceProperties, containerName string, exposedPorts []int) []corev1.Service {
+func createK8sServicesForContainers(wkspCtx WorkspaceContext, containerName string, exposedPorts []int) []corev1.Service {
 	services := []corev1.Service{}
 	servicePorts := k8sModelUtils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
-	serviceName := containerServiceName(wkspProps, containerName)
+	serviceName := containerServiceName(wkspCtx, containerName)
 	if len(servicePorts) > 0 {
 		service := corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      serviceName,
-				Namespace: wkspProps.Namespace,
+				Namespace: wkspCtx.Namespace,
 				Annotations: map[string]string{
 					"org.eclipse.che.machine.name": containerName,
 				},
 				Labels: map[string]string{
-					WorkspaceIDLabel: wkspProps.WorkspaceId,
+					WorkspaceIDLabel: wkspCtx.WorkspaceId,
 				},
 			},
 			Spec: corev1.ServiceSpec{
 				Selector: map[string]string{
 					CheOriginalNameLabel: CheOriginalName,
-					WorkspaceIDLabel:     wkspProps.WorkspaceId,
+					WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 				},
 				Type:  corev1.ServiceTypeClusterIP,
 				Ports: servicePorts,
@@ -103,8 +103,8 @@ func createK8sServicesForContainers(wkspProps WorkspaceProperties, containerName
 	return services
 }
 
-func interpolate(someString string, wkspProps WorkspaceProperties) string {
-	for _, envVar := range commonEnvironmentVariables(wkspProps) {
+func interpolate(someString string, wkspCtx WorkspaceContext) string {
+	for _, envVar := range commonEnvironmentVariables(wkspCtx) {
 		someString = strings.ReplaceAll(someString, "${"+envVar.Name+"}", envVar.Value)
 	}
 	return someString

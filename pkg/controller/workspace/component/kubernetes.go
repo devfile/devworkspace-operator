@@ -33,7 +33,7 @@ import (
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
-func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupK8sLikeComponent(wkspCtx WorkspaceContext, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
 	var k8sObjects []runtime.Object
 
 	theScheme := runtime.NewScheme()
@@ -83,7 +83,7 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 	for _, obj = range objects {
 		if objMeta, isMeta := obj.(metav1.Object); isMeta {
 			if selector.Matches(labels.Set(objMeta.GetLabels())) {
-				objMeta.SetNamespace(wkspProps.Namespace)
+				objMeta.SetNamespace(wkspCtx.Namespace)
 				k8sObjects = append(k8sObjects, obj)
 			}
 		}
@@ -103,15 +103,15 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 				suffix = "." + strconv.Itoa(podCount)
 			}
 			additionalDeploymentOriginalName := componentName + suffix
-			var workspaceDeploymentName = wkspProps.WorkspaceId + "." + additionalDeploymentOriginalName
+			var workspaceDeploymentName = wkspCtx.WorkspaceId + "." + additionalDeploymentOriginalName
 			var replicas int32 = 1
 			fromIntOne := intstr.FromInt(1)
 
 			podLabels := map[string]string{
 				"deployment":         workspaceDeploymentName,
-				WorkspaceIDLabel:     wkspProps.WorkspaceId,
+				WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 				CheOriginalNameLabel: additionalDeploymentOriginalName,
-				WorkspaceNameLabel:   wkspProps.WorkspaceName,
+				WorkspaceNameLabel:   wkspCtx.WorkspaceName,
 			}
 			for labelName, labelValue := range objPod.Labels {
 				if _, exists := podLabels[labelName]; exists {
@@ -123,16 +123,16 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 			k8sObjects[index] = &appsv1.Deployment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workspaceDeploymentName,
-					Namespace: wkspProps.Namespace,
+					Namespace: wkspCtx.Namespace,
 					Labels: map[string]string{
-						WorkspaceIDLabel: wkspProps.WorkspaceId,
+						WorkspaceIDLabel: wkspCtx.WorkspaceId,
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
 					Selector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
 							"deployment":         workspaceDeploymentName,
-							WorkspaceIDLabel:     wkspProps.WorkspaceId,
+							WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 							CheOriginalNameLabel: additionalDeploymentOriginalName,
 						},
 					},
@@ -155,7 +155,7 @@ func setupK8sLikeComponent(wkspProps WorkspaceProperties, component *workspaceAp
 				},
 			}
 		} else if objMeta, isMeta := obj.(metav1.Object); isMeta {
-			objMeta.GetLabels()[WorkspaceIDLabel] = wkspProps.WorkspaceId
+			objMeta.GetLabels()[WorkspaceIDLabel] = wkspCtx.WorkspaceId
 		}
 	}
 

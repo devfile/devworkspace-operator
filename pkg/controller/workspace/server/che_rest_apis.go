@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"fmt"
+
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
@@ -56,8 +57,8 @@ func AddCheRestApis(wkspCtx WorkspaceContext, podSpec *corev1.PodSpec) ([]runtim
 	})
 
 	serviceName, servicePort := containerName, k8sModelUtils.ServicePortName(cheRestApisPort)
-	serviceNameAndPort := serviceName + "-" + servicePort
-	ingressHost := k8sModelUtils.IngressHostName(serviceNameAndPort, wkspCtx)
+	ingressName := k8sModelUtils.IngressName(serviceName, int64(cheRestApisPort))
+	ingressHost := k8sModelUtils.IngressHostname(serviceName, wkspCtx.Namespace, int64(cheRestApisPort))
 	ingressUrl := "http://" + ingressHost + "/api"
 
 	service := corev1.Service{
@@ -96,7 +97,7 @@ func AddCheRestApis(wkspCtx WorkspaceContext, podSpec *corev1.PodSpec) ([]runtim
 				"org.eclipse.che.machine.name":               containerName,
 			},
 			Labels: map[string]string{
-				CheOriginalNameLabel: serviceNameAndPort,
+				CheOriginalNameLabel: ingressName,
 				WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 			},
 		},

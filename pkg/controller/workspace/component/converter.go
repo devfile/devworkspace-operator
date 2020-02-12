@@ -22,7 +22,6 @@ import (
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
-	"github.com/eclipse/che-plugin-broker/model"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -187,14 +186,8 @@ func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec,
 		var componentInstanceStatus *ComponentInstanceStatus
 		switch componentType {
 		case workspaceApi.CheEditor, workspaceApi.ChePlugin:
-			componentInstanceStatus, err = setupChePlugin(wkspCtx, &component)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			if componentInstanceStatus.PluginFQN != nil {
-				pluginFQNs = append(pluginFQNs, *componentInstanceStatus.PluginFQN)
-			}
-			break
+			pluginComponents = append(pluginComponents, component)
+			continue
 		case workspaceApi.Kubernetes, workspaceApi.Openshift:
 			componentInstanceStatus, err = setupK8sLikeComponent(wkspCtx, &component)
 			break
@@ -208,19 +201,22 @@ func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec,
 		k8sObjects = append(k8sObjects, componentInstanceStatus.ExternalObjects...)
 		componentInstanceStatuses = append(componentInstanceStatuses, *componentInstanceStatus)
 	}
+	pluginComponentStatuses, err := setupChePlugins(wkspCtx, pluginComponents)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	err := mergeWorkspaceAdditions(deployment, componentInstanceStatuses, k8sObjects)
+	componentInstanceStatuses = append(componentInstanceStatuses, pluginComponentStatuses...)
+	for _, cis := range componentInstanceStatuses {
+		k8sObjects = append(k8sObjects, cis.ExternalObjects...)
+	}
+
+	err = mergeWorkspaceAdditions(deployment, componentInstanceStatuses, k8sObjects)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	precreateSubpathsInitContainer(wkspCtx, &deployment.Spec.Template.Spec)
-	initContainersK8sObjects, err := setupPluginInitContainers(wkspCtx, &deployment.Spec.Template.Spec, pluginFQNs)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	k8sObjects = append(k8sObjects, initContainersK8sObjects...)
 
 	workspaceRouting := buildWorkspaceRouting(wkspCtx, componentInstanceStatuses)
 

@@ -14,299 +14,157 @@ package component
 
 import (
 	"encoding/json"
-	"errors"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/server"
-	"strconv"
-	"strings"
-
-	"github.com/eclipse/che-plugin-broker/utils"
 
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	workspace "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
 	metadataBroker "github.com/eclipse/che-plugin-broker/brokers/metadata"
-	commonBroker "github.com/eclipse/che-plugin-broker/common"
-	"github.com/eclipse/che-plugin-broker/model"
+	brokerModel "github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"fmt"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
+
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
-// TODO : change this because we don't expect plugin metas anymore, but plugin FQNs in the config maps
-func setupPluginInitContainers(wkspCtx WorkspaceContext, podSpec *corev1.PodSpec, pluginFQNs []model.PluginFQN) ([]runtime.Object, error) {
-	var k8sObjects []runtime.Object
+func setupChePlugins(wkspCtx model.WorkspaceContext, components []workspaceApi.ComponentSpec) ([]model.ComponentInstanceStatus, error) {
+	var componentInstanceStatuses []model.ComponentInstanceStatus
 
-	type initContainerDef struct {
-		imageName  string
-		pluginFQNs []model.PluginFQN
-	}
-
-	for _, def := range []initContainerDef{
-		{
-			imageName:  "che.workspace.plugin_broker.init.image",
-			pluginFQNs: []model.PluginFQN{},
-		},
-		{
-			imageName:  "che.workspace.plugin_broker.unified.image",
-			pluginFQNs: pluginFQNs,
-		},
-	} {
-		brokerImage := ControllerCfg.GetProperty(def.imageName)
-		if brokerImage == nil {
-			return nil, errors.New("Unknown broker docker image for : " + def.imageName)
-		}
-
-		volumeMounts := []corev1.VolumeMount{
-			corev1.VolumeMount{
-				MountPath: "/plugins/",
-				Name:      ControllerCfg.GetWorkspacePVCName(),
-				SubPath:   wkspCtx.WorkspaceId + "/plugins/",
-			},
-		}
-
-		containerName := strings.ReplaceAll(
-			strings.TrimSuffix(
-				strings.TrimPrefix(def.imageName, "che.workspace.plugin_"),
-				".image"),
-			".", "-")
-		args := []string{
-			"-disable-push",
-			"-runtime-id",
-			fmt.Sprintf("%s:%s:%s", wkspCtx.WorkspaceId, "default", "anonymous"),
-			"--registry-address",
-			ControllerCfg.GetPluginRegistry(),
-		}
-
-		if len(def.pluginFQNs) > 0 {
-
-			// TODO: See how the unified broker is defined in the yaml
-			// and define it the same way here.
-			// See also how it is that we do not put volume =>
-			// => Log on the operator side to see what there is in PluginFQNs
-
-			configMapName := containerName + "-broker-config-map"
-			configMapVolume := containerName + "-broker-config-volume"
-			configMapContent, err := json.MarshalIndent(pluginFQNs, "", "")
-			if err != nil {
-				return nil, err
-			}
-
-			configMap := corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      configMapName,
-					Namespace: wkspCtx.Namespace,
-					Labels: map[string]string{
-						WorkspaceIDLabel: wkspCtx.WorkspaceId,
-					},
-				},
-				Data: map[string]string{
-					"config.json": string(configMapContent),
-				},
-			}
-			k8sObjects = append(k8sObjects, &configMap)
-
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				MountPath: "/broker-config/",
-				Name:      configMapVolume,
-				ReadOnly:  true,
-			})
-
-			podSpec.Volumes = append(podSpec.Volumes, corev1.Volume{
-				Name: configMapVolume,
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: configMapName,
-						},
-					},
-				},
-			})
-
-			args = append(args,
-				"-metas",
-				"/broker-config/config.json",
-			)
-		}
-
-		podSpec.InitContainers = append(podSpec.InitContainers, corev1.Container{
-			Name:  containerName,
-			Image: *brokerImage,
-			Args:  args,
-
-			ImagePullPolicy:          corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
-			VolumeMounts:             volumeMounts,
-			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-		})
-	}
-	return k8sObjects, nil
-}
-
-func setupChePlugin(wkspCtx WorkspaceContext, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
-	theIoUtil := utils.New()
-	theRand := commonBroker.NewRand()
-
-	pluginFQN := model.PluginFQN{}
-	idParts := strings.Split(*component.Id, "/")
-	idPartsLen := len(idParts)
-	if idPartsLen < 3 {
-		return nil, errors.New("Invalid component ID: " + *component.Id)
-	}
-	pluginFQN.ID = strings.Join(idParts[idPartsLen-3:3], "/")
-	if idPartsLen > 3 {
-		pluginFQN.Registry = strings.Join(idParts[0:idPartsLen-3], "/")
-	}
-
-	pluginMeta, err := utils.GetPluginMeta(pluginFQN, ControllerCfg.GetPluginRegistry(), theIoUtil)
+	broker := metadataBroker.NewBroker(true)
+	metas, err := getMetasForComponents(components)
 	if err != nil {
 		return nil, err
 	}
 
-	pluginMetas := []model.PluginMeta{*pluginMeta}
-	err = utils.ResolveRelativeExtensionPaths(pluginMetas, ControllerCfg.GetPluginRegistry())
+	plugins, err := broker.ProcessPlugins(metas)
 	if err != nil {
 		return nil, err
 	}
-	err = utils.ValidateMetas(pluginMetas...)
-	if err != nil {
-		return nil, err
-	}
-	pluginMeta = &pluginMetas[0]
 
-	chePlugin := metadataBroker.ConvertMetaToPlugin(*pluginMeta)
-
-	isTheiaOrVsCodePlugin := utils.IsTheiaOrVscodePlugin(*pluginMeta)
-
-	if isTheiaOrVsCodePlugin && len(pluginMeta.Spec.Containers) > 0 {
-		metadataBroker.AddPluginRunnerRequirements(*pluginMeta, theRand, true)
-	}
-
-	componentInstanceStatus := &ComponentInstanceStatus{
-		Containers:                 map[string]ContainerDescription{},
-		Endpoints:                  []workspaceApi.Endpoint{},
-		ContributedRuntimeCommands: []CheWorkspaceCommand{},
-		PluginFQN:                  &pluginFQN,
-	}
-	if len(chePlugin.Containers) == 0 {
-		return componentInstanceStatus, nil
-	}
-
-	podTemplate := &corev1.PodTemplateSpec{}
-	componentInstanceStatus.WorkspacePodAdditions = podTemplate
-	componentInstanceStatus.ExternalObjects = []runtime.Object{}
-
-	for _, containerDef := range chePlugin.Containers {
-		containerName := containerDef.Name
-
-		var exposedPorts []int = exposedPortsToInts(containerDef.Ports)
-
-		var limitOrDefault string
-
-		if containerDef.MemoryLimit == "" {
-			limitOrDefault = "128M"
-		} else {
-			limitOrDefault = containerDef.MemoryLimit
-		}
-
-		limit, err := resource.ParseQuantity(limitOrDefault)
+	for _, plugin := range plugins {
+		component, err := convertToComponentInstanceStatus(plugin, wkspCtx)
 		if err != nil {
 			return nil, err
 		}
-
-		volumeMounts := createVolumeMounts(wkspCtx, &containerDef.MountSources, []workspaceApi.Volume{}, containerDef.Volumes)
-
-		var envVars []corev1.EnvVar
-		for _, envVarDef := range containerDef.Env {
-			envVars = append(envVars, corev1.EnvVar{
-				Name:  envVarDef.Name,
-				Value: envVarDef.Value,
-			})
-		}
-		envVars = append(envVars, corev1.EnvVar{
-			Name:  "CHE_MACHINE_NAME",
-			Value: containerName,
-		})
-		container := corev1.Container{
-			Name:            containerName,
-			Image:           containerDef.Image,
-			ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
-			Ports:           k8sModelUtils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
-			Resources: corev1.ResourceRequirements{
-				Limits: corev1.ResourceList{
-					"memory": limit,
-				},
-				Requests: corev1.ResourceList{
-					"memory": limit,
-				},
-			},
-			VolumeMounts:             volumeMounts,
-			Env:                      append(envVars, commonEnvironmentVariables(wkspCtx)...),
-			TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-		}
-		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
-
-		for _, service := range createK8sServicesForContainers(wkspCtx, containerName, exposedPorts) {
-			componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
-		}
-
-		for _, endpointDef := range chePlugin.Endpoints {
-			attributes := map[workspaceApi.EndpointAttribute]string{}
-			if endpointDef.Public {
-				attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE] = "true"
-			} else {
-				attributes[workspaceApi.PUBLIC_ENDPOINT_ATTRIBUTE] = "false"
-			}
-			for name, value := range endpointDef.Attributes {
-				attributes[workspaceApi.EndpointAttribute(name)] = value
-			}
-			if attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] == "" {
-				attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = "http"
-			}
-			endpoint := workspaceApi.Endpoint{
-				Name:       endpointDef.Name,
-				Port:       int64(endpointDef.TargetPort),
-				Attributes: attributes,
-			}
-			componentInstanceStatus.Endpoints = append(componentInstanceStatus.Endpoints, endpoint)
-		}
-
-		containerAttributes := map[string]string{}
-		if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
-			containerAttributes[server.MEMORY_LIMIT_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-			containerAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
-		}
-		containerAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.TOOL_CONTAINER_SOURCE
-		containerAttributes[server.PLUGIN_MACHINE_ATTRIBUTE] = chePlugin.ID
-
-		componentInstanceStatus.Containers[containerName] = ContainerDescription{
-			Attributes: containerAttributes,
-			Ports:      exposedPorts,
-		}
-
-		for _, command := range containerDef.Commands {
-			componentInstanceStatus.ContributedRuntimeCommands = append(componentInstanceStatus.ContributedRuntimeCommands,
-				CheWorkspaceCommand{
-					Name:        command.Name,
-					CommandLine: strings.Join(command.Command, " "),
-					Type:        "custom",
-					Attributes: map[string]string{
-						server.COMMAND_WORKING_DIRECTORY_ATTRIBUTE: interpolate(command.WorkingDir, wkspCtx),
-						server.COMMAND_MACHINE_NAME_ATTRIBUTE:      containerName,
-					},
-				})
-		}
+		componentInstanceStatuses = append(componentInstanceStatuses, *component)
 	}
 
-	return componentInstanceStatus, nil
+	if isArtifactsBrokerNecessary(metas) {
+		artifactsBroker, err := getArtifactsBrokerObjects(wkspCtx, components)
+		if err != nil {
+			return nil, err
+		}
+		componentInstanceStatuses = append(componentInstanceStatuses, artifactsBroker)
+	}
+
+	return componentInstanceStatuses, nil
 }
 
-func exposedPortsToInts(exposedPorts []model.ExposedPort) []int {
-	ports := []int{}
-	for _, exposedPort := range exposedPorts {
-		ports = append(ports, exposedPort.ExposedPort)
+func getArtifactsBrokerObjects(wkspCtx model.WorkspaceContext, components []workspaceApi.ComponentSpec) (model.ComponentInstanceStatus, error) {
+	var brokerComponent model.ComponentInstanceStatus
+
+	const (
+		configMapVolumeName = "broker-config-volume"
+		configMapMountPath  = "/broker-config"
+		configMapDataName   = "config.json"
+	)
+	configMapName := fmt.Sprintf("%s.broker-config-map", wkspCtx.WorkspaceId)
+	brokerImage := config.ControllerCfg.GetPluginArtifactsBrokerImage()
+	brokerContainerName := workspace.GetContainerNameFromImage(brokerImage)
+
+	// Define plugin broker configmap
+	var fqns []brokerModel.PluginFQN
+	for _, component := range components {
+		fqns = append(fqns, getPluginFQN(component))
 	}
-	return ports
+	cmData, err := json.Marshal(fqns)
+	if err != nil {
+		return brokerComponent, err
+	}
+	cm := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      configMapName,
+			Namespace: wkspCtx.Namespace,
+			Labels: map[string]string{
+				model.WorkspaceIDLabel: wkspCtx.WorkspaceId,
+			},
+		},
+		Data: map[string]string{
+			configMapDataName: string(cmData),
+		},
+	}
+
+	// Define volumes used by plugin broker
+	cmVolume := corev1.Volume{
+		Name: configMapVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configMapName,
+				},
+			},
+		},
+	}
+
+	cmVolumeMounts := []corev1.VolumeMount{
+		{
+			MountPath: configMapMountPath,
+			Name:      configMapVolumeName,
+			ReadOnly:  true,
+		},
+		{
+			MountPath: "/plugins",
+			Name:      config.ControllerCfg.GetWorkspacePVCName(),
+			SubPath:   wkspCtx.WorkspaceId + "/plugins",
+		},
+	}
+
+	initContainer := corev1.Container{
+		Name:                     brokerContainerName,
+		Image:                    brokerImage,
+		ImagePullPolicy:          corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
+		VolumeMounts:             cmVolumeMounts,
+		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
+		Args: []string{
+			"--disable-push",
+			"--runtime-id",
+			fmt.Sprintf("%s:%s:%s", wkspCtx.WorkspaceId, "default", "anonymous"),
+			"--registry-address",
+			config.ControllerCfg.GetPluginRegistry(),
+			"--metas",
+			fmt.Sprintf("%s/%s", configMapMountPath, configMapDataName),
+		},
+		Resources: corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("150Mi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceMemory: resource.MustParse("150Mi"),
+			},
+		},
+	}
+
+	brokerComponent = model.ComponentInstanceStatus{
+		WorkspacePodAdditions: &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				InitContainers: []corev1.Container{initContainer},
+				Volumes:        []corev1.Volume{cmVolume},
+			},
+		},
+		ExternalObjects: []runtime.Object{&cm},
+	}
+
+	return brokerComponent, err
+}
+
+func isArtifactsBrokerNecessary(metas []brokerModel.PluginMeta) bool {
+	for _, meta := range metas {
+		if len(meta.Spec.Extensions) > 0 {
+			return true
+		}
+	}
+	return false
 }

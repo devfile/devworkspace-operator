@@ -18,9 +18,6 @@ const (
 
 	workspacePVCStorageClassName = "pvc.storage_class.name"
 
-	unifiedPluginBrokerImage        = "che.workspace.plugin_broker.unified.image"
-	defaultUnifiedPluginBrokerImage = "eclipse/che-unified-plugin-broker:v0.20"
-
-	initPluginBrokerImage        = "che.workspace.plugin_broker.init.image"
-	defaultInitPluginBrokerImage = "eclipse/che-init-plugin-broker:v0.20"
+	pluginArtifactsBrokerImage        = "che.workspace.plugin_broker.artifacts.image"
+	defaultPluginArtifactsBrokerImage = "quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0"
 )

@@ -16,9 +16,9 @@ spec:
     components:
       - alias: theia-ide
         type: cheEditor
-        id: eclipse/che-theia/7.1.0
+        id: eclipse/che-theia/latest
       - type: chePlugin
-        id: eclipse/che-machine-exec-plugin/7.1.0
+        id: eclipse/che-machine-exec-plugin/latest
       - type: chePlugin
         id: ms-python/python/latest
         memoryLimit: 512Mi

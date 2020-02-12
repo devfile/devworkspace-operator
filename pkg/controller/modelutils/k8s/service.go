@@ -13,15 +13,25 @@
 package utils
 
 import (
+	"strconv"
+	"strings"
+
+	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strconv"
 )
 
-func ServicePortName(port int) string {
-	return "srv-" + strconv.FormatInt(int64(port), 10)
+// ContainerServiceName generates service names for workspaces
+func ContainerServiceName(workspaceId, containerName string) string {
+	return "server" + strings.ReplaceAll(workspaceId, "workspace", "") + "-" + containerName
 }
 
+// ServicePortName generates names for ports in workspace services
+func ServicePortName(port int) string {
+	return "server-" + strconv.FormatInt(int64(port), 10)
+}
+
+// BuildServicePorts converts exposed ports into k8s ServicePort objects
 func BuildServicePorts(exposedPorts []int, protocol corev1.Protocol) []corev1.ServicePort {
 	var servicePorts []corev1.ServicePort
 	for _, port := range exposedPorts {
@@ -33,4 +43,13 @@ func BuildServicePorts(exposedPorts []int, protocol corev1.Protocol) []corev1.Se
 		})
 	}
 	return servicePorts
+}
+
+// EndpointPortsToInts converts model endpoints to ints
+func EndpointPortsToInts(endpoints []v1alpha1.Endpoint) []int {
+	ports := []int{}
+	for _, endpoint := range endpoints {
+		ports = append(ports, int(endpoint.Port))
+	}
+	return ports
 }

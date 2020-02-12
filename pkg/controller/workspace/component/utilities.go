@@ -13,12 +13,13 @@
 package component
 
 import (
-	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
+	"strings"
+
+	modelutils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	config "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
@@ -29,18 +30,6 @@ func emptyIfNil(s *string) string {
 		return *s
 	}
 	return ""
-}
-
-func containerServiceName(wkspCtx WorkspaceContext, containerName string) string {
-	return "server" + strings.ReplaceAll(wkspCtx.WorkspaceId, "workspace", "") + "-" + containerName
-}
-
-func endpointPortsToInts(endpoints []workspaceApi.Endpoint) []int {
-	ports := []int{}
-	for _, endpint := range endpoints {
-		ports = append(ports, int(endpint.Port))
-	}
-	return ports
 }
 
 func createVolumeMounts(wkspCtx WorkspaceContext, mountSources *bool, devfileVolumes []workspaceApi.Volume, pluginVolumes []model.Volume) []corev1.VolumeMount {
@@ -75,8 +64,8 @@ func createVolumeMounts(wkspCtx WorkspaceContext, mountSources *bool, devfileVol
 
 func createK8sServicesForContainers(wkspCtx WorkspaceContext, containerName string, exposedPorts []int) []corev1.Service {
 	services := []corev1.Service{}
-	servicePorts := k8sModelUtils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
-	serviceName := containerServiceName(wkspCtx, containerName)
+	servicePorts := modelutils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
+	serviceName := modelutils.ContainerServiceName(wkspCtx.WorkspaceId, containerName)
 	if len(servicePorts) > 0 {
 		service := corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{

@@ -13,9 +13,8 @@
 package workspacerouting
 
 import (
-	"strconv"
-
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	modelutils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
@@ -58,15 +57,6 @@ func (solver *BasicSolver) CreateDiscoverableServices(cr CurrentReconcile) []cor
 	return discoverableServices
 }
 
-func ingressName(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint) string {
-	portString := strconv.FormatInt(endpoint.Port, 10)
-	return serviceDesc.ServiceName + "-" + portString
-}
-
-func ingressHost(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint, routing *workspacev1alpha1.WorkspaceRouting) string {
-	return ingressName(serviceDesc, endpoint) + "-" + routing.Namespace + "." + routing.Spec.IngressGlobalDomain
-}
-
 func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1beta1.Ingress {
 	ingresses := []extensionsv1beta1.Ingress{}
 	for _, serviceDesc := range cr.Instance.Spec.Services {
@@ -74,7 +64,7 @@ func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1be
 			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "true" {
 				ingresses = append(ingresses, extensionsv1beta1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      ingressName(serviceDesc, endpoint),
+						Name:      modelutils.IngressName(serviceDesc.ServiceName, endpoint.Port),
 						Namespace: cr.Instance.Namespace,
 						Annotations: map[string]string{
 							"kubernetes.io/ingress.class":                "nginx",
@@ -85,7 +75,7 @@ func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1be
 					Spec: extensionsv1beta1.IngressSpec{
 						Rules: []extensionsv1beta1.IngressRule{
 							extensionsv1beta1.IngressRule{
-								Host: ingressHost(serviceDesc, endpoint, cr.Instance),
+								Host: modelutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, endpoint.Port),
 								IngressRuleValue: extensionsv1beta1.IngressRuleValue{
 									HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
 										Paths: []extensionsv1beta1.HTTPIngressPath{
@@ -170,7 +160,7 @@ func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{
 				Attributes: endpoint.Attributes,
 				Name:       endpoint.Name,
-				Url:        endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] + "://" + ingressHost(serviceDesc, endpoint, cr.Instance),
+				Url:        endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] + "://" + modelutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, endpoint.Port),
 			}
 			containerExposedEndpoints = append(containerExposedEndpoints, exposedEndpoint)
 		}

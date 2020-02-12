@@ -124,9 +124,9 @@ spec:
           app.kubernetes.io/part-of: petclinic
       - alias: theia-ide
         type: cheEditor
-        id: eclipse/che-theia/7.1.0
+        id: eclipse/che-theia/latest
       - type: chePlugin
-        id: eclipse/che-machine-exec-plugin/7.1.0
+        id: eclipse/che-machine-exec-plugin/latest
       - alias: jdt.ls
         type: chePlugin
         id: redhat/java/0.46.0

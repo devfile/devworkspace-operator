@@ -20,7 +20,8 @@ spec:
       - type: dockerimage
         memoryLimit: 256Mi
         alias: dev
-        image: 'eclipse/che-remote-plugin-openshift-connector-0.0.17:7.2.0'
+        image: 'quay.io/eclipse/che-sidecar-openshift-connector:0.1.2-2601509'
+        command: ["tail", "-f", "/dev/null"]
         env:
           - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
             name: PS1

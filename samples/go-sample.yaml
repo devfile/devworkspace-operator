@@ -49,16 +49,16 @@ spec:
     components:
       - alias: theia-ide
         type: cheEditor
-        id: eclipse/che-theia/7.1.0
+        id: eclipse/che-theia/latest
       - type: chePlugin
-        id: eclipse/che-machine-exec-plugin/7.1.0
+        id: eclipse/che-machine-exec-plugin/latest
       - alias: go-plugin
         type: chePlugin
-        id: ms-vscode/go/0.11.0
+        id: ms-vscode/go/0.11.4
         memoryLimit: 512Mi
       - alias: go-cli
         type: dockerimage
-        image: 'quay.io/eclipse/che-golang-1.10:7.1.0'
+        image: 'quay.io/eclipse/che-sidecar-go:1.12.9-652ad19'
         endpoints:
           - name: 8080/tcp
             port: 8080

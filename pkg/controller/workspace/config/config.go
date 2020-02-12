@@ -93,6 +93,10 @@ func (wc *ControllerConfig) GetSidecarPullPolicy() string {
 	return wc.GetPropertyOrDefault(sidecarPullPolicy, defaultSidecarPullPolicy)
 }
 
+func (wc *ControllerConfig) GetPluginArtifactsBrokerImage() string {
+	return wc.GetPropertyOrDefault(pluginArtifactsBrokerImage, defaultPluginArtifactsBrokerImage)
+}
+
 func (wc *ControllerConfig) GetProperty(name string) *string {
 	val, exists := wc.configMap.Data[name]
 	if exists {
@@ -207,9 +211,8 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Namespace = ConfigMapReference.Namespace
 
 	cm.Data = map[string]string{
-		ingressGlobalDomain:      defaultIngressGlobalDomain,
-		unifiedPluginBrokerImage: defaultUnifiedPluginBrokerImage,
-		initPluginBrokerImage:    defaultInitPluginBrokerImage,
+		ingressGlobalDomain:        defaultIngressGlobalDomain,
+		pluginArtifactsBrokerImage: defaultPluginArtifactsBrokerImage,
 	}
 }
 

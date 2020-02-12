@@ -14,7 +14,6 @@ package model
 
 import (
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	"github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,7 +40,6 @@ type ComponentInstanceStatus struct {
 	Containers            map[string]ContainerDescription `json:"containers,omitempty"`
 	WorkspacePodAdditions *corev1.PodTemplateSpec         `json:"-"`
 	ExternalObjects       []runtime.Object                `json:"-"`
-	PluginFQN             *model.PluginFQN                `json:"-"`
 	Endpoints             []workspacev1alpha1.Endpoint    `json:"-"`
 	//fields below are used to be propagated via Che REST API Emulator for workspace components
 	ContributedRuntimeCommands []CheWorkspaceCommand `json:"contributedRuntimeCommands,omitempty"`

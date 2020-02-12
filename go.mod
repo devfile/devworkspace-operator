@@ -2,8 +2,8 @@ module github.com/che-incubator/che-workspace-operator
 
 go 1.12
 
-// Che Plugin Broker v3.0.0
-require github.com/eclipse/che-plugin-broker v3.0.0+incompatible
+// Che Plugin Broker branch devworkspace-controller
+require github.com/eclipse/che-plugin-broker v3.1.1-0.20200207223144-b20597f15e4c+incompatible
 
 // Operator Framework 0.12.x
 require (

@@ -13,9 +13,14 @@
 package workspace
 
 import (
+	"regexp"
+	"strings"
+
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
+
+var imageRegexp = regexp.MustCompile(`[^0-9a-zA-Z]`)
 
 func IsOpenShift() (bool, error) {
 	kubeCfg, err := config.GetConfig()
@@ -37,4 +42,10 @@ func IsOpenShift() (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func GetContainerNameFromImage(image string) string {
+	parts := strings.Split(image, "/")
+	imageName := parts[len(parts)-1]
+	return imageRegexp.ReplaceAllString(imageName, "-")
 }

@@ -31,7 +31,7 @@ spec:
         app: che-plugin-registry
     spec:
       containers:
-      - image: quay.io/che-incubator/che-workspace-crd-plugin-registry:7.1.0-offline
+      - image: quay.io/eclipse/che-plugin-registry:7.8.0
         imagePullPolicy: Always
         name: che-plugin-registry
         ports:
@@ -41,6 +41,3 @@ spec:
             memory: 256Mi
           requests:
             memory: 16Mi
-        env:
-          - name: CHE_SIDECAR_CONTAINERS_REGISTRY_TAG
-            value: '7.1.0'

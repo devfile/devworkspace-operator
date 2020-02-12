@@ -6,6 +6,5 @@ metadata:
 data:
   ingress.global.domain: 192.168.99.100.nip.io
   plugin.registry.url: http://che-plugin-registry.192.168.99.100.nip.io/v3
-  che.workspace.plugin_broker.unified.image: eclipse/che-unified-plugin-broker:v0.20
-  che.workspace.plugin_broker.init.image: eclipse/che-init-plugin-broker:v0.20
+  che.workspace.plugin_broker.artifacts.image: quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0
   cherestapis.image.name: quay.io/dfestal/che-workspace-crd-rest-apis:newone

@@ -93,3 +93,10 @@ rules:
   - pods/exec
   verbs:
   - create
+- apiGroups:
+    - admissionregistration.k8s.io
+  resources:
+    - mutatingwebhookconfigurations
+    - validatingwebhookconfigurations
+  verbs:
+    - '*'

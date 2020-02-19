@@ -17,8 +17,9 @@ docker build -t quay.io/che-incubator/che-workspace-controller:7.1.0 -f ./build/
 2. `kubectl create namespace che-workspace-controller`
 3. Make sure that the right domain is set in `./deploy/controller_config.yaml` and `./deploy/registry/local/ingress.yaml`
 4. `kubectl apply -f ./deploy/registry/local`
-5. [Optional] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
-6. `kubectl apply -f ./deploy`
+5. Generate certificates for Webhook server by executing: `./deploy/webhook-server-certs/deploy-webhook-server-certs.sh`
+6. [Optional] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
+7. `kubectl apply -f ./deploy`
 
 ### Run controller locally
 1. `kubectl apply -f ./deploy/crds`

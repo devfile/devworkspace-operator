@@ -14,7 +14,7 @@ package workspacerouting
 
 import (
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	modelutils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
@@ -64,7 +64,7 @@ func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1be
 			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "true" {
 				ingresses = append(ingresses, extensionsv1beta1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      modelutils.IngressName(serviceDesc.ServiceName, endpoint.Port),
+						Name:      specutils.IngressName(serviceDesc.ServiceName, endpoint.Port),
 						Namespace: cr.Instance.Namespace,
 						Annotations: map[string]string{
 							"kubernetes.io/ingress.class":                "nginx",
@@ -75,7 +75,7 @@ func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1be
 					Spec: extensionsv1beta1.IngressSpec{
 						Rules: []extensionsv1beta1.IngressRule{
 							extensionsv1beta1.IngressRule{
-								Host: modelutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, endpoint.Port),
+								Host: specutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, cr.Instance.Spec.IngressGlobalDomain, endpoint.Port),
 								IngressRuleValue: extensionsv1beta1.IngressRuleValue{
 									HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
 										Paths: []extensionsv1beta1.HTTPIngressPath{
@@ -160,7 +160,8 @@ func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{
 				Attributes: endpoint.Attributes,
 				Name:       endpoint.Name,
-				Url:        endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] + "://" + modelutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, endpoint.Port),
+				Url:        endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] + "://" +
+					specutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, cr.Instance.Spec.IngressGlobalDomain, endpoint.Port),
 			}
 			containerExposedEndpoints = append(containerExposedEndpoints, exposedEndpoint)
 		}

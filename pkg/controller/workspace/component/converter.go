@@ -14,9 +14,9 @@ package component
 
 import (
 	"errors"
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"strings"
 
-	modelutils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/server"
 
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
@@ -252,7 +252,7 @@ func buildWorkspaceRouting(wkspCtx WorkspaceContext, componentInstanceStatuses [
 			}
 			if len(containerEndpoints) > 0 {
 				services[containerName] = workspaceApi.ServiceDescription{
-					ServiceName: modelutils.ContainerServiceName(wkspCtx.WorkspaceId, containerName),
+					ServiceName: specutils.ContainerServiceName(wkspCtx.WorkspaceId, containerName),
 					Endpoints:   containerEndpoints,
 				}
 			}

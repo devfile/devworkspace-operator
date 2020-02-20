@@ -13,9 +13,10 @@
 package workspacerouting
 
 import (
-	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
-	"k8s.io/apimachinery/pkg/api/resource"
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"strconv"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
@@ -62,33 +63,12 @@ func (solver *OpenshiftOAuthSolver) CreateDiscoverableServices(cr CurrentReconci
 	return discoverableServices
 }
 
-func routeName(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint) string {
-	portString := strconv.FormatInt(endpoint.Port, 10)
-	return serviceDesc.ServiceName + "-" + portString
-}
-
-func routeHost(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint, routing *workspacev1alpha1.WorkspaceRouting) string {
-	return routeName(serviceDesc, endpoint) + "-" + routing.Namespace + "." + routing.Spec.IngressGlobalDomain
-}
-
-func proxyServiceAccountName(routing *workspacev1alpha1.WorkspaceRouting) string {
-	return routing.Name + "-oauth-proxy"
-}
-
-func proxyDeploymentName(routing *workspacev1alpha1.WorkspaceRouting) string {
-	return routing.Name + "-oauth-proxy"
-}
-
-func proxyServiceName(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint) string {
-	return routeName(serviceDesc, endpoint) + "-oauth-proxy"
-}
-
 func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.Object {
 	objectsToCreate := []runtime.Object{}
 
 	proxyServiceAccount := corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        proxyServiceAccountName(cr.Instance),
+			Name:        specutils.ProxyServiceAccountName(cr.Instance.Name),
 			Namespace:   cr.Instance.Namespace,
 			Annotations: map[string]string{},
 		},
@@ -99,25 +79,25 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 	var replicas int32 = 1
 	proxyDeployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      proxyDeploymentName(cr.Instance),
+			Name:      specutils.ProxyDeploymentName(cr.Instance.Name),
 			Namespace: cr.Instance.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": proxyDeploymentName(cr.Instance),
+					"app": specutils.ProxyDeploymentName(cr.Instance.Name),
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": proxyDeploymentName(cr.Instance),
+						"app": specutils.ProxyDeploymentName(cr.Instance.Name),
 					},
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:      corev1.RestartPolicyAlways,
-					ServiceAccountName: proxyServiceAccountName(cr.Instance),
+					ServiceAccountName: specutils.ProxyServiceAccountName(cr.Instance.Name),
 					Volumes:            []corev1.Volume{},
 					Containers:         []corev1.Container{},
 				},
@@ -136,7 +116,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "true" {
 				proxyCountString := strconv.FormatInt(int64(proxyCount), 10)
 				targetServiceName := serviceDesc.ServiceName
-				targetServicePort := k8sModelUtils.ServicePortName(int(endpoint.Port))
+				targetServicePort := specutils.ServicePortName(int(endpoint.Port))
 				var tls *routeV1.TLSConfig = nil
 
 				if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
@@ -146,7 +126,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 							InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
 						}
 					} else {
-						targetServiceName = proxyServiceName(serviceDesc, endpoint)
+						targetServiceName = specutils.ProxyServiceName(serviceDesc.ServiceName, endpoint.Port)
 						targetServicePort = "proxy"
 						tls = &routeV1.TLSConfig{
 							Termination: routeV1.TLSTerminationReencrypt,
@@ -180,7 +160,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 								"--https-address=:" + proxyHttpsPortString,
 								"--http-address=127.0.0.1:" + proxyHttpPortString,
 								"--provider=openshift",
-								"--openshift-service-account=" + proxyServiceAccountName(cr.Instance),
+								"--openshift-service-account=" + specutils.ProxyServiceAccountName(cr.Instance.Name),
 								"--upstream=http://" + serviceDesc.ServiceName + ":" + targetPortString,
 								"--tls-cert=/etc/tls/private/tls.crt",
 								"--tls-key=/etc/tls/private/tls.key",
@@ -201,7 +181,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 
 						proxyServiceAccount.Annotations["serviceaccounts.openshift.io/oauth-redirectreference."+proxyCountString] =
 							`{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"` +
-								routeName(serviceDesc, endpoint) +
+								specutils.IngressName(serviceDesc.ServiceName, endpoint.Port) +
 								`"}}`
 
 						objectsToCreate = append(objectsToCreate, &corev1.Service{
@@ -214,7 +194,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 							},
 							Spec: corev1.ServiceSpec{
 								Selector: map[string]string{
-									"app": proxyDeploymentName(cr.Instance),
+									"app": specutils.ProxyDeploymentName(cr.Instance.Name),
 								},
 								Type: corev1.ServiceTypeClusterIP,
 								Ports: []corev1.ServicePort{
@@ -232,11 +212,15 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 
 				objectsToCreate = append(objectsToCreate, &routeV1.Route{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      routeName(serviceDesc, endpoint),
+						Name:      specutils.IngressName(serviceDesc.ServiceName, endpoint.Port),
 						Namespace: cr.Instance.Namespace,
 					},
 					Spec: routeV1.RouteSpec{
-						Host: routeHost(serviceDesc, endpoint, cr.Instance),
+						Host: specutils.IngressHostname(
+							serviceDesc.ServiceName,
+							cr.Instance.Namespace,
+							cr.Instance.Spec.IngressGlobalDomain,
+							endpoint.Port),
 						To: routeV1.RouteTargetReference{
 							Kind: "Service",
 							Name: targetServiceName,
@@ -325,7 +309,11 @@ func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) m
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{
 				Attributes: endpoint.Attributes,
 				Name:       endpoint.Name,
-				Url:        protocol + "://" + routeHost(serviceDesc, endpoint, cr.Instance),
+				Url:        protocol + "://" + specutils.IngressHostname(
+					serviceDesc.ServiceName,
+					cr.Instance.Namespace,
+					cr.Instance.Spec.IngressGlobalDomain,
+					endpoint.Port),
 			}
 			containerExposedEndpoints = append(containerExposedEndpoints, exposedEndpoint)
 		}

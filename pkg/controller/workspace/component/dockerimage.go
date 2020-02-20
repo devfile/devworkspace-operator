@@ -13,6 +13,7 @@
 package component
 
 import (
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"regexp"
 	"strconv"
 	"strings"
@@ -21,7 +22,6 @@ import (
 	"github.com/eclipse/che-plugin-broker/model"
 
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	modelutils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,7 +49,7 @@ func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi
 		containerName = component.Alias
 	}
 
-	var exposedPorts []int = modelutils.EndpointPortsToInts(component.Endpoints)
+	var exposedPorts []int = specutils.EndpointPortsToInts(component.Endpoints)
 
 	var limitOrDefault string
 
@@ -81,7 +81,7 @@ func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi
 		Name:            containerName,
 		Image:           *component.Image,
 		ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
-		Ports:           modelutils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
+		Ports:           specutils.BuildContainerPorts(exposedPorts, corev1.ProtocolTCP),
 		Resources: corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
 				"memory": limit,

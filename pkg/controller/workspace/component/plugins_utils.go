@@ -14,11 +14,11 @@ package component
 
 import (
 	"fmt"
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"strconv"
 	"strings"
 
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/server"
@@ -164,7 +164,7 @@ func convertContainers(pluginContainers []brokerModel.Container, wkspCtx model.W
 func convertContainer(container brokerModel.Container, wkspCtx model.WorkspaceContext) (corev1.Container, error) {
 	var converted corev1.Container
 
-	ports := k8sModelUtils.BuildContainerPorts(exposedPortsToInts(container.Ports), corev1.ProtocolTCP)
+	ports := specutils.BuildContainerPorts(exposedPortsToInts(container.Ports), corev1.ProtocolTCP)
 	envVars := convertContainerEnvVars(container)
 	envVars = append(envVars, commonEnvironmentVariables(wkspCtx)...)
 	volumeMounts := createVolumeMounts(wkspCtx, &container.MountSources, nil, container.Volumes)

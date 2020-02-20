@@ -9,12 +9,14 @@
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
 //
-package utils
+
+package specutils
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"regexp"
 	"strings"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func BuildContainerPorts(exposedPorts []int, protocol corev1.Protocol) []corev1.ContainerPort {

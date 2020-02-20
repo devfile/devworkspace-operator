@@ -9,32 +9,32 @@
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
 //
-package utils
+package specutils
 
 import (
 	"strconv"
 	"strings"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// ContainerServiceName generates service names for workspaces
+// ContainerServiceName generates service specutils for workspaces
 func ContainerServiceName(workspaceId, containerName string) string {
 	return "server" + strings.ReplaceAll(workspaceId, "workspace", "") + "-" + containerName
 }
 
-// ServicePortName generates names for ports in workspace services
+// ServicePortName generates specutils for ports in workspace services
 func ServicePortName(port int) string {
 	return "server-" + strconv.FormatInt(int64(port), 10)
 }
 
 // BuildServicePorts converts exposed ports into k8s ServicePort objects
-func BuildServicePorts(exposedPorts []int, protocol corev1.Protocol) []corev1.ServicePort {
-	var servicePorts []corev1.ServicePort
+func BuildServicePorts(exposedPorts []int, protocol v1.Protocol) []v1.ServicePort {
+	var servicePorts []v1.ServicePort
 	for _, port := range exposedPorts {
-		servicePorts = append(servicePorts, corev1.ServicePort{
+		servicePorts = append(servicePorts, v1.ServicePort{
 			Name:       ServicePortName(port),
 			Protocol:   protocol,
 			Port:       int32(port),

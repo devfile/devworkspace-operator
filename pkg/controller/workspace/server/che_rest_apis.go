@@ -13,7 +13,7 @@
 package server
 
 import (
-	k8sModelUtils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,9 +56,9 @@ func AddCheRestApis(wkspCtx WorkspaceContext, podSpec *corev1.PodSpec) ([]runtim
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 	})
 
-	serviceName, servicePort := containerName, k8sModelUtils.ServicePortName(cheRestApisPort)
-	ingressName := k8sModelUtils.IngressName(serviceName, int64(cheRestApisPort))
-	ingressHost := k8sModelUtils.IngressHostname(serviceName, wkspCtx.Namespace, int64(cheRestApisPort))
+	serviceName, servicePort := containerName, specutils.ServicePortName(cheRestApisPort)
+	ingressName := specutils.IngressName(serviceName, int64(cheRestApisPort))
+	ingressHost := specutils.IngressHostname(serviceName, wkspCtx.Namespace, ControllerCfg.GetIngressGlobalDomain(), int64(cheRestApisPort))
 	ingressUrl := "http://" + ingressHost + "/api"
 
 	service := corev1.Service{
@@ -78,7 +78,7 @@ func AddCheRestApis(wkspCtx WorkspaceContext, podSpec *corev1.PodSpec) ([]runtim
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       k8sModelUtils.ServicePortName(cheRestApisPort),
+					Name:       specutils.ServicePortName(cheRestApisPort),
 					Protocol:   ServicePortProtocol,
 					Port:       int32(cheRestApisPort),
 					TargetPort: intstr.FromInt(cheRestApisPort),

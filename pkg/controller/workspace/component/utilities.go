@@ -13,9 +13,9 @@
 package component
 
 import (
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"strings"
 
-	modelutils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 	config "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
@@ -64,8 +64,8 @@ func createVolumeMounts(wkspCtx WorkspaceContext, mountSources *bool, devfileVol
 
 func createK8sServicesForContainers(wkspCtx WorkspaceContext, containerName string, exposedPorts []int) []corev1.Service {
 	services := []corev1.Service{}
-	servicePorts := modelutils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
-	serviceName := modelutils.ContainerServiceName(wkspCtx.WorkspaceId, containerName)
+	servicePorts := specutils.BuildServicePorts(exposedPorts, corev1.ProtocolTCP)
+	serviceName := specutils.ContainerServiceName(wkspCtx.WorkspaceId, containerName)
 	if len(servicePorts) > 0 {
 		service := corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{

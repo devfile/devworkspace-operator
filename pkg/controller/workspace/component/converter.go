@@ -101,7 +101,10 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 
 	fromIntOne := intstr.FromInt(1)
 
-	var user int64 = 1234
+	var user *int64
+	if !ControllerCfg.IsOpenShift() {
+		*user = 1234
+	}
 
 	deploy := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -143,8 +146,8 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
 					Containers:                    []corev1.Container{},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: &user,
-						FSGroup:   &user,
+						RunAsUser: user,
+						FSGroup:   user,
 					},
 				},
 			},

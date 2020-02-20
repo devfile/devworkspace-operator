@@ -1,0 +1,103 @@
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: Workspace
+metadata:
+  name: java-mysql
+spec:
+  started: true
+  routingClass: openshift-oauth
+  devfile:
+    apiVersion: 1.0.0
+    projects:
+      - name: web-java-spring-petclinic
+        source:
+          type: git
+          location: "https://github.com/spring-projects/spring-petclinic.git"
+    components:
+      - type: chePlugin
+        id: redhat/java/latest
+        memoryLimit: 1280MiB
+      - type: dockerimage
+        alias: tools
+        image: quay.io/eclipse/che-java8-maven:nightly
+        env:
+          - name: JAVA_OPTS
+            value: "-XX:MaxRAMPercentage=50.0 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
+              -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4 -XX:AdaptiveSizePolicyWeight=90
+              -Dsun.zip.disableMemoryMapping=true -Xms20m -Djava.security.egd=file:/dev/./urandom
+              -Duser.home=/home/user"
+          - name: MAVEN_OPTS
+            value: $(JAVA_OPTS)
+        memoryLimit: 700Mi
+        endpoints:
+          - name: '8080/tcp'
+            port: 8080
+        mountSources: true
+        volumes:
+          - name: m2
+            containerPath: /home/user/.m2
+      - type: dockerimage
+        alias: mysql
+        image: centos/mysql-57-centos7
+        env:
+          - name: MYSQL_USER
+            value: petclinic
+          - name: MYSQL_PASSWORD
+            value: password
+          - name: MYSQL_DATABASE
+            value: petclinic
+          - name: PS1
+            value: $(echo ${0})\\$
+        memoryLimit: 300Mi
+        endpoints:
+          - name: 'db'
+            port: 3306
+            attributes:
+              discoverable: "true"
+              public: "false"
+        mountSources: true
+      - alias: theia-ide
+        type: cheEditor
+        id: eclipse/che-theia/latest
+      - type: chePlugin
+        id: eclipse/che-machine-exec-plugin/latest
+    commands:
+      - name: maven build
+        actions:
+          - type: exec
+            component: tools
+            command: "mvn clean install"
+            workdir: "${CHE_PROJECTS_ROOT}/web-java-spring-petclinic"
+      - name: run webapp
+        actions:
+          - type: exec
+            component: tools
+            command: |
+              SPRING_DATASOURCE_URL=jdbc:mysql://db/petclinic \
+              SPRING_DATASOURCE_USERNAME=petclinic \
+              SPRING_DATASOURCE_PASSWORD=password \
+              java -jar -Dspring.profiles.active=mysql \
+              -Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005 \
+              target/*.jar
+            workdir: ${CHE_PROJECTS_ROOT}/web-java-spring-petclinic
+      - name: prepare database
+        actions:
+        - type: exec
+          component: mysql
+          command: |
+            /opt/rh/rh-mysql57/root/usr/bin/mysql -u root < ${CHE_PROJECTS_ROOT}/web-java-spring-petclinic/src/main/resources/db/mysql/schema.sql &&
+            echo -e "\e[32mDone.\e[0m Database petclinic was configured!"
+      - name: Debug remote java application
+        actions:
+          - type: vscode-launch
+            referenceContent: |
+              {
+              "version": "0.2.0",
+              "configurations": [
+                {
+                  "type": "java",
+                  "name": "Debug (Attach) - Remote",
+                  "request": "attach",
+                  "hostName": "localhost",
+                  "port": 5005
+                }]
+              }

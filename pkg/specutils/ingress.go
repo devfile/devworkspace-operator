@@ -33,4 +33,3 @@ func IngressName(serviceName string, port int64) string {
 	portString := strconv.FormatInt(port, 10)
 	return serviceName + "-" + portString
 }
-

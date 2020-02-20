@@ -160,7 +160,7 @@ func (solver *BasicSolver) BuildExposedEndpoints(cr CurrentReconcile) map[string
 			exposedEndpoint := workspacev1alpha1.ExposedEndpoint{
 				Attributes: endpoint.Attributes,
 				Name:       endpoint.Name,
-				Url:        endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] + "://" +
+				Url: endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] + "://" +
 					specutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, cr.Instance.Spec.IngressGlobalDomain, endpoint.Port),
 			}
 			containerExposedEndpoints = append(containerExposedEndpoints, exposedEndpoint)

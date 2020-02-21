@@ -14,8 +14,6 @@ package workspacerouting
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
-	"strconv"
-
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
@@ -69,86 +67,126 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 
 	// TODO: Temp workaround -- should be able to get serviceAcct separately.
 	proxyDeployment, proxySA := specutils.GetProxyDeployment(currentInstance.Name, currentInstance.Namespace, currentInstance.Spec.Services)
-
 	objectsToCreate = append(objectsToCreate, &proxyDeployment, &proxySA)
 
-	initialProxyHttpsPort := 8443
+	proxyService := createServiceForContainerPorts(currentInstance.Name, currentInstance.Namespace, proxyDeployment)
+	objectsToCreate = append(objectsToCreate, &proxyService)
 
-	proxyCount := 0
+	proxyRoutes := createRoutesForServicePorts(currentInstance.Namespace, currentInstance.Spec.IngressGlobalDomain, proxyService)
+	for _, proxyRoute := range proxyRoutes {
+		objectsToCreate = append(objectsToCreate, &proxyRoute)
+	}
+
 	for _, serviceDesc := range currentInstance.Spec.Services {
 		for _, endpoint := range serviceDesc.Endpoints {
-			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "true" {
-				proxyCountString := strconv.FormatInt(int64(proxyCount), 10)
-				targetServiceName := serviceDesc.ServiceName
-				targetServicePort := specutils.ServicePortName(int(endpoint.Port))
-				var tls *routeV1.TLSConfig = nil
-
-				if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
-					if endpoint.Attributes[workspacev1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "terminal" {
-						tls = &routeV1.TLSConfig{
-							Termination:                   routeV1.TLSTerminationEdge,
-							InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
-						}
-					} else {
-						targetServiceName = specutils.ProxyServiceName(serviceDesc.ServiceName, endpoint.Port)
-						targetServicePort = "proxy" // TODO This is very strange.
-						tls = &routeV1.TLSConfig{
-							Termination: routeV1.TLSTerminationReencrypt,
-						}
-
-						proxyHttpsPort := initialProxyHttpsPort + proxyCount
-
-						objectsToCreate = append(objectsToCreate, &corev1.Service{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      targetServiceName,
-								Namespace: currentInstance.Namespace,
-								Annotations: map[string]string{
-									"service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls" + proxyCountString,
-								},
-							},
-							Spec: corev1.ServiceSpec{
-								Selector: map[string]string{
-									"app": specutils.ProxyDeploymentName(currentInstance.Name),
-								},
-								Type: corev1.ServiceTypeClusterIP,
-								Ports: []corev1.ServicePort{
-									corev1.ServicePort{
-										Name:     "proxy",
-										Port:     int32(proxyHttpsPort),
-										Protocol: corev1.ProtocolTCP,
-									},
-								},
-							},
-						})
-						proxyCount++
-					}
-				}
-
-				objectsToCreate = append(objectsToCreate, &routeV1.Route{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      specutils.IngressName(serviceDesc.ServiceName, endpoint.Port),
-						Namespace: currentInstance.Namespace,
-					},
-					Spec: routeV1.RouteSpec{
-						Host: specutils.IngressHostname(
-							serviceDesc.ServiceName,
-							currentInstance.Namespace,
-							currentInstance.Spec.IngressGlobalDomain,
-							endpoint.Port),
-						To: routeV1.RouteTargetReference{
-							Kind: "Service",
-							Name: targetServiceName,
-						},
-						Port: &routeV1.RoutePort{
-							TargetPort: intstr.FromString(targetServicePort),
-						},
-						TLS: tls,
-					},
-				})
+			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
+				continue
 			}
+
+			var tls *routeV1.TLSConfig = nil
+			// TODO: Figure out why this is done?
+			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
+				if endpoint.Attributes[workspacev1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "terminal" {
+					tls = &routeV1.TLSConfig{
+						Termination:                   routeV1.TLSTerminationEdge,
+						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
+					}
+				} else {
+					continue
+				}
+			}
+
+			objectsToCreate = append(objectsToCreate, &routeV1.Route{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      specutils.IngressName(serviceDesc.ServiceName, endpoint.Port),
+					Namespace: currentInstance.Namespace,
+				},
+				Spec: routeV1.RouteSpec{
+					Host: specutils.IngressHostname(
+						serviceDesc.ServiceName,
+						currentInstance.Namespace,
+						currentInstance.Spec.IngressGlobalDomain,
+						endpoint.Port),
+					To: routeV1.RouteTargetReference{
+						Kind: "Service",
+						Name: serviceDesc.ServiceName,
+					},
+					Port: &routeV1.RoutePort{
+						TargetPort: intstr.FromString(specutils.ServicePortName(int(endpoint.Port))),
+					},
+					TLS: tls,
+				},
+			})
 		}
 	}
 	return objectsToCreate
+}
+
+func createServiceForContainerPorts(workspaceroutingname, namespace string, proxyDeployment appsv1.Deployment) corev1.Service {
+	var servicePorts []corev1.ServicePort
+	for _, container := range proxyDeployment.Spec.Template.Spec.Containers {
+		for _, port := range container.Ports {
+			servicePorts = append(servicePorts, corev1.ServicePort{
+				Name:     port.Name,
+				Port:     port.ContainerPort,
+				Protocol: corev1.ProtocolTCP,
+			})
+		}
+	}
+	service := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "che-workspace-proxy", // TODO : What should this be?
+			Namespace: namespace,
+			Annotations: map[string]string{
+				// TODO
+				//Annotations: map[string]string{
+				//       "service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls" + proxyCountString,
+				//},
+				"service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls",
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{
+				"app": specutils.ProxyDeploymentName(workspaceroutingname),
+			},
+			Type:  corev1.ServiceTypeClusterIP,
+			Ports: servicePorts,
+		},
+	}
+
+	return service
+}
+
+func createRoutesForServicePorts(namespace, ingressGlobalDomain string, service corev1.Service) []routeV1.Route {
+	var routes []routeV1.Route
+
+	for _, port := range service.Spec.Ports {
+		portNum := int64(port.Port)
+		servicePort := intstr.FromString(port.Name)
+		route := routeV1.Route{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      specutils.IngressName(service.Name, portNum),
+				Namespace: namespace,
+			},
+			Spec: routeV1.RouteSpec{
+				Host: specutils.IngressHostname(service.Name, namespace, ingressGlobalDomain, portNum),
+				To: routeV1.RouteTargetReference{
+					Kind: "Service",
+					Name: service.Name,
+				},
+				Port: &routeV1.RoutePort{
+					TargetPort: servicePort,
+				},
+				TLS: &routeV1.TLSConfig{
+					Termination:                   routeV1.TLSTerminationReencrypt,
+					InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
+				},
+			},
+		}
+		routes = append(routes, route)
+	}
+
+	return routes
 }
 
 func (solver *OpenshiftOAuthSolver) CreateOrUpdateRoutingObjects(cr CurrentReconcile) (reconcile.Result, error) {

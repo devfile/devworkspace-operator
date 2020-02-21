@@ -26,11 +26,10 @@ const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oa
 const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
 
 type proxyEndpoint struct {
-	index          int
+	name           string
 	targetService  string
 	targetPort     int64
-	proxyHttpPort  int
-	proxyHttpsPort int
+	proxyHttpsPort int64
 }
 
 func ProxyServiceName(serviceName string, port int64) string {
@@ -45,6 +44,10 @@ func ProxyDeploymentName(routingName string) string {
 	return routingName + "-oauth-proxy"
 }
 
+func ProxyRouteName(serviceDesc v1alpha1.ServiceDescription, endpoint v1alpha1.Endpoint) string {
+	return fmt.Sprintf("%s-%s", serviceDesc.ServiceName, endpoint.Name)
+}
+
 func GetProxyServiceAccount(workspaceroutingName, namespace string, proxyEndpoints []proxyEndpoint) corev1.ServiceAccount {
 	sa := corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -55,8 +58,9 @@ func GetProxyServiceAccount(workspaceroutingName, namespace string, proxyEndpoin
 	}
 
 	for _, endpoint := range proxyEndpoints {
-		key := fmt.Sprintf(proxyServiceAcctAnnotationKeyFmt, strconv.Itoa(endpoint.index))
-		val := fmt.Sprintf(proxyServiceAcctAnnotationValueFmt, IngressName(endpoint.targetService, endpoint.targetPort))
+		key := fmt.Sprintf(proxyServiceAcctAnnotationKeyFmt, endpoint.name)
+		// TODO : Name proxy service better and fix this
+		val := fmt.Sprintf(proxyServiceAcctAnnotationValueFmt, IngressName("che-workspace-proxy", endpoint.targetPort))
 		sa.Annotations[key] = val
 	}
 
@@ -105,24 +109,18 @@ func GetProxyDeployment(workspaceRoutingName, namespace string, services map[str
 
 func getProxyEndpoints(services map[string]v1alpha1.ServiceDescription) []proxyEndpoint {
 	var proxyEndpoints []proxyEndpoint
-	index := 0
-	initialProxyHttpPort := 4180
-	initialProxyHttpsPort := 8443
 	for _, serviceDesc := range services {
 		for _, endpoint := range serviceDesc.Endpoints {
 			if !endpointNeedsProxy(endpoint) {
 				continue
 			}
-
 			proxyEndpoint := proxyEndpoint{
-				index:          index,
+				name:           ProxyRouteName(serviceDesc, endpoint),
 				targetService:  serviceDesc.ServiceName,
 				targetPort:     endpoint.Port,
-				proxyHttpPort:  initialProxyHttpPort + index,
-				proxyHttpsPort: initialProxyHttpsPort + index,
+				proxyHttpsPort: endpoint.Port,
 			}
 			proxyEndpoints = append(proxyEndpoints, proxyEndpoint)
-			index++
 		}
 	}
 	return proxyEndpoints
@@ -130,7 +128,7 @@ func getProxyEndpoints(services map[string]v1alpha1.ServiceDescription) []proxyE
 
 func getProxyDeploymentContainer(saName string, endpoint proxyEndpoint) corev1.Container {
 	container := corev1.Container{
-		Name: "oauth-proxy-" + strconv.Itoa(endpoint.index),
+		Name: "oauth-proxy-" + endpoint.name,
 		Ports: []corev1.ContainerPort{
 			{
 				Name:          "public",
@@ -141,15 +139,15 @@ func getProxyDeploymentContainer(saName string, endpoint proxyEndpoint) corev1.C
 		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      "proxy-tls" + strconv.Itoa(endpoint.index),
+				Name:      "proxy-tls", // TODO: Can this name be shared among containers or does it have to be unique?
 				MountPath: "/etc/tls/private",
 			},
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		Image:                    "openshift/oauth-proxy:latest",
 		Args: []string{
-			"--https-address=:" + strconv.Itoa(endpoint.proxyHttpsPort),
-			"--http-address=127.0.0.1:" + strconv.Itoa(endpoint.proxyHttpPort),
+			"--https-address=:" + strconv.FormatInt(endpoint.proxyHttpsPort, 10),
+			"--http-address=127.0.0.1:" + strconv.Itoa(8080),
 			"--provider=openshift",
 			"--openshift-service-account=" + ProxyServiceAccountName(saName),
 			"--upstream=http://" + endpoint.targetService + ":" + strconv.FormatInt(endpoint.targetPort, 10),

@@ -22,7 +22,7 @@ spec:
     listKind: WorkspaceList
     plural: workspaces
     singular: workspace
-  scope: Namespaced
+  scope: ""
   subresources:
     status: {}
   validation:
@@ -289,6 +289,7 @@ spec:
           - phase
           - workspaceId
           type: object
+      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1

@@ -66,11 +66,14 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 	currentInstance := cr.Instance
 
 	// TODO: Temp workaround -- should be able to get serviceAcct separately.
-	proxyDeployment, proxySA := specutils.GetProxyDeployment(currentInstance.Name, currentInstance.Namespace, currentInstance.Spec.Services)
-	objectsToCreate = append(objectsToCreate, &proxyDeployment, &proxySA)
+	proxyDeployment := specutils.GetProxyDeployment(currentInstance.Name, currentInstance.Namespace, currentInstance.Spec.Services)
+	objectsToCreate = append(objectsToCreate, &proxyDeployment)
 
 	proxyService := createServiceForContainerPorts(currentInstance.Name, currentInstance.Namespace, proxyDeployment)
 	objectsToCreate = append(objectsToCreate, &proxyService)
+
+	proxySA := specutils.GetProxyServiceAccount(currentInstance.Name, currentInstance.Namespace, proxyService)
+	objectsToCreate = append(objectsToCreate, &proxySA)
 
 	proxyRoutes := createRoutesForServicePorts(currentInstance.Namespace, currentInstance.Spec.IngressGlobalDomain, proxyService)
 	for _, proxyRoute := range proxyRoutes {
@@ -122,7 +125,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 	return objectsToCreate
 }
 
-func createServiceForContainerPorts(workspaceroutingname, namespace string, proxyDeployment appsv1.Deployment) corev1.Service {
+func createServiceForContainerPorts(name, namespace string, proxyDeployment appsv1.Deployment) corev1.Service {
 	var servicePorts []corev1.ServicePort
 	for _, container := range proxyDeployment.Spec.Template.Spec.Containers {
 		for _, port := range container.Ports {
@@ -135,7 +138,7 @@ func createServiceForContainerPorts(workspaceroutingname, namespace string, prox
 	}
 	service := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "che-workspace-proxy", // TODO : What should this be?
+			Name:      specutils.ProxyServiceName(name),
 			Namespace: namespace,
 			Annotations: map[string]string{
 				// TODO
@@ -147,7 +150,7 @@ func createServiceForContainerPorts(workspaceroutingname, namespace string, prox
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
-				"app": specutils.ProxyDeploymentName(workspaceroutingname),
+				"app": proxyDeployment.Name,
 			},
 			Type:  corev1.ServiceTypeClusterIP,
 			Ports: servicePorts,

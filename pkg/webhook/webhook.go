@@ -12,21 +12,23 @@
 package webhook
 
 import (
+	"context"
 	"github.com/che-incubator/che-workspace-operator/pkg/webhook/server"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var log = logf.Log.WithName("webhook")
 
-// AddToManagerFuncs is a list of functions to add all Controllers to the Manager
-var AddToManagerFuncs []func(manager.Manager) error
+// configureWebhookTasks is a list of functions to add set webhook up and add them to the Manager
+var configureWebhookTasks []func(*webhook.Server, context.Context) error
 
-// AddToManager adds all Controllers to the Manager
+// SetUpWebhooks sets up Webhook server and registers webhooks configurations
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations;validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
-func AddToManager(mgr manager.Manager) error {
+func SetUpWebhooks(mgr manager.Manager, ctx context.Context) error {
 	success, err := server.ConfigureWebhookServer(mgr)
 	if !success {
 		if err != nil {
@@ -36,8 +38,8 @@ func AddToManager(mgr manager.Manager) error {
 		}
 	}
 
-	for _, f := range AddToManagerFuncs {
-		if err := f(mgr); err != nil {
+	for _, f := range configureWebhookTasks {
+		if err := f(mgr.GetWebhookServer(), ctx); err != nil {
 			return err
 		}
 	}

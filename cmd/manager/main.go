@@ -124,7 +124,7 @@ func main() {
 	}
 
 	log.Info("Setting up webhooks")
-	if err := webhook.AddToManager(mgr); err != nil {
+	if err := webhook.SetUpWebhooks(mgr, ctx); err != nil {
 		log.Error(err, "unable to register webhooks to the manager")
 		os.Exit(1)
 	}

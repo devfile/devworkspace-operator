@@ -50,9 +50,6 @@ Running the controller outside of the cluster depends on everything being in one
 kc delete workspaces.workspace.che.eclipse.org --all-namespaces --all
 # Remove contoller
 kc delete namespace che-workspace-controller
-# Remove admissionwebhook configurations
-kc delete validatingwebhookconfigurations.admissionregistration.k8s.io validate-workspace-admission-hooks
-kc delete mutatingwebhookconfigurations.admissionregistration.k8s.io mutate-workspace-admission-hooks
 # Remove CRDs
 kc delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
 kc delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org

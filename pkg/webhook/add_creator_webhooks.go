@@ -13,5 +13,5 @@ package webhook
 import "github.com/che-incubator/che-workspace-operator/pkg/webhook/creator"
 
 func init() {
-	AddToManagerFuncs = append(AddToManagerFuncs, creator.Add)
+	configureWebhookTasks = append(configureWebhookTasks, creator.SetUp)
 }

@@ -15,13 +15,13 @@ package registry
 import (
 	"context"
 	"fmt"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -132,56 +132,13 @@ func initOperatorService(ctx context.Context, client crclient.Client, port int32
 		},
 	}
 
-	ownRef, err := getPodOwnerRef(ctx, client, namespace)
+	ownRef, err := ownerref.FindControllerOwner(ctx, client)
 	if err != nil {
 		return nil, err
 	}
 	service.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
 
 	return service, nil
-}
-
-func getPodOwnerRef(ctx context.Context, client crclient.Client, ns string) (*metav1.OwnerReference, error) {
-	// Get current Pod the operator is running in
-	pod, err := k8sutil.GetPod(ctx, client, ns)
-	if err != nil {
-		return nil, err
-	}
-	podOwnerRefs := metav1.NewControllerRef(pod, pod.GroupVersionKind())
-	// Get Owner that the Pod belongs to
-	ownerRef := metav1.GetControllerOf(pod)
-	finalOwnerRef, err := findFinalOwnerRef(ctx, client, ns, ownerRef)
-	if err != nil {
-		return nil, err
-	}
-	if finalOwnerRef != nil {
-		return finalOwnerRef, nil
-	}
-
-	// Default to returning Pod as the Owner
-	return podOwnerRefs, nil
-}
-
-// findFinalOwnerRef tries to locate the final controller/owner based on the owner reference provided.
-func findFinalOwnerRef(ctx context.Context, client crclient.Client, ns string, ownerRef *metav1.OwnerReference) (*metav1.OwnerReference, error) {
-	if ownerRef == nil {
-		return nil, nil
-	}
-
-	obj := &unstructured.Unstructured{}
-	obj.SetAPIVersion(ownerRef.APIVersion)
-	obj.SetKind(ownerRef.Kind)
-	err := client.Get(ctx, types.NamespacedName{Namespace: ns, Name: ownerRef.Name}, obj)
-	if err != nil {
-		return nil, err
-	}
-	newOwnerRef := metav1.GetControllerOf(obj)
-	if newOwnerRef != nil {
-		return findFinalOwnerRef(ctx, client, ns, newOwnerRef)
-	}
-
-	log.V(1).Info("Pods owner found", "Kind", ownerRef.Kind, "Name", ownerRef.Name, "Namespace", ns)
-	return ownerRef, nil
 }
 
 func createClient() (crclient.Client, error) {

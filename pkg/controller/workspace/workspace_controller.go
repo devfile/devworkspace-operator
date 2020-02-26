@@ -244,11 +244,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 			return reconcile.Result{}, err
 		} else {
 			if _, isPVC := found.(*corev1.PersistentVolumeClaim); !isPVC {
-				if _, isServiceAccount := found.(*corev1.ServiceAccount); !isServiceAccount {
-					err = r.Update(context.TODO(), prereq)
-					if err != nil {
-						Log.Error(err, "")
-					}
+				err = r.Update(context.TODO(), prereq)
+				if err != nil {
+					Log.Error(err, "")
 				}
 			}
 		}

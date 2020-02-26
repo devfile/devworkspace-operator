@@ -37,22 +37,26 @@ func ProxyServiceName(basename string) string {
 	return basename + "-oauth-proxy"
 }
 
-func proxyServiceAccountName(routingName string) string {
+func ProxyServiceAccountName(routingName string) string {
 	return routingName + "-oauth-proxy"
 }
 
-func proxyDeploymentName(routingName string) string {
+func ProxyDeploymentName(routingName string) string {
 	return routingName + "-oauth-proxy"
 }
 
-func proxyRouteName(serviceDesc v1alpha1.ServiceDescription, endpoint v1alpha1.Endpoint) string {
-	return fmt.Sprintf("%s-%s", serviceDesc.ServiceName, endpoint.Name)
+func ProxyRouteName(serviceName string, endpoint v1alpha1.Endpoint) string {
+	return fmt.Sprintf("%s-%s", serviceName, endpoint.Name)
+}
+
+func ProxyContainerName(endpoint v1alpha1.Endpoint) string {
+	return "oauth-proxy-" + endpoint.Name
 }
 
 func GetProxyServiceAccount(workspaceroutingName, namespace string, service corev1.Service) corev1.ServiceAccount {
 	sa := corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        proxyServiceAccountName(workspaceroutingName),
+			Name:        ProxyServiceAccountName(workspaceroutingName),
 			Namespace:   namespace,
 			Annotations: map[string]string{},
 		},
@@ -78,25 +82,25 @@ func GetProxyDeployment(workspaceRoutingName, namespace string, services map[str
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      proxyDeploymentName(workspaceRoutingName),
+			Name:      ProxyDeploymentName(workspaceRoutingName),
 			Namespace: namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": proxyDeploymentName(workspaceRoutingName),
+					"app": ProxyDeploymentName(workspaceRoutingName),
 				},
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app": proxyDeploymentName(workspaceRoutingName),
+						"app": ProxyDeploymentName(workspaceRoutingName),
 					},
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:      corev1.RestartPolicyAlways,
-					ServiceAccountName: proxyServiceAccountName(workspaceRoutingName),
+					ServiceAccountName: ProxyServiceAccountName(workspaceRoutingName),
 					Volumes:            getProxyVolumes(containers),
 					Containers:         containers,
 				},
@@ -110,11 +114,11 @@ func getProxyEndpoints(services map[string]v1alpha1.ServiceDescription) []proxyE
 	var proxyEndpoints []proxyEndpoint
 	for _, serviceDesc := range services {
 		for _, endpoint := range serviceDesc.Endpoints {
-			if !endpointNeedsProxy(endpoint) {
+			if !EndpointNeedsProxy(endpoint) {
 				continue
 			}
 			proxyEndpoint := proxyEndpoint{
-				name:           proxyRouteName(serviceDesc, endpoint),
+				name:           ProxyRouteName(serviceDesc.ServiceName, endpoint),
 				targetService:  serviceDesc.ServiceName,
 				targetPort:     endpoint.Port,
 				proxyHttpsPort: endpoint.Port,
@@ -148,7 +152,7 @@ func getProxyDeploymentContainer(saName string, endpoint proxyEndpoint) corev1.C
 			"--https-address=:" + strconv.FormatInt(endpoint.proxyHttpsPort, 10),
 			"--http-address=127.0.0.1:" + strconv.Itoa(8080),
 			"--provider=openshift",
-			"--openshift-service-account=" + proxyServiceAccountName(saName),
+			"--openshift-service-account=" + ProxyServiceAccountName(saName),
 			"--upstream=http://" + endpoint.targetService + ":" + strconv.FormatInt(endpoint.targetPort, 10),
 			"--tls-cert=/etc/tls/private/tls.crt",
 			"--tls-key=/etc/tls/private/tls.key",
@@ -179,8 +183,10 @@ func getProxyVolumes(containers []corev1.Container) []corev1.Volume {
 	return volumes
 }
 
-func endpointNeedsProxy(endpoint v1alpha1.Endpoint) bool {
-	return endpoint.Attributes[v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] == "true" &&
+func EndpointNeedsProxy(endpoint v1alpha1.Endpoint) bool {
+	publicAttr, exists := endpoint.Attributes[v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE]
+	endpointIsPublic := !exists || (publicAttr == "true")
+	return endpointIsPublic &&
 		endpoint.Attributes[v1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" &&
 		endpoint.Attributes[v1alpha1.TYPE_ENDPOINT_ATTRIBUTE] != "terminal"
 }

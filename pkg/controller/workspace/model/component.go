@@ -24,7 +24,7 @@ type ContainerDescription struct {
 	// Attributes stores the Che-specific metadata about a component, e.g. a plugin's ID, memoryLimit from devfile, etc.
 	Attributes map[string]string `json:"attributes,omitempty"`
 	// Ports stores the list of ports exposed by this container.
-	Ports      []int             `json:"ports,omitempty"`
+	Ports []int `json:"ports,omitempty"`
 }
 
 // ComponentInstanceStatus represents a workspace components contributions to a workspace deployment, along with additional
@@ -33,14 +33,31 @@ type ContainerDescription struct {
 type ComponentInstanceStatus struct {
 	// Containers is a map of container names to ContainerDescriptions. Field is serialized into workspace status "additionalFields"
 	// and consumed by che-rest-apis
-	Containers            map[string]ContainerDescription `json:"containers,omitempty"`
+	Containers map[string]ContainerDescription `json:"containers,omitempty"`
 	// WorkspacePodAdditions contains the workspace's contributions to the main deployment (e.g. containers, volumes, etc.)
-	WorkspacePodAdditions *corev1.PodTemplateSpec         `json:"-"`
+	WorkspacePodAdditions *corev1.PodTemplateSpec `json:"-"`
 	// ExternalObjects represents the additional (non-deployment) objects that are required for the workspace (e.g. Services)
-	ExternalObjects       []runtime.Object                `json:"-"`
+	ExternalObjects []runtime.Object `json:"-"`
 	// Endpoints stores the workspace endpoints defined by the component
-	Endpoints             []workspacev1alpha1.Endpoint    `json:"-"`
+	Endpoints []workspacev1alpha1.Endpoint `json:"-"`
 	// ContributedRuntimeCommands represent the devfile commands available in the current workspace. They are serialized into the
 	// workspace status "additionalFields" and consumed by che-rest-apis.
 	ContributedRuntimeCommands []CheWorkspaceCommand `json:"contributedRuntimeCommands,omitempty"`
 }
+
+//type ComponentDescription struct {
+//	WorkspaceAdditions ComponentWorkspaceAdditions `json:"-"`
+//	ExternalObjects ComponentExternalObjects `json:"-"`
+//	ComponentStatus ContainerDescription `json:"containers,omitempty"`
+//}
+//
+//// ComponentWorkspaceAdditions contains the k8s elements that should be added to the main workspace pod
+//type ComponentWorkspaceAdditions struct {
+//	Attributes map[string]string
+//	Labels     map[string]string
+//
+//}
+//
+//// ComponentExternalObjects contains the external k8s objects that the component contributes to the workspace
+//type ComponentExternalObjects struct {
+//}

@@ -14,6 +14,7 @@ package component
 
 import (
 	"errors"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/proxy"
 	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"strings"
 
@@ -80,13 +81,47 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceContext,
 	}
 	wkspCtx.CheApiExternal = externalUrl
 
-	workspaceRouting, componentStatuses, k8sComponentsObjects, err := setupComponents(wkspCtx, workspace.Spec.Devfile, mainDeployment)
+	componentStatuses, k8sComponentsObjects, err := setupComponents(wkspCtx, workspace.Spec.Devfile, mainDeployment)
 	if err != nil {
 		return &wkspCtx, nil, nil, nil, err
 	}
-	k8sComponentsObjects = append(k8sComponentsObjects, cheRestApisK8sObjects...)
 
-	return &wkspCtx, workspaceRouting, componentStatuses, append(k8sComponentsObjects, mainDeployment), nil
+	// TODO: This probably shouldn't be done here.
+	provisionServiceAccount(wkspCtx, mainDeployment, &k8sComponentsObjects)
+
+	// TODO: Extract to const
+	if wkspCtx.RoutingClass == "openshift-oauth" {
+		err = proxy.AddProxyToDeployment(wkspCtx, mainDeployment, &k8sComponentsObjects, &componentStatuses)
+		if err != nil {
+			return &wkspCtx, nil, nil, nil, err
+		}
+	}
+
+	workspaceRouting := buildWorkspaceRouting(wkspCtx, componentStatuses)
+
+	k8sComponentsObjects = append(k8sComponentsObjects, cheRestApisK8sObjects...)
+	k8sComponentsObjects = append(k8sComponentsObjects, mainDeployment)
+
+	return &wkspCtx, workspaceRouting, componentStatuses, k8sComponentsObjects, nil
+}
+
+func provisionServiceAccount(wkspCtx WorkspaceContext, deployment *appsv1.Deployment, k8sObjects *[]runtime.Object) {
+	// TODO: Figure this out
+	serviceAccountName := "che-" + wkspCtx.WorkspaceId
+
+	// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
+	autoMountServiceAccount := true
+	workspaceServiceAccount := corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceAccountName,
+			Namespace: wkspCtx.Namespace,
+		},
+		AutomountServiceAccountToken: &autoMountServiceAccount,
+	}
+	*k8sObjects = append(*k8sObjects, &workspaceServiceAccount)
+
+	deployment.Spec.Template.Spec.ServiceAccountName = serviceAccountName
+	deployment.Spec.Template.Spec.AutomountServiceAccountToken = &autoMountServiceAccount
 }
 
 func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Workspace) (*appsv1.Deployment, error) {
@@ -96,8 +131,6 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 	if wkspCtx.Started {
 		replicas = 1
 	}
-
-	var autoMountServiceAccount = ServiceAccount != ""
 
 	fromIntOne := intstr.FromInt(1)
 
@@ -142,7 +175,6 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 					Name: workspaceDeploymentName,
 				},
 				Spec: corev1.PodSpec{
-					AutomountServiceAccountToken:  &autoMountServiceAccount,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
 					Containers:                    []corev1.Container{},
@@ -153,9 +185,6 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 				},
 			},
 		},
-	}
-	if ServiceAccount != "" {
-		deploy.Spec.Template.Spec.ServiceAccountName = ServiceAccount
 	}
 
 	return &deploy, nil
@@ -176,7 +205,7 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec, deployment *appsv1.Deployment) (*workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
+func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec, deployment *appsv1.Deployment) ([]ComponentInstanceStatus, []runtime.Object, error) {
 	components := devfile.Components
 	var k8sObjects []runtime.Object
 
@@ -200,14 +229,14 @@ func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec,
 			break
 		}
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, err
 		}
 		k8sObjects = append(k8sObjects, componentInstanceStatus.ExternalObjects...)
 		componentInstanceStatuses = append(componentInstanceStatuses, *componentInstanceStatus)
 	}
 	pluginComponentStatuses, err := setupChePlugins(wkspCtx, pluginComponents)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	componentInstanceStatuses = append(componentInstanceStatuses, pluginComponentStatuses...)
@@ -215,18 +244,18 @@ func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec,
 		k8sObjects = append(k8sObjects, cis.ExternalObjects...)
 	}
 
-	err = mergeWorkspaceAdditions(deployment, componentInstanceStatuses, k8sObjects)
+	err = mergeWorkspaceAdditions(deployment, componentInstanceStatuses)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
+
+	setWorkspaceDeploymentLabel(deployment, k8sObjects)
 
 	precreateSubpathsInitContainer(wkspCtx, &deployment.Spec.Template.Spec)
 
-	workspaceRouting := buildWorkspaceRouting(wkspCtx, componentInstanceStatuses)
-
 	// TODO store the annotation of the workspaceAPi: with the defer ????
 
-	return workspaceRouting, componentInstanceStatuses, k8sObjects, nil
+	return componentInstanceStatuses, k8sObjects, nil
 }
 
 func buildWorkspaceRouting(wkspCtx WorkspaceContext, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceRouting {
@@ -302,7 +331,7 @@ func precreateSubpathsInitContainer(wkspCtx WorkspaceContext, podSpec *corev1.Po
 	})
 }
 
-func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentInstanceStatuses []ComponentInstanceStatus, k8sObjects []runtime.Object) error {
+func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentInstanceStatuses []ComponentInstanceStatus) error {
 	workspacePodAdditions := []corev1.PodTemplateSpec{}
 	for _, componentInstanceStatus := range componentInstanceStatuses {
 		if componentInstanceStatus.WorkspacePodAdditions != nil {
@@ -358,12 +387,16 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			workspacePodTemplate.Spec.ImagePullSecrets = append(workspacePodTemplate.Spec.ImagePullSecrets, pullSecret)
 		}
 	}
-	workspacePodTemplate.Labels[server.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
+
+	return nil
+}
+
+func setWorkspaceDeploymentLabel(workspaceDeployment *appsv1.Deployment, k8sObjects []runtime.Object) {
+	workspaceDeployment.Spec.Template.Labels[server.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 	for _, externalObject := range k8sObjects {
 		service, isAService := externalObject.(*corev1.Service)
 		if isAService {
 			service.Spec.Selector[server.DEPLOYMENT_NAME_LABEL] = workspaceDeployment.Name
 		}
 	}
-	return nil
 }

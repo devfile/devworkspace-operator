@@ -47,7 +47,7 @@ func (solver *OpenshiftOAuthSolver) CreateDiscoverableServices(cr CurrentReconci
 						Selector: cr.Instance.Spec.WorkspacePodSelector,
 						Type:     corev1.ServiceTypeClusterIP,
 						Ports: []corev1.ServicePort{
-							corev1.ServicePort{
+							{
 								Port:     int32(endpoint.Port),
 								Protocol: corev1.ProtocolTCP,
 							},
@@ -65,20 +65,20 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 
 	currentInstance := cr.Instance
 
-	// TODO: Temp workaround -- should be able to get serviceAcct separately.
-	proxyDeployment := specutils.GetProxyDeployment(currentInstance.Name, currentInstance.Namespace, currentInstance.Spec.Services)
-	objectsToCreate = append(objectsToCreate, &proxyDeployment)
+	//// TODO: Temp workaround -- should be able to get serviceAcct separately.
+	//proxyDeployment := specutils.GetProxyDeployment(currentInstance.Name, currentInstance.Namespace, currentInstance.Spec.Services)
+	//objectsToCreate = append(objectsToCreate, &proxyDeployment)
+	//
+	//proxyService := createServiceForContainerPorts(currentInstance.Name, currentInstance.Namespace, proxyDeployment)
+	//objectsToCreate = append(objectsToCreate, &proxyService)
+	//
+	//proxySA := specutils.GetProxyServiceAccount(currentInstance.Name, currentInstance.Namespace, proxyService)
+	//objectsToCreate = append(objectsToCreate, &proxySA)
 
-	proxyService := createServiceForContainerPorts(currentInstance.Name, currentInstance.Namespace, proxyDeployment)
-	objectsToCreate = append(objectsToCreate, &proxyService)
-
-	proxySA := specutils.GetProxyServiceAccount(currentInstance.Name, currentInstance.Namespace, proxyService)
-	objectsToCreate = append(objectsToCreate, &proxySA)
-
-	proxyRoutes := createRoutesForServicePorts(currentInstance.Namespace, currentInstance.Spec.IngressGlobalDomain, proxyService)
-	for _, proxyRoute := range proxyRoutes {
-		objectsToCreate = append(objectsToCreate, &proxyRoute)
-	}
+	//proxyRoutes := createRoutesForServicePorts(currentInstance.Namespace, currentInstance.Spec.IngressGlobalDomain, proxyService)
+	//for _, proxyRoute := range proxyRoutes {
+	//	objectsToCreate = append(objectsToCreate, &proxyRoute)
+	//}
 
 	for _, serviceDesc := range currentInstance.Spec.Services {
 		for _, endpoint := range serviceDesc.Endpoints {
@@ -95,7 +95,10 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
 					}
 				} else {
-					continue
+					tls = &routeV1.TLSConfig{
+						Termination:                   routeV1.TLSTerminationReencrypt,
+						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
+					}
 				}
 			}
 
@@ -123,73 +126,6 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 		}
 	}
 	return objectsToCreate
-}
-
-func createServiceForContainerPorts(name, namespace string, proxyDeployment appsv1.Deployment) corev1.Service {
-	var servicePorts []corev1.ServicePort
-	for _, container := range proxyDeployment.Spec.Template.Spec.Containers {
-		for _, port := range container.Ports {
-			servicePorts = append(servicePorts, corev1.ServicePort{
-				Name:     port.Name,
-				Port:     port.ContainerPort,
-				Protocol: corev1.ProtocolTCP,
-			})
-		}
-	}
-	service := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      specutils.ProxyServiceName(name),
-			Namespace: namespace,
-			Annotations: map[string]string{
-				// TODO
-				//Annotations: map[string]string{
-				//       "service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls" + proxyCountString,
-				//},
-				"service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls",
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: map[string]string{
-				"app": proxyDeployment.Name,
-			},
-			Type:  corev1.ServiceTypeClusterIP,
-			Ports: servicePorts,
-		},
-	}
-
-	return service
-}
-
-func createRoutesForServicePorts(namespace, ingressGlobalDomain string, service corev1.Service) []routeV1.Route {
-	var routes []routeV1.Route
-
-	for _, port := range service.Spec.Ports {
-		portNum := int64(port.Port)
-		servicePort := intstr.FromString(port.Name)
-		route := routeV1.Route{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      specutils.IngressName(service.Name, portNum),
-				Namespace: namespace,
-			},
-			Spec: routeV1.RouteSpec{
-				Host: specutils.IngressHostname(service.Name, namespace, ingressGlobalDomain, portNum),
-				To: routeV1.RouteTargetReference{
-					Kind: "Service",
-					Name: service.Name,
-				},
-				Port: &routeV1.RoutePort{
-					TargetPort: servicePort,
-				},
-				TLS: &routeV1.TLSConfig{
-					Termination:                   routeV1.TLSTerminationReencrypt,
-					InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
-				},
-			},
-		}
-		routes = append(routes, route)
-	}
-
-	return routes
 }
 
 func (solver *OpenshiftOAuthSolver) CreateOrUpdateRoutingObjects(cr CurrentReconcile) (reconcile.Result, error) {

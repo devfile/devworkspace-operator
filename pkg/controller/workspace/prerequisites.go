@@ -30,8 +30,6 @@ func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object,
 		return nil, err
 	}
 
-	autoMountServiceAccount := true
-
 	k8sObjects := []runtime.Object{
 		&corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
@@ -49,13 +47,6 @@ func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object,
 				},
 				StorageClassName: ControllerCfg.GetPVCStorageClassName(),
 			},
-		},
-		&corev1.ServiceAccount{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ServiceAccount,
-				Namespace: workspace.Namespace,
-			},
-			AutomountServiceAccountToken: &autoMountServiceAccount,
 		},
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{

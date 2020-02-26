@@ -22,7 +22,7 @@ spec:
     listKind: WorkspaceList
     plural: workspaces
     singular: workspace
-  scope: Namespaced
+  scope: ""
   subresources:
     status: {}
   validation:

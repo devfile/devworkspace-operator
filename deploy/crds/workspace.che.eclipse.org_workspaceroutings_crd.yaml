@@ -9,7 +9,7 @@ spec:
     listKind: WorkspaceRoutingList
     plural: workspaceroutings
     singular: workspacerouting
-  scope: Namespaced
+  scope: ""
   subresources:
     status: {}
   validation:

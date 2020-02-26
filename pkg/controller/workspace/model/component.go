@@ -15,32 +15,32 @@ package model
 import (
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-type ComponentInstance struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              ComponentInstanceSpec
-	Status            ComponentInstanceStatus
-}
-
-type ComponentInstanceSpec struct {
-	ComponentClass string                          `json:"componentClass"`
-	Component      workspacev1alpha1.ComponentSpec `json:"component"`
-}
-
+// ContainerDescription stores metadata about workspace containers. This is used to provide information
+// to Theia via the che-rest-apis container.
 type ContainerDescription struct {
+	// Attributes stores the Che-specific metadata about a component, e.g. a plugin's ID, memoryLimit from devfile, etc.
 	Attributes map[string]string `json:"attributes,omitempty"`
+	// Ports stores the list of ports exposed by this container.
 	Ports      []int             `json:"ports,omitempty"`
 }
 
+// ComponentInstanceStatus represents a workspace components contributions to a workspace deployment, along with additional
+// metadata that is required by che-rest-apis. Parts of this struct are serialized into the status of the workspace custom
+// resource.
 type ComponentInstanceStatus struct {
+	// Containers is a map of container names to ContainerDescriptions. Field is serialized into workspace status "additionalFields"
+	// and consumed by che-rest-apis
 	Containers            map[string]ContainerDescription `json:"containers,omitempty"`
+	// WorkspacePodAdditions contains the workspace's contributions to the main deployment (e.g. containers, volumes, etc.)
 	WorkspacePodAdditions *corev1.PodTemplateSpec         `json:"-"`
+	// ExternalObjects represents the additional (non-deployment) objects that are required for the workspace (e.g. Services)
 	ExternalObjects       []runtime.Object                `json:"-"`
+	// Endpoints stores the workspace endpoints defined by the component
 	Endpoints             []workspacev1alpha1.Endpoint    `json:"-"`
-	//fields below are used to be propagated via Che REST API Emulator for workspace components
+	// ContributedRuntimeCommands represent the devfile commands available in the current workspace. They are serialized into the
+	// workspace status "additionalFields" and consumed by che-rest-apis.
 	ContributedRuntimeCommands []CheWorkspaceCommand `json:"contributedRuntimeCommands,omitempty"`
 }

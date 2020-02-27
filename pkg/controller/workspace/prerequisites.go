@@ -84,10 +84,9 @@ func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object,
 				Name: "view",
 			},
 			Subjects: []rbacv1.Subject{
-				rbacv1.Subject{
-					Kind:      "ServiceAccount",
-					Name:      ServiceAccount,
-					Namespace: workspace.Namespace,
+				{
+					Kind: "Group",
+					Name: "system:serviceaccounts:" + workspace.Namespace,
 				},
 			},
 		},
@@ -102,9 +101,8 @@ func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object,
 			},
 			Subjects: []rbacv1.Subject{
 				{
-					Kind:      "ServiceAccount",
-					Name:      ServiceAccount,
-					Namespace: workspace.Namespace,
+					Kind: "Group",
+					Name: "system:serviceaccounts:" + workspace.Namespace,
 				},
 			},
 		},
@@ -119,9 +117,8 @@ func generatePrerequisites(workspace *workspaceApi.Workspace) ([]runtime.Object,
 			},
 			Subjects: []rbacv1.Subject{
 				{
-					Kind:      "ServiceAccount",
-					Name:      ServiceAccount,
-					Namespace: workspace.Namespace,
+					Kind: "Group",
+					Name: "system:serviceaccounts:" + workspace.Namespace,
 				},
 			},
 		},

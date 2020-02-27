@@ -11,7 +11,7 @@
 package server
 
 import (
-	utils "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
+	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	"io/ioutil"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,7 +29,7 @@ var log = logf.Log.WithName("webhook.server")
 var CABundle []byte
 
 func ConfigureWebhookServer(mgr manager.Manager) (bool, error) {
-	enabled, err := utils.IsWebhookConfigurationEnabled()
+	enabled, err := cluster.IsWebhookConfigurationEnabled()
 
 	if err != nil {
 		log.Info("ERROR: Could not evaluate if admission webhook configurations are available", "error", err)

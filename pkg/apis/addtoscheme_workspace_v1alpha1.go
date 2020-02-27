@@ -13,8 +13,8 @@
 package apis
 
 import (
+	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	apis "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	utils "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
 	routeV1 "github.com/openshift/api/route/v1"
 	templateV1 "github.com/openshift/api/template/v1"
 )
@@ -24,7 +24,7 @@ func init() {
 	AddToSchemes = append(AddToSchemes,
 		apis.SchemeBuilder.AddToScheme,
 	)
-	if isOS, err := utils.IsOpenShift(); isOS && err == nil {
+	if isOS, err := cluster.IsOpenShift(); isOS && err == nil {
 		AddToSchemes = append(AddToSchemes,
 			routeV1.AddToScheme,
 			templateV1.AddToScheme,

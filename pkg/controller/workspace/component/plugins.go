@@ -14,10 +14,10 @@ package component
 
 import (
 	"encoding/json"
+	utils "github.com/che-incubator/che-workspace-operator/pkg/controller/modelutils/k8s"
 
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
-	workspace "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
 	metadataBroker "github.com/eclipse/che-plugin-broker/brokers/metadata"
 	brokerModel "github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
@@ -73,7 +73,7 @@ func getArtifactsBrokerObjects(wkspCtx model.WorkspaceContext, components []work
 	)
 	configMapName := fmt.Sprintf("%s.broker-config-map", wkspCtx.WorkspaceId)
 	brokerImage := config.ControllerCfg.GetPluginArtifactsBrokerImage()
-	brokerContainerName := workspace.GetContainerNameFromImage(brokerImage)
+	brokerContainerName := utils.GetContainerNameFromImage(brokerImage)
 
 	// Define plugin broker configmap
 	var fqns []brokerModel.PluginFQN

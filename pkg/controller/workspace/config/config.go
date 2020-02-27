@@ -15,6 +15,7 @@ package config
 import (
 	"context"
 	"errors"
+	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/registry"
 	"os"
 	"strings"
@@ -34,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/log"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
 
 	"fmt"
 )
@@ -217,7 +217,7 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 }
 
 func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMap *corev1.ConfigMap) error {
-	isOS, err := IsOpenShift()
+	isOS, err := cluster.IsOpenShift()
 	if err != nil {
 		return err
 	}

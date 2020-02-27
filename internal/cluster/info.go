@@ -10,18 +10,13 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspace
+package cluster
 
 import (
-	"regexp"
-	"strings"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
-
-var imageRegexp = regexp.MustCompile(`[^0-9a-zA-Z]`)
 
 func IsOpenShift() (bool, error) {
 	kubeCfg, err := config.GetConfig()
@@ -61,6 +56,7 @@ func findAPIResources(source []*metav1.APIResourceList, groupName string) []meta
 	return nil
 }
 
+//IsWebhookConfigurationEnabled returns true if both of mutating and validating webhook configurations are enabled
 func IsWebhookConfigurationEnabled() (bool, error) {
 	kubeCfg, err := config.GetConfig()
 	if err != nil {
@@ -92,10 +88,4 @@ func IsWebhookConfigurationEnabled() (bool, error) {
 	}
 
 	return false, nil
-}
-
-func GetContainerNameFromImage(image string) string {
-	parts := strings.Split(image, "/")
-	imageName := parts[len(parts)-1]
-	return imageRegexp.ReplaceAllString(imageName, "-")
 }

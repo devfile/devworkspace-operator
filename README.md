@@ -47,10 +47,10 @@ Running the controller outside of the cluster depends on everything being in one
 ### Remove controller from your K8s/OS Cluster
 ```sh
 # Delete all workspaces
-kc delete workspaces.workspace.che.eclipse.org --all-namespaces --all
+kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
 # Remove contoller
-kc delete namespace che-workspace-controller
+kubectl delete namespace che-workspace-controller
 # Remove CRDs
-kc delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
-kc delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
+kubectl delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
+kubectl delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
 ```

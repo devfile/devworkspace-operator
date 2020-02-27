@@ -17,7 +17,7 @@ spec:
       serviceAccountName: che-workspace-controller
       containers:
         - name: che-workspace-controller
-          image: quay.io/che-incubator/che-workspace-controller:nightly
+          image: sleshchenko/che-workspace-controller:webhook
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -31,15 +31,8 @@ spec:
           ports:
             - name: webhook-server
               containerPort: 8443
-          volumeMounts:
-            - name: webhook-tls-certs
-              mountPath: /tmp/k8s-webhook-server/serving-certs
-              readOnly: true
-      volumes:
-        - name: webhook-tls-certs
-          secret:
-            secretName: webhook-server-tls
 ---
+#TODO move creating of it on fly if needed
 apiVersion: v1
 kind: Service
 metadata:

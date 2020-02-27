@@ -15,7 +15,7 @@ package registry
 import (
 	"context"
 	"fmt"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
+	"github.com/che-incubator/che-workspace-operator/internal/ownerref"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 

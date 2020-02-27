@@ -13,7 +13,7 @@ package creator
 
 import (
 	"context"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
+	"github.com/che-incubator/che-workspace-operator/internal/ownerref"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

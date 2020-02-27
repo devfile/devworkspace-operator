@@ -11,9 +11,9 @@
 package server
 
 import (
+	"context"
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	"io/ioutil"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -22,13 +22,14 @@ const (
 	webhookServerHost    = "0.0.0.0"
 	webhookServerPort    = 8443
 	webhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
+	webhookCADir         = "/tmp/k8s-webhook-server/certificate-authority"
 )
 
 var log = logf.Log.WithName("webhook.server")
 
 var CABundle []byte
 
-func ConfigureWebhookServer(mgr manager.Manager) (bool, error) {
+func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) (bool, error) {
 	enabled, err := cluster.IsWebhookConfigurationEnabled()
 
 	if err != nil {
@@ -43,12 +44,22 @@ func ConfigureWebhookServer(mgr manager.Manager) (bool, error) {
 		return false, nil
 	}
 
-	CABundle, err = ioutil.ReadFile(webhookServerCertDir + "/ca.crt")
-	if os.IsNotExist(err) {
-		log.Info("CA certificate is not found. Webhook server is not set up")
+	if inCluster, err := cluster.IsInCluster(); !inCluster || err != nil {
+		if err != nil {
+			return false, err
+		}
+		log.Info("Controller is run outside of cluster. Skipping setting webhook server up")
 		return false, nil
 	}
+
+	if err := generateTLSCerts(mgr, ctx); err != nil {
+		return false, err
+	}
+
+	CABundle, err = ioutil.ReadFile(webhookCADir + "/ca.crt")
 	if err != nil {
+		//after generating TLS certs first run will fail.
+		//TODO Rework and read certs directly from configmap,secret to avoid rebooting
 		return false, err
 	}
 

@@ -13,8 +13,10 @@
 package cluster
 
 import (
+	"io/ioutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
+	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
@@ -36,6 +38,19 @@ func IsOpenShift() (bool, error) {
 	} else {
 		return true, nil
 	}
+}
+
+func IsInCluster() (bool, error) {
+	//TODO Try to find a better check
+	_, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return false, err
+		}
+		return false, nil
+	}
+
+	return true, nil
 }
 
 func findAPIGroup(source []metav1.APIGroup, apiName string) *metav1.APIGroup {

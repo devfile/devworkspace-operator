@@ -28,6 +28,8 @@ import (
 const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oauth-redirectreference.%s-%s"
 const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
 
+var openShiftProxySARFmt = `{"namespace": "%s", "resource": "pods", "name": "%s", "verb": "exec"}`
+
 type proxyEndpoint struct {
 	upstreamEndpoint       v1alpha1.Endpoint
 	publicEndpoint         v1alpha1.Endpoint
@@ -173,6 +175,7 @@ func createProxyContainer(endpoint proxyEndpoint, serviceAcctName string) corev1
 			"--tls-cert=/etc/tls/private/tls.crt",
 			"--tls-key=/etc/tls/private/tls.key",
 			"--cookie-secret=SECRET",
+			"--openshift-sar=" + fmt.Sprintf(openShiftProxySARFmt, "", ""),
 		},
 	}
 }

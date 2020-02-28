@@ -29,8 +29,9 @@ const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oa
 const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
 
 type proxyEndpoint struct {
-	upstreamEndpoint v1alpha1.Endpoint
-	publicEndpoint   v1alpha1.Endpoint
+	upstreamEndpoint       v1alpha1.Endpoint
+	publicEndpoint         v1alpha1.Endpoint
+	publicEndpointHttpPort int64
 }
 
 func AddProxyToDeployment(
@@ -84,7 +85,9 @@ func createProxyComponentStatus(containers []corev1.Container, proxyEndpoints []
 			ports = append(ports, int(port.ContainerPort))
 		}
 		containerMetas[container.Name] = model.ContainerDescription{
-			Attributes: nil,
+			Attributes: map[string]string{
+				"source": "tool",
+			},
 			Ports:      ports,
 		}
 	}
@@ -103,8 +106,6 @@ func createProxyComponentStatus(containers []corev1.Container, proxyEndpoints []
 	}
 }
 
-
-
 func annotateServiceAccount(wkspCtx model.WorkspaceContext, serviceAcct *corev1.ServiceAccount, service corev1.Service) {
 	if serviceAcct.Annotations == nil {
 		serviceAcct.Annotations = make(map[string]string)
@@ -120,22 +121,26 @@ func annotateServiceAccount(wkspCtx model.WorkspaceContext, serviceAcct *corev1.
 }
 
 func getProxyPortMappings(wkspCtx model.WorkspaceContext, endpointsToProxy []v1alpha1.Endpoint) []proxyEndpoint {
-	proxyPort := 4400
+	proxyHttpsPort := 4400
+	proxyHttpPort := int64(4180)
 	var proxyEndpoints []proxyEndpoint
 	for _, toProxy := range endpointsToProxy {
 		proxyEndpoint := proxyEndpoint{
 			upstreamEndpoint: toProxy,
-			publicEndpoint:   v1alpha1.Endpoint{
+			publicEndpoint: v1alpha1.Endpoint{
 				Attributes: map[v1alpha1.EndpointAttribute]string{
 					v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE: "true",
 					v1alpha1.SECURE_ENDPOINT_ATTRIBUTE: "true",
-					v1alpha1.TYPE_ENDPOINT_ATTRIBUTE: "ide",
+					v1alpha1.TYPE_ENDPOINT_ATTRIBUTE:   "ide",
 				},
-				Name:       specutils.ProxyRouteName(wkspCtx.WorkspaceId, toProxy),
-				Port:       int64(proxyPort),
+				Name: specutils.ProxyRouteName(wkspCtx.WorkspaceId, toProxy),
+				Port: int64(proxyHttpsPort),
 			},
+			publicEndpointHttpPort: proxyHttpPort,
 		}
 		proxyEndpoints = append(proxyEndpoints, proxyEndpoint)
+		proxyHttpsPort++
+		proxyHttpPort++
 	}
 	return proxyEndpoints
 }
@@ -161,6 +166,7 @@ func createProxyContainer(endpoint proxyEndpoint, serviceAcctName string) corev1
 		Image:                    "openshift/oauth-proxy:latest",
 		Args: []string{
 			"--https-address=:" + strconv.FormatInt(endpoint.publicEndpoint.Port, 10),
+			"--http-address=127.0.0.1:" + strconv.FormatInt(endpoint.publicEndpointHttpPort, 10),
 			"--provider=openshift",
 			"--openshift-service-account=" + serviceAcctName,
 			"--upstream=http://localhost:" + strconv.FormatInt(endpoint.upstreamEndpoint.Port, 10),
@@ -173,9 +179,13 @@ func createProxyContainer(endpoint proxyEndpoint, serviceAcctName string) corev1
 
 func getProxyVolumes(containers []corev1.Container) []corev1.Volume {
 	var volumes []corev1.Volume
+	volumeNames := map[string]bool{}
 	var volumeDefaultMode int32 = 420
 	for _, container := range containers {
 		for _, volumeMount := range container.VolumeMounts {
+			if volumeNames[volumeMount.Name] {
+				continue
+			}
 			volume := corev1.Volume{
 				Name: volumeMount.Name,
 				VolumeSource: corev1.VolumeSource{
@@ -186,6 +196,7 @@ func getProxyVolumes(containers []corev1.Container) []corev1.Volume {
 				},
 			}
 			volumes = append(volumes, volume)
+			volumeNames[volumeMount.Name] = true
 		}
 	}
 	return volumes
@@ -258,7 +269,7 @@ func getServiceForContainerPorts(name, namespace string, containers []corev1.Con
 	service := corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			// TODO: Ugly workaround because naming things is complicated
-			Name:      specutils.ContainerServiceName(name + "-oauth-proxy", "theia"),
+			Name:      specutils.ContainerServiceName(name+"-oauth-proxy", "theia"),
 			Namespace: namespace,
 			Annotations: map[string]string{
 				"service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls",

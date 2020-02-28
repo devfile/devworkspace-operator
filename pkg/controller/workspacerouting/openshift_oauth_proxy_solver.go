@@ -65,21 +65,6 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 
 	currentInstance := cr.Instance
 
-	//// TODO: Temp workaround -- should be able to get serviceAcct separately.
-	//proxyDeployment := specutils.GetProxyDeployment(currentInstance.Name, currentInstance.Namespace, currentInstance.Spec.Services)
-	//objectsToCreate = append(objectsToCreate, &proxyDeployment)
-	//
-	//proxyService := createServiceForContainerPorts(currentInstance.Name, currentInstance.Namespace, proxyDeployment)
-	//objectsToCreate = append(objectsToCreate, &proxyService)
-	//
-	//proxySA := specutils.GetProxyServiceAccount(currentInstance.Name, currentInstance.Namespace, proxyService)
-	//objectsToCreate = append(objectsToCreate, &proxySA)
-
-	//proxyRoutes := createRoutesForServicePorts(currentInstance.Namespace, currentInstance.Spec.IngressGlobalDomain, proxyService)
-	//for _, proxyRoute := range proxyRoutes {
-	//	objectsToCreate = append(objectsToCreate, &proxyRoute)
-	//}
-
 	for _, serviceDesc := range currentInstance.Spec.Services {
 		for _, endpoint := range serviceDesc.Endpoints {
 			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
@@ -87,7 +72,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 			}
 
 			var tls *routeV1.TLSConfig = nil
-			// TODO: Figure out why this is done?
+			// TODO: Document issues around proxying terminal (separate cookies)
 			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
 				if endpoint.Attributes[workspacev1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "terminal" {
 					tls = &routeV1.TLSConfig{

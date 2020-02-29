@@ -31,7 +31,6 @@ import (
 
 var log = logf.Log.WithName("che-plugin-registry")
 
-var trueVar = true
 var EmbeddedPluginRegistryUrl = ""
 
 const (

@@ -205,7 +205,6 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 				result, err = cleanExposedEndpoints(currentReconcile)
 			}
 			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingHiding)
-			return reconcile.Result{}, nil
 		}
 	}
 	return reconcile.Result{}, nil
@@ -230,7 +229,6 @@ func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err erro
 				return err
 			}
 		}
-		return nil
 	}
 
 	if err != nil {

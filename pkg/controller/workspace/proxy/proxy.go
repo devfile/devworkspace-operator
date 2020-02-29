@@ -40,7 +40,7 @@ func AddProxyToDeployment(
 	wkspCtx model.WorkspaceContext,
 	deployment *appsv1.Deployment,
 	k8sObjects *[]runtime.Object,
-	componentInstanceStatuses *[]model.ComponentInstanceStatus) error {
+	componentDescriptions *[]model.ComponentDescription) error {
 
 	serviceAcct, err := findProxyServiceAccount(*k8sObjects)
 	if err != nil {
@@ -48,10 +48,10 @@ func AddProxyToDeployment(
 	}
 
 	var endpointsToProxy []v1alpha1.Endpoint
-	// Get endpoints we need to recreate as proxied endpoints, and remove those from componentInstanceStatuses
-	for idx, component := range *componentInstanceStatuses {
+	// Get endpoints we need to recreate as proxied endpoints, and remove those from componentDescriptions
+	for idx, component := range *componentDescriptions {
 		toProxy, noProxy := getProxyEndpoints(component)
-		(*componentInstanceStatuses)[idx].Endpoints = noProxy
+		(*componentDescriptions)[idx].Status.Endpoints = noProxy
 		endpointsToProxy = append(endpointsToProxy, toProxy...)
 	}
 
@@ -74,12 +74,12 @@ func AddProxyToDeployment(
 	*k8sObjects = append(*k8sObjects, &proxyService)
 
 	proxyComponent := createProxyComponentStatus(proxyContainers, proxyEndpoints)
-	*componentInstanceStatuses = append(*componentInstanceStatuses, proxyComponent)
+	*componentDescriptions = append(*componentDescriptions, proxyComponent)
 
 	return nil
 }
 
-func createProxyComponentStatus(containers []corev1.Container, proxyEndpoints []proxyEndpoint) model.ComponentInstanceStatus {
+func createProxyComponentStatus(containers []corev1.Container, proxyEndpoints []proxyEndpoint) model.ComponentDescription {
 	containerMetas := map[string]model.ContainerDescription{}
 	for _, container := range containers {
 		var ports []int
@@ -99,12 +99,12 @@ func createProxyComponentStatus(containers []corev1.Container, proxyEndpoints []
 		endpoints = append(endpoints, proxyEndpoint.publicEndpoint)
 	}
 
-	return model.ComponentInstanceStatus{
-		Containers:                 containerMetas,
-		WorkspacePodAdditions:      nil,
-		ExternalObjects:            nil,
-		Endpoints:                  endpoints,
-		ContributedRuntimeCommands: nil,
+	return model.ComponentDescription{
+		Status: model.ComponentStatus{
+			Containers:                 containerMetas,
+			Endpoints:                  endpoints,
+			ContributedRuntimeCommands: nil,
+		},
 	}
 }
 
@@ -214,8 +214,8 @@ func findProxyServiceAccount(k8sObjects []runtime.Object) (*corev1.ServiceAccoun
 	return nil, fmt.Errorf("no service account associated with workspace")
 }
 
-func getProxyEndpoints(component model.ComponentInstanceStatus) (proxied, unmodified []v1alpha1.Endpoint) {
-	for _, endpoint := range component.Endpoints {
+func getProxyEndpoints(component model.ComponentDescription) (proxied, unmodified []v1alpha1.Endpoint) {
+	for _, endpoint := range component.Status.Endpoints {
 		if specutils.EndpointNeedsProxy(endpoint) {
 			proxied = append(proxied, endpoint)
 		} else {

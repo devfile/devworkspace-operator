@@ -30,8 +30,8 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
-func setupChePlugins(wkspCtx model.WorkspaceContext, components []workspaceApi.ComponentSpec) ([]model.ComponentInstanceStatus, error) {
-	var componentInstanceStatuses []model.ComponentInstanceStatus
+func setupChePlugins(wkspCtx model.WorkspaceContext, components []workspaceApi.ComponentSpec) ([]model.ComponentDescription, error) {
+	var componentDescriptions []model.ComponentDescription
 
 	broker := metadataBroker.NewBroker(true)
 	metas, err := getMetasForComponents(components)
@@ -45,11 +45,11 @@ func setupChePlugins(wkspCtx model.WorkspaceContext, components []workspaceApi.C
 	}
 
 	for _, plugin := range plugins {
-		component, err := convertToComponentInstanceStatus(plugin, wkspCtx)
+		component, err := convertToComponentDescription(plugin, wkspCtx)
 		if err != nil {
 			return nil, err
 		}
-		componentInstanceStatuses = append(componentInstanceStatuses, *component)
+		componentDescriptions = append(componentDescriptions, *component)
 	}
 
 	if isArtifactsBrokerNecessary(metas) {
@@ -57,14 +57,14 @@ func setupChePlugins(wkspCtx model.WorkspaceContext, components []workspaceApi.C
 		if err != nil {
 			return nil, err
 		}
-		componentInstanceStatuses = append(componentInstanceStatuses, artifactsBroker)
+		componentDescriptions = append(componentDescriptions, artifactsBroker)
 	}
 
-	return componentInstanceStatuses, nil
+	return componentDescriptions, nil
 }
 
-func getArtifactsBrokerObjects(wkspCtx model.WorkspaceContext, components []workspaceApi.ComponentSpec) (model.ComponentInstanceStatus, error) {
-	var brokerComponent model.ComponentInstanceStatus
+func getArtifactsBrokerObjects(wkspCtx model.WorkspaceContext, components []workspaceApi.ComponentSpec) (model.ComponentDescription, error) {
+	var brokerComponent model.ComponentDescription
 
 	const (
 		configMapVolumeName = "broker-config-volume"
@@ -147,12 +147,10 @@ func getArtifactsBrokerObjects(wkspCtx model.WorkspaceContext, components []work
 		},
 	}
 
-	brokerComponent = model.ComponentInstanceStatus{
-		WorkspacePodAdditions: &corev1.PodTemplateSpec{
-			Spec: corev1.PodSpec{
-				InitContainers: []corev1.Container{initContainer},
-				Volumes:        []corev1.Volume{cmVolume},
-			},
+	brokerComponent = model.ComponentDescription{
+		WorkspaceAdditions: &model.ComponentWorkspaceAdditions{
+			InitContainers: []corev1.Container{initContainer},
+			Volumes:        []corev1.Volume{cmVolume},
 		},
 		ExternalObjects: []runtime.Object{&cm},
 	}

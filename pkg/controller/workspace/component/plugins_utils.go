@@ -29,8 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func convertToComponentInstanceStatus(plugin brokerModel.ChePlugin, wkspCtx model.WorkspaceContext) (*model.ComponentInstanceStatus, error) {
-	pod, err := createPodFromPlugin(plugin, wkspCtx)
+func convertToComponentDescription(plugin brokerModel.ChePlugin, wkspCtx model.WorkspaceContext) (*model.ComponentDescription, error) {
+	workspaceAdditions, err := getWorkspaceAdditionsFromPlugin(plugin, wkspCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -43,18 +43,20 @@ func convertToComponentInstanceStatus(plugin brokerModel.ChePlugin, wkspCtx mode
 	commands := createCommandsFromPlugin(plugin, wkspCtx)
 	containerDescriptions := createDescriptionsFromPlugin(plugin)
 
-	component := &model.ComponentInstanceStatus{
-		WorkspacePodAdditions:      pod,
-		ExternalObjects:            externalObjects,
-		Endpoints:                  endpoints,
-		ContributedRuntimeCommands: commands,
-		Containers:                 containerDescriptions,
+	component := &model.ComponentDescription{
+		WorkspaceAdditions: workspaceAdditions,
+		ExternalObjects:    externalObjects,
+		Status: model.ComponentStatus{
+			Endpoints:                  endpoints,
+			ContributedRuntimeCommands: commands,
+			Containers:                 containerDescriptions,
+		},
 	}
 
 	return component, nil
 }
 
-func createPodFromPlugin(plugin brokerModel.ChePlugin, wkspCtx model.WorkspaceContext) (*corev1.PodTemplateSpec, error) {
+func getWorkspaceAdditionsFromPlugin(plugin brokerModel.ChePlugin, wkspCtx model.WorkspaceContext) (*model.ComponentWorkspaceAdditions, error) {
 	containers, err := convertContainers(plugin.Containers, wkspCtx)
 	if err != nil {
 		return nil, err
@@ -63,11 +65,9 @@ func createPodFromPlugin(plugin brokerModel.ChePlugin, wkspCtx model.WorkspaceCo
 	if err != nil {
 		return nil, err
 	}
-	return &corev1.PodTemplateSpec{
-		Spec: corev1.PodSpec{
-			Containers:     containers,
-			InitContainers: initContainers,
-		},
+	return &model.ComponentWorkspaceAdditions{
+		Containers:     containers,
+		InitContainers: initContainers,
 	}, nil
 }
 

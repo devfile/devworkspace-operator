@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/server"
-	"github.com/eclipse/che-plugin-broker/model"
+	brokerModel "github.com/eclipse/che-plugin-broker/model"
 
 	workspaceApi "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,19 +27,21 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
-func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
-	componentInstanceStatus := &ComponentInstanceStatus{
-		Containers:                 map[string]ContainerDescription{},
-		Endpoints:                  []workspaceApi.Endpoint{},
-		ContributedRuntimeCommands: []CheWorkspaceCommand{},
+func setupDockerimageComponent(wkspCtx model.WorkspaceContext, commands []workspaceApi.CommandSpec, component *workspaceApi.ComponentSpec) (*model.ComponentDescription, error) {
+	componentDescription := &model.ComponentDescription{
+		Status: model.ComponentStatus{
+			Containers:                 map[string]model.ContainerDescription{},
+			Endpoints:                  []workspaceApi.Endpoint{},
+			ContributedRuntimeCommands: []model.CheWorkspaceCommand{},
+		},
 	}
 
-	podTemplate := &corev1.PodTemplateSpec{}
-	componentInstanceStatus.WorkspacePodAdditions = podTemplate
-	componentInstanceStatus.ExternalObjects = []runtime.Object{}
+	workspaceAdditions := &model.ComponentWorkspaceAdditions{}
+	componentDescription.WorkspaceAdditions = workspaceAdditions
+	componentDescription.ExternalObjects = []runtime.Object{}
 
 	var containerName string
 	if component.Alias == "" {
@@ -64,13 +66,13 @@ func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi
 		return nil, err
 	}
 
-	volumeMounts := createVolumeMounts(wkspCtx, component.MountSources, component.Volumes, []model.Volume{})
+	volumeMounts := createVolumeMounts(wkspCtx, component.MountSources, component.Volumes, []brokerModel.Volume{})
 
 	var envVars []corev1.EnvVar
 	for _, envVarDef := range component.Env {
 		envVars = append(envVars, corev1.EnvVar{
 			Name:  envVarDef.Name,
-			Value: strings.ReplaceAll(envVarDef.Value, "$(CHE_PROJECTS_ROOT)", DefaultProjectsSourcesRoot),
+			Value: strings.ReplaceAll(envVarDef.Value, "$(CHE_PROJECTS_ROOT)", model.DefaultProjectsSourcesRoot),
 		})
 	}
 	envVars = append(envVars, corev1.EnvVar{
@@ -100,13 +102,13 @@ func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi
 		container.Args = *component.Args
 	}
 
-	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, container)
+	workspaceAdditions.Containers = append(workspaceAdditions.Containers, container)
 
 	for _, service := range createK8sServicesForContainers(wkspCtx, containerName, exposedPorts) {
-		componentInstanceStatus.ExternalObjects = append(componentInstanceStatus.ExternalObjects, &service)
+		componentDescription.ExternalObjects = append(componentDescription.ExternalObjects, &service)
 	}
 
-	componentInstanceStatus.Endpoints = component.Endpoints
+	componentDescription.Status.Endpoints = component.Endpoints
 
 	containerAttributes := map[string]string{}
 	if limitAsInt64, canBeConverted := limit.AsInt64(); canBeConverted {
@@ -114,7 +116,7 @@ func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi
 		containerAttributes[server.MEMORY_REQUEST_ATTRIBUTE] = strconv.FormatInt(limitAsInt64, 10)
 	}
 	containerAttributes[server.CONTAINER_SOURCE_ATTRIBUTE] = server.RECIPE_CONTAINER_SOURCE
-	componentInstanceStatus.Containers[containerName] = ContainerDescription{
+	componentDescription.Status.Containers[containerName] = model.ContainerDescription{
 		Attributes: containerAttributes,
 		Ports:      exposedPorts,
 	}
@@ -139,8 +141,8 @@ func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi
 		for attrName, attrValue := range command.Attributes {
 			attributes[attrName] = attrValue
 		}
-		componentInstanceStatus.ContributedRuntimeCommands = append(componentInstanceStatus.ContributedRuntimeCommands,
-			CheWorkspaceCommand{
+		componentDescription.Status.ContributedRuntimeCommands = append(componentDescription.Status.ContributedRuntimeCommands,
+			model.CheWorkspaceCommand{
 				Name:        command.Name,
 				CommandLine: emptyIfNil(action.Command),
 				Type:        action.Type,
@@ -148,5 +150,5 @@ func setupDockerimageComponent(wkspCtx WorkspaceContext, commands []workspaceApi
 			})
 	}
 
-	return componentInstanceStatus, nil
+	return componentDescription, nil
 }

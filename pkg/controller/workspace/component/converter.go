@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceContext, *workspaceApi.WorkspaceRouting, []ComponentInstanceStatus, []runtime.Object, error) {
+func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceContext, *workspaceApi.WorkspaceRouting, []ComponentDescription, []runtime.Object, error) {
 
 	uid, err := uuid.Parse(string(workspace.ObjectMeta.UID))
 	if err != nil {
@@ -205,46 +205,46 @@ func setupPersistentVolumeClaim(workspace *workspaceApi.Workspace, deployment *a
 	return nil
 }
 
-func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec, deployment *appsv1.Deployment) ([]ComponentInstanceStatus, []runtime.Object, error) {
+func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec, deployment *appsv1.Deployment) ([]ComponentDescription, []runtime.Object, error) {
 	components := devfile.Components
 	var k8sObjects []runtime.Object
 
 	var pluginComponents []workspaceApi.ComponentSpec
 
-	componentInstanceStatuses := []ComponentInstanceStatus{}
+	var componentDescriptions []ComponentDescription
 
 	for _, component := range components {
 		var componentType = component.Type
 		var err error
-		var componentInstanceStatus *ComponentInstanceStatus
+		var componentDescription *ComponentDescription
 		switch componentType {
 		case workspaceApi.CheEditor, workspaceApi.ChePlugin:
 			pluginComponents = append(pluginComponents, component)
 			continue
 		case workspaceApi.Kubernetes, workspaceApi.Openshift:
-			componentInstanceStatus, err = setupK8sLikeComponent(wkspCtx, &component)
+			componentDescription, err = setupK8sLikeComponent(wkspCtx, &component)
 			break
 		case workspaceApi.Dockerimage:
-			componentInstanceStatus, err = setupDockerimageComponent(wkspCtx, devfile.Commands, &component)
+			componentDescription, err = setupDockerimageComponent(wkspCtx, devfile.Commands, &component)
 			break
 		}
 		if err != nil {
 			return nil, nil, err
 		}
-		k8sObjects = append(k8sObjects, componentInstanceStatus.ExternalObjects...)
-		componentInstanceStatuses = append(componentInstanceStatuses, *componentInstanceStatus)
+		k8sObjects = append(k8sObjects, componentDescription.ExternalObjects...)
+		componentDescriptions = append(componentDescriptions, *componentDescription)
 	}
 	pluginComponentStatuses, err := setupChePlugins(wkspCtx, pluginComponents)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	componentInstanceStatuses = append(componentInstanceStatuses, pluginComponentStatuses...)
-	for _, cis := range componentInstanceStatuses {
+	componentDescriptions = append(componentDescriptions, pluginComponentStatuses...)
+	for _, cis := range componentDescriptions {
 		k8sObjects = append(k8sObjects, cis.ExternalObjects...)
 	}
 
-	err = mergeWorkspaceAdditions(deployment, componentInstanceStatuses)
+	err = mergeWorkspaceAdditions(deployment, componentDescriptions)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -255,17 +255,17 @@ func setupComponents(wkspCtx WorkspaceContext, devfile workspaceApi.DevfileSpec,
 
 	// TODO store the annotation of the workspaceAPi: with the defer ????
 
-	return componentInstanceStatuses, k8sObjects, nil
+	return componentDescriptions, k8sObjects, nil
 }
 
-func buildWorkspaceRouting(wkspCtx WorkspaceContext, componentInstanceStatuses []ComponentInstanceStatus) *workspaceApi.WorkspaceRouting {
+func buildWorkspaceRouting(wkspCtx WorkspaceContext, componentDescriptions []ComponentDescription) *workspaceApi.WorkspaceRouting {
 	services := map[string]workspaceApi.ServiceDescription{}
-	for _, componentInstanceStatus := range componentInstanceStatuses {
-		for containerName, container := range componentInstanceStatus.Containers {
+	for _, componentDescription := range componentDescriptions {
+		for containerName, container := range componentDescription.Status.Containers {
 			containerEndpoints := []workspaceApi.Endpoint{}
 			for _, port := range container.Ports {
 				port64 := int64(port)
-				for _, endpoint := range componentInstanceStatus.Endpoints {
+				for _, endpoint := range componentDescription.Status.Endpoints {
 					if endpoint.Port != port64 {
 						continue
 					}
@@ -331,11 +331,11 @@ func precreateSubpathsInitContainer(wkspCtx WorkspaceContext, podSpec *corev1.Po
 	})
 }
 
-func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentInstanceStatuses []ComponentInstanceStatus) error {
-	workspacePodAdditions := []corev1.PodTemplateSpec{}
-	for _, componentInstanceStatus := range componentInstanceStatuses {
-		if componentInstanceStatus.WorkspacePodAdditions != nil {
-			workspacePodAdditions = append(workspacePodAdditions, *componentInstanceStatus.WorkspacePodAdditions)
+func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentDescriptions []ComponentDescription) error {
+	var workspacePodAdditions []ComponentWorkspaceAdditions
+	for _, componentDescription := range componentDescriptions {
+		if componentDescription.WorkspaceAdditions != nil {
+			workspacePodAdditions = append(workspacePodAdditions, *componentDescription.WorkspaceAdditions)
 		}
 	}
 	workspacePodTemplate := &workspaceDeployment.Spec.Template
@@ -355,7 +355,7 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			workspacePodTemplate.Labels[labelKey] = labelValue
 		}
 
-		for _, container := range addition.Spec.Containers {
+		for _, container := range addition.Containers {
 			if containerNames[container.Name] {
 				return errors.New("Duplicate containers in the workspace definition: " + container.Name)
 			}
@@ -363,7 +363,7 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			workspacePodTemplate.Spec.Containers = append(workspacePodTemplate.Spec.Containers, container)
 		}
 
-		for _, container := range addition.Spec.InitContainers {
+		for _, container := range addition.InitContainers {
 			if initContainerNames[container.Name] {
 				return errors.New("Duplicate init conainers in the workspace definition: " + container.Name)
 			}
@@ -371,7 +371,7 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			workspacePodTemplate.Spec.InitContainers = append(workspacePodTemplate.Spec.InitContainers, container)
 		}
 
-		for _, volume := range addition.Spec.Volumes {
+		for _, volume := range addition.Volumes {
 			if volumeNames[volume.Name] {
 				return errors.New("Duplicate volumes in the workspace definition: " + volume.Name)
 			}
@@ -379,7 +379,7 @@ func mergeWorkspaceAdditions(workspaceDeployment *appsv1.Deployment, componentIn
 			workspacePodTemplate.Spec.Volumes = append(workspacePodTemplate.Spec.Volumes, volume)
 		}
 
-		for _, pullSecret := range addition.Spec.ImagePullSecrets {
+		for _, pullSecret := range addition.PullSecrets {
 			if pullSecretNames[pullSecret.Name] {
 				continue
 			}

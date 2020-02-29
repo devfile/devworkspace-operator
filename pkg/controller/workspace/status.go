@@ -214,11 +214,11 @@ func (r *ReconcileWorkspace) updateStatusAfterWorkspaceChange(rs *reconcileStatu
 			}
 		}
 
-		if rs.componentInstanceStatuses == nil {
+		if rs.componentDescriptions == nil {
 			delete(rs.workspace.Status.AdditionalInfo, ComponentStatusesAdditionalInfo)
 		} else {
 
-			statusesAnnotation, err := json.Marshal(rs.componentInstanceStatuses)
+			statusesAnnotation, err := json.Marshal(rs.componentDescriptions)
 			if err != nil {
 				Log.Error(err, "")
 			}
@@ -250,8 +250,8 @@ func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alph
 			Log.Error(nil, "statusesAnnotation is empty !")
 		}
 
-		var statuses []ComponentInstanceStatus
-		err := json.Unmarshal([]byte(statusesAnnotation), &statuses)
+		var componentDescriptions []ComponentDescription
+		err := json.Unmarshal([]byte(statusesAnnotation), &componentDescriptions)
 		if err != nil {
 			Log.Error(err, "")
 		}
@@ -259,9 +259,9 @@ func (r *ReconcileWorkspace) updateFromWorkspaceRouting(routing *workspacev1alph
 		var commands []model.CheWorkspaceCommand
 		machines := map[string]model.CheWorkspaceMachine{}
 
-		for _, status := range statuses {
-			commands = append(commands, status.ContributedRuntimeCommands...)
-			for machineName, description := range status.Containers {
+		for _, description := range componentDescriptions {
+			commands = append(commands, description.Status.ContributedRuntimeCommands...)
+			for machineName, description := range description.Status.Containers {
 				machineExposedEndpoints := routing.Status.ExposedEndpoints[machineName]
 				machineServers := map[string]model.CheWorkspaceServer{}
 				for _, endpoint := range machineExposedEndpoints {

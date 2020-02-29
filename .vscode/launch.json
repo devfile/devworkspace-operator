@@ -10,7 +10,7 @@
       "env": {
         "WATCH_NAMESPACE": "che-workspace-controller",
         "CONTROLLER_CONFIG_MAP_NAMESPACE": "che-workspace-controller"
-      },
+      }
     },
     {
       "name": "Launch Controller",

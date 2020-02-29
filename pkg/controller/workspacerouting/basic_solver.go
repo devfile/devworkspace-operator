@@ -44,7 +44,7 @@ func (solver *BasicSolver) CreateDiscoverableServices(cr CurrentReconcile) []cor
 						Selector: cr.Instance.Spec.WorkspacePodSelector,
 						Type:     corev1.ServiceTypeClusterIP,
 						Ports: []corev1.ServicePort{
-							corev1.ServicePort{
+							{
 								Port:     int32(endpoint.Port),
 								Protocol: corev1.ProtocolTCP,
 							},
@@ -74,12 +74,12 @@ func (solver *BasicSolver) CreateIngresses(cr CurrentReconcile) []extensionsv1be
 					},
 					Spec: extensionsv1beta1.IngressSpec{
 						Rules: []extensionsv1beta1.IngressRule{
-							extensionsv1beta1.IngressRule{
+							{
 								Host: specutils.IngressHostname(serviceDesc.ServiceName, cr.Instance.Namespace, cr.Instance.Spec.IngressGlobalDomain, endpoint.Port),
 								IngressRuleValue: extensionsv1beta1.IngressRuleValue{
 									HTTP: &extensionsv1beta1.HTTPIngressRuleValue{
 										Paths: []extensionsv1beta1.HTTPIngressPath{
-											extensionsv1beta1.HTTPIngressPath{
+											{
 												Backend: extensionsv1beta1.IngressBackend{
 													ServiceName: serviceDesc.ServiceName,
 													ServicePort: intstr.FromInt(int(endpoint.Port)),
@@ -140,8 +140,6 @@ func (solver *BasicSolver) CreateOrUpdateRoutingObjects(cr CurrentReconcile) (re
 			}
 		},
 	)
-
-	return reconcile.Result{}, nil
 }
 
 func (solver *BasicSolver) CheckRoutingObjects(cr CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceRoutingPhase) (workspacev1alpha1.WorkspaceRoutingPhase, reconcile.Result, error) {

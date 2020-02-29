@@ -18,6 +18,37 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+type ComponentDescription struct {
+	// WorkspacePodAdditions contains the workspace's contributions to the main deployment (e.g. containers, volumes, etc.)
+	WorkspaceAdditions *ComponentWorkspaceAdditions `json:"-"`
+	// ExternalObjects represents the additional (non-deployment) objects that are required for the workspace (e.g. Services)
+	ExternalObjects ComponentExternalObjects `json:"-"`
+	// ComponentStatus holds metadata about the component that is serialized into the workspace's status
+	Status ComponentStatus `json:",inline"`
+}
+
+type ComponentWorkspaceAdditions struct {
+	Annotations    map[string]string
+	Labels         map[string]string
+	Containers     []corev1.Container
+	InitContainers []corev1.Container
+	Volumes        []corev1.Volume
+	PullSecrets    []corev1.LocalObjectReference
+}
+
+type ComponentExternalObjects []runtime.Object
+
+type ComponentStatus struct {
+	// Containers is a map of container names to ContainerDescriptions. Field is serialized into workspace status "additionalFields"
+	// and consumed by che-rest-apis
+	Containers map[string]ContainerDescription `json:"containers,omitempty"`
+	// ContributedRuntimeCommands represent the devfile commands available in the current workspace. They are serialized into the
+	// workspace status "additionalFields" and consumed by che-rest-apis.
+	ContributedRuntimeCommands []CheWorkspaceCommand `json:"contributedRuntimeCommands,omitempty"`
+	// Endpoints stores the workspace endpoints defined by the component
+	Endpoints []workspacev1alpha1.Endpoint `json:"-"`
+}
+
 // ContainerDescription stores metadata about workspace containers. This is used to provide information
 // to Theia via the che-rest-apis container.
 type ContainerDescription struct {
@@ -26,38 +57,3 @@ type ContainerDescription struct {
 	// Ports stores the list of ports exposed by this container.
 	Ports []int `json:"ports,omitempty"`
 }
-
-// ComponentInstanceStatus represents a workspace components contributions to a workspace deployment, along with additional
-// metadata that is required by che-rest-apis. Parts of this struct are serialized into the status of the workspace custom
-// resource.
-type ComponentInstanceStatus struct {
-	// Containers is a map of container names to ContainerDescriptions. Field is serialized into workspace status "additionalFields"
-	// and consumed by che-rest-apis
-	Containers map[string]ContainerDescription `json:"containers,omitempty"`
-	// WorkspacePodAdditions contains the workspace's contributions to the main deployment (e.g. containers, volumes, etc.)
-	WorkspacePodAdditions *corev1.PodTemplateSpec `json:"-"`
-	// ExternalObjects represents the additional (non-deployment) objects that are required for the workspace (e.g. Services)
-	ExternalObjects []runtime.Object `json:"-"`
-	// Endpoints stores the workspace endpoints defined by the component
-	Endpoints []workspacev1alpha1.Endpoint `json:"-"`
-	// ContributedRuntimeCommands represent the devfile commands available in the current workspace. They are serialized into the
-	// workspace status "additionalFields" and consumed by che-rest-apis.
-	ContributedRuntimeCommands []CheWorkspaceCommand `json:"contributedRuntimeCommands,omitempty"`
-}
-
-//type ComponentDescription struct {
-//	WorkspaceAdditions ComponentWorkspaceAdditions `json:"-"`
-//	ExternalObjects ComponentExternalObjects `json:"-"`
-//	ComponentStatus ContainerDescription `json:"containers,omitempty"`
-//}
-//
-//// ComponentWorkspaceAdditions contains the k8s elements that should be added to the main workspace pod
-//type ComponentWorkspaceAdditions struct {
-//	Attributes map[string]string
-//	Labels     map[string]string
-//
-//}
-//
-//// ComponentExternalObjects contains the external k8s objects that the component contributes to the workspace
-//type ComponentExternalObjects struct {
-//}

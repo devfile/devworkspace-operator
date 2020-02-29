@@ -33,7 +33,7 @@ import (
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 )
 
-func setupK8sLikeComponent(wkspCtx WorkspaceContext, component *workspaceApi.ComponentSpec) (*ComponentInstanceStatus, error) {
+func setupK8sLikeComponent(wkspCtx WorkspaceContext, component *workspaceApi.ComponentSpec) (*ComponentDescription, error) {
 	var k8sObjects []runtime.Object
 
 	theScheme := runtime.NewScheme()
@@ -159,12 +159,14 @@ func setupK8sLikeComponent(wkspCtx WorkspaceContext, component *workspaceApi.Com
 		}
 	}
 
-	componentInstanceStatus := &ComponentInstanceStatus{
-		Containers:                 map[string]ContainerDescription{},
-		ExternalObjects:            []runtime.Object{},
-		Endpoints:                  []workspaceApi.Endpoint{},
-		ContributedRuntimeCommands: []CheWorkspaceCommand{},
+	// TODO: This appears to do nothing.
+	componentDescription := &ComponentDescription{
+		Status: ComponentStatus{
+			Containers:                 map[string]ContainerDescription{},
+			Endpoints:                  []workspaceApi.Endpoint{},
+			ContributedRuntimeCommands: []CheWorkspaceCommand{},
+		},
 	}
 
-	return componentInstanceStatus, nil
+	return componentDescription, nil
 }

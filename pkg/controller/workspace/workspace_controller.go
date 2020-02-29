@@ -162,14 +162,14 @@ type ReconcileWorkspace struct {
 }
 
 type reconcileStatus struct {
-	changedWorkspaceObjects   bool
-	createdWorkspaceObjects   bool
-	failure                   string
-	cleanedWorkspaceObjects   bool
-	wkspCtx                   *WorkspaceContext
-	workspace                 *workspacev1alpha1.Workspace
-	componentInstanceStatuses []ComponentInstanceStatus
-	ReqLogger                 logr.Logger
+	changedWorkspaceObjects bool
+	createdWorkspaceObjects bool
+	failure                 string
+	cleanedWorkspaceObjects bool
+	wkspCtx                 *WorkspaceContext
+	workspace               *workspacev1alpha1.Workspace
+	componentDescriptions   []ComponentDescription
+	ReqLogger               logr.Logger
 }
 
 // Reconcile reads that state of the cluster for a Workspace object and makes changes based on the state read
@@ -252,7 +252,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		}
 	}
 
-	wkspCtx, workspaceRouting, componentInstanceStatuses, k8sObjects, err := component.ConvertToCoreObjects(instance)
+	wkspCtx, workspaceRouting, componentDescriptions, k8sObjects, err := component.ConvertToCoreObjects(instance)
 	reconcileStatus.wkspCtx = wkspCtx
 	if err != nil {
 		reqLogger.Error(err, "Error when converting to K8S objects")
@@ -260,7 +260,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, nil
 	}
 
-	reconcileStatus.componentInstanceStatuses = componentInstanceStatuses
+	reconcileStatus.componentDescriptions = componentDescriptions
 	k8sObjectNames := map[string]struct{}{}
 
 	reqLogger.Info("Managing K8s Objects")

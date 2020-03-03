@@ -21,7 +21,7 @@ spec:
         memoryLimit: 256Mi
         alias: dev
         image: 'quay.io/eclipse/che-sidecar-openshift-connector:0.1.2-2601509'
-        command: ["tail", "-f", "/dev/null"]
+        args: ["tail", "-f", "/dev/null"]
         env:
           - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
             name: PS1

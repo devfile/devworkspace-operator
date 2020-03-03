@@ -14,6 +14,7 @@ package workspacerouting
 
 import (
 	"context"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,10 +50,10 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		client: mgr.GetClient(),
 		scheme: mgr.GetScheme(),
 		solvers: map[string]WorkspaceRoutingSolver{
-			"": &BasicSolver{
+			model.RoutingTypeDefault: &BasicSolver{
 				Client: mgr.GetClient(),
 			},
-			"openshift-oauth": &OpenshiftOAuthSolver{
+			model.RoutingTypeOpenShiftOauth: &OpenshiftOAuthSolver{
 				Client: mgr.GetClient(),
 			},
 		},

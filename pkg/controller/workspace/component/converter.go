@@ -89,8 +89,7 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceContext,
 	// TODO: This probably shouldn't be done here.
 	provisionServiceAccount(wkspCtx, mainDeployment, &k8sComponentsObjects)
 
-	// TODO: Extract to const
-	if wkspCtx.RoutingClass == "openshift-oauth" {
+	if wkspCtx.RoutingClass == RoutingTypeOpenShiftOauth {
 		err = proxy.AddProxyToDeployment(wkspCtx, mainDeployment, &k8sComponentsObjects, &componentStatuses)
 		if err != nil {
 			return &wkspCtx, nil, nil, nil, err

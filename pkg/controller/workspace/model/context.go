@@ -12,6 +12,11 @@
 
 package model
 
+const (
+	RoutingTypeDefault        string = ""
+	RoutingTypeOpenShiftOauth string = "openshift-oauth"
+)
+
 type WorkspaceContext struct {
 	WorkspaceId    string
 	WorkspaceName  string

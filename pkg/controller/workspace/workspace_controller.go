@@ -15,6 +15,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	origLog "log"
 	"os"
 	"reflect"
@@ -51,7 +52,6 @@ import (
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/log"
 	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/utils"
 )
 
 // Add creates a new Workspace Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -136,7 +136,7 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 
 	origLog.SetOutput(r)
 
-	isOS, err := IsOpenShift()
+	isOS, err := cluster.IsOpenShift()
 	if err != nil {
 		return err
 	}

@@ -17,8 +17,9 @@ docker build -t quay.io/che-incubator/che-workspace-controller:7.1.0 -f ./build/
 2. `kubectl create namespace che-workspace-controller`
 3. Make sure that the right domain is set in `./deploy/controller_config.yaml` and `./deploy/registry/local/ingress.yaml`
 4. `kubectl apply -f ./deploy/registry/local`
-5. [Optional] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
-6. `kubectl apply -f ./deploy`
+5. Generate certificates for Webhook server by executing: `./deploy/webhook-server-certs/deploy-webhook-server-certs.sh`
+6. [Optional] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
+7. `kubectl apply -f ./deploy`
 
 ### Run controller locally
 1. `kubectl apply -f ./deploy/crds`
@@ -42,3 +43,14 @@ Running the controller outside of the cluster depends on everything being in one
 1. Follow steps 1-5 for running the controller locally above
 2. `operator-sdk up local --namespace <your namespace> --enable-delve`
 3. Connect debugger to `127.0.0.1:2345` (see config in `.vscode/launch.json`)
+
+### Remove controller from your K8s/OS Cluster
+```sh
+# Delete all workspaces
+kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
+# Remove contoller
+kubectl delete namespace che-workspace-controller
+# Remove CRDs
+kubectl delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
+kubectl delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
+```

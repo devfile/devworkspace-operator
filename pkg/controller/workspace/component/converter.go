@@ -103,7 +103,8 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 
 	var user *int64
 	if !ControllerCfg.IsOpenShift() {
-		*user = 1234
+		uID := int64(1234)
+		user = &uID
 	}
 
 	deploy := appsv1.Deployment{

@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
 )
 
@@ -122,8 +123,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Info("setting up webhooks")
-	if err := webhook.AddToManager(mgr); err != nil {
+	log.Info("Setting up webhooks")
+	if err := webhook.SetUpWebhooks(mgr, ctx); err != nil {
 		log.Error(err, "unable to register webhooks to the manager")
 		os.Exit(1)
 	}

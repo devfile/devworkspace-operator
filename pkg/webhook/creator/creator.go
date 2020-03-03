@@ -15,6 +15,7 @@ import (
 	"context"
 	"github.com/che-incubator/che-workspace-operator/internal/controller"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,6 +25,11 @@ import (
 
 //SetUp sets up mutate/validating webhooks that provides exec access into workspace for creator only
 func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
+	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
+		log.Info("Webhooks are disabled")
+		return nil
+	}
+
 	log.Info("Configuring creator webhooks")
 	c, err := controller.CreateClient()
 	if err != nil {

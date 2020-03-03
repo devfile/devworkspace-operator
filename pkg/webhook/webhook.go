@@ -35,6 +35,7 @@ func SetUpWebhooks(mgr manager.Manager, ctx context.Context) error {
 			return err
 		} else {
 			log.Info("Webhook server is not set up. Skipping webhook cfg registration")
+			return nil
 		}
 	}
 

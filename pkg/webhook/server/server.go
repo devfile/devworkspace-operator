@@ -12,6 +12,7 @@ package server
 
 import (
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"io/ioutil"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -29,6 +30,9 @@ var log = logf.Log.WithName("webhook.server")
 var CABundle []byte
 
 func ConfigureWebhookServer(mgr manager.Manager) (bool, error) {
+	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
+		return false, nil
+	}
 	enabled, err := cluster.IsWebhookConfigurationEnabled()
 
 	if err != nil {

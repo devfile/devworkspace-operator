@@ -14,12 +14,13 @@ package creator
 import (
 	"context"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	clientConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -28,6 +29,11 @@ var log = logf.Log.WithName("webhook.creator")
 
 //SetUp set up mutate webhook that manager creator annotations for workspaces
 func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
+	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
+		log.Info("Webhooks are disabled")
+		return nil
+	}
+
 	log.Info("Configuring creator mutating webhook")
 	client, err := createClient()
 	if err != nil {
@@ -72,7 +78,7 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 
 //TODO It's copied/pasted from embedded_registry. Consider move it to util class
 func createClient() (crclient.Client, error) {
-	cfg, err := config.GetConfig()
+	cfg, err := clientConfig.GetConfig()
 	if err != nil {
 		return nil, err
 	}

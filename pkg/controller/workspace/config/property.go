@@ -20,4 +20,7 @@ const (
 
 	pluginArtifactsBrokerImage        = "che.workspace.plugin_broker.artifacts.image"
 	defaultPluginArtifactsBrokerImage = "quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0"
+
+	webhooksEnabled = "che.webhooks.enabled"
+	defaultWebhooksEnabled = "true"
 )

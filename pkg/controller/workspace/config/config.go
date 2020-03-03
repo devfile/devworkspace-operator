@@ -97,6 +97,10 @@ func (wc *ControllerConfig) GetPluginArtifactsBrokerImage() string {
 	return wc.GetPropertyOrDefault(pluginArtifactsBrokerImage, defaultPluginArtifactsBrokerImage)
 }
 
+func (wc *ControllerConfig) GetWebhooksEnabled() string {
+	return wc.GetPropertyOrDefault(webhooksEnabled, defaultWebhooksEnabled)
+}
+
 func (wc *ControllerConfig) GetProperty(name string) *string {
 	val, exists := wc.configMap.Data[name]
 	if exists {

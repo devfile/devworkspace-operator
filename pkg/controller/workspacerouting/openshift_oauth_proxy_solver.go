@@ -166,6 +166,7 @@ func (solver *OpenshiftOAuthSolver) BuildExposedEndpoints(cr CurrentReconcile) m
 				continue
 			}
 			protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
+			// TODO: Handle if protocol ends is "https"?
 			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
 				protocol = protocol + "s"
 			}

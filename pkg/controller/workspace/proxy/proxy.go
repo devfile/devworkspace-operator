@@ -134,6 +134,7 @@ func getProxyPortMappings(wkspCtx model.WorkspaceContext, endpointsToProxy []v1a
 					v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE: "true",
 					v1alpha1.SECURE_ENDPOINT_ATTRIBUTE: "true",
 					v1alpha1.TYPE_ENDPOINT_ATTRIBUTE:   "ide",
+					v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE: "http",
 				},
 				Name: specutils.ProxyRouteName(wkspCtx.WorkspaceId, toProxy),
 				Port: int64(proxyHttpsPort),

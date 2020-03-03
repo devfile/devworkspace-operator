@@ -13,14 +13,11 @@
 package workspacerouting
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/specutils"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	routeV1 "github.com/openshift/api/route/v1"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -72,7 +69,8 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 			}
 
 			var tls *routeV1.TLSConfig = nil
-			// TODO: Document issues around proxying terminal (separate cookies)
+			// TODO: Currently, each proxied endpoint requires its own container and cookie; as such,
+			// we cannot proxy the terminal route.
 			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
 				if endpoint.Attributes[workspacev1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "terminal" {
 					tls = &routeV1.TLSConfig{
@@ -125,14 +123,7 @@ func (solver *OpenshiftOAuthSolver) CreateOrUpdateRoutingObjects(cr CurrentRecon
 
 	return CreateOrUpdate(cr, k8sObjects,
 		cmp.Options{
-			cmpopts.IgnoreUnexported(resource.Quantity{}),
 			cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "SessionAffinity", "Type"),
-			cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
-			cmpopts.IgnoreFields(corev1.PodSpec{}, "DNSPolicy", "SecurityContext", "SchedulerName", "DeprecatedServiceAccount", "RestartPolicy", "TerminationGracePeriodSeconds"),
-			cmpopts.IgnoreFields(appsv1.DeploymentStrategy{}, "RollingUpdate"),
-			cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "RevisionHistoryLimit", "ProgressDeadlineSeconds"),
-			cmpopts.IgnoreFields(corev1.ConfigMapVolumeSource{}, "DefaultMode"),
-			cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
 			cmp.FilterPath(
 				func(p cmp.Path) bool {
 					s := p.String()
@@ -147,18 +138,14 @@ func (solver *OpenshiftOAuthSolver) CreateOrUpdateRoutingObjects(cr CurrentRecon
 		},
 		func(found runtime.Object, new runtime.Object) {
 			switch found.(type) {
-			case (*routeV1.Route):
+			case *routeV1.Route:
 				{
 					found.(*routeV1.Route).Spec = new.(*routeV1.Route).Spec
 				}
-			case (*corev1.Service):
+			case *corev1.Service:
 				{
 					new.(*corev1.Service).Spec.ClusterIP = found.(*corev1.Service).Spec.ClusterIP
 					found.(*corev1.Service).Spec = new.(*corev1.Service).Spec
-				}
-			case (*appsv1.Deployment):
-				{
-					found.(*appsv1.Deployment).Spec = new.(*appsv1.Deployment).Spec
 				}
 			}
 		},
@@ -203,6 +190,5 @@ func (solver *OpenshiftOAuthSolver) DeleteRoutingObjects(cr CurrentReconcile) (r
 	return DeleteRoutingObjects(cr, []runtime.Object{
 		&corev1.ServiceList{},
 		&routeV1.RouteList{},
-		&appsv1.Deployment{},
 	})
 }

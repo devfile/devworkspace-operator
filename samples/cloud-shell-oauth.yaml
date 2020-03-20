@@ -4,6 +4,7 @@ metadata:
   name: cloud-shell
 spec:
   started: true
+  routingClass: openshift-oauth
   devfile:
     apiVersion: 0.0.1
     metadata:

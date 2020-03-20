@@ -30,6 +30,14 @@ kubectl apply -f ./deploy
 ```
 
 ### Run controller within OpenShift cluster
+> The operator requires internet access from containers to work. By default, `crc setup` may not provision this, so it's necessary to configure DNS for Docker:
+> ```
+> # /etc/docker/daemon.json
+> {
+>   "dns": ["192.168.0.1"]
+> }
+> ```
+
 ```bash
 # 1. Install CRDs
 oc apply -f ./deploy/crds

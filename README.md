@@ -12,25 +12,56 @@ To build docker image run the following command in the project's root
 docker build -t quay.io/che-incubator/che-workspace-controller:7.1.0 -f ./build/Dockerfile .
 ```
 
-### Run controller within K8s cluster
-1. `kubectl apply -f ./deploy/crds`
-2. `kubectl create namespace che-workspace-controller`
-3. Make sure that the right domain is set in `./deploy/controller_config.yaml` and `./deploy/registry/local/ingress.yaml`
-4. `kubectl apply -f ./deploy/registry/local`
-5. Generate certificates for Webhook server by executing: `./deploy/webhook-server-certs/deploy-webhook-server-certs.sh`
-6. [Optional] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
-7. `kubectl apply -f ./deploy`
+### Run controller within Kubernetes cluster
+```bash
+# 1. Install CRDs
+kubectl apply -f ./deploy/crds
+# 2. Create che-workspace-controller which will hosts controller
+kubectl create namespace che-workspace-controller
+# 3. Deploy Plugin Registry
+# [!MANUAL_ACTION]: Make sure that the right domain is set in `./deploy/controller_config.yaml` and `./deploy/registry/local/ingress.yaml`
+kubectl apply -f ./deploy/registry/local
+kubectl apply -f ./deploy/registry/local/k8s
+# 4. Generate certificates for Webhook server by executing
+./deploy/webhook-server-certs/deploy-webhook-server-certs.sh kubectl
+# 5. Deploy Controller itself
+# [OPTIONAL MANUAL ACTION] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
+kubectl apply -f ./deploy
+```
+
+### Run controller within OpenShift cluster
+> The operator requires internet access from containers to work. By default, `crc setup` may not provision this, so it's necessary to configure DNS for Docker:
+> ```
+> # /etc/docker/daemon.json
+> {
+>   "dns": ["192.168.0.1"]
+> }
+> ```
+
+```bash
+# 1. Install CRDs
+oc apply -f ./deploy/crds
+# 2. Create che-workspace-controller which will hosts controller
+oc create namespace che-workspace-controller
+# 3. Deploy Plugin Registry
+oc apply -f ./deploy/registry/local
+oc apply -f ./deploy/registry/local/os
+PLUGIN_REGISTRY_HOST=$(oc get route che-plugin-registry -n che-workspace-controller -o jsonpath='{.spec.host}' || echo "")
+# 4. Generate certificates for Webhook server by executing
+./deploy/webhook-server-certs/deploy-webhook-server-certs.sh oc
+# 5. Deploy Controller itself
+# [OPTIONAL MANUAL ACTION] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
+cat ./deploy/*.yaml | \
+  sed "s|plugin.registry.url: .*|plugin.registry.url: http://${PLUGIN_REGISTRY_HOST}/v3|" | \
+  oc apply -f -
+```
 
 ### Run controller locally
-1. `kubectl apply -f ./deploy/crds`
-2. `kubectl create namespace che-workspace-controller`
-3. Make sure that the right domain is set in `./deploy/controller_config.yaml` and `./deploy/registry/local/ingress.yaml`
-4. `kubectl apply -f ./deploy/registry/local`
-5. `kubectl apply -f ./deploy/controller_config.yaml`
-6. `operator-sdk up local --namespace <your namespace>`
+According to your Cluster do 1-4 steps from [Kubernetes](#run-controller-within-kubernetes-cluster) or [OpenShift](#run-controller-within-openshift-cluster).
+
+`operator-sdk up local --namespace <your watched namespace>`
 
 ### Test run controller
-
 1. Take a look samples workspace configuration in `./samples` folder.
 2. Apply any of them by executing `kubectl apply -f ./samples/workspace_java_mysql.yaml -n <namespace>`
 3. As soon as workspace is started you're able to get IDE url by executing `kubectl get workspace -n <namespace>`

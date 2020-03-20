@@ -1,0 +1,18 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-edit: "true"
+  name: edit-workspaces
+rules:
+  - apiGroups:
+      - workspace.che.eclipse.org
+    resources:
+      - workspaces
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - patch
+      - update

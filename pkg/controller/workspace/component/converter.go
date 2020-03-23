@@ -43,6 +43,7 @@ func ConvertToCoreObjects(workspace *workspaceApi.Workspace) (*WorkspaceContext,
 		WorkspaceName: workspace.Name,
 		Started:       workspace.Spec.Started,
 		RoutingClass:  workspace.Spec.RoutingClass,
+		Creator:       workspace.Annotations[WorkspaceCreatorAnnotation],
 	}
 
 	if !wkspCtx.Started {
@@ -114,6 +115,9 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 			Labels: map[string]string{
 				WorkspaceIDLabel: wkspCtx.WorkspaceId,
 			},
+			Annotations: map[string]string{
+				WorkspaceCreatorAnnotation: wkspCtx.Creator,
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -138,6 +142,9 @@ func buildMainDeployment(wkspCtx WorkspaceContext, workspace *workspaceApi.Works
 						CheOriginalNameLabel: CheOriginalName,
 						WorkspaceIDLabel:     wkspCtx.WorkspaceId,
 						WorkspaceNameLabel:   wkspCtx.WorkspaceName,
+					},
+					Annotations: map[string]string{
+						WorkspaceCreatorAnnotation: wkspCtx.Creator,
 					},
 					Name: workspaceDeploymentName,
 				},

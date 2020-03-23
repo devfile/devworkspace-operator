@@ -48,5 +48,6 @@ const (
 	//CheOriginalNameLabel is label key to original name
 	CheOriginalNameLabel = "che.original_name"
 
+	//WorkspaceCreatorAnnotation must be provisioned to every Workspace/Deployment/Pod as an annotation
 	WorkspaceCreatorAnnotation = "org.eclipse.che.workspace/creator"
 )

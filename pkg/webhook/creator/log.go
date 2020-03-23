@@ -8,16 +8,8 @@
 //
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
-//
+package creator
 
-package model
+import logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-type WorkspaceContext struct {
-	WorkspaceId    string
-	WorkspaceName  string
-	Namespace      string
-	Started        bool
-	CheApiExternal string
-	RoutingClass   string
-	Creator        string
-}
+var log = logf.Log.WithName("webhook.creator")

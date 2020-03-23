@@ -28,19 +28,20 @@ type WorkspaceAnnotator struct {
 	decoder *admission.Decoder
 }
 
-// WorkspaceAnnotator adds an creator annotation to every incoming workspaces.
+// WorkspaceAnnotator makes sure every incoming workspaces has creator and it's not modified.
 func (a *WorkspaceAnnotator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	switch req.Operation {
-	case v1beta1.Create:
-		return a.handleCreate(ctx, req)
-	case v1beta1.Update:
-		return a.handleUpdate(ctx, req)
-	default:
-		return admission.Denied(fmt.Sprintf("This admission is not supposed to handle %s operation. Please revise configuration", req.Operation))
+	if req.Kind.Kind == "Workspace" {
+		switch req.Operation {
+		case v1beta1.Create:
+			return a.handleWorkspaceCreate(ctx, req)
+		case v1beta1.Update:
+			return a.handleWorkspaceUpdate(ctx, req)
+		}
 	}
+	return admission.Denied(fmt.Sprintf("This admission is not supposed to handle %s operation for %s. Let administrator to know about this issue", req.Operation, req.Kind))
 }
 
-func (a *WorkspaceAnnotator) handleCreate(_ context.Context, req admission.Request) admission.Response {
+func (a *WorkspaceAnnotator) handleWorkspaceCreate(_ context.Context, req admission.Request) admission.Response {
 	wksp := &v1alpha1.Workspace{}
 
 	err := a.decoder.Decode(req, wksp)
@@ -63,7 +64,7 @@ func (a *WorkspaceAnnotator) handleCreate(_ context.Context, req admission.Reque
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledWksp)
 }
 
-func (a *WorkspaceAnnotator) handleUpdate(ctx context.Context, req admission.Request) admission.Response {
+func (a *WorkspaceAnnotator) handleWorkspaceUpdate(_ context.Context, req admission.Request) admission.Response {
 	newWksp := &v1alpha1.Workspace{}
 	oldWksp := &v1alpha1.Workspace{}
 
@@ -80,22 +81,22 @@ func (a *WorkspaceAnnotator) handleUpdate(ctx context.Context, req admission.Req
 	if !found {
 		log.Info(fmt.Sprintf("WARN: Worskpace %s does not have creator annotation. It happens only for old "+
 			"workspaces or when mutating webhook is not configured properly", newWksp.ObjectMeta.UID))
-		return returnPatchedWithUser(req.Object.Raw, newWksp, req.UserInfo.UID)
+		return returnAnnotatedWorkspace(req.Object.Raw, newWksp, req.UserInfo.UID)
 	}
 
 	newCreator, found := newWksp.Annotations[model.WorkspaceCreatorAnnotation]
 	if !found {
-		return returnPatchedWithUser(req.Object.Raw, newWksp, oldCreator)
+		return returnAnnotatedWorkspace(req.Object.Raw, newWksp, oldCreator)
 	}
 
 	if newCreator != oldCreator {
-		return admission.Denied(fmt.Sprintf("annotation %s is immutable and must have value: %q", model.WorkspaceCreatorAnnotation, oldCreator))
+		return admission.Denied(fmt.Sprintf("annotation '%s' is assigned once workspace is created and is immutable", model.WorkspaceCreatorAnnotation))
 	}
 
 	return admission.Allowed("new workspace has the same creator as old one")
 }
 
-func returnPatchedWithUser(original []byte, patchedWksp *v1alpha1.Workspace, creator string) admission.Response {
+func returnAnnotatedWorkspace(original []byte, patchedWksp *v1alpha1.Workspace, creator string) admission.Response {
 	patchedWksp.Annotations[model.WorkspaceCreatorAnnotation] = creator
 
 	marshaledWksp, err := json.Marshal(patchedWksp)

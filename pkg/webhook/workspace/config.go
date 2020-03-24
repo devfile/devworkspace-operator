@@ -9,13 +9,14 @@
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
 //
-package creator
+package workspace
 
 import (
 	"context"
 	"github.com/che-incubator/che-workspace-operator/internal/controller"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	"github.com/che-incubator/che-workspace-operator/pkg/webhook/workspace/handler"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +31,7 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		return nil
 	}
 
-	log.Info("Configuring creator webhooks")
+	log.Info("Configuring workspace webhooks")
 	c, err := controller.CreateClient()
 	if err != nil {
 		return err
@@ -66,13 +67,12 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Updated creator mutating webhook configuration")
+		log.Info("Updated workspace mutating webhook configuration")
 	} else {
-		log.Info("Created creator mutating webhook configuration")
+		log.Info("Created workspace mutating webhook configuration")
 	}
 
-	webhookServer.Register(mutateWorkspacesWebhookPath, &webhook.Admission{Handler: &WorkspaceAnnotator{}})
-	webhookServer.Register(mutateWebhookPath, &webhook.Admission{Handler: &CreatorChecker{}})
+	webhookServer.Register(mutateWebhookPath, &webhook.Admission{Handler: &handler.WorkspaceResourcesMutator{}})
 
 	validateWebhookCfg := buildValidatingWebhookCfg()
 	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
@@ -94,12 +94,12 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Updated creator validating webhook configuration")
+		log.Info("Updated workspace validating webhook configuration")
 	} else {
-		log.Info("Created creator validating webhook configuration")
+		log.Info("Created workspace validating webhook configuration")
 	}
 
-	webhookServer.Register(validateWebhookPath, &webhook.Admission{Handler: &WorkspaceExecValidator{}})
+	webhookServer.Register(validateWebhookPath, &webhook.Admission{Handler: &handler.WorkspaceValidator{}})
 
 	return nil
 }

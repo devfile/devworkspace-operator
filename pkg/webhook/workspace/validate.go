@@ -8,27 +8,31 @@
 //
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
-package handler
+package workspace
 
 import (
 	"context"
 	"fmt"
+	"github.com/che-incubator/che-workspace-operator/pkg/webhook/workspace/handler"
 	"k8s.io/api/admission/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// WorkspaceValidator validates execs process all exec requests and:
+// ResourcesValidator validates execs process all exec requests and:
 // if related pod DOES NOT have workspace_id label - just skip it
 // if related pod DOES have workspace_id label - make sure that exec is requested by workspace workspace
-type WorkspaceValidator struct {
-	client  client.Client
-	decoder *admission.Decoder
+type ResourcesValidator struct {
+	*handler.WebhookHandler
 }
 
-func (v *WorkspaceValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	if req.Kind == V1PodExecOptionKind && req.Operation == v1beta1.Connect {
-		return v.validateExecOnConnect(ctx, req)
+func NewResourcesValidator() *ResourcesValidator {
+	return &ResourcesValidator{&handler.WebhookHandler{}}
+}
+
+func (v *ResourcesValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
+	if req.Kind == handler.V1PodExecOptionKind && req.Operation == v1beta1.Connect {
+		return v.ValidateExecOnConnect(ctx, req)
 	}
 	// Do not allow operation if the corresponding handler is not found
 	// It indicates that the webhooks configuration is not a valid or incompatible with this version of controller
@@ -39,8 +43,8 @@ func (v *WorkspaceValidator) Handle(ctx context.Context, req admission.Request) 
 // A client will be automatically injected.
 
 // InjectClient injects the client.
-func (v *WorkspaceValidator) InjectClient(c client.Client) error {
-	v.client = c
+func (v *ResourcesValidator) InjectClient(c client.Client) error {
+	v.Client = c
 	return nil
 }
 
@@ -48,7 +52,7 @@ func (v *WorkspaceValidator) InjectClient(c client.Client) error {
 // A decoder will be automatically injected.
 
 // InjectDecoder injects the decoder.
-func (v *WorkspaceValidator) InjectDecoder(d *admission.Decoder) error {
-	v.decoder = d
+func (v *ResourcesValidator) InjectDecoder(d *admission.Decoder) error {
+	v.Decoder = d
 	return nil
 }

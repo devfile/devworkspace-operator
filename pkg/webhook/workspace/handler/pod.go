@@ -20,15 +20,15 @@ import (
 
 var V1PodKind = metav1.GroupVersionKind{Kind: "Pod", Group: "", Version: "v1"}
 
-func (m *WorkspaceResourcesMutator) mutatePodOnCreate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) MutatePodOnCreate(_ context.Context, req admission.Request) admission.Response {
 	p := &corev1.Pod{}
 
-	err := m.decoder.Decode(req, p)
+	err := h.Decoder.Decode(req, p)
 	if err != nil {
 		return admission.Denied(".metadata validation failed: " + err.Error())
 	}
 
-	err = m.mutateMetadataOnCreate(&p.ObjectMeta)
+	err = h.mutateMetadataOnCreate(&p.ObjectMeta)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -36,22 +36,22 @@ func (m *WorkspaceResourcesMutator) mutatePodOnCreate(_ context.Context, req adm
 	return admission.Allowed("The object is valid")
 }
 
-func (m *WorkspaceResourcesMutator) mutatePodOnUpdate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) MutatePodOnUpdate(_ context.Context, req admission.Request) admission.Response {
 	oldP := &corev1.Pod{}
 	newP := &corev1.Pod{}
 
-	err := m.parse(req, oldP, newP)
+	err := h.parse(req, oldP, newP)
 	if err != nil {
 		return admission.Denied(err.Error())
 	}
 
-	patched, err := m.mutateMetadataOnUpdate(&oldP.ObjectMeta, &newP.ObjectMeta)
+	patched, err := h.mutateMetadataOnUpdate(&oldP.ObjectMeta, &newP.ObjectMeta)
 	if err != nil {
 		return admission.Denied(".metadata validation failed: " + err.Error())
 	}
 
 	if patched {
-		return m.returnPatched(req, newP)
+		return h.returnPatched(req, newP)
 	}
 
 	return admission.Allowed("The object is valid")

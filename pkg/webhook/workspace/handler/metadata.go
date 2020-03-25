@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (m *WorkspaceResourcesMutator) mutateMetadataOnCreate(o *metav1.ObjectMeta) error {
+func (h *WebhookHandler) mutateMetadataOnCreate(o *metav1.ObjectMeta) error {
 	if o.GetAnnotations() == nil {
 		return fmt.Errorf("annotations are missing while %s is required", model.WorkspaceCreatorAnnotation)
 	} else {
@@ -36,7 +36,7 @@ func (m *WorkspaceResourcesMutator) mutateMetadataOnCreate(o *metav1.ObjectMeta)
 	return nil
 }
 
-func (m *WorkspaceResourcesMutator) mutateMetadataOnUpdate(oldMeta, newMeta *metav1.ObjectMeta) (bool, error) {
+func (h *WebhookHandler) mutateMetadataOnUpdate(oldMeta, newMeta *metav1.ObjectMeta) (bool, error) {
 	if oldMeta.Annotations == nil {
 		oldMeta.Annotations = map[string]string{}
 	}

@@ -22,10 +22,10 @@ import (
 
 var V1alpha1WorkspaceKind = metav1.GroupVersionKind{Kind: "Workspace", Group: "workspace.che.eclipse.org", Version: "v1alpha1"}
 
-func (m *WorkspaceResourcesMutator) mutateWorkspaceOnCreate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) MutateWorkspaceOnCreate(_ context.Context, req admission.Request) admission.Response {
 	wksp := &v1alpha1.Workspace{}
 
-	err := m.decoder.Decode(req, wksp)
+	err := h.Decoder.Decode(req, wksp)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -34,13 +34,13 @@ func (m *WorkspaceResourcesMutator) mutateWorkspaceOnCreate(_ context.Context, r
 		wksp.Annotations = map[string]string{}
 	}
 	wksp.Annotations[model.WorkspaceCreatorAnnotation] = req.UserInfo.UID
-	return m.returnPatched(req, wksp)
+	return h.returnPatched(req, wksp)
 }
 
-func (m *WorkspaceResourcesMutator) mutateWorkspaceOnUpdate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admission.Request) admission.Response {
 	newWksp := &v1alpha1.Workspace{}
 	oldWksp := &v1alpha1.Workspace{}
-	err := m.parse(req, oldWksp, newWksp)
+	err := h.parse(req, oldWksp, newWksp)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -50,13 +50,13 @@ func (m *WorkspaceResourcesMutator) mutateWorkspaceOnUpdate(_ context.Context, r
 		log.Info(fmt.Sprintf("WARN: Worskpace %s does not have workspace annotation. It happens only for old "+
 			"workspaces or when mutating webhook is not configured properly", newWksp.ObjectMeta.UID))
 		newWksp.Annotations[model.WorkspaceCreatorAnnotation] = req.UserInfo.UID
-		return m.returnPatched(req, newWksp)
+		return h.returnPatched(req, newWksp)
 	}
 
 	newCreator, found := newWksp.Annotations[model.WorkspaceCreatorAnnotation]
 	if !found {
 		newWksp.Annotations[model.WorkspaceCreatorAnnotation] = oldCreator
-		return m.returnPatched(req, newWksp)
+		return h.returnPatched(req, newWksp)
 	}
 
 	if newCreator != oldCreator {

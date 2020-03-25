@@ -23,7 +23,7 @@ import (
 
 var V1PodExecOptionKind = metav1.GroupVersionKind{Kind: "PodExecOptions", Group: "", Version: "v1"}
 
-func (v *WorkspaceValidator) validateExecOnConnect(ctx context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admission.Request) admission.Response {
 	c, err := controller.CreateClient()
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)

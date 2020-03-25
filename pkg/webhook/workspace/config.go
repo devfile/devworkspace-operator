@@ -16,7 +16,6 @@ import (
 	"github.com/che-incubator/che-workspace-operator/internal/controller"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
-	"github.com/che-incubator/che-workspace-operator/pkg/webhook/workspace/handler"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,7 +71,7 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		log.Info("Created workspace mutating webhook configuration")
 	}
 
-	webhookServer.Register(mutateWebhookPath, &webhook.Admission{Handler: &handler.WorkspaceResourcesMutator{}})
+	webhookServer.Register(mutateWebhookPath, &webhook.Admission{Handler: NewWorkspaceResourcesMutator()})
 
 	validateWebhookCfg := buildValidatingWebhookCfg()
 	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
@@ -99,7 +98,7 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		log.Info("Created workspace validating webhook configuration")
 	}
 
-	webhookServer.Register(validateWebhookPath, &webhook.Admission{Handler: &handler.WorkspaceValidator{}})
+	webhookServer.Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator()})
 
 	return nil
 }

@@ -47,10 +47,7 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 
 	oldCreator, found := oldWksp.Annotations[model.WorkspaceCreatorAnnotation]
 	if !found {
-		log.Info(fmt.Sprintf("WARN: Worskpace %s does not have workspace annotation. It happens only for old "+
-			"workspaces or when mutating webhook is not configured properly", newWksp.ObjectMeta.UID))
-		newWksp.Annotations[model.WorkspaceCreatorAnnotation] = req.UserInfo.UID
-		return h.returnPatched(req, newWksp)
+		return admission.Denied(fmt.Sprintf("annotation '%s' is missing. Please recreate workspace to get it initialized", model.WorkspaceCreatorAnnotation))
 	}
 
 	newCreator, found := newWksp.Annotations[model.WorkspaceCreatorAnnotation]

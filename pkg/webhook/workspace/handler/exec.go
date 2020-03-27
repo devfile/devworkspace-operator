@@ -12,7 +12,6 @@ package handler
 
 import (
 	"context"
-	"github.com/che-incubator/che-workspace-operator/internal/controller"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,23 +23,14 @@ import (
 var V1PodExecOptionKind = metav1.GroupVersionKind{Kind: "PodExecOptions", Group: "", Version: "v1"}
 
 func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admission.Request) admission.Response {
-	c, err := controller.CreateClient()
-	if err != nil {
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
 	p := corev1.Pod{}
-	err = c.Get(ctx, types.NamespacedName{
+	err := h.Client.Get(ctx, types.NamespacedName{
 		Name:      req.Name,
 		Namespace: req.Namespace,
 	}, &p)
 
 	if err != nil {
 		return admission.Errored(http.StatusInternalServerError, err)
-	}
-
-	if p.Annotations == nil {
-		p.Annotations = map[string]string{}
 	}
 
 	_, ok := p.Labels[model.WorkspaceIDLabel]

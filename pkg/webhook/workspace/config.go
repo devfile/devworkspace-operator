@@ -71,7 +71,7 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		log.Info("Created workspace mutating webhook configuration")
 	}
 
-	webhookServer.Register(mutateWebhookPath, &webhook.Admission{Handler: NewWorkspaceResourcesMutator()})
+	webhookServer.Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator()})
 
 	validateWebhookCfg := buildValidatingWebhookCfg()
 	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})

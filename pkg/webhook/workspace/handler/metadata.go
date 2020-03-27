@@ -17,29 +17,18 @@ import (
 )
 
 func (h *WebhookHandler) mutateMetadataOnCreate(o *metav1.ObjectMeta) error {
-	if o.GetAnnotations() == nil {
-		return fmt.Errorf("annotations are missing while %s is required", model.WorkspaceCreatorAnnotation)
-	} else {
-		if _, ok := o.GetAnnotations()[model.WorkspaceCreatorAnnotation]; !ok {
-			return fmt.Errorf("'%s' annotation is missing", model.WorkspaceCreatorAnnotation)
-		}
+	if _, ok := o.Labels[model.WorkspaceIDLabel]; !ok {
+		return fmt.Errorf("'%s' label is missing", model.WorkspaceIDLabel)
 	}
 
-	if o.GetLabels() == nil {
-		return fmt.Errorf("labels are missing while %s is required", model.WorkspaceIDLabel)
-	} else {
-		if _, ok := o.GetLabels()[model.WorkspaceIDLabel]; !ok {
-			return fmt.Errorf("'%s' label is missing", model.WorkspaceIDLabel)
-		}
+	if _, ok := o.Annotations[model.WorkspaceCreatorAnnotation]; !ok {
+		return fmt.Errorf("'%s' annotation is missing", model.WorkspaceCreatorAnnotation)
 	}
 
 	return nil
 }
 
 func (h *WebhookHandler) mutateMetadataOnUpdate(oldMeta, newMeta *metav1.ObjectMeta) (bool, error) {
-	if oldMeta.Annotations == nil {
-		oldMeta.Annotations = map[string]string{}
-	}
 	if newMeta.Annotations == nil {
 		newMeta.Annotations = map[string]string{}
 	}
@@ -48,9 +37,6 @@ func (h *WebhookHandler) mutateMetadataOnUpdate(oldMeta, newMeta *metav1.ObjectM
 		return false, err
 	}
 
-	if oldMeta.Labels == nil {
-		oldMeta.Labels = map[string]string{}
-	}
 	if newMeta.Labels == nil {
 		newMeta.Labels = map[string]string{}
 	}

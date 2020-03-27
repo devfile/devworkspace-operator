@@ -21,7 +21,7 @@ import (
 
 // ResourcesValidator validates execs process all exec requests and:
 // if related pod DOES NOT have workspace_id label - just skip it
-// if related pod DOES have workspace_id label - make sure that exec is requested by workspace workspace
+// if related pod DOES have workspace_id label - make sure that exec is requested by workspace creator
 type ResourcesValidator struct {
 	*handler.WebhookHandler
 }
@@ -36,7 +36,7 @@ func (v *ResourcesValidator) Handle(ctx context.Context, req admission.Request) 
 	}
 	// Do not allow operation if the corresponding handler is not found
 	// It indicates that the webhooks configuration is not a valid or incompatible with this version of controller
-	return admission.Denied(fmt.Sprintf("This admission is not supposed to handle %s operation for %s. Let administrator to know about this issue", req.Operation, req.Kind))
+	return admission.Denied(fmt.Sprintf("This admission controller is not designed to handle %s operation for %s. Notify an administrator about this issue", req.Operation, req.Kind))
 }
 
 // WorkspaceMutator implements inject.Client.

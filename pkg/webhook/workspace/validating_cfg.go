@@ -9,7 +9,7 @@
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
 //
-package creator
+package workspace
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/webhook/server"

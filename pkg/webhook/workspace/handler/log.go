@@ -8,10 +8,8 @@
 //
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
-package webhook
+package handler
 
-import "github.com/che-incubator/che-workspace-operator/pkg/webhook/workspace"
+import logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-func init() {
-	configureWebhookTasks = append(configureWebhookTasks, workspace.SetUp)
-}
+var log = logf.Log.WithName("webhook.workspace.handler")

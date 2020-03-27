@@ -9,7 +9,7 @@
 // Contributors:
 //   Red Hat, Inc. - initial API and implementation
 //
-package creator
+package workspace
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
@@ -19,15 +19,13 @@ import (
 )
 
 const (
-	mutateWebhookCfgName        = "workspace.che.eclipse.org"
-	mutateWorkspacesWebhookPath = "/mutate-workspaces"
-	mutateWebhookPath           = "/mutate"
-	mutateWebhookFailurePolicy  = v1beta1.Fail
+	mutateWebhookCfgName       = "workspace.che.eclipse.org"
+	mutateWebhookPath          = "/mutate"
+	mutateWebhookFailurePolicy = v1beta1.Fail
 )
 
 func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 	mutateWebhookFailurePolicy := mutateWebhookFailurePolicy
-	mutateWsWebhookPath := mutateWorkspacesWebhookPath
 	mutateWebhookPath := mutateWebhookPath
 	labelExistsOp := metav1.LabelSelectorOpExists
 	equivalentMatchPolicy := v1beta1.Equivalent
@@ -37,13 +35,13 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 		},
 		Webhooks: []v1beta1.MutatingWebhook{
 			{
-				Name:          "mutate-workspaces.che-workspace-controller.svc",
+				Name:          "mutate.che-workspace-controller.svc",
 				FailurePolicy: &mutateWebhookFailurePolicy,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
 						Name:      "workspace-controller",
 						Namespace: "che-workspace-controller",
-						Path:      &mutateWsWebhookPath,
+						Path:      &mutateWebhookPath,
 					},
 					CABundle: server.CABundle,
 				},
@@ -59,7 +57,7 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 				},
 			},
 			{
-				Name:          "mutate-workspaces.che-workspace-controller.svc",
+				Name:          "mutate-ws-resources.che-workspace-controller.svc",
 				FailurePolicy: &mutateWebhookFailurePolicy,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
@@ -82,16 +80,16 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 					{
 						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
 						Rule: v1beta1.Rule{
-							APIGroups:   []string{"*"},
-							APIVersions: []string{"*"},
+							APIGroups:   []string{""},
+							APIVersions: []string{"v1"},
 							Resources:   []string{"pods"},
 						},
 					},
 					{
 						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
 						Rule: v1beta1.Rule{
-							APIGroups:   []string{"*"},
-							APIVersions: []string{"*"},
+							APIGroups:   []string{"apps"},
+							APIVersions: []string{"v1"},
 							Resources:   []string{"deployments"},
 						},
 					},

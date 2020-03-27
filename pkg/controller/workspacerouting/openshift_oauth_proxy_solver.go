@@ -18,7 +18,7 @@ import (
 	"strconv"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	cfg "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	routeV1 "github.com/openshift/api/route/v1"
@@ -167,7 +167,7 @@ func (solver *OpenshiftOAuthSolver) CreateRoutes(cr CurrentReconcile) []runtime.
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							ImagePullPolicy: corev1.PullPolicy(ControllerCfg.GetSidecarPullPolicy()),
+							ImagePullPolicy: corev1.PullPolicy(cfg.ControllerCfg.GetSidecarPullPolicy()),
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "proxy-tls" + proxyCountString,

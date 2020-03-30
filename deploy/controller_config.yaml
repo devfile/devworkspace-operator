@@ -10,3 +10,4 @@ data:
   che.workspace.plugin_broker.artifacts.image: quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0
   cherestapis.image.name: quay.io/dfestal/che-workspace-crd-rest-apis:newone
   che.webhooks.enabled: "false"
+  che.default_routing_class: "basic"

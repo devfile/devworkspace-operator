@@ -14,6 +14,7 @@ package workspacerouting
 
 import (
 	"context"
+	cfg "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/types"
@@ -45,18 +46,32 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileWorkspaceRouting{
-		client: mgr.GetClient(),
-		scheme: mgr.GetScheme(),
-		solvers: map[string]WorkspaceRoutingSolver{
-			"": &BasicSolver{
-				Client: mgr.GetClient(),
-			},
-			"openshift-oauth": &OpenshiftOAuthSolver{
-				Client: mgr.GetClient(),
-			},
+	solvers := map[string]WorkspaceRoutingSolver{
+		"basic": &BasicSolver{
+			Client: mgr.GetClient(),
+		},
+		"openshift-oauth": &OpenshiftOAuthSolver{
+			Client: mgr.GetClient(),
 		},
 	}
+	solvers = initDefault(solvers)
+
+	return &ReconcileWorkspaceRouting{
+		client:  mgr.GetClient(),
+		scheme:  mgr.GetScheme(),
+		solvers: solvers,
+	}
+}
+
+func initDefault(solvers map[string]WorkspaceRoutingSolver) map[string]WorkspaceRoutingSolver {
+	def := cfg.ControllerCfg.GetDefaultRoutingClass()
+	v, ok := solvers[def]
+	if !ok {
+		log.Info("WARN: Could not find configured default routing solver", "default_solver", def)
+		return solvers
+	}
+	solvers[""] = v
+	return solvers
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler

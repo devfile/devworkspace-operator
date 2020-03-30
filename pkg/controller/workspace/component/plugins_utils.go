@@ -155,6 +155,14 @@ func convertContainers(pluginContainers []brokerModel.Container, wkspCtx model.W
 		if err != nil {
 			return nil, err
 		}
+
+		if config.ControllerCfg.GetWebhooksEnabled() == "true" {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name: "USE_BEARER_TOKEN",
+				Value: "true",
+			})
+		}
+
 		containers = append(containers, container)
 	}
 	return containers, nil

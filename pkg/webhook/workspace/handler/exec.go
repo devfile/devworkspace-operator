@@ -44,7 +44,7 @@ func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admissio
 	}
 
 	if creator != req.UserInfo.UID {
-		return admission.Denied("The only workspace workspace has exec access")
+		return admission.Denied("The only workspace creator has exec access")
 	}
 
 	return admission.Allowed("The current user and workspace are matched")

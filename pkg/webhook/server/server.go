@@ -17,6 +17,7 @@ import (
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 const (
@@ -26,41 +27,57 @@ const (
 )
 
 var log = logf.Log.WithName("webhook.server")
-
+var webhookServer *webhook.Server
 var CABundle []byte
 
-func ConfigureWebhookServer(mgr manager.Manager) (bool, error) {
+func ConfigureWebhookServer(mgr manager.Manager) error {
 	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
-		return false, nil
+		log.Info("Webhooks are disabled. Skipping setting up webhook server")
+		return nil
 	}
 
 	enabled, err := cluster.IsWebhookConfigurationEnabled()
 
 	if err != nil {
 		log.Info("ERROR: Could not evaluate if admission webhook configurations are available", "error", err)
-		return false, err
+		return err
 	}
 
 	if !enabled {
 		log.Info("WARN: AdmissionWebhooks are not configured at your cluster." +
 			"    To make your workspaces more secure, please configuring them." +
 			"    Skipping setting up Webhook Server")
-		return false, nil
+		return nil
 	}
 
 	CABundle, err = ioutil.ReadFile(webhookServerCertDir + "/ca.crt")
 	if os.IsNotExist(err) {
 		log.Info("CA certificate is not found. Webhook server is not set up")
-		return false, nil
+		return nil
 	}
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	log.Info("Setting up webhook server")
-	mgr.GetWebhookServer().Port = webhookServerPort
-	mgr.GetWebhookServer().Host = webhookServerHost
-	mgr.GetWebhookServer().CertDir = webhookServerCertDir
 
-	return true, nil
+	webhookServer = mgr.GetWebhookServer()
+
+	webhookServer.Port = webhookServerPort
+	webhookServer.Host = webhookServerHost
+	webhookServer.CertDir = webhookServerCertDir
+
+	return nil
+}
+
+//GetWebhookServer returns webhook server if it's configured
+//  nil otherwise
+func GetWebhookServer() *webhook.Server {
+	return webhookServer
+}
+
+//IsSetUp returns true if webhook server is configured
+//  false otherwise
+func IsSetUp() bool {
+	return webhookServer != nil
 }

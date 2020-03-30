@@ -13,5 +13,5 @@ package webhook
 import "github.com/che-incubator/che-workspace-operator/pkg/webhook/workspace"
 
 func init() {
-	configureWebhookTasks = append(configureWebhookTasks, workspace.SetUp)
+	configureWebhookTasks = append(configureWebhookTasks, workspace.Configure)
 }

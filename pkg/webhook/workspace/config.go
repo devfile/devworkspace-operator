@@ -15,7 +15,7 @@ import (
 	"context"
 	"github.com/che-incubator/che-workspace-operator/internal/controller"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/ownerref"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	"github.com/che-incubator/che-workspace-operator/pkg/webhook/server"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,17 +23,36 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-//SetUp sets up mutate/validating webhooks that provides exec access into workspace for creator only
-func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
-	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
-		log.Info("Webhooks are disabled")
-		return nil
-	}
-
+//Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
+func Configure(ctx context.Context) error {
 	log.Info("Configuring workspace webhooks")
 	c, err := controller.CreateClient()
 	if err != nil {
 		return err
+	}
+
+	if !server.IsSetUp() {
+		log.Info("Webhooks server is not set up. Cleaning up webhook configurations")
+
+		if err := c.Delete(ctx, &v1beta1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: mutateWebhookCfgName,
+			}}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+		}
+		if err = c.Delete(ctx, &v1beta1.ValidatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: validateWebhookCfgName,
+			}}); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return err
+			}
+		}
+
+		log.Info("Existing workspace related webhook configurations are removed")
+		return nil
 	}
 
 	mutateWebhookCfg := buildMutateWebhookCfg()
@@ -71,7 +90,7 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		log.Info("Created workspace mutating webhook configuration")
 	}
 
-	webhookServer.Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator()})
+	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator()})
 
 	validateWebhookCfg := buildValidatingWebhookCfg()
 	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
@@ -98,7 +117,7 @@ func SetUp(webhookServer *webhook.Server, ctx context.Context) error {
 		log.Info("Created workspace validating webhook configuration")
 	}
 
-	webhookServer.Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator()})
+	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator()})
 
 	return nil
 }

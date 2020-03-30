@@ -65,6 +65,10 @@ func (wc *ControllerConfig) GetWorkspacePVCName() string {
 	return wc.GetPropertyOrDefault(workspacePVCName, defaultWorkspacePVCName)
 }
 
+func (wc *ControllerConfig) GetDefaultRoutingClass() string {
+	return wc.GetPropertyOrDefault(routingClass, defaultRoutingClass)
+}
+
 func (wc *ControllerConfig) GetPluginRegistry() string {
 	return wc.GetPropertyOrDefault(pluginRegistryURL, registry.EmbeddedPluginRegistryUrl)
 }

@@ -64,7 +64,7 @@ func (solver *OpenshiftOAuthSolver) CreateDiscoverableServices(cr CurrentReconci
 
 func routeName(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint) string {
 	portString := strconv.FormatInt(endpoint.Port, 10)
-	return serviceDesc.ServiceName + "-" + portString
+	return serviceDesc.ServiceName[0:10] + "-" + portString
 }
 
 func routeHost(serviceDesc workspacev1alpha1.ServiceDescription, endpoint workspacev1alpha1.Endpoint, routing *workspacev1alpha1.WorkspaceRouting) string {

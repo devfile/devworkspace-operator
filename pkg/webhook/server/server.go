@@ -11,10 +11,12 @@
 package server
 
 import (
-	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	"context"
 	"io/ioutil"
 	"os"
+
+	"github.com/che-incubator/che-workspace-operator/internal/cluster"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -30,7 +32,7 @@ var log = logf.Log.WithName("webhook.server")
 var webhookServer *webhook.Server
 var CABundle []byte
 
-func ConfigureWebhookServer(mgr manager.Manager) error {
+func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) error {
 	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
 		log.Info("Webhooks are disabled. Skipping setting up webhook server")
 		return nil
@@ -48,6 +50,13 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 			"    To make your workspaces more secure, please configuring them." +
 			"    Skipping setting up Webhook Server")
 		return nil
+	}
+
+	// We can do some optimization like if webhooks set then don't do anything here
+	// Webhooks need to be created before we can stop and wait for the cert job to finish
+	certErr := CreateCert(ctx)
+	if certErr != nil {
+		return certErr
 	}
 
 	CABundle, err = ioutil.ReadFile(webhookServerCertDir + "/ca.crt")

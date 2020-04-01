@@ -16,43 +16,36 @@ import (
 	"context"
 	"fmt"
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
+	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/prerequisites"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
+	wsRuntime "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/runtime"
+	"github.com/google/uuid"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	origLog "log"
 	"os"
-	"reflect"
-	"strings"
-
-	"github.com/go-logr/logr"
-
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	brokerCfg "github.com/eclipse/che-plugin-broker/cfg"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/component"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/log"
-	. "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
+	"strings"
 )
+
+var log = logf.Log.WithName("controller_workspace")
+
+type currentStatus struct {
+	// List of condition types that are true for the current workspace
+	Conditions []workspacev1alpha1.WorkspaceConditionType
+	// Current workspace phase
+	Phase workspacev1alpha1.WorkspacePhase
+}
 
 // Add creates a new Workspace Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -62,138 +55,103 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) *ReconcileWorkspace {
-	return &ReconcileWorkspace{Client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileWorkspace{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	// Create a new controller
-	c, err := controller.New("workspace-controller", mgr, controller.Options{
-		Reconciler:              r,
-		MaxConcurrentReconciles: 1,
-	})
+	c, err := controller.New("workspace-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
 
 	operatorNamespace, err := k8sutil.GetOperatorNamespace()
 	if err == nil {
-		ConfigMapReference.Namespace = operatorNamespace
+		config.ConfigMapReference.Namespace = operatorNamespace
 	} else if err == k8sutil.ErrRunLocal {
-		ConfigMapReference.Namespace = os.Getenv("WATCH_NAMESPACE")
-		Log.Info(fmt.Sprintf("Running operator in local mode; watching namespace %s", ConfigMapReference.Namespace))
+		config.ConfigMapReference.Namespace = os.Getenv("WATCH_NAMESPACE")
+		log.Info(fmt.Sprintf("Running operator in local mode; watching namespace %s", config.ConfigMapReference.Namespace))
 	} else if err != k8sutil.ErrNoNamespace {
 		return err
 	}
 
-	err = WatchControllerConfig(c, mgr)
-	if err != nil {
-		return err
-	}
-
-	if ControllerCfg.GetPluginRegistry() == "" {
-		return fmt.Errorf("No Che plugin registry setup. To use the embedded registry, you should not run the operator locally.")
-	}
-
-	err = watchStatus(c, mgr)
+	err = config.WatchControllerConfig(c, mgr)
 	if err != nil {
 		return err
 	}
 
 	// Watch for changes to primary resource Workspace
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			if e.MetaOld == nil {
-				Log.Error(nil, "UpdateEvent has no old metadata", "event", e)
-				return false
-			}
-			if e.ObjectOld == nil {
-				Log.Error(nil, "GenericEvent has no old runtime object to update", "event", e)
-				return false
-			}
-			if e.ObjectNew == nil {
-				Log.Error(nil, "GenericEvent has no new runtime object for update", "event", e)
-				return false
-			}
-			if e.MetaNew == nil {
-				Log.Error(nil, "UpdateEvent has no new metadata", "event", e)
-				return false
-			}
-			if e.MetaNew.GetGeneration() == e.MetaOld.GetGeneration() {
-				return false
-			}
-			return true
-		},
+	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to secondary resource Deployments and requeue the owner Workspace
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &workspacev1alpha1.Workspace{},
 	})
 	if err != nil {
 		return err
 	}
 
-	brokerCfg.AuthEnabled = false
-	brokerCfg.DisablePushingToEndpoint = true
-	brokerCfg.UseLocalhostInPluginUrls = true
-	brokerCfg.OnlyApplyMetadataActions = true
+	// Watch for changes in secondary resource Components and requeue the owner workspace
+	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Component{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &workspacev1alpha1.Workspace{},
+	})
 
-	origLog.SetOutput(r)
+	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &workspacev1alpha1.Workspace{},
+	})
 
+	// Check if we're running on OpenShift
 	isOS, err := cluster.IsOpenShift()
 	if err != nil {
 		return err
 	}
+	config.ControllerCfg.SetIsOpenShift(isOS)
 
-	ControllerCfg.SetIsOpenShift(isOS)
+	// Redirect standard logging to the reconcile's log
+	// Necessary as e.g. the plugin broker logs to stdout
+	origLog.SetOutput(r)
 
 	return nil
 }
 
-func (r *ReconcileWorkspace) Write(p []byte) (n int, err error) {
-	Log.Info(string(p))
-	return len(p), nil
-}
-
+// blank assignment to verify that ReconcileWorkspace implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileWorkspace{}
 
 // ReconcileWorkspace reconciles a Workspace object
 type ReconcileWorkspace struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client.Client
+	client client.Client
 	scheme *runtime.Scheme
 }
 
-type reconcileStatus struct {
-	changedWorkspaceObjects   bool
-	createdWorkspaceObjects   bool
-	failure                   string
-	cleanedWorkspaceObjects   bool
-	wkspCtx                   *WorkspaceContext
-	workspace                 *workspacev1alpha1.Workspace
-	componentInstanceStatuses []ComponentInstanceStatus
-	ReqLogger                 logr.Logger
+// Enable redirecting standard log output to the controller's log
+func (r *ReconcileWorkspace) Write(p []byte) (n int, err error) {
+	log.Info(string(p))
+	return len(p), nil
 }
 
 // Reconcile reads that state of the cluster for a Workspace object and makes changes based on the state read
-// and what is in the Workspace.Spec&True
-// Note:
-// The Controller will requeue the Request to be processed again if the returned error is non-nil or
-// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := Log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reconcileStatus := &reconcileStatus{
-		ReqLogger: reqLogger,
+// and what is in the Workspace.Spec
+func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResult reconcile.Result, err error) {
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Reconciling Workspace")
+	clusterAPI := provision.ClusterAPI{
+		Client: r.client,
+		Scheme: r.scheme,
+		Logger: reqLogger,
 	}
-
-	isStatusChange := false
-	if strings.HasPrefix(request.Name, ownedObjectEventPrefix) {
-		request.Name = strings.TrimPrefix(request.Name, ownedObjectEventPrefix)
-		isStatusChange = true
-	}
-
-	reqLogger.V(1).Info("Reconciling")
 
 	// Fetch the Workspace instance
-	instance := &workspacev1alpha1.Workspace{}
-	err := r.Get(context.TODO(), request.NamespacedName, instance)
+	workspace := &workspacev1alpha1.Workspace{}
+	err = r.client.Get(context.TODO(), request.NamespacedName, workspace)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -205,215 +163,125 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	if isStatusChange {
-		return r.updateStatusFromOwnedObjects(instance, reqLogger)
-	}
-
-	var wkspCtx *WorkspaceContext
-	reconcileStatus.workspace = instance
-
-	defer r.updateStatusAfterWorkspaceChange(reconcileStatus)
-
-	prerequisites, err := generatePrerequisites(instance)
+	// TODO: The rolebindings here are created namespace-wide; find a way to limit this, given that each workspace
+	// needs a new serviceAccount
+	err = prerequisites.CheckPrerequisites(workspace, r.client, reqLogger)
 	if err != nil {
-		reconcileStatus.failure = err.Error()
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Managing K8s Pre-requisites")
-	for _, prereq := range prerequisites {
-		prereqAsMetaObject, isMeta := prereq.(metav1.Object)
-		if !isMeta {
-			reconcileStatus.failure = err.Error()
-			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
-		}
-
-		reqLogger.V(1).Info("Managing K8s Pre-requisite", "kind", reflect.TypeOf(prereq).Elem().String(), "name", prereqAsMetaObject.GetName())
-
-		found := reflect.New(reflect.TypeOf(prereq).Elem()).Interface().(runtime.Object)
-		err = r.Get(context.TODO(), types.NamespacedName{Name: prereqAsMetaObject.GetName(), Namespace: prereqAsMetaObject.GetNamespace()}, found)
-		if err != nil && errors.IsNotFound(err) {
-			reqLogger.Info("    => Creating "+reflect.TypeOf(prereqAsMetaObject).Elem().String(), "namespace", prereqAsMetaObject.GetNamespace(), "name", prereqAsMetaObject.GetName())
-			err = r.Create(context.TODO(), prereq)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			continue
-		} else if err != nil {
-			reconcileStatus.failure = err.Error()
+	// Ensure workspaceID is set.
+	if workspace.Status.WorkspaceId == "" {
+		workspaceId, err := getWorkspaceId(workspace)
+		if err != nil {
 			return reconcile.Result{}, err
-		} else {
-			if _, isPVC := found.(*corev1.PersistentVolumeClaim); !isPVC {
-				if _, isServiceAccount := found.(*corev1.ServiceAccount); !isServiceAccount {
-					err = r.Update(context.TODO(), prereq)
-					if err != nil {
-						Log.Error(err, "")
-					}
-				}
-			}
 		}
+		workspace.Status.WorkspaceId = workspaceId
+		err = r.client.Status().Update(context.TODO(), workspace)
+		return reconcile.Result{Requeue: true}, err
 	}
 
-	wkspCtx, workspaceRouting, componentInstanceStatuses, k8sObjects, err := component.ConvertToCoreObjects(instance)
-	reconcileStatus.wkspCtx = wkspCtx
-	if err != nil {
-		reqLogger.Error(err, "Error when converting to K8S objects")
-		reconcileStatus.failure = err.Error()
+	if workspace.Status.Phase == workspacev1alpha1.WorkspaceStatusFailed {
+		// TODO: Figure out when workspace spec is changed and clear failed status to allow reconcile to continue
+		reqLogger.Info("Workspace startup is failed; not attempting to update.")
 		return reconcile.Result{}, nil
 	}
 
-	reconcileStatus.componentInstanceStatuses = componentInstanceStatuses
-	k8sObjectNames := map[string]struct{}{}
+	// Prepare handling workspace status and condition
+	reconcileStatus := currentStatus{
+		Phase: workspacev1alpha1.WorkspaceStatusStarting,
+	}
+	defer func() (reconcile.Result, error) {
+		return r.updateWorkspaceStatus(workspace, clusterAPI, &reconcileStatus, reconcileResult, err)
+	}()
 
-	reqLogger.Info("Managing K8s Objects")
-	for _, k8sObject := range append(k8sObjects, workspaceRouting) {
-		k8sObjectAsMetaObject, isMeta := k8sObject.(metav1.Object)
-		if !isMeta {
-			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
+	// Step one: Create components, and wait for their states to be ready.
+	componentsStatus := provision.SyncComponentsToCluster(workspace, clusterAPI)
+	if !componentsStatus.Continue {
+		reqLogger.Info("Waiting on components to be ready")
+		return reconcile.Result{Requeue: componentsStatus.Requeue}, componentsStatus.Err
+	}
+	componentDescriptions := componentsStatus.ComponentDescriptions
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceComponentsReady)
+
+	cheRestApisComponent := getCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
+	componentDescriptions = append(componentDescriptions, cheRestApisComponent)
+
+	// Step two: Create routing, and wait for routing to be ready
+	routingStatus := provision.SyncRoutingToCluster(workspace, componentDescriptions, clusterAPI)
+	if !routingStatus.Continue {
+		if routingStatus.FailStartup {
+			reqLogger.Info("Workspace start failed")
+			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			return reconcile.Result{}, routingStatus.Err
 		}
-		k8sObjectNames[k8sObjectAsMetaObject.GetName()] = struct{}{}
+		reqLogger.Info("Waiting on routing to be ready")
+		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
+	}
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceRoutingReady)
 
-		reqLogger.V(1).Info("  - Managing K8s Object", "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
-
-		// Set Workspace instance as the owner and controller
-		if err := controllerutil.SetControllerReference(instance, k8sObjectAsMetaObject, r.scheme); err != nil {
-			reconcileStatus.failure = err.Error()
-			reqLogger.Error(err, "Error when setting controller reference")
-			return reconcile.Result{}, nil
+	// Step 2.5: setup runtime annotation (TODO: use configmap)
+	cheRuntime, err := wsRuntime.ConstructRuntimeAnnotation(componentDescriptions, routingStatus.ExposedEndpoints)
+	workspaceStatus := provision.SyncWorkspaceStatus(workspace, routingStatus.ExposedEndpoints, cheRuntime, clusterAPI)
+	if !workspaceStatus.Continue {
+		if workspaceStatus.FailStartup {
+			reqLogger.Info("Workspace start failed")
+			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			return reconcile.Result{}, workspaceStatus.Err
 		}
-
-		k8sObjectAsMetaObject.SetLabels(map[string]string{WorkspaceIDLabel: wkspCtx.WorkspaceId})
-
-		// Check if the k8s Object already exists
-
-		found := reflect.New(reflect.TypeOf(k8sObject).Elem()).Interface().(runtime.Object)
-		err = r.Get(context.TODO(), types.NamespacedName{Name: k8sObjectAsMetaObject.GetName(), Namespace: k8sObjectAsMetaObject.GetNamespace()}, found)
-		if err != nil && errors.IsNotFound(err) {
-			reqLogger.Info("  => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
-			err = r.Create(context.TODO(), k8sObject)
-			if err != nil {
-				reqLogger.Error(err, "Error when creating K8S object: ", "k8sObject", k8sObject)
-				reconcileStatus.failure = err.Error()
-				return reconcile.Result{}, nil
-			}
-			if deployment, isDeployment := k8sObject.(*appsv1.Deployment); isDeployment &&
-				strings.HasSuffix(deployment.GetName(), "."+CheOriginalName) {
-				reconcileStatus.createdWorkspaceObjects = true
-			}
-			continue
-		} else if err != nil {
-			reqLogger.Error(err, "Error when getting K8S object: ", "k8sObject", k8sObjectAsMetaObject)
-			reconcileStatus.failure = err.Error()
-			return reconcile.Result{}, nil
-		}
-
-		r.scheme.Default(k8sObject)
-
-		// Update the found object and write the result back if there are any changes
-
-		foundSpecValue := reflect.ValueOf(found).Elem().FieldByName("Spec")
-		k8sObjectSpecValue := reflect.ValueOf(k8sObject).Elem().FieldByName("Spec")
-
-		var foundToUse interface{} = found
-		var newToUse interface{} = k8sObject
-		if foundSpecValue.IsValid() {
-			foundToUse = foundSpecValue.Interface()
-			newToUse = k8sObjectSpecValue.Interface()
-		}
-
-		diffOpts := cmp.Options{
-			cmpopts.IgnoreUnexported(resource.Quantity{}),
-			cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "SessionAffinity", "Type"),
-			cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
-			cmpopts.IgnoreFields(corev1.PodSpec{}, "DNSPolicy", "SecurityContext", "SchedulerName", "DeprecatedServiceAccount", "RestartPolicy", "TerminationGracePeriodSeconds"),
-			cmpopts.IgnoreFields(appsv1.DeploymentStrategy{}, "RollingUpdate"),
-			cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "RevisionHistoryLimit", "ProgressDeadlineSeconds"),
-			cmpopts.IgnoreFields(corev1.ConfigMapVolumeSource{}, "DefaultMode"),
-			cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
-			cmp.FilterPath(
-				func(p cmp.Path) bool {
-					s := p.String()
-					return s == "Ports.Protocol"
-				},
-				cmp.Transformer("DefaultTcpProtocol", func(p corev1.Protocol) corev1.Protocol {
-					if p == "" {
-						return corev1.ProtocolTCP
-					}
-					return p
-				})),
-		}
-
-		if !cmp.Equal(foundToUse, newToUse, diffOpts) {
-			reqLogger.V(1).Info("  => Differences: " + cmp.Diff(foundToUse, newToUse, diffOpts...))
-			switch found.(type) {
-			case (*appsv1.Deployment):
-				{
-					found.(*appsv1.Deployment).Spec = k8sObject.(*appsv1.Deployment).Spec
-					if strings.HasSuffix(found.(*appsv1.Deployment).GetName(), "."+CheOriginalName) {
-						reconcileStatus.changedWorkspaceObjects = true
-					}
-				}
-			case (*extensionsv1beta1.Ingress):
-				{
-					found.(*extensionsv1beta1.Ingress).Spec = k8sObject.(*extensionsv1beta1.Ingress).Spec
-				}
-			case (*corev1.Service):
-				{
-					k8sObject.(*corev1.Service).Spec.ClusterIP = found.(*corev1.Service).Spec.ClusterIP
-					found.(*corev1.Service).Spec = k8sObject.(*corev1.Service).Spec
-				}
-			case (*corev1.ConfigMap):
-				{
-					found.(*corev1.ConfigMap).Data = k8sObject.(*corev1.ConfigMap).Data
-					found.(*corev1.ConfigMap).BinaryData = k8sObject.(*corev1.ConfigMap).BinaryData
-				}
-			case (*workspacev1alpha1.WorkspaceRouting):
-				{
-					found.(*workspacev1alpha1.WorkspaceRouting).Spec = k8sObject.(*workspacev1alpha1.WorkspaceRouting).Spec
-				}
-			}
-			reqLogger.Info("  => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
-			err = r.Update(context.TODO(), found)
-			if err != nil {
-				reqLogger.Error(err, "Error when updating K8S object: ", "k8sObject", k8sObjectAsMetaObject)
-				reconcileStatus.failure = err.Error()
-				return reconcile.Result{}, nil
-			}
-		}
+		reqLogger.Info("Updating workspace status")
+		return reconcile.Result{Requeue: workspaceStatus.Requeue}, workspaceStatus.Err
 	}
 
-	if err != nil {
-		reqLogger.Error(err, "Error during reconcile")
-		reconcileStatus.failure = err.Error()
-		return reconcile.Result{}, nil
+	// Step three: Collect all workspace deployment contributions
+	routingPodAdditions := routingStatus.PodAdditions
+	var podAdditions []workspacev1alpha1.PodAdditions
+	for _, component := range componentDescriptions {
+		podAdditions = append(podAdditions, component.PodAdditions)
+	}
+	if routingPodAdditions != nil {
+		podAdditions = append(podAdditions, *routingPodAdditions)
 	}
 
-	for _, list := range []runtime.Object{
-		&appsv1.DeploymentList{},
-		&corev1.ServiceList{},
-		&extensionsv1beta1.IngressList{},
-		&corev1.ConfigMapList{},
-	} {
-		r.List(context.TODO(), list,
-			client.InNamespace(wkspCtx.Namespace),
-			client.MatchingLabels{WorkspaceIDLabel: wkspCtx.WorkspaceId})
-		items := reflect.ValueOf(list).Elem().FieldByName("Items")
-		for i := 0; i < items.Len(); i++ {
-			item := items.Index(i).Addr().Interface()
-			if itemMeta, isMeta := item.(metav1.Object); isMeta {
-				if itemRuntime, isRuntime := item.(runtime.Object); isRuntime {
-					if _, present := k8sObjectNames[itemMeta.GetName()]; !present {
-						Log.Info("  => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "name", itemMeta.GetName())
-						r.Delete(context.TODO(), itemRuntime)
-						if _, isDeployment := itemRuntime.(*appsv1.Deployment); isDeployment &&
-							strings.HasSuffix(itemMeta.GetName(), "."+CheOriginalName) {
-							reconcileStatus.cleanedWorkspaceObjects = true
-						}
-					}
-				}
-			}
+	// Step four: Prepare workspace ServiceAccount
+	saAnnotations := map[string]string{}
+	if routingPodAdditions != nil {
+		saAnnotations = routingPodAdditions.ServiceAccountAnnotations
+	}
+	serviceAcctStatus := provision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
+	if !serviceAcctStatus.Continue {
+		if serviceAcctStatus.FailStartup {
+			reqLogger.Info("Workspace start failed")
+			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			return reconcile.Result{}, serviceAcctStatus.Err
 		}
+		reqLogger.Info("Waiting for workspace ServiceAccount")
+		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}
+	serviceAcctName := serviceAcctStatus.ServiceAccountName
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceServiceAccountReady)
 
+	// Step five: Create deployment and wait for it to be ready
+	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
+	if !deploymentStatus.Continue {
+		if deploymentStatus.FailStartup {
+			reqLogger.Info("Workspace start failed")
+			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			return reconcile.Result{}, deploymentStatus.Err
+		}
+		reqLogger.Info("Waiting on deployment to be ready")
+		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
+	}
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceDeploymentReady)
+
+	reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusReady
 	return reconcile.Result{}, nil
+}
+
+func getWorkspaceId(instance *workspacev1alpha1.Workspace) (string, error) {
+	uid, err := uuid.Parse(string(instance.UID))
+	if err != nil {
+		return "", err
+	}
+	return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
 }

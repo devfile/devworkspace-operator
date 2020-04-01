@@ -12,7 +12,7 @@ package handler
 
 import (
 	"context"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,12 +33,12 @@ func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admissio
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	_, ok := p.Labels[model.WorkspaceIDLabel]
+	_, ok := p.Labels[config.WorkspaceIDLabel]
 	if !ok {
 		return admission.Allowed("It's not workspace related pod")
 	}
 
-	creator, ok := p.Annotations[model.WorkspaceCreatorAnnotation]
+	creator, ok := p.Annotations[config.WorkspaceCreatorAnnotation]
 	if !ok {
 		return admission.Denied("The workspace info is missing in the workspace-related pod")
 	}

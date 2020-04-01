@@ -5,16 +5,16 @@ metadata:
 spec:
   additionalPrinterColumns:
   - JSONPath: .status.workspaceId
-    name: Id
+    description: The workspace's unique id
+    name: Workspace ID
     type: string
-  - JSONPath: .spec.started
-    name: Enabled
-    type: boolean
   - JSONPath: .status.phase
-    name: Status
+    description: The current workspace startup phase
+    name: Phase
     type: string
   - JSONPath: .status.ideUrl
-    name: Url
+    description: Url endpoint for accessing workspace
+    name: URL
     type: string
   group: workspace.che.eclipse.org
   names:
@@ -22,7 +22,7 @@ spec:
     listKind: WorkspaceList
     plural: workspaces
     singular: workspace
-  scope: ""
+  scope: Namespaced
   subresources:
     status: {}
   validation:
@@ -40,10 +40,9 @@ spec:
             submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
           type: string
         metadata:
-          description: 'Standard object''s metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata'
           type: object
         spec:
-          description: Desired state of the workspace
+          description: WorkspaceSpec defines the desired state of Workspace
           properties:
             devfile:
               description: 'Workspace Structure defined in the Devfile format syntax.
@@ -220,16 +219,20 @@ spec:
           - started
           type: object
         status:
-          description: Observed state of the workspace
+          description: WorkspaceStatus defines the observed state of Workspace
           properties:
             additionalFields:
-              additionalProperties:
-                type: string
-              description: AdditionalInfo
+              description: 'TODO: This could potentially be handled via configmap
+                more cleanly'
+              properties:
+                org.eclipse.che.workspace/runtime:
+                  type: string
+              required:
+              - org.eclipse.che.workspace/runtime
               type: object
-            conditions:
-              description: Condition keeps track of all cluster conditions, if they
-                exist.
+            condition:
+              description: Conditions represent the latest available observations
+                of an object's state
               items:
                 description: WorkspaceCondition contains details for the current condition
                   of this workspace.
@@ -248,7 +251,7 @@ spec:
                       last transition.
                     type: string
                   status:
-                    description: Status is the status of the condition. Can be True,
+                    description: Phase is the status of the condition. Can be True,
                       False, Unknown.
                     type: string
                   type:
@@ -260,35 +263,16 @@ spec:
                 type: object
               type: array
             ideUrl:
-              description: URL at which the Editor can be joined
               type: string
-            members:
-              description: Members are the Workspace pods
-              properties:
-                ready:
-                  description: Ready are the workspace Pods that are ready The member
-                    names are based on the workspace pod deployment names
-                  items:
-                    type: string
-                  type: array
-                unready:
-                  description: Unready are the workspace Pods that are not ready to
-                    serve requests
-                  items:
-                    type: string
-                  type: array
-              type: object
             phase:
-              description: Workspace status
               type: string
             workspaceId:
-              description: Id of the workspace
               type: string
           required:
-          - members
-          - phase
+          - ideUrl
           - workspaceId
           type: object
+      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1

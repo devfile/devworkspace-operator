@@ -1,17 +1,78 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+// WorkspaceRoutingSpec defines the desired state of WorkspaceRouting
+// +k8s:openapi-gen=true
+type WorkspaceRoutingSpec struct {
+	// WorkspaceId for the workspace being routed
+	WorkspaceId string `json:"workspaceId"`
+	// Class of the routing: this drives which Workspace Routing controller will manage this routing
+	RoutingClass WorkspaceRoutingClass `json:"routingClass,omitempty"`
+	// Ingress global domain (corresponds to the OpenShift route suffix)
+	IngressGlobalDomain string `json:"ingressGlobalDomain"`
+	// Machines to endpoints map
+	Endpoints map[string][]Endpoint `json:"endpoints"`
+	// Selector that should be used by created services to point to the workspace Pod
+	PodSelector map[string]string `json:"podSelector"`
+}
+
+type WorkspaceRoutingClass string
+
+const (
+	WorkspaceRoutingDefault        WorkspaceRoutingClass = "basic"
+	WorkspaceRoutingOpenShiftOauth WorkspaceRoutingClass = "openshift-oauth"
+)
+
+// WorkspaceRoutingStatus defines the observed state of WorkspaceRouting
+// +k8s:openapi-gen=true
+type WorkspaceRoutingStatus struct {
+	// Additions to main workspace deployment
+	PodAdditions *PodAdditions `json:"podAdditions,omitempty"`
+	// Machine name to exposed endpoint map
+	ExposedEndpoints map[string][]ExposedEndpoint `json:"exposedEndpoints,omitempty"`
+	// Routing reconcile phase
+	Phase WorkspaceRoutingPhase `json:"phase,omitempty""`
+}
+
+// Valid phases for workspacerouting
+type WorkspaceRoutingPhase string
+
+const (
+	RoutingReady     WorkspaceRoutingPhase = "Ready"
+	RoutingPreparing WorkspaceRoutingPhase = "Preparing"
+	RoutingFailed    WorkspaceRoutingPhase = "Failed"
+)
+
+type ExposedEndpoint struct {
+	// Name of the exposed endpoint
+	Name string `json:"name"`
+	// Public URL of the exposed endpoint
+	Url string `json:"url"`
+	// Attributes of the exposed endpoint
+	Attributes map[EndpointAttribute]string `json:"attributes"`
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // WorkspaceRouting is the Schema for the workspaceroutings API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=workspaceroutings,scope=Namespaced
 type WorkspaceRouting struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -21,71 +82,13 @@ type WorkspaceRouting struct {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // WorkspaceRoutingList contains a list of WorkspaceRouting
 type WorkspaceRoutingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []WorkspaceRouting `json:"items"`
 }
-
-// WorkspaceRoutingSpec defines the desired state of WorkspaceRouting
-// +k8s:openapi-gen=true
-type WorkspaceRoutingSpec struct {
-	// Class of the routing: this drives which Workspace Routing controller will manage this routing
-	RoutingClass string `json:"routingClass"`
-
-	//Should the workspace be exposed ?
-	Exposed bool `json:"exposed"`
-
-	// ingress global domain (corresponds to the OpenShift route suffix)
-	IngressGlobalDomain string `json:"ingressGlobalDomain"`
-
-	// Selector that should be used by created services to point to the workspace Pod
-	WorkspacePodSelector map[string]string `json:"workspacePodSelector"`
-
-	//Services by machine name
-	Services map[string]ServiceDescription `json:"services"`
-}
-
-type ServiceDescription struct {
-	// Service name of the machine-related service
-	ServiceName string `json:"serviceName"`
-	// Endpoints that correspond to this machine-related service
-	Endpoints []Endpoint `json:"endpoints"`
-}
-
-type ExposedEndpoint struct {
-	// Name of the exposed endpoint
-	Name string `json:"name"`
-	// Url of the exposed endpoint
-	Url string `json:"url"`
-	// Attributes of the exposed endpoint
-	Attributes map[EndpointAttribute]string `json:"attributes,omitempty"`
-}
-
-// WorkspaceRoutingPhase is a label for the condition of a workspace routing at the current time.
-type WorkspaceRoutingPhase string
-
-// These are the valid statuses of pods.
-const (
-	WorkspaceRoutingExposing WorkspaceRoutingPhase = "Exposing"
-	WorkspaceRoutingExposed  WorkspaceRoutingPhase = "Exposed"
-	WorkspaceRoutingReady    WorkspaceRoutingPhase = "Ready"
-	WorkspaceRoutingHidden   WorkspaceRoutingPhase = "Hidden"
-	WorkspaceRoutingHiding   WorkspaceRoutingPhase = "Hiding"
-	WorkspaceRoutingFailed   WorkspaceRoutingPhase = "Failed"
-)
-
-// WorkspaceRoutingStatus defines the observed state of WorkspaceRouting
-// +k8s:openapi-gen=true
-type WorkspaceRoutingStatus struct {
-	// Workspace Routing status
-	Phase            WorkspaceRoutingPhase          `json:"phase,omitempty"`
-	ExposedEndpoints map[string]ExposedEndpointList `json:"exposedEndpoints,omitempty"`
-}
-
-// +k8s:openapi-gen=true
-type ExposedEndpointList []ExposedEndpoint
 
 func init() {
 	SchemeBuilder.Register(&WorkspaceRouting{}, &WorkspaceRoutingList{})

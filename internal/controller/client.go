@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
-//CreateClient creates Controller client with default config
+// CreateClient creates Controller client with default config
 // or returns error if any happens
 func CreateClient() (client.Client, error) {
 	cfg, err := config.GetConfig()

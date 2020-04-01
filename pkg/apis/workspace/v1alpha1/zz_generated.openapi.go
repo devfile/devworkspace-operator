@@ -11,11 +11,59 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/workspace/v1alpha1.Workspace":              schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceRouting":       schema_pkg_apis_workspace_v1alpha1_WorkspaceRouting(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceRoutingSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceRoutingStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingStatus(ref),
-		"./pkg/apis/workspace/v1alpha1.WorkspaceSpec":          schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.Component":                schema_pkg_apis_workspace_v1alpha1_Component(ref),
+		"./pkg/apis/workspace/v1alpha1.Workspace":                schema_pkg_apis_workspace_v1alpha1_Workspace(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceComponentSpec":   schema_pkg_apis_workspace_v1alpha1_WorkspaceComponentSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceComponentStatus": schema_pkg_apis_workspace_v1alpha1_WorkspaceComponentStatus(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceRouting":         schema_pkg_apis_workspace_v1alpha1_WorkspaceRouting(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceRoutingSpec":     schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceRoutingStatus":   schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingStatus(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceSpec":            schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref),
+		"./pkg/apis/workspace/v1alpha1.WorkspaceStatus":          schema_pkg_apis_workspace_v1alpha1_WorkspaceStatus(ref),
+	}
+}
+
+func schema_pkg_apis_workspace_v1alpha1_Component(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Component is the Schema for the components API",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceComponentSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceComponentStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/workspace/v1alpha1.WorkspaceComponentSpec", "./pkg/apis/workspace/v1alpha1.WorkspaceComponentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -42,20 +90,17 @@ func schema_pkg_apis_workspace_v1alpha1_Workspace(ref common.ReferenceCallback) 
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Desired state of the workspace",
-							Ref:         ref("./pkg/apis/workspace/v1alpha1.WorkspaceSpec"),
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Observed state of the workspace",
-							Ref:         ref("./pkg/apis/workspace/v1alpha1.WorkspaceStatus"),
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceStatus"),
 						},
 					},
 				},
@@ -63,6 +108,106 @@ func schema_pkg_apis_workspace_v1alpha1_Workspace(ref common.ReferenceCallback) 
 		},
 		Dependencies: []string{
 			"./pkg/apis/workspace/v1alpha1.WorkspaceSpec", "./pkg/apis/workspace/v1alpha1.WorkspaceStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceComponentSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ComponentSpec defines the desired state of Component",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"workspaceId": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Id of workspace that contains this component",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"components": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "map +listMapKey=name",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "List of devfile components to be processed by this component",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("./pkg/apis/workspace/v1alpha1.ComponentSpec"),
+									},
+								},
+							},
+						},
+					},
+					"commands": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "map +listMapKey=name",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Commands from devfile, to be matched to components",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("./pkg/apis/workspace/v1alpha1.CommandSpec"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"workspaceId", "components"},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/workspace/v1alpha1.CommandSpec", "./pkg/apis/workspace/v1alpha1.ComponentSpec"},
+	}
+}
+
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceComponentStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ComponentStatus defines the observed state of Component",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"ready": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Whether the component has finished processing its spec",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"componentDescriptions": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "map +listMapKey=name",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Descriptions of processed components from spec",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("./pkg/apis/workspace/v1alpha1.ComponentDescription"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"ready", "componentDescriptions"},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/workspace/v1alpha1.ComponentDescription"},
 	}
 }
 
@@ -117,6 +262,13 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.Referenc
 				Description: "WorkspaceRoutingSpec defines the desired state of WorkspaceRouting",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"workspaceId": {
+						SchemaProps: spec.SchemaProps{
+							Description: "WorkspaceId for the workspace being routed",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"routingClass": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Class of the routing: this drives which Workspace Routing controller will manage this routing",
@@ -124,21 +276,35 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
-					"exposed": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Should the workspace be exposed ?",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"ingressGlobalDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ingress global domain (corresponds to the OpenShift route suffix)",
+							Description: "Ingress global domain (corresponds to the OpenShift route suffix)",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"workspacePodSelector": {
+					"endpoints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Machines to endpoints map",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Allows: true,
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type: []string{"array"},
+										Items: &spec.SchemaOrArray{
+											Schema: &spec.Schema{
+												SchemaProps: spec.SchemaProps{
+													Ref: ref("./pkg/apis/workspace/v1alpha1.Endpoint"),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					"podSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Selector that should be used by created services to point to the workspace Pod",
 							Type:        []string{"object"},
@@ -153,26 +319,12 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.Referenc
 							},
 						},
 					},
-					"services": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Services by machine name",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/workspace/v1alpha1.ServiceDescription"),
-									},
-								},
-							},
-						},
-					},
 				},
-				Required: []string{"routingClass", "exposed", "ingressGlobalDomain", "workspacePodSelector", "services"},
+				Required: []string{"workspaceId", "ingressGlobalDomain", "endpoints", "podSelector"},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/workspace/v1alpha1.ServiceDescription"},
+			"./pkg/apis/workspace/v1alpha1.Endpoint"},
 	}
 }
 
@@ -183,16 +335,16 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingStatus(ref common.Refere
 				Description: "WorkspaceRoutingStatus defines the observed state of WorkspaceRouting",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"phase": {
+					"podAdditions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Workspace Routing status",
-							Type:        []string{"string"},
-							Format:      "",
+							Description: "Additions to main workspace deployment",
+							Ref:         ref("./pkg/apis/workspace/v1alpha1.PodAdditions"),
 						},
 					},
 					"exposedEndpoints": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
+							Description: "Machine name to exposed endpoint map",
+							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
 								Schema: &spec.Schema{
@@ -210,11 +362,18 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingStatus(ref common.Refere
 							},
 						},
 					},
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Routing reconcile phase",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/workspace/v1alpha1.ExposedEndpoint"},
+			"./pkg/apis/workspace/v1alpha1.ExposedEndpoint", "./pkg/apis/workspace/v1alpha1.PodAdditions"},
 	}
 }
 
@@ -251,5 +410,62 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceSpec(ref common.ReferenceCallba
 		},
 		Dependencies: []string{
 			"./pkg/apis/workspace/v1alpha1.DevfileSpec"},
+	}
+}
+
+func schema_pkg_apis_workspace_v1alpha1_WorkspaceStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "WorkspaceStatus defines the observed state of Workspace",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"workspaceId": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"ideUrl": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
+					"condition": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "map",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represent the latest available observations of an object's state",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceCondition"),
+									},
+								},
+							},
+						},
+					},
+					"additionalFields": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceStatusAdditionalFields"),
+						},
+					},
+				},
+				Required: []string{"workspaceId", "ideUrl"},
+			},
+		},
+		Dependencies: []string{
+			"./pkg/apis/workspace/v1alpha1.WorkspaceCondition", "./pkg/apis/workspace/v1alpha1.WorkspaceStatusAdditionalFields"},
 	}
 }

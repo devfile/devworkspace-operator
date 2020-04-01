@@ -14,25 +14,24 @@ package workspacerouting
 
 import (
 	"context"
-	cfg "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
-	"github.com/go-logr/logr"
-	"github.com/google/go-cmp/cmp"
-	"k8s.io/apimachinery/pkg/types"
-	"reflect"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
+	"fmt"
+	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspacerouting/solvers"
+	"github.com/google/go-cmp/cmp"
+	routeV1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
@@ -46,32 +45,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	solvers := map[string]WorkspaceRoutingSolver{
-		"basic": &BasicSolver{
-			Client: mgr.GetClient(),
-		},
-		"openshift-oauth": &OpenshiftOAuthSolver{
-			Client: mgr.GetClient(),
-		},
-	}
-	solvers = initDefault(solvers)
-
-	return &ReconcileWorkspaceRouting{
-		client:  mgr.GetClient(),
-		scheme:  mgr.GetScheme(),
-		solvers: solvers,
-	}
-}
-
-func initDefault(solvers map[string]WorkspaceRoutingSolver) map[string]WorkspaceRoutingSolver {
-	def := cfg.ControllerCfg.GetDefaultRoutingClass()
-	v, ok := solvers[def]
-	if !ok {
-		log.Info("WARN: Could not find configured default routing solver", "default_solver", def)
-		return solvers
-	}
-	solvers[""] = v
-	return solvers
+	return &ReconcileWorkspaceRouting{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -83,32 +57,40 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource WorkspaceRouting
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForObject{}, predicate.Funcs{
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			if e.MetaOld == nil {
-				log.Error(nil, "UpdateEvent has no old metadata", "event", e)
-				return false
-			}
-			if e.ObjectOld == nil {
-				log.Error(nil, "UpdateEvent has no old runtime object to update", "event", e)
-				return false
-			}
-			if e.ObjectNew == nil {
-				log.Error(nil, "UpdateEvent has no new runtime object for update", "event", e)
-				return false
-			}
-			if e.MetaNew == nil {
-				log.Error(nil, "UpdateEvent has no new metadata", "event", e)
-				return false
-			}
-			if e.MetaNew.GetGeneration() == e.MetaOld.GetGeneration() {
-				return false
-			}
-			return true
-		},
+	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForObject{})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to secondary resources: Services, Ingresses, and (on OpenShift) Routes.
+	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &workspacev1alpha1.WorkspaceRouting{},
 	})
 	if err != nil {
 		return err
+	}
+	err = c.Watch(&source.Kind{Type: &v1beta1.Ingress{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &workspacev1alpha1.WorkspaceRouting{},
+	})
+	if err != nil {
+		return err
+	}
+
+	isOpenShift, err := cluster.IsOpenShift()
+	if err != nil {
+		log.Error(err, "Failed to determine if running in OpenShift")
+		return err
+	}
+	if isOpenShift {
+		err = c.Watch(&source.Kind{Type: &routeV1.Route{}}, &handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &workspacev1alpha1.WorkspaceRouting{},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -121,24 +103,18 @@ var _ reconcile.Reconciler = &ReconcileWorkspaceRouting{}
 type ReconcileWorkspaceRouting struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client  client.Client
-	scheme  *runtime.Scheme
-	solvers map[string]WorkspaceRoutingSolver
+	client client.Client
+	scheme *runtime.Scheme
 }
 
-type CurrentReconcile struct {
-	Instance  *workspacev1alpha1.WorkspaceRouting
-	ReqLogger logr.Logger
-	Reconcile *ReconcileWorkspaceRouting
-	Solver    WorkspaceRoutingSolver
-}
-
+// Reconcile reads that state of the cluster for a WorkspaceRouting object and makes changes based on the state read
+// and what is in the WorkspaceRouting.Spec
 func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Reconciling WorkspaceRouting")
 
 	// Fetch the WorkspaceRouting instance
 	instance := &workspacev1alpha1.WorkspaceRouting{}
-
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -151,249 +127,91 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	solver, found := r.solvers[instance.Spec.RoutingClass]
-	if !found {
-		reqLogger.Info("Reconciling Skipped: unsupported routing class", "routing", instance.Spec.RoutingClass)
+	workspaceMeta := solvers.WorkspaceMetadata{
+		WorkspaceId:         instance.Spec.WorkspaceId,
+		Namespace:           instance.Namespace,
+		PodSelector:         instance.Spec.PodSelector,
+		IngressGlobalDomain: instance.Spec.IngressGlobalDomain,
+	}
+
+	if instance.Status.Phase == workspacev1alpha1.RoutingFailed {
 		return reconcile.Result{}, err
 	}
 
-	reqLogger = reqLogger.WithValues("RoutingClass", instance.Spec.RoutingClass)
-
-	reqLogger.V(1).Info("Reconciling", "expected", instance.Spec.Exposed, "phase", instance.Status.Phase)
-
-	currentReconcile := CurrentReconcile{
-		Instance:  instance,
-		ReqLogger: reqLogger,
-		Reconcile: r,
-		Solver:    solver,
+	solver, err := getSolverForRoutingClass(instance.Spec.RoutingClass)
+	if err != nil {
+		reqLogger.Error(err, "Could not get solver for routingClass")
+		instance.Status.Phase = workspacev1alpha1.RoutingFailed
+		statusErr := r.client.Status().Update(context.TODO(), instance)
+		return reconcile.Result{}, statusErr
 	}
 
-	switch instance.Spec.Exposed {
-	case true:
-		switch instance.Status.Phase {
-
-		case "", workspacev1alpha1.WorkspaceRoutingHidden:
-			result, err := solver.CreateOrUpdateRoutingObjects(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingExposing)
-
-		case workspacev1alpha1.WorkspaceRoutingExposing:
-			nextPhase, result, err := solver.CheckRoutingObjects(currentReconcile, workspacev1alpha1.WorkspaceRoutingExposed)
-			return updatePhaseIfSuccess(currentReconcile, result, err, nextPhase)
-
-		case workspacev1alpha1.WorkspaceRoutingExposed:
-			result, err := updateExposedEndpoints(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingReady)
-
-		case workspacev1alpha1.WorkspaceRoutingReady:
-			return reconcile.Result{}, nil
-
-		case workspacev1alpha1.WorkspaceRoutingFailed:
-			return reconcile.Result{}, nil
-
-		case workspacev1alpha1.WorkspaceRoutingHiding:
-			nextPhase, result, err := solver.CheckRoutingObjects(currentReconcile, workspacev1alpha1.WorkspaceRoutingHidden)
-			return updatePhaseIfSuccess(currentReconcile, result, err, nextPhase)
-		}
-	case false:
-		switch instance.Status.Phase {
-		case "":
-			return updatePhaseIfSuccess(currentReconcile, reconcile.Result{}, nil, workspacev1alpha1.WorkspaceRoutingHidden)
-
-		case workspacev1alpha1.WorkspaceRoutingHidden:
-			return reconcile.Result{}, nil
-
-		case workspacev1alpha1.WorkspaceRoutingExposing, workspacev1alpha1.WorkspaceRoutingExposed:
-			result, err := solver.DeleteRoutingObjects(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingHiding)
-
-		case workspacev1alpha1.WorkspaceRoutingReady:
-			result, err := cleanExposedEndpoints(currentReconcile)
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingExposed)
-
-		case workspacev1alpha1.WorkspaceRoutingHiding:
-			nextPhase, result, err := solver.CheckRoutingObjects(currentReconcile, workspacev1alpha1.WorkspaceRoutingHidden)
-			return updatePhaseIfSuccess(currentReconcile, result, err, nextPhase)
-
-		case workspacev1alpha1.WorkspaceRoutingFailed:
-			result, err := solver.DeleteRoutingObjects(currentReconcile)
-			if err != nil {
-				result, err = cleanExposedEndpoints(currentReconcile)
-			}
-			return updatePhaseIfSuccess(currentReconcile, result, err, workspacev1alpha1.WorkspaceRoutingHiding)
-			return reconcile.Result{}, nil
+	routingObjects := solver.GetSpecObjects(instance.Spec, workspaceMeta)
+	services := routingObjects.Services
+	for idx := range services {
+		err := controllerutil.SetControllerReference(instance, &services[idx], r.scheme)
+		if err != nil {
+			return reconcile.Result{}, err
 		}
 	}
-	return reconcile.Result{}, nil
+	ingresses := routingObjects.Ingresses
+	for idx := range ingresses {
+		err := controllerutil.SetControllerReference(instance, &ingresses[idx], r.scheme)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+	routes := routingObjects.Routes
+	for idx := range routes {
+		err := controllerutil.SetControllerReference(instance, &routes[idx], r.scheme)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	servicesInSync, err := r.syncServices(instance, services)
+	if err != nil || !servicesInSync {
+		reqLogger.Info("Services not in sync")
+		return reconcile.Result{Requeue: true}, err
+	}
+
+	ingressesInSync, err := r.syncIngresses(instance, ingresses)
+	if err != nil || !ingressesInSync {
+		reqLogger.Info("Ingresses not in sync")
+		return reconcile.Result{Requeue: true}, err
+	}
+
+	routesInSync, err := r.syncRoutes(instance, routes)
+	if err != nil || !routesInSync {
+		reqLogger.Info("Routes not in sync")
+		return reconcile.Result{Requeue: true}, err
+	}
+
+	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects)
 }
 
-func updatePhaseIfSuccess(cr CurrentReconcile, result reconcile.Result, err error, nextPhase workspacev1alpha1.WorkspaceRoutingPhase) (reconcile.Result, error) {
-	existingPhase := cr.Instance.Status.Phase
-	updateWhileConflict := func(action func() error) error {
-		for {
-			err := action()
-			if !errors.IsConflict(err) {
-				return err
-			}
-			if err2 := cr.Reconcile.client.Get(context.TODO(),
-				types.NamespacedName{
-					Namespace: cr.Instance.Namespace,
-					Name:      cr.Instance.Name,
-				},
-				cr.Instance,
-			); err2 != nil && !errors.IsNotFound(err) {
-				cr.ReqLogger.Error(err, "When trying to get workspace routing "+cr.Instance.Name)
-				return err
-			}
-		}
+func (r *ReconcileWorkspaceRouting) reconcileStatus(instance *workspacev1alpha1.WorkspaceRouting, routingObjects solvers.RoutingObjects) error {
+	if instance.Status.Phase == workspacev1alpha1.RoutingReady &&
+		cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
+		cmp.Equal(instance.Status.ExposedEndpoints, routingObjects.ExposedEndpoints) {
 		return nil
 	}
-
-	if err != nil {
-		updateError := updateWhileConflict(func() error {
-			cr.Instance.Status.Phase = workspacev1alpha1.WorkspaceRoutingFailed
-			return cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
-		})
-		if updateError != nil {
-			cr.ReqLogger.Error(err, "When trying to update the status phase to: "+string(workspacev1alpha1.WorkspaceRoutingFailed))
-		}
-		return result, err
-	}
-	updateError := updateWhileConflict(func() error {
-		cr.Instance.Status.Phase = nextPhase
-		return cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
-	})
-	if updateError != nil {
-		cr.ReqLogger.Error(err, "When trying to update the status phase to: "+string(nextPhase))
-	}
-	if existingPhase != cr.Instance.Status.Phase {
-		cr.ReqLogger.Info("Phase: " + string(existingPhase) + " => " + string(cr.Instance.Status.Phase))
-	}
-	return reconcile.Result{Requeue: true}, err
+	instance.Status.Phase = workspacev1alpha1.RoutingReady
+	instance.Status.PodAdditions = routingObjects.PodAdditions
+	instance.Status.ExposedEndpoints = routingObjects.ExposedEndpoints
+	return r.client.Status().Update(context.TODO(), instance)
 }
 
-func cleanExposedEndpoints(cr CurrentReconcile) (reconcile.Result, error) {
-	cr.Instance.Status.ExposedEndpoints = map[string]workspacev1alpha1.ExposedEndpointList{}
-	err := cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
-	if err != nil {
-		log.Error(err, "When updating the routing status with no endpoints")
-		return reconcile.Result{}, err
+func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
+	if routingClass == "" {
+		routingClass = workspacev1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
 	}
-	return reconcile.Result{}, nil
-}
-
-func updateExposedEndpoints(cr CurrentReconcile) (reconcile.Result, error) {
-	cr.Instance.Status.ExposedEndpoints = cr.Solver.BuildExposedEndpoints(cr)
-	err := cr.Reconcile.client.Status().Update(context.TODO(), cr.Instance)
-	if err != nil {
-		log.Error(err, "When updating the routing status with exposed endpoints", "exposedEndpoints", cr.Instance.Status.ExposedEndpoints)
-		return reconcile.Result{}, err
+	switch routingClass {
+	case workspacev1alpha1.WorkspaceRoutingDefault:
+		return &solvers.BasicSolver{}, nil
+	case workspacev1alpha1.WorkspaceRoutingOpenShiftOauth:
+		return &solvers.OpenShiftOAuthSolver{}, nil
+	default:
+		return nil, fmt.Errorf("routing class %s not supported", routingClass)
 	}
-	return reconcile.Result{}, nil
-}
-
-type WorkspaceRoutingSolver interface {
-	CreateOrUpdateRoutingObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
-	CheckRoutingObjects(currentReconcile CurrentReconcile, targetPhase workspacev1alpha1.WorkspaceRoutingPhase) (workspacev1alpha1.WorkspaceRoutingPhase, reconcile.Result, error)
-	BuildExposedEndpoints(currentReconcile CurrentReconcile) map[string]workspacev1alpha1.ExposedEndpointList
-	DeleteRoutingObjects(currentReconcile CurrentReconcile) (reconcile.Result, error)
-}
-
-func DeleteRoutingObjects(cr CurrentReconcile, objectTypes []runtime.Object) (reconcile.Result, error) {
-	cr.ReqLogger.Info("Deleting K8s objects")
-	for _, list := range objectTypes {
-		cr.Reconcile.client.List(context.TODO(), list,
-			client.InNamespace(cr.Instance.Namespace),
-			client.MatchingLabels{
-				"org.eclipse.che.workspace.routing.workspace_id": cr.Instance.Name,
-			})
-		items := reflect.ValueOf(list).Elem().FieldByName("Items")
-		if !items.IsValid() {
-			return reconcile.Result{}, nil
-		}
-		for i := 0; i < items.Len(); i++ {
-			item := items.Index(i).Addr().Interface()
-			if itemMeta, isMeta := item.(metav1.Object); isMeta {
-				if itemRuntime, isRuntime := item.(runtime.Object); isRuntime {
-					log.Info("  => Deleting "+reflect.TypeOf(itemRuntime).Elem().String(), "name", itemMeta.GetName())
-					err := cr.Reconcile.client.Delete(context.TODO(), itemRuntime)
-					if err != nil {
-						cr.ReqLogger.Error(err, "Error when creating K8S object own by the Workspace Routing: ", "k8sObject", itemRuntime)
-						return reconcile.Result{}, err
-					}
-				}
-			}
-		}
-	}
-	return reconcile.Result{}, nil
-}
-
-func CreateOrUpdate(cr CurrentReconcile, k8sObjects []runtime.Object, diffOpts cmp.Options, replaceFun func(found runtime.Object, new runtime.Object)) (reconcile.Result, error) {
-	cr.ReqLogger.Info("Creating K8s objects")
-	reqLogger := cr.ReqLogger
-	instance := cr.Instance
-	r := cr.Reconcile
-
-	for _, k8sObject := range k8sObjects {
-		k8sObjectAsMetaObject, isMeta := k8sObject.(metav1.Object)
-		if !isMeta {
-			return reconcile.Result{}, errors.NewBadRequest("Converted objects are not valid K8s objects")
-		}
-
-		reqLogger.V(1).Info("  - Managing K8s Object", "kind", reflect.TypeOf(k8sObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
-
-		// Set Workspace instance as the owner and controller
-		if err := controllerutil.SetControllerReference(instance, k8sObjectAsMetaObject, r.scheme); err != nil {
-			reqLogger.Error(err, "Error when setting controller reference")
-			return reconcile.Result{}, err
-		}
-
-		// Set Workspace instance as the owner and controller
-		k8sObjectAsMetaObject.SetLabels(map[string]string{
-			"org.eclipse.che.workspace.routing.workspace_id": instance.Name,
-		})
-
-		// Check if the k8s Object already exists
-
-		found := reflect.New(reflect.TypeOf(k8sObject).Elem()).Interface().(runtime.Object)
-		err := r.client.Get(context.TODO(), types.NamespacedName{Name: k8sObjectAsMetaObject.GetName(), Namespace: k8sObjectAsMetaObject.GetNamespace()}, found)
-		if err != nil && errors.IsNotFound(err) {
-			reqLogger.Info("  => Creating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
-			err = r.client.Create(context.TODO(), k8sObject)
-			if err != nil {
-				reqLogger.Error(err, "Error when creating K8S object: ", "k8sObject", k8sObject)
-				return reconcile.Result{}, err
-			}
-			continue
-		} else if err != nil {
-			reqLogger.Error(err, "Error when getting K8S object: ", "k8sObject", k8sObjectAsMetaObject)
-			return reconcile.Result{}, err
-		}
-
-		r.scheme.Default(k8sObject)
-
-		// Update the found object and write the result back if there are any changes
-
-		foundSpecValue := reflect.ValueOf(found).Elem().FieldByName("Spec")
-		k8sObjectSpecValue := reflect.ValueOf(k8sObject).Elem().FieldByName("Spec")
-
-		var foundToUse interface{} = found
-		var newToUse interface{} = k8sObject
-		if foundSpecValue.IsValid() {
-			foundToUse = foundSpecValue.Interface()
-			newToUse = k8sObjectSpecValue.Interface()
-		}
-
-		if !cmp.Equal(foundToUse, newToUse, diffOpts) {
-			reqLogger.V(1).Info("  => Differences: " + cmp.Diff(foundToUse, newToUse, diffOpts...))
-			replaceFun(found, k8sObject)
-			reqLogger.Info("  => Updating "+reflect.TypeOf(k8sObjectAsMetaObject).Elem().String(), "name", k8sObjectAsMetaObject.GetName())
-			err = r.client.Update(context.TODO(), found)
-			if err != nil {
-				reqLogger.Error(err, "Error when updating K8S object: ", "k8sObject", k8sObjectAsMetaObject)
-				return reconcile.Result{}, err
-			}
-		}
-	}
-
-	return reconcile.Result{}, nil
 }

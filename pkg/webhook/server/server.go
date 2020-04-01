@@ -12,7 +12,7 @@ package server
 
 import (
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/config"
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"io/ioutil"
 	"os"
 	"sigs.k8s.io/controller-runtime/pkg/manager"

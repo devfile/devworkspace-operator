@@ -12,7 +12,7 @@
 package workspace
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/webhook/server"
 	"k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,7 +70,7 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 				ObjectSelector: &metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
 						{
-							Key:      model.WorkspaceIDLabel,
+							Key:      config.WorkspaceIDLabel,
 							Operator: labelExistsOp,
 						},
 					},

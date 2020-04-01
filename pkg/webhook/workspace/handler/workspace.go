@@ -14,7 +14,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/model"
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -33,7 +33,7 @@ func (h *WebhookHandler) MutateWorkspaceOnCreate(_ context.Context, req admissio
 	if wksp.Annotations == nil {
 		wksp.Annotations = map[string]string{}
 	}
-	wksp.Annotations[model.WorkspaceCreatorAnnotation] = req.UserInfo.UID
+	wksp.Annotations[config.WorkspaceCreatorAnnotation] = req.UserInfo.UID
 	return h.returnPatched(req, wksp)
 }
 
@@ -45,19 +45,19 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	oldCreator, found := oldWksp.Annotations[model.WorkspaceCreatorAnnotation]
+	oldCreator, found := oldWksp.Annotations[config.WorkspaceCreatorAnnotation]
 	if !found {
-		return admission.Denied(fmt.Sprintf("annotation '%s' is missing. Please recreate workspace to get it initialized", model.WorkspaceCreatorAnnotation))
+		return admission.Denied(fmt.Sprintf("annotation '%s' is missing. Please recreate workspace to get it initialized", config.WorkspaceCreatorAnnotation))
 	}
 
-	newCreator, found := newWksp.Annotations[model.WorkspaceCreatorAnnotation]
+	newCreator, found := newWksp.Annotations[config.WorkspaceCreatorAnnotation]
 	if !found {
-		newWksp.Annotations[model.WorkspaceCreatorAnnotation] = oldCreator
+		newWksp.Annotations[config.WorkspaceCreatorAnnotation] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}
 
 	if newCreator != oldCreator {
-		return admission.Denied(fmt.Sprintf("annotation '%s' is assigned once workspace is created and is immutable", model.WorkspaceCreatorAnnotation))
+		return admission.Denied(fmt.Sprintf("annotation '%s' is assigned once workspace is created and is immutable", config.WorkspaceCreatorAnnotation))
 	}
 
 	return admission.Allowed("new workspace has the same workspace as old one")

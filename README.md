@@ -11,7 +11,7 @@ To build docker image run the following command in the project's root
 ```
 docker build -t quay.io/che-incubator/che-workspace-controller:7.1.0 -f ./build/Dockerfile .
 ```
-
+> Webhooks are not configured automatically in non openshift environments
 ### Run controller within Kubernetes cluster
 ```bash
 # 1. Install CRDs
@@ -25,7 +25,8 @@ kubectl apply -f ./deploy/registry/local/k8s
 # 4. Generate certificates for Webhook server by executing
 ./deploy/webhook-server-certs/deploy-webhook-server-certs.sh kubectl
 # 5. Deploy Controller itself
-# [OPTIONAL MANUAL ACTION] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
+# [OPTIONAL MANUAL ACTION] Modify ./deploy/k8s/controller.yaml and put your docker image and pull policy there.
+kubectl apply -f ./deploy/k8s/controller.yaml
 kubectl apply -f ./deploy
 ```
 
@@ -47,10 +48,9 @@ oc create namespace che-workspace-controller
 oc apply -f ./deploy/registry/local
 oc apply -f ./deploy/registry/local/os
 PLUGIN_REGISTRY_HOST=$(oc get route che-plugin-registry -n che-workspace-controller -o jsonpath='{.spec.host}' || echo "")
-# 4. Generate certificates for Webhook server by executing
-./deploy/webhook-server-certs/deploy-webhook-server-certs.sh oc
-# 5. Deploy Controller itself
-# [OPTIONAL MANUAL ACTION] Modify ./deploy/controller.yaml and put your docker image and pull policy there.
+# 4. Deploy Controller itself
+# [OPTIONAL MANUAL ACTION] Modify ./deploy/os/controller.yaml and put your docker image and pull policy there.
+oc apply -f ./deploy/os/controller.yaml
 cat ./deploy/*.yaml | \
   sed "s|plugin.registry.url: .*|plugin.registry.url: http://${PLUGIN_REGISTRY_HOST}/v3|" | \
   oc apply -f -

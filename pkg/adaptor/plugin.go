@@ -30,7 +30,7 @@ func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []v1
 
 	broker := metadataBroker.NewBroker(true)
 
-	metas, aliases, err := getMetasForComponents(devfileComponents)
+	metas, _, err := getMetasForComponents(devfileComponents)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -44,9 +44,11 @@ func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []v1
 		if err != nil {
 			return nil, nil, err
 		}
-		if aliases[plugin.ID] != "" {
-			component.Name = aliases[plugin.ID]
-		}
+		// TODO: Alias for plugins seems to be ignored in regular Che
+		// Setting component.Name = alias here breaks matching, as container names do not match alias
+		//if aliases[plugin.ID] != "" {
+		//	component.Name = aliases[plugin.ID]
+		//}
 
 		components = append(components, component)
 	}

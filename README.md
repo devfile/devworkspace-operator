@@ -9,7 +9,17 @@ The controller can be deployed to a cluster provided you are logged in with clus
 ```bash
 export IMG=quay.io/che-incubator/che-workspace-controller:nightly
 export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
-export WEBHOOK_ENABLED=false
+make deploy
+```
+
+By default, controller will expose workspace servers without any authentications
+which is not accessible in public available clusters.
+
+In case of OpenShift, you're able to configure controller to secure your workspaces server deploy with the following options:
+
+```bash
+export WEBHOOK_ENABLED=true
+export DEFAULT_ROUTING=openshift-oauth
 make deploy
 ```
 

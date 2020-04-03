@@ -15,7 +15,12 @@ package workspace
 import (
 	"context"
 	"fmt"
+	origLog "log"
+	"os"
+	"strings"
+
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
+	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/prerequisites"
@@ -26,8 +31,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	origLog "log"
-	"os"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -35,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-	"strings"
 )
 
 var log = logf.Log.WithName("controller_workspace")
@@ -204,8 +206,11 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	componentDescriptions := componentsStatus.ComponentDescriptions
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceComponentsReady)
 
-	cheRestApisComponent := getCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
-	componentDescriptions = append(componentDescriptions, cheRestApisComponent)
+	// Only add che rest apis if theia editor is present in the devfile
+	if hasTheiaEditor(workspace.Spec.Devfile.Components) {
+		cheRestApisComponent := getCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
+		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
+	}
 
 	// Step two: Create routing, and wait for routing to be ready
 	routingStatus := provision.SyncRoutingToCluster(workspace, componentDescriptions, clusterAPI)
@@ -284,4 +289,13 @@ func getWorkspaceId(instance *workspacev1alpha1.Workspace) (string, error) {
 		return "", err
 	}
 	return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
+}
+
+func hasTheiaEditor(components []workspacev1alpha1.ComponentSpec) bool {
+	for _, comp := range components {
+		if strings.Contains(comp.Id, config.TheiaEditorID) && comp.Type == v1alpha1.CheEditor {
+			return true
+		}
+	}
+	return false
 }

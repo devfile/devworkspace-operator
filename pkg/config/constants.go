@@ -110,3 +110,9 @@ const (
 	// Policy on webhook failure
 	MutateWebhookFailurePolicy = v1beta1.Fail
 )
+
+// constants for workspace controller
+const (
+	// The ide of theia editor in devfile
+	TheiaEditorID = "eclipse/che-theia"
+)

@@ -89,6 +89,7 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			targetEndpoint := intstr.FromInt(int(endpoint.Port))
 			endpointName := common.EndpointName(endpoint.Name)
 			hostname := common.EndpointHostname(workspaceMeta.WorkspaceId, endpointName, endpoint.Port, workspaceMeta.IngressGlobalDomain)
+			url := fmt.Sprintf("https://%s", hostname)
 
 			// NOTE: openshift oauth-proxy only supports listening on a single port; as a result, we can't proxy more than
 			// one endpoint or we run into cookie issues (each proxied port gets a container and sets a cookie in the browser
@@ -129,7 +130,7 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			})
 			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], v1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
-				Url:        hostname,
+				Url:        url,
 				Attributes: endpoint.Attributes,
 			})
 		}

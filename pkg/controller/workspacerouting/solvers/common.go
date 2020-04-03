@@ -13,6 +13,7 @@
 package solvers
 
 import (
+	"fmt"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
@@ -112,6 +113,7 @@ func getIngressesForSpec(endpoints map[string][]v1alpha1.Endpoint, workspaceMeta
 
 			endpointName := common.EndpointName(endpoint.Name)
 			ingressHostname := common.EndpointHostname(workspaceMeta.WorkspaceId, endpointName, endpoint.Port, workspaceMeta.IngressGlobalDomain)
+			ingressURL := fmt.Sprintf("http://%s", ingressHostname)
 			ingresses = append(ingresses, v1beta1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      common.RouteName(workspaceMeta.WorkspaceId, endpointName),
@@ -143,7 +145,7 @@ func getIngressesForSpec(endpoints map[string][]v1alpha1.Endpoint, workspaceMeta
 			})
 			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], v1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
-				Url:        ingressHostname,
+				Url:        ingressURL,
 				Attributes: endpoint.Attributes,
 			})
 		}

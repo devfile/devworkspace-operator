@@ -32,5 +32,5 @@ func IngressHostname(serviceName, namespace string, port int64) string {
 // IngressName generates a names for ingresses
 func IngressName(serviceName string, port int64) string {
 	portString := strconv.FormatInt(port, 10)
-	return serviceName + "-" + portString
+	return serviceName[0:10] + "-" + portString
 }

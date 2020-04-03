@@ -39,14 +39,19 @@ The makefile supports the following rules:
 
 |rule|purpose|
 |---|---|
-| docker | build and push docker container |
-| webhook | set up certificates/secrets for webhooks support; no-op if webhooks disabled |
-| deploy | deploy controller |
-| restart | rollout the controller deployment in cluster |
-| rollout | build and push docker image; rollout changes to controller deployment | 
-| update | reapply crds and configmap |
+| docker | build and push docker image |
+| webhook | generate certificates for webhooks and deploy to cluster; no-op if webhooks are disabled or running on OpenShift |
+| deploy | deploy controller to cluster |
+| restart | restart cluster controller deployment |
+| rollout | rebuild and push docker image and restart cluster deployment |
+| update_cfg | configures already deployed controller according to set env variables |
+| update_crds | update custom resource definitions on cluster |
 | uninstall | delete controller namespace `che-workspace-controller` and remove custom resource definitions from cluster |
 | local | set up cluster to support controller, but do not deploy it; intended for use with `operator-sdk up local` |
+| start_local | start local instance of controller using operator-sdk |
+| start_local_debug | start local instance of controller with debugging enabled |
+| fmt | format all go files in repository |
+| help | print this message |
 
 ### Test run controller
 1. Take a look samples workspace configuration in `./samples` folder.

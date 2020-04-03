@@ -57,6 +57,8 @@ endif
 
 _update_crds:
 	$(TOOL) apply -f ./deploy/crds
+
+_update_controller_configmap:
 	$(TOOL) apply -f ./deploy/controller_config.yaml
 
 _apply_controller_cfg:
@@ -72,7 +74,7 @@ docker:
 	docker build -t $(IMG) -f ./build/Dockerfile .
 	docker push $(IMG)
 
-### webhook: generate certificates for webhooks and deploy to cluster
+### webhook: generate certificates for webhooks and deploy to cluster; no-op if webhooks are disabled or running on OpenShift
 webhook:
 ifeq ($(WEBHOOK_ENABLED),true)
 ifeq ($(TOOL),kubectl)
@@ -98,11 +100,11 @@ endif
 ### rollout: rebuild and push docker image and restart cluster deployment
 rollout: docker restart
 
-### configure: configures already deployed controller according to set env variables
-configure: _update_yamls _apply_controller_cfg _reset_yamls
+### update_cfg: configures already deployed controller according to set env variables
+update_cfg: _update_yamls _apply_controller_cfg _reset_yamls
 
-### update: update CRDs defined on cluster
-update: _update_crds
+### update_crds: update custom resource definitions on cluster
+update_crds: _update_crds
 
 ### uninstall: remove namespace and all CRDs from cluster
 uninstall:
@@ -118,7 +120,15 @@ endif
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
 
 ### local: set up cluster for local development
-local: _set_context _deploy_registry _set_registry_url _update_yamls _update_crds _reset_yamls
+local: _set_context _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls
+
+### start_local: start local instance of controller using operator-sdk
+start_local:
+	operator-sdk up local --namespace $(NAMESPACE) 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
+
+### start_local_debug: start local instance of controller with debugging enabled
+start_local_debug:
+	operator-sdk up local --namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
 ### fmt: format all go files in repository
 fmt:
@@ -128,12 +138,12 @@ fmt:
 ### help: print this message
 help: Makefile
 	@echo "Available rules:"
-	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-20s -%s\n", $$1, $$2 }'
+	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-22s -%s\n", $$1, $$2 }'
 	@echo ""
 	@echo "Supported environment variables:"
-	@echo "    IMG              - Image used for controller"
-	@echo "    NAMESPACE        - Namespace to use for deploying controller"
-	@echo "    TOOL             - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes"
-	@echo "    CLUSTER_IP       - For Kubernetes only, the ip address of the cluster (minikube ip)"
-	@echo "    PULL_POLICY      - Image pull policy for controller"
-	@echo "    WEBHOOK_ENABLED  - Whether webhooks should be enabled in the deployment"
+	@echo "    IMG                - Image used for controller"
+	@echo "    NAMESPACE          - Namespace to use for deploying controller"
+	@echo "    TOOL               - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes"
+	@echo "    CLUSTER_IP         - For Kubernetes only, the ip address of the cluster (minikube ip)"
+	@echo "    PULL_POLICY        - Image pull policy for controller"
+	@echo "    WEBHOOK_ENABLED    - Whether webhooks should be enabled in the deployment"

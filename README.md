@@ -33,6 +33,7 @@ The repository contains a Makefile; building and deploying can be configured via
 | `CLUSTER_IP` | For Kubernetes only, the ip address of the cluster (`minikube ip`) | `192.168.99.100` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |
 | `WEBHOOK_ENABLED` | Whether webhooks should be enabled in the deployment | `false` |
+| `DEFAULT_ROUTING` | Default routingClass to apply to workspaces that don't specify one | `basic` |
 
 The makefile supports the following rules:
 

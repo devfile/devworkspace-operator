@@ -4,6 +4,7 @@ TOOL ?= oc
 CLUSTER_IP ?= 192.168.99.100
 PULL_POLICY ?= Always
 WEBHOOK_ENABLED ?= false
+DEFAULT_ROUTING ?= basic
 
 all: help
 
@@ -28,15 +29,27 @@ endif
 
 _update_yamls: _set_registry_url
 	sed -i "s|plugin.registry.url: .*|plugin.registry.url: http://$(PLUGIN_REGISTRY_HOST)|g" ./deploy/controller_config.yaml
-	sed -i "s|image: .*|image: $(IMG)|g" ./deploy/controller.yaml
-	sed -i "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/controller.yaml
-	sed -i "s|che.webhooks.enabled: .*|che.webhooks.enabled: $(WEBHOOK_ENABLED)|g" ./deploy/controller.yaml
+	sed -i 's|che.webhooks.enabled: .*|che.webhooks.enabled: "$(WEBHOOK_ENABLED)"|g' ./deploy/controller_config.yaml
+	sed -i 's|che.default_routing_class: .*|che.default_routing_class: "$(DEFAULT_ROUTING)"|g' ./deploy/controller_config.yaml
+ifeq ($(TOOL),oc)
+	sed -i "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
+	sed -i "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
+else
+	sed -i "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
+	sed -i "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
+endif
 
 _reset_yamls: _set_registry_url
 	sed -i "s|http://$(PLUGIN_REGISTRY_HOST)|http://che-plugin-registry.192.168.99.100.nip.io/v3|g" ./deploy/controller_config.yaml
-	sed -i "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/controller.yaml
-	sed -i "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/controller.yaml
-	sed -i "s|che.webhooks.enabled: .*|che.webhooks.enabled: "false"|g" ./deploy/controller.yaml
+	sed -i 's|che.webhooks.enabled: .*|che.webhooks.enabled: "false"|g' ./deploy/controller_config.yaml
+	sed -i 's|che.default_routing_class: .*|che.default_routing_class: "basic"|g' ./deploy/controller_config.yaml
+ifeq ($(TOOL),oc)
+	sed -i "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/os/controller.yaml
+	sed -i "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
+else
+	sed -i "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/k8s/controller.yaml
+	sed -i "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
+endif
 
 _update_crds:
 	$(TOOL) apply -f ./deploy/crds
@@ -44,6 +57,11 @@ _update_crds:
 
 _deploy_controller:
 	$(TOOL) apply -f ./deploy
+ifeq ($(TOOL),oc)
+	$(TOOL) apply -f ./deploy/os/
+else
+	$(TOOL) apply -f ./deploy/k8s/
+endif
 
 ### docker: build and push docker image
 docker:
@@ -81,8 +99,8 @@ update: _update_yamls _update_crds _reset_yamls
 
 ### uninstall: remove namespace and all CRDs from cluster
 uninstall:
-	# It's safer to delete all workspaces before deleting the controller; otherwise we could
-	# leave workspaces in a hanging state if we add finalizers.
+# It's safer to delete all workspaces before deleting the controller; otherwise we could
+# leave workspaces in a hanging state if we add finalizers.
 ifneq ($(shell command -v kubectl),)
 	kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
 else

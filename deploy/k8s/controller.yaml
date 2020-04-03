@@ -13,6 +13,8 @@ spec:
     metadata:
       labels:
         app: che-workspace-controller
+      annotations:
+        kubectl.kubernetes.io/restartedAt: ""
     spec:
       serviceAccountName: che-workspace-controller
       containers:

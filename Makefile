@@ -34,9 +34,11 @@ _update_yamls: _set_registry_url
 ifeq ($(TOOL),oc)
 	sed -i "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
 	sed -i "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
+	sed -i "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date --iso-8601=seconds)'|g" ./deploy/os/controller.yaml
 else
 	sed -i "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
 	sed -i "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
+	sed -i "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date --iso-8601=seconds)'|g" ./deploy/k8s/controller.yaml
 endif
 
 _reset_yamls: _set_registry_url
@@ -46,16 +48,18 @@ _reset_yamls: _set_registry_url
 ifeq ($(TOOL),oc)
 	sed -i "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/os/controller.yaml
 	sed -i "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
+	sed -i 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
 else
 	sed -i "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/k8s/controller.yaml
 	sed -i "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
+	sed -i 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/k8s/controller.yaml
 endif
 
 _update_crds:
 	$(TOOL) apply -f ./deploy/crds
 	$(TOOL) apply -f ./deploy/controller_config.yaml
 
-_deploy_controller:
+_apply_controller_cfg:
 	$(TOOL) apply -f ./deploy
 ifeq ($(TOOL),oc)
 	$(TOOL) apply -f ./deploy/os/
@@ -79,7 +83,7 @@ else
 endif
 
 ### deploy: deploy controller to cluster
-deploy: _set_context _deploy_registry _update_yamls _update_crds webhook _deploy_controller _reset_yamls
+deploy: _set_context _deploy_registry _update_yamls _update_crds webhook _apply_controller_cfg _reset_yamls
 
 ### restart: restart cluster controller deployment
 restart:
@@ -94,8 +98,11 @@ endif
 ### rollout: rebuild and push docker image and restart cluster deployment
 rollout: docker restart
 
+### configure: configures already deployed controller according to set env variables
+configure: _update_yamls _apply_controller_cfg _reset_yamls
+
 ### update: update CRDs defined on cluster
-update: _update_yamls _update_crds _reset_yamls
+update: _update_crds
 
 ### uninstall: remove namespace and all CRDs from cluster
 uninstall:

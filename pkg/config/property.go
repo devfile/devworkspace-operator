@@ -38,5 +38,5 @@ const (
 	defaultRoutingClass = "basic"
 
 	webhooksEnabled        = "che.webhooks.enabled"
-	defaultWebhooksEnabled = "true"
+	defaultWebhooksEnabled = "false"
 )

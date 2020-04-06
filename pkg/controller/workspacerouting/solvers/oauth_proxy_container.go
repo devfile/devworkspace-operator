@@ -14,18 +14,19 @@ package solvers
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
-	"strconv"
 )
 
 const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oauth-redirectreference.%s-%s"
 const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
 
 func (s *OpenShiftOAuthSolver) getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *v1alpha1.PodAdditions {
-	tlsSecretVolume := buildSecretVolume(s.getProxyTLSSecret(meta))
+	tlsSecretVolume := buildSecretVolume(common.OAuthProxySecretName(meta.WorkspaceId))
 	var proxyContainers []corev1.Container
 	for _, proxyEndpoint := range proxyEndpoints {
 		proxyContainers = append(proxyContainers, getProxyContainerForEndpoint(proxyEndpoint, tlsSecretVolume, meta))

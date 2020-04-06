@@ -14,6 +14,7 @@ package solvers
 
 import (
 	"fmt"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
@@ -53,7 +54,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 	proxyServices := getServicesForEndpoints(proxyPorts, workspaceMeta)
 	for idx := range proxyServices {
 		proxyServices[idx].Annotations = map[string]string{
-			"service.alpha.openshift.io/serving-cert-secret-name": s.getProxyTLSSecret(workspaceMeta),
+			"service.alpha.openshift.io/serving-cert-secret-name": common.OAuthProxySecretName(workspaceMeta.WorkspaceId),
 		}
 	}
 	discoverableServices := getDiscoverableServicesForEndpoints(proxyPorts, workspaceMeta)
@@ -71,10 +72,6 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 		PodAdditions:     podAdditions,
 		ExposedEndpoints: exposedEndpoints,
 	}
-}
-
-func (s *OpenShiftOAuthSolver) getProxyTLSSecret(meta WorkspaceMetadata) string{
-	return "proxy-tls";
 }
 
 func (s *OpenShiftOAuthSolver) getProxyRoutes(

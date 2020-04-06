@@ -165,4 +165,4 @@ help: Makefile
 	@echo "    CLUSTER_IP         - For Kubernetes only, the ip address of the cluster (minikube ip)"
 	@echo "    PULL_POLICY        - Image pull policy for controller"
 	@echo "    WEBHOOK_ENABLED    - Whether webhooks should be enabled in the deployment"
-	@cho  "    ADMIN_CTX          - Kubectx entry that should be used during work with cluster. The current will be used if omitted"
+	@echo  "    ADMIN_CTX          - Kubectx entry that should be used during work with cluster. The current will be used if omitted"

@@ -1,3 +1,6 @@
+[![Master Build Status](https://ci.centos.org/buildStatus/icon?subject=master&job=devtools-che-workspace-operator-build-master/)](https://ci.centos.org/view/Devtools/job/devtools-che-workspace-operator-build-master/)
+[![Nightly Build Status](https://ci.centos.org/buildStatus/icon?subject=nightly&job=devtools-che-workspace-operator-nightly/)](https://ci.centos.org/view/Devtools/job/devtools-che-workspace-operator-nightly/)
+
 # Che Workspace Operator
 
 Che workspace operator repository that contains K8s API for Che workspace and controller for them.
@@ -97,3 +100,9 @@ To uninstall the controller and associated CRDs, use the Makefile uninstall rule
 make uninstall
 ```
 This will delete all custom resource definitions created for the controller, as well as the `che-workspace-controller` namespace.
+
+### CentOS CI
+The following [CentOS CI jobs](https://ci.centos.org/) are associated with the repository:
+
+- [`master`](https://ci.centos.org/job/devtools-che-workspace-operator-build-master/) - builds CentOS images on each commit to the [`master`](https://github.com/che-incubator/che-workspace-operator/tree/master) branch and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller).
+- [`nightly`](https://ci.centos.org/job/devtools-che-workspace-operator-nightly/) - builds CentOS images and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller) on a daily basis from the [`master`](https://github.com/che-incubator/che-workspace-operator/tree/master) branch.

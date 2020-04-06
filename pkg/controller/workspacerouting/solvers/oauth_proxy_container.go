@@ -24,22 +24,35 @@ import (
 const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oauth-redirectreference.%s-%s"
 const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
 
-func getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *v1alpha1.PodAdditions {
+func (s *OpenShiftOAuthSolver) getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *v1alpha1.PodAdditions {
+	tlsSecretVolume := buildSecretVolume(s.getProxyTLSSecret(meta))
 	var proxyContainers []corev1.Container
 	for _, proxyEndpoint := range proxyEndpoints {
-		proxyContainers = append(proxyContainers, getProxyContainerForEndpoint(proxyEndpoint, meta))
+		proxyContainers = append(proxyContainers, getProxyContainerForEndpoint(proxyEndpoint, tlsSecretVolume, meta))
 	}
-	proxyVolumes := getProxyVolumes(proxyContainers)
 	serviceAcctAnnotations := getProxyServiceAcctAnnotations(proxyEndpoints, meta)
 
 	return &v1alpha1.PodAdditions{
 		Containers:                proxyContainers,
-		Volumes:                   proxyVolumes,
+		Volumes:                   []corev1.Volume{tlsSecretVolume},
 		ServiceAccountAnnotations: serviceAcctAnnotations,
 	}
 }
 
-func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, meta WorkspaceMetadata) corev1.Container {
+func buildSecretVolume(secretName string) corev1.Volume {
+	var readOnly int32 = 420
+	return corev1.Volume{
+		Name: secretName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  secretName,
+				DefaultMode: &readOnly,
+			},
+		},
+	}
+}
+
+func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume corev1.Volume, meta WorkspaceMetadata) corev1.Container {
 	proxyContainerName := fmt.Sprintf("%s-oauth-proxy-%s", meta.WorkspaceId, strconv.FormatInt(proxyEndpoint.upstreamEndpoint.Port, 10))
 
 	return corev1.Container{
@@ -54,7 +67,7 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, meta WorkspaceMet
 		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				Name:      "proxy-tls",
+				Name:      tlsProxyVolume.Name,
 				MountPath: "/etc/tls/private",
 			},
 		},
@@ -74,31 +87,6 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, meta WorkspaceMet
 			"--scope=user:info user:check-access role:pods-exec:" + meta.Namespace,
 		},
 	}
-}
-
-func getProxyVolumes(containers []corev1.Container) []corev1.Volume {
-	var volumes []corev1.Volume
-	volumeNames := map[string]bool{}
-	var volumeDefaultMode int32 = 420
-	for _, container := range containers {
-		for _, volumeMount := range container.VolumeMounts {
-			if volumeNames[volumeMount.Name] {
-				continue
-			}
-			volume := corev1.Volume{
-				Name: volumeMount.Name,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  volumeMount.Name,
-						DefaultMode: &volumeDefaultMode,
-					},
-				},
-			}
-			volumes = append(volumes, volume)
-			volumeNames[volumeMount.Name] = true
-		}
-	}
-	return volumes
 }
 
 func getProxyServiceAcctAnnotations(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) map[string]string {

@@ -53,7 +53,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 	proxyServices := getServicesForEndpoints(proxyPorts, workspaceMeta)
 	for idx := range proxyServices {
 		proxyServices[idx].Annotations = map[string]string{
-			"service.alpha.openshift.io/serving-cert-secret-name": "proxy-tls",
+			"service.alpha.openshift.io/serving-cert-secret-name": s.getProxyTLSSecret(workspaceMeta),
 		}
 	}
 	discoverableServices := getDiscoverableServicesForEndpoints(proxyPorts, workspaceMeta)
@@ -71,6 +71,10 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 		PodAdditions:     podAdditions,
 		ExposedEndpoints: exposedEndpoints,
 	}
+}
+
+func (s *OpenShiftOAuthSolver) getProxyTLSSecret(meta WorkspaceMetadata) string{
+	return "proxy-tls";
 }
 
 func (s *OpenShiftOAuthSolver) getProxyRoutes(
@@ -135,7 +139,7 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			})
 		}
 	}
-	podAdditions = getProxyPodAdditions(portMappings, workspaceMeta)
+	podAdditions = s.getProxyPodAdditions(portMappings, workspaceMeta)
 	return routes, exposedEndpoints, podAdditions
 }
 

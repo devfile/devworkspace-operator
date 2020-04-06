@@ -12,8 +12,7 @@ export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
 make deploy
 ```
 
-By default, controller will expose workspace servers without any authentications
-which is not accessible in public available clusters.
+By default, controller will expose workspace servers without any authentication; this is not advisable for public clusters, as any user could access the created workspace via URL.
 
 In case of OpenShift, you're able to configure controller to secure your workspaces server deploy with the following options:
 

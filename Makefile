@@ -5,10 +5,24 @@ CLUSTER_IP ?= 192.168.99.100
 PULL_POLICY ?= Always
 WEBHOOK_ENABLED ?= false
 DEFAULT_ROUTING ?= basic
+ADMIN_CTX ?= ""
 
 all: help
 
-_set_context:
+_set_ctx:
+ifneq ($(ADMIN_CTX),"")
+	$(eval CURRENT_CTX := $(shell $(TOOL) config current-context))
+	@echo "Switching current ctx to $(ADMIN_CTX) from $(CURRENT_CTX)"
+	$(TOOL) config use-context $(ADMIN_CTX)
+endif
+
+_reset_ctx:
+ifneq ($(ADMIN_CTX),"")
+	@echo "Restoring the current context to $(CURRENT_CTX)"
+	$(TOOL) config use-context $(CURRENT_CTX)
+endif
+
+_create_namespace:
 	$(TOOL) create namespace $(NAMESPACE) || true
 
 _deploy_registry:
@@ -69,6 +83,27 @@ else
 	$(TOOL) apply -f ./deploy/k8s/
 endif
 
+_do_restart:
+ifeq ($(TOOL),oc)
+	oc patch deployment/che-workspace-controller \
+		-n che-workspace-controller \
+		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
+else
+	kubectl rollout restart -n $(NAMESPACE) che-workspace-controller
+endif
+
+_do_uninstall:
+# It's safer to delete all workspaces before deleting the controller; otherwise we could
+# leave workspaces in a hanging state if we add finalizers.
+ifneq ($(shell command -v kubectl),)
+	kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
+else
+	$(info WARN: kubectl is not installed: unable to delete all workspaces)
+endif
+	$(TOOL) delete namespace $(NAMESPACE)
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
+
 ### docker: build and push docker image
 docker:
 	docker build -t $(IMG) -f ./build/Dockerfile .
@@ -85,42 +120,25 @@ else
 endif
 
 ### deploy: deploy controller to cluster
-deploy: _set_context _deploy_registry _update_yamls _update_crds webhook _apply_controller_cfg _reset_yamls
+deploy: _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds webhook _apply_controller_cfg _reset_yamls _reset_ctx
 
 ### restart: restart cluster controller deployment
-restart:
-ifeq ($(TOOL),oc)
-	oc patch deployment/che-workspace-controller \
-		-n che-workspace-controller \
-		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
-else
-	kubectl rollout restart -n $(NAMESPACE) che-workspace-controller
-endif
+restart: _set_ctx _do_restart _reset_ctx
 
 ### rollout: rebuild and push docker image and restart cluster deployment
 rollout: docker restart
 
 ### update_cfg: configures already deployed controller according to set env variables
-update_cfg: _update_yamls _apply_controller_cfg _reset_yamls
+update_cfg: _set_ctx _update_yamls _apply_controller_cfg _reset_yamls _reset_ctx
 
 ### update_crds: update custom resource definitions on cluster
-update_crds: _update_crds
+update_crds: _set_ctx _update_crds _reset_ctx
 
 ### uninstall: remove namespace and all CRDs from cluster
-uninstall:
-# It's safer to delete all workspaces before deleting the controller; otherwise we could
-# leave workspaces in a hanging state if we add finalizers.
-ifneq ($(shell command -v kubectl),)
-	kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
-else
-	$(info WARN: kubectl is not installed: unable to delete all workspaces)
-endif
-	$(TOOL) delete namespace $(NAMESPACE)
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
+uninstall: _set_ctx _do_uninstall _reset_ctx
 
 ### local: set up cluster for local development
-local: _set_context _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls
+local: _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
 
 ### start_local: start local instance of controller using operator-sdk
 start_local:
@@ -147,3 +165,4 @@ help: Makefile
 	@echo "    CLUSTER_IP         - For Kubernetes only, the ip address of the cluster (minikube ip)"
 	@echo "    PULL_POLICY        - Image pull policy for controller"
 	@echo "    WEBHOOK_ENABLED    - Whether webhooks should be enabled in the deployment"
+	@echo  "    ADMIN_CTX          - Kubectx entry that should be used during work with cluster. The current will be used if omitted"

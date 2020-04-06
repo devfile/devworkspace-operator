@@ -25,7 +25,7 @@ import (
 const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oauth-redirectreference.%s-%s"
 const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
 
-func (s *OpenShiftOAuthSolver) getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *v1alpha1.PodAdditions {
+func getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *v1alpha1.PodAdditions {
 	tlsSecretVolume := buildSecretVolume(common.OAuthProxySecretName(meta.WorkspaceId))
 	var proxyContainers []corev1.Container
 	for _, proxyEndpoint := range proxyEndpoints {

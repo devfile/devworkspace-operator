@@ -1,0 +1,19 @@
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: Workspace
+metadata:
+  name: cloud-shell
+spec:
+  started: true
+  devfile:
+    apiVersion: 0.0.1
+    metadata:
+      name: cloud-shell
+    components:
+      - type: dockerimage
+        memoryLimit: 256Mi
+        alias: dev
+        image: 'quay.io/eclipse/che-sidecar-openshift-connector:0.1.2-2601509'
+        args: ["tail", "-f", "/dev/null"]
+        env:
+          - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
+            name: PS1

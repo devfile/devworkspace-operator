@@ -128,44 +128,50 @@ func getSpecComponents(workspace *v1alpha1.Workspace, scheme *runtime.Scheme) ([
 		return nil, err
 	}
 
-	dockerResolver := v1alpha1.Component{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      fmt.Sprintf("components-%s-%s", workspace.Status.WorkspaceId, "docker"),
-			Namespace: workspace.Namespace,
-			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+	var components []v1alpha1.Component
+	if len(dockerComponents) > 0 {
+		dockerResolver := v1alpha1.Component{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      fmt.Sprintf("components-%s-%s", workspace.Status.WorkspaceId, "docker"),
+				Namespace: workspace.Namespace,
+				Labels: map[string]string{
+					config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+				},
 			},
-		},
-		Spec: v1alpha1.WorkspaceComponentSpec{
-			WorkspaceId: workspace.Status.WorkspaceId,
-			Components:  dockerComponents,
-			Commands:    workspace.Spec.Devfile.Commands,
-		},
-	}
-	pluginResolver := v1alpha1.Component{
-		ObjectMeta: v1.ObjectMeta{
-			Name:      fmt.Sprintf("components-%s-%s", workspace.Status.WorkspaceId, "plugins"),
-			Namespace: workspace.Namespace,
-			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+			Spec: v1alpha1.WorkspaceComponentSpec{
+				WorkspaceId: workspace.Status.WorkspaceId,
+				Components:  dockerComponents,
+				Commands:    workspace.Spec.Devfile.Commands,
 			},
-		},
-		Spec: v1alpha1.WorkspaceComponentSpec{
-			WorkspaceId: workspace.Status.WorkspaceId,
-			Components:  pluginComponents,
-			Commands:    workspace.Spec.Devfile.Commands,
-		},
+		}
+		err = controllerutil.SetControllerReference(workspace, &dockerResolver, scheme)
+		if err != nil {
+			return nil, err
+		}
+		components = append(components, dockerResolver)
 	}
-	err = controllerutil.SetControllerReference(workspace, &dockerResolver, scheme)
-	if err != nil {
-		return nil, err
+	if len(pluginComponents) > 0 {
+		pluginResolver := v1alpha1.Component{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      fmt.Sprintf("components-%s-%s", workspace.Status.WorkspaceId, "plugins"),
+				Namespace: workspace.Namespace,
+				Labels: map[string]string{
+					config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+				},
+			},
+			Spec: v1alpha1.WorkspaceComponentSpec{
+				WorkspaceId: workspace.Status.WorkspaceId,
+				Components:  pluginComponents,
+				Commands:    workspace.Spec.Devfile.Commands,
+			},
+		}
+		err = controllerutil.SetControllerReference(workspace, &pluginResolver, scheme)
+		if err != nil {
+			return nil, err
+		}
+		components = append(components, pluginResolver)
 	}
-	err = controllerutil.SetControllerReference(workspace, &pluginResolver, scheme)
-	if err != nil {
-		return nil, err
-	}
-
-	return []v1alpha1.Component{pluginResolver, dockerResolver}, nil
+	return components, nil
 }
 
 func getClusterComponents(workspace *v1alpha1.Workspace, client runtimeClient.Client) ([]v1alpha1.Component, error) {

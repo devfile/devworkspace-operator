@@ -113,7 +113,7 @@ func getIngressesForSpec(endpoints map[string][]v1alpha1.Endpoint, workspaceMeta
 
 			endpointName := common.EndpointName(endpoint.Name)
 			ingressHostname := common.EndpointHostname(workspaceMeta.WorkspaceId, endpointName, endpoint.Port, workspaceMeta.IngressGlobalDomain)
-			ingressURL := fmt.Sprintf("http://%s", ingressHostname)
+			ingressURL := fmt.Sprintf("%s://%s", endpoint.Attributes[v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE], ingressHostname)
 			ingresses = append(ingresses, v1beta1.Ingress{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      common.RouteName(workspaceMeta.WorkspaceId, endpointName),
@@ -151,4 +151,17 @@ func getIngressesForSpec(endpoints map[string][]v1alpha1.Endpoint, workspaceMeta
 		}
 	}
 	return ingresses, exposedEndpoints
+}
+
+// getSecureProtocol takes a (potentially unsecure protocol e.g. http) and returns the secure version (e.g. https).
+// If protocol isn't recognized, it is returned unmodified.
+func getSecureProtocol(protocol string) string {
+	switch protocol {
+	case "ws":
+		return "wss"
+	case "http":
+		return "https"
+	default:
+		return protocol
+	}
 }

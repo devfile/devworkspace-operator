@@ -24,8 +24,6 @@ import (
 const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oauth-redirectreference.%s-%s"
 const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
 
-var openShiftProxySARFmt = `{"namespace": "%s", "resource": "pods", "name": "%s", "verb": "exec"}`
-
 func getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *v1alpha1.PodAdditions {
 	var proxyContainers []corev1.Container
 	for _, proxyEndpoint := range proxyEndpoints {
@@ -70,9 +68,10 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, meta WorkspaceMet
 			"--upstream=http://localhost:" + strconv.FormatInt(proxyEndpoint.upstreamEndpoint.Port, 10),
 			"--tls-cert=/etc/tls/private/tls.crt",
 			"--tls-key=/etc/tls/private/tls.key",
-			"--cookie-secret=SECRET",
-			// Currently: block anyone who can't exec in the current namespace
-			"--openshift-sar=" + fmt.Sprintf(openShiftProxySARFmt, "", ""),
+			"--cookie-secret=0123456789abcdefabcd",
+			"--pass-user-bearer-token=false",
+			"--pass-access-token=true",
+			"--scope=user:info user:check-access role:pods-exec:" + meta.Namespace,
 		},
 	}
 }

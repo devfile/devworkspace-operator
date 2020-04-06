@@ -38,6 +38,7 @@ See below for all environment variables used in the makefile.
 ## Development
 
 The repository contains a Makefile; building and deploying can be configured via the environment variables
+
 |variable|purpose|default value|
 |---|---|---|
 | `IMG` | Image used for controller | `quay.io/che-incubator/che-workspace-controller:7.1.0` |
@@ -46,6 +47,7 @@ The repository contains a Makefile; building and deploying can be configured via
 | `PULL_POLICY` | Image pull policy for controller | `Always` |
 | `WEBHOOK_ENABLED` | Whether webhooks should be enabled in the deployment | `false` |
 | `DEFAULT_ROUTING` | Default routingClass to apply to workspaces that don't specify one | `basic` |
+| `ADMIN_CTX` | Kubectx entry that should be used during work with cluster. The current will be used if omitted |-|
 
 The makefile supports the following rules:
 

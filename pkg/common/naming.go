@@ -46,3 +46,7 @@ func EndpointHostname(workspaceId, endpointName string, endpointPort int64, ingr
 func RouteName(workspaceId, endpointName string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, endpointName)
 }
+
+func OAuthProxySecretName(workspaceId string) string {
+	return "proxy-tls-" + workspaceId
+}

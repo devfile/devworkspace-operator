@@ -48,6 +48,7 @@ The repository contains a Makefile; building and deploying can be configured via
 | `WEBHOOK_ENABLED` | Whether webhooks should be enabled in the deployment | `false` |
 | `DEFAULT_ROUTING` | Default routingClass to apply to workspaces that don't specify one | `basic` |
 | `ADMIN_CTX` | Kubectx entry that should be used during work with cluster. The current will be used if omitted |-|
+| `REGISTRY_ENABLED` | Whether the plugin registry should be deployed | `true` |
 
 The makefile supports the following rules:
 

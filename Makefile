@@ -6,6 +6,7 @@ PULL_POLICY ?= Always
 WEBHOOK_ENABLED ?= false
 DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
+REGISTRY_ENABLED ?= true
 
 all: help
 
@@ -33,12 +34,14 @@ _create_namespace:
 	$(TOOL) create namespace $(NAMESPACE) || true
 
 _deploy_registry:
+ifeq ($(REGISTRY_ENABLED),true)
 	$(TOOL) apply -f ./deploy/registry/local
 ifeq ($(TOOL),oc)
 	$(TOOL) apply -f ./deploy/registry/local/os
 else
 	sed -i "s|192.168.99.100|$(CLUSTER_IP)|g" ./deploy/registry/local/k8s/ingress.yaml
 	$(TOOL) apply -f ./deploy/registry/local/k8s
+endif
 endif
 
 _set_registry_url:

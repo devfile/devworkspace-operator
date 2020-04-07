@@ -213,7 +213,7 @@ func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerM
 		}
 		fqn := getPluginFQN(component)
 		var meta *brokerModel.PluginMeta
-		// delegate to the internal registry, if found there then use that
+		// delegate to the internal registry first, if found there then use that
 		if val, ok := internalRegistry[fqn.ID]; ok {
 			log.Info(fmt.Sprintf("Grabbing the meta.yaml for %s from the internal registry", fqn.ID))
 			meta = &val

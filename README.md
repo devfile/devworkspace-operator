@@ -41,7 +41,7 @@ The repository contains a Makefile; building and deploying can be configured via
 
 |variable|purpose|default value|
 |---|---|---|
-| `IMG` | Image used for controller | `quay.io/che-incubator/che-workspace-controller:7.1.0` |
+| `IMG` | Image used for controller | `quay.io/che-incubator/che-workspace-controller:nightly` |
 | `TOOL` | CLI tool for interfacing with the cluster: `kubectl` or `oc`; if `oc` is used, deployment is tailored to OpenShift, otherwise Kubernetes | `oc` |
 | `CLUSTER_IP` | For Kubernetes only, the ip address of the cluster (`minikube ip`) | `192.168.99.100` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |

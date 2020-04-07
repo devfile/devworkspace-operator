@@ -1,5 +1,5 @@
 NAMESPACE = che-workspace-controller
-IMG ?= quay.io/che-incubator/che-workspace-controller:7.1.0
+IMG ?= quay.io/che-incubator/che-workspace-controller:nightly
 TOOL ?= oc
 CLUSTER_IP ?= 192.168.99.100
 PULL_POLICY ?= Always

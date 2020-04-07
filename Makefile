@@ -16,6 +16,7 @@ _print_vars:
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
+	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
 
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
@@ -176,4 +177,5 @@ help: Makefile
 	@echo "    CLUSTER_IP         - For Kubernetes only, the ip address of the cluster (minikube ip)"
 	@echo "    PULL_POLICY        - Image pull policy for controller"
 	@echo "    WEBHOOK_ENABLED    - Whether webhooks should be enabled in the deployment"
-	@echo  "    ADMIN_CTX          - Kubectx entry that should be used during work with cluster. The current will be used if omitted"
+	@echo "    ADMIN_CTX          - Kubectx entry that should be used during work with cluster. The current will be used if omitted"
+	@echo "    REGISTRY_ENABLED   - Whether the plugin registry should be deployed"

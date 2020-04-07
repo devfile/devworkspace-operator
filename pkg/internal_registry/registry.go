@@ -12,7 +12,7 @@ func InternalRegistry() map[string]brokerModel.PluginMeta {
 			Publisher:   "eclipse",
 			Description: "Cloud Shell provides an ability to use terminal widget like an editor.",
 			DisplayName: "Cloud Shell Editor",
-			ID:          "",
+			ID:          "eclipse.cloud-shell",
 			Icon:        "https://www.eclipse.org/che/images/logo-eclipseche.svg",
 			Name:        "cloud-shell",
 			Spec: brokerModel.PluginMetaSpec{

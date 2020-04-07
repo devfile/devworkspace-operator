@@ -14,16 +14,21 @@ package adaptor
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	registry "github.com/che-incubator/che-workspace-operator/pkg/internal_registry"
 	metadataBroker "github.com/eclipse/che-plugin-broker/brokers/metadata"
 	brokerModel "github.com/eclipse/che-plugin-broker/model"
 	"github.com/eclipse/che-plugin-broker/utils"
 	corev1 "k8s.io/api/core/v1"
-	"strconv"
-	"strings"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+var log = logf.Log.WithName("plugin")
 
 func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []v1alpha1.ComponentSpec) ([]v1alpha1.ComponentDescription, *corev1.ConfigMap, error) {
 	var components []v1alpha1.ComponentDescription
@@ -199,6 +204,7 @@ func adaptVolumeMountsFromBroker(workspaceId string, brokerContainer brokerModel
 
 func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerModel.PluginMeta, aliases map[string]string, err error) {
 	defaultRegistry := config.ControllerCfg.GetPluginRegistry()
+	internalRegistry := registry.InternalRegistry()
 	ioUtils := utils.New()
 	aliases = map[string]string{}
 	for _, component := range components {
@@ -206,7 +212,15 @@ func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerM
 			return nil, nil, fmt.Errorf("cannot adapt non-plugin or editor type component %s in plugin adaptor", component.Type)
 		}
 		fqn := getPluginFQN(component)
-		meta, err := utils.GetPluginMeta(fqn, defaultRegistry, ioUtils)
+		var meta *brokerModel.PluginMeta
+		// delegate to the internal registry, if found there then use that
+		if val, ok := internalRegistry[fqn.ID]; ok {
+			log.Info(fmt.Sprintf("Grabbing the meta.yaml for %s from the internal registry", fqn.ID))
+			meta = &val
+		} else {
+			meta, err = utils.GetPluginMeta(fqn, defaultRegistry, ioUtils)
+		}
+
 		if err != nil {
 			return nil, nil, err
 		}

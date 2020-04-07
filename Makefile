@@ -95,7 +95,7 @@ endif
 _do_uninstall:
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
-ifneq ($(shell command -v kubectl),)
+ifneq ($(shell command -v kubectl 2> /dev/null),)
 	kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
 else
 	$(info WARN: kubectl is not installed: unable to delete all workspaces)

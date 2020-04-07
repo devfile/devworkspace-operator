@@ -9,6 +9,13 @@ ADMIN_CTX ?= ""
 
 all: help
 
+_print_vars:
+	@echo "Current env vars:"
+	@echo "    IMG=$(IMG)"
+	@echo "    PULL_POLICY=$(PULL_POLICY)"
+	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"
+	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
+
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
 	$(eval CURRENT_CTX := $(shell $(TOOL) config current-context))
@@ -106,7 +113,7 @@ endif
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
 
 ### docker: build and push docker image
-docker:
+docker: _print_vars
 	docker build -t $(IMG) -f ./build/Dockerfile .
 	docker push $(IMG)
 
@@ -121,7 +128,7 @@ else
 endif
 
 ### deploy: deploy controller to cluster
-deploy: _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds webhook _apply_controller_cfg _reset_yamls _reset_ctx
+deploy: _print_vars _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds webhook _apply_controller_cfg _reset_yamls _reset_ctx
 
 ### restart: restart cluster controller deployment
 restart: _set_ctx _do_restart _reset_ctx
@@ -130,7 +137,7 @@ restart: _set_ctx _do_restart _reset_ctx
 rollout: docker restart
 
 ### update_cfg: configures already deployed controller according to set env variables
-update_cfg: _set_ctx _update_yamls _apply_controller_cfg _reset_yamls _reset_ctx
+update_cfg: _print_vars _set_ctx _update_yamls _apply_controller_cfg _reset_yamls _reset_ctx
 
 ### update_crds: update custom resource definitions on cluster
 update_crds: _set_ctx _update_crds _reset_ctx
@@ -139,7 +146,7 @@ update_crds: _set_ctx _update_crds _reset_ctx
 uninstall: _set_ctx _do_uninstall _reset_ctx
 
 ### local: set up cluster for local development
-local: _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
+local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
 
 ### start_local: start local instance of controller using operator-sdk
 start_local:

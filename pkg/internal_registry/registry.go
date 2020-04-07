@@ -39,13 +39,6 @@ func InternalRegistry() map[string]brokerModel.PluginMeta {
 								ExposedPort: 4444,
 							},
 						},
-						Command: []string{
-							"/go/bin/che-machine-exec",
-							"--static",
-							"/cloud-shell",
-							"--url",
-							"127.0.0.1:4444",
-						},
 					},
 				},
 			},

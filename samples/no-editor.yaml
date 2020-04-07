@@ -1,13 +1,13 @@
 apiVersion: workspace.che.eclipse.org/v1alpha1
 kind: Workspace
 metadata:
-  name: cloud-shell
+  name: no-editor
 spec:
   started: true
   devfile:
     apiVersion: 0.0.1
     metadata:
-      name: cloud-shell
+      name: no-editor
     components:
       - type: dockerimage
         memoryLimit: 256Mi

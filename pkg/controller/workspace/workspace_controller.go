@@ -279,7 +279,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceDeploymentReady)
 
-	reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusReady
+	reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusRunning
 	return reconcile.Result{}, nil
 }
 

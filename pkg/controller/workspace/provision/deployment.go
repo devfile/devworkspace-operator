@@ -26,7 +26,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"strings"
@@ -120,7 +119,6 @@ func getSpecDeployment(
 	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
-	rollingUpdateParam := intstr.FromInt(1)
 
 	var user *int64
 	if !config.ControllerCfg.IsOpenShift() {
@@ -162,11 +160,7 @@ func getSpecDeployment(
 				},
 			},
 			Strategy: appsv1.DeploymentStrategy{
-				Type: "RollingUpdate",
-				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxSurge:       &rollingUpdateParam,
-					MaxUnavailable: &rollingUpdateParam,
-				},
+				Type: appsv1.RecreateDeploymentStrategyType,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

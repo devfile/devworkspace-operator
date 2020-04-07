@@ -67,7 +67,7 @@ type WorkspacePhase string
 // Valid workspace Statuses
 const (
 	WorkspaceStatusStarting WorkspacePhase = "Starting"
-	WorkspaceStatusReady    WorkspacePhase = "Ready"
+	WorkspaceStatusRunning  WorkspacePhase = "Running"
 	WorkspaceStatusStopped  WorkspacePhase = "Stopped"
 	WorkspaceStatusFailed   WorkspacePhase = "Failed"
 )

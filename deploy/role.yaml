@@ -100,3 +100,15 @@ rules:
     - validatingwebhookconfigurations
   verbs:
     - '*'
+- apiGroups:
+  - oauth.openshift.io
+  resources:
+  - oauthclients
+  verbs:
+  - create
+  - get
+  - delete
+  - list
+  - patch
+  - update
+  - watch

@@ -18,7 +18,9 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type OpenShiftOAuthSolver struct{}
@@ -56,11 +58,29 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 
 	routes, podAdditions := s.getProxyRoutes(proxy, workspaceMeta, portMappings)
 
+	var publicURls []string
+	for _, route := range routes {
+		publicURls = append(publicURls, "https://"+route.Spec.Host+"/oauth/callback")
+	}
+
+	oauthClient := &oauthv1.OAuthClient{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: workspaceMeta.WorkspaceId + "-oauth-client",
+			Labels: map[string]string{
+				config.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
+			},
+		},
+		GrantMethod:  oauthv1.GrantHandlerPrompt,
+		Secret:       "1234567890",
+		RedirectURIs: publicURls,
+	}
+
 	return RoutingObjects{
 		Services:     services,
 		Ingresses:    defaultIngresses,
 		Routes:       append(routes, defaultRoutes...),
 		PodAdditions: podAdditions,
+		OAuthClient:  oauthClient,
 	}
 }
 

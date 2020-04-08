@@ -54,7 +54,7 @@ func buildSecretVolume(secretName string) corev1.Volume {
 }
 
 func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume corev1.Volume, meta WorkspaceMetadata) corev1.Container {
-	proxyContainerName := fmt.Sprintf("%s-oauth-proxy-%s", meta.WorkspaceId, strconv.FormatInt(proxyEndpoint.upstreamEndpoint.Port, 10))
+	proxyContainerName := fmt.Sprintf("oauth-proxy-%s", strconv.FormatInt(proxyEndpoint.upstreamEndpoint.Port, 10))
 
 	return corev1.Container{
 		Name: proxyContainerName,
@@ -78,14 +78,15 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 			"--https-address=:" + strconv.FormatInt(proxyEndpoint.publicEndpoint.Port, 10),
 			"--http-address=127.0.0.1:" + strconv.FormatInt(proxyEndpoint.publicEndpointHttpPort, 10),
 			"--provider=openshift",
-			"--openshift-service-account=" + common.ServiceAccountName(meta.WorkspaceId),
 			"--upstream=http://localhost:" + strconv.FormatInt(proxyEndpoint.upstreamEndpoint.Port, 10),
 			"--tls-cert=/etc/tls/private/tls.crt",
 			"--tls-key=/etc/tls/private/tls.key",
 			"--cookie-secret=0123456789abcdefabcd",
+			"--client-id=" + meta.WorkspaceId + "-oauth-client",
+			"--client-secret=1234567890",
 			"--pass-user-bearer-token=false",
 			"--pass-access-token=true",
-			"--scope=user:info user:check-access role:pods-exec:" + meta.Namespace,
+			"--scope=user:full",
 		},
 	}
 }

@@ -100,6 +100,7 @@ _update_controller_configmap:
 
 _apply_controller_cfg:
 	$(TOOL) apply -f ./deploy
+	$(TOOL) apply -f ./deploy/role.yaml
 ifeq ($(TOOL),oc)
 	$(TOOL) apply -f ./deploy/os/
 else

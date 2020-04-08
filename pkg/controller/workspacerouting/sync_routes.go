@@ -27,23 +27,27 @@ import (
 
 var routeDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(routeV1.Route{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmpopts.IgnoreFields(routeV1.RouteSpec{}, "WildcardPolicy"),
+	cmpopts.IgnoreFields(routeV1.RouteSpec{}, "WildcardPolicy", "Host"),
 	cmpopts.IgnoreFields(routeV1.RouteTargetReference{}, "Weight"),
 }
 
-func (r *ReconcileWorkspaceRouting) syncRoutes(routing *v1alpha1.WorkspaceRouting, specRoutes []routeV1.Route) (ok bool, err error) {
+func (r *ReconcileWorkspaceRouting) syncRoutes(routing *v1alpha1.WorkspaceRouting, specRoutes []routeV1.Route) (ok bool, clusterRoutes []routeV1.Route, err error) {
+	if !config.ControllerCfg.IsOpenShift() {
+		return true, nil, nil
+	}
+
 	routesInSync := true
 
-	clusterRoutes, err := r.getClusterRoutes(routing)
+	clusterRoutes, err = r.getClusterRoutes(routing)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	toDelete := getRoutesToDelete(clusterRoutes, specRoutes)
 	for _, route := range toDelete {
 		err := r.client.Delete(context.TODO(), &route)
 		if err != nil {
-			return false, err
+			return false, nil, err
 		}
 		routesInSync = false
 	}
@@ -56,7 +60,7 @@ func (r *ReconcileWorkspaceRouting) syncRoutes(routing *v1alpha1.WorkspaceRoutin
 				clusterRoute.Spec = specRoute.Spec
 				err := r.client.Update(context.TODO(), &clusterRoute)
 				if err != nil && !errors.IsConflict(err) {
-					return false, err
+					return false, nil, err
 				}
 
 				routesInSync = false
@@ -64,13 +68,13 @@ func (r *ReconcileWorkspaceRouting) syncRoutes(routing *v1alpha1.WorkspaceRoutin
 		} else {
 			err := r.client.Create(context.TODO(), &specRoute)
 			if err != nil {
-				return false, err
+				return false, nil, err
 			}
 			routesInSync = false
 		}
 	}
 
-	return routesInSync, nil
+	return routesInSync, clusterRoutes,nil
 }
 
 func (r *ReconcileWorkspaceRouting) getClusterRoutes(routing *v1alpha1.WorkspaceRouting) ([]routeV1.Route, error) {

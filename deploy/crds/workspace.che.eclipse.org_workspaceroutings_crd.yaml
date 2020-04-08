@@ -33,10 +33,6 @@ spec:
           properties:
             endpoints:
               description: Machines to endpoints map
-            ingressGlobalDomain:
-              description: Ingress global domain (corresponds to the OpenShift route
-                suffix)
-              type: string
             podSelector:
               additionalProperties:
                 type: string
@@ -47,13 +43,16 @@ spec:
               description: 'Class of the routing: this drives which Workspace Routing
                 controller will manage this routing'
               type: string
+            routingSuffix:
+              description: Routing suffix for cluster
+              type: string
             workspaceId:
               description: WorkspaceId for the workspace being routed
               type: string
           required:
           - endpoints
-          - ingressGlobalDomain
           - podSelector
+          - routingSuffix
           - workspaceId
           type: object
         status:

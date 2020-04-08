@@ -128,10 +128,10 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 	}
 
 	workspaceMeta := solvers.WorkspaceMetadata{
-		WorkspaceId:         instance.Spec.WorkspaceId,
-		Namespace:           instance.Namespace,
-		PodSelector:         instance.Spec.PodSelector,
-		IngressGlobalDomain: instance.Spec.IngressGlobalDomain,
+		WorkspaceId:   instance.Spec.WorkspaceId,
+		Namespace:     instance.Namespace,
+		PodSelector:   instance.Spec.PodSelector,
+		RoutingSuffix: instance.Spec.RoutingSuffix,
 	}
 
 	if instance.Status.Phase == workspacev1alpha1.RoutingFailed {
@@ -175,31 +175,92 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	ingressesInSync, err := r.syncIngresses(instance, ingresses)
+	ingressesInSync, clusterIngresses, err := r.syncIngresses(instance, ingresses)
 	if err != nil || !ingressesInSync {
 		reqLogger.Info("Ingresses not in sync")
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	routesInSync, err := r.syncRoutes(instance, routes)
+	routesInSync, clusterRoutes, err := r.syncRoutes(instance, routes)
 	if err != nil || !routesInSync {
 		reqLogger.Info("Routes not in sync")
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects)
+	exposedEndpoints, err := getExposedEndpoints(instance.Spec.Endpoints, clusterIngresses, clusterRoutes)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints)
 }
 
-func (r *ReconcileWorkspaceRouting) reconcileStatus(instance *workspacev1alpha1.WorkspaceRouting, routingObjects solvers.RoutingObjects) error {
+func (r *ReconcileWorkspaceRouting) reconcileStatus(
+		instance *workspacev1alpha1.WorkspaceRouting,
+		routingObjects solvers.RoutingObjects,
+		exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint) error {
 	if instance.Status.Phase == workspacev1alpha1.RoutingReady &&
-		cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
-		cmp.Equal(instance.Status.ExposedEndpoints, routingObjects.ExposedEndpoints) {
+			cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
+			cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
 		return nil
 	}
 	instance.Status.Phase = workspacev1alpha1.RoutingReady
 	instance.Status.PodAdditions = routingObjects.PodAdditions
-	instance.Status.ExposedEndpoints = routingObjects.ExposedEndpoints
+	instance.Status.ExposedEndpoints = exposedEndpoints
 	return r.client.Status().Update(context.TODO(), instance)
+}
+
+func getExposedEndpoints(
+		endpoints map[string][]workspacev1alpha1.Endpoint,
+		ingresses []v1beta1.Ingress,
+		routes []routeV1.Route) (map[string][]workspacev1alpha1.ExposedEndpoint, error) {
+	exposedEndpoints := map[string][]workspacev1alpha1.ExposedEndpoint{}
+
+	for machineName, machineEndpoints := range endpoints {
+		for _, endpoint := range machineEndpoints {
+			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
+				continue
+			}
+			url, err := getURLforEndpoint(endpoint, ingresses, routes)
+			if err != nil {
+				return nil, err
+			}
+			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], workspacev1alpha1.ExposedEndpoint{
+				Name:       endpoint.Name,
+				Url:        url,
+				Attributes: endpoint.Attributes,
+			})
+		}
+	}
+	return exposedEndpoints, nil
+}
+
+func getURLforEndpoint(
+		endpoint workspacev1alpha1.Endpoint,
+		ingresses []v1beta1.Ingress,
+		routes []routeV1.Route) (string, error) {
+	for _, route := range routes {
+		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
+			protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
+			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" &&
+					route.Spec.TLS != nil {
+				protocol = getSecureProtocol(protocol)
+			}
+			url := fmt.Sprintf("%s://%s", protocol, route.Spec.Host)
+			return url, nil
+		}
+	}
+	for _, ingress := range ingresses {
+		if ingress.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
+			if len(ingress.Spec.Rules) == 1 {
+				protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
+				url := fmt.Sprintf("%s://%s", protocol, ingress.Spec.Rules[0].Host)
+				return url, nil
+			} else {
+				return "", fmt.Errorf("ingress %s contains multiple rules", ingress.Name)
+			}
+		}
+	}
+	return "", fmt.Errorf("could not get URL for endpoint %s", endpoint.Name)
 }
 
 func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
@@ -215,3 +276,17 @@ func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingCla
 		return nil, fmt.Errorf("routing class %s not supported", routingClass)
 	}
 }
+
+// getSecureProtocol takes a (potentially unsecure protocol e.g. http) and returns the secure version (e.g. https).
+// If protocol isn't recognized, it is returned unmodified.
+func getSecureProtocol(protocol string) string {
+	switch protocol {
+	case "ws":
+		return "wss"
+	case "http":
+		return "https"
+	default:
+		return protocol
+	}
+}
+

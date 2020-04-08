@@ -43,7 +43,7 @@ The repository contains a Makefile; building and deploying can be configured via
 |---|---|---|
 | `IMG` | Image used for controller | `quay.io/che-incubator/che-workspace-controller:nightly` |
 | `TOOL` | CLI tool for interfacing with the cluster: `kubectl` or `oc`; if `oc` is used, deployment is tailored to OpenShift, otherwise Kubernetes | `oc` |
-| `CLUSTER_IP` | For Kubernetes only, the ip address of the cluster (`minikube ip`) | `192.168.99.100` |
+| `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |
 | `WEBHOOK_ENABLED` | Whether webhooks should be enabled in the deployment | `false` |
 | `DEFAULT_ROUTING` | Default routingClass to apply to workspaces that don't specify one | `basic` |

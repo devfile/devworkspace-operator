@@ -13,10 +13,10 @@
 package solvers
 
 import (
-	"fmt"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,13 +24,13 @@ import (
 )
 
 type WorkspaceMetadata struct {
-	WorkspaceId         string
-	Namespace           string
-	PodSelector         map[string]string
-	IngressGlobalDomain string
+	WorkspaceId   string
+	Namespace     string
+	PodSelector   map[string]string
+	RoutingSuffix string
 }
 
-func getDiscoverableServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, workspaceMeta WorkspaceMetadata) []corev1.Service {
+func getDiscoverableServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, meta WorkspaceMetadata) []corev1.Service {
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
@@ -47,14 +47,14 @@ func getDiscoverableServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoin
 				services = append(services, corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      common.EndpointName(endpoint.Name),
-						Namespace: workspaceMeta.Namespace,
+						Namespace: meta.Namespace,
 						Labels: map[string]string{
-							config.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
+							config.WorkspaceIDLabel: meta.WorkspaceId,
 						},
 					},
 					Spec: corev1.ServiceSpec{
 						Ports:    []corev1.ServicePort{servicePort},
-						Selector: workspaceMeta.PodSelector,
+						Selector: meta.PodSelector,
 						Type:     corev1.ServiceTypeClusterIP,
 					},
 				})
@@ -64,7 +64,7 @@ func getDiscoverableServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoin
 	return services
 }
 
-func getServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, workspaceMeta WorkspaceMetadata) []corev1.Service {
+func getServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, meta WorkspaceMetadata) []corev1.Service {
 	var services []corev1.Service
 	var servicePorts []corev1.ServicePort
 	for _, machineEndpoints := range endpoints {
@@ -81,15 +81,15 @@ func getServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, workspace
 
 	services = append(services, corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.ServiceName(workspaceMeta.WorkspaceId),
-			Namespace: workspaceMeta.Namespace,
+			Name:      common.ServiceName(meta.WorkspaceId),
+			Namespace: meta.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
+				config.WorkspaceIDLabel: meta.WorkspaceId,
 			},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports:    servicePorts,
-			Selector: workspaceMeta.PodSelector,
+			Selector: meta.PodSelector,
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	})
@@ -97,71 +97,89 @@ func getServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, workspace
 	return services
 }
 
-func getIngressesForSpec(endpoints map[string][]v1alpha1.Endpoint, workspaceMeta WorkspaceMetadata) ([]v1beta1.Ingress, map[string][]v1alpha1.ExposedEndpoint) {
+func getRoutingForSpec(endpoints map[string][]v1alpha1.Endpoint, meta WorkspaceMetadata) ([]v1beta1.Ingress, []routeV1.Route) {
 	var ingresses []v1beta1.Ingress
-	exposedEndpoints := map[string][]v1alpha1.ExposedEndpoint{}
-
-	for machineName, machineEndpoints := range endpoints {
+	var routes []routeV1.Route
+	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Attributes[v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
 				continue
 			}
-			// Note: there is an additional limitation on target endpoint here: must be a DNS name fewer than 15 chars long
-			// In general, endpoint.Name _cannot_ be used here
-			var targetEndpoint intstr.IntOrString
-			targetEndpoint = intstr.FromInt(int(endpoint.Port))
+			if config.ControllerCfg.IsOpenShift() {
+				routes = append(routes, getRouteForEndpoint(endpoint, meta))
+			} else {
+				ingresses = append(ingresses, getIngressForEndpoint(endpoint, meta))
+			}
+		}
+	}
+	return ingresses, routes
+}
 
-			endpointName := common.EndpointName(endpoint.Name)
-			ingressHostname := common.EndpointHostname(workspaceMeta.WorkspaceId, endpointName, endpoint.Port, workspaceMeta.IngressGlobalDomain)
-			ingressURL := fmt.Sprintf("%s://%s", endpoint.Attributes[v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE], ingressHostname)
-			ingresses = append(ingresses, v1beta1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      common.RouteName(workspaceMeta.WorkspaceId, endpointName),
-					Namespace: workspaceMeta.Namespace,
-					Labels: map[string]string{
-						config.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
-					},
-					Annotations: ingressAnnotations,
-				},
-				Spec: v1beta1.IngressSpec{
-					Rules: []v1beta1.IngressRule{
-						{
-							Host: ingressHostname,
-							IngressRuleValue: v1beta1.IngressRuleValue{
-								HTTP: &v1beta1.HTTPIngressRuleValue{
-									Paths: []v1beta1.HTTPIngressPath{
-										{
-											Backend: v1beta1.IngressBackend{
-												ServiceName: common.ServiceName(workspaceMeta.WorkspaceId),
-												ServicePort: targetEndpoint,
-											},
-										},
+func getRouteForEndpoint(endpoint v1alpha1.Endpoint, meta WorkspaceMetadata) routeV1.Route {
+	targetEndpoint := intstr.FromInt(int(endpoint.Port))
+	endpointName := common.EndpointName(endpoint.Name)
+	return routeV1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.RouteName(meta.WorkspaceId, endpointName),
+			Namespace: meta.Namespace,
+			Labels: map[string]string{
+				config.WorkspaceIDLabel: meta.WorkspaceId,
+			},
+			Annotations: map[string]string{
+				config.WorkspaceEndpointNameAnnotation: endpoint.Name,
+			},
+		},
+		Spec: routeV1.RouteSpec{
+			Host: common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.Port, meta.RoutingSuffix),
+			To: routeV1.RouteTargetReference{
+				Kind: "Service",
+				Name: common.ServiceName(meta.WorkspaceId),
+			},
+			Port: &routeV1.RoutePort{
+				TargetPort: targetEndpoint,
+			},
+		},
+	}
+}
+
+func getIngressForEndpoint(endpoint v1alpha1.Endpoint, meta WorkspaceMetadata) v1beta1.Ingress {
+	targetEndpoint := intstr.FromInt(int(endpoint.Port))
+	endpointName := common.EndpointName(endpoint.Name)
+	hostname := common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.Port, meta.RoutingSuffix)
+	annotations := map[string]string{
+		config.WorkspaceEndpointNameAnnotation: endpoint.Name,
+	}
+	for k, v := range ingressAnnotations {
+		annotations[k] = v
+	}
+
+	return v1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.RouteName(meta.WorkspaceId, endpointName),
+			Namespace: meta.Namespace,
+			Labels: map[string]string{
+				config.WorkspaceIDLabel: meta.WorkspaceId,
+			},
+			Annotations: annotations,
+		},
+		Spec: v1beta1.IngressSpec{
+			Rules: []v1beta1.IngressRule{
+				{
+					Host: hostname,
+					IngressRuleValue: v1beta1.IngressRuleValue{
+						HTTP: &v1beta1.HTTPIngressRuleValue{
+							Paths: []v1beta1.HTTPIngressPath{
+								{
+									Backend: v1beta1.IngressBackend{
+										ServiceName: common.ServiceName(meta.WorkspaceId),
+										ServicePort: targetEndpoint,
 									},
 								},
 							},
 						},
 					},
 				},
-			})
-			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], v1alpha1.ExposedEndpoint{
-				Name:       endpoint.Name,
-				Url:        ingressURL,
-				Attributes: endpoint.Attributes,
-			})
-		}
-	}
-	return ingresses, exposedEndpoints
-}
-
-// getSecureProtocol takes a (potentially unsecure protocol e.g. http) and returns the secure version (e.g. https).
-// If protocol isn't recognized, it is returned unmodified.
-func getSecureProtocol(protocol string) string {
-	switch protocol {
-	case "ws":
-		return "wss"
-	case "http":
-		return "https"
-	default:
-		return protocol
+			},
+		},
 	}
 }

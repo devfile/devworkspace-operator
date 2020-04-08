@@ -21,8 +21,8 @@ const (
 
 	pluginRegistryURL = "plugin.registry.url"
 
-	ingressGlobalDomain        = "ingress.global.domain"
-	defaultIngressGlobalDomain = ""
+	routingSuffix        = "cluster.routing_suffix"
+	defaultRoutingSuffix = ""
 
 	// workspacePVCName config property handles the PVC name that should be created and used for all workspaces within one kubernetes namespace
 	workspacePVCName        = "pvc.name"

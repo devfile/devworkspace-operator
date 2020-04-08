@@ -23,8 +23,8 @@ type WorkspaceRoutingSpec struct {
 	WorkspaceId string `json:"workspaceId"`
 	// Class of the routing: this drives which Workspace Routing controller will manage this routing
 	RoutingClass WorkspaceRoutingClass `json:"routingClass,omitempty"`
-	// Ingress global domain (corresponds to the OpenShift route suffix)
-	IngressGlobalDomain string `json:"ingressGlobalDomain"`
+	// Routing suffix for cluster
+	RoutingSuffix string `json:"routingSuffix"`
 	// Machines to endpoints map
 	Endpoints map[string][]Endpoint `json:"endpoints"`
 	// Selector that should be used by created services to point to the workspace Pod

@@ -29,19 +29,19 @@ var ingressDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(v1beta1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
 }
 
-func (r *ReconcileWorkspaceRouting) syncIngresses(routing *v1alpha1.WorkspaceRouting, specIngresses []v1beta1.Ingress) (ok bool, err error) {
+func (r *ReconcileWorkspaceRouting) syncIngresses(routing *v1alpha1.WorkspaceRouting, specIngresses []v1beta1.Ingress) (ok bool, clusterIngresses []v1beta1.Ingress, err error) {
 	ingressesInSync := true
 
-	clusterIngresses, err := r.getClusterIngresses(routing)
+	clusterIngresses, err = r.getClusterIngresses(routing)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	toDelete := getIngressesToDelete(clusterIngresses, specIngresses)
 	for _, ingress := range toDelete {
 		err := r.client.Delete(context.TODO(), &ingress)
 		if err != nil {
-			return false, err
+			return false, nil, err
 		}
 		ingressesInSync = false
 	}
@@ -54,20 +54,20 @@ func (r *ReconcileWorkspaceRouting) syncIngresses(routing *v1alpha1.WorkspaceRou
 				clusterIngress.Spec = specIngress.Spec
 				err := r.client.Update(context.TODO(), &clusterIngress)
 				if err != nil && !errors.IsConflict(err) {
-					return false, err
+					return false, nil, err
 				}
 				ingressesInSync = false
 			}
 		} else {
 			err := r.client.Create(context.TODO(), &specIngress)
 			if err != nil {
-				return false, err
+				return false, nil, err
 			}
 			ingressesInSync = false
 		}
 	}
 
-	return ingressesInSync, nil
+	return ingressesInSync, clusterIngresses,nil
 }
 
 func (r *ReconcileWorkspaceRouting) getClusterIngresses(routing *v1alpha1.WorkspaceRouting) ([]v1beta1.Ingress, error) {

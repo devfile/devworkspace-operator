@@ -24,7 +24,6 @@ type RoutingObjects struct {
 	Ingresses        []v1beta1.Ingress
 	Routes           []routeV1.Route
 	PodAdditions     *v1alpha1.PodAdditions
-	ExposedEndpoints map[string][]v1alpha1.ExposedEndpoint
 }
 
 type RoutingSolver interface {

@@ -276,9 +276,9 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.Referenc
 							Format:      "",
 						},
 					},
-					"ingressGlobalDomain": {
+					"routingSuffix": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Ingress global domain (corresponds to the OpenShift route suffix)",
+							Description: "Routing suffix for cluster",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -320,7 +320,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceRoutingSpec(ref common.Referenc
 						},
 					},
 				},
-				Required: []string{"workspaceId", "ingressGlobalDomain", "endpoints", "podSelector"},
+				Required: []string{"workspaceId", "routingSuffix", "endpoints", "podSelector"},
 			},
 		},
 		Dependencies: []string{

@@ -42,6 +42,9 @@ const (
 	// WorkspaceIDLabel is label key to store workspace identifier
 	WorkspaceIDLabel = "che.workspace_id"
 
+	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
+	WorkspaceEndpointNameAnnotation = "che.workspace.endpoint_name"
+
 	// WorkspaceNameLabel is label key to store workspace identifier
 	WorkspaceNameLabel = "che.workspace_name"
 

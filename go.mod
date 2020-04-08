@@ -12,11 +12,10 @@ require (
 	github.com/go-openapi/spec v0.19.0
 	github.com/google/go-cmp v0.3.0
 	github.com/google/uuid v1.0.0
-	github.com/onsi/gomega v1.5.0
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	github.com/operator-framework/operator-sdk v0.12.1-0.20191112211508-82fc57de5e5b
 	github.com/spf13/pflag v1.0.3
-	golang.org/x/net v0.0.0-20190812203447-cdfb69ac37fc
+	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.0+incompatible

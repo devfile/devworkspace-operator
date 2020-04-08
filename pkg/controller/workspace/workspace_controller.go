@@ -220,6 +220,11 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
 	}
 
+	isPVCRequired := provision.IsPVCRequired(workspace.Spec.Devfile.Components)
+	if isPVCRequired {
+		provision.GeneratePVC(workspace, r.client, reqLogger)
+	}
+
 	// Step two: Create routing, and wait for routing to be ready
 	routingStatus := provision.SyncRoutingToCluster(workspace, componentDescriptions, clusterAPI)
 	if !routingStatus.Continue {
@@ -284,8 +289,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceServiceAccountReady)
 
-	// Step six: Create deployment and wait for it to be ready
-	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
+	// Step five: Create deployment and wait for it to be ready
+	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI, isPVCRequired)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")

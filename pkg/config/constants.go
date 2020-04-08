@@ -130,4 +130,7 @@ const (
 const (
 	// The ide of theia editor in devfile
 	TheiaEditorID = "eclipse/che-theia"
+
+	// The name of cloud shell in devfile
+	CloudShellID = "eclipse/cloud-shell"
 )

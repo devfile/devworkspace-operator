@@ -53,11 +53,12 @@ func SyncDeploymentToCluster(
 	workspace *v1alpha1.Workspace,
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
-	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
+	clusterAPI ClusterAPI,
+	isPVCRequired bool) DeploymentProvisioningStatus {
 
 	// [design] we have to pass components and routing pod additions separately becuase we need mountsources from each
 	// component.
-	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, clusterAPI.Scheme)
+	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, clusterAPI.Scheme, isPVCRequired)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{Err: err},
@@ -117,7 +118,8 @@ func getSpecDeployment(
 	workspace *v1alpha1.Workspace,
 	podAdditionsList []v1alpha1.PodAdditions,
 	saName string,
-	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+	scheme *runtime.Scheme,
+	isPVCRequired bool) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
 
@@ -177,10 +179,10 @@ func getSpecDeployment(
 					},
 				},
 				Spec: corev1.PodSpec{
-					InitContainers:                append(podAdditions.InitContainers, precreateSubpathsInitContainer(workspace.Status.WorkspaceId)),
+					InitContainers:                podAdditions.InitContainers,
 					Containers:                    podAdditions.Containers,
-					Volumes:                       append(podAdditions.Volumes, getPersistentVolumeClaim()),
 					ImagePullSecrets:              podAdditions.PullSecrets,
+					Volumes:                       podAdditions.Volumes,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
 					SecurityContext: &corev1.PodSecurityContext{
@@ -192,6 +194,11 @@ func getSpecDeployment(
 				},
 			},
 		},
+	}
+
+	if isPVCRequired {
+		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, precreateSubpathsInitContainer(workspace.Status.WorkspaceId))
+		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
 	}
 
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)

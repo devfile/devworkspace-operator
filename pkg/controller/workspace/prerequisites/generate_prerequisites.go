@@ -14,37 +14,13 @@ package prerequisites
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func generatePrerequisites(namespace string) ([]runtime.Object, error) {
-	pvcStorageQuantity, err := resource.ParseQuantity(config.PVCStorageSize)
-	if err != nil {
-		return nil, err
-	}
-
-	k8sObjects := []runtime.Object{
-		&corev1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ControllerCfg.GetWorkspacePVCName(),
-				Namespace: namespace,
-			},
-			Spec: corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{
-					corev1.ReadWriteOnce,
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						"storage": pvcStorageQuantity,
-					},
-				},
-				StorageClassName: config.ControllerCfg.GetPVCStorageClassName(),
-			},
-		},
+func generatePrerequisites(namespace string) []runtime.Object {
+	return []runtime.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "exec",
@@ -91,5 +67,4 @@ func generatePrerequisites(namespace string) ([]runtime.Object, error) {
 			},
 		},
 	}
-	return k8sObjects, nil
 }

@@ -204,7 +204,6 @@ func adaptVolumeMountsFromBroker(workspaceId string, brokerContainer brokerModel
 
 func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerModel.PluginMeta, aliases map[string]string, err error) {
 	defaultRegistry := config.ControllerCfg.GetPluginRegistry()
-	internalRegistry := registry.InternalRegistry()
 	ioUtils := utils.New()
 	aliases = map[string]string{}
 	for _, component := range components {
@@ -214,9 +213,10 @@ func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerM
 		fqn := getPluginFQN(component)
 		var meta *brokerModel.PluginMeta
 		// delegate to the internal registry first, if found there then use that
-		if val, ok := internalRegistry[fqn.ID]; ok {
+		isInInternalRegistry := registry.IsInInternalRegistry(fqn.ID)
+		if isInInternalRegistry {
+			meta, err = registry.InternalRegistryPluginToMetaYAML(fqn.ID)
 			log.Info(fmt.Sprintf("Grabbing the meta.yaml for %s from the internal registry", fqn.ID))
-			meta = &val
 		} else {
 			meta, err = utils.GetPluginMeta(fqn, defaultRegistry, ioUtils)
 		}

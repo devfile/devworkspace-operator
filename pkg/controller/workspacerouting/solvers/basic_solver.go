@@ -29,11 +29,11 @@ var _ RoutingSolver = (*BasicSolver)(nil)
 func (s *BasicSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec, workspaceMeta WorkspaceMetadata) RoutingObjects {
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	services = append(services, getDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
-	ingresses, exposedEndpoints := getIngressesForSpec(spec.Endpoints, workspaceMeta)
+	ingresses, routes := getRoutingForSpec(spec.Endpoints, workspaceMeta)
 
 	return RoutingObjects{
-		Services:         services,
-		Ingresses:        ingresses,
-		ExposedEndpoints: exposedEndpoints,
+		Services:  services,
+		Ingresses: ingresses,
+		Routes:    routes,
 	}
 }

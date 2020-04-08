@@ -14,13 +14,10 @@ package solvers
 
 import (
 	"fmt"
-
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	routeV1 "github.com/openshift/api/route/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type OpenShiftOAuthSolver struct{}
@@ -35,12 +32,8 @@ type proxyEndpoint struct {
 }
 
 func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec, workspaceMeta WorkspaceMetadata) RoutingObjects {
-	var exposedEndpoints = map[string][]v1alpha1.ExposedEndpoint{}
 	proxy, noProxy := getProxiedEndpoints(spec)
-	defaultIngresses, defaultEndpoints := getIngressesForSpec(noProxy, workspaceMeta)
-	for machineName, machineEndpoints := range defaultEndpoints {
-		exposedEndpoints[machineName] = append(exposedEndpoints[machineName], machineEndpoints...)
-	}
+	defaultIngresses, defaultRoutes := getRoutingForSpec(noProxy, workspaceMeta)
 
 	portMappings := getProxyEndpointMappings(proxy, workspaceMeta)
 	var proxyPorts = map[string][]v1alpha1.Endpoint{}
@@ -60,41 +53,27 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 	discoverableServices := getDiscoverableServicesForEndpoints(proxyPorts, workspaceMeta)
 	services := append(proxyServices, discoverableServices...)
 
-	routes, proxyEndpoints, podAdditions := s.getProxyRoutes(proxy, workspaceMeta, portMappings)
-	for machineName, machineEndpoints := range proxyEndpoints {
-		exposedEndpoints[machineName] = append(exposedEndpoints[machineName], machineEndpoints...)
-	}
+	routes, podAdditions := s.getProxyRoutes(proxy, workspaceMeta, portMappings)
 
 	return RoutingObjects{
 		Services:         services,
 		Ingresses:        defaultIngresses,
-		Routes:           routes,
+		Routes:           append(routes, defaultRoutes...),
 		PodAdditions:     podAdditions,
-		ExposedEndpoints: exposedEndpoints,
 	}
 }
 
 func (s *OpenShiftOAuthSolver) getProxyRoutes(
 	endpoints map[string][]v1alpha1.Endpoint,
 	workspaceMeta WorkspaceMetadata,
-	portMappings map[string]proxyEndpoint) ([]routeV1.Route, map[string][]v1alpha1.ExposedEndpoint, *v1alpha1.PodAdditions) {
+	portMappings map[string]proxyEndpoint) ([]routeV1.Route, *v1alpha1.PodAdditions) {
 
 	var routes []routeV1.Route
-	var exposedEndpoints = map[string][]v1alpha1.ExposedEndpoint{}
 	var podAdditions *v1alpha1.PodAdditions
-
-	for machineName, machineEndpoints := range endpoints {
+	for _, machineEndpoints := range endpoints {
 		for _, upstreamEndpoint := range machineEndpoints {
 			proxyEndpoint := portMappings[upstreamEndpoint.Name]
 			endpoint := proxyEndpoint.publicEndpoint
-			targetEndpoint := intstr.FromInt(int(endpoint.Port))
-			endpointName := common.EndpointName(endpoint.Name)
-			hostname := common.EndpointHostname(workspaceMeta.WorkspaceId, endpointName, endpoint.Port, workspaceMeta.IngressGlobalDomain)
-			url := fmt.Sprintf("%s://%s", getSecureProtocol(endpoint.Attributes[v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]), hostname)
-
-			// NOTE: openshift oauth-proxy only supports listening on a single port; as a result, we can't proxy more than
-			// one endpoint or we run into cookie issues (each proxied port gets a container and sets a cookie in the browser
-			// once auth is completed).
 			var tls *routeV1.TLSConfig = nil
 			if endpoint.Attributes[v1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
 				if endpoint.Attributes[v1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "terminal" {
@@ -109,35 +88,17 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 					}
 				}
 			}
-			routes = append(routes, routeV1.Route{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      common.RouteName(workspaceMeta.WorkspaceId, endpointName),
-					Namespace: workspaceMeta.Namespace,
-					Labels: map[string]string{
-						config.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
-					},
-				},
-				Spec: routeV1.RouteSpec{
-					Host: hostname,
-					To: routeV1.RouteTargetReference{
-						Kind: "Service",
-						Name: common.ServiceName(workspaceMeta.WorkspaceId),
-					},
-					Port: &routeV1.RoutePort{
-						TargetPort: targetEndpoint,
-					},
-					TLS: tls,
-				},
-			})
-			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], v1alpha1.ExposedEndpoint{
-				Name:       endpoint.Name,
-				Url:        url,
-				Attributes: endpoint.Attributes,
-			})
+			route := getRouteForEndpoint(endpoint, workspaceMeta)
+			route.Spec.TLS = tls
+			if route.Annotations == nil {
+				route.Annotations = map[string]string{}
+			}
+			route.Annotations[config.WorkspaceEndpointNameAnnotation] = upstreamEndpoint.Name
+			routes = append(routes, route)
 		}
 	}
 	podAdditions = getProxyPodAdditions(portMappings, workspaceMeta)
-	return routes, exposedEndpoints, podAdditions
+	return routes, podAdditions
 }
 
 func getProxiedEndpoints(spec v1alpha1.WorkspaceRoutingSpec) (proxy, noProxy map[string][]v1alpha1.Endpoint) {

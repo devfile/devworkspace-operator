@@ -116,10 +116,10 @@ func getSpecRouting(
 			Namespace: workspace.Namespace,
 		},
 		Spec: v1alpha1.WorkspaceRoutingSpec{
-			WorkspaceId:         workspace.Status.WorkspaceId,
-			RoutingClass:        workspace.Spec.RoutingClass,
-			IngressGlobalDomain: config.ControllerCfg.GetIngressGlobalDomain(),
-			Endpoints:           endpoints,
+			WorkspaceId:   workspace.Status.WorkspaceId,
+			RoutingClass:  workspace.Spec.RoutingClass,
+			RoutingSuffix: config.ControllerCfg.GetRoutingSuffix(),
+			Endpoints:     endpoints,
 			PodSelector: map[string]string{
 				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},

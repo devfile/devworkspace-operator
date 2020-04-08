@@ -72,8 +72,8 @@ func (wc *ControllerConfig) GetPluginRegistry() string {
 	return wc.GetPropertyOrDefault(pluginRegistryURL, "")
 }
 
-func (wc *ControllerConfig) GetIngressGlobalDomain() string {
-	return wc.GetPropertyOrDefault(ingressGlobalDomain, defaultIngressGlobalDomain)
+func (wc *ControllerConfig) GetRoutingSuffix() string {
+	return wc.GetPropertyOrDefault(routingSuffix, defaultRoutingSuffix)
 }
 
 func (wc *ControllerConfig) GetPVCStorageClassName() *string {
@@ -218,7 +218,7 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Namespace = ConfigMapReference.Namespace
 
 	cm.Data = map[string]string{
-		ingressGlobalDomain:        defaultIngressGlobalDomain,
+		routingSuffix:              defaultRoutingSuffix,
 		pluginArtifactsBrokerImage: defaultPluginArtifactsBrokerImage,
 	}
 }
@@ -252,7 +252,7 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	host := testRoute.Spec.Host
 	if host != "" {
 		prefixToRemove := "che-workspace-controller-test-route-" + configMap.Namespace + "."
-		configMap.Data["ingress.global.domain"] = strings.TrimPrefix(host, prefixToRemove)
+		configMap.Data[routingSuffix] = strings.TrimPrefix(host, prefixToRemove)
 	}
 
 	err = nonCachedClient.Update(context.TODO(), configMap)

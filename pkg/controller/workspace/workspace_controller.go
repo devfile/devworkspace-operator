@@ -207,7 +207,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceComponentsReady)
 
 	// Only add che rest apis if theia editor is present in the devfile
-	if hasTheiaEditor(workspace.Spec.Devfile.Components) {
+	if isCheRestApisRequired(workspace.Spec.Devfile.Components) {
 		cheRestApisComponent := getCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
 	}
@@ -291,7 +291,7 @@ func getWorkspaceId(instance *workspacev1alpha1.Workspace) (string, error) {
 	return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
 }
 
-func hasTheiaEditor(components []workspacev1alpha1.ComponentSpec) bool {
+func isCheRestApisRequired(components []workspacev1alpha1.ComponentSpec) bool {
 	for _, comp := range components {
 		if strings.Contains(comp.Id, config.TheiaEditorID) && comp.Type == v1alpha1.CheEditor {
 			return true

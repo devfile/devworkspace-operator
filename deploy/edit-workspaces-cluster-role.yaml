@@ -10,6 +10,8 @@ rules:
       - workspace.che.eclipse.org
     resources:
       - workspaces
+      - workspaceroutings
+      - components
     verbs:
       - create
       - delete

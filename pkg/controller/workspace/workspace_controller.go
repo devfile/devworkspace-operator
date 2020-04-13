@@ -19,14 +19,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
-
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/prerequisites"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
 	"github.com/google/uuid"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -84,6 +83,19 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 		return err
 	}
 
+	// Check if we're running on OpenShift
+	isOS, err := cluster.IsOpenShift()
+	if err != nil {
+		return err
+	}
+	config.ControllerCfg.SetIsOpenShift(isOS)
+
+	err = config.ControllerCfg.Validate()
+	if err != nil {
+		log.Error(err, "Controller configuration is invalid")
+		return err
+	}
+
 	// Watch for changes to primary resource Workspace
 	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
@@ -109,19 +121,6 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 		IsController: true,
 		OwnerType:    &workspacev1alpha1.Workspace{},
 	})
-
-	// Check if we're running on OpenShift
-	isOS, err := cluster.IsOpenShift()
-	if err != nil {
-		return err
-	}
-	config.ControllerCfg.SetIsOpenShift(isOS)
-
-	err = config.ControllerCfg.Validate()
-	if err != nil {
-		log.Error(err, "Controller configuration is invalid")
-		return err
-	}
 
 	// Redirect standard logging to the reconcile's log
 	// Necessary as e.g. the plugin broker logs to stdout

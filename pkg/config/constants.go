@@ -85,6 +85,18 @@ const (
 
 	// Workspace command attributes that indicates with which component it is associated. */
 	ComponentAliasCommandAttribute = "componentAlias"
+
+	// RestAPIsRuntimeVolumePathis the path where workspace information is mounted in che-rest-apis
+	RestAPIsRuntimeVolumePath = "/workspace/"
+
+	// RestAPIsRuntimeJSONFilename is the filename for the runtime json annotation
+	RestAPIsRuntimeJSONFilename = "runtime.json"
+
+	// RestAPIsDevfileYamlFilename is the filename for the devfile yaml
+	RestAPIsDevfileYamlFilename = "devfile.yaml"
+
+	// RestAPIsVolumeName is the name of the configmap volume that stores workspace metadata
+	RestAPIsVolumeName = "che-rest-apis-data"
 )
 
 // constants for webhook

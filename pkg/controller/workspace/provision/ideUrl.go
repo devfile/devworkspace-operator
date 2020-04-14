@@ -15,20 +15,16 @@ package provision
 import (
 	"context"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	"github.com/google/go-cmp/cmp"
 )
 
-func SyncWorkspaceStatus(workspace *v1alpha1.Workspace, exposedEndpoints map[string][]v1alpha1.ExposedEndpoint, runtime string, clusterAPI ClusterAPI) ProvisioningStatus {
+func SyncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[string][]v1alpha1.ExposedEndpoint, clusterAPI ClusterAPI) ProvisioningStatus {
 	ideUrl := getIdeUrl(exposedEndpoints)
-	ideUrlUpToDate := (workspace.Status.IdeUrl == ideUrl)
 
-	runtimeUpToDate := cmp.Equal(runtime, workspace.Status.AdditionalFields.Runtime)
-	if runtimeUpToDate && ideUrlUpToDate {
+	if workspace.Status.IdeUrl == ideUrl {
 		return ProvisioningStatus{
 			Continue: true,
 		}
 	}
-	workspace.Status.AdditionalFields.Runtime = runtime
 	workspace.Status.IdeUrl = ideUrl
 	err := clusterAPI.Client.Status().Update(context.TODO(), workspace)
 	return ProvisioningStatus{

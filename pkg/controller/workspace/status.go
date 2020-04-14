@@ -67,5 +67,5 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 			reconcileError = err
 		}
 	}
-	return reconcileResult, err
+	return reconcileResult, reconcileError
 }

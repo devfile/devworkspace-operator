@@ -56,10 +56,10 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 	routes, podAdditions := s.getProxyRoutes(proxy, workspaceMeta, portMappings)
 
 	return RoutingObjects{
-		Services:         services,
-		Ingresses:        defaultIngresses,
-		Routes:           append(routes, defaultRoutes...),
-		PodAdditions:     podAdditions,
+		Services:     services,
+		Ingresses:    defaultIngresses,
+		Routes:       append(routes, defaultRoutes...),
+		PodAdditions: podAdditions,
 	}
 }
 

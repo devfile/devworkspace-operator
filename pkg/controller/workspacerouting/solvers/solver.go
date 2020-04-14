@@ -20,10 +20,10 @@ import (
 )
 
 type RoutingObjects struct {
-	Services         []v1.Service
-	Ingresses        []v1beta1.Ingress
-	Routes           []routeV1.Route
-	PodAdditions     *v1alpha1.PodAdditions
+	Services     []v1.Service
+	Ingresses    []v1beta1.Ingress
+	Routes       []routeV1.Route
+	PodAdditions *v1alpha1.PodAdditions
 }
 
 type RoutingSolver interface {

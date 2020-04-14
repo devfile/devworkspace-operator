@@ -74,7 +74,7 @@ func (r *ReconcileWorkspaceRouting) syncRoutes(routing *v1alpha1.WorkspaceRoutin
 		}
 	}
 
-	return routesInSync, clusterRoutes,nil
+	return routesInSync, clusterRoutes, nil
 }
 
 func (r *ReconcileWorkspaceRouting) getClusterRoutes(routing *v1alpha1.WorkspaceRouting) ([]routeV1.Route, error) {

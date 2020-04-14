@@ -116,6 +116,12 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	}
 	config.ControllerCfg.SetIsOpenShift(isOS)
 
+	err = config.ControllerCfg.Validate()
+	if err != nil {
+		log.Error(err, "Controller configuration is invalid")
+		return err
+	}
+
 	// Redirect standard logging to the reconcile's log
 	// Necessary as e.g. the plugin broker logs to stdout
 	origLog.SetOutput(r)

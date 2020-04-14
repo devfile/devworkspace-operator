@@ -67,7 +67,7 @@ func (r *ReconcileWorkspaceRouting) syncIngresses(routing *v1alpha1.WorkspaceRou
 		}
 	}
 
-	return ingressesInSync, clusterIngresses,nil
+	return ingressesInSync, clusterIngresses, nil
 }
 
 func (r *ReconcileWorkspaceRouting) getClusterIngresses(routing *v1alpha1.WorkspaceRouting) ([]v1beta1.Ingress, error) {

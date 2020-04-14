@@ -195,12 +195,12 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 }
 
 func (r *ReconcileWorkspaceRouting) reconcileStatus(
-		instance *workspacev1alpha1.WorkspaceRouting,
-		routingObjects solvers.RoutingObjects,
-		exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint) error {
+	instance *workspacev1alpha1.WorkspaceRouting,
+	routingObjects solvers.RoutingObjects,
+	exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint) error {
 	if instance.Status.Phase == workspacev1alpha1.RoutingReady &&
-			cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
-			cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
+		cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
+		cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
 		return nil
 	}
 	instance.Status.Phase = workspacev1alpha1.RoutingReady
@@ -210,9 +210,9 @@ func (r *ReconcileWorkspaceRouting) reconcileStatus(
 }
 
 func getExposedEndpoints(
-		endpoints map[string][]workspacev1alpha1.Endpoint,
-		ingresses []v1beta1.Ingress,
-		routes []routeV1.Route) (map[string][]workspacev1alpha1.ExposedEndpoint, error) {
+	endpoints map[string][]workspacev1alpha1.Endpoint,
+	ingresses []v1beta1.Ingress,
+	routes []routeV1.Route) (map[string][]workspacev1alpha1.ExposedEndpoint, error) {
 	exposedEndpoints := map[string][]workspacev1alpha1.ExposedEndpoint{}
 
 	for machineName, machineEndpoints := range endpoints {
@@ -235,14 +235,14 @@ func getExposedEndpoints(
 }
 
 func getURLforEndpoint(
-		endpoint workspacev1alpha1.Endpoint,
-		ingresses []v1beta1.Ingress,
-		routes []routeV1.Route) (string, error) {
+	endpoint workspacev1alpha1.Endpoint,
+	ingresses []v1beta1.Ingress,
+	routes []routeV1.Route) (string, error) {
 	for _, route := range routes {
 		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
 			protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
 			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" &&
-					route.Spec.TLS != nil {
+				route.Spec.TLS != nil {
 				protocol = getSecureProtocol(protocol)
 			}
 			url := fmt.Sprintf("%s://%s", protocol, route.Spec.Host)
@@ -289,4 +289,3 @@ func getSecureProtocol(protocol string) string {
 		return protocol
 	}
 }
-

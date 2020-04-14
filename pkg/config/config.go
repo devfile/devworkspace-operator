@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
+	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"strings"
@@ -118,6 +119,13 @@ func (wc *ControllerConfig) GetPropertyOrDefault(name string, defaultValue strin
 		return val
 	}
 	return defaultValue
+}
+
+func (wc *ControllerConfig) Validate() error {
+	if !wc.isOpenShift && wc.GetDefaultRoutingClass() == string(v1alpha1.WorkspaceRoutingOpenShiftOauth) {
+		return fmt.Errorf("controller appears to be running in non-OpenShift cluster, but default routing class is '%s'", v1alpha1.WorkspaceRoutingOpenShiftOauth)
+	}
+	return nil
 }
 
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {

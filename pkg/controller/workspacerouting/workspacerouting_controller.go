@@ -187,17 +187,27 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	exposedEndpoints, err := getExposedEndpoints(instance.Spec.Endpoints, clusterIngresses, clusterRoutes)
+	exposedEndpoints, endpointsReady, err := getExposedEndpoints(instance.Spec.Endpoints, clusterIngresses, clusterRoutes)
 	if err != nil {
-		return reconcile.Result{}, err
+		reqLogger.Error(err, "Could not get exposed endpoints for workspace")
+		instance.Status.Phase = workspacev1alpha1.RoutingFailed
+		statusErr := r.client.Status().Update(context.TODO(), instance)
+		return reconcile.Result{}, statusErr
 	}
-	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints)
+
+	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsReady)
 }
 
 func (r *ReconcileWorkspaceRouting) reconcileStatus(
 	instance *workspacev1alpha1.WorkspaceRouting,
 	routingObjects solvers.RoutingObjects,
-	exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint) error {
+	exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint,
+	endpointsReady bool) error {
+
+	if !endpointsReady {
+		instance.Status.Phase = workspacev1alpha1.RoutingPreparing
+		return r.client.Status().Update(context.TODO(), instance)
+	}
 	if instance.Status.Phase == workspacev1alpha1.RoutingReady &&
 		cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
 		cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
@@ -212,8 +222,10 @@ func (r *ReconcileWorkspaceRouting) reconcileStatus(
 func getExposedEndpoints(
 	endpoints map[string][]workspacev1alpha1.Endpoint,
 	ingresses []v1beta1.Ingress,
-	routes []routeV1.Route) (map[string][]workspacev1alpha1.ExposedEndpoint, error) {
-	exposedEndpoints := map[string][]workspacev1alpha1.ExposedEndpoint{}
+	routes []routeV1.Route) (exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint, ready bool, err error) {
+
+	exposedEndpoints = map[string][]workspacev1alpha1.ExposedEndpoint{}
+	ready = true
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
@@ -222,7 +234,10 @@ func getExposedEndpoints(
 			}
 			url, err := getURLforEndpoint(endpoint, ingresses, routes)
 			if err != nil {
-				return nil, err
+				return nil, false, err
+			}
+			if url == "" {
+				ready = false
 			}
 			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], workspacev1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
@@ -231,7 +246,7 @@ func getExposedEndpoints(
 			})
 		}
 	}
-	return exposedEndpoints, nil
+	return exposedEndpoints, ready, nil
 }
 
 func getURLforEndpoint(
@@ -260,7 +275,7 @@ func getURLforEndpoint(
 			}
 		}
 	}
-	return "", fmt.Errorf("could not get URL for endpoint %s", endpoint.Name)
+	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
 }
 
 func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {

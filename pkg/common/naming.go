@@ -50,3 +50,7 @@ func RouteName(workspaceId, endpointName string) string {
 func OAuthProxySecretName(workspaceId string) string {
 	return "proxy-tls-" + workspaceId
 }
+
+func CheRestAPIsConfigmapName(workspaceId string) string {
+	return "che-rest-apis-" + workspaceId
+}

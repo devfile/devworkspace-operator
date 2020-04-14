@@ -25,7 +25,6 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/prerequisites"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
-	wsRuntime "github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/runtime"
 	"github.com/google/uuid"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -208,6 +207,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 
 	// Only add che rest apis if theia editor is present in the devfile
 	if isCheRestApisRequired(workspace.Spec.Devfile.Components) {
+		// TODO: first half of provisioning rest-apis
 		cheRestApisComponent := getCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
 	}
@@ -225,9 +225,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceRoutingReady)
 
-	// Step 2.5: setup runtime annotation (TODO: use configmap)
-	cheRuntime, err := wsRuntime.ConstructRuntimeAnnotation(componentDescriptions, routingStatus.ExposedEndpoints)
-	workspaceStatus := provision.SyncWorkspaceStatus(workspace, routingStatus.ExposedEndpoints, cheRuntime, clusterAPI)
+	workspaceStatus := provision.SyncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if !workspaceStatus.Continue {
 		if workspaceStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
@@ -238,7 +236,21 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{Requeue: workspaceStatus.Requeue}, workspaceStatus.Err
 	}
 
-	// Step three: Collect all workspace deployment contributions
+	// Step three: setup che-rest-apis configmap
+	if isCheRestApisRequired(workspace.Spec.Devfile.Components) {
+		configMapStatus := provision.SyncRestAPIsConfigMap(workspace, componentDescriptions, routingStatus.ExposedEndpoints, clusterAPI)
+		if !configMapStatus.Continue {
+			if configMapStatus.FailStartup {
+				reqLogger.Info("Workspace start failed")
+				reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+				return reconcile.Result{}, configMapStatus.Err
+			}
+			reqLogger.Info("Waiting on che-rest-apis configmap to be ready")
+			return reconcile.Result{Requeue: configMapStatus.Requeue}, configMapStatus.Err
+		}
+	}
+
+	// Step four: Collect all workspace deployment contributions
 	routingPodAdditions := routingStatus.PodAdditions
 	var podAdditions []workspacev1alpha1.PodAdditions
 	for _, component := range componentDescriptions {
@@ -248,7 +260,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		podAdditions = append(podAdditions, *routingPodAdditions)
 	}
 
-	// Step four: Prepare workspace ServiceAccount
+	// Step five: Prepare workspace ServiceAccount
 	saAnnotations := map[string]string{}
 	if routingPodAdditions != nil {
 		saAnnotations = routingPodAdditions.ServiceAccountAnnotations
@@ -266,7 +278,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceServiceAccountReady)
 
-	// Step five: Create deployment and wait for it to be ready
+	// Step six: Create deployment and wait for it to be ready
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {

@@ -14,6 +14,7 @@ package workspace
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -45,6 +46,34 @@ func getCheRestApisComponent(workspaceName, workspaceId, namespace string) v1alp
 				Name:  "CHE_WORKSPACE_NAMESPACE",
 				Value: namespace,
 			},
+			{
+				Name:  "CHE_WORKSPACE_RUNTIME_JSON_PATH",
+				Value: config.RestAPIsRuntimeVolumePath + config.RestAPIsRuntimeJSONFilename,
+			},
+			{
+				Name:  "CHE_WORKSPACE_DEVFILE_YAML_PATH",
+				Value: config.RestAPIsRuntimeVolumePath + config.RestAPIsDevfileYamlFilename,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      config.RestAPIsVolumeName,
+				ReadOnly:  true,
+				MountPath: config.RestAPIsRuntimeVolumePath,
+			},
+		},
+	}
+
+	volumeMode := corev1.ConfigMapVolumeSourceDefaultMode
+	configmapVolume := corev1.Volume{
+		Name: config.RestAPIsVolumeName,
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: common.CheRestAPIsConfigmapName(workspaceId),
+				},
+				DefaultMode: &volumeMode,
+			},
 		},
 	}
 
@@ -52,6 +81,7 @@ func getCheRestApisComponent(workspaceName, workspaceId, namespace string) v1alp
 		Name: cheRestAPIsName,
 		PodAdditions: v1alpha1.PodAdditions{
 			Containers: []corev1.Container{container},
+			Volumes:    []corev1.Volume{configmapVolume},
 		},
 		ComponentMetadata: v1alpha1.ComponentMetadata{
 			Containers: map[string]v1alpha1.ContainerDescription{
@@ -65,8 +95,7 @@ func getCheRestApisComponent(workspaceName, workspaceId, namespace string) v1alp
 			Endpoints: []v1alpha1.Endpoint{
 				{
 					Attributes: map[v1alpha1.EndpointAttribute]string{
-						v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE: "false",
-						//v1alpha1.TYPE_ENDPOINT_ATTRIBUTE: "ide",
+						v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE:   "false",
 						v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE: "tcp",
 					},
 					Name: cheRestAPIsName,

@@ -18,7 +18,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 
 FROM registry.access.redhat.com/ubi8-minimal:8.1-279
 COPY --from=builder /che-workspace-operator/_output/bin/che-workspace-controller /usr/local/bin/che-workspace-controller
-COPY --from=builder /che-workspace-operator/deploy/internal-registry  deploy/internal-registry
+COPY --from=builder /che-workspace-operator/internal-registry  internal-registry
 
 ENV USER_UID=1001 \
     USER_NAME=che-workspace-controller

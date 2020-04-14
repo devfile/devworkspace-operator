@@ -25,7 +25,7 @@ import (
 
 const (
 	// RegistryDirectory is the directory where the YAML files for the internal registry exist
-	RegistryDirectory = "deploy/internal-registry/"
+	RegistryDirectory = "internal-registry/"
 )
 
 var log = logf.Log.WithName("registry")

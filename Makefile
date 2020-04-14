@@ -43,6 +43,7 @@ else
 	sed -i.bak -e "s|192.168.99.100|$(CLUSTER_IP)|g" ./deploy/registry/local/k8s/ingress.yaml
 	rm ./deploy/registry/local/k8s/ingress.yaml.bak
 	$(TOOL) apply -f ./deploy/registry/local/k8s
+	sed -i "s|$(ROUTING_SUFFIX)|192.168.99.100.nip.io|g" ./deploy/registry/local/k8s/ingress.yaml
 endif
 endif
 

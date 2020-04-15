@@ -221,15 +221,6 @@ spec:
         status:
           description: WorkspaceStatus defines the observed state of Workspace
           properties:
-            additionalFields:
-              description: 'TODO: This could potentially be handled via configmap
-                more cleanly'
-              properties:
-                org.eclipse.che.workspace/runtime:
-                  type: string
-              required:
-              - org.eclipse.che.workspace/runtime
-              type: object
             condition:
               description: Conditions represent the latest available observations
                 of an object's state

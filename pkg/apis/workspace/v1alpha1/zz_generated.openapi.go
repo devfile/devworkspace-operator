@@ -456,16 +456,11 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceStatus(ref common.ReferenceCall
 							},
 						},
 					},
-					"additionalFields": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/workspace/v1alpha1.WorkspaceStatusAdditionalFields"),
-						},
-					},
 				},
 				Required: []string{"workspaceId", "ideUrl"},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/workspace/v1alpha1.WorkspaceCondition", "./pkg/apis/workspace/v1alpha1.WorkspaceStatusAdditionalFields"},
+			"./pkg/apis/workspace/v1alpha1.WorkspaceCondition"},
 	}
 }

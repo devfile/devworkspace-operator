@@ -38,13 +38,6 @@ type WorkspaceStatus struct {
 	// Conditions represent the latest available observations of an object's state
 	// +listType=map
 	Condition []WorkspaceCondition `json:"condition,omitempty"`
-
-	// TODO: This could potentially be handled via configmap more cleanly
-	AdditionalFields WorkspaceStatusAdditionalFields `json:"additionalFields,omitempty"`
-}
-
-type WorkspaceStatusAdditionalFields struct {
-	Runtime string `json:"org.eclipse.che.workspace/runtime"`
 }
 
 // WorkspaceCondition contains details for the current condition of this workspace.

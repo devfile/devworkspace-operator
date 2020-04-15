@@ -53,12 +53,11 @@ func SyncDeploymentToCluster(
 	workspace *v1alpha1.Workspace,
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
-	clusterAPI ClusterAPI,
-	isPVCRequired bool) DeploymentProvisioningStatus {
+	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
 
-	// [design] we have to pass components and routing pod additions separately becuase we need mountsources from each
+	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
-	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, clusterAPI.Scheme, isPVCRequired)
+	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{Err: err},
@@ -118,8 +117,7 @@ func getSpecDeployment(
 	workspace *v1alpha1.Workspace,
 	podAdditionsList []v1alpha1.PodAdditions,
 	saName string,
-	scheme *runtime.Scheme,
-	isPVCRequired bool) (*appsv1.Deployment, error) {
+	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
 
@@ -196,7 +194,7 @@ func getSpecDeployment(
 		},
 	}
 
-	if isPVCRequired {
+	if len(podAdditions.Volumes) != 0 {
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, precreateSubpathsInitContainer(workspace.Status.WorkspaceId))
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
 	}

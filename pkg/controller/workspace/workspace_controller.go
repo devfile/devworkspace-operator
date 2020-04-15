@@ -25,7 +25,6 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/prerequisites"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
 	"github.com/google/uuid"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -172,13 +171,6 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{}, err
 	}
 
-	// TODO: The rolebindings here are created namespace-wide; find a way to limit this, given that each workspace
-	// needs a new serviceAccount
-	err = prerequisites.CheckPrerequisites(workspace, r.client, reqLogger)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Ensure workspaceID is set.
 	if workspace.Status.WorkspaceId == "" {
 		workspaceId, err := getWorkspaceId(workspace)
@@ -220,9 +212,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
 	}
 
-	isPVCRequired := provision.IsPVCRequired(workspace.Spec.Devfile.Components)
-	if isPVCRequired {
-		provision.GeneratePVC(workspace, r.client, reqLogger)
+	if err := provision.SyncPVC(workspace, componentDescriptions, r.client, reqLogger); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	//TODO Previously we check rbac before components creation. Now we are able to do the same but what the purpose of creating RBAC if like there is component with unreached plugin/editor?
+	if err := provision.SyncRBAC(workspace, r.client, reqLogger); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
@@ -290,7 +286,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceServiceAccountReady)
 
 	// Step five: Create deployment and wait for it to be ready
-	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI, isPVCRequired)
+	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")

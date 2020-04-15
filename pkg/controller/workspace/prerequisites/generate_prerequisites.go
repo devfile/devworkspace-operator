@@ -58,19 +58,6 @@ func generatePrerequisites(namespace string) ([]runtime.Object, error) {
 				},
 			},
 		},
-		&rbacv1.Role{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "view-workspaces",
-				Namespace: namespace,
-			},
-			Rules: []rbacv1.PolicyRule{
-				{
-					Resources: []string{"workspaces"},
-					APIGroups: []string{"workspace.che.eclipse.org"},
-					Verbs:     []string{"get", "list"},
-				},
-			},
-		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      config.ServiceAccount + "-view",
@@ -95,22 +82,6 @@ func generatePrerequisites(namespace string) ([]runtime.Object, error) {
 			RoleRef: rbacv1.RoleRef{
 				Kind: "Role",
 				Name: "exec",
-			},
-			Subjects: []rbacv1.Subject{
-				{
-					Kind: "Group",
-					Name: "system:serviceaccounts:" + namespace,
-				},
-			},
-		},
-		&rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ServiceAccount + "-view-workspaces",
-				Namespace: namespace,
-			},
-			RoleRef: rbacv1.RoleRef{
-				Kind: "Role",
-				Name: "view-workspaces",
 			},
 			Subjects: []rbacv1.Subject{
 				{

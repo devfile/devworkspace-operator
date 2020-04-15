@@ -216,7 +216,6 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{}, err
 	}
 
-	//TODO Previously we check rbac before components creation. Now we are able to do the same but what the purpose of creating RBAC if like there is component with unreached plugin/editor?
 	if err := provision.SyncRBAC(workspace, r.client, reqLogger); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -286,7 +285,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceServiceAccountReady)
 
 	// Step five: Create deployment and wait for it to be ready
-	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
+	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, componentDescriptions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")

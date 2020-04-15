@@ -1,3 +1,15 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package provision
 
 import (
@@ -16,7 +28,7 @@ func SyncPVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescr
 	}
 
 	var pvc *corev1.PersistentVolumeClaim
-	if pvc, err = generatePVC(workspace, components); err != nil {
+	if pvc, err = generatePVC(workspace); err != nil {
 		return err
 	}
 
@@ -26,11 +38,7 @@ func SyncPVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescr
 	return nil
 }
 
-func generatePVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription) (*corev1.PersistentVolumeClaim, error) {
-	if !IsPVCRequired(components) {
-		return nil, nil
-	}
-
+func generatePVC(workspace *v1alpha1.Workspace) (*corev1.PersistentVolumeClaim, error) {
 	pvcStorageQuantity, err := resource.ParseQuantity(config.PVCStorageSize)
 	if err != nil {
 		return nil, err
@@ -56,12 +64,17 @@ func generatePVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentD
 }
 
 // IsPVCRequired checks to see if we need a PVC for the given devfile.
-// If there is any PodAdditions with Volume - we need PVC, otherwise we don't
+// If there is any Containers with VolumeMounts that have the same name as the workspace PVC name then we need a PVC
 func IsPVCRequired(components []v1alpha1.ComponentDescription) bool {
+	volumeName := config.ControllerCfg.GetWorkspacePVCName()
 	for _, comp := range components {
-		if len(comp.PodAdditions.Volumes) != 0 {
-			return true
+		for _, cont := range comp.PodAdditions.Containers {
+			for _, vm := range cont.VolumeMounts {
+				if vm.Name == volumeName {
+					return true
+				}
+			}
 		}
 	}
-	return true
+	return false
 }

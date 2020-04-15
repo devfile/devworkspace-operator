@@ -52,12 +52,13 @@ var deploymentDiffOpts = cmp.Options{
 func SyncDeploymentToCluster(
 	workspace *v1alpha1.Workspace,
 	podAdditions []v1alpha1.PodAdditions,
+	components []v1alpha1.ComponentDescription,
 	saName string,
 	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
 
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
-	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, clusterAPI.Scheme)
+	specDeployment, err := getSpecDeployment(workspace, podAdditions, components, saName, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{Err: err},
@@ -116,6 +117,7 @@ func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
 func getSpecDeployment(
 	workspace *v1alpha1.Workspace,
 	podAdditionsList []v1alpha1.PodAdditions,
+	components []v1alpha1.ComponentDescription,
 	saName string,
 	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	replicas := int32(1)
@@ -194,7 +196,7 @@ func getSpecDeployment(
 		},
 	}
 
-	if len(podAdditions.Volumes) != 0 {
+	if IsPVCRequired(components) {
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, precreateSubpathsInitContainer(workspace.Status.WorkspaceId))
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
 	}

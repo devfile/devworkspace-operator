@@ -1,3 +1,15 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package provision
 
 import (
@@ -10,10 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// SyncRBAC generates RBAC and synchronizes the runtime objects
 func SyncRBAC(workspace *v1alpha1.Workspace, client client.Client, reqLogger logr.Logger) (err error) {
 	rbac := generateRBAC(workspace.Namespace)
 
-	if err := SyncObjects(rbac, client, reqLogger); err != nil {
+	if err := SyncMutableObjects(rbac, client, reqLogger); err != nil {
 		return err
 	}
 	return nil

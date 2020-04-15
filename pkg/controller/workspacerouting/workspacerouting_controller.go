@@ -187,7 +187,7 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	exposedEndpoints, endpointsReady, err := getExposedEndpoints(instance.Spec.Endpoints, clusterIngresses, clusterRoutes)
+	exposedEndpoints, endpointsAreReady, err := getExposedEndpoints(instance.Spec.Endpoints, clusterIngresses, clusterRoutes)
 	if err != nil {
 		reqLogger.Error(err, "Could not get exposed endpoints for workspace")
 		instance.Status.Phase = workspacev1alpha1.RoutingFailed
@@ -195,7 +195,7 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, statusErr
 	}
 
-	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsReady)
+	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsAreReady)
 }
 
 func (r *ReconcileWorkspaceRouting) reconcileStatus(
@@ -217,65 +217,6 @@ func (r *ReconcileWorkspaceRouting) reconcileStatus(
 	instance.Status.PodAdditions = routingObjects.PodAdditions
 	instance.Status.ExposedEndpoints = exposedEndpoints
 	return r.client.Status().Update(context.TODO(), instance)
-}
-
-func getExposedEndpoints(
-	endpoints map[string][]workspacev1alpha1.Endpoint,
-	ingresses []v1beta1.Ingress,
-	routes []routeV1.Route) (exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint, ready bool, err error) {
-
-	exposedEndpoints = map[string][]workspacev1alpha1.ExposedEndpoint{}
-	ready = true
-
-	for machineName, machineEndpoints := range endpoints {
-		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
-				continue
-			}
-			url, err := getURLforEndpoint(endpoint, ingresses, routes)
-			if err != nil {
-				return nil, false, err
-			}
-			if url == "" {
-				ready = false
-			}
-			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], workspacev1alpha1.ExposedEndpoint{
-				Name:       endpoint.Name,
-				Url:        url,
-				Attributes: endpoint.Attributes,
-			})
-		}
-	}
-	return exposedEndpoints, ready, nil
-}
-
-func getURLforEndpoint(
-	endpoint workspacev1alpha1.Endpoint,
-	ingresses []v1beta1.Ingress,
-	routes []routeV1.Route) (string, error) {
-	for _, route := range routes {
-		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
-			protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
-			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" &&
-				route.Spec.TLS != nil {
-				protocol = getSecureProtocol(protocol)
-			}
-			url := fmt.Sprintf("%s://%s", protocol, route.Spec.Host)
-			return url, nil
-		}
-	}
-	for _, ingress := range ingresses {
-		if ingress.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
-			if len(ingress.Spec.Rules) == 1 {
-				protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
-				url := fmt.Sprintf("%s://%s", protocol, ingress.Spec.Rules[0].Host)
-				return url, nil
-			} else {
-				return "", fmt.Errorf("ingress %s contains multiple rules", ingress.Name)
-			}
-		}
-	}
-	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
 }
 
 func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {

@@ -40,8 +40,10 @@ ifeq ($(REGISTRY_ENABLED),true)
 ifeq ($(TOOL),oc)
 	$(TOOL) apply -f ./deploy/registry/local/os
 else
-	sed -i "s|192.168.99.100|$(CLUSTER_IP)|g" ./deploy/registry/local/k8s/ingress.yaml
+	sed -i.bak -e "s|192.168.99.100|$(CLUSTER_IP)|g" ./deploy/registry/local/k8s/ingress.yaml
 	$(TOOL) apply -f ./deploy/registry/local/k8s
+	sed -i.bak -e "s|$(CLUSTER_IP)|192.168.99.100.nip.io|g" ./deploy/registry/local/k8s/ingress.yaml
+	rm ./deploy/registry/local/k8s/ingress.yaml.bak
 endif
 endif
 
@@ -52,32 +54,39 @@ else
 	$(eval PLUGIN_REGISTRY_HOST := $(shell $(TOOL) get ingress che-plugin-registry -n $(NAMESPACE) -o jsonpath='{.spec.rules[0].host}' || echo ""))
 endif
 
+# -i.bak is needed for compatibility between OS X and Linux versions of sed
 _update_yamls: _set_registry_url
-	sed -i "s|plugin.registry.url: .*|plugin.registry.url: http://$(PLUGIN_REGISTRY_HOST)|g" ./deploy/controller_config.yaml
-	sed -i 's|che.webhooks.enabled: .*|che.webhooks.enabled: "$(WEBHOOK_ENABLED)"|g' ./deploy/controller_config.yaml
-	sed -i 's|che.default_routing_class: .*|che.default_routing_class: "$(DEFAULT_ROUTING)"|g' ./deploy/controller_config.yaml
+	sed -i.bak -e "s|plugin.registry.url: .*|plugin.registry.url: http://$(PLUGIN_REGISTRY_HOST)|g" ./deploy/controller_config.yaml
+	sed -i.bak -e 's|che.webhooks.enabled: .*|che.webhooks.enabled: "$(WEBHOOK_ENABLED)"|g' ./deploy/controller_config.yaml
+	sed -i.bak -e 's|che.default_routing_class: .*|che.default_routing_class: "$(DEFAULT_ROUTING)"|g' ./deploy/controller_config.yaml
+	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
-	sed -i "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
-	sed -i "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
-	sed -i "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date --iso-8601=seconds)'|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/controller.yaml
+	rm ./deploy/os/controller.yaml.bak
 else
-	sed -i "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
-	sed -i "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
-	sed -i "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date --iso-8601=seconds)'|g" ./deploy/k8s/controller.yaml
+	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
+	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
+	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/k8s/controller.yaml
+	rm ./deploy/k8s/controller.yaml.bak
 endif
 
 _reset_yamls: _set_registry_url
-	sed -i "s|http://$(PLUGIN_REGISTRY_HOST)|http://che-plugin-registry.192.168.99.100.nip.io/v3|g" ./deploy/controller_config.yaml
-	sed -i 's|che.webhooks.enabled: .*|che.webhooks.enabled: "false"|g' ./deploy/controller_config.yaml
-	sed -i 's|che.default_routing_class: .*|che.default_routing_class: "basic"|g' ./deploy/controller_config.yaml
+	sed -i.bak -e "s|http://$(PLUGIN_REGISTRY_HOST)|http://che-plugin-registry.192.168.99.100.nip.io/v3|g" ./deploy/controller_config.yaml
+	sed -i.bak -e 's|che.webhooks.enabled: .*|che.webhooks.enabled: "false"|g' ./deploy/controller_config.yaml
+	sed -i.bak -e 's|che.default_routing_class: .*|che.default_routing_class: "basic"|g' ./deploy/controller_config.yaml
+	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
-	sed -i "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/os/controller.yaml
-	sed -i "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
-	sed -i 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
+	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
+	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
+	rm ./deploy/os/controller.yaml.bak
 else
-	sed -i "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/k8s/controller.yaml
-	sed -i "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
-	sed -i 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/k8s/controller.yaml
+	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/k8s/controller.yaml
+	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
+	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/k8s/controller.yaml
+	rm ./deploy/k8s/controller.yaml.bak
 endif
 
 _update_crds:

@@ -15,10 +15,11 @@ package workspace
 import (
 	"context"
 	"fmt"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
 	origLog "log"
 	"os"
 	"strings"
+
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
 
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"

@@ -15,6 +15,7 @@ package component
 import (
 	"context"
 	"fmt"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/adaptor"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"

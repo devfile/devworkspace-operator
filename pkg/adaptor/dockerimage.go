@@ -14,11 +14,12 @@ package adaptor
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
-	"strings"
 )
 
 func AdaptDockerimageComponents(workspaceId string, devfileComponents []v1alpha1.ComponentSpec, commands []v1alpha1.CommandSpec) ([]v1alpha1.ComponentDescription, error) {

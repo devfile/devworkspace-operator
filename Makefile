@@ -176,6 +176,14 @@ start_local_debug:
 fmt:
 	go fmt -x ./...
 
+### fmt_license: ensure license header is set on all files
+fmt_license:
+ifneq ($(shell command -v addlicense 2> /dev/null),)
+	addlicense -f license_header.txt **/*.go
+else
+	$(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
+endif
+
 .PHONY: help
 ### help: print this message
 help: Makefile

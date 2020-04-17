@@ -28,11 +28,11 @@ func EndpointName(endpointName string) string {
 }
 
 func ServiceName(workspaceId string) string {
-	return "service-" + workspaceId
+	return fmt.Sprintf("%s-%s", workspaceId, "service")
 }
 
 func ServiceAccountName(workspaceId string) string {
-	return "che-" + workspaceId
+	return fmt.Sprintf("%s-%s", workspaceId, "sa")
 }
 
 func EndpointHostname(workspaceId, endpointName string, endpointPort int64, ingressGlobalDomain string) string {
@@ -47,10 +47,14 @@ func RouteName(workspaceId, endpointName string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, endpointName)
 }
 
-func OAuthProxySecretName(workspaceId string) string {
-	return "proxy-tls-" + workspaceId
+func CheRestAPIsConfigmapName(workspaceId string) string {
+	return fmt.Sprintf("%s-%s", workspaceId, "che-rest-apis")
 }
 
-func CheRestAPIsConfigmapName(workspaceId string) string {
-	return "che-rest-apis-" + workspaceId
+func PluginBrokerConfigmapName(workspaceId string) string {
+	return fmt.Sprintf("%s-plugin-broker", workspaceId)
+}
+
+func OAuthProxySecretName(workspaceId string) string {
+	return fmt.Sprintf("%s-%s", workspaceId, "proxy-tls")
 }

@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/eclipse/che-plugin-broker/model"
 	corev1 "k8s.io/api/core/v1"
@@ -29,7 +30,7 @@ func getArtifactsBrokerComponent(workspaceId, namespace string, components []v1a
 		configMapMountPath  = "/broker-config"
 		configMapDataName   = "config.json"
 	)
-	configMapName := fmt.Sprintf("%s.broker-config-map", workspaceId)
+	configMapName := common.PluginBrokerConfigmapName(workspaceId)
 	brokerImage := config.ControllerCfg.GetPluginArtifactsBrokerImage()
 	brokerContainerName := "plugin-artifacts-broker"
 

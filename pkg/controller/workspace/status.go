@@ -15,14 +15,15 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclock "k8s.io/apimachinery/pkg/util/clock"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sort"
-	"strings"
 )
 
 // clock is used to set status condition timestamps.

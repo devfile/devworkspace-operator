@@ -15,6 +15,8 @@ package workspacerouting
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
@@ -23,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"strings"
 )
 
 var serviceDiffOpts = cmp.Options{

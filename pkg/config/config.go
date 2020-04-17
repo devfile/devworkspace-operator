@@ -15,11 +15,12 @@ package config
 import (
 	"context"
 	"errors"
+	"os"
+	"strings"
+
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	"os"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"strings"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"

@@ -15,6 +15,8 @@ package provision
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/env"
@@ -28,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"strings"
 )
 
 type DeploymentProvisioningStatus struct {

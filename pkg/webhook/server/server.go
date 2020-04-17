@@ -11,10 +11,11 @@
 package server
 
 import (
-	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"io/ioutil"
 	"os"
+
+	"github.com/che-incubator/che-workspace-operator/internal/cluster"
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"

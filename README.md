@@ -50,7 +50,7 @@ The repository contains a Makefile; building and deploying can be configured via
 | `ADMIN_CTX` | Kubectx entry that should be used during work with cluster. The current will be used if omitted |-|
 | `REGISTRY_ENABLED` | Whether the plugin registry should be deployed | `true` |
 
-The makefile supports the following rules:
+Some of the rules supported by the makefile:
 
 |rule|purpose|
 |---|---|
@@ -62,11 +62,9 @@ The makefile supports the following rules:
 | update_cfg | configures already deployed controller according to set env variables |
 | update_crds | update custom resource definitions on cluster |
 | uninstall | delete controller namespace `che-workspace-controller` and remove custom resource definitions from cluster |
-| local | set up cluster to support controller, but do not deploy it; intended for use with `operator-sdk up local` |
-| start_local | start local instance of controller using operator-sdk |
-| start_local_debug | start local instance of controller with debugging enabled |
-| fmt | format all go files in repository |
-| help | print this message |
+| help | print all rules and variables |
+
+To see all rules supported by the makefile, run `make help`
 
 ### Test run controller
 1. Take a look samples workspace configuration in `./samples` folder.

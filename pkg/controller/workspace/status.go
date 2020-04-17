@@ -69,3 +69,25 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 	}
 	return reconcileResult, reconcileError
 }
+
+func SyncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[string][]v1alpha1.ExposedEndpoint, clusterAPI provision.ClusterAPI) (ok bool, err error) {
+	ideUrl := getIdeUrl(exposedEndpoints)
+
+	if workspace.Status.IdeUrl == ideUrl {
+		return true, nil
+	}
+	workspace.Status.IdeUrl = ideUrl
+	err = clusterAPI.Client.Status().Update(context.TODO(), workspace)
+	return false, err
+}
+
+func getIdeUrl(exposedEndpoints map[string][]v1alpha1.ExposedEndpoint) string {
+	for _, endpoints := range exposedEndpoints {
+		for _, endpoint := range endpoints {
+			if endpoint.Attributes[v1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "ide" {
+				return endpoint.Url
+			}
+		}
+	}
+	return ""
+}

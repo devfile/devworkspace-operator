@@ -15,6 +15,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
 	origLog "log"
 	"os"
 	"strings"
@@ -208,7 +209,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	// Only add che rest apis if theia editor is present in the devfile
 	if isCheRestApisRequired(workspace.Spec.Devfile.Components) {
 		// TODO: first half of provisioning rest-apis
-		cheRestApisComponent := getCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
+		cheRestApisComponent := restapis.GetCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
 	}
 
@@ -225,20 +226,18 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceRoutingReady)
 
-	workspaceStatus := provision.SyncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
-	if !workspaceStatus.Continue {
-		if workspaceStatus.FailStartup {
-			reqLogger.Info("Workspace start failed")
-			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
-			return reconcile.Result{}, workspaceStatus.Err
-		}
+	statusOk, err := SyncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if !statusOk {
 		reqLogger.Info("Updating workspace status")
-		return reconcile.Result{Requeue: workspaceStatus.Requeue}, workspaceStatus.Err
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// Step three: setup che-rest-apis configmap
 	if isCheRestApisRequired(workspace.Spec.Devfile.Components) {
-		configMapStatus := provision.SyncRestAPIsConfigMap(workspace, componentDescriptions, routingStatus.ExposedEndpoints, clusterAPI)
+		configMapStatus := restapis.SyncRestAPIsConfigMap(workspace, componentDescriptions, routingStatus.ExposedEndpoints, clusterAPI)
 		if !configMapStatus.Continue {
 			if configMapStatus.FailStartup {
 				reqLogger.Info("Workspace start failed")

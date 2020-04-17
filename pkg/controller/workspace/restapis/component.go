@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspace
+package restapis
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
@@ -22,7 +22,7 @@ import (
 const cheRestAPIsName = "che-rest-apis"
 const cheRestApisPort = 9999
 
-func getCheRestApisComponent(workspaceName, workspaceId, namespace string) v1alpha1.ComponentDescription {
+func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) v1alpha1.ComponentDescription {
 	container := corev1.Container{
 		Image:           config.ControllerCfg.GetCheRestApisDockerImage(),
 		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),

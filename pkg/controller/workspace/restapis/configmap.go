@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package provision
+package restapis
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gopkg.in/yaml.v2"
@@ -34,21 +35,21 @@ var configmapDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
 }
 
-func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, endpoints map[string][]v1alpha1.ExposedEndpoint, clusterAPI ClusterAPI) ProvisioningStatus {
+func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, endpoints map[string][]v1alpha1.ExposedEndpoint, clusterAPI provision.ClusterAPI) provision.ProvisioningStatus {
 	specCM, err := getSpecConfigMap(workspace, components, endpoints, clusterAPI.Scheme)
 	if err != nil {
-		return ProvisioningStatus{Err: err}
+		return provision.ProvisioningStatus{Err: err}
 	}
 
 	clusterCM, err := getClusterConfigMap(specCM.Name, workspace.Namespace, clusterAPI.Client)
 	if err != nil {
-		return ProvisioningStatus{Err: err}
+		return provision.ProvisioningStatus{Err: err}
 	}
 
 	if clusterCM == nil {
 		clusterAPI.Logger.Info("Creating che-rest-apis configmap")
 		err := clusterAPI.Client.Create(context.TODO(), specCM)
-		return ProvisioningStatus{Requeue: true, Err: err}
+		return provision.ProvisioningStatus{Requeue: true, Err: err}
 	}
 
 	if !cmp.Equal(specCM, clusterCM, configmapDiffOpts) {
@@ -56,12 +57,12 @@ func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.
 		clusterCM.Data = specCM.Data
 		err := clusterAPI.Client.Update(context.TODO(), clusterCM)
 		if err != nil && !errors.IsConflict(err) {
-			return ProvisioningStatus{Err: err}
+			return provision.ProvisioningStatus{Err: err}
 		}
-		return ProvisioningStatus{Requeue: true}
+		return provision.ProvisioningStatus{Requeue: true}
 	}
 
-	return ProvisioningStatus{Continue: true}
+	return provision.ProvisioningStatus{Continue: true}
 }
 
 func getSpecConfigMap(

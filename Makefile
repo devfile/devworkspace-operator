@@ -121,8 +121,13 @@ _do_uninstall:
 # leave workspaces in a hanging state if we add finalizers.
 ifneq ($(shell command -v kubectl 2> /dev/null),)
 	kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
+# Have to wait for routings to be deleted in case there are finalizers
+	kubectl delete workspaceroutings.workspace.che.eclipse.org --all-namespaces --all --wait
 else
-	$(info WARN: kubectl is not installed: unable to delete all workspaces)
+ifneq ($(TOOL) get workspaces.workspace.che.eclipse.org --all-namespaces,"No resources found.")
+	$(info To automatically remove all workspaces when uninstalling, ensure kubectl is installed)
+	$(error Cannot uninstall operator, workspaces still running. Delete all workspaces and workspaceroutings before proceeding)
+endif
 endif
 	$(TOOL) delete namespace $(NAMESPACE)
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org

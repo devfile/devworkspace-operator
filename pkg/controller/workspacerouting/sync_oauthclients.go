@@ -15,6 +15,7 @@ package workspacerouting
 import (
 	"context"
 	"fmt"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
@@ -29,12 +30,19 @@ var oauthClientDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(oauthv1.OAuthClient{}, "TypeMeta", "ObjectMeta"),
 }
 
-func (r *ReconcileWorkspaceRouting) syncOAuthClient(routing *v1alpha1.WorkspaceRouting, oauthClientSpec oauthv1.OAuthClient) (ok bool, err error) {
+func (r *ReconcileWorkspaceRouting) syncOAuthClient(routing *v1alpha1.WorkspaceRouting, oauthClientSpec *oauthv1.OAuthClient) (ok bool, err error) {
 	oauthClientInSync := true
 
 	clusterOAuthClients, err := r.getClusterOAuthClients(routing)
 	if err != nil {
 		return false, err
+	}
+	if oauthClientSpec == nil {
+		if len(clusterOAuthClients) > 0 {
+			return false, r.deleteOAuthClients(routing)
+		} else {
+			return true, nil
+		}
 	}
 
 	var clusterOAuthClient *oauthv1.OAuthClient
@@ -47,8 +55,8 @@ func (r *ReconcileWorkspaceRouting) syncOAuthClient(routing *v1alpha1.WorkspaceR
 		}
 	}
 
-	for _, route := range toDelete {
-		err := r.client.Delete(context.TODO(), &route)
+	for _, oauthClient := range toDelete {
+		err := r.client.Delete(context.TODO(), &oauthClient)
 		if err != nil {
 			return false, err
 		}
@@ -70,14 +78,12 @@ func (r *ReconcileWorkspaceRouting) syncOAuthClient(routing *v1alpha1.WorkspaceR
 			oauthClientInSync = false
 		}
 	} else {
-		err = r.client.Create(context.TODO(), &oauthClientSpec)
+		err = r.client.Create(context.TODO(), oauthClientSpec)
 
-		if err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				return true, nil
-			}
-			return false, err
+		if err != nil && apierrors.IsAlreadyExists(err) {
+			return false, nil
 		}
+		return false, err
 	}
 
 	return oauthClientInSync, nil
@@ -90,7 +96,6 @@ func (r *ReconcileWorkspaceRouting) getClusterOAuthClients(routing *v1alpha1.Wor
 		return nil, err
 	}
 	listOptions := &client.ListOptions{
-		Namespace:     routing.Namespace,
 		LabelSelector: labelSelector,
 	}
 	err = r.client.List(context.TODO(), found, listOptions)
@@ -107,7 +112,7 @@ func (r *ReconcileWorkspaceRouting) deleteOAuthClients(routing *v1alpha1.Workspa
 		return err
 	}
 	listOptions := &client.DeleteAllOfOptions{
-		ListOptions: *&client.ListOptions{
+		ListOptions: client.ListOptions{
 			Namespace:     routing.Namespace,
 			LabelSelector: labelSelector,
 		},

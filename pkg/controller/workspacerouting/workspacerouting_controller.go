@@ -133,32 +133,14 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 
 	// Check if the WorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
-	isRoutingMarkedToBeDeleted := instance.GetDeletionTimestamp() != nil
-	if isRoutingMarkedToBeDeleted {
-		if contains(instance.GetFinalizers(), workspaceRoutingFinalizer) {
-			// Run finalization logic for workspaceRoutingFinalizer. If the
-			// finalization logic fails, don't remove the finalizer so
-			// that we can retry during the next reconciliation.
-			if err := r.deleteOAuthClients(instance); err != nil {
-				return reconcile.Result{}, err
-			}
-			// Remove workspaceRoutingFinalizer. Once all finalizers have been
-			// removed, the object will be deleted.
-			instance.SetFinalizers(remove(instance.GetFinalizers(), workspaceRoutingFinalizer))
-			err := r.client.Update(context.TODO(), instance)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-			reqLogger.Info("WorkspaceRouting is finalized")
-		}
-		return reconcile.Result{}, nil
+	if instance.GetDeletionTimestamp() != nil {
+		reqLogger.Info("Finalizing WorkspaceRouting")
+		return reconcile.Result{}, r.finalize(instance)
 	}
 
-	// Add finalizer for this CR
-	if !contains(instance.GetFinalizers(), workspaceRoutingFinalizer) {
-		if err := r.addFinalizer(reqLogger, instance); err != nil {
-			return reconcile.Result{}, err
-		}
+	// Add finalizer for this CR if not already present
+	if err := r.setFinalizer(reqLogger, instance); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	workspaceMeta := solvers.WorkspaceMetadata{
@@ -203,8 +185,6 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		}
 	}
 
-	oauthClient := routingObjects.OAuthClient
-
 	servicesInSync, err := r.syncServices(instance, services)
 	if err != nil || !servicesInSync {
 		reqLogger.Info("Services not in sync")
@@ -231,7 +211,8 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, statusErr
 	}
 
-	oauthClientInSync, err := r.syncOAuthClient(instance, *oauthClient)
+	oauthClient := routingObjects.OAuthClient
+	oauthClientInSync, err := r.syncOAuthClient(instance, oauthClient)
 	if err != nil || !oauthClientInSync {
 		reqLogger.Info("OAuthClient not in sync")
 		return reconcile.Result{Requeue: true}, err
@@ -240,7 +221,11 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsAreReady)
 }
 
-func (r *ReconcileWorkspaceRouting) addFinalizer(reqLogger logr.Logger, m *workspacev1alpha1.WorkspaceRouting) error {
+// setFinalizer ensures a finalizer is set on a workspaceRouting instance; no-op if finalizer is already present.
+func (r *ReconcileWorkspaceRouting) setFinalizer(reqLogger logr.Logger, m *workspacev1alpha1.WorkspaceRouting) error {
+	if contains(m.GetFinalizers(), workspaceRoutingFinalizer) {
+		return nil
+	}
 	reqLogger.Info("Adding Finalizer for the WorkspaceRouting")
 	m.SetFinalizers(append(m.GetFinalizers(), workspaceRoutingFinalizer))
 
@@ -253,19 +238,38 @@ func (r *ReconcileWorkspaceRouting) addFinalizer(reqLogger logr.Logger, m *works
 	return nil
 }
 
+func (r *ReconcileWorkspaceRouting) finalize(instance *workspacev1alpha1.WorkspaceRouting) error {
+	if contains(instance.GetFinalizers(), workspaceRoutingFinalizer) {
+		// Run finalization logic for workspaceRoutingFinalizer. If the
+		// finalization logic fails, don't remove the finalizer so
+		// that we can retry during the next reconciliation.
+		if err := r.deleteOAuthClients(instance); err != nil {
+			return err
+		}
+		// Remove workspaceRoutingFinalizer. Once all finalizers have been
+		// removed, the object will be deleted.
+		instance.SetFinalizers(remove(instance.GetFinalizers(), workspaceRoutingFinalizer))
+		err := r.client.Update(context.TODO(), instance)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *ReconcileWorkspaceRouting) reconcileStatus(
-	instance *workspacev1alpha1.WorkspaceRouting,
-	routingObjects solvers.RoutingObjects,
-	exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint,
-	endpointsReady bool) error {
+		instance *workspacev1alpha1.WorkspaceRouting,
+		routingObjects solvers.RoutingObjects,
+		exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint,
+		endpointsReady bool) error {
 
 	if !endpointsReady {
 		instance.Status.Phase = workspacev1alpha1.RoutingPreparing
 		return r.client.Status().Update(context.TODO(), instance)
 	}
 	if instance.Status.Phase == workspacev1alpha1.RoutingReady &&
-		cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
-		cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
+			cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
+			cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
 		return nil
 	}
 	instance.Status.Phase = workspacev1alpha1.RoutingReady

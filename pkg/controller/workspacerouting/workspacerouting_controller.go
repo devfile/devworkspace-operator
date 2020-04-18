@@ -223,7 +223,7 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 
 // setFinalizer ensures a finalizer is set on a workspaceRouting instance; no-op if finalizer is already present.
 func (r *ReconcileWorkspaceRouting) setFinalizer(reqLogger logr.Logger, m *workspacev1alpha1.WorkspaceRouting) error {
-	if contains(m.GetFinalizers(), workspaceRoutingFinalizer) {
+	if !isFinalizerNecessary(m) || contains(m.GetFinalizers(), workspaceRoutingFinalizer) {
 		return nil
 	}
 	reqLogger.Info("Adding Finalizer for the WorkspaceRouting")
@@ -258,18 +258,18 @@ func (r *ReconcileWorkspaceRouting) finalize(instance *workspacev1alpha1.Workspa
 }
 
 func (r *ReconcileWorkspaceRouting) reconcileStatus(
-		instance *workspacev1alpha1.WorkspaceRouting,
-		routingObjects solvers.RoutingObjects,
-		exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint,
-		endpointsReady bool) error {
+	instance *workspacev1alpha1.WorkspaceRouting,
+	routingObjects solvers.RoutingObjects,
+	exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint,
+	endpointsReady bool) error {
 
 	if !endpointsReady {
 		instance.Status.Phase = workspacev1alpha1.RoutingPreparing
 		return r.client.Status().Update(context.TODO(), instance)
 	}
 	if instance.Status.Phase == workspacev1alpha1.RoutingReady &&
-			cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
-			cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
+		cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
+		cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
 		return nil
 	}
 	instance.Status.Phase = workspacev1alpha1.RoutingReady
@@ -289,6 +289,21 @@ func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingCla
 		return &solvers.OpenShiftOAuthSolver{}, nil
 	default:
 		return nil, fmt.Errorf("routing class %s not supported", routingClass)
+	}
+}
+
+func isFinalizerNecessary(routing *workspacev1alpha1.WorkspaceRouting) bool {
+	routingClass := routing.Spec.RoutingClass
+	if routingClass == "" {
+		routingClass = workspacev1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
+	}
+	switch routingClass {
+	case workspacev1alpha1.WorkspaceRoutingOpenShiftOauth:
+		return true
+	case workspacev1alpha1.WorkspaceRoutingDefault:
+		return false
+	default:
+		return false
 	}
 }
 

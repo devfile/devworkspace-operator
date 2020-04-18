@@ -113,7 +113,6 @@ func (r *ReconcileWorkspaceRouting) deleteOAuthClients(routing *v1alpha1.Workspa
 	}
 	listOptions := &client.DeleteAllOfOptions{
 		ListOptions: client.ListOptions{
-			Namespace:     routing.Namespace,
 			LabelSelector: labelSelector,
 		},
 	}

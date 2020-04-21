@@ -38,8 +38,8 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 	proxy, noProxy := getProxiedEndpoints(spec)
 	defaultIngresses, defaultRoutes := getRoutingForSpec(noProxy, workspaceMeta)
 
-	portMappings := getProxyEndpointMappings(proxy, workspaceMeta)
-	var proxyPorts = map[string][]v1alpha1.Endpoint{}
+	portMappings := getProxyEndpointMappings(proxy)
+	var proxyPorts = map[string]v1alpha1.EndpointList{}
 	for _, proxyEndpoint := range portMappings {
 		proxyPorts[proxyEndpoint.machineName] = append(proxyPorts[proxyEndpoint.machineName], proxyEndpoint.publicEndpoint)
 	}
@@ -85,7 +85,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 }
 
 func (s *OpenShiftOAuthSolver) getProxyRoutes(
-	endpoints map[string][]v1alpha1.Endpoint,
+	endpoints map[string]v1alpha1.EndpointList,
 	workspaceMeta WorkspaceMetadata,
 	portMappings map[string]proxyEndpoint) ([]routeV1.Route, *v1alpha1.PodAdditions) {
 
@@ -122,9 +122,9 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 	return routes, podAdditions
 }
 
-func getProxiedEndpoints(spec v1alpha1.WorkspaceRoutingSpec) (proxy, noProxy map[string][]v1alpha1.Endpoint) {
-	proxy = map[string][]v1alpha1.Endpoint{}
-	noProxy = map[string][]v1alpha1.Endpoint{}
+func getProxiedEndpoints(spec v1alpha1.WorkspaceRoutingSpec) (proxy, noProxy map[string]v1alpha1.EndpointList) {
+	proxy = map[string]v1alpha1.EndpointList{}
+	noProxy = map[string]v1alpha1.EndpointList{}
 	for machineName, machineEndpoints := range spec.Endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpointNeedsProxy(endpoint) {
@@ -138,7 +138,7 @@ func getProxiedEndpoints(spec v1alpha1.WorkspaceRoutingSpec) (proxy, noProxy map
 }
 
 func getProxyEndpointMappings(
-	endpoints map[string][]v1alpha1.Endpoint, workspaceMeta WorkspaceMetadata) map[string]proxyEndpoint {
+	endpoints map[string]v1alpha1.EndpointList) map[string]proxyEndpoint {
 	proxyHttpsPort := 4400
 	proxyHttpPort := int64(4180)
 

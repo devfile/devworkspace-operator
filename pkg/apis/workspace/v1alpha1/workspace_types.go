@@ -36,7 +36,6 @@ type WorkspaceStatus struct {
 	Phase       WorkspacePhase `json:"phase,omitempty"`
 	IdeUrl      string         `json:"ideUrl"`
 	// Conditions represent the latest available observations of an object's state
-	// +listType=map
 	Condition []WorkspaceCondition `json:"condition,omitempty"`
 }
 

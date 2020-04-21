@@ -30,7 +30,7 @@ type WorkspaceMetadata struct {
 	RoutingSuffix string
 }
 
-func getDiscoverableServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, meta WorkspaceMetadata) []corev1.Service {
+func getDiscoverableServicesForEndpoints(endpoints map[string]v1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
@@ -64,7 +64,7 @@ func getDiscoverableServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoin
 	return services
 }
 
-func getServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, meta WorkspaceMetadata) []corev1.Service {
+func getServicesForEndpoints(endpoints map[string]v1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
 	var services []corev1.Service
 	var servicePorts []corev1.ServicePort
 	for _, machineEndpoints := range endpoints {
@@ -97,7 +97,7 @@ func getServicesForEndpoints(endpoints map[string][]v1alpha1.Endpoint, meta Work
 	return services
 }
 
-func getRoutingForSpec(endpoints map[string][]v1alpha1.Endpoint, meta WorkspaceMetadata) ([]v1beta1.Ingress, []routeV1.Route) {
+func getRoutingForSpec(endpoints map[string]v1alpha1.EndpointList, meta WorkspaceMetadata) ([]v1beta1.Ingress, []routeV1.Route) {
 	var ingresses []v1beta1.Ingress
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {

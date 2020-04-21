@@ -1,5 +1,5 @@
 NAMESPACE = che-workspace-controller
-OPERATOR_SDK_VERSION = v0.12.0
+OPERATOR_SDK_VERSION = v0.17.0
 IMG ?= quay.io/che-incubator/che-workspace-controller:nightly
 TOOL ?= oc
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
@@ -176,18 +176,18 @@ local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url
 generate:
 ifeq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
 	operator-sdk generate k8s
-	operator-sdk generate openapi
+	operator-sdk generate crds
 else
 	$(error operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used during CRDs and k8s objects generating while $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found)
 endif
 
 ### start_local: start local instance of controller using operator-sdk
 start_local:
-	operator-sdk up local --namespace $(NAMESPACE) 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
+	operator-sdk run --local --watch-namespace $(NAMESPACE) 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
 ### start_local_debug: start local instance of controller with debugging enabled
 start_local_debug:
-	operator-sdk up local --namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
+	operator-sdk run --local --watch-namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
 ### fmt: format all go files in repository
 fmt:

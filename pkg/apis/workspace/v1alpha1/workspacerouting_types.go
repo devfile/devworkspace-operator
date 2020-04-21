@@ -26,7 +26,7 @@ type WorkspaceRoutingSpec struct {
 	// Routing suffix for cluster
 	RoutingSuffix string `json:"routingSuffix"`
 	// Machines to endpoints map
-	Endpoints map[string][]Endpoint `json:"endpoints"`
+	Endpoints map[string]EndpointList `json:"endpoints"`
 	// Selector that should be used by created services to point to the workspace Pod
 	PodSelector map[string]string `json:"podSelector"`
 }
@@ -44,9 +44,9 @@ type WorkspaceRoutingStatus struct {
 	// Additions to main workspace deployment
 	PodAdditions *PodAdditions `json:"podAdditions,omitempty"`
 	// Machine name to exposed endpoint map
-	ExposedEndpoints map[string][]ExposedEndpoint `json:"exposedEndpoints,omitempty"`
+	ExposedEndpoints map[string]ExposedEndpointList `json:"exposedEndpoints,omitempty"`
 	// Routing reconcile phase
-	Phase WorkspaceRoutingPhase `json:"phase,omitempty""`
+	Phase WorkspaceRoutingPhase `json:"phase,omitempty"`
 }
 
 // Valid phases for workspacerouting
@@ -66,6 +66,10 @@ type ExposedEndpoint struct {
 	// Attributes of the exposed endpoint
 	Attributes map[EndpointAttribute]string `json:"attributes"`
 }
+
+type EndpointList []Endpoint
+
+type ExposedEndpointList []ExposedEndpoint
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

@@ -36,7 +36,7 @@ var configmapDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
 }
 
-func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, endpoints map[string][]v1alpha1.ExposedEndpoint, clusterAPI provision.ClusterAPI) provision.ProvisioningStatus {
+func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, endpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) provision.ProvisioningStatus {
 	specCM, err := getSpecConfigMap(workspace, components, endpoints, clusterAPI.Scheme)
 	if err != nil {
 		return provision.ProvisioningStatus{Err: err}
@@ -69,7 +69,7 @@ func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.
 func getSpecConfigMap(
 	workspace *v1alpha1.Workspace,
 	components []v1alpha1.ComponentDescription,
-	endpoints map[string][]v1alpha1.ExposedEndpoint,
+	endpoints map[string]v1alpha1.ExposedEndpointList,
 	scheme *k8sRuntime.Scheme) (*corev1.ConfigMap, error) {
 	runtimeJSON, err := constructRuntimeAnnotation(components, endpoints)
 	if err != nil {
@@ -121,7 +121,7 @@ func getDevfileYaml(devfile v1alpha1.DevfileSpec) (string, error) {
 	return string(devfileYaml), err
 }
 
-func constructRuntimeAnnotation(components []v1alpha1.ComponentDescription, endpoints map[string][]v1alpha1.ExposedEndpoint) (string, error) {
+func constructRuntimeAnnotation(components []v1alpha1.ComponentDescription, endpoints map[string]v1alpha1.ExposedEndpointList) (string, error) {
 	defaultEnv := "default"
 
 	machines := getMachinesAnnotation(components, endpoints)
@@ -140,7 +140,7 @@ func constructRuntimeAnnotation(components []v1alpha1.ComponentDescription, endp
 	return string(runtimeJSON), nil
 }
 
-func getMachinesAnnotation(components []v1alpha1.ComponentDescription, endpoints map[string][]v1alpha1.ExposedEndpoint) map[string]v1alpha1.CheWorkspaceMachine {
+func getMachinesAnnotation(components []v1alpha1.ComponentDescription, endpoints map[string]v1alpha1.ExposedEndpointList) map[string]v1alpha1.CheWorkspaceMachine {
 	machines := map[string]v1alpha1.CheWorkspaceMachine{}
 
 	for _, component := range components {

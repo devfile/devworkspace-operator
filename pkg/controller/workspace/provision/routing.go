@@ -31,7 +31,7 @@ import (
 type RoutingProvisioningStatus struct {
 	ProvisioningStatus
 	PodAdditions     *v1alpha1.PodAdditions
-	ExposedEndpoints map[string][]v1alpha1.ExposedEndpoint
+	ExposedEndpoints map[string]v1alpha1.ExposedEndpointList
 }
 
 var routingDiffOpts = cmp.Options{
@@ -106,9 +106,12 @@ func getSpecRouting(
 	componentDescriptions []v1alpha1.ComponentDescription,
 	scheme *runtime.Scheme) (*v1alpha1.WorkspaceRouting, error) {
 
-	endpoints := map[string][]v1alpha1.Endpoint{}
+	endpoints := map[string]v1alpha1.EndpointList{}
 	for _, desc := range componentDescriptions {
-		endpoints[desc.Name] = append(endpoints[desc.Name], desc.ComponentMetadata.Endpoints...)
+		componentEndpoints := desc.ComponentMetadata.Endpoints
+		if componentEndpoints != nil && len(componentEndpoints) > 0 {
+			endpoints[desc.Name] = append(endpoints[desc.Name], componentEndpoints...)
+		}
 	}
 
 	routing := &v1alpha1.WorkspaceRouting{

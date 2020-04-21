@@ -260,7 +260,7 @@ func (r *ReconcileWorkspaceRouting) finalize(instance *workspacev1alpha1.Workspa
 func (r *ReconcileWorkspaceRouting) reconcileStatus(
 	instance *workspacev1alpha1.WorkspaceRouting,
 	routingObjects solvers.RoutingObjects,
-	exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint,
+	exposedEndpoints map[string]workspacev1alpha1.ExposedEndpointList,
 	endpointsReady bool) error {
 
 	if !endpointsReady {

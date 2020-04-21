@@ -23,11 +23,11 @@ import (
 )
 
 func getExposedEndpoints(
-	endpoints map[string][]workspacev1alpha1.Endpoint,
+	endpoints map[string]workspacev1alpha1.EndpointList,
 	ingresses []v1beta1.Ingress,
-	routes []routeV1.Route) (exposedEndpoints map[string][]workspacev1alpha1.ExposedEndpoint, ready bool, err error) {
+	routes []routeV1.Route) (exposedEndpoints map[string]workspacev1alpha1.ExposedEndpointList, ready bool, err error) {
 
-	exposedEndpoints = map[string][]workspacev1alpha1.ExposedEndpoint{}
+	exposedEndpoints = map[string]workspacev1alpha1.ExposedEndpointList{}
 	ready = true
 
 	for machineName, machineEndpoints := range endpoints {

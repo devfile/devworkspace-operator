@@ -22,10 +22,8 @@ type WorkspaceComponentSpec struct {
 	// Id of workspace that contains this component
 	WorkspaceId string `json:"workspaceId"`
 	// List of devfile components to be processed by this component
-	// +listType=map +listMapKey=name
 	Components []ComponentSpec `json:"components"`
 	// Commands from devfile, to be matched to components
-	// +listType=map +listMapKey=name
 	Commands []CommandSpec `json:"commands,omitempty"`
 }
 
@@ -35,7 +33,6 @@ type WorkspaceComponentStatus struct {
 	// Whether the component has finished processing its spec
 	Ready bool `json:"ready"`
 	// Descriptions of processed components from spec
-	// +listType=map +listMapKey=name
 	ComponentDescriptions []ComponentDescription `json:"componentDescriptions"`
 }
 
@@ -59,7 +56,7 @@ type Component struct {
 type ComponentList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Component `json:"items"`
+	Items []Component `json:"items"`
 }
 
 func init() {

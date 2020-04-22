@@ -46,7 +46,7 @@ type PodAdditions struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	PullSecrets []v1.LocalObjectReference `json:"pullSecrets,omitempty"`
-	// Annotations for the workspace service account, required for e.g. OpenShift oauth
+	// Annotations for the workspace service account, it might be used for e.g. OpenShift oauth with SA as auth client
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge

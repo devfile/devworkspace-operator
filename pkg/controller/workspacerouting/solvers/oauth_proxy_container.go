@@ -22,21 +22,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const proxyServiceAcctAnnotationKeyFmt string = "serviceaccounts.openshift.io/oauth-redirectreference.%s-%s"
-const proxyServiceAcctAnnotationValueFmt string = `{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"%s"}}`
-
 func getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *v1alpha1.PodAdditions {
 	tlsSecretVolume := buildSecretVolume(common.OAuthProxySecretName(meta.WorkspaceId))
 	var proxyContainers []corev1.Container
 	for _, proxyEndpoint := range proxyEndpoints {
 		proxyContainers = append(proxyContainers, getProxyContainerForEndpoint(proxyEndpoint, tlsSecretVolume, meta))
 	}
-	serviceAcctAnnotations := getProxyServiceAcctAnnotations(proxyEndpoints, meta)
-
 	return &v1alpha1.PodAdditions{
-		Containers:                proxyContainers,
-		Volumes:                   []corev1.Volume{tlsSecretVolume},
-		ServiceAccountAnnotations: serviceAcctAnnotations,
+		Containers: proxyContainers,
+		Volumes:    []corev1.Volume{tlsSecretVolume},
 	}
 }
 
@@ -89,18 +83,4 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 			"--scope=user:full",
 		},
 	}
-}
-
-func getProxyServiceAcctAnnotations(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) map[string]string {
-	annotations := map[string]string{}
-
-	for _, proxyEndpoint := range proxyEndpoints {
-		portNum := proxyEndpoint.publicEndpoint.Port
-		routeName := common.RouteName(meta.WorkspaceId, proxyEndpoint.publicEndpoint.Name)
-		annotKey := fmt.Sprintf(proxyServiceAcctAnnotationKeyFmt, meta.WorkspaceId, strconv.FormatInt(portNum, 10))
-		annotVal := fmt.Sprintf(proxyServiceAcctAnnotationValueFmt, routeName)
-		annotations[annotKey] = annotVal
-	}
-
-	return annotations
 }

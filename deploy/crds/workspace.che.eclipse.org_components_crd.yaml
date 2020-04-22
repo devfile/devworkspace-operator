@@ -2198,7 +2198,8 @@ spec:
                         additionalProperties:
                           type: string
                         description: Annotations for the workspace service account,
-                          required for e.g. OpenShift oauth
+                          it might be used for e.g. OpenShift oauth with SA as auth
+                          client
                         type: object
                       volumes:
                         description: Volumes to add to workspace deployment

@@ -1,4 +1,5 @@
 NAMESPACE = che-workspace-controller
+OPERATOR_SDK_VERSION = v0.12.0
 IMG ?= quay.io/che-incubator/che-workspace-controller:nightly
 TOOL ?= oc
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
@@ -169,6 +170,15 @@ uninstall: _set_ctx _do_uninstall _reset_ctx
 
 ### local: set up cluster for local development
 local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
+
+### generate: generates CRDs and Kubernetes code for custom resource
+generate:
+ifeq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
+	operator-sdk generate k8s
+	operator-sdk generate openapi
+else
+	$(error operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used during CRDs and k8s objects generating while $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found)
+endif
 
 ### start_local: start local instance of controller using operator-sdk
 start_local:

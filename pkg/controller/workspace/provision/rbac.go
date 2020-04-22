@@ -23,13 +23,11 @@ import (
 )
 
 // SyncRBAC generates RBAC and synchronizes the runtime objects
-func SyncRBAC(workspace *v1alpha1.Workspace, client client.Client, reqLogger logr.Logger) (err error) {
+func SyncRBAC(workspace *v1alpha1.Workspace, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
 	rbac := generateRBAC(workspace.Namespace)
 
-	if err := SyncMutableObjects(rbac, client, reqLogger); err != nil {
-		return err
-	}
-	return nil
+	didChange, err := SyncMutableObjects(rbac, client, reqLogger)
+	return ProvisioningStatus{Continue: !didChange, Err: err}
 }
 
 func generateRBAC(namespace string) []runtime.Object {

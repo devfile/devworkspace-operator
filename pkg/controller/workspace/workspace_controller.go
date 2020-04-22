@@ -23,7 +23,6 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/prerequisites"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
 	"github.com/google/uuid"
@@ -171,13 +170,6 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{}, err
 	}
 
-	// TODO: The rolebindings here are created namespace-wide; find a way to limit this, given that each workspace
-	// needs a new serviceAccount
-	err = prerequisites.CheckPrerequisites(workspace, r.client, reqLogger)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Ensure workspaceID is set.
 	if workspace.Status.WorkspaceId == "" {
 		workspaceId, err := getWorkspaceId(workspace)
@@ -217,6 +209,14 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		// TODO: first half of provisioning rest-apis
 		cheRestApisComponent := restapis.GetCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
+	}
+
+	if err := provision.SyncPVC(workspace, componentDescriptions, r.client, reqLogger); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	if err := provision.SyncRBAC(workspace, r.client, reqLogger); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
@@ -283,8 +283,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceServiceAccountReady)
 
-	// Step six: Create deployment and wait for it to be ready
-	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
+	// Step five: Create deployment and wait for it to be ready
+	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, componentDescriptions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")

@@ -10,41 +10,31 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package prerequisites
+package provision
 
 import (
+	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func generatePrerequisites(namespace string) ([]runtime.Object, error) {
-	pvcStorageQuantity, err := resource.ParseQuantity(config.PVCStorageSize)
-	if err != nil {
-		return nil, err
-	}
+// SyncRBAC generates RBAC and synchronizes the runtime objects
+func SyncRBAC(workspace *v1alpha1.Workspace, client client.Client, reqLogger logr.Logger) (err error) {
+	rbac := generateRBAC(workspace.Namespace)
 
-	k8sObjects := []runtime.Object{
-		&corev1.PersistentVolumeClaim{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ControllerCfg.GetWorkspacePVCName(),
-				Namespace: namespace,
-			},
-			Spec: corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{
-					corev1.ReadWriteOnce,
-				},
-				Resources: corev1.ResourceRequirements{
-					Requests: corev1.ResourceList{
-						"storage": pvcStorageQuantity,
-					},
-				},
-				StorageClassName: config.ControllerCfg.GetPVCStorageClassName(),
-			},
-		},
+	if err := SyncMutableObjects(rbac, client, reqLogger); err != nil {
+		return err
+	}
+	return nil
+}
+
+func generateRBAC(namespace string) []runtime.Object {
+	// TODO: The rolebindings here are created namespace-wide; find a way to limit this, given that each workspace
+	return []runtime.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "exec",
@@ -91,5 +81,4 @@ func generatePrerequisites(namespace string) ([]runtime.Object, error) {
 			},
 		},
 	}
-	return k8sObjects, nil
 }

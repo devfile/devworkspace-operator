@@ -22,20 +22,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SyncPVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, client client.Client, reqLogger logr.Logger) (err error) {
+func SyncPVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
 	if !IsPVCRequired(components) {
-		return nil
+		return ProvisioningStatus{Continue: true}
 	}
 
-	var pvc *corev1.PersistentVolumeClaim
-	if pvc, err = generatePVC(workspace); err != nil {
-		return err
+	pvc, err := generatePVC(workspace)
+	if err != nil {
+		return ProvisioningStatus{Err: err}
 	}
 
-	if err := SyncObject(pvc, client, reqLogger); err != nil {
-		return err
-	}
-	return nil
+	didChange, err := SyncObject(pvc, client, reqLogger, false)
+	return ProvisioningStatus{Continue: !didChange, Err: err}
 }
 
 func generatePVC(workspace *v1alpha1.Workspace) (*corev1.PersistentVolumeClaim, error) {

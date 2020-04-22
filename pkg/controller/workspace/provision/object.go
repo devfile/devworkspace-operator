@@ -14,6 +14,10 @@ package provision
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"reflect"
 
 	"github.com/go-logr/logr"
@@ -24,51 +28,71 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// Map to store diff options for each type we're handling.
+var diffOpts = map[reflect.Type]cmp.Options{
+	reflect.TypeOf(rbacv1.Role{}): {cmpopts.IgnoreFields(rbacv1.Role{}, "TypeMeta", "ObjectMeta")},
+	reflect.TypeOf(rbacv1.RoleBinding{}): {
+		cmpopts.IgnoreFields(rbacv1.RoleBinding{}, "TypeMeta", "ObjectMeta"),
+		cmpopts.IgnoreFields(rbacv1.RoleRef{}, "APIGroup"),
+		cmpopts.IgnoreFields(rbacv1.Subject{}, "APIGroup"),
+	},
+}
+
 // SyncMutableObjects synchronizes runtime objects and changes/updates existing ones
-func SyncMutableObjects(objects []runtime.Object, client client.Client, reqLogger logr.Logger) error {
+func SyncMutableObjects(objects []runtime.Object, client client.Client, reqLogger logr.Logger) (didChange bool, err error) {
+	didAnyChange := false
 	for _, object := range objects {
-		if err := SyncMutableObject(object, client, reqLogger); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// SyncMutableObject synchronizes a runtime object and changes/updates existing ones
-func SyncMutableObject(object runtime.Object, client client.Client, reqLogger logr.Logger) error {
-	prereqAsMetaObject, isMeta := object.(metav1.Object)
-	if !isMeta {
-		return errors.NewBadRequest("Converted objects are not valid K8s objects")
-	}
-	err := SyncObject(object, client, reqLogger)
-
-	// If the object already exists we can update it
-	if !errors.IsNotFound(err) {
-		reqLogger.Info("    => Updating "+reflect.TypeOf(prereqAsMetaObject).Elem().String(), "namespace", prereqAsMetaObject.GetNamespace(), "name", prereqAsMetaObject.GetName())
-		err = client.Update(context.TODO(), object)
-	}
-	return nil
-}
-
-// SyncObject synchronizes runtime objects but does not change/updating existing ones
-func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logger) error {
-	prereqAsMetaObject, isMeta := object.(metav1.Object)
-	if !isMeta {
-		return errors.NewBadRequest("Converted objects are not valid K8s objects")
-	}
-
-	reqLogger.V(1).Info("Managing K8s Object", "kind", reflect.TypeOf(object).Elem().String(), "name", prereqAsMetaObject.GetName())
-
-	found := reflect.New(reflect.TypeOf(object).Elem()).Interface().(runtime.Object)
-	err := client.Get(context.TODO(), types.NamespacedName{Name: prereqAsMetaObject.GetName(), Namespace: prereqAsMetaObject.GetNamespace()}, found)
-	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("    => Creating "+reflect.TypeOf(prereqAsMetaObject).Elem().String(), "namespace", prereqAsMetaObject.GetNamespace(), "name", prereqAsMetaObject.GetName())
-		err = client.Create(context.TODO(), object)
+		didChange, err := SyncObject(object, client, reqLogger, true)
 		if err != nil {
-			return err
+			return false, err
 		}
-	} else if err != nil {
-		return err
+		didAnyChange = didAnyChange || didChange
 	}
-	return nil
+	return didAnyChange, nil
+}
+
+// SyncObject synchronizes a runtime object and changes/updates existing ones
+func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logger, update bool) (didChange bool, apiErr error) {
+	objMeta, isMeta := object.(metav1.Object)
+	if !isMeta {
+		return false, errors.NewBadRequest("Converted objects are not valid K8s objects")
+	}
+
+	objType := reflect.TypeOf(object).Elem()
+
+	reqLogger.V(1).Info("Managing K8s Object", "kind", objType.String(), "name", objMeta.GetName())
+
+	found := reflect.New(objType).Interface().(runtime.Object)
+	err := client.Get(context.TODO(), types.NamespacedName{Name: objMeta.GetName(), Namespace: objMeta.GetNamespace()}, found)
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return false, err
+		}
+		reqLogger.Info("    => Creating "+objType.String(), "namespace", objMeta.GetNamespace(), "name", objMeta.GetName())
+		createErr := client.Create(context.TODO(), object)
+		if errors.IsAlreadyExists(createErr) {
+			fmt.Println("Suppressing alreadyExists in ", objType.String())
+			return true, nil
+		}
+		return true, createErr
+	}
+	if !update {
+		return false, nil
+	}
+
+	diffOpt, ok := diffOpts[objType]
+	if !ok {
+		reqLogger.V(0).Info("WARN: Could not get diff options for element " + objType.String())
+		diffOpt = cmp.Options{}
+	}
+	if !cmp.Equal(object, found, diffOpt) {
+		reqLogger.Info("    => Updating "+objType.String(), "namespace", objMeta.GetNamespace(), "name", objMeta.GetName())
+		updateErr := client.Update(context.TODO(), object)
+		if errors.IsConflict(updateErr) {
+			fmt.Println("Suppressing conflict in ", objType.String())
+			return true, nil
+		}
+		return true, updateErr
+	}
+	return false, nil
 }

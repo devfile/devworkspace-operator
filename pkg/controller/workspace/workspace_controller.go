@@ -211,12 +211,14 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
 	}
 
-	if err := provision.SyncPVC(workspace, componentDescriptions, r.client, reqLogger); err != nil {
-		return reconcile.Result{}, err
+	pvcStatus := provision.SyncPVC(workspace, componentDescriptions, r.client, reqLogger)
+	if pvcStatus.Err != nil || !pvcStatus.Continue {
+		return reconcile.Result{Requeue: true}, err
 	}
 
-	if err := provision.SyncRBAC(workspace, r.client, reqLogger); err != nil {
-		return reconcile.Result{}, err
+	rbacStatus := provision.SyncRBAC(workspace, r.client, reqLogger)
+	if rbacStatus.Err != nil || !rbacStatus.Continue {
+		return reconcile.Result{Requeue: true}, err
 	}
 
 	// Step two: Create routing, and wait for routing to be ready

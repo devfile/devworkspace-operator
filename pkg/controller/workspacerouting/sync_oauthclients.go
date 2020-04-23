@@ -31,6 +31,9 @@ var oauthClientDiffOpts = cmp.Options{
 }
 
 func (r *ReconcileWorkspaceRouting) syncOAuthClient(routing *v1alpha1.WorkspaceRouting, oauthClientSpec *oauthv1.OAuthClient) (ok bool, err error) {
+	if !config.ControllerCfg.IsOpenShift() {
+		return true, nil
+	}
 	oauthClientInSync := true
 
 	clusterOAuthClients, err := r.getClusterOAuthClients(routing)

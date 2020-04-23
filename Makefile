@@ -114,7 +114,7 @@ ifeq ($(TOOL),oc)
 		-n che-workspace-controller \
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
 else
-	kubectl rollout restart -n $(NAMESPACE) che-workspace-controller
+	kubectl rollout restart -n $(NAMESPACE) deployment/che-workspace-controller
 endif
 
 _do_uninstall:

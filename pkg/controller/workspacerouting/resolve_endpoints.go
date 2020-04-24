@@ -14,6 +14,7 @@ package workspacerouting
 
 import (
 	"fmt"
+	"strings"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
@@ -34,7 +35,7 @@ func getExposedEndpoints(
 			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
 				continue
 			}
-			url, err := getURLforEndpoint(endpoint, ingresses, routes)
+			url, err := resolveURLForEndpoint(endpoint, ingresses, routes)
 			if err != nil {
 				return nil, false, err
 			}
@@ -51,31 +52,37 @@ func getExposedEndpoints(
 	return exposedEndpoints, ready, nil
 }
 
-func getURLforEndpoint(
+func resolveURLForEndpoint(
 	endpoint workspacev1alpha1.Endpoint,
 	ingresses []v1beta1.Ingress,
 	routes []routeV1.Route) (string, error) {
 	for _, route := range routes {
 		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
-			protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
-			if endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" &&
-				route.Spec.TLS != nil {
-				protocol = getSecureProtocol(protocol)
-			}
-			url := fmt.Sprintf("%s://%s", protocol, route.Spec.Host)
-			return url, nil
+			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.TLS != nil), nil
 		}
 	}
 	for _, ingress := range ingresses {
 		if ingress.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
 			if len(ingress.Spec.Rules) == 1 {
-				protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
-				url := fmt.Sprintf("%s://%s", protocol, ingress.Spec.Rules[0].Host)
-				return url, nil
+				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, false), nil // no TLS supported for ingresses yet
 			} else {
 				return "", fmt.Errorf("ingress %s contains multiple rules", ingress.Name)
 			}
 		}
 	}
 	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
+}
+
+func getURLForEndpoint(endpoint workspacev1alpha1.Endpoint, host string, secure bool) string {
+	protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
+	if secure && endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
+		protocol = getSecureProtocol(protocol)
+	}
+	path := endpoint.Attributes[workspacev1alpha1.PATH_ENDPOINT_ATTRIBUTE]
+	if path != "" {
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+	}
+	return fmt.Sprintf("%s://%s%s", protocol, host, path)
 }

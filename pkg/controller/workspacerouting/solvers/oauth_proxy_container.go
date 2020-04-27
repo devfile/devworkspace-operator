@@ -75,12 +75,25 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 			"--upstream=http://localhost:" + strconv.FormatInt(proxyEndpoint.upstreamEndpoint.Port, 10),
 			"--tls-cert=/etc/tls/private/tls.crt",
 			"--tls-key=/etc/tls/private/tls.key",
-			"--cookie-secret=0123456789abcdefabcd",
+			"--cookie-secret=$(cookiesecret)",
 			"--client-id=" + meta.WorkspaceId + "-oauth-client",
 			"--client-secret=1234567890",
 			"--pass-user-bearer-token=false",
 			"--pass-access-token=true",
 			"--scope=user:full",
+		},
+		Env: []corev1.EnvVar{
+			{
+				Name: "cookiesecret",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						Key: "openshift-oauth-cookie-secret",
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: common.SecretStore(meta.WorkspaceId),
+						},
+					},
+				},
+			},
 		},
 	}
 }

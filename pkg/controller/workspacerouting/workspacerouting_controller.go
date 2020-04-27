@@ -16,6 +16,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
+
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
@@ -160,6 +162,10 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		instance.Status.Phase = workspacev1alpha1.RoutingFailed
 		statusErr := r.client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, statusErr
+	}
+
+	if err := provision.CreateAndSyncSecret("openshift-oauth-cookie-secret", instance.Spec.WorkspaceId, r.client, reqLogger); err != nil {
+		return reconcile.Result{}, err
 	}
 
 	routingObjects := solver.GetSpecObjects(instance.Spec, workspaceMeta)

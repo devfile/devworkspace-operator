@@ -58,3 +58,7 @@ func PluginBrokerConfigmapName(workspaceId string) string {
 func OAuthProxySecretName(workspaceId string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, "proxy-tls")
 }
+
+func SecretStore(workspaceId string) string {
+	return fmt.Sprintf("%s-%s", workspaceId, "secret-store")
+}

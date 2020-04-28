@@ -44,6 +44,13 @@ rules:
   - create
   - update
 - apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  verbs:
+  - list
+  - get
+- apiGroups:
   - apps
   resources:
   - deployments
@@ -59,13 +66,35 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - ""
   - route.openshift.io
   resources:
   - routes
-  - routes/custom-host
   verbs:
   - create
   - delete
+  - deleteCollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  - route.openshift.io
+  resources:
+  - routes/custom-host
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  - route.openshift.io
+  resources:
+  - routes/status
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - monitoring.coreos.com
   resources:

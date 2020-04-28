@@ -20,3 +20,5 @@ spec:
         env:
           - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
             name: PS1
+          - name: KUBECONFIG
+            value: /tmp/.kube/config

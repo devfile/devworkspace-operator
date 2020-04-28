@@ -134,9 +134,18 @@ func getSpecDeployment(
 		return nil, err
 	}
 
+	kubeConfigPath := findKubeConfigPath(workspace)
+	// Kubeconfig env var was found
+	if kubeConfigPath != "" {
+		podAdditions.Volumes = append(podAdditions.Volumes, getKubeConfigVolume())
+	}
+
 	commonEnv := env.CommonEnvironmentVariables(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
 	for idx := range podAdditions.Containers {
 		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, commonEnv...)
+		if kubeConfigPath != "" {
+			podAdditions.Containers[idx].VolumeMounts = append(podAdditions.Containers[idx].VolumeMounts, kubeConfigVolumeMount(kubeConfigPath))
+		}
 	}
 	for idx := range podAdditions.InitContainers {
 		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, commonEnv...)
@@ -286,6 +295,34 @@ func getPersistentVolumeClaim() corev1.Volume {
 		},
 	}
 	return pvcVolume
+}
+
+func findKubeConfigPath(workspace *v1alpha1.Workspace) string {
+	for _, comp := range workspace.Spec.Devfile.Components {
+		for _, env := range comp.Env {
+			if env.Name == "KUBECONFIG" {
+				return env.Value
+			}
+		}
+	}
+	return ""
+}
+
+func kubeConfigVolumeMount(kubeConfigPath string) corev1.VolumeMount {
+	return corev1.VolumeMount{
+		MountPath: strings.Replace(kubeConfigPath, "/config", "", 1),
+		Name:      "kubeconfig",
+		ReadOnly:  false,
+	}
+}
+
+func getKubeConfigVolume() corev1.Volume {
+	return corev1.Volume{
+		Name: "kubeconfig",
+		VolumeSource: corev1.VolumeSource{
+			EmptyDir: &corev1.EmptyDirVolumeSource{},
+		},
+	}
 }
 
 func precreateSubpathsInitContainer(workspaceId string) corev1.Container {

@@ -26,3 +26,6 @@ spec:
      image: "quay.io/eclipse/che-machine-exec:nightly"
      ports:
        - exposedPort: 4444
+     env:
+       - name: KUBECONFIG
+         value: /tmp/.kube/config

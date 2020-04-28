@@ -108,6 +108,9 @@ const (
 	//endpoint attribute that indicates which protocol is used by backend application
 	PROTOCOL_ENDPOINT_ATTRIBUTE EndpointAttribute = "protocol"
 
+	//endpoint attribute that indicates which path should be used by default to access an application
+	PATH_ENDPOINT_ATTRIBUTE EndpointAttribute = "path"
+
 	DISCOVERABLE_ATTRIBUTE EndpointAttribute = "discoverable"
 )
 

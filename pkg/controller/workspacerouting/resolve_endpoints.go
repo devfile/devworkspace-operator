@@ -14,7 +14,7 @@ package workspacerouting
 
 import (
 	"fmt"
-	"strings"
+	"net/url"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
@@ -79,10 +79,10 @@ func getURLForEndpoint(endpoint workspacev1alpha1.Endpoint, host string, secure 
 		protocol = getSecureProtocol(protocol)
 	}
 	path := endpoint.Attributes[workspacev1alpha1.PATH_ENDPOINT_ATTRIBUTE]
-	if path != "" {
-		if !strings.HasPrefix(path, "/") {
-			path = "/" + path
-		}
+	u := url.URL{
+		Scheme: protocol,
+		Host:   host,
+		Path:   path,
 	}
-	return fmt.Sprintf("%s://%s%s", protocol, host, path)
+	return u.String()
 }

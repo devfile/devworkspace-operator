@@ -211,11 +211,13 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, statusErr
 	}
 
-	oauthClient := routingObjects.OAuthClient
-	oauthClientInSync, err := r.syncOAuthClient(instance, oauthClient)
-	if err != nil || !oauthClientInSync {
-		reqLogger.Info("OAuthClient not in sync")
-		return reconcile.Result{Requeue: true}, err
+	if config.ControllerCfg.IsOpenShift() {
+		oauthClient := routingObjects.OAuthClient
+		oauthClientInSync, err := r.syncOAuthClient(instance, oauthClient)
+		if err != nil || !oauthClientInSync {
+			reqLogger.Info("OAuthClient not in sync")
+			return reconcile.Result{Requeue: true}, err
+		}
 	}
 
 	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsAreReady)

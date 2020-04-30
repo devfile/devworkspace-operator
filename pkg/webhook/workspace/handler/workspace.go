@@ -45,6 +45,10 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+	immutable := oldWksp.Annotations[config.WorkspaceImmutableAnnotation]
+	if immutable == "true" {
+		return admission.Denied(fmt.Sprintf("workspace '%s' is immutable. To make modifications it must be deleted and recreated", oldWksp.Name))
+	}
 
 	oldCreator, found := oldWksp.Annotations[config.WorkspaceCreatorAnnotation]
 	if !found {

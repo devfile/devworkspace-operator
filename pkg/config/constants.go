@@ -52,6 +52,8 @@ const (
 	CheOriginalNameLabel = "che.original_name"
 
 	WorkspaceCreatorAnnotation = "org.eclipse.che.workspace/creator"
+
+	WorkspaceImmutableAnnotation = "org.eclipse.che.workspace/immutable"
 )
 
 // Constants for che-rest-apis

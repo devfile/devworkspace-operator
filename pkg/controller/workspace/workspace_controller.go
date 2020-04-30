@@ -195,6 +195,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return r.updateWorkspaceStatus(workspace, clusterAPI, &reconcileStatus, reconcileResult, err)
 	}()
 
+	immutable := workspace.Annotations[config.WorkspaceImmutableAnnotation]
+	if immutable == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
+		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")
+		reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+		return reconcile.Result{}, nil
+	}
+
 	// Step one: Create components, and wait for their states to be ready.
 	componentsStatus := provision.SyncComponentsToCluster(workspace, clusterAPI)
 	if !componentsStatus.Continue {

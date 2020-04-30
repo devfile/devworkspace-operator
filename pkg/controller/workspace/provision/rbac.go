@@ -35,7 +35,7 @@ func generateRBAC(namespace string) []runtime.Object {
 	return []runtime.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "exec",
+				Name:      "workspace",
 				Namespace: namespace,
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -44,32 +44,26 @@ func generateRBAC(namespace string) []runtime.Object {
 					APIGroups: []string{""},
 					Verbs:     []string{"create"},
 				},
-			},
-		},
-		&rbacv1.RoleBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ServiceAccount + "-view",
-				Namespace: namespace,
-			},
-			RoleRef: rbacv1.RoleRef{
-				Kind: "ClusterRole",
-				Name: "view",
-			},
-			Subjects: []rbacv1.Subject{
 				{
-					Kind: "Group",
-					Name: "system:serviceaccounts:" + namespace,
+					Resources: []string{"pods"},
+					APIGroups: []string{""},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					Resources: []string{"deployments", "replicasets"},
+					APIGroups: []string{"apps", "extensions"},
+					Verbs:     []string{"get", "list", "watch"},
 				},
 			},
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ServiceAccount + "-exec",
+				Name:      config.ServiceAccount + "-workspace",
 				Namespace: namespace,
 			},
 			RoleRef: rbacv1.RoleRef{
 				Kind: "Role",
-				Name: "exec",
+				Name: "workspace",
 			},
 			Subjects: []rbacv1.Subject{
 				{

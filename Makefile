@@ -129,6 +129,7 @@ ifneq ($(TOOL) get workspaces.workspace.che.eclipse.org --all-namespaces,"No res
 	$(error Cannot uninstall operator, workspaces still running. Delete all workspaces and workspaceroutings before proceeding)
 endif
 endif
+	$(TOOL) delete -f ./deploy
 	$(TOOL) delete namespace $(NAMESPACE)
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.workspace.che.eclipse.org

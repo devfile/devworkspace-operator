@@ -50,13 +50,13 @@ rules:
   verbs:
   - list
   - get
+  - watch
 - apiGroups:
   - apps
+  - extensions
   resources:
   - deployments
-  - daemonsets
   - replicasets
-  - statefulsets
   verbs:
   - '*'
 - apiGroups:

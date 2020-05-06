@@ -19,6 +19,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/che-incubator/che-workspace-operator/pkg/common"
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
@@ -181,6 +185,10 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{Requeue: true}, err
 	}
 
+	if !workspace.Spec.Started {
+		return r.stopWorkspace(workspace, reqLogger)
+	}
+
 	if workspace.Status.Phase == workspacev1alpha1.WorkspaceStatusFailed {
 		// TODO: Figure out when workspace spec is changed and clear failed status to allow reconcile to continue
 		reqLogger.Info("Workspace startup is failed; not attempting to update.")
@@ -192,7 +200,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		Phase: workspacev1alpha1.WorkspaceStatusStarting,
 	}
 	defer func() (reconcile.Result, error) {
-		return r.updateWorkspaceStatus(workspace, clusterAPI, &reconcileStatus, reconcileResult, err)
+		return r.updateWorkspaceStatus(workspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
 	// Step one: Create components, and wait for their states to be ready.
@@ -300,6 +308,43 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 
 	reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusRunning
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileWorkspace) stopWorkspace(workspace *workspacev1alpha1.Workspace, logger logr.Logger) (reconcile.Result, error) {
+	workspaceDeployment := &appsv1.Deployment{}
+	namespaceName := types.NamespacedName{
+		Name:      common.DeploymentName(workspace.Status.WorkspaceId),
+		Namespace: workspace.Namespace,
+	}
+	status := &currentStatus{}
+	err := r.client.Get(context.TODO(), namespaceName, workspaceDeployment)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			status.Phase = workspacev1alpha1.WorkspaceStatusStopped
+			return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
+		}
+		return reconcile.Result{}, err
+	}
+
+	status.Phase = workspacev1alpha1.WorkspaceStatusStopping
+	replicas := workspaceDeployment.Spec.Replicas
+	if replicas == nil || *replicas > 0 {
+		logger.Info("Stopping workspace")
+		patch := client.MergeFrom(workspaceDeployment.DeepCopy())
+		var replicasZero int32 = 0
+		workspaceDeployment.Spec.Replicas = &replicasZero
+		err = r.client.Patch(context.TODO(), workspaceDeployment, patch)
+		if err != nil && !errors.IsConflict(err) {
+			return reconcile.Result{}, err
+		}
+		return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
+	}
+
+	if workspaceDeployment.Status.Replicas == 0 {
+		logger.Info("Workspace stopped")
+		status.Phase = workspacev1alpha1.WorkspaceStatusStopped
+	}
+	return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
 }
 
 func getWorkspaceId(instance *workspacev1alpha1.Workspace) (string, error) {

@@ -61,6 +61,7 @@ const (
 	WorkspaceStatusStarting WorkspacePhase = "Starting"
 	WorkspaceStatusRunning  WorkspacePhase = "Running"
 	WorkspaceStatusStopped  WorkspacePhase = "Stopped"
+	WorkspaceStatusStopping WorkspacePhase = "Stopping"
 	WorkspaceStatusFailed   WorkspacePhase = "Failed"
 )
 

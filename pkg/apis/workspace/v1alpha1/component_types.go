@@ -56,7 +56,7 @@ type Component struct {
 type ComponentList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items []Component `json:"items"`
+	Items           []Component `json:"items"`
 }
 
 func init() {

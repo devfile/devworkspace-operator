@@ -13,6 +13,8 @@ package handler
 import (
 	"context"
 	"fmt"
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"net/http"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
@@ -47,7 +49,7 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 	}
 	immutable := oldWksp.Annotations[config.WorkspaceImmutableAnnotation]
 	if immutable == "true" {
-		return admission.Denied(fmt.Sprintf("workspace '%s' is immutable. To make modifications it must be deleted and recreated", oldWksp.Name))
+		return h.handleImmutableWorkspace(oldWksp, newWksp)
 	}
 
 	oldCreator, found := oldWksp.Annotations[config.WorkspaceCreatorAnnotation]
@@ -66,4 +68,11 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 	}
 
 	return admission.Allowed("new workspace has the same workspace as old one")
+}
+
+func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *v1alpha1.Workspace) admission.Response {
+	if cmp.Equal(oldWksp, newWksp, cmpopts.IgnoreFields(v1alpha1.WorkspaceSpec{}, "Started")) {
+		return admission.Allowed("immutable workspace is started/stopped")
+	}
+	return admission.Denied(fmt.Sprintf("workspace '%s' is immutable. To make modifications it must be deleted and recreated", oldWksp.Name))
 }

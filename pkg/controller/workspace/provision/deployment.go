@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/che-incubator/che-workspace-operator/pkg/common"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/env"
@@ -144,7 +146,7 @@ func getSpecDeployment(
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      workspace.Status.WorkspaceId,
+			Name:      common.DeploymentName(workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,

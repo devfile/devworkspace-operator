@@ -18,6 +18,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-logr/logr"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +32,10 @@ import (
 // This variable makes it easier to test conditions.
 var clock kubeclock.Clock = &kubeclock.RealClock{}
 
-func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace, clusterAPI provision.ClusterAPI, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+// updateWorkspaceStatus updates the current workspace's status field with conditions and phase from the passed in status.
+// Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
+// updating the status.
+func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
 	workspace.Status.Phase = status.Phase
 	currTransitionTime := metav1.Time{Time: clock.Now()}
 	for _, conditionType := range status.Conditions {
@@ -63,7 +68,7 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 
 	err := r.client.Status().Update(context.TODO(), workspace)
 	if err != nil {
-		clusterAPI.Logger.Info(fmt.Sprintf("Error updating workspace status: %s", err))
+		logger.Info(fmt.Sprintf("Error updating workspace status: %s", err))
 		if reconcileError == nil {
 			reconcileError = err
 		}

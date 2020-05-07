@@ -177,6 +177,7 @@ generate:
 ifeq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
 	operator-sdk generate k8s
 	operator-sdk generate crds
+	patch/patch_crds.sh
 else
 	$(error operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used during CRDs and k8s objects generating while $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found)
 endif

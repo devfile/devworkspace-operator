@@ -185,7 +185,7 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		}
 	}
 
-	servicesInSync, err := r.syncServices(instance, services)
+	servicesInSync, clusterServices, err := r.syncServices(instance, services)
 	if err != nil || !servicesInSync {
 		reqLogger.Info("Services not in sync")
 		return reconcile.Result{Requeue: true}, err
@@ -203,7 +203,12 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	exposedEndpoints, endpointsAreReady, err := getExposedEndpoints(instance.Spec.Endpoints, clusterIngresses, clusterRoutes)
+	clusterRoutingObj := solvers.RoutingObjects{
+		Services:  clusterServices,
+		Ingresses: clusterIngresses,
+		Routes:    clusterRoutes,
+	}
+	exposedEndpoints, endpointsAreReady, err := solver.GetExposedEndpoints(instance.Spec.Endpoints, clusterRoutingObj)
 	if err != nil {
 		reqLogger.Error(err, "Could not get exposed endpoints for workspace")
 		instance.Status.Phase = workspacev1alpha1.RoutingFailed
@@ -289,6 +294,8 @@ func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingCla
 		return &solvers.BasicSolver{}, nil
 	case workspacev1alpha1.WorkspaceRoutingOpenShiftOauth:
 		return &solvers.OpenShiftOAuthSolver{}, nil
+	case workspacev1alpha1.WorkspaceRoutingCluster:
+		return &solvers.ClusterSolver{}, nil
 	default:
 		return nil, fmt.Errorf("routing class %s not supported", routingClass)
 	}
@@ -306,19 +313,6 @@ func isFinalizerNecessary(routing *workspacev1alpha1.WorkspaceRouting) bool {
 		return false
 	default:
 		return false
-	}
-}
-
-// getSecureProtocol takes a (potentially unsecure protocol e.g. http) and returns the secure version (e.g. https).
-// If protocol isn't recognized, it is returned unmodified.
-func getSecureProtocol(protocol string) string {
-	switch protocol {
-	case "ws":
-		return "wss"
-	case "http":
-		return "https"
-	default:
-		return protocol
 	}
 }
 

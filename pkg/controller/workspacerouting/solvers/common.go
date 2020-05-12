@@ -51,6 +51,9 @@ func getDiscoverableServicesForEndpoints(endpoints map[string]v1alpha1.EndpointL
 						Labels: map[string]string{
 							config.WorkspaceIDLabel: meta.WorkspaceId,
 						},
+						Annotations: map[string]string{
+							config.WorkspaceDiscoverableServiceAnnotation: "true",
+						},
 					},
 					Spec: corev1.ServiceSpec{
 						Ports:    []corev1.ServicePort{servicePort},

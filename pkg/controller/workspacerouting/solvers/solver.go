@@ -30,4 +30,5 @@ type RoutingObjects struct {
 
 type RoutingSolver interface {
 	GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec, workspaceMeta WorkspaceMetadata) RoutingObjects
+	GetExposedEndpoints(endpoints map[string]v1alpha1.EndpointList, routingObj RoutingObjects) (exposedEndpoints map[string]v1alpha1.ExposedEndpointList, ready bool, err error)
 }

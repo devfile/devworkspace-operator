@@ -145,7 +145,7 @@ webhook:
 ifeq ($(WEBHOOK_ENABLED),true)
 ifeq ($(TOOL),kubectl)
 	./deploy/webhook-server-certs/deploy-webhook-server-certs.sh kubectl
-	kubectl patch deployment che-workspace-controller -p "$$(cat ./deploy/k8s/controller-tls.yaml)"
+	kubectl patch deployment -n $(NAMESPACE) che-workspace-controller -p "$$(cat ./deploy/k8s/controller-tls.yaml)"
 endif
 else
 	@echo "Webhooks disabled, skipping certificate generation"

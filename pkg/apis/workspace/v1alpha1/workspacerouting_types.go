@@ -36,6 +36,7 @@ type WorkspaceRoutingClass string
 const (
 	WorkspaceRoutingDefault        WorkspaceRoutingClass = "basic"
 	WorkspaceRoutingOpenShiftOauth WorkspaceRoutingClass = "openshift-oauth"
+	WorkspaceRoutingCluster        WorkspaceRoutingClass = "cluster"
 )
 
 // WorkspaceRoutingStatus defines the observed state of WorkspaceRouting

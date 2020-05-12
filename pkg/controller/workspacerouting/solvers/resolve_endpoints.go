@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspacerouting
+package solvers
 
 import (
 	"fmt"
@@ -18,14 +18,11 @@ import (
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	routeV1 "github.com/openshift/api/route/v1"
-	"k8s.io/api/extensions/v1beta1"
 )
 
 func getExposedEndpoints(
 	endpoints map[string]workspacev1alpha1.EndpointList,
-	ingresses []v1beta1.Ingress,
-	routes []routeV1.Route) (exposedEndpoints map[string]workspacev1alpha1.ExposedEndpointList, ready bool, err error) {
+	routingObj RoutingObjects) (exposedEndpoints map[string]workspacev1alpha1.ExposedEndpointList, ready bool, err error) {
 
 	exposedEndpoints = map[string]workspacev1alpha1.ExposedEndpointList{}
 	ready = true
@@ -35,7 +32,7 @@ func getExposedEndpoints(
 			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
 				continue
 			}
-			url, err := resolveURLForEndpoint(endpoint, ingresses, routes)
+			url, err := resolveURLForEndpoint(endpoint, routingObj)
 			if err != nil {
 				return nil, false, err
 			}
@@ -54,14 +51,13 @@ func getExposedEndpoints(
 
 func resolveURLForEndpoint(
 	endpoint workspacev1alpha1.Endpoint,
-	ingresses []v1beta1.Ingress,
-	routes []routeV1.Route) (string, error) {
-	for _, route := range routes {
+	routingObj RoutingObjects) (string, error) {
+	for _, route := range routingObj.Routes {
 		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
 			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.TLS != nil), nil
 		}
 	}
-	for _, ingress := range ingresses {
+	for _, ingress := range routingObj.Ingresses {
 		if ingress.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
 			if len(ingress.Spec.Rules) == 1 {
 				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, false), nil // no TLS supported for ingresses yet
@@ -85,4 +81,17 @@ func getURLForEndpoint(endpoint workspacev1alpha1.Endpoint, host string, secure 
 		Path:   path,
 	}
 	return u.String()
+}
+
+// getSecureProtocol takes a (potentially unsecure protocol e.g. http) and returns the secure version (e.g. https).
+// If protocol isn't recognized, it is returned unmodified.
+func getSecureProtocol(protocol string) string {
+	switch protocol {
+	case "ws":
+		return "wss"
+	case "http":
+		return "https"
+	default:
+		return protocol
+	}
 }

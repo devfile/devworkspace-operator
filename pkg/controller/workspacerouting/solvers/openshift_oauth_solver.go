@@ -84,6 +84,12 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec
 	}
 }
 
+func (s *OpenShiftOAuthSolver) GetExposedEndpoints(
+	endpoints map[string]v1alpha1.EndpointList,
+	routingObj RoutingObjects) (exposedEndpoints map[string]v1alpha1.ExposedEndpointList, ready bool, err error) {
+	return getExposedEndpoints(endpoints, routingObj)
+}
+
 func (s *OpenShiftOAuthSolver) getProxyRoutes(
 	endpoints map[string]v1alpha1.EndpointList,
 	workspaceMeta WorkspaceMetadata,

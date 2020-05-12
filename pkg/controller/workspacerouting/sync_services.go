@@ -36,19 +36,19 @@ var serviceDiffOpts = cmp.Options{
 	}),
 }
 
-func (r *ReconcileWorkspaceRouting) syncServices(routing *v1alpha1.WorkspaceRouting, specServices []corev1.Service) (ok bool, err error) {
+func (r *ReconcileWorkspaceRouting) syncServices(routing *v1alpha1.WorkspaceRouting, specServices []corev1.Service) (ok bool, clusterServices []corev1.Service, err error) {
 	servicesInSync := true
 
-	clusterServices, err := r.getClusterServices(routing)
+	clusterServices, err = r.getClusterServices(routing)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	toDelete := getServicesToDelete(clusterServices, specServices)
 	for _, service := range toDelete {
 		err := r.client.Delete(context.TODO(), &service)
 		if err != nil {
-			return false, err
+			return false, nil, err
 		}
 		servicesInSync = false
 	}
@@ -63,20 +63,20 @@ func (r *ReconcileWorkspaceRouting) syncServices(routing *v1alpha1.WorkspaceRout
 				clusterService.Spec.ClusterIP = clusterIP
 				err := r.client.Update(context.TODO(), &clusterService)
 				if err != nil && !errors.IsConflict(err) {
-					return false, err
+					return false, nil, err
 				}
 				servicesInSync = false
 			}
 		} else {
 			err := r.client.Create(context.TODO(), &specService)
 			if err != nil {
-				return false, err
+				return false, nil, err
 			}
 			servicesInSync = false
 		}
 	}
 
-	return servicesInSync, nil
+	return servicesInSync, clusterServices, nil
 }
 
 func (r *ReconcileWorkspaceRouting) getClusterServices(routing *v1alpha1.WorkspaceRouting) ([]corev1.Service, error) {

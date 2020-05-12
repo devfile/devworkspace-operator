@@ -37,3 +37,9 @@ func (s *BasicSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec, workspa
 		Routes:    routes,
 	}
 }
+
+func (s *BasicSolver) GetExposedEndpoints(
+	endpoints map[string]v1alpha1.EndpointList,
+	routingObj RoutingObjects) (exposedEndpoints map[string]v1alpha1.ExposedEndpointList, ready bool, err error) {
+	return getExposedEndpoints(endpoints, routingObj)
+}

@@ -33,12 +33,6 @@ const (
 	SidecarDefaultMemoryLimit = "128M"
 	PVCStorageSize            = "1Gi"
 
-	// RuntimeAdditionalInfo is a key of workspaceStatus.AdditionalInfo where runtime info is stored
-	RuntimeAdditionalInfo = "org.eclipse.che.workspace/runtime"
-
-	// RuntimeAdditionalInfo is a key of workspaceStatus.AdditionalInfo info where component statuses info is stored
-	ComponentStatusesAdditionalInfo = "org.eclipse.che.workspace/componentstatuses"
-
 	// WorkspaceIDLabel is label key to store workspace identifier
 	WorkspaceIDLabel = "che.workspace_id"
 
@@ -51,9 +45,15 @@ const (
 	// CheOriginalNameLabel is label key to original name
 	CheOriginalNameLabel = "che.original_name"
 
+	// WorkspaceCreatorLabel is the annotation key for storing the UID of the user who created the workspace
 	WorkspaceCreatorLabel = "org.eclipse.che.workspace/creator"
 
+	// WorkspaceImmutableAnnotation marks a workspace as 'immutable' if 'true'
 	WorkspaceImmutableAnnotation = "org.eclipse.che.workspace/immutable"
+
+	// WorkspaceDiscoverableServiceAnnotation marks a service in a workspace as created for a discoverable endpoint,
+	// as opposed to a service created to support the workspace itself.
+	WorkspaceDiscoverableServiceAnnotation = "org.eclipse.che.workspace/discoverable-service"
 )
 
 // Constants for che-rest-apis

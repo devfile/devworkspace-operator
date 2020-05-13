@@ -1,0 +1,19 @@
+--- /home/joshpinkney/Documents/Work/che-workspace-operator/olm/eclipse-che-preview-kubernetes/deploy/olm-catalog/eclipse-che-preview-kubernetes/9.9.9-nightly.1589334995/eclipse-che-preview-kubernetes.v9.9.9-nightly.1589334995.clusterserviceversion.yaml	2020-05-12 21:56:39.349905549 -0400
++++ /home/joshpinkney/Documents/Work/che-workspace-operator/olm/eclipse-che-preview-kubernetes/deploy/olm-catalog/eclipse-che-preview-kubernetes/9.9.9-nightly.1589335389/eclipse-che-preview-kubernetes.v9.9.9-nightly.1589335389.clusterserviceversion.yaml	2020-05-12 22:03:12.453888872 -0400
+@@ -3,7 +3,7 @@
+ metadata:
+   annotations:
+     capabilities: Basic Install
+-  name: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589334995
++  name: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589335389
+   namespace: placeholder
+ spec:
+   apiservicedefinitions: {}
+@@ -196,5 +196,5 @@
+     type: AllNamespaces
+   maturity: alpha
+   provider: {}
+-  replaces: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589334939
+-  version: 9.9.9-nightly.1589334995
++  replaces: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589334995
++  version: 9.9.9-nightly.1589335389

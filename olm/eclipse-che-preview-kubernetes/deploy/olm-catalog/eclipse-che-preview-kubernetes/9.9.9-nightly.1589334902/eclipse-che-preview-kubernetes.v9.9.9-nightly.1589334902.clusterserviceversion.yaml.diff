@@ -1,0 +1,379 @@
+--- /home/joshpinkney/Documents/Work/che-workspace-operator/olm/eclipse-che-preview-kubernetes/deploy/olm-catalog/eclipse-che-preview-kubernetes/9.9.9-nightly.1589313631/eclipse-che-preview-kubernetes.v9.9.9-nightly.1589313631.clusterserviceversion.yaml	2020-05-12 16:09:35.195085588 -0400
++++ /home/joshpinkney/Documents/Work/che-workspace-operator/olm/eclipse-che-preview-kubernetes/deploy/olm-catalog/eclipse-che-preview-kubernetes/9.9.9-nightly.1589334902/eclipse-che-preview-kubernetes.v9.9.9-nightly.1589334902.clusterserviceversion.yaml	2020-05-12 21:55:06.620909483 -0400
+@@ -3,197 +3,198 @@
+ metadata:
+   annotations:
+     capabilities: Basic Install
+-  name: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589313631
++  name: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589334902
+   namespace: placeholder
+ spec:
+   apiservicedefinitions: {}
+   customresourcedefinitions:
+     owned:
+-      - kind: Component
+-        name: components.workspace.che.eclipse.org
+-        version: v1alpha1
+-      - kind: WorkspaceRouting
+-        name: workspaceroutings.workspace.che.eclipse.org
+-        version: v1alpha1
+-      - kind: Workspace
+-        name: workspaces.workspace.che.eclipse.org
+-        version: v1alpha1
++    - kind: Component
++      name: components.workspace.che.eclipse.org
++      version: v1alpha1
++    - kind: WorkspaceRouting
++      name: workspaceroutings.workspace.che.eclipse.org
++      version: v1alpha1
++    - kind: Workspace
++      name: workspaces.workspace.che.eclipse.org
++      version: v1alpha1
+   description: Placeholder description
+   displayName: Eclipse Che Preview Kubernetes
+   install:
+     spec:
+       clusterPermissions:
+-        - rules:
+-            - apiGroups:
+-                - ""
+-              resources:
+-                - pods
+-                - services
+-                - endpoints
+-                - persistentvolumeclaims
+-                - events
+-                - configmaps
+-                - secrets
+-              verbs:
+-                - "*"
+-            - apiGroups:
+-                - ""
+-              resources:
+-                - namespaces
+-              verbs:
+-                - get
+-            - apiGroups:
+-                - ""
+-              resources:
+-                - serviceaccounts
+-              verbs:
+-                - watch
+-                - list
+-                - get
+-                - create
+-                - update
+-                - patch
+-            - apiGroups:
+-                - rbac.authorization.k8s.io
+-              resources:
+-                - roles
+-                - rolebindings
+-              verbs:
+-                - watch
+-                - list
+-                - get
+-                - create
+-                - update
+-            - apiGroups:
+-                - rbac.authorization.k8s.io
+-              resources:
+-                - clusterroles
+-              verbs:
+-                - list
+-                - get
+-                - watch
+-            - apiGroups:
+-                - apps
+-                - extensions
+-              resources:
+-                - deployments
+-                - replicasets
+-              verbs:
+-                - "*"
+-            - apiGroups:
+-                - extensions
+-              resources:
+-                - ingresses
+-              verbs:
+-                - "*"
+-            - apiGroups:
+-                - monitoring.coreos.com
+-              resources:
+-                - servicemonitors
+-              verbs:
+-                - get
+-                - create
+-            - apiGroups:
+-                - apps
+-              resourceNames:
+-                - che-workspace-controller
+-              resources:
+-                - deployments/finalizers
+-              verbs:
+-                - update
+-            - apiGroups:
+-                - workspace.che.eclipse.org
+-              resources:
+-                - "*"
+-                - workspaceroutings
+-              verbs:
+-                - "*"
+-            - apiGroups:
+-                - ""
+-              resources:
+-                - pods/exec
+-              verbs:
+-                - create
+-            - apiGroups:
+-                - admissionregistration.k8s.io
+-              resources:
+-                - mutatingwebhookconfigurations
+-                - validatingwebhookconfigurations
+-              verbs:
+-                - "*"
+-            - apiGroups:
+-                - oauth.openshift.io
+-              resources:
+-                - oauthclients
+-              verbs:
+-                - create
+-                - get
+-                - delete
+-                - list
+-                - patch
+-                - update
+-                - watch
+-                - deletecollection
+-          serviceAccountName: che-workspace-controller
+-        - rules:
+-            - apiGroups:
+-                - workspace.che.eclipse.org
+-              resources:
+-                - workspaces
+-                - workspaceroutings
+-                - components
+-              verbs:
+-                - create
+-                - delete
+-                - deletecollection
+-                - patch
+-                - update
+-          serviceAccountName: edit-workspaces
++      - rules:
++        - apiGroups:
++          - ""
++          resources:
++          - pods
++          - services
++          - endpoints
++          - persistentvolumeclaims
++          - events
++          - configmaps
++          - secrets
++          verbs:
++          - '*'
++        - apiGroups:
++          - ""
++          resources:
++          - namespaces
++          verbs:
++          - get
++        - apiGroups:
++          - ""
++          resources:
++          - serviceaccounts
++          verbs:
++          - watch
++          - list
++          - get
++          - create
++          - update
++          - patch
++        - apiGroups:
++          - rbac.authorization.k8s.io
++          resources:
++          - roles
++          - rolebindings
++          verbs:
++          - watch
++          - list
++          - get
++          - create
++          - update
++        - apiGroups:
++          - rbac.authorization.k8s.io
++          resources:
++          - clusterroles
++          verbs:
++          - list
++          - get
++          - watch
++        - apiGroups:
++          - apps
++          - extensions
++          resources:
++          - deployments
++          - replicasets
++          verbs:
++          - '*'
++        - apiGroups:
++          - extensions
++          resources:
++          - ingresses
++          verbs:
++          - '*'
++        - apiGroups:
++          - monitoring.coreos.com
++          resources:
++          - servicemonitors
++          verbs:
++          - get
++          - create
++        - apiGroups:
++          - apps
++          resourceNames:
++          - che-workspace-controller
++          resources:
++          - deployments/finalizers
++          verbs:
++          - update
++        - apiGroups:
++          - workspace.che.eclipse.org
++          resources:
++          - '*'
++          - workspaceroutings
++          verbs:
++          - '*'
++        - apiGroups:
++          - ""
++          resources:
++          - pods/exec
++          verbs:
++          - create
++        - apiGroups:
++          - admissionregistration.k8s.io
++          resources:
++          - mutatingwebhookconfigurations
++          - validatingwebhookconfigurations
++          verbs:
++          - '*'
++        - apiGroups:
++          - oauth.openshift.io
++          resources:
++          - oauthclients
++          verbs:
++          - create
++          - get
++          - delete
++          - list
++          - patch
++          - update
++          - watch
++          - deletecollection
++        serviceAccountName: che-workspace-controller
++      - rules:
++        - apiGroups:
++          - workspace.che.eclipse.org
++          resources:
++          - workspaces
++          - workspaceroutings
++          - components
++          verbs:
++          - create
++          - delete
++          - deletecollection
++          - patch
++          - update
++        serviceAccountName: edit-workspaces
+       deployments:
+-        - name: che-workspace-controller
+-          spec:
+-            replicas: 1
+-            selector:
+-              matchLabels:
++      - name: che-workspace-controller
++        spec:
++          replicas: 1
++          selector:
++            matchLabels:
++              app: che-workspace-controller
++          strategy: {}
++          template:
++            metadata:
++              annotations:
++                kubectl.kubernetes.io/restartedAt: ""
++              labels:
+                 app: che-workspace-controller
+-            strategy: {}
+-            template:
+-              metadata:
+-                annotations:
+-                  kubectl.kubernetes.io/restartedAt: ""
+-                labels:
+-                  app: che-workspace-controller
+-              spec:
+-                containers:
+-                  - env:
+-                      - name: WATCH_NAMESPACE
+-                        valueFrom:
+-                          fieldRef:
+-                            fieldPath: metadata.annotations['olm.targetNamespaces']
+-                      - name: POD_NAME
+-                        valueFrom:
+-                          fieldRef:
+-                            fieldPath: metadata.name
+-                      - name: OPERATOR_NAME
+-                        value: che-workspace-operator
+-                    image: quay.io/che-incubator/che-workspace-controller:nightly
+-                    name: che-workspace-controller
+-                    ports:
+-                      - containerPort: 8443
+-                        name: webhook-server
+-                    resources: {}
+-                serviceAccountName: che-workspace-controller
++            spec:
++              containers:
++              - env:
++                - name: WATCH_NAMESPACE
++                  valueFrom:
++                    fieldRef:
++                      fieldPath: metadata.annotations['olm.targetNamespaces']
++                - name: POD_NAME
++                  valueFrom:
++                    fieldRef:
++                      fieldPath: metadata.name
++                - name: OPERATOR_NAME
++                  value: che-workspace-operator
++                image: quay.io/che-incubator/che-workspace-controller:nightly
++                imagePullPolicy: Always
++                name: che-workspace-controller
++                ports:
++                - containerPort: 8443
++                  name: webhook-server
++                resources: {}
++              serviceAccountName: che-workspace-controller
+     strategy: deployment
+   installModes:
+-    - supported: true
+-      type: OwnNamespace
+-    - supported: true
+-      type: SingleNamespace
+-    - supported: false
+-      type: MultiNamespace
+-    - supported: true
+-      type: AllNamespaces
++  - supported: true
++    type: OwnNamespace
++  - supported: true
++    type: SingleNamespace
++  - supported: false
++    type: MultiNamespace
++  - supported: true
++    type: AllNamespaces
+   maturity: alpha
+   provider: {}
+-  version: 9.9.9-nightly.1589313631
+-
++  replaces: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589313631
++  version: 9.9.9-nightly.1589334902

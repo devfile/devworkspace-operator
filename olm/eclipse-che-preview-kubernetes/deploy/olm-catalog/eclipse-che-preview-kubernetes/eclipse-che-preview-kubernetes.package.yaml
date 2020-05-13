@@ -1,0 +1,5 @@
+channels:
+- currentCSV: eclipse-che-preview-kubernetes.v9.9.9-nightly.1589335389
+  name: nightly
+defaultChannel: nightly
+packageName: eclipse-che-preview-kubernetes

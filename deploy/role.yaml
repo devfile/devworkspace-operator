@@ -44,6 +44,15 @@ rules:
   - create
   - update
 - apiGroups:
+  - ""
+  - route.openshift.io
+  resources:
+  - routes/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - clusterroles
@@ -73,27 +82,11 @@ rules:
   verbs:
   - create
   - delete
-  - deleteCollection
+  - deletecollection
   - get
   - list
   - patch
   - update
-  - watch
-- apiGroups:
-  - ""
-  - route.openshift.io
-  resources:
-  - routes/custom-host
-  verbs:
-  - create
-- apiGroups:
-  - ""
-  - route.openshift.io
-  resources:
-  - routes/status
-  verbs:
-  - get
-  - list
   - watch
 - apiGroups:
   - monitoring.coreos.com
@@ -117,6 +110,13 @@ rules:
   - workspaceroutings
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  - route.openshift.io
+  resources:
+  - routes/custom-host
+  verbs:
+  - create
 - apiGroups:
   - ""
   resources:

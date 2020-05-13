@@ -152,8 +152,7 @@ func getSpecDeployment(
 			Name:      common.DeploymentName(workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
-				config.WorkspaceCreatorLabel: creator,
+				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -173,10 +172,9 @@ func getSpecDeployment(
 					Name:      workspace.Status.WorkspaceId,
 					Namespace: workspace.Namespace,
 					Labels: map[string]string{
-						config.CheOriginalNameLabel:  config.CheOriginalName,
-						config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
-						config.WorkspaceNameLabel:    workspace.Name,
-						config.WorkspaceCreatorLabel: creator,
+						config.CheOriginalNameLabel: config.CheOriginalName,
+						config.WorkspaceIDLabel:     workspace.Status.WorkspaceId,
+						config.WorkspaceNameLabel:   workspace.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -200,6 +198,12 @@ func getSpecDeployment(
 	if IsPVCRequired(components) {
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, precreateSubpathsInitContainer(workspace.Status.WorkspaceId))
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
+	}
+
+	workspaceCreator := workspace.Annotations[config.WorkspaceCreatorLabel]
+	if workspaceCreator != "" {
+		deployment.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
+		deployment.Spec.Template.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
 	}
 
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)

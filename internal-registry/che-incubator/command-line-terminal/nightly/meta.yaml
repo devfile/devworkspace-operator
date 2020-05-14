@@ -1,0 +1,31 @@
+apiVersion: v2
+publisher: che-incubator
+name: command-line-terminal
+version: nightly
+type: Che Editor
+displayName: Command Line Terminal
+title: Command Line Terminal
+description: Command Line Terminal provides the ability to start a terminal inside the OpenShift Console.
+icon: https://www.eclipse.org/che/images/logo-eclipseche.svg
+repository: https://github.com/eclipse/che-machine-exec/
+firstPublicationDate: "2020-05-13"
+category: Other
+spec:
+  endpoints:
+   -  name: command-line-terminal
+      public: true
+      targetPort: 4444
+      attributes:
+        protocol: http
+        type: ide
+        path: /static/
+        discoverable: false
+        secure: true
+        cookiesAuthEnabled: true
+  containers:
+   - name: command-line-terminal
+     image: "quay.io/eclipse/che-machine-exec:nightly"
+#    ^ it'll be replaced with new image below after https://github.com/eclipse/che/issues/16942 is fixed
+#    image: "quay.io/che-incubator/command-line-terminal:nightly"
+     ports:
+       - exposedPort: 4444

@@ -1,0 +1,31 @@
+# It's just an example of workspace configuration OpenShift Console creates
+# when user requests terminal
+apiVersion: workspace.che.eclipse.org/v1alpha1
+kind: Workspace
+metadata:
+  name: command-line-terminal
+  annotations:
+    # it's important to make workspace immutable to make sure nobody with right access
+    # won't set custom editor to steal creator's token
+    org.eclipse.che.workspace/immutable: "true"
+  labels:
+    # it's a label OpenShift console uses a flag to mark terminal's workspaces
+    console.openshift.io/cloudshell: "true"
+spec:
+  started: true
+  devfile:
+    apiVersion: 1.0.0
+    metadata:
+      name: command-line-terminal
+    components:
+      - alias: command-line-terminal
+        type: cheEditor
+        id: che-incubator/command-line-terminal/4.5.0
+      - type: dockerimage
+        memoryLimit: 256Mi
+        alias: dev
+        image: 'registry.redhat.io/codeready-workspaces/plugin-openshift-rhel8:2.1'
+        args: ["tail", "-f", "/dev/null"]
+        env:
+          - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
+            name: PS1

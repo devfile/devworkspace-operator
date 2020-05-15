@@ -51,7 +51,7 @@ const (
 	// CheOriginalNameLabel is label key to original name
 	CheOriginalNameLabel = "che.original_name"
 
-	WorkspaceCreatorAnnotation = "org.eclipse.che.workspace/creator"
+	WorkspaceCreatorLabel = "org.eclipse.che.workspace/creator"
 
 	WorkspaceImmutableAnnotation = "org.eclipse.che.workspace/immutable"
 )

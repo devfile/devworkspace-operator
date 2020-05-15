@@ -149,10 +149,8 @@ func getSpecDeployment(
 			Name:      common.DeploymentName(workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
-			},
-			Annotations: map[string]string{
-				config.WorkspaceCreatorAnnotation: workspace.Annotations[config.WorkspaceCreatorAnnotation],
+				config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
+				config.WorkspaceCreatorLabel: workspace.Labels[config.WorkspaceCreatorLabel],
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -172,12 +170,10 @@ func getSpecDeployment(
 					Name:      workspace.Status.WorkspaceId,
 					Namespace: workspace.Namespace,
 					Labels: map[string]string{
-						config.CheOriginalNameLabel: config.CheOriginalName,
-						config.WorkspaceIDLabel:     workspace.Status.WorkspaceId,
-						config.WorkspaceNameLabel:   workspace.Name,
-					},
-					Annotations: map[string]string{
-						config.WorkspaceCreatorAnnotation: workspace.Annotations[config.WorkspaceCreatorAnnotation],
+						config.CheOriginalNameLabel:  config.CheOriginalName,
+						config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
+						config.WorkspaceNameLabel:    workspace.Name,
+						config.WorkspaceCreatorLabel: workspace.Labels[config.WorkspaceCreatorLabel],
 					},
 				},
 				Spec: corev1.PodSpec{

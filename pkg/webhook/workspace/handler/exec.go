@@ -39,7 +39,7 @@ func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admissio
 		return admission.Allowed("It's not workspace related pod")
 	}
 
-	creator, ok := p.Annotations[config.WorkspaceCreatorAnnotation]
+	creator, ok := p.Labels[config.WorkspaceCreatorLabel]
 	if !ok {
 		return admission.Denied("The workspace info is missing in the workspace-related pod")
 	}

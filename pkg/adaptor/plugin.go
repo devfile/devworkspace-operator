@@ -169,7 +169,7 @@ func convertPluginContainer(workspaceId, pluginID string, brokerContainer broker
 		Env:             env,
 		Resources:       containerResources,
 		VolumeMounts:    adaptVolumeMountsFromBroker(workspaceId, brokerContainer),
-		ImagePullPolicy: corev1.PullAlways,
+		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
 	}
 
 	containerDescription := v1alpha1.ContainerDescription{

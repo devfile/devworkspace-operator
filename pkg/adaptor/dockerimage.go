@@ -94,7 +94,7 @@ func getContainerFromDevfile(workspaceId string, devfileComponent v1alpha1.Compo
 		Env:             env,
 		Resources:       containerResources,
 		VolumeMounts:    adaptVolumesMountsFromDevfile(workspaceId, devfileComponent.Volumes),
-		ImagePullPolicy: corev1.PullAlways,
+		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
 	}
 
 	containerDescription := v1alpha1.ContainerDescription{

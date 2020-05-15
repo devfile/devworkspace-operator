@@ -21,8 +21,8 @@ import (
 )
 
 // ResourcesMutator checks that every:
-// - workspace has creator annotation specified and it's not modified
-// - workspace-related deployment, pod has unmodified workspace-id label and creator annotation
+// - workspace has creator label specified and it's not modified
+// - workspace-related deployment, pod has unmodified workspace-id label and creator label
 type ResourcesMutator struct {
 	*handler.WebhookHandler
 }

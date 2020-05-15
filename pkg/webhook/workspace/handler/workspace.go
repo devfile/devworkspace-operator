@@ -13,9 +13,10 @@ package handler
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"net/http"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
@@ -33,10 +34,10 @@ func (h *WebhookHandler) MutateWorkspaceOnCreate(_ context.Context, req admissio
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if wksp.Annotations == nil {
-		wksp.Annotations = map[string]string{}
+	if wksp.Labels == nil {
+		wksp.Labels = map[string]string{}
 	}
-	wksp.Annotations[config.WorkspaceCreatorAnnotation] = req.UserInfo.UID
+	wksp.Labels[config.WorkspaceCreatorLabel] = req.UserInfo.UID
 	return h.returnPatched(req, wksp)
 }
 
@@ -52,19 +53,19 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 		return h.handleImmutableWorkspace(oldWksp, newWksp)
 	}
 
-	oldCreator, found := oldWksp.Annotations[config.WorkspaceCreatorAnnotation]
+	oldCreator, found := oldWksp.Labels[config.WorkspaceCreatorLabel]
 	if !found {
-		return admission.Denied(fmt.Sprintf("annotation '%s' is missing. Please recreate workspace to get it initialized", config.WorkspaceCreatorAnnotation))
+		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate workspace to get it initialized", config.WorkspaceCreatorLabel))
 	}
 
-	newCreator, found := newWksp.Annotations[config.WorkspaceCreatorAnnotation]
+	newCreator, found := newWksp.Labels[config.WorkspaceCreatorLabel]
 	if !found {
-		newWksp.Annotations[config.WorkspaceCreatorAnnotation] = oldCreator
+		newWksp.Labels[config.WorkspaceCreatorLabel] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}
 
 	if newCreator != oldCreator {
-		return admission.Denied(fmt.Sprintf("annotation '%s' is assigned once workspace is created and is immutable", config.WorkspaceCreatorAnnotation))
+		return admission.Denied(fmt.Sprintf("label '%s' is assigned once workspace is created and is immutable", config.WorkspaceCreatorLabel))
 	}
 
 	return admission.Allowed("new workspace has the same workspace as old one")

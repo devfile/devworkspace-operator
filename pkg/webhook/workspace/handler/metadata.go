@@ -22,22 +22,14 @@ func (h *WebhookHandler) mutateMetadataOnCreate(o *metav1.ObjectMeta) error {
 		return fmt.Errorf("'%s' label is missing", config.WorkspaceIDLabel)
 	}
 
-	if _, ok := o.Annotations[config.WorkspaceCreatorAnnotation]; !ok {
-		return fmt.Errorf("'%s' annotation is missing", config.WorkspaceCreatorAnnotation)
+	if _, ok := o.Labels[config.WorkspaceCreatorLabel]; !ok {
+		return fmt.Errorf("'%s' label is missing", config.WorkspaceCreatorLabel)
 	}
 
 	return nil
 }
 
 func (h *WebhookHandler) mutateMetadataOnUpdate(oldMeta, newMeta *metav1.ObjectMeta) (bool, error) {
-	if newMeta.Annotations == nil {
-		newMeta.Annotations = map[string]string{}
-	}
-	updatedAnnotations, err := mutateAnnotationsOnUpdate(oldMeta.Annotations, newMeta.Annotations)
-	if err != nil {
-		return false, err
-	}
-
 	if newMeta.Labels == nil {
 		newMeta.Labels = map[string]string{}
 	}
@@ -46,29 +38,25 @@ func (h *WebhookHandler) mutateMetadataOnUpdate(oldMeta, newMeta *metav1.ObjectM
 		return false, err
 	}
 
-	return updatedAnnotations || updatedLabels, nil
-}
-
-func mutateAnnotationsOnUpdate(old, new map[string]string) (bool, error) {
-	oldCreator, found := old[config.WorkspaceCreatorAnnotation]
-	if !found {
-		return false, fmt.Errorf("'%s' annotation is required. Update Controller and restart your workspace", config.WorkspaceCreatorAnnotation)
-	}
-
-	newCreator, found := new[config.WorkspaceCreatorAnnotation]
-	if !found {
-		new[config.WorkspaceCreatorAnnotation] = oldCreator
-		return true, nil
-	}
-
-	if newCreator != oldCreator {
-		return false, fmt.Errorf("annotation '%s' is assigned once workspace is created and is immutable", config.WorkspaceCreatorAnnotation)
-	}
-
-	return false, nil
+	return updatedLabels, nil
 }
 
 func mutateLabelsOnUpdate(old map[string]string, new map[string]string) (bool, error) {
+	modifiedWorkspaceId, err := mutateWorkspaceIdLabel(old, new)
+	if err != nil {
+		return false, err
+	}
+
+	modifiedCreator, err := mutateCreatorLabel(old, new)
+
+	if err != nil {
+		return false, err
+	}
+
+	return modifiedWorkspaceId || modifiedCreator, nil
+}
+
+func mutateWorkspaceIdLabel(old map[string]string, new map[string]string) (bool, error) {
 	oldWorkpaceId, found := old[config.WorkspaceIDLabel]
 	if !found {
 		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your workspace", config.WorkspaceIDLabel)
@@ -82,6 +70,24 @@ func mutateLabelsOnUpdate(old map[string]string, new map[string]string) (bool, e
 
 	if newCreator != oldWorkpaceId {
 		return false, fmt.Errorf("'%s' label is assigned once workspace is created and is immutable", config.WorkspaceIDLabel)
+	}
+	return false, nil
+}
+
+func mutateCreatorLabel(old map[string]string, new map[string]string) (bool, error) {
+	oldCreator, found := old[config.WorkspaceCreatorLabel]
+	if !found {
+		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your workspace", config.WorkspaceCreatorLabel)
+	}
+
+	newCreator, found := new[config.WorkspaceCreatorLabel]
+	if !found {
+		new[config.WorkspaceCreatorLabel] = oldCreator
+		return true, nil
+	}
+
+	if newCreator != oldCreator {
+		return false, fmt.Errorf("label '%s' is assigned once workspace is created and is immutable", config.WorkspaceCreatorLabel)
 	}
 
 	return false, nil

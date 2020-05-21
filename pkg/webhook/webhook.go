@@ -29,7 +29,7 @@ var configureWebhookTasks []func(context.Context) error
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 func SetUpWebhooks(mgr manager.Manager, ctx context.Context) error {
-	err := server.ConfigureWebhookServer(mgr)
+	err := server.ConfigureWebhookServer(mgr, ctx)
 	if err != nil {
 		return err
 	}

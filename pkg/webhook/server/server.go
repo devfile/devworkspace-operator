@@ -11,6 +11,7 @@
 package server
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 
@@ -31,7 +32,7 @@ var log = logf.Log.WithName("webhook.server")
 var webhookServer *webhook.Server
 var CABundle []byte
 
-func ConfigureWebhookServer(mgr manager.Manager) error {
+func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) error {
 	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
 		log.Info("Webhooks are disabled. Skipping setting up webhook server")
 		return nil
@@ -53,7 +54,11 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 
 	CABundle, err = ioutil.ReadFile(webhookServerCertDir + "/ca.crt")
 	if os.IsNotExist(err) {
-		log.Info("CA certificate is not found. Webhook server is not set up")
+		log.Info("CA certificate is not found. Webhook server will now attempt to setup")
+		err = InitWebhookServer(ctx)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 	if err != nil {

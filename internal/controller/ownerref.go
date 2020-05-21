@@ -14,6 +14,7 @@ import (
 	"context"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -48,7 +49,6 @@ func FindControllerOwner(ctx context.Context, client crclient.Client) (*metav1.O
 		return finalOwnerRef, nil
 	}
 
-	// Default to returning Pod as the Owner
 	return podOwnerRefs, nil
 }
 
@@ -72,4 +72,58 @@ func findFinalOwnerRef(ctx context.Context, client crclient.Client, ns string, o
 
 	Log.V(1).Info("Pods owner found", "Kind", ownerRef.Kind, "Name", ownerRef.Name, "Namespace", ns)
 	return ownerRef, nil
+}
+
+// FindControllerDeployment gets the deployment of the deployed controller
+func FindControllerDeployment(ctx context.Context, client crclient.Client) (*appsv1.Deployment, error) {
+	ns, err := k8sutil.GetOperatorNamespace()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get current Pod the operator is running in
+	pod, err := k8sutil.GetPod(ctx, client, ns)
+	if err != nil {
+		return nil, err
+	}
+
+	deployment, err := findDeployment(ctx, client, ns, pod)
+	if err != nil {
+		return nil, err
+	}
+	if deployment != nil {
+		return deployment, nil
+	}
+
+	// Default to returning Pod as the Owner
+	return nil, nil
+}
+
+// findDeployment tries to locate the final controller/owner based on the owner reference provided.
+func findDeployment(ctx context.Context, client crclient.Client, ns string, metaObj metav1.Object) (*appsv1.Deployment, error) {
+	ownerRef := metav1.GetControllerOf(metaObj)
+
+	if ownerRef == nil {
+		return nil, nil
+	}
+
+	if ownerRef.Kind == "Deployment" {
+		d := &appsv1.Deployment{}
+		err := client.Get(ctx, types.NamespacedName{Namespace: ns, Name: ownerRef.Name}, d)
+		d.APIVersion = ownerRef.APIVersion
+		d.Kind = ownerRef.Kind
+		if err != nil {
+			return nil, err
+		}
+		return d, nil
+	}
+	obj := &unstructured.Unstructured{}
+	obj.SetAPIVersion(ownerRef.APIVersion)
+	obj.SetKind(ownerRef.Kind)
+	err := client.Get(ctx, types.NamespacedName{Namespace: ns, Name: ownerRef.Name}, obj)
+	if err != nil {
+		return nil, err
+	}
+
+	return findDeployment(ctx, client, ns, obj)
 }

@@ -79,10 +79,10 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 func SyncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
 	ideUrl := getIdeUrl(exposedEndpoints)
 
-	if workspace.Status.IdeUrl == ideUrl {
+	if workspace.Status.MainIdeUrl == ideUrl {
 		return true, nil
 	}
-	workspace.Status.IdeUrl = ideUrl
+	workspace.Status.MainIdeUrl = ideUrl
 	err = clusterAPI.Client.Status().Update(context.TODO(), workspace)
 	return false, err
 }

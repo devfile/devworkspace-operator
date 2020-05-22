@@ -34,7 +34,7 @@ type WorkspaceSpec struct {
 type WorkspaceStatus struct {
 	WorkspaceId string         `json:"workspaceId"`
 	Phase       WorkspacePhase `json:"phase,omitempty"`
-	IdeUrl      string         `json:"ideUrl"`
+	MainIdeUrl  string         `json:"mainIdeUrl"`
 	// Conditions represent the latest available observations of an object's state
 	Condition []WorkspaceCondition `json:"condition,omitempty"`
 }
@@ -83,7 +83,7 @@ const (
 // +kubebuilder:resource:path=workspaces,scope=Namespaced
 // +kubebuilder:printcolumn:name="Workspace ID",type="string",JSONPath=".status.workspaceId",description="The workspace's unique id"
 // +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="The current workspace startup phase"
-// +kubebuilder:printcolumn:name="URL",type="string",JSONPath=".status.ideUrl",description="Url endpoint for accessing workspace"
+// +kubebuilder:printcolumn:name="URL",type="string",JSONPath=".status.mainIdeUrl",description="Url endpoint for accessing workspace"
 type Workspace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

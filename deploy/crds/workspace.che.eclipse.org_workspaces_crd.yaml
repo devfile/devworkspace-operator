@@ -12,7 +12,7 @@ spec:
     description: The current workspace startup phase
     name: Phase
     type: string
-  - JSONPath: .status.ideUrl
+  - JSONPath: .status.mainIdeUrl
     description: Url endpoint for accessing workspace
     name: URL
     type: string
@@ -253,14 +253,14 @@ spec:
                 - type
                 type: object
               type: array
-            ideUrl:
+            mainIdeUrl:
               type: string
             phase:
               type: string
             workspaceId:
               type: string
           required:
-          - ideUrl
+          - mainIdeUrl
           - workspaceId
           type: object
       type: object

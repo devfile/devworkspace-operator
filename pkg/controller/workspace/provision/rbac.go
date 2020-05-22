@@ -54,6 +54,11 @@ func generateRBAC(namespace string) []runtime.Object {
 					APIGroups: []string{"apps", "extensions"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
+				{
+					Resources: []string{"workspaces"},
+					APIGroups: []string{"workspace.che.eclipse.org"},
+					Verbs:     []string{"patch"},
+				},
 			},
 		},
 		&rbacv1.RoleBinding{

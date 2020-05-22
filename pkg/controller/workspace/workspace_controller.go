@@ -18,6 +18,7 @@ import (
 	origLog "log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/go-logr/logr"
@@ -249,7 +250,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceRoutingReady)
 
-	statusOk, err := SyncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
+	statusOk, err := syncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -313,6 +314,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceDeploymentReady)
 
+	serverReady, err := checkServerStatus(workspace)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if !serverReady {
+		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
+	}
 	reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusRunning
 	return reconcile.Result{}, nil
 }

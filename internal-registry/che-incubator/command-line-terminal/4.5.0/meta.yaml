@@ -18,7 +18,6 @@ spec:
       attributes:
         protocol: http
         type: ide
-        path: /static/
         discoverable: false
         secure: true
         cookiesAuthEnabled: true

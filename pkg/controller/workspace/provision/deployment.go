@@ -136,7 +136,8 @@ func getSpecDeployment(
 		return nil, err
 	}
 
-	commonEnv := env.CommonEnvironmentVariables(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
+	creator := workspace.Labels[config.WorkspaceCreatorLabel]
+	commonEnv := env.CommonEnvironmentVariables(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace, creator)
 	for idx := range podAdditions.Containers {
 		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, commonEnv...)
 	}
@@ -150,7 +151,7 @@ func getSpecDeployment(
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
-				config.WorkspaceCreatorLabel: workspace.Labels[config.WorkspaceCreatorLabel],
+				config.WorkspaceCreatorLabel: creator,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -173,7 +174,7 @@ func getSpecDeployment(
 						config.CheOriginalNameLabel:  config.CheOriginalName,
 						config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
 						config.WorkspaceNameLabel:    workspace.Name,
-						config.WorkspaceCreatorLabel: workspace.Labels[config.WorkspaceCreatorLabel],
+						config.WorkspaceCreatorLabel: creator,
 					},
 				},
 				Spec: corev1.PodSpec{

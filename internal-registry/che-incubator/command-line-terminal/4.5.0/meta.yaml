@@ -25,6 +25,10 @@ spec:
    - name: command-line-terminal
      image: "quay.io/eclipse/che-machine-exec:nightly"
 #    ^ it'll be replaced with new image below after https://github.com/eclipse/che/issues/16942 is fixed
-#    image: "quay.io/che-incubator/command-line-terminal:4.5.0"
+     #    image: "quay.io/che-incubator/command-line-terminal:4.5.0"
+     command: ["/go/bin/che-machine-exec", "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)"]
      ports:
        - exposedPort: 4444
+     env:
+       - name: USE_BEARER_TOKEN
+         value: true

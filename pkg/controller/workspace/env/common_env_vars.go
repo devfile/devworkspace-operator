@@ -17,7 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func CommonEnvironmentVariables(workspaceName, workspaceId, namespace string) []corev1.EnvVar {
+func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name: "CHE_MACHINE_TOKEN",
@@ -57,6 +57,10 @@ func CommonEnvironmentVariables(workspaceName, workspaceId, namespace string) []
 		{
 			Name:  "USE_BEARER_TOKEN",
 			Value: config.ControllerCfg.GetWebhooksEnabled(),
+		},
+		{
+			Name:  "CHE_WORKSPACE_CREATOR",
+			Value: creator,
 		},
 	}
 }

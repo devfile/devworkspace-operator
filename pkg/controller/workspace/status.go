@@ -15,6 +15,8 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -76,7 +78,7 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 	return reconcileResult, reconcileError
 }
 
-func SyncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
+func syncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
 	ideUrl := getIdeUrl(exposedEndpoints)
 
 	if workspace.Status.IdeUrl == ideUrl {
@@ -85,6 +87,29 @@ func SyncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[str
 	workspace.Status.IdeUrl = ideUrl
 	err = clusterAPI.Client.Status().Update(context.TODO(), workspace)
 	return false, err
+}
+
+func checkServerStatus(workspace *v1alpha1.Workspace) (ok bool, err error) {
+	ideUrl := workspace.Status.IdeUrl
+	if ideUrl == "" {
+		return false, nil
+	}
+	healthz, err := url.Parse(ideUrl)
+	if err != nil {
+		return false, err
+	}
+	healthz.Path = "healthz"
+
+	resp, err := http.Get(healthz.String())
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode == 404 {
+		// Compatibility: assume endpoint is unimplemented.
+		return true, nil
+	}
+	ok = (resp.StatusCode / 100) == 2
+	return ok, nil
 }
 
 func getIdeUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string {

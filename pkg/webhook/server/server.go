@@ -47,7 +47,7 @@ func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) error {
 
 	if !enabled {
 		log.Info("WARN: AdmissionWebhooks are not configured at your cluster." +
-			"    To make your workspaces more secure, please configuring them." +
+			"    To make your workspaces more secure, please configure them." +
 			"    Skipping setting up Webhook Server")
 		return nil
 	}

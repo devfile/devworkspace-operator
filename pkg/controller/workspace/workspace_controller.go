@@ -311,7 +311,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		reqLogger.Info("Waiting on deployment to be ready")
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceDeploymentReady)
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceReady)
 
 	reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusRunning
 	return reconcile.Result{}, nil

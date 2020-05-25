@@ -195,6 +195,11 @@ func WatchControllerConfig(ctr controller.Controller, mgr manager.Manager) error
 		return err
 	}
 
+	err = fillRegistryIfNecessary(nonCachedClient, configMap)
+	if err != nil {
+		return err
+	}
+
 	updateConfigMap(nonCachedClient, configMap.GetObjectMeta(), configMap)
 
 	var emptyMapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
@@ -265,6 +270,37 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	}
 
 	err = nonCachedClient.Update(context.TODO(), configMap)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func fillRegistryIfNecessary(nonCachedClient client.Client, configMap *corev1.ConfigMap) error {
+	if _, exists := configMap.Data[pluginRegistryURL]; exists {
+		return nil
+	}
+	pluginRegistryName, found := os.LookupEnv("PLUGIN_REGISTRY_SERVICE_NAME")
+	if !found {
+		return nil
+	}
+
+	pluginRegistryHost, found := os.LookupEnv(pluginRegistryName + "_SERVICE_HOST")
+	if !found {
+		return nil
+	}
+
+	pluginRegistryPort, found := os.LookupEnv(pluginRegistryName + "_SERVICE_PORT")
+	if !found {
+		return nil
+	}
+
+	pluginRegistryUrl := "http://" + pluginRegistryHost + ":" + pluginRegistryPort + "/v3"
+
+	configMap.Data[pluginRegistryURL] = pluginRegistryUrl
+
+	err := nonCachedClient.Update(context.TODO(), configMap)
 	if err != nil {
 		return err
 	}

@@ -50,30 +50,30 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 	currTransitionTime := metav1.Time{Time: clock.Now()}
 	for _, conditionType := range status.Conditions {
 		conditionExists := false
-		for idx, condition := range workspace.Status.Condition {
+		for idx, condition := range workspace.Status.Conditions {
 			if condition.Type == conditionType && condition.LastTransitionTime.Before(&currTransitionTime) {
-				workspace.Status.Condition[idx].LastTransitionTime = currTransitionTime
-				workspace.Status.Condition[idx].Status = corev1.ConditionTrue
+				workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
+				workspace.Status.Conditions[idx].Status = corev1.ConditionTrue
 				conditionExists = true
 				break
 			}
 		}
 		if !conditionExists {
-			workspace.Status.Condition = append(workspace.Status.Condition, v1alpha1.WorkspaceCondition{
+			workspace.Status.Conditions = append(workspace.Status.Conditions, v1alpha1.WorkspaceCondition{
 				Type:               conditionType,
 				Status:             corev1.ConditionTrue,
 				LastTransitionTime: currTransitionTime,
 			})
 		}
 	}
-	for idx, condition := range workspace.Status.Condition {
+	for idx, condition := range workspace.Status.Conditions {
 		if condition.LastTransitionTime.Before(&currTransitionTime) {
-			workspace.Status.Condition[idx].LastTransitionTime = currTransitionTime
-			workspace.Status.Condition[idx].Status = corev1.ConditionUnknown
+			workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
+			workspace.Status.Conditions[idx].Status = corev1.ConditionUnknown
 		}
 	}
-	sort.SliceStable(workspace.Status.Condition, func(i, j int) bool {
-		return strings.Compare(string(workspace.Status.Condition[i].Type), string(workspace.Status.Condition[j].Type)) > 0
+	sort.SliceStable(workspace.Status.Conditions, func(i, j int) bool {
+		return strings.Compare(string(workspace.Status.Conditions[i].Type), string(workspace.Status.Conditions[j].Type)) > 0
 	})
 
 	err := r.client.Status().Update(context.TODO(), workspace)

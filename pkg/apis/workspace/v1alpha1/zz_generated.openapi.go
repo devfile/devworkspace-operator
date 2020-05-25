@@ -450,7 +450,7 @@ func schema_pkg_apis_workspace_v1alpha1_WorkspaceStatus(ref common.ReferenceCall
 							Format: "",
 						},
 					},
-					"condition": {
+					"conditions": {
 						VendorExtensible: spec.VendorExtensible{
 							Extensions: spec.Extensions{
 								"x-kubernetes-list-type": "map",

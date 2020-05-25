@@ -36,7 +36,7 @@ type WorkspaceStatus struct {
 	Phase       WorkspacePhase `json:"phase,omitempty"`
 	IdeUrl      string         `json:"ideUrl"`
 	// Conditions represent the latest available observations of an object's state
-	Condition []WorkspaceCondition `json:"condition,omitempty"`
+	Conditions []WorkspaceCondition `json:"conditions,omitempty"`
 }
 
 // WorkspaceCondition contains details for the current condition of this workspace.
@@ -72,7 +72,7 @@ const (
 	WorkspaceComponentsReady     WorkspaceConditionType = "ComponentsReady"
 	WorkspaceRoutingReady        WorkspaceConditionType = "RoutingReady"
 	WorkspaceServiceAccountReady WorkspaceConditionType = "ServiceAccountReady"
-	WorkspaceDeploymentReady     WorkspaceConditionType = "DeploymentReady"
+	WorkspaceReady               WorkspaceConditionType = "Ready"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

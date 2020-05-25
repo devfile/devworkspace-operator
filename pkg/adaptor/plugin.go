@@ -146,7 +146,7 @@ func convertPluginContainer(workspaceId, pluginID string, brokerContainer broker
 	for _, brokerEnv := range brokerContainer.Env {
 		env = append(env, corev1.EnvVar{
 			Name:  brokerEnv.Name,
-			Value: brokerEnv.Value,
+			Value: strings.ReplaceAll(brokerEnv.Value, "$(CHE_PROJECTS_ROOT)", config.DefaultProjectsSourcesRoot),
 		})
 	}
 

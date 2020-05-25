@@ -14,6 +14,7 @@ package workspace
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -33,6 +34,13 @@ import (
 // clock is used to set status condition timestamps.
 // This variable makes it easier to test conditions.
 var clock kubeclock.Clock = &kubeclock.RealClock{}
+
+// healthHttpClient is supposed to be used for performing health checks of workspace endpoints
+var healthHttpClient = &http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	},
+}
 
 // updateWorkspaceStatus updates the current workspace's status field with conditions and phase from the passed in status.
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
@@ -100,9 +108,13 @@ func checkServerStatus(workspace *v1alpha1.Workspace) (ok bool, err error) {
 	}
 	healthz.Path = "healthz"
 
-	resp, err := http.Get(healthz.String())
+	resp, err := healthHttpClient.Get(healthz.String())
 	if err != nil {
 		return false, err
+	}
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		// Assume endpoint is unimplemented and * is covered with authentication.
+		return true, nil
 	}
 	if resp.StatusCode == 404 {
 		// Compatibility: assume endpoint is unimplemented.

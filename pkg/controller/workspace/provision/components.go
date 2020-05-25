@@ -14,14 +14,16 @@ package provision
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/adaptor"
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/che-incubator/che-workspace-operator/pkg/controller/component/cmd_terminal"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -76,7 +78,7 @@ func SyncComponentsToCluster(
 		log.Info("Updating component", "component", component.Name)
 		err := clusterAPI.Client.Update(context.TODO(), &component)
 		if err != nil {
-			if errors.IsConflict(err) {
+			if k8sErrors.IsConflict(err) {
 				return ComponentProvisioningStatus{
 					ProvisioningStatus: ProvisioningStatus{Requeue: true},
 				}
@@ -127,6 +129,17 @@ func getSpecComponents(workspace *v1alpha1.Workspace, scheme *runtime.Scheme) ([
 	dockerComponents, pluginComponents, err := adaptor.SortComponentsByType(workspace.Spec.Devfile.Components)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(dockerComponents) == 0 {
+		if cmd_terminal.ContainsCmdTerminalComponent(pluginComponents) {
+			defaultDockerimage, err := config.ControllerCfg.GetDefaultTerminalDockerimage()
+			if err != nil {
+				log.Error(err, fmt.Sprintf("Failed to provision default dockerimage component for '%s'. Cause: %s", cmd_terminal.CommandLineTerminalPublisherName, err.Error()))
+				return nil, errors.New("configure dockerimage component or ask administrator to fix default one for " + cmd_terminal.CommandLineTerminalPublisherName)
+			}
+			dockerComponents = []v1alpha1.ComponentSpec{*defaultDockerimage}
+		}
 	}
 
 	var components []v1alpha1.Component

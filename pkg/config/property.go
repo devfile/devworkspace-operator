@@ -39,4 +39,7 @@ const (
 
 	webhooksEnabled        = "che.webhooks.enabled"
 	defaultWebhooksEnabled = "false"
+
+	workspaceIdleTimeout        = "che.workspace.idle_timeout"
+	defaultWorkspaceIdleTimeout = "15m"
 )

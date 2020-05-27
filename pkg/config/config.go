@@ -129,6 +129,10 @@ func (wc *ControllerConfig) Validate() error {
 	return nil
 }
 
+func (wc *ControllerConfig) GetWorkspaceIdleTimeout() string {
+	return wc.GetPropertyOrDefault(workspaceIdleTimeout, defaultWorkspaceIdleTimeout)
+}
+
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {
 	if meta.GetNamespace() != ConfigMapReference.Namespace ||
 		meta.GetName() != ConfigMapReference.Name {

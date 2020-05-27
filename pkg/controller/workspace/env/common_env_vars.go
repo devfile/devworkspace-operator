@@ -62,5 +62,9 @@ func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator s
 			Name:  "CHE_WORKSPACE_CREATOR",
 			Value: creator,
 		},
+		{
+			Name:  "CHE_WORKSPACE_IDLE_TIMEOUT",
+			Value: config.ControllerCfg.GetWorkspaceIdleTimeout(),
+		},
 	}
 }

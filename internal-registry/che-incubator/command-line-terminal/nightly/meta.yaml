@@ -26,7 +26,9 @@ spec:
      image: "quay.io/eclipse/che-machine-exec:nightly"
      #    ^ it'll be replaced with new image below after https://github.com/eclipse/che/issues/16942 is fixed
      #    image: "quay.io/che-incubator/command-line-terminal:nightly"
-     command: ["/go/bin/che-machine-exec", "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)"]
+     command: ["/go/bin/che-machine-exec",
+               "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
+               "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)"]
      ports:
        - exposedPort: 4444
       env:

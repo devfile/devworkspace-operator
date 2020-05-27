@@ -64,7 +64,7 @@ func SyncRoutingToCluster(
 		}
 	}
 
-	if (specRouting.Spec.RoutingClass != clusterRouting.Spec.RoutingClass) {
+	if specRouting.Spec.RoutingClass != clusterRouting.Spec.RoutingClass {
 		err := clusterAPI.Client.Delete(context.TODO(), clusterRouting)
 		return RoutingProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{Requeue: true, Err: err},

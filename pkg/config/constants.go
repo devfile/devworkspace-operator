@@ -45,7 +45,7 @@ const (
 	// CheOriginalNameLabel is label key to original name
 	CheOriginalNameLabel = "che.original_name"
 
-	// WorkspaceCreatorLabel is the annotation key for storing the UID of the user who created the workspace
+	// WorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
 	WorkspaceCreatorLabel = "org.eclipse.che.workspace/creator"
 
 	// WorkspaceImmutableAnnotation marks a workspace as 'immutable' if 'true'

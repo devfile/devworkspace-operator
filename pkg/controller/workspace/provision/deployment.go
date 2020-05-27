@@ -140,9 +140,11 @@ func getSpecDeployment(
 	commonEnv := env.CommonEnvironmentVariables(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace, creator)
 	for idx := range podAdditions.Containers {
 		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, commonEnv...)
+		podAdditions.Containers[idx].VolumeMounts = append(podAdditions.Containers[idx].VolumeMounts, podAdditions.VolumeMounts...)
 	}
 	for idx := range podAdditions.InitContainers {
 		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, commonEnv...)
+		podAdditions.InitContainers[idx].VolumeMounts = append(podAdditions.InitContainers[idx].VolumeMounts, podAdditions.VolumeMounts...)
 	}
 
 	deployment := &appsv1.Deployment{
@@ -231,6 +233,7 @@ func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions,
 	containerNames := map[string]bool{}
 	initContainerNames := map[string]bool{}
 	volumeNames := map[string]bool{}
+	volumeMountNames := map[string]bool{}
 	pullSecretNames := map[string]bool{}
 	for _, additions := range toMerge {
 		for annotKey, annotVal := range additions.Annotations {
@@ -261,6 +264,14 @@ func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions,
 			}
 			volumeNames[volume.Name] = true
 			podAdditions.Volumes = append(podAdditions.Volumes, volume)
+		}
+
+		for _, volumeMount := range additions.VolumeMounts {
+			if volumeMountNames[volumeMount.Name] {
+				return nil, fmt.Errorf("duplicated volumeMounts in workspace definition: %s", volumeMount.Name)
+			}
+			volumeMountNames[volumeMount.Name] = true
+			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, volumeMount)
 		}
 
 		for _, pullSecret := range additions.PullSecrets {

@@ -62,3 +62,7 @@ func OAuthProxySecretName(workspaceId string) string {
 func DeploymentName(workspaceId string) string {
 	return workspaceId
 }
+
+func ServingCertVolumeName(serviceName string) string {
+	return fmt.Sprintf("workspace-serving-cert-%s", serviceName)
+}

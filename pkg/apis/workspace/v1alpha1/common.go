@@ -41,6 +41,11 @@ type PodAdditions struct {
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Volumes []v1.Volume `json:"volumes,omitempty"`
+	// VolumeMounts to add to all containers in a workspace deployment
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	VolumeMounts []v1.VolumeMount `json:"volumeMounts,omitempty"`
 	// ImagePullSecrets to add to workspace deployment
 	// +optional
 	// +patchMergeKey=name

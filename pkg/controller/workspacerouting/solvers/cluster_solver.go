@@ -3,20 +3,53 @@ package solvers
 import (
 	"fmt"
 
+	"github.com/che-incubator/che-workspace-operator/pkg/common"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 )
 
-type ClusterSolver struct{}
+const (
+	serviceServingCertAnnot = "service.beta.openshift.io/serving-cert-secret-name"
+)
+
+type ClusterSolver struct {
+	TLS bool
+}
 
 var _ RoutingSolver = (*ClusterSolver)(nil)
 
 func (s *ClusterSolver) GetSpecObjects(spec v1alpha1.WorkspaceRoutingSpec, workspaceMeta WorkspaceMetadata) RoutingObjects {
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
+	podAdditions := &v1alpha1.PodAdditions{}
+	if s.TLS {
+		readOnlyMode := int32(420)
+		for idx, service := range services {
+			if services[idx].Annotations == nil {
+				services[idx].Annotations = map[string]string{}
+			}
+			services[idx].Annotations[serviceServingCertAnnot] = service.Name
+			podAdditions.Volumes = append(podAdditions.Volumes, corev1.Volume{
+				Name: common.ServingCertVolumeName(service.Name),
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  service.Name,
+						DefaultMode: &readOnlyMode,
+					},
+				},
+			})
+			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, corev1.VolumeMount{
+				Name:      common.ServingCertVolumeName(service.Name),
+				ReadOnly:  true,
+				MountPath: "/var/serving-cert/",
+			})
+		}
+	}
 
 	return RoutingObjects{
-		Services: services,
+		Services:     services,
+		PodAdditions: podAdditions,
 	}
 }
 
@@ -61,5 +94,9 @@ func resolveServiceHostnameForEndpoint(endpoint v1alpha1.Endpoint, services []co
 }
 
 func getHostnameFromService(service corev1.Service, port int32) string {
-	return fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", service.Name, service.Namespace, port)
+	scheme := "http"
+	if _, ok := service.Annotations[serviceServingCertAnnot]; ok {
+		scheme = "https"
+	}
+	return fmt.Sprintf("%s://%s.%s.svc:%d", scheme, service.Name, service.Namespace, port)
 }

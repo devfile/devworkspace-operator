@@ -296,6 +296,11 @@ func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingCla
 		return &solvers.OpenShiftOAuthSolver{}, nil
 	case workspacev1alpha1.WorkspaceRoutingCluster:
 		return &solvers.ClusterSolver{}, nil
+	case workspacev1alpha1.WorkspaceRoutingClusterTLS:
+		if !config.ControllerCfg.IsOpenShift() {
+			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
+		}
+		return &solvers.ClusterSolver{TLS: true}, nil
 	default:
 		return nil, fmt.Errorf("routing class %s not supported", routingClass)
 	}

@@ -14,11 +14,16 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	"github.com/che-incubator/che-workspace-operator/internal/controller"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +37,10 @@ func InitWebhookServer(ctx context.Context) error {
 	}
 
 	ns, err := k8sutil.GetOperatorNamespace()
-	if err != nil {
+	if err == k8sutil.ErrRunLocal {
+		ns = os.Getenv("WATCH_NAMESPACE")
+		log.Info(fmt.Sprintf("Running operator in local mode; watching namespace %s", config.ConfigMapReference.Namespace))
+	} else if err != nil {
 		return err
 	}
 
@@ -60,13 +68,20 @@ func syncService(ctx context.Context, crclient client.Client, namespace string) 
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg := &v1.Service{}
+		existingCfg := &corev1.Service{}
 		err := crclient.Get(ctx, types.NamespacedName{
 			Name:      secureService.Name,
 			Namespace: secureService.Namespace,
 		}, existingCfg)
+		if err != nil {
+			return err
+		}
+		clusterIP := existingCfg.Spec.ClusterIP
+		existingCfg.Spec = secureService.Spec
+		existingCfg.Spec.ClusterIP = clusterIP
+		copyLabelsAndAnnotations(secureService, existingCfg)
 
-		err = crclient.Update(ctx, secureService)
+		err = crclient.Update(ctx, existingCfg)
 		if err != nil {
 			return err
 		}
@@ -83,13 +98,16 @@ func syncConfigMap(ctx context.Context, crclient client.Client, namespace string
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg := &v1.Service{}
+		existingCfg := &corev1.ConfigMap{}
 		err := crclient.Get(ctx, types.NamespacedName{
 			Name:      secureConfigMap.Name,
 			Namespace: secureConfigMap.Namespace,
 		}, existingCfg)
-
-		err = crclient.Update(ctx, secureConfigMap)
+		if err != nil {
+			return err
+		}
+		copyLabelsAndAnnotations(secureConfigMap, existingCfg)
+		err = crclient.Update(ctx, existingCfg)
 		if err != nil {
 			return err
 		}
@@ -123,7 +141,7 @@ func updateDeployment(ctx context.Context, crclient client.Client, namespace str
 }
 
 // appendVolumeMountIfMissing appends the volume mount if it is missing. Indicates if the volume mount is missing with the return value
-func appendVolumeMountIfMissing(volumeMounts *[]v1.VolumeMount, volumeMount v1.VolumeMount) bool {
+func appendVolumeMountIfMissing(volumeMounts *[]corev1.VolumeMount, volumeMount corev1.VolumeMount) bool {
 	for _, vm := range *volumeMounts {
 		if vm.Name == volumeMount.Name {
 			return false
@@ -134,7 +152,7 @@ func appendVolumeMountIfMissing(volumeMounts *[]v1.VolumeMount, volumeMount v1.V
 }
 
 // appendVolumeIfMissing appends the volume if it is missing. Indicates if the volume is missing with the return value
-func appendVolumeIfMissing(volumes *[]v1.Volume, volume v1.Volume) bool {
+func appendVolumeIfMissing(volumes *[]corev1.Volume, volume corev1.Volume) bool {
 	for _, v := range *volumes {
 		if v.Name == volume.Name {
 			return true
@@ -155,10 +173,25 @@ func appendLabelIfMissing(labels *map[string]string) bool {
 }
 
 // appendPortIfMissing appends a port to the che-workspace-controller container. Indicates if the port is missing with the return value
-func appendPortIfMissing(ports *[]v1.ContainerPort) bool {
+func appendPortIfMissing(ports *[]corev1.ContainerPort) bool {
 	if len(*ports) == 0 || (*ports)[0].Name != webhookServerName {
 		*ports = append(*ports, getPort())
 		return true
 	}
 	return false
+}
+
+func copyLabelsAndAnnotations(from, to metav1.Object) {
+	if to.GetAnnotations() == nil {
+		to.SetAnnotations(map[string]string{})
+	}
+	if to.GetLabels() == nil {
+		to.SetLabels(map[string]string{})
+	}
+	for k, v := range from.GetAnnotations() {
+		to.GetAnnotations()[k] = v
+	}
+	for k, v := range from.GetLabels() {
+		to.GetLabels()[k] = v
+	}
 }

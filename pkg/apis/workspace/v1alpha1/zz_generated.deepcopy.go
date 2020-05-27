@@ -597,6 +597,13 @@ func (in *PodAdditions) DeepCopyInto(out *PodAdditions) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.VolumeMounts != nil {
+		in, out := &in.VolumeMounts, &out.VolumeMounts
+		*out = make([]v1.VolumeMount, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.PullSecrets != nil {
 		in, out := &in.PullSecrets, &out.PullSecrets
 		*out = make([]v1.LocalObjectReference, len(*in))

@@ -221,7 +221,7 @@ spec:
         status:
           description: WorkspaceStatus defines the observed state of Workspace
           properties:
-            condition:
+            conditions:
               description: Conditions represent the latest available observations
                 of an object's state
               items:

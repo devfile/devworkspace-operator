@@ -13,7 +13,7 @@ metadata:
     console.openshift.io/cloudshell: "true"
 spec:
   started: true
-  routingClass: cluster-tls
+  routingClass: openshift-terminal
   devfile:
     apiVersion: 1.0.0
     metadata:

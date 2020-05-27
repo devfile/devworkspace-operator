@@ -19,7 +19,8 @@ import (
 )
 
 const (
-	CommandLineTerminalPublisherName = "che-incubator/command-line-terminal/"
+	CommandLineTerminalPublisherName    = "che-incubator/command-line-terminal/"
+	CommandLineTerminalDevPublisherName = "che-incubator/command-line-terminal-dev/"
 )
 
 func ContainsCmdTerminalComponent(plugins []v1alpha1.ComponentSpec) bool {
@@ -32,7 +33,7 @@ func ContainsCmdTerminalComponent(plugins []v1alpha1.ComponentSpec) bool {
 }
 
 func IsCommandLineTerminalPlugin(p v1alpha1.ComponentSpec) bool {
-	if strings.HasPrefix(p.Id, CommandLineTerminalPublisherName) {
+	if strings.HasPrefix(p.Id, CommandLineTerminalPublisherName) || strings.HasPrefix(p.Id, CommandLineTerminalDevPublisherName) {
 		return true
 	}
 	return false

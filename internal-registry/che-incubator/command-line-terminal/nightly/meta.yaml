@@ -12,26 +12,26 @@ firstPublicationDate: "2020-05-13"
 category: Other
 spec:
   endpoints:
-   -  name: command-line-terminal
-      public: true
-      targetPort: 4444
-      attributes:
-        protocol: http
-        type: ide
-        discoverable: false
-        secure: true
-        cookiesAuthEnabled: true
+  - name: command-line-terminal
+    public: true
+    targetPort: 4444
+    attributes:
+      protocol: http
+      type: ide
+      discoverable: false
+      secure: true
+      cookiesAuthEnabled: true
   containers:
-   - name: command-line-terminal
-     image: "quay.io/eclipse/che-machine-exec:nightly"
-     #    ^ it'll be replaced with new image below after https://github.com/eclipse/che/issues/16942 is fixed
-     #    image: "quay.io/che-incubator/command-line-terminal:nightly"
-     command: ["/go/bin/che-machine-exec",
-               "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
-               "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",
-               "--use-tls"]
-     ports:
-       - exposedPort: 4444
-      env:
-        - name: USE_BEARER_TOKEN
-          value: true
+  - name: command-line-terminal
+    image: "quay.io/eclipse/che-machine-exec:nightly"
+    #    ^ it'll be replaced with new image below after https://github.com/eclipse/che/issues/16942 is fixed
+    #    image: "quay.io/che-incubator/command-line-terminal:nightly"
+    command: ["/go/bin/che-machine-exec",
+              "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
+              "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",
+              "--use-tls"]
+    ports:
+      - exposedPort: 4444
+    env:
+      - name: USE_BEARER_TOKEN
+        value: true

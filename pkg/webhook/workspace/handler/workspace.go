@@ -15,16 +15,23 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var V1alpha1WorkspaceKind = metav1.GroupVersionKind{Kind: "Workspace", Group: "workspace.che.eclipse.org", Version: "v1alpha1"}
+
+// StopStartDiffOption is comparing options that should be used to check if there is no other changes except changing started
+var StopStartDiffOption = []cmp.Option{
+	// field managed by cluster and should be ignored while comparing
+	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields"),
+	cmpopts.IgnoreFields(v1alpha1.WorkspaceSpec{}, "Started"),
+}
 
 func (h *WebhookHandler) MutateWorkspaceOnCreate(_ context.Context, req admission.Request) admission.Response {
 	wksp := &v1alpha1.Workspace{}
@@ -72,7 +79,7 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 }
 
 func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *v1alpha1.Workspace) admission.Response {
-	if cmp.Equal(oldWksp, newWksp, cmpopts.IgnoreFields(v1alpha1.WorkspaceSpec{}, "Started")) {
+	if cmp.Equal(oldWksp, newWksp, StopStartDiffOption[:]...) {
 		return admission.Allowed("immutable workspace is started/stopped")
 	}
 	return admission.Denied(fmt.Sprintf("workspace '%s' is immutable. To make modifications it must be deleted and recreated", oldWksp.Name))

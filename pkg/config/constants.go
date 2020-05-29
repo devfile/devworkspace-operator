@@ -12,8 +12,6 @@
 
 package config
 
-import "k8s.io/api/admissionregistration/v1beta1"
-
 // Internal constants
 const (
 	// default URL for accessing Che Rest API Emulator from Workspace containers
@@ -99,32 +97,8 @@ const (
 	RestAPIsVolumeName = "che-rest-apis-data"
 )
 
-// constants for webhook
-const (
-	// The address that the webhook will host on
-	WebhookServerHost = "0.0.0.0"
-
-	// The port that the webhook will host on
-	WebhookServerPort = 8443
-
-	// The directory where the certificate can be found by the webhook server
-	WebhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
-)
-
-// constants for webhook configuration
-const (
-	// The name of the workspace admission hook
-	MutateWebhookCfgName = "mutate-workspace-admission-hooks"
-
-	// The webhooks path on the server
-	MutateWebhookPath = "/mutate-workspaces"
-
-	// Policy on webhook failure
-	MutateWebhookFailurePolicy = v1beta1.Fail
-)
-
 // constants for workspace controller
 const (
-	// The ide of theia editor in devfile
+	// The IDE of theia editor in devfile
 	TheiaEditorID = "eclipse/che-theia"
 )

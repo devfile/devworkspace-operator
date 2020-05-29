@@ -62,6 +62,7 @@ _update_yamls: _set_registry_url
 	sed -i.bak -e 's|che.webhooks.enabled: .*|che.webhooks.enabled: "$(WEBHOOK_ENABLED)"|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|che.workspace.default_routing_class: .*|che.workspace.default_routing_class: "$(DEFAULT_ROUTING)"|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|cluster.routing_suffix: .*|cluster.routing_suffix: $(ROUTING_SUFFIX)|g' ./deploy/controller_config.yaml
+	sed -i.bak -e 's|che.workspace.sidecar.image_pull_policy: .*|che.workspace.sidecar.image_pull_policy: $(PULL_POLICY)|g' ./deploy/controller_config.yaml
 	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
@@ -80,6 +81,7 @@ _reset_yamls: _set_registry_url
 	sed -i.bak -e 's|che.webhooks.enabled: .*|che.webhooks.enabled: "false"|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|che.workspace.default_routing_class: .*|che.workspace.default_routing_class: "basic"|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|cluster.routing_suffix: .*|cluster.routing_suffix: 192.168.99.100.nip.io|g' ./deploy/controller_config.yaml
+	sed -i.bak -e 's|che.workspace.sidecar.image_pull_policy: .*|che.workspace.sidecar.image_pull_policy: Always|g' ./deploy/controller_config.yaml
 	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/os/controller.yaml

@@ -95,6 +95,12 @@ make local
 operator-sdk up local --namespace ${NAMESPACE} --enable-delve
 ```
 
+### Controller configuration
+
+Controller behavior can be configured with data from the `che-workspace-controller` config map in the same namespace where controller lives.
+
+For all available configuration properties and their default values, see [pkg/config](https://github.com/che-incubator/che-workspace-operator/tree/master/pkg/config)
+
 ### Remove controller from your K8s/OS Cluster
 To uninstall the controller and associated CRDs, use the Makefile uninstall rule:
 ```bash

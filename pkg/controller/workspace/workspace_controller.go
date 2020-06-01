@@ -14,6 +14,7 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	origLog "log"
 	"os"
@@ -25,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
@@ -33,7 +33,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -165,7 +165,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	workspace := &workspacev1alpha1.Workspace{}
 	err = r.client.Get(context.TODO(), request.NamespacedName, workspace)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -220,8 +220,12 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	componentDescriptions := componentsStatus.ComponentDescriptions
 	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceComponentsReady)
 
-	// Only add che rest apis if theia editor is present in the devfile
-	if isCheRestApisRequired(workspace.Spec.Devfile.Components) {
+	// Only add che rest apis if Theia editor is present in the devfile
+	if restapis.IsCheRestApisRequired(workspace.Spec.Devfile.Components) {
+		if !restapis.IsCheRestApisConfigured() {
+			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			return reconcile.Result{Requeue: false}, errors.New("Che REST API sidecar is not configured but required for used Theia plugin")
+		}
 		// TODO: first half of provisioning rest-apis
 		cheRestApisComponent := restapis.GetCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
 		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
@@ -260,7 +264,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 
 	// Step three: setup che-rest-apis configmap
-	if isCheRestApisRequired(workspace.Spec.Devfile.Components) {
+	if restapis.IsCheRestApisRequired(workspace.Spec.Devfile.Components) {
 		configMapStatus := restapis.SyncRestAPIsConfigMap(workspace, componentDescriptions, routingStatus.ExposedEndpoints, clusterAPI)
 		if !configMapStatus.Continue {
 			if configMapStatus.FailStartup {
@@ -334,7 +338,7 @@ func (r *ReconcileWorkspace) stopWorkspace(workspace *workspacev1alpha1.Workspac
 	status := &currentStatus{}
 	err := r.client.Get(context.TODO(), namespaceName, workspaceDeployment)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			status.Phase = workspacev1alpha1.WorkspaceStatusStopped
 			return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
 		}
@@ -349,7 +353,7 @@ func (r *ReconcileWorkspace) stopWorkspace(workspace *workspacev1alpha1.Workspac
 		var replicasZero int32 = 0
 		workspaceDeployment.Spec.Replicas = &replicasZero
 		err = r.client.Patch(context.TODO(), workspaceDeployment, patch)
-		if err != nil && !errors.IsConflict(err) {
+		if err != nil && !k8sErrors.IsConflict(err) {
 			return reconcile.Result{}, err
 		}
 		return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
@@ -368,13 +372,4 @@ func getWorkspaceId(instance *workspacev1alpha1.Workspace) (string, error) {
 		return "", err
 	}
 	return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
-}
-
-func isCheRestApisRequired(components []workspacev1alpha1.ComponentSpec) bool {
-	for _, comp := range components {
-		if strings.Contains(comp.Id, config.TheiaEditorID) && comp.Type == v1alpha1.CheEditor {
-			return true
-		}
-	}
-	return false
 }

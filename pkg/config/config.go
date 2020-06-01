@@ -82,8 +82,8 @@ func (wc *ControllerConfig) GetPVCStorageClassName() *string {
 	return wc.GetProperty(workspacePVCStorageClassName)
 }
 
-func (wc *ControllerConfig) GetCheRestApisDockerImage() string {
-	return wc.GetPropertyOrDefault(serverImageName, defaultServerImageName)
+func (wc *ControllerConfig) GetCheAPISidecarImage() string {
+	return wc.GetPropertyOrDefault(cheAPISidecarImage, defaultCheAPISidecarImage)
 }
 
 func (wc *ControllerConfig) IsOpenShift() bool {

@@ -235,10 +235,7 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Name = ConfigMapReference.Name
 	cm.Namespace = ConfigMapReference.Namespace
 
-	cm.Data = map[string]string{
-		routingSuffix:              defaultRoutingSuffix,
-		pluginArtifactsBrokerImage: defaultPluginArtifactsBrokerImage,
-	}
+	cm.Data = map[string]string{}
 }
 
 func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMap *corev1.ConfigMap) error {

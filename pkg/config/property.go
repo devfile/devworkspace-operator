@@ -38,7 +38,7 @@ const (
 	defaultRoutingClass = "basic"
 
 	webhooksEnabled        = "che.webhooks.enabled"
-	defaultWebhooksEnabled = "false"
+	defaultWebhooksEnabled = "true"
 
 	workspaceIdleTimeout        = "che.workspace.idle_timeout"
 	defaultWorkspaceIdleTimeout = "15m"

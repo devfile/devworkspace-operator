@@ -21,8 +21,9 @@ const (
 	webhooksEnabled        = "che.webhooks.enabled"
 	defaultWebhooksEnabled = "true"
 
-	serverImageName        = "che.workspace.che-api-sidecar.image"
-	defaultServerImageName = "quay.io/che-incubator/che-workspace-crd-rest-apis:7.1.0"
+	cheAPISidecarImage = "che.workspace.che_api_sidecar.image"
+	// by default that functionality is not available since it's not fully supported
+	defaultCheAPISidecarImage = ""
 
 	sidecarPullPolicy        = "che.workspace.sidecar.image_pull_policy"
 	defaultSidecarPullPolicy = "Always"

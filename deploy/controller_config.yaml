@@ -9,7 +9,7 @@ data:
   plugin.registry.url: http://che-plugin-registry.192.168.99.100.nip.io/v3
   che.webhooks.enabled: "false"
   che.workspace.default_routing_class: "basic"
-  che.workspace.che-api-sidecar.image: amisevsk/che-rest-apis:v0.0.2
+  che.workspace.che_api_sidecar.image: amisevsk/che-rest-apis:v0.0.2
   che.workspace.plugin_broker.artifacts.image: quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0
   # image pull policy that is applied to all workspace's containers
   che.workspace.sidecar.image_pull_policy: Always

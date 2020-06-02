@@ -159,9 +159,8 @@ func getSpecDeployment(
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					config.CheOriginalNameLabel: config.CheOriginalName,
-					config.WorkspaceIDLabel:     workspace.Status.WorkspaceId,
-					config.WorkspaceNameLabel:   workspace.Name,
+					config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
+					config.WorkspaceNameLabel: workspace.Name,
 				},
 			},
 			Strategy: appsv1.DeploymentStrategy{
@@ -172,9 +171,8 @@ func getSpecDeployment(
 					Name:      workspace.Status.WorkspaceId,
 					Namespace: workspace.Namespace,
 					Labels: map[string]string{
-						config.CheOriginalNameLabel: config.CheOriginalName,
-						config.WorkspaceIDLabel:     workspace.Status.WorkspaceId,
-						config.WorkspaceNameLabel:   workspace.Name,
+						config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
+						config.WorkspaceNameLabel: workspace.Name,
 					},
 				},
 				Spec: corev1.PodSpec{

@@ -200,8 +200,8 @@ func getSpecDeployment(
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
 	}
 
-	workspaceCreator := workspace.Annotations[config.WorkspaceCreatorLabel]
-	if workspaceCreator != "" {
+	workspaceCreator, present := workspace.Labels[config.WorkspaceCreatorLabel]
+	if present {
 		deployment.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
 		deployment.Spec.Template.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
 	}

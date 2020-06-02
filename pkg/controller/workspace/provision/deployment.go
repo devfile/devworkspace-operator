@@ -152,17 +152,15 @@ func getSpecDeployment(
 			Name:      common.DeploymentName(workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
-				config.WorkspaceCreatorLabel: creator,
+				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					config.CheOriginalNameLabel: config.CheOriginalName,
-					config.WorkspaceIDLabel:     workspace.Status.WorkspaceId,
-					config.WorkspaceNameLabel:   workspace.Name,
+					config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
+					config.WorkspaceNameLabel: workspace.Name,
 				},
 			},
 			Strategy: appsv1.DeploymentStrategy{
@@ -173,10 +171,8 @@ func getSpecDeployment(
 					Name:      workspace.Status.WorkspaceId,
 					Namespace: workspace.Namespace,
 					Labels: map[string]string{
-						config.CheOriginalNameLabel:  config.CheOriginalName,
-						config.WorkspaceIDLabel:      workspace.Status.WorkspaceId,
-						config.WorkspaceNameLabel:    workspace.Name,
-						config.WorkspaceCreatorLabel: creator,
+						config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
+						config.WorkspaceNameLabel: workspace.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -200,6 +196,12 @@ func getSpecDeployment(
 	if IsPVCRequired(components) {
 		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, precreateSubpathsInitContainer(workspace.Status.WorkspaceId))
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
+	}
+
+	workspaceCreator, present := workspace.Labels[config.WorkspaceCreatorLabel]
+	if present {
+		deployment.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
+		deployment.Spec.Template.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
 	}
 
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)

@@ -75,14 +75,14 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 }, func(data []byte) {})
 
 var _ = ginkgo.SynchronizedAfterSuite(func() {
-	workspaces, err := workspaces.NewK8sClient()
+	workspaces, err := client.NewK8sClient()
 
 	if err != nil {
 		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
 	}
 
 	if err = workspaces.Kube().CoreV1().Namespaces().Delete(config.Namespace, &metav1.DeleteOptions{}); err != nil {
-		_ = fmt.Errorf("Failed to deploy workspace controller %s", err)
+		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
 	}
 }, func() {})
 

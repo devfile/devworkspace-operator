@@ -21,7 +21,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
   -asmflags all=-trimpath=/ \
   cmd/manager/main.go
 
-FROM registry.access.redhat.com/ubi8-minimal:8.1-279
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
+FROM registry.access.redhat.com/ubi8-minimal:8.2
 COPY --from=builder /che-workspace-operator/_output/bin/che-workspace-controller /usr/local/bin/che-workspace-controller
 COPY --from=builder /che-workspace-operator/internal-registry  internal-registry
 

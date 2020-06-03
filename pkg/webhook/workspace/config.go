@@ -15,7 +15,12 @@ import (
 	"context"
 	"errors"
 
+	"fmt"
+	"os"
+
+	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/che-incubator/che-workspace-operator/internal/controller"
 	"github.com/che-incubator/che-workspace-operator/pkg/webhook/server"
@@ -53,6 +58,11 @@ func Configure(ctx context.Context) error {
 		return nil
 	}
 
+	saUID, err := controllerSAUID(ctx, c)
+	if err != nil {
+		return err
+	}
+
 	ownRef, err := controller.FindControllerOwner(ctx, c)
 	if err != nil {
 		return err
@@ -85,7 +95,7 @@ func Configure(ctx context.Context) error {
 		log.Info("Created workspace mutating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator()})
+	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID)})
 
 	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
 
@@ -110,7 +120,7 @@ func Configure(ctx context.Context) error {
 		log.Info("Created workspace validating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator()})
+	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID)})
 
 	return nil
 }
@@ -131,4 +141,25 @@ func getValidateWebhook(ctx context.Context, c client.Client, validateWebhookCfg
 		Namespace: validateWebhookCfg.Namespace,
 	}, existingCfg)
 	return existingCfg, err
+}
+
+func controllerSAUID(ctx context.Context, c client.Client) (string, error) {
+	saName := os.Getenv(config.ControllerServiceAccountNameEnvVar)
+	if saName == "" {
+		return "", fmt.Errorf("could not get service account name")
+	}
+	namespace, err := k8sutil.GetOperatorNamespace()
+	if err != nil {
+		return "", err
+	}
+	namespacedName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      saName,
+	}
+	sa := &corev1.ServiceAccount{}
+	err = c.Get(ctx, namespacedName, sa)
+	if err != nil {
+		return "", err
+	}
+	return string(sa.UID), nil
 }

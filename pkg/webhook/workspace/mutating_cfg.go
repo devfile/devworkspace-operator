@@ -29,72 +29,105 @@ func buildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	mutateWebhookPath := mutateWebhookPath
 	labelExistsOp := metav1.LabelSelectorOpExists
 	equivalentMatchPolicy := v1beta1.Equivalent
+	webhookClientConfig := v1beta1.WebhookClientConfig{
+		Service: &v1beta1.ServiceReference{
+			Name:      "workspace-controller",
+			Namespace: namespace,
+			Path:      &mutateWebhookPath,
+		},
+		CABundle: server.CABundle,
+	}
+
+	workspaceMutateWebhook := v1beta1.MutatingWebhook{
+		Name:          "mutate.che-workspace-controller.svc",
+		FailurePolicy: &mutateWebhookFailurePolicy,
+		ClientConfig:  webhookClientConfig,
+		Rules: []v1beta1.RuleWithOperations{
+			{
+				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{"workspace.devfile.io"},
+					APIVersions: []string{"v1alpha1"},
+					Resources:   []string{"devworkspaces"},
+				},
+			},
+			{
+				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{"workspace.che.eclipse.org"},
+					APIVersions: []string{"v1alpha1"},
+					Resources:   []string{"workspaceroutings", "components"},
+				},
+			},
+		},
+	}
+
+	workspaceObjMutateWebhook := v1beta1.MutatingWebhook{
+		Name:          "mutate-ws-resources.che-workspace-controller.svc",
+		FailurePolicy: &mutateWebhookFailurePolicy,
+		ClientConfig:  webhookClientConfig,
+		ObjectSelector: &metav1.LabelSelector{
+			MatchExpressions: []metav1.LabelSelectorRequirement{
+				{
+					Key:      config.WorkspaceIDLabel,
+					Operator: labelExistsOp,
+				},
+			},
+		},
+		MatchPolicy: &equivalentMatchPolicy,
+		Rules: []v1beta1.RuleWithOperations{
+			{
+				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"pods"},
+				},
+			},
+			{
+				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{""},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"services"},
+				},
+			},
+			{
+				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{"apps"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"deployments"},
+				},
+			},
+			{
+				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{"extensions"},
+					APIVersions: []string{"v1beta1"},
+					Resources:   []string{"ingresses"},
+				},
+			},
+		},
+	}
+	if config.ControllerCfg.IsOpenShift() {
+		workspaceObjMutateWebhook.Rules = append(workspaceObjMutateWebhook.Rules, v1beta1.RuleWithOperations{
+			Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+			Rule: v1beta1.Rule{
+				APIGroups:   []string{"route.openshift.io"},
+				APIVersions: []string{"v1"},
+				Resources:   []string{"routes"},
+			},
+		})
+	}
+
 	return &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mutateWebhookCfgName,
 		},
 		Webhooks: []v1beta1.MutatingWebhook{
-			{
-				Name:          "mutate.workspace-controller.svc",
-				FailurePolicy: &mutateWebhookFailurePolicy,
-				ClientConfig: v1beta1.WebhookClientConfig{
-					Service: &v1beta1.ServiceReference{
-						Name:      "workspace-controller",
-						Namespace: namespace,
-						Path:      &mutateWebhookPath,
-					},
-					CABundle: server.CABundle,
-				},
-				Rules: []v1beta1.RuleWithOperations{
-					{
-						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-						Rule: v1beta1.Rule{
-							APIGroups:   []string{"workspace.devfile.io"},
-							APIVersions: []string{"v1alpha1"},
-							Resources:   []string{"devworkspaces"},
-						},
-					},
-				},
-			},
-			{
-				Name:          "mutate-ws-resources.workspace-controller.svc",
-				FailurePolicy: &mutateWebhookFailurePolicy,
-				ClientConfig: v1beta1.WebhookClientConfig{
-					Service: &v1beta1.ServiceReference{
-						Name:      "workspace-controller",
-						Namespace: namespace,
-						Path:      &mutateWebhookPath,
-					},
-					CABundle: server.CABundle,
-				},
-				ObjectSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{
-						{
-							Key:      config.WorkspaceIDLabel,
-							Operator: labelExistsOp,
-						},
-					},
-				},
-				MatchPolicy: &equivalentMatchPolicy,
-				Rules: []v1beta1.RuleWithOperations{
-					{
-						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-						Rule: v1beta1.Rule{
-							APIGroups:   []string{""},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"pods"},
-						},
-					},
-					{
-						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-						Rule: v1beta1.Rule{
-							APIGroups:   []string{"apps"},
-							APIVersions: []string{"v1"},
-							Resources:   []string{"deployments"},
-						},
-					},
-				},
-			},
+			workspaceMutateWebhook,
+			workspaceObjMutateWebhook,
 		},
 	}
 }

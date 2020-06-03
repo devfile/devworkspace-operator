@@ -48,6 +48,9 @@ const (
 	// WorkspaceDiscoverableServiceAnnotation marks a service in a workspace as created for a discoverable endpoint,
 	// as opposed to a service created to support the workspace itself.
 	WorkspaceDiscoverableServiceAnnotation = "io.devfile.workspace/discoverable-service"
+
+	// ControllerServiceAccountNameEnvVar stores the name of the serviceaccount used in the controller.
+	ControllerServiceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"
 )
 
 // Constants for che-rest-apis

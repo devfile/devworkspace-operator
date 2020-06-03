@@ -54,9 +54,9 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	immutable := oldWksp.Annotations[config.WorkspaceImmutableAnnotation]
-	if immutable == "true" {
-		return h.handleImmutableWorkspace(oldWksp, newWksp)
+	allowed, msg := h.handleImmutableWorkspace(oldWksp, newWksp, req.UserInfo.UID)
+	if !allowed {
+		return admission.Denied(msg)
 	}
 
 	oldCreator, found := oldWksp.Labels[config.WorkspaceCreatorLabel]
@@ -75,11 +75,4 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 	}
 
 	return admission.Allowed("new workspace has the same workspace as old one")
-}
-
-func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *devworkspace.DevWorkspace) admission.Response {
-	if cmp.Equal(oldWksp, newWksp, StopStartDiffOption[:]...) {
-		return admission.Allowed("immutable workspace is started/stopped")
-	}
-	return admission.Denied(fmt.Sprintf("workspace '%s' is immutable. To make modifications it must be deleted and recreated", oldWksp.Name))
 }

@@ -13,6 +13,7 @@ package workspace
 
 import (
 	"context"
+	"errors"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
@@ -22,6 +23,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
@@ -38,31 +40,18 @@ func Configure(ctx context.Context) error {
 		return err
 	}
 
+	mutateWebhookCfg := buildMutateWebhookCfg(namespace)
+	validateWebhookCfg := buildValidatingWebhookCfg(namespace)
 	if !server.IsSetUp() {
-		log.Info("Webhooks server is not set up. Cleaning up webhook configurations")
+		_, mutatingWebhookErr := getMutatingWebhook(ctx, c, mutateWebhookCfg)
+		_, validatingWebhookErr := getValidateWebhook(ctx, c, validateWebhookCfg)
 
-		if err := c.Delete(ctx, &v1beta1.MutatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: mutateWebhookCfgName,
-			}}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
+		// No errors from either means that they are on the cluster
+		if mutatingWebhookErr == nil || validatingWebhookErr == nil {
+			return errors.New(`Webhooks have previously been set up and cannot be removed automatically. Configure the controller to use webhooks again or make sure that all workspaces are stopped, webhooks configuration are removed and then restart the controller`)
 		}
-		if err = c.Delete(ctx, &v1beta1.ValidatingWebhookConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: validateWebhookCfgName,
-			}}); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return err
-			}
-		}
-
-		log.Info("Existing workspace related webhook configurations are removed")
 		return nil
 	}
-
-	mutateWebhookCfg := buildMutateWebhookCfg(namespace)
 
 	ownRef, err := controller.FindControllerOwner(ctx, c)
 	if err != nil {
@@ -81,11 +70,10 @@ func Configure(ctx context.Context) error {
 		}
 		// Webhook Configuration already exists, we want to update it
 		// as we do not know if any fields might have changed.
-		existingCfg := &v1beta1.MutatingWebhookConfiguration{}
-		err := c.Get(ctx, types.NamespacedName{
-			Name:      mutateWebhookCfg.Name,
-			Namespace: mutateWebhookCfg.Namespace,
-		}, existingCfg)
+		existingCfg, err := getMutatingWebhook(ctx, c, mutateWebhookCfg)
+		if err != nil {
+			return err
+		}
 
 		mutateWebhookCfg.ResourceVersion = existingCfg.ResourceVersion
 		err = c.Update(ctx, mutateWebhookCfg)
@@ -99,7 +87,6 @@ func Configure(ctx context.Context) error {
 
 	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator()})
 
-	validateWebhookCfg := buildValidatingWebhookCfg(namespace)
 	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
 
 	if err := c.Create(ctx, validateWebhookCfg); err != nil {
@@ -108,11 +95,10 @@ func Configure(ctx context.Context) error {
 		}
 		// Webhook Configuration already exists, we want to update it
 		// as we do not know if any fields might have changed.
-		existingCfg := &v1beta1.ValidatingWebhookConfiguration{}
-		err := c.Get(ctx, types.NamespacedName{
-			Name:      validateWebhookCfg.Name,
-			Namespace: validateWebhookCfg.Namespace,
-		}, existingCfg)
+		existingCfg, err := getValidateWebhook(ctx, c, validateWebhookCfg)
+		if err != nil {
+			return err
+		}
 
 		validateWebhookCfg.ResourceVersion = existingCfg.ResourceVersion
 		err = c.Update(ctx, validateWebhookCfg)
@@ -127,4 +113,22 @@ func Configure(ctx context.Context) error {
 	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator()})
 
 	return nil
+}
+
+func getMutatingWebhook(ctx context.Context, c client.Client, mutatingWebhookCfg *v1beta1.MutatingWebhookConfiguration) (*v1beta1.MutatingWebhookConfiguration, error) {
+	existingCfg := &v1beta1.MutatingWebhookConfiguration{}
+	err := c.Get(ctx, types.NamespacedName{
+		Name:      mutatingWebhookCfg.Name,
+		Namespace: mutatingWebhookCfg.Namespace,
+	}, existingCfg)
+	return existingCfg, err
+}
+
+func getValidateWebhook(ctx context.Context, c client.Client, validateWebhookCfg *v1beta1.ValidatingWebhookConfiguration) (*v1beta1.ValidatingWebhookConfiguration, error) {
+	existingCfg := &v1beta1.ValidatingWebhookConfiguration{}
+	err := c.Get(ctx, types.NamespacedName{
+		Name:      validateWebhookCfg.Name,
+		Namespace: validateWebhookCfg.Namespace,
+	}, existingCfg)
+	return existingCfg, err
 }

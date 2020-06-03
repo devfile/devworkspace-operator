@@ -14,13 +14,13 @@ package client
 
 import (
 	"fmt"
+	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
 	"os/exec"
 	"strings"
 )
 
 func (w *K8sClient) OcApply(filePath string) (err error) {
-	const namespace = "che-workspace-controller"
-	cmd := exec.Command("oc", "apply", "--namespace", namespace, "-f", filePath)
+	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", filePath)
 	output, err := cmd.CombinedOutput()
 	fmt.Println(string(output))
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {

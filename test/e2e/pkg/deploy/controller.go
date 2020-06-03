@@ -48,16 +48,6 @@ func (w *Deployment) CreateAllOperatorRoles() (err error) {
 	return err
 }
 
-func (w *Deployment) CreatePluginRegistryRoute() (err error) {
-	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy/registry/local/os")
-	output, err := cmd.CombinedOutput()
-	fmt.Println(string(output))
-	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
-		fmt.Println(err)
-	}
-	return err
-}
-
 func (w *Deployment) CustomResourceDefinitions() (err error) {
 	cmd := exec.Command("oc", "apply", "-f", "deploy/crds")
 	output, err := cmd.CombinedOutput()

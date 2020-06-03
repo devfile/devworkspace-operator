@@ -14,6 +14,7 @@ package tests
 
 import (
 	"fmt"
+
 	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/client"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -24,7 +25,6 @@ var _ = ginkgo.Describe("[Create Cloud Shell Workspace]", func() {
 		label := "che.workspace_name=cloud-shell"
 		k8sClient, err := client.NewK8sClient()
 		if err != nil {
-			//TODO make sure it's the right way to fail here
 			ginkgo.Fail("Failed to create k8s client: " + err.Error())
 			return
 		}

@@ -15,8 +15,9 @@ package client
 import (
 	"errors"
 	"fmt"
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
 	"time"
+
+	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

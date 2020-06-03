@@ -14,10 +14,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
-	deploy2 "github.com/che-incubator/che-workspace-operator/test/e2e/pkg/deploy"
 	"path/filepath"
 	"testing"
+
+	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
+	deploy2 "github.com/che-incubator/che-workspace-operator/test/e2e/pkg/deploy"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,7 +51,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	ns, err = workspaces.Kube().CoreV1().Namespaces().Create(ns)
 
 	if err != nil {
-		fmt.Println("Failed to create namespace")
+		panic(err)
 	}
 
 	deploy := deploy2.NewDeployment(workspaces)
@@ -85,7 +86,6 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
 	}
 }, func() {})
-
 
 func TestWorkspaceController(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)

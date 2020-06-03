@@ -78,7 +78,7 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	workspaces, err := workspaces.NewK8sClient()
 
 	if err != nil {
-		_ = fmt.Errorf("Failed to create workspace client to uninstall controller %s", err)
+		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
 	}
 
 	if err = workspaces.Kube().CoreV1().Namespaces().Delete(config.Namespace, &metav1.DeleteOptions{}); err != nil {
@@ -87,7 +87,7 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 }, func() {})
 
 
-func TestHarnessCodeReadyWorkspaces(t *testing.T) {
+func TestWorkspaceController(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 
 	fmt.Println("Creating ginkgo reporter for Test Harness: Junit and Debug Detail reporter")

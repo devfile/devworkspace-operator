@@ -33,8 +33,7 @@ func (w *K8sClient) PodDeployWaitUtil(label string) (deployed bool, err error) {
 			return false, errors.New("timed out")
 		case <-tick:
 			desc := w.WaitForPodBySelectorRunning(config.Namespace, label, 180)
-			if desc != nil {
-			} else {
+			if desc == nil {
 				return true, nil
 			}
 		}

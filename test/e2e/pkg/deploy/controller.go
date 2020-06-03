@@ -58,7 +58,7 @@ func (w *Deployment) CreatePluginRegistryRoute() (err error) {
 }
 
 func (w *Deployment) CustomResourceDefinitions() (err error) {
-	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy/crds")
+	cmd := exec.Command("oc", "apply", "-f", "deploy/crds")
 	output, err := cmd.CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
 		fmt.Println(err)

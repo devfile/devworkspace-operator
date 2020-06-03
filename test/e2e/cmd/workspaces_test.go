@@ -22,8 +22,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/client"
 	_ "github.com/che-incubator/che-workspace-operator/test/e2e/pkg/tests"
-	workspaces "github.com/che-incubator/che-workspace-operator/test/e2e/pkg/client"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
@@ -41,7 +41,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	fmt.Println("Starting to setup objects before run ginkgo suite")
 	config.Namespace = "che-workspace-controller"
 
-	workspaces, err := workspaces.NewK8sClient()
+	workspaces, err := client.NewK8sClient()
 	if err != nil {
 		fmt.Println("Failed to create workspace client")
 	}

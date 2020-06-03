@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
-	deploy2 "github.com/che-incubator/che-workspace-operator/test/e2e/pkg/deploy"
+	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/deploy"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,21 +54,21 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		panic(err)
 	}
 
-	deploy := deploy2.NewDeployment(workspaces)
+	controller := deploy.NewDeployment(workspaces)
 
-	if err := deploy.CreateAllOperatorRoles(); err != nil {
+	if err := controller.CreateAllOperatorRoles(); err != nil {
 		_ = fmt.Errorf("Failed to create roles in clusters %s", err)
 	}
 
-	if err := deploy.CreateOperatorClusterRole(); err != nil {
+	if err := controller.CreateOperatorClusterRole(); err != nil {
 		_ = fmt.Errorf("Failed to create roles in clusters %s", err)
 	}
 
-	if err := deploy.CustomResourceDefinitions(); err != nil {
+	if err := controller.CustomResourceDefinitions(); err != nil {
 		_ = fmt.Errorf("Failed to add custom resources definitions to cluster %s", err)
 	}
 
-	if err := deploy.DeployWorkspacesController(); err != nil {
+	if err := controller.DeployWorkspacesController(); err != nil {
 		_ = fmt.Errorf("Failed to deploy workspace controller %s", err)
 	}
 

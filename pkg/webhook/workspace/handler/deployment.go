@@ -15,11 +15,8 @@ import (
 	"net/http"
 
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-var AppsV1DeploymentKind = metav1.GroupVersionKind{Kind: "Deployment", Group: "apps", Version: "v1"}
 
 func (h *WebhookHandler) MutateDeploymentOnCreate(_ context.Context, req admission.Request) admission.Response {
 	d := &appsv1.Deployment{}
@@ -49,6 +46,11 @@ func (h *WebhookHandler) MutateDeploymentOnUpdate(_ context.Context, req admissi
 	err := h.parse(req, oldD, newD)
 	if err != nil {
 		return admission.Denied(err.Error())
+	}
+
+	ok, msg := h.handleImmutableObj(oldD, newD, req.UserInfo.UID)
+	if !ok {
+		return admission.Denied(msg)
 	}
 
 	patchedMeta, err := h.mutateMetadataOnUpdate(&oldD.ObjectMeta, &newD.ObjectMeta)

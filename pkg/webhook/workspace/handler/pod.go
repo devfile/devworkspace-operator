@@ -17,11 +17,8 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-var V1PodKind = metav1.GroupVersionKind{Kind: "Pod", Group: "", Version: "v1"}
 
 func (h *WebhookHandler) MutatePodOnCreate(_ context.Context, req admission.Request) admission.Response {
 	p := &corev1.Pod{}
@@ -46,6 +43,11 @@ func (h *WebhookHandler) MutatePodOnUpdate(_ context.Context, req admission.Requ
 	err := h.parse(req, oldP, newP)
 	if err != nil {
 		return admission.Denied(err.Error())
+	}
+
+	ok, msg := h.handleImmutableObj(oldP, newP, req.UserInfo.UID)
+	if !ok {
+		return admission.Denied(msg)
 	}
 
 	patched, err := h.mutateMetadataOnUpdate(&oldP.ObjectMeta, &newP.ObjectMeta)

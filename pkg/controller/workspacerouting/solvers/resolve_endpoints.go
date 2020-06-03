@@ -33,16 +33,16 @@ func getExposedEndpoints(
 			if endpoint.Attributes[string(workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
 				continue
 			}
-			url, err := resolveURLForEndpoint(endpoint, routingObj)
+			endpointUrl, err := resolveURLForEndpoint(endpoint, routingObj)
 			if err != nil {
 				return nil, false, err
 			}
-			if url == "" {
+			if endpointUrl == "" {
 				ready = false
 			}
 			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], workspacev1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
-				Url:        url,
+				Url:        endpointUrl,
 				Attributes: endpoint.Attributes,
 			})
 		}

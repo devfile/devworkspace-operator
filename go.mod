@@ -8,8 +8,6 @@ require github.com/eclipse/che-plugin-broker v3.1.1-0.20200207223144-b20597f15e4
 // use-devfile-2.0-in-workspace-controller
 require github.com/devfile/kubernetes-api v0.0.0-20200603111415-8e1485401159
 
-// replace github.com/devfile/kubernetes-api => /home/dfestal/go/src/github.com/devfile/kubernetes-api
-
 // Operator Framework 0.17.x
 require (
 	github.com/eclipse/che-go-jsonrpc v0.0.0-20181205102516-87cdb8da2597 // indirect

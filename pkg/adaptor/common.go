@@ -26,7 +26,7 @@ func SortComponentsByType(components []devworkspace.Component) (dockerimages []d
 			Plugin: func(plugin *devworkspace.PluginComponent) error {
 				plugins = append(plugins, component)
 				return nil
-			}, 
+			},
 			Container: func(container *devworkspace.ContainerComponent) error {
 				dockerimages = append(dockerimages, component)
 				return nil

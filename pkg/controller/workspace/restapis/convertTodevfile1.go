@@ -21,9 +21,9 @@ import (
 )
 
 func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
-	var commandSpec *workspaceApi.CommandSpec = nil 
+	var commandSpec *workspaceApi.CommandSpec = nil
 	c.Visit(devworkspace.CommandVisitor{
-		Exec: func (cmd *devworkspace.ExecCommand) error {
+		Exec: func(cmd *devworkspace.ExecCommand) error {
 			name := cmd.Label
 			if name == "" {
 				name = cmd.Id
@@ -41,7 +41,7 @@ func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
 			}
 			return nil
 		},
-		VscodeLaunch: func (cmd *devworkspace.VscodeConfigurationCommand) error {
+		VscodeLaunch: func(cmd *devworkspace.VscodeConfigurationCommand) error {
 			commandSpec = &workspaceApi.CommandSpec{
 				Name: cmd.Id,
 				Actions: []workspaceApi.CommandActionSpec{
@@ -53,7 +53,7 @@ func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
 			}
 			return nil
 		},
-		VscodeTask: func (cmd *devworkspace.VscodeConfigurationCommand) error {
+		VscodeTask: func(cmd *devworkspace.VscodeConfigurationCommand) error {
 			commandSpec = &workspaceApi.CommandSpec{
 				Name: cmd.Id,
 				Actions: []workspaceApi.CommandActionSpec{
@@ -81,14 +81,14 @@ func nilIfEmpty(s string) *string {
 func toDevfileEndpoints(eps []devworkspace.Endpoint) []workspaceApi.Endpoint {
 	devfileEndpoints := []workspaceApi.Endpoint{}
 	for _, e := range eps {
-		attributes := map[workspaceApi.EndpointAttribute] string {}
+		attributes := map[workspaceApi.EndpointAttribute]string{}
 		if e.Configuration != nil {
 			attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = e.Configuration.Scheme
 		}
 
 		devfileEndpoints = append(devfileEndpoints, workspaceApi.Endpoint{
-			Name: e.Name,
-			Port: int64(e.TargetPort),
+			Name:       e.Name,
+			Port:       int64(e.TargetPort),
 			Attributes: attributes,
 		})
 	}
@@ -101,17 +101,17 @@ func toDevfileComponent(c devworkspace.Component) *workspaceApi.ComponentSpec {
 		Plugin: func(plugin *devworkspace.PluginComponent) error {
 			if strings.Contains(plugin.Id, config.TheiaEditorID) {
 				componentSpec = &workspaceApi.ComponentSpec{
-					Type:        workspaceApi.CheEditor,
-					Alias:       plugin.Name,
-					Id:          plugin.Id,
-	//				MemoryLimit: nilIfEmpty(c.Plugin.MemoryLimit),
+					Type:  workspaceApi.CheEditor,
+					Alias: plugin.Name,
+					Id:    plugin.Id,
+					//				MemoryLimit: nilIfEmpty(c.Plugin.MemoryLimit),
 				}
 			} else {
 				componentSpec = &workspaceApi.ComponentSpec{
-					Type:        workspaceApi.ChePlugin,
-					Alias:       plugin.Name,
-					Id:          plugin.Id,
-		//			MemoryLimit: nilIfEmpty(c.Plugin.MemoryLimit),
+					Type:  workspaceApi.ChePlugin,
+					Alias: plugin.Name,
+					Id:    plugin.Id,
+					//			MemoryLimit: nilIfEmpty(c.Plugin.MemoryLimit),
 				}
 			}
 			return nil
@@ -144,7 +144,7 @@ func toDevfileComponent(c devworkspace.Component) *workspaceApi.ComponentSpec {
 func toDevfileProject(p devworkspace.Project) *workspaceApi.ProjectSpec {
 	var theLocation string
 	var theType string
-	
+
 	p.Visit(devworkspace.ProjectSourceVisitor{
 		Git: func(src *devworkspace.GitProjectSource) error {
 			theLocation = src.Location
@@ -162,11 +162,11 @@ func toDevfileProject(p devworkspace.Project) *workspaceApi.ProjectSpec {
 			return nil
 		},
 	})
-	return &workspaceApi.ProjectSpec {
+	return &workspaceApi.ProjectSpec{
 		Name: p.Name,
-		Source: workspaceApi.ProjectSourceSpec {
+		Source: workspaceApi.ProjectSourceSpec{
 			Location: theLocation,
-			Type: theType,
+			Type:     theType,
 		},
 	}
 }
@@ -193,4 +193,3 @@ func completeDevfileFromDevworkspaceTemplate(template *devworkspace.DevWorkspace
 		}
 	}
 }
-

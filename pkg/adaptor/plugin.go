@@ -126,7 +126,7 @@ func createEndpointsFromPlugin(plugin brokerModel.ChePlugin) []devworkspace.Endp
 		}
 		endpoints = append(endpoints, devworkspace.Endpoint{
 			Name:       common.EndpointName(pluginEndpoint.Name),
-			TargetPort:       pluginEndpoint.TargetPort,
+			TargetPort: pluginEndpoint.TargetPort,
 			Attributes: attributes,
 		})
 	}

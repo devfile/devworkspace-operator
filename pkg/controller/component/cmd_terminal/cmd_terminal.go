@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
-
 )
 
 const (

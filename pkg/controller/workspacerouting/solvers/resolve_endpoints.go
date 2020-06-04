@@ -17,8 +17,8 @@ import (
 	"net/url"
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
 func getExposedEndpoints(
@@ -39,7 +39,7 @@ func getExposedEndpoints(
 			}
 			if url == "" {
 				ready = false
-			}			
+			}
 			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], workspacev1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
 				Url:        url,

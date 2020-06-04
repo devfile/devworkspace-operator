@@ -143,11 +143,11 @@ func GetDockerfileComponentCommands(component devworkspace.ContainerComponent, c
 			Exec: func(exec *devworkspace.ExecCommand) error {
 				if exec.Component == component.Name {
 					attributes := map[string]string{
-						config.CommandWorkingDirectoryAttribute:       exec.WorkingDir, // TODO: Env var substitution?
-						config.CommandMachineNameAttribute:            component.Name,
-						config.ComponentAliasCommandAttribute:         component.Name,
+						config.CommandWorkingDirectoryAttribute: exec.WorkingDir, // TODO: Env var substitution?
+						config.CommandMachineNameAttribute:      component.Name,
+						config.ComponentAliasCommandAttribute:   component.Name,
 					}
-	
+
 					componentCommands = append(componentCommands, v1alpha1.CheWorkspaceCommand{
 						Name:        exec.Id,
 						Type:        "exec",

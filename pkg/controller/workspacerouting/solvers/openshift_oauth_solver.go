@@ -16,9 +16,9 @@ import (
 	"fmt"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -158,7 +158,7 @@ func getProxyEndpointMappings(
 				publicEndpoint: devworkspace.Endpoint{
 					Attributes: endpoint.Attributes,
 					Name:       fmt.Sprintf("%s-proxy", endpoint.Name),
-					TargetPort:       proxyHttpsPort,
+					TargetPort: proxyHttpsPort,
 				},
 				publicEndpointHttpPort: proxyHttpPort,
 			}

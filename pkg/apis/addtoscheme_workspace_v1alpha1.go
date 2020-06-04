@@ -25,7 +25,7 @@ func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
 	AddToSchemes = append(AddToSchemes, v1alpha1.SchemeBuilder.AddToScheme)
 	AddToSchemes = append(AddToSchemes, devworkspace.SchemeBuilder.AddToScheme)
-		if isOS, err := cluster.IsOpenShift(); isOS && err == nil {
+	if isOS, err := cluster.IsOpenShift(); isOS && err == nil {
 		AddToSchemes = append(AddToSchemes,
 			routeV1.Install,
 			templateV1.Install,

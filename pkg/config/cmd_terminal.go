@@ -31,9 +31,9 @@ var (
 	defaultTerminalDockerimage = &devworkspace.ContainerComponent{
 		MemoryLimit: "256Mi",
 		Container: devworkspace.Container{
-			Name:        "dev",
-			Image:       "registry.redhat.io/codeready-workspaces/plugin-openshift-rhel8:2.1",
-			Args:        []string{"tail", "-f", "/dev/null"},
+			Name:  "dev",
+			Image: "registry.redhat.io/codeready-workspaces/plugin-openshift-rhel8:2.1",
+			Args:  []string{"tail", "-f", "/dev/null"},
 			Env: []devworkspace.EnvVar{
 				{
 					Name:  "PS1",

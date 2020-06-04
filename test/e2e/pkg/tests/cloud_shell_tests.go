@@ -29,7 +29,7 @@ var _ = ginkgo.Describe("[Create Cloud Shell Workspace]", func() {
 			return
 		}
 		_ = k8sClient.OcApply("samples/cloud-shell.yaml")
-		deploy, err := k8sClient.PodDeployWaitUtil(label)
+		deploy, err := k8sClient.WaitForPodRunningByLabel(label)
 
 		if !deploy {
 			fmt.Println("Cloud Shell not deployed")

@@ -35,121 +35,1047 @@ spec:
               description: Commands from devfile, to be matched to components
               items:
                 properties:
-                  actions:
-                    items:
-                      properties:
-                        command:
-                          type: string
-                        component:
-                          type: string
-                        reference:
-                          type: string
-                        referenceContent:
-                          type: string
-                        type:
-                          type: string
-                        workdir:
-                          type: string
-                      required:
-                        - type
-                      type: object
-                    type: array
-                  attributes:
-                    additionalProperties:
-                      type: string
-                    type: object
-                  name:
+                  commandType:
+                    description: Type of workspace command
+                    enum:
+                    - Exec
+                    - VscodeTask
+                    - VscodeLaunch
+                    - Composite
+                    - Custom
                     type: string
-                required:
-                  - name
+                  composite:
+                    description: Composite command that allows executing several sub-commands
+                      either sequentially or concurrently
+                    properties:
+                      attributes:
+                        additionalProperties:
+                          type: string
+                        description: Optional map of free-form additional command
+                          attributes
+                        type: object
+                      commands:
+                        description: The commands that comprise this composite command
+                        items:
+                          type: string
+                        type: array
+                      group:
+                        description: Defines the group this command is part of
+                        properties:
+                          isDefault:
+                            description: Identifies the default command for a given
+                              group kind
+                            type: boolean
+                          kind:
+                            description: Kind of group the command is part of
+                            enum:
+                            - build
+                            - run
+                            - test
+                            - debug
+                            type: string
+                        required:
+                        - kind
+                        type: object
+                      id:
+                        description: Mandatory identifier that allows referencing
+                          this command in composite commands, or from a parent, or
+                          in events.
+                        type: string
+                      label:
+                        description: Optional label that provides a label for this
+                          command to be used in Editor UI menus for example
+                        type: string
+                      parallel:
+                        description: Indicates if the sub-commands should be executed
+                          concurrently
+                        type: boolean
+                    required:
+                    - id
+                    type: object
+                  custom:
+                    description: Custom command whose logic is implementation-dependant
+                      and should be provided by the user possibly through some dedicated
+                      plugin
+                    properties:
+                      attributes:
+                        additionalProperties:
+                          type: string
+                        description: Optional map of free-form additional command
+                          attributes
+                        type: object
+                      commandClass:
+                        description: Class of command that the associated implementation
+                          component should use to process this command with the appropriate
+                          logic
+                        type: string
+                      embeddedResource:
+                        description: Additional free-form configuration for this custom
+                          command that the implementation component will know how
+                          to use
+                        type: object
+                        x-kubernetes-embedded-resource: true
+                        x-kubernetes-preserve-unknown-fields: true
+                      group:
+                        description: Defines the group this command is part of
+                        properties:
+                          isDefault:
+                            description: Identifies the default command for a given
+                              group kind
+                            type: boolean
+                          kind:
+                            description: Kind of group the command is part of
+                            enum:
+                            - build
+                            - run
+                            - test
+                            - debug
+                            type: string
+                        required:
+                        - kind
+                        type: object
+                      id:
+                        description: Mandatory identifier that allows referencing
+                          this command in composite commands, or from a parent, or
+                          in events.
+                        type: string
+                      label:
+                        description: Optional label that provides a label for this
+                          command to be used in Editor UI menus for example
+                        type: string
+                    required:
+                    - commandClass
+                    - embeddedResource
+                    - id
+                    type: object
+                  exec:
+                    description: CLI Command executed in a component container
+                    properties:
+                      attributes:
+                        additionalProperties:
+                          type: string
+                        description: Optional map of free-form additional command
+                          attributes
+                        type: object
+                      commandLine:
+                        description: The actual command-line string
+                        type: string
+                      component:
+                        description: Describes component to which given action relates
+                        type: string
+                      env:
+                        description: Optional list of environment variables that have
+                          to be set before running the command
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        type: array
+                      group:
+                        description: Defines the group this command is part of
+                        properties:
+                          isDefault:
+                            description: Identifies the default command for a given
+                              group kind
+                            type: boolean
+                          kind:
+                            description: Kind of group the command is part of
+                            enum:
+                            - build
+                            - run
+                            - test
+                            - debug
+                            type: string
+                        required:
+                        - kind
+                        type: object
+                      id:
+                        description: Mandatory identifier that allows referencing
+                          this command in composite commands, or from a parent, or
+                          in events.
+                        type: string
+                      label:
+                        description: Optional label that provides a label for this
+                          command to be used in Editor UI menus for example
+                        type: string
+                      workingDir:
+                        description: Working directory where the command should be
+                          executed
+                        type: string
+                    required:
+                    - id
+                    type: object
+                  vscodeLaunch:
+                    description: Command providing the definition of a VsCode launch
+                      action
+                    properties:
+                      attributes:
+                        additionalProperties:
+                          type: string
+                        description: Optional map of free-form additional command
+                          attributes
+                        type: object
+                      group:
+                        description: Defines the group this command is part of
+                        properties:
+                          isDefault:
+                            description: Identifies the default command for a given
+                              group kind
+                            type: boolean
+                          kind:
+                            description: Kind of group the command is part of
+                            enum:
+                            - build
+                            - run
+                            - test
+                            - debug
+                            type: string
+                        required:
+                        - kind
+                        type: object
+                      id:
+                        description: Mandatory identifier that allows referencing
+                          this command in composite commands, or from a parent, or
+                          in events.
+                        type: string
+                      inlined:
+                        description: Inlined content of the VsCode configuration
+                        type: string
+                      locationType:
+                        description: Type of Vscode configuration command location
+                        enum:
+                        - Uri
+                        - Inlined
+                        type: string
+                      uri:
+                        description: Location as an absolute of relative URI the VsCode
+                          configuration will be fetched from
+                        type: string
+                    required:
+                    - id
+                    type: object
+                  vscodeTask:
+                    description: Command providing the definition of a VsCode Task
+                    properties:
+                      attributes:
+                        additionalProperties:
+                          type: string
+                        description: Optional map of free-form additional command
+                          attributes
+                        type: object
+                      group:
+                        description: Defines the group this command is part of
+                        properties:
+                          isDefault:
+                            description: Identifies the default command for a given
+                              group kind
+                            type: boolean
+                          kind:
+                            description: Kind of group the command is part of
+                            enum:
+                            - build
+                            - run
+                            - test
+                            - debug
+                            type: string
+                        required:
+                        - kind
+                        type: object
+                      id:
+                        description: Mandatory identifier that allows referencing
+                          this command in composite commands, or from a parent, or
+                          in events.
+                        type: string
+                      inlined:
+                        description: Inlined content of the VsCode configuration
+                        type: string
+                      locationType:
+                        description: Type of Vscode configuration command location
+                        enum:
+                        - Uri
+                        - Inlined
+                        type: string
+                      uri:
+                        description: Location as an absolute of relative URI the VsCode
+                          configuration will be fetched from
+                        type: string
+                    required:
+                    - id
+                    type: object
                 type: object
               type: array
             components:
               description: List of devfile components to be processed by this component
               items:
                 properties:
-                  alias:
+                  componentType:
+                    description: Type of component
+                    enum:
+                    - Container
+                    - Kubernetes
+                    - Openshift
+                    - Volume
+                    - Plugin
+                    - Custom
                     type: string
-                  args:
-                    items:
-                      type: string
-                    type: array
-                  command:
-                    items:
-                      type: string
-                    type: array
-                  endpoints:
-                    items:
-                      description: Describes dockerimage component endpoint
-                      properties:
-                        attributes:
-                          additionalProperties:
-                            type: string
+                  container:
+                    description: Allows adding and configuring workspace-related containers
+                    properties:
+                      args:
+                        description: The arguments to supply to the command running
+                          the dockerimage component. The arguments are supplied either
+                          to the default command provided in the image or to the overridden
+                          command. Defaults to an empty array, meaning use whatever
+                          is defined in the image.
+                        items:
+                          type: string
+                        type: array
+                      command:
+                        description: The command to run in the dockerimage component
+                          instead of the default one provided in the image. Defaults
+                          to an empty array, meaning use whatever is defined in the
+                          image.
+                        items:
+                          type: string
+                        type: array
+                      endpoints:
+                        items:
+                          properties:
+                            attributes:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            configuration:
+                              properties:
+                                cookiesAuthEnabled:
+                                  type: boolean
+                                discoverable:
+                                  type: boolean
+                                path:
+                                  type: string
+                                protocol:
+                                  description: The is the low-level protocol of traffic
+                                    coming through this endpoint. Default value is
+                                    "tcp"
+                                  type: string
+                                public:
+                                  type: boolean
+                                scheme:
+                                  description: The is the URL scheme to use when accessing
+                                    the endpoint. Default value is "http"
+                                  type: string
+                                secure:
+                                  type: boolean
+                                type:
+                                  enum:
+                                  - ide
+                                  - terminal
+                                  - ide-dev
+                                  type: string
+                              type: object
+                            name:
+                              type: string
+                            targetPort:
+                              type: integer
+                          required:
+                          - name
                           type: object
-                        name:
-                          type: string
-                        port:
-                          format: int64
-                          type: integer
-                      required:
-                        - name
-                        - port
-                      type: object
-                    type: array
-                  env:
-                    items:
-                      description: Describes environment variable
-                      properties:
-                        name:
-                          type: string
-                        value:
-                          type: string
-                      required:
-                        - name
-                        - value
-                      type: object
-                    type: array
-                  id:
-                    type: string
-                  image:
-                    type: string
-                  memoryLimit:
-                    type: string
-                  mountSources:
-                    type: boolean
-                  reference:
-                    type: string
-                  referenceContent:
-                    type: string
-                  selector:
-                    additionalProperties:
-                      type: string
+                        type: array
+                      env:
+                        description: Environment variables used in this container
+                        items:
+                          properties:
+                            name:
+                              type: string
+                            value:
+                              type: string
+                          required:
+                          - name
+                          - value
+                          type: object
+                        type: array
+                      image:
+                        type: string
+                      memoryLimit:
+                        type: string
+                      mountSources:
+                        type: boolean
+                      name:
+                        type: string
+                      sourceMapping:
+                        description: Optional specification of the path in the container
+                          where project sources should be transferred/mounted when
+                          `mountSources` is `true`. When omitted, the value of the
+                          `PROJECTS_ROOT` environment variable is used.
+                        type: string
+                      volumeMounts:
+                        description: List of volumes mounts that should be mounted
+                          is this container.
+                        items:
+                          description: Volume that should be mounted to a component
+                            container
+                          properties:
+                            name:
+                              description: The volume mount name is the name of an
+                                existing `Volume` component. If no corresponding `Volume`
+                                component exist it is implicitly added. If several
+                                containers mount the same volume name then they will
+                                reuse the same volume and will be able to access to
+                                the same files.
+                              type: string
+                            path:
+                              description: The path in the component container where
+                                the volume should be mounted. If not path is mentioned,
+                                default path is the is `/<name>`.
+                              type: string
+                          required:
+                          - name
+                          type: object
+                        type: array
+                    required:
+                    - name
                     type: object
-                  type:
-                    type: string
-                  volumes:
-                    items:
-                      description: Describe volume that should be mount to component
-                      properties:
-                        containerPath:
-                          type: string
-                        name:
-                          type: string
-                      required:
-                        - containerPath
+                  custom:
+                    description: Custom component whose logic is implementation-dependant
+                      and should be provided by the user possibly through some dedicated
+                      controller
+                    properties:
+                      componentClass:
+                        description: Class of component that the associated implementation
+                          controller should use to process this command with the appropriate
+                          logic
+                        type: string
+                      embeddedResource:
+                        description: Additional free-form configuration for this custom
+                          component that the implementation controller will know how
+                          to use
+                        type: object
+                        x-kubernetes-embedded-resource: true
+                        x-kubernetes-preserve-unknown-fields: true
+                      name:
+                        description: Mandatory name that allows referencing the component
+                          in commands, or inside a parent
+                        type: string
+                    required:
+                    - componentClass
+                    - embeddedResource
+                    - name
+                    type: object
+                  kubernetes:
+                    description: Allows importing into the workspace the Kubernetes
+                      resources defined in a given manifest. For example this allows
+                      reusing the Kubernetes definitions used to deploy some runtime
+                      components in production.
+                    properties:
+                      inlined:
+                        description: Inlined manifest
+                        type: string
+                      locationType:
+                        description: Type of Kubernetes-like location
+                        enum:
+                        - Uri
+                        - Inlined
+                        type: string
+                      name:
+                        description: Mandatory name that allows referencing the component
+                          in commands, or inside a parent
+                        type: string
+                      uri:
+                        description: Location in a file fetched from a uri.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  openshift:
+                    description: Allows importing into the workspace the OpenShift
+                      resources defined in a given manifest. For example this allows
+                      reusing the OpenShift definitions used to deploy some runtime
+                      components in production.
+                    properties:
+                      inlined:
+                        description: Inlined manifest
+                        type: string
+                      locationType:
+                        description: Type of Kubernetes-like location
+                        enum:
+                        - Uri
+                        - Inlined
+                        type: string
+                      name:
+                        description: Mandatory name that allows referencing the component
+                          in commands, or inside a parent
+                        type: string
+                      uri:
+                        description: Location in a file fetched from a uri.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  plugin:
+                    description: Allows importing a plugin. Plugins are mainly imported
+                      devfiles that contribute components, commands and events as
+                      a consistent single unit. They are defined in either YAML files
+                      following the devfile syntax, or as `DevWorkspaceTemplate` Kubernetes
+                      Custom Resources
+                    properties:
+                      commands:
+                        description: Overrides of commands encapsulated in a plugin.
+                          Overriding is done using a strategic merge
+                        items:
+                          properties:
+                            commandType:
+                              description: Type of workspace command
+                              enum:
+                              - Exec
+                              - VscodeTask
+                              - VscodeLaunch
+                              - Composite
+                              - Custom
+                              type: string
+                            composite:
+                              description: Composite command that allows executing
+                                several sub-commands either sequentially or concurrently
+                              properties:
+                                attributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: Optional map of free-form additional
+                                    command attributes
+                                  type: object
+                                commands:
+                                  description: The commands that comprise this composite
+                                    command
+                                  items:
+                                    type: string
+                                  type: array
+                                group:
+                                  description: Defines the group this command is part
+                                    of
+                                  properties:
+                                    isDefault:
+                                      description: Identifies the default command
+                                        for a given group kind
+                                      type: boolean
+                                    kind:
+                                      description: Kind of group the command is part
+                                        of
+                                      enum:
+                                      - build
+                                      - run
+                                      - test
+                                      - debug
+                                      type: string
+                                  required:
+                                  - kind
+                                  type: object
+                                id:
+                                  description: Mandatory identifier that allows referencing
+                                    this command in composite commands, or from a
+                                    parent, or in events.
+                                  type: string
+                                label:
+                                  description: Optional label that provides a label
+                                    for this command to be used in Editor UI menus
+                                    for example
+                                  type: string
+                                parallel:
+                                  description: Indicates if the sub-commands should
+                                    be executed concurrently
+                                  type: boolean
+                              required:
+                              - id
+                              type: object
+                            custom:
+                              description: Custom command whose logic is implementation-dependant
+                                and should be provided by the user possibly through
+                                some dedicated plugin
+                              properties:
+                                attributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: Optional map of free-form additional
+                                    command attributes
+                                  type: object
+                                commandClass:
+                                  description: Class of command that the associated
+                                    implementation component should use to process
+                                    this command with the appropriate logic
+                                  type: string
+                                embeddedResource:
+                                  description: Additional free-form configuration
+                                    for this custom command that the implementation
+                                    component will know how to use
+                                  type: object
+                                  x-kubernetes-embedded-resource: true
+                                  x-kubernetes-preserve-unknown-fields: true
+                                group:
+                                  description: Defines the group this command is part
+                                    of
+                                  properties:
+                                    isDefault:
+                                      description: Identifies the default command
+                                        for a given group kind
+                                      type: boolean
+                                    kind:
+                                      description: Kind of group the command is part
+                                        of
+                                      enum:
+                                      - build
+                                      - run
+                                      - test
+                                      - debug
+                                      type: string
+                                  required:
+                                  - kind
+                                  type: object
+                                id:
+                                  description: Mandatory identifier that allows referencing
+                                    this command in composite commands, or from a
+                                    parent, or in events.
+                                  type: string
+                                label:
+                                  description: Optional label that provides a label
+                                    for this command to be used in Editor UI menus
+                                    for example
+                                  type: string
+                              required:
+                              - commandClass
+                              - embeddedResource
+                              - id
+                              type: object
+                            exec:
+                              description: CLI Command executed in a component container
+                              properties:
+                                attributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: Optional map of free-form additional
+                                    command attributes
+                                  type: object
+                                commandLine:
+                                  description: The actual command-line string
+                                  type: string
+                                component:
+                                  description: Describes component to which given
+                                    action relates
+                                  type: string
+                                env:
+                                  description: Optional list of environment variables
+                                    that have to be set before running the command
+                                  items:
+                                    properties:
+                                      name:
+                                        type: string
+                                      value:
+                                        type: string
+                                    required:
+                                    - name
+                                    - value
+                                    type: object
+                                  type: array
+                                group:
+                                  description: Defines the group this command is part
+                                    of
+                                  properties:
+                                    isDefault:
+                                      description: Identifies the default command
+                                        for a given group kind
+                                      type: boolean
+                                    kind:
+                                      description: Kind of group the command is part
+                                        of
+                                      enum:
+                                      - build
+                                      - run
+                                      - test
+                                      - debug
+                                      type: string
+                                  required:
+                                  - kind
+                                  type: object
+                                id:
+                                  description: Mandatory identifier that allows referencing
+                                    this command in composite commands, or from a
+                                    parent, or in events.
+                                  type: string
+                                label:
+                                  description: Optional label that provides a label
+                                    for this command to be used in Editor UI menus
+                                    for example
+                                  type: string
+                                workingDir:
+                                  description: Working directory where the command
+                                    should be executed
+                                  type: string
+                              required:
+                              - id
+                              type: object
+                            vscodeLaunch:
+                              description: Command providing the definition of a VsCode
+                                launch action
+                              properties:
+                                attributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: Optional map of free-form additional
+                                    command attributes
+                                  type: object
+                                group:
+                                  description: Defines the group this command is part
+                                    of
+                                  properties:
+                                    isDefault:
+                                      description: Identifies the default command
+                                        for a given group kind
+                                      type: boolean
+                                    kind:
+                                      description: Kind of group the command is part
+                                        of
+                                      enum:
+                                      - build
+                                      - run
+                                      - test
+                                      - debug
+                                      type: string
+                                  required:
+                                  - kind
+                                  type: object
+                                id:
+                                  description: Mandatory identifier that allows referencing
+                                    this command in composite commands, or from a
+                                    parent, or in events.
+                                  type: string
+                                inlined:
+                                  description: Inlined content of the VsCode configuration
+                                  type: string
+                                locationType:
+                                  description: Type of Vscode configuration command
+                                    location
+                                  enum:
+                                  - Uri
+                                  - Inlined
+                                  type: string
+                                uri:
+                                  description: Location as an absolute of relative
+                                    URI the VsCode configuration will be fetched from
+                                  type: string
+                              required:
+                              - id
+                              type: object
+                            vscodeTask:
+                              description: Command providing the definition of a VsCode
+                                Task
+                              properties:
+                                attributes:
+                                  additionalProperties:
+                                    type: string
+                                  description: Optional map of free-form additional
+                                    command attributes
+                                  type: object
+                                group:
+                                  description: Defines the group this command is part
+                                    of
+                                  properties:
+                                    isDefault:
+                                      description: Identifies the default command
+                                        for a given group kind
+                                      type: boolean
+                                    kind:
+                                      description: Kind of group the command is part
+                                        of
+                                      enum:
+                                      - build
+                                      - run
+                                      - test
+                                      - debug
+                                      type: string
+                                  required:
+                                  - kind
+                                  type: object
+                                id:
+                                  description: Mandatory identifier that allows referencing
+                                    this command in composite commands, or from a
+                                    parent, or in events.
+                                  type: string
+                                inlined:
+                                  description: Inlined content of the VsCode configuration
+                                  type: string
+                                locationType:
+                                  description: Type of Vscode configuration command
+                                    location
+                                  enum:
+                                  - Uri
+                                  - Inlined
+                                  type: string
+                                uri:
+                                  description: Location as an absolute of relative
+                                    URI the VsCode configuration will be fetched from
+                                  type: string
+                              required:
+                              - id
+                              type: object
+                          type: object
+                        type: array
+                      components:
+                        description: Overrides of components encapsulated in a plugin.
+                          Overriding is done using a strategic merge
+                        items:
+                          properties:
+                            componentType:
+                              description: Type of component override
+                              enum:
+                              - Container
+                              - Kubernetes
+                              - Openshift
+                              - Volume
+                              type: string
+                            container:
+                              description: Configuration overriding for a Container
+                                component
+                              properties:
+                                args:
+                                  description: The arguments to supply to the command
+                                    running the dockerimage component. The arguments
+                                    are supplied either to the default command provided
+                                    in the image or to the overridden command. Defaults
+                                    to an empty array, meaning use whatever is defined
+                                    in the image.
+                                  items:
+                                    type: string
+                                  type: array
+                                command:
+                                  description: The command to run in the dockerimage
+                                    component instead of the default one provided
+                                    in the image. Defaults to an empty array, meaning
+                                    use whatever is defined in the image.
+                                  items:
+                                    type: string
+                                  type: array
+                                endpoints:
+                                  items:
+                                    properties:
+                                      attributes:
+                                        additionalProperties:
+                                          type: string
+                                        type: object
+                                      configuration:
+                                        properties:
+                                          cookiesAuthEnabled:
+                                            type: boolean
+                                          discoverable:
+                                            type: boolean
+                                          path:
+                                            type: string
+                                          protocol:
+                                            description: The is the low-level protocol
+                                              of traffic coming through this endpoint.
+                                              Default value is "tcp"
+                                            type: string
+                                          public:
+                                            type: boolean
+                                          scheme:
+                                            description: The is the URL scheme to
+                                              use when accessing the endpoint. Default
+                                              value is "http"
+                                            type: string
+                                          secure:
+                                            type: boolean
+                                          type:
+                                            enum:
+                                            - ide
+                                            - terminal
+                                            - ide-dev
+                                            type: string
+                                        type: object
+                                      name:
+                                        type: string
+                                      targetPort:
+                                        type: integer
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                                env:
+                                  description: Environment variables used in this
+                                    container
+                                  items:
+                                    properties:
+                                      name:
+                                        type: string
+                                      value:
+                                        type: string
+                                    required:
+                                    - name
+                                    - value
+                                    type: object
+                                  type: array
+                                image:
+                                  type: string
+                                memoryLimit:
+                                  type: string
+                                mountSources:
+                                  type: boolean
+                                name:
+                                  type: string
+                                sourceMapping:
+                                  description: Optional specification of the path
+                                    in the container where project sources should
+                                    be transferred/mounted when `mountSources` is
+                                    `true`. When omitted, the value of the `PROJECTS_ROOT`
+                                    environment variable is used.
+                                  type: string
+                                volumeMounts:
+                                  description: List of volumes mounts that should
+                                    be mounted is this container.
+                                  items:
+                                    description: Volume that should be mounted to
+                                      a component container
+                                    properties:
+                                      name:
+                                        description: The volume mount name is the
+                                          name of an existing `Volume` component.
+                                          If no corresponding `Volume` component exist
+                                          it is implicitly added. If several containers
+                                          mount the same volume name then they will
+                                          reuse the same volume and will be able to
+                                          access to the same files.
+                                        type: string
+                                      path:
+                                        description: The path in the component container
+                                          where the volume should be mounted. If not
+                                          path is mentioned, default path is the is
+                                          `/<name>`.
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type: array
+                              required:
+                              - name
+                              type: object
+                            kubernetes:
+                              description: Configuration overriding for a Kubernetes
+                                component
+                              properties:
+                                inlined:
+                                  description: Inlined manifest
+                                  type: string
+                                locationType:
+                                  description: Type of Kubernetes-like location
+                                  enum:
+                                  - Uri
+                                  - Inlined
+                                  type: string
+                                name:
+                                  description: Mandatory name that allows referencing
+                                    the component in commands, or inside a parent
+                                  type: string
+                                uri:
+                                  description: Location in a file fetched from a uri.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            openshift:
+                              description: Configuration overriding for an OpenShift
+                                component
+                              properties:
+                                inlined:
+                                  description: Inlined manifest
+                                  type: string
+                                locationType:
+                                  description: Type of Kubernetes-like location
+                                  enum:
+                                  - Uri
+                                  - Inlined
+                                  type: string
+                                name:
+                                  description: Mandatory name that allows referencing
+                                    the component in commands, or inside a parent
+                                  type: string
+                                uri:
+                                  description: Location in a file fetched from a uri.
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                            volume:
+                              description: Configuration overriding for a Volume component
+                              properties:
+                                name:
+                                  description: Mandatory name that allows referencing
+                                    the Volume component in Container volume mounts
+                                    or inside a parent
+                                  type: string
+                                size:
+                                  description: Size of the volume
+                                  type: string
+                              required:
+                              - name
+                              type: object
+                          type: object
+                        type: array
+                      id:
+                        description: Id in a registry that contains a Devfile yaml
+                          file
+                        type: string
+                      importReferenceType:
+                        description: type of location from where the referenced template
+                          structure should be retrieved
+                        enum:
+                        - Uri
+                        - Id
+                        - Kubernetes
+                        type: string
+                      kubernetes:
+                        description: Reference to a Kubernetes CRD of type DevWorkspaceTemplate
+                        properties:
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                        required:
                         - name
-                      type: object
-                    type: array
-                required:
-                  - type
+                        type: object
+                      name:
+                        description: Optional name that allows referencing the component
+                          in commands, or inside a parent If omitted it will be infered
+                          from the location (uri or registryEntry)
+                        type: string
+                      registryUrl:
+                        type: string
+                      uri:
+                        description: Uri of a Devfile yaml file
+                        type: string
+                    type: object
+                  volume:
+                    description: Allows specifying the definition of a volume shared
+                      by several other components
+                    properties:
+                      name:
+                        description: Mandatory name that allows referencing the Volume
+                          component in Container volume mounts or inside a parent
+                        type: string
+                      size:
+                        description: Size of the volume
+                        type: string
+                    required:
+                    - name
+                    type: object
                 type: object
               type: array
             workspaceId:
               description: Id of workspace that contains this component
               type: string
           required:
-            - components
-            - workspaceId
+          - components
+          - workspaceId
           type: object
         status:
           description: ComponentStatus defines the observed state of Component
@@ -211,29 +1137,54 @@ spec:
                               description: Type of the command
                               type: string
                           required:
-                            - commandLine
-                            - name
-                            - type
+                          - commandLine
+                          - name
+                          - type
                           type: object
                         type: array
                       endpoints:
                         description: Endpoints stores the workspace endpoints defined
                           by the component
                         items:
-                          description: Describes dockerimage component endpoint
                           properties:
                             attributes:
                               additionalProperties:
                                 type: string
                               type: object
+                            configuration:
+                              properties:
+                                cookiesAuthEnabled:
+                                  type: boolean
+                                discoverable:
+                                  type: boolean
+                                path:
+                                  type: string
+                                protocol:
+                                  description: The is the low-level protocol of traffic
+                                    coming through this endpoint. Default value is
+                                    "tcp"
+                                  type: string
+                                public:
+                                  type: boolean
+                                scheme:
+                                  description: The is the URL scheme to use when accessing
+                                    the endpoint. Default value is "http"
+                                  type: string
+                                secure:
+                                  type: boolean
+                                type:
+                                  enum:
+                                  - ide
+                                  - terminal
+                                  - ide-dev
+                                  type: string
+                              type: object
                             name:
                               type: string
-                            port:
-                              format: int64
+                            targetPort:
                               type: integer
                           required:
-                            - name
-                            - port
+                          - name
                           type: object
                         type: array
                     type: object
@@ -324,7 +1275,7 @@ spec:
                                               or its key must be defined
                                             type: boolean
                                         required:
-                                          - key
+                                        - key
                                         type: object
                                       fieldRef:
                                         description: 'Selects a field of the pod:
@@ -343,7 +1294,7 @@ spec:
                                               in the specified API version.
                                             type: string
                                         required:
-                                          - fieldPath
+                                        - fieldPath
                                         type: object
                                       resourceFieldRef:
                                         description: 'Selects a resource of the container:
@@ -358,8 +1309,8 @@ spec:
                                             type: string
                                           divisor:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             description: Specifies the output format
                                               of the exposed resources, defaults to
                                               "1"
@@ -369,7 +1320,7 @@ spec:
                                             description: 'Required: resource to select'
                                             type: string
                                         required:
-                                          - resource
+                                        - resource
                                         type: object
                                       secretKeyRef:
                                         description: Selects a key of a secret in
@@ -391,11 +1342,11 @@ spec:
                                               or its key must be defined
                                             type: boolean
                                         required:
-                                          - key
+                                        - key
                                         type: object
                                     type: object
                                 required:
-                                  - name
+                                - name
                                 type: object
                               type: array
                             envFrom:
@@ -513,8 +1464,8 @@ spec:
                                                 description: The header field value
                                                 type: string
                                             required:
-                                              - name
-                                              - value
+                                            - name
+                                            - value
                                             type: object
                                           type: array
                                         path:
@@ -523,8 +1474,8 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Name or number of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
@@ -535,7 +1486,7 @@ spec:
                                             to the host. Defaults to HTTP.
                                           type: string
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                     tcpSocket:
                                       description: 'TCPSocket specifies an action
@@ -549,15 +1500,15 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Number or name of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
                                             be an IANA_SVC_NAME.
                                           x-kubernetes-int-or-string: true
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                   type: object
                                 preStop:
@@ -619,8 +1570,8 @@ spec:
                                                 description: The header field value
                                                 type: string
                                             required:
-                                              - name
-                                              - value
+                                            - name
+                                            - value
                                             type: object
                                           type: array
                                         path:
@@ -629,8 +1580,8 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Name or number of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
@@ -641,7 +1592,7 @@ spec:
                                             to the host. Defaults to HTTP.
                                           type: string
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                     tcpSocket:
                                       description: 'TCPSocket specifies an action
@@ -655,15 +1606,15 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Number or name of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
                                             be an IANA_SVC_NAME.
                                           x-kubernetes-int-or-string: true
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                   type: object
                               type: object
@@ -719,8 +1670,8 @@ spec:
                                             description: The header field value
                                             type: string
                                         required:
-                                          - name
-                                          - value
+                                        - name
+                                        - value
                                         type: object
                                       type: array
                                     path:
@@ -728,8 +1679,8 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Name or number of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
@@ -739,7 +1690,7 @@ spec:
                                         the host. Defaults to HTTP.
                                       type: string
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 initialDelaySeconds:
                                   description: 'Number of seconds after the container
@@ -771,14 +1722,14 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Number or name of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
                                       x-kubernetes-int-or-string: true
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 timeoutSeconds:
                                   description: 'Number of seconds after which the
@@ -834,13 +1785,12 @@ spec:
                                       or SCTP. Defaults to "TCP".
                                     type: string
                                 required:
-                                  - containerPort
-                                  - protocol
+                                - containerPort
                                 type: object
                               type: array
                               x-kubernetes-list-map-keys:
-                                - containerPort
-                                - protocol
+                              - containerPort
+                              - protocol
                               x-kubernetes-list-type: map
                             readinessProbe:
                               description: 'Periodic probe of container service readiness.
@@ -894,8 +1844,8 @@ spec:
                                             description: The header field value
                                             type: string
                                         required:
-                                          - name
-                                          - value
+                                        - name
+                                        - value
                                         type: object
                                       type: array
                                     path:
@@ -903,8 +1853,8 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Name or number of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
@@ -914,7 +1864,7 @@ spec:
                                         the host. Defaults to HTTP.
                                       type: string
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 initialDelaySeconds:
                                   description: 'Number of seconds after the container
@@ -946,14 +1896,14 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Number or name of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
                                       x-kubernetes-int-or-string: true
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 timeoutSeconds:
                                   description: 'Number of seconds after which the
@@ -969,8 +1919,8 @@ spec:
                                 limits:
                                   additionalProperties:
                                     anyOf:
-                                      - type: integer
-                                      - type: string
+                                    - type: integer
+                                    - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Limits describes the maximum amount
@@ -979,8 +1929,8 @@ spec:
                                 requests:
                                   additionalProperties:
                                     anyOf:
-                                      - type: integer
-                                      - type: string
+                                    - type: integer
+                                    - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Requests describes the minimum amount
@@ -1189,8 +2139,8 @@ spec:
                                             description: The header field value
                                             type: string
                                         required:
-                                          - name
-                                          - value
+                                        - name
+                                        - value
                                         type: object
                                       type: array
                                     path:
@@ -1198,8 +2148,8 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Name or number of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
@@ -1209,7 +2159,7 @@ spec:
                                         the host. Defaults to HTTP.
                                       type: string
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 initialDelaySeconds:
                                   description: 'Number of seconds after the container
@@ -1241,14 +2191,14 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Number or name of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
                                       x-kubernetes-int-or-string: true
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 timeoutSeconds:
                                   description: 'Number of seconds after which the
@@ -1320,8 +2270,8 @@ spec:
                                       in the pod
                                     type: string
                                 required:
-                                  - devicePath
-                                  - name
+                                - devicePath
+                                - name
                                 type: object
                               type: array
                             volumeMounts:
@@ -1365,8 +2315,8 @@ spec:
                                       are mutually exclusive.
                                     type: string
                                 required:
-                                  - mountPath
-                                  - name
+                                - mountPath
+                                - name
                                 type: object
                               type: array
                             workingDir:
@@ -1376,7 +2326,7 @@ spec:
                                 be updated.
                               type: string
                           required:
-                            - name
+                          - name
                           type: object
                         type: array
                       initContainers:
@@ -1455,7 +2405,7 @@ spec:
                                               or its key must be defined
                                             type: boolean
                                         required:
-                                          - key
+                                        - key
                                         type: object
                                       fieldRef:
                                         description: 'Selects a field of the pod:
@@ -1474,7 +2424,7 @@ spec:
                                               in the specified API version.
                                             type: string
                                         required:
-                                          - fieldPath
+                                        - fieldPath
                                         type: object
                                       resourceFieldRef:
                                         description: 'Selects a resource of the container:
@@ -1489,8 +2439,8 @@ spec:
                                             type: string
                                           divisor:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             description: Specifies the output format
                                               of the exposed resources, defaults to
                                               "1"
@@ -1500,7 +2450,7 @@ spec:
                                             description: 'Required: resource to select'
                                             type: string
                                         required:
-                                          - resource
+                                        - resource
                                         type: object
                                       secretKeyRef:
                                         description: Selects a key of a secret in
@@ -1522,11 +2472,11 @@ spec:
                                               or its key must be defined
                                             type: boolean
                                         required:
-                                          - key
+                                        - key
                                         type: object
                                     type: object
                                 required:
-                                  - name
+                                - name
                                 type: object
                               type: array
                             envFrom:
@@ -1644,8 +2594,8 @@ spec:
                                                 description: The header field value
                                                 type: string
                                             required:
-                                              - name
-                                              - value
+                                            - name
+                                            - value
                                             type: object
                                           type: array
                                         path:
@@ -1654,8 +2604,8 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Name or number of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
@@ -1666,7 +2616,7 @@ spec:
                                             to the host. Defaults to HTTP.
                                           type: string
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                     tcpSocket:
                                       description: 'TCPSocket specifies an action
@@ -1680,15 +2630,15 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Number or name of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
                                             be an IANA_SVC_NAME.
                                           x-kubernetes-int-or-string: true
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                   type: object
                                 preStop:
@@ -1750,8 +2700,8 @@ spec:
                                                 description: The header field value
                                                 type: string
                                             required:
-                                              - name
-                                              - value
+                                            - name
+                                            - value
                                             type: object
                                           type: array
                                         path:
@@ -1760,8 +2710,8 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Name or number of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
@@ -1772,7 +2722,7 @@ spec:
                                             to the host. Defaults to HTTP.
                                           type: string
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                     tcpSocket:
                                       description: 'TCPSocket specifies an action
@@ -1786,15 +2736,15 @@ spec:
                                           type: string
                                         port:
                                           anyOf:
-                                            - type: integer
-                                            - type: string
+                                          - type: integer
+                                          - type: string
                                           description: Number or name of the port
                                             to access on the container. Number must
                                             be in the range 1 to 65535. Name must
                                             be an IANA_SVC_NAME.
                                           x-kubernetes-int-or-string: true
                                       required:
-                                        - port
+                                      - port
                                       type: object
                                   type: object
                               type: object
@@ -1850,8 +2800,8 @@ spec:
                                             description: The header field value
                                             type: string
                                         required:
-                                          - name
-                                          - value
+                                        - name
+                                        - value
                                         type: object
                                       type: array
                                     path:
@@ -1859,8 +2809,8 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Name or number of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
@@ -1870,7 +2820,7 @@ spec:
                                         the host. Defaults to HTTP.
                                       type: string
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 initialDelaySeconds:
                                   description: 'Number of seconds after the container
@@ -1902,14 +2852,14 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Number or name of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
                                       x-kubernetes-int-or-string: true
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 timeoutSeconds:
                                   description: 'Number of seconds after which the
@@ -1965,13 +2915,12 @@ spec:
                                       or SCTP. Defaults to "TCP".
                                     type: string
                                 required:
-                                  - containerPort
-                                  - protocol
+                                - containerPort
                                 type: object
                               type: array
                               x-kubernetes-list-map-keys:
-                                - containerPort
-                                - protocol
+                              - containerPort
+                              - protocol
                               x-kubernetes-list-type: map
                             readinessProbe:
                               description: 'Periodic probe of container service readiness.
@@ -2025,8 +2974,8 @@ spec:
                                             description: The header field value
                                             type: string
                                         required:
-                                          - name
-                                          - value
+                                        - name
+                                        - value
                                         type: object
                                       type: array
                                     path:
@@ -2034,8 +2983,8 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Name or number of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
@@ -2045,7 +2994,7 @@ spec:
                                         the host. Defaults to HTTP.
                                       type: string
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 initialDelaySeconds:
                                   description: 'Number of seconds after the container
@@ -2077,14 +3026,14 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Number or name of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
                                       x-kubernetes-int-or-string: true
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 timeoutSeconds:
                                   description: 'Number of seconds after which the
@@ -2100,8 +3049,8 @@ spec:
                                 limits:
                                   additionalProperties:
                                     anyOf:
-                                      - type: integer
-                                      - type: string
+                                    - type: integer
+                                    - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Limits describes the maximum amount
@@ -2110,8 +3059,8 @@ spec:
                                 requests:
                                   additionalProperties:
                                     anyOf:
-                                      - type: integer
-                                      - type: string
+                                    - type: integer
+                                    - type: string
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                   description: 'Requests describes the minimum amount
@@ -2320,8 +3269,8 @@ spec:
                                             description: The header field value
                                             type: string
                                         required:
-                                          - name
-                                          - value
+                                        - name
+                                        - value
                                         type: object
                                       type: array
                                     path:
@@ -2329,8 +3278,8 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Name or number of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
@@ -2340,7 +3289,7 @@ spec:
                                         the host. Defaults to HTTP.
                                       type: string
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 initialDelaySeconds:
                                   description: 'Number of seconds after the container
@@ -2372,14 +3321,14 @@ spec:
                                       type: string
                                     port:
                                       anyOf:
-                                        - type: integer
-                                        - type: string
+                                      - type: integer
+                                      - type: string
                                       description: Number or name of the port to access
                                         on the container. Number must be in the range
                                         1 to 65535. Name must be an IANA_SVC_NAME.
                                       x-kubernetes-int-or-string: true
                                   required:
-                                    - port
+                                  - port
                                   type: object
                                 timeoutSeconds:
                                   description: 'Number of seconds after which the
@@ -2451,8 +3400,8 @@ spec:
                                       in the pod
                                     type: string
                                 required:
-                                  - devicePath
-                                  - name
+                                - devicePath
+                                - name
                                 type: object
                               type: array
                             volumeMounts:
@@ -2496,8 +3445,8 @@ spec:
                                       are mutually exclusive.
                                     type: string
                                 required:
-                                  - mountPath
-                                  - name
+                                - mountPath
+                                - name
                                 type: object
                               type: array
                             workingDir:
@@ -2507,7 +3456,7 @@ spec:
                                 be updated.
                               type: string
                           required:
-                            - name
+                          - name
                           type: object
                         type: array
                       labels:
@@ -2616,7 +3565,7 @@ spec:
                                     in AWS (Amazon EBS volume). More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore'
                                   type: string
                               required:
-                                - volumeID
+                              - volumeID
                               type: object
                             azureDisk:
                               description: AzureDisk represents an Azure Data Disk
@@ -2651,8 +3600,8 @@ spec:
                                     here will force the ReadOnly setting in VolumeMounts.
                                   type: boolean
                               required:
-                                - diskName
-                                - diskURI
+                              - diskName
+                              - diskURI
                               type: object
                             azureFile:
                               description: AzureFile represents an Azure File Service
@@ -2670,8 +3619,8 @@ spec:
                                   description: Share Name
                                   type: string
                               required:
-                                - secretName
-                                - shareName
+                              - secretName
+                              - shareName
                               type: object
                             cephfs:
                               description: CephFS represents a Ceph FS mount on the
@@ -2714,7 +3663,7 @@ spec:
                                     default is admin More info: https://examples.k8s.io/volumes/cephfs/README.md#how-to-use-it'
                                   type: string
                               required:
-                                - monitors
+                              - monitors
                               type: object
                             cinder:
                               description: 'Cinder represents a cinder volume attached
@@ -2748,7 +3697,7 @@ spec:
                                     in cinder. More info: https://examples.k8s.io/mysql-cinder-pd/README.md'
                                   type: string
                               required:
-                                - volumeID
+                              - volumeID
                               type: object
                             configMap:
                               description: ConfigMap represents a configMap that should
@@ -2800,8 +3749,8 @@ spec:
                                           May not start with the string '..'.
                                         type: string
                                     required:
-                                      - key
-                                      - path
+                                    - key
+                                    - path
                                     type: object
                                   type: array
                                 name:
@@ -2860,7 +3809,7 @@ spec:
                                     values.
                                   type: object
                               required:
-                                - driver
+                              - driver
                               type: object
                             downwardAPI:
                               description: DownwardAPI represents downward API about
@@ -2899,7 +3848,7 @@ spec:
                                               in the specified API version.
                                             type: string
                                         required:
-                                          - fieldPath
+                                        - fieldPath
                                         type: object
                                       mode:
                                         description: 'Optional: mode bits to use on
@@ -2930,8 +3879,8 @@ spec:
                                             type: string
                                           divisor:
                                             anyOf:
-                                              - type: integer
-                                              - type: string
+                                            - type: integer
+                                            - type: string
                                             description: Specifies the output format
                                               of the exposed resources, defaults to
                                               "1"
@@ -2941,10 +3890,10 @@ spec:
                                             description: 'Required: resource to select'
                                             type: string
                                         required:
-                                          - resource
+                                        - resource
                                         type: object
                                     required:
-                                      - path
+                                    - path
                                     type: object
                                   type: array
                               type: object
@@ -2960,8 +3909,8 @@ spec:
                                   type: string
                                 sizeLimit:
                                   anyOf:
-                                    - type: integer
-                                    - type: string
+                                  - type: integer
+                                  - type: string
                                   description: 'Total amount of local storage required
                                     for this EmptyDir volume. The size limit is also
                                     applicable for memory medium. The maximum usage
@@ -3051,7 +4000,7 @@ spec:
                                       type: string
                                   type: object
                               required:
-                                - driver
+                              - driver
                               type: object
                             flocker:
                               description: Flocker represents a Flocker volume attached
@@ -3102,7 +4051,7 @@ spec:
                                     info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk'
                                   type: boolean
                               required:
-                                - pdName
+                              - pdName
                               type: object
                             gitRepo:
                               description: 'GitRepo represents a git repository at
@@ -3127,7 +4076,7 @@ spec:
                                   description: Commit hash for the specified revision.
                                   type: string
                               required:
-                                - repository
+                              - repository
                               type: object
                             glusterfs:
                               description: 'Glusterfs represents a Glusterfs mount
@@ -3148,8 +4097,8 @@ spec:
                                     Defaults to false. More info: https://examples.k8s.io/volumes/glusterfs/README.md#create-a-pod'
                                   type: boolean
                               required:
-                                - endpoints
-                                - path
+                              - endpoints
+                              - path
                               type: object
                             hostPath:
                               description: 'HostPath represents a pre-existing file
@@ -3172,7 +4121,7 @@ spec:
                                     to "" More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath'
                                   type: string
                               required:
-                                - path
+                              - path
                               type: object
                             iscsi:
                               description: 'ISCSI represents an ISCSI Disk resource
@@ -3242,9 +4191,9 @@ spec:
                                     than default (typically TCP ports 860 and 3260).
                                   type: string
                               required:
-                                - iqn
-                                - lun
-                                - targetPortal
+                              - iqn
+                              - lun
+                              - targetPortal
                               type: object
                             name:
                               description: 'Volume''s name. Must be a DNS_LABEL and
@@ -3268,8 +4217,8 @@ spec:
                                     of the NFS server. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs'
                                   type: string
                               required:
-                                - path
-                                - server
+                              - path
+                              - server
                               type: object
                             persistentVolumeClaim:
                               description: 'PersistentVolumeClaimVolumeSource represents
@@ -3286,7 +4235,7 @@ spec:
                                     VolumeMounts. Default false.
                                   type: boolean
                               required:
-                                - claimName
+                              - claimName
                               type: object
                             photonPersistentDisk:
                               description: PhotonPersistentDisk represents a PhotonController
@@ -3304,7 +4253,7 @@ spec:
                                     persistent disk
                                   type: string
                               required:
-                                - pdID
+                              - pdID
                               type: object
                             portworxVolume:
                               description: PortworxVolume represents a portworx volume
@@ -3325,7 +4274,7 @@ spec:
                                     volume
                                   type: string
                               required:
-                                - volumeID
+                              - volumeID
                               type: object
                             projected:
                               description: Items for all in one resources secrets,
@@ -3392,8 +4341,8 @@ spec:
                                                     '..'.
                                                   type: string
                                               required:
-                                                - key
-                                                - path
+                                              - key
+                                              - path
                                               type: object
                                             type: array
                                           name:
@@ -3436,7 +4385,7 @@ spec:
                                                         API version.
                                                       type: string
                                                   required:
-                                                    - fieldPath
+                                                  - fieldPath
                                                   type: object
                                                 mode:
                                                   description: 'Optional: mode bits
@@ -3474,8 +4423,8 @@ spec:
                                                       type: string
                                                     divisor:
                                                       anyOf:
-                                                        - type: integer
-                                                        - type: string
+                                                      - type: integer
+                                                      - type: string
                                                       description: Specifies the output
                                                         format of the exposed resources,
                                                         defaults to "1"
@@ -3486,10 +4435,10 @@ spec:
                                                         to select'
                                                       type: string
                                                   required:
-                                                    - resource
+                                                  - resource
                                                   type: object
                                               required:
-                                                - path
+                                              - path
                                               type: object
                                             type: array
                                         type: object
@@ -3539,8 +4488,8 @@ spec:
                                                     '..'.
                                                   type: string
                                               required:
-                                                - key
-                                                - path
+                                              - key
+                                              - path
                                               type: object
                                             type: array
                                           name:
@@ -3587,12 +4536,12 @@ spec:
                                               the token into.
                                             type: string
                                         required:
-                                          - path
+                                        - path
                                         type: object
                                     type: object
                                   type: array
                               required:
-                                - sources
+                              - sources
                               type: object
                             quobyte:
                               description: Quobyte represents a Quobyte mount on the
@@ -3628,8 +4577,8 @@ spec:
                                     an already created Quobyte volume by name.
                                   type: string
                               required:
-                                - registry
-                                - volume
+                              - registry
+                              - volume
                               type: object
                             rbd:
                               description: 'RBD represents a Rados Block Device mount
@@ -3685,8 +4634,8 @@ spec:
                                     More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it'
                                   type: string
                               required:
-                                - image
-                                - monitors
+                              - image
+                              - monitors
                               type: object
                             scaleIO:
                               description: ScaleIO represents a ScaleIO persistent
@@ -3746,9 +4695,9 @@ spec:
                                     this volume source.
                                   type: string
                               required:
-                                - gateway
-                                - secretRef
-                                - system
+                              - gateway
+                              - secretRef
+                              - system
                               type: object
                             secret:
                               description: 'Secret represents a secret that should
@@ -3800,8 +4749,8 @@ spec:
                                           May not start with the string '..'.
                                         type: string
                                     required:
-                                      - key
-                                      - path
+                                    - key
+                                    - path
                                     type: object
                                   type: array
                                 optional:
@@ -3879,29 +4828,29 @@ spec:
                                     vmdk
                                   type: string
                               required:
-                                - volumePath
+                              - volumePath
                               type: object
                           required:
-                            - name
+                          - name
                           type: object
                         type: array
                     type: object
                 required:
-                  - componentMetadata
-                  - name
-                  - podAdditions
+                - componentMetadata
+                - name
+                - podAdditions
                 type: object
               type: array
             ready:
               description: Whether the component has finished processing its spec
               type: boolean
           required:
-            - componentDescriptions
-            - ready
+          - componentDescriptions
+          - ready
           type: object
       type: object
   version: v1alpha1
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
+  - name: v1alpha1
+    served: true
+    storage: true

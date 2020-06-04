@@ -174,12 +174,13 @@ update_crds: _set_ctx _update_crds _reset_ctx
 ### uninstall: remove namespace and all CRDs from cluster
 uninstall: _set_ctx _do_uninstall _reset_ctx
 
+### update_devworkspace_api: update version of devworkspace crds in go.mod
 update_devworkspace_api:
 	go mod edit --require github.com/devfile/kubernetes-api@$(DEVWORKSPACE_API_VERSION)
 	go mod download
 	go mod vendor
 
-### ...
+### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
 update_devworkspace_crds:
 	mkdir -p devworkspace-crds
 	cd devworkspace-crds && git init || true
@@ -234,7 +235,7 @@ endif
 ### help: print this message
 help: Makefile
 	@echo 'Available rules:'
-	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-22s -%s\n", $$1, $$2 }'
+	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-30s -%s\n", $$1, $$2 }'
 	@echo ''
 	@echo 'Supported environment variables:'
 	@echo '    IMG                        - Image used for controller'

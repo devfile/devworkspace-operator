@@ -44,7 +44,7 @@ const (
 )
 
 type CheWorkspaceServer struct {
-	Attributes map[EndpointAttribute]string `json:"attributes,omitempty"`
+	Attributes map[string]string `json:"attributes,omitempty"`
 	Status     CheWorkspaceServerStatus     `json:"status"`
 	URL        string                       `json:"url,omitempty"`
 }

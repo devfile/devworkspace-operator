@@ -12,6 +12,10 @@
 
 package v1alpha1
 
+import (
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
+)
+
 // Description of a devfile component's workspace additions
 type ComponentDescription struct {
 	// The name of the component
@@ -30,7 +34,7 @@ type ComponentMetadata struct {
 	// workspace status "additionalFields" and consumed by che-rest-apis.
 	ContributedRuntimeCommands []CheWorkspaceCommand `json:"contributedRuntimeCommands,omitempty"`
 	// Endpoints stores the workspace endpoints defined by the component
-	Endpoints []Endpoint `json:"endpoints,omitempty"`
+	Endpoints []devworkspace.Endpoint `json:"endpoints,omitempty"`
 }
 
 // ContainerDescription stores metadata about workspace containers. This is used to provide information

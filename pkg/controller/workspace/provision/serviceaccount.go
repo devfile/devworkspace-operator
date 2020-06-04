@@ -15,7 +15,7 @@ package provision
 import (
 	"context"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -32,7 +32,7 @@ type ServiceAcctProvisioningStatus struct {
 }
 
 func SyncServiceAccount(
-	workspace *v1alpha1.Workspace,
+	workspace *devworkspace.DevWorkspace,
 	additionalAnnotations map[string]string,
 	clusterAPI ClusterAPI) ServiceAcctProvisioningStatus {
 	// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go

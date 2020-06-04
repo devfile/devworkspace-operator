@@ -118,6 +118,12 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - devfile.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
   - ""
   resources:
   - pods/exec

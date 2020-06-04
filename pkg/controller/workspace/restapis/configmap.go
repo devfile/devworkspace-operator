@@ -20,6 +20,7 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"gopkg.in/yaml.v2"
@@ -36,7 +37,7 @@ var configmapDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
 }
 
-func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, endpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) provision.ProvisioningStatus {
+func SyncRestAPIsConfigMap(workspace *devworkspace.DevWorkspace, components []v1alpha1.ComponentDescription, endpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) provision.ProvisioningStatus {
 	specCM, err := getSpecConfigMap(workspace, components, endpoints, clusterAPI.Scheme)
 	if err != nil {
 		return provision.ProvisioningStatus{Err: err}
@@ -67,7 +68,7 @@ func SyncRestAPIsConfigMap(workspace *v1alpha1.Workspace, components []v1alpha1.
 }
 
 func getSpecConfigMap(
-	workspace *v1alpha1.Workspace,
+	workspace *devworkspace.DevWorkspace,
 	components []v1alpha1.ComponentDescription,
 	endpoints map[string]v1alpha1.ExposedEndpointList,
 	scheme *k8sRuntime.Scheme) (*corev1.ConfigMap, error) {
@@ -75,7 +76,7 @@ func getSpecConfigMap(
 	if err != nil {
 		return nil, err
 	}
-	devfileYAML, err := getDevfileYaml(workspace.Spec.Devfile)
+	devfileYAML, err := getDevfileYaml(workspace.Spec.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +114,9 @@ func getClusterConfigMap(name, namespace string, client runtimeClient.Client) (*
 	return cm, err
 }
 
-func getDevfileYaml(devfile v1alpha1.DevfileSpec) (string, error) {
+func getDevfileYaml(template devworkspace.DevWorkspaceTemplateSpec) (string, error) {
+	devfile := v1alpha1.DevfileSpec{}
+	completeDevfileFromDevworkspaceTemplate(&template, &devfile)
 	devfileYaml, err := yaml.Marshal(devfile)
 	if err != nil {
 		return "", err

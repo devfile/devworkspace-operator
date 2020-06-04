@@ -24,6 +24,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +46,7 @@ var healthHttpClient = &http.Client{
 // updateWorkspaceStatus updates the current workspace's status field with conditions and phase from the passed in status.
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
-func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *devworkspace.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
 	workspace.Status.Phase = status.Phase
 	currTransitionTime := metav1.Time{Time: clock.Now()}
 	for _, conditionType := range status.Conditions {
@@ -59,7 +60,7 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 			}
 		}
 		if !conditionExists {
-			workspace.Status.Conditions = append(workspace.Status.Conditions, v1alpha1.WorkspaceCondition{
+			workspace.Status.Conditions = append(workspace.Status.Conditions, devworkspace.WorkspaceCondition{
 				Type:               conditionType,
 				Status:             corev1.ConditionTrue,
 				LastTransitionTime: currTransitionTime,
@@ -86,7 +87,7 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *v1alpha1.Workspace
 	return reconcileResult, reconcileError
 }
 
-func syncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
+func syncWorkspaceIdeURL(workspace *devworkspace.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
 	ideUrl := getIdeUrl(exposedEndpoints)
 
 	if workspace.Status.IdeUrl == ideUrl {
@@ -97,7 +98,7 @@ func syncWorkspaceIdeURL(workspace *v1alpha1.Workspace, exposedEndpoints map[str
 	return false, err
 }
 
-func checkServerStatus(workspace *v1alpha1.Workspace) (ok bool, err error) {
+func checkServerStatus(workspace *devworkspace.DevWorkspace) (ok bool, err error) {
 	ideUrl := workspace.Status.IdeUrl
 	if ideUrl == "" {
 		return false, nil
@@ -127,7 +128,7 @@ func checkServerStatus(workspace *v1alpha1.Workspace) (ok bool, err error) {
 func getIdeUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string {
 	for _, endpoints := range exposedEndpoints {
 		for _, endpoint := range endpoints {
-			if endpoint.Attributes[v1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "ide" {
+			if endpoint.Attributes[string(v1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] == "ide" {
 				return endpoint.Url
 			}
 		}

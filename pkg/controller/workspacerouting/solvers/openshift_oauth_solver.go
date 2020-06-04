@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	oauthv1 "github.com/openshift/api/oauth/v1"
@@ -29,8 +30,8 @@ var _ RoutingSolver = (*OpenShiftOAuthSolver)(nil)
 
 type proxyEndpoint struct {
 	machineName            string
-	upstreamEndpoint       v1alpha1.Endpoint
-	publicEndpoint         v1alpha1.Endpoint
+	upstreamEndpoint       devworkspace.Endpoint
+	publicEndpoint         devworkspace.Endpoint
 	publicEndpointHttpPort int64
 }
 
@@ -102,8 +103,8 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			proxyEndpoint := portMappings[upstreamEndpoint.Name]
 			endpoint := proxyEndpoint.publicEndpoint
 			var tls *routeV1.TLSConfig = nil
-			if endpoint.Attributes[v1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
-				if endpoint.Attributes[v1alpha1.TYPE_ENDPOINT_ATTRIBUTE] == "terminal" {
+			if endpoint.Attributes[string(v1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" {
+				if endpoint.Attributes[string(v1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] == "terminal" {
 					tls = &routeV1.TLSConfig{
 						Termination:                   routeV1.TLSTerminationEdge,
 						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
@@ -154,10 +155,10 @@ func getProxyEndpointMappings(
 			proxyEndpoints[endpoint.Name] = proxyEndpoint{
 				machineName:      machineName,
 				upstreamEndpoint: endpoint,
-				publicEndpoint: v1alpha1.Endpoint{
+				publicEndpoint: devworkspace.Endpoint{
 					Attributes: endpoint.Attributes,
 					Name:       fmt.Sprintf("%s-proxy", endpoint.Name),
-					Port:       int64(proxyHttpsPort),
+					TargetPort:       proxyHttpsPort,
 				},
 				publicEndpointHttpPort: proxyHttpPort,
 			}
@@ -169,10 +170,10 @@ func getProxyEndpointMappings(
 	return proxyEndpoints
 }
 
-func endpointNeedsProxy(endpoint v1alpha1.Endpoint) bool {
-	publicAttr, exists := endpoint.Attributes[v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE]
+func endpointNeedsProxy(endpoint devworkspace.Endpoint) bool {
+	publicAttr, exists := endpoint.Attributes[string(v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)]
 	endpointIsPublic := !exists || (publicAttr == "true")
 	return endpointIsPublic &&
-		endpoint.Attributes[v1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" &&
-		endpoint.Attributes[v1alpha1.TYPE_ENDPOINT_ATTRIBUTE] != "terminal"
+		endpoint.Attributes[string(v1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" &&
+		endpoint.Attributes[string(v1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] != "terminal"
 }

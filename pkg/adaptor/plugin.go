@@ -18,6 +18,8 @@ import (
 	"strings"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
+
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	registry "github.com/che-incubator/che-workspace-operator/pkg/internal_registry"
@@ -30,7 +32,7 @@ import (
 
 var log = logf.Log.WithName("plugin")
 
-func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []v1alpha1.ComponentSpec) ([]v1alpha1.ComponentDescription, *corev1.ConfigMap, error) {
+func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []devworkspace.Component) ([]v1alpha1.ComponentDescription, *corev1.ConfigMap, error) {
 	var components []v1alpha1.ComponentDescription
 
 	broker := metadataBroker.NewBroker(true)
@@ -111,20 +113,20 @@ func adaptChePluginToComponent(workspaceId string, plugin brokerModel.ChePlugin)
 	return component, nil
 }
 
-func createEndpointsFromPlugin(plugin brokerModel.ChePlugin) []v1alpha1.Endpoint {
-	var endpoints []v1alpha1.Endpoint
+func createEndpointsFromPlugin(plugin brokerModel.ChePlugin) []devworkspace.Endpoint {
+	var endpoints []devworkspace.Endpoint
 
 	for _, pluginEndpoint := range plugin.Endpoints {
-		attributes := map[v1alpha1.EndpointAttribute]string{}
+		attributes := map[string]string{}
 		// Default value of http for protocol, may be overwritten by pluginEndpoint attributes
-		attributes[v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE] = "http"
-		attributes[v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] = strconv.FormatBool(pluginEndpoint.Public)
+		attributes[string(v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE)] = "http"
+		attributes[string(v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] = strconv.FormatBool(pluginEndpoint.Public)
 		for key, val := range pluginEndpoint.Attributes {
-			attributes[v1alpha1.EndpointAttribute(key)] = val
+			attributes[key] = val
 		}
-		endpoints = append(endpoints, v1alpha1.Endpoint{
+		endpoints = append(endpoints, devworkspace.Endpoint{
 			Name:       common.EndpointName(pluginEndpoint.Name),
-			Port:       int64(pluginEndpoint.TargetPort),
+			TargetPort:       pluginEndpoint.TargetPort,
 			Attributes: attributes,
 		})
 	}
@@ -202,15 +204,12 @@ func adaptVolumeMountsFromBroker(workspaceId string, brokerContainer brokerModel
 	return volumeMounts
 }
 
-func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerModel.PluginMeta, aliases map[string]string, err error) {
+func getMetasForComponents(components []devworkspace.Component) (metas []brokerModel.PluginMeta, aliases map[string]string, err error) {
 	defaultRegistry := config.ControllerCfg.GetPluginRegistry()
 	ioUtils := utils.New()
 	aliases = map[string]string{}
 	for _, component := range components {
-		if component.Type != v1alpha1.ChePlugin && component.Type != v1alpha1.CheEditor {
-			return nil, nil, fmt.Errorf("cannot adapt non-plugin or editor type component %s in plugin adaptor", component.Type)
-		}
-		fqn := getPluginFQN(component)
+		fqn := getPluginFQN(*component.Plugin)
 		var meta *brokerModel.PluginMeta
 		// delegate to the internal registry first, if found there then use that
 		isInInternalRegistry := registry.IsInInternalRegistry(fqn.ID)
@@ -225,7 +224,7 @@ func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerM
 			return nil, nil, err
 		}
 		metas = append(metas, *meta)
-		aliases[meta.ID] = component.Alias
+		aliases[meta.ID] = component.Plugin.Name
 	}
 	err = utils.ResolveRelativeExtensionPaths(metas, defaultRegistry)
 	if err != nil {
@@ -234,16 +233,19 @@ func getMetasForComponents(components []v1alpha1.ComponentSpec) (metas []brokerM
 	return metas, aliases, nil
 }
 
-func getPluginFQN(component v1alpha1.ComponentSpec) brokerModel.PluginFQN {
+func getPluginFQN(plugin devworkspace.PluginComponent) brokerModel.PluginFQN {
 	var pluginFQN brokerModel.PluginFQN
-	registryAndID := strings.Split(component.Id, "#")
+	registryAndID := strings.Split(plugin.Id, "#")
 	if len(registryAndID) == 2 {
 		pluginFQN.Registry = registryAndID[0]
 		pluginFQN.ID = registryAndID[1]
 	} else if len(registryAndID) == 1 {
 		pluginFQN.ID = registryAndID[0]
 	}
-	pluginFQN.Reference = component.Reference
+	if plugin.RegistryUrl != "" {
+		pluginFQN.Registry = plugin.RegistryUrl
+	}
+	pluginFQN.Reference = plugin.Uri
 	return pluginFQN
 }
 

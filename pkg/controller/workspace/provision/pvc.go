@@ -14,6 +14,7 @@ package provision
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SyncPVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescription, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
+func SyncPVC(workspace *devworkspace.DevWorkspace, components []v1alpha1.ComponentDescription, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
 	if !IsPVCRequired(components) {
 		return ProvisioningStatus{Continue: true}
 	}
@@ -36,7 +37,7 @@ func SyncPVC(workspace *v1alpha1.Workspace, components []v1alpha1.ComponentDescr
 	return ProvisioningStatus{Continue: !didChange, Err: err}
 }
 
-func generatePVC(workspace *v1alpha1.Workspace) (*corev1.PersistentVolumeClaim, error) {
+func generatePVC(workspace *devworkspace.DevWorkspace) (*corev1.PersistentVolumeClaim, error) {
 	pvcStorageQuantity, err := resource.ParseQuantity(config.PVCStorageSize)
 	if err != nil {
 		return nil, err

@@ -14,6 +14,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
 // WorkspaceRoutingSpec defines the desired state of WorkspaceRouting
@@ -67,10 +68,10 @@ type ExposedEndpoint struct {
 	// Public URL of the exposed endpoint
 	Url string `json:"url"`
 	// Attributes of the exposed endpoint
-	Attributes map[EndpointAttribute]string `json:"attributes"`
+	Attributes map[string]string `json:"attributes"`
 }
 
-type EndpointList []Endpoint
+type EndpointList []devworkspace.Endpoint
 
 type ExposedEndpointList []ExposedEndpoint
 

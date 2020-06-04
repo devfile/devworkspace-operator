@@ -8,6 +8,7 @@ WEBHOOK_ENABLED ?= false
 DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
+DEVWORKSPACE_API_VERSION ?= master
 
 all: help
 
@@ -19,6 +20,7 @@ _print_vars:
 	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
+	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
 
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
@@ -95,8 +97,9 @@ else
 	rm ./deploy/k8s/controller.yaml.bak
 endif
 
-_update_crds:
+_update_crds: update_devworkspace_crds
 	$(TOOL) apply -f ./deploy/crds
+	$(TOOL) apply -f ./devworkspace-crds/deploy/crds
 
 _update_controller_configmap:
 	$(TOOL) apply -f ./deploy/controller_config.yaml
@@ -171,6 +174,22 @@ update_crds: _set_ctx _update_crds _reset_ctx
 ### uninstall: remove namespace and all CRDs from cluster
 uninstall: _set_ctx _do_uninstall _reset_ctx
 
+update_devworkspace_api:
+	go mod edit --require github.com/devfile/kubernetes-api@$(DEVWORKSPACE_API_VERSION)
+	go mod download
+	go mod vendor
+
+### ...
+update_devworkspace_crds:
+	mkdir -p devworkspace-crds
+	cd devworkspace-crds && git init || true
+ifneq ($(shell git --git-dir=devworkspace-crds/.git remote), origin)
+	cd devworkspace-crds && git remote add origin -f https://github.com/devfile/kubernetes-api.git
+	cd devworkspace-crds && git config core.sparsecheckout true 
+	cd devworkspace-crds && echo "deploy/crds/*" >> .git/info/sparse-checkout
+endif
+	cd devworkspace-crds && git pull origin master
+
 ### local: set up cluster for local development
 local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
 
@@ -218,11 +237,12 @@ help: Makefile
 	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-22s -%s\n", $$1, $$2 }'
 	@echo ''
 	@echo 'Supported environment variables:'
-	@echo '    IMG                - Image used for controller'
-	@echo '    NAMESPACE          - Namespace to use for deploying controller'
-	@echo '    TOOL               - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes'
-	@echo '    ROUTING_SUFFIX     - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
-	@echo '    PULL_POLICY        - Image pull policy for controller'
-	@echo '    WEBHOOK_ENABLED    - Whether webhooks should be enabled in the deployment'
-	@echo '    ADMIN_CTX          - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
-	@echo '    REGISTRY_ENABLED   - Whether the plugin registry should be deployed'
+	@echo '    IMG                        - Image used for controller'
+	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
+	@echo '    TOOL                       - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes'
+	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
+	@echo '    PULL_POLICY                - Image pull policy for controller'
+	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'
+	@echo '    ADMIN_CTX                  - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
+	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
+	@echo '    DEVWORKSPACE_API_VERSION   - Version, branch or tag of the DevWorkspaceAPI to depend on'

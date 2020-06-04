@@ -14,6 +14,7 @@ package solvers
 
 import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	routeV1 "github.com/openshift/api/route/v1"
@@ -34,15 +35,15 @@ func getDiscoverableServicesForEndpoints(endpoints map[string]v1alpha1.EndpointL
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[v1alpha1.DISCOVERABLE_ATTRIBUTE] == "true" {
+			if endpoint.Attributes[string(v1alpha1.DISCOVERABLE_ATTRIBUTE)] == "true" {
 				// Create service with name matching endpoint
 				// TODO: This could cause a reconcile conflict if multiple workspaces define the same discoverable endpoint
 				// Also endpoint names may not be valid as service names
 				servicePort := corev1.ServicePort{
 					Name:       common.EndpointName(endpoint.Name),
 					Protocol:   corev1.ProtocolTCP,
-					Port:       int32(endpoint.Port),
-					TargetPort: intstr.FromInt(int(endpoint.Port)),
+					Port:       int32(endpoint.TargetPort),
+					TargetPort: intstr.FromInt(int(endpoint.TargetPort)),
 				}
 				services = append(services, corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -75,8 +76,8 @@ func getServicesForEndpoints(endpoints map[string]v1alpha1.EndpointList, meta Wo
 			servicePort := corev1.ServicePort{
 				Name:       common.EndpointName(endpoint.Name),
 				Protocol:   corev1.ProtocolTCP,
-				Port:       int32(endpoint.Port),
-				TargetPort: intstr.FromInt(int(endpoint.Port)),
+				Port:       int32(endpoint.TargetPort),
+				TargetPort: intstr.FromInt(int(endpoint.TargetPort)),
 			}
 			servicePorts = append(servicePorts, servicePort)
 		}
@@ -105,7 +106,7 @@ func getRoutingForSpec(endpoints map[string]v1alpha1.EndpointList, meta Workspac
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
+			if endpoint.Attributes[string(v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
 				continue
 			}
 			if config.ControllerCfg.IsOpenShift() {
@@ -118,8 +119,8 @@ func getRoutingForSpec(endpoints map[string]v1alpha1.EndpointList, meta Workspac
 	return ingresses, routes
 }
 
-func getRouteForEndpoint(endpoint v1alpha1.Endpoint, meta WorkspaceMetadata) routeV1.Route {
-	targetEndpoint := intstr.FromInt(int(endpoint.Port))
+func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata) routeV1.Route {
+	targetEndpoint := intstr.FromInt(int(endpoint.TargetPort))
 	endpointName := common.EndpointName(endpoint.Name)
 	return routeV1.Route{
 		ObjectMeta: metav1.ObjectMeta{
@@ -133,7 +134,7 @@ func getRouteForEndpoint(endpoint v1alpha1.Endpoint, meta WorkspaceMetadata) rou
 			},
 		},
 		Spec: routeV1.RouteSpec{
-			Host: common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.Port, meta.RoutingSuffix),
+			Host: common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.TargetPort, meta.RoutingSuffix),
 			To: routeV1.RouteTargetReference{
 				Kind: "Service",
 				Name: common.ServiceName(meta.WorkspaceId),
@@ -145,10 +146,10 @@ func getRouteForEndpoint(endpoint v1alpha1.Endpoint, meta WorkspaceMetadata) rou
 	}
 }
 
-func getIngressForEndpoint(endpoint v1alpha1.Endpoint, meta WorkspaceMetadata) v1beta1.Ingress {
-	targetEndpoint := intstr.FromInt(int(endpoint.Port))
+func getIngressForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata) v1beta1.Ingress {
+	targetEndpoint := intstr.FromInt(int(endpoint.TargetPort))
 	endpointName := common.EndpointName(endpoint.Name)
-	hostname := common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.Port, meta.RoutingSuffix)
+	hostname := common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.TargetPort, meta.RoutingSuffix)
 	annotations := map[string]string{
 		config.WorkspaceEndpointNameAnnotation: endpoint.Name,
 	}

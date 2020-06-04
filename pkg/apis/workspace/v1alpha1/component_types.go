@@ -14,6 +14,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
 // ComponentSpec defines the desired state of Component
@@ -22,9 +23,9 @@ type WorkspaceComponentSpec struct {
 	// Id of workspace that contains this component
 	WorkspaceId string `json:"workspaceId"`
 	// List of devfile components to be processed by this component
-	Components []ComponentSpec `json:"components"`
+	Components []devworkspace.Component `json:"components"`
 	// Commands from devfile, to be matched to components
-	Commands []CommandSpec `json:"commands,omitempty"`
+	Commands []devworkspace.Command `json:"commands,omitempty"`
 }
 
 // ComponentStatus defines the observed state of Component

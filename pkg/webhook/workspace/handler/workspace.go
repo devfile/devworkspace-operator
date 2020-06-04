@@ -16,25 +16,24 @@ import (
 	"net/http"
 
 	"github.com/google/go-cmp/cmp/cmpopts"
-
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var V1alpha1WorkspaceKind = metav1.GroupVersionKind{Kind: "Workspace", Group: "workspace.che.eclipse.org", Version: "v1alpha1"}
+var V1alpha1WorkspaceKind = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "devfile.io", Version: "v1alpha1"}
 
 // StopStartDiffOption is comparing options that should be used to check if there is no other changes except changing started
 var StopStartDiffOption = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
 	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields"),
-	cmpopts.IgnoreFields(v1alpha1.WorkspaceSpec{}, "Started"),
+	cmpopts.IgnoreFields(devworkspace.DevWorkspaceSpec{}, "Started"),
 }
 
 func (h *WebhookHandler) MutateWorkspaceOnCreate(_ context.Context, req admission.Request) admission.Response {
-	wksp := &v1alpha1.Workspace{}
+	wksp := &devworkspace.DevWorkspace{}
 
 	err := h.Decoder.Decode(req, wksp)
 	if err != nil {
@@ -49,8 +48,8 @@ func (h *WebhookHandler) MutateWorkspaceOnCreate(_ context.Context, req admissio
 }
 
 func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admission.Request) admission.Response {
-	newWksp := &v1alpha1.Workspace{}
-	oldWksp := &v1alpha1.Workspace{}
+	newWksp := &devworkspace.DevWorkspace{}
+	oldWksp := &devworkspace.DevWorkspace{}
 	err := h.parse(req, oldWksp, newWksp)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -78,7 +77,7 @@ func (h *WebhookHandler) MutateWorkspaceOnUpdate(_ context.Context, req admissio
 	return admission.Allowed("new workspace has the same workspace as old one")
 }
 
-func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *v1alpha1.Workspace) admission.Response {
+func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *devworkspace.DevWorkspace) admission.Response {
 	if cmp.Equal(oldWksp, newWksp, StopStartDiffOption[:]...) {
 		return admission.Allowed("immutable workspace is started/stopped")
 	}

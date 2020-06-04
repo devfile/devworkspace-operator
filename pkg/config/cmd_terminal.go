@@ -15,7 +15,8 @@ package config
 import (
 	"fmt"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -27,28 +28,29 @@ const (
 )
 
 var (
-	defaultTerminalDockerimage = &v1alpha1.ComponentSpec{
-		Type:        "dockerimage",
+	defaultTerminalDockerimage = &devworkspace.ContainerComponent{
 		MemoryLimit: "256Mi",
-		Alias:       "dev",
-		Image:       "registry.redhat.io/codeready-workspaces/plugin-openshift-rhel8:2.1",
-		Args:        []string{"tail", "-f", "/dev/null"},
-		Env: []v1alpha1.Env{
-			{
-				Name:  "PS1",
-				Value: "\\[\\e[34m\\]>\\[\\e[m\\]\\[\\e[33m\\]>\\[\\e[m\\]",
+		Container: devworkspace.Container{
+			Name:        "dev",
+			Image:       "registry.redhat.io/codeready-workspaces/plugin-openshift-rhel8:2.1",
+			Args:        []string{"tail", "-f", "/dev/null"},
+			Env: []devworkspace.EnvVar{
+				{
+					Name:  "PS1",
+					Value: "\\[\\e[34m\\]>\\[\\e[m\\]\\[\\e[33m\\]>\\[\\e[m\\]",
+				},
 			},
 		},
 	}
 )
 
-func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*v1alpha1.ComponentSpec, error) {
+func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.ContainerComponent, error) {
 	defaultDockerimageYaml := wc.GetProperty(defaultTerminalDockerimageProperty)
 	if defaultDockerimageYaml == nil {
 		return defaultTerminalDockerimage.DeepCopy(), nil
 	}
 
-	var dockerimage v1alpha1.ComponentSpec
+	var dockerimage devworkspace.ContainerComponent
 	if err := yaml.Unmarshal([]byte(*defaultDockerimageYaml), &dockerimage); err != nil {
 		return nil, fmt.Errorf(
 			"%s is configure with invalid dockerimage component. Error: %s", defaultTerminalDockerimageProperty, err)

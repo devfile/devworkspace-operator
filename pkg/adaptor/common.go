@@ -13,23 +13,27 @@
 package adaptor
 
 import (
-	"fmt"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func SortComponentsByType(components []v1alpha1.ComponentSpec) (dockerimage, plugin []v1alpha1.ComponentSpec, err error) {
+func SortComponentsByType(components []devworkspace.Component) (dockerimages []devworkspace.Component, plugins []devworkspace.Component, err error) {
 	for _, component := range components {
-		switch component.Type {
-		case v1alpha1.Dockerimage:
-			dockerimage = append(dockerimage, component)
-		case v1alpha1.CheEditor, v1alpha1.ChePlugin:
-			plugin = append(plugin, component)
-		default:
-			return nil, nil, fmt.Errorf("unsupported component type encountered: %s", component.Type)
+		err := component.Visit(devworkspace.ComponentVisitor{
+			Plugin: func(plugin *devworkspace.PluginComponent) error {
+				plugins = append(plugins, component)
+				return nil
+			}, 
+			Container: func(container *devworkspace.ContainerComponent) error {
+				dockerimages = append(dockerimages, component)
+				return nil
+			},
+		})
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 	return

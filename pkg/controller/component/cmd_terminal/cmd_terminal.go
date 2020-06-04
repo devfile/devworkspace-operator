@@ -15,7 +15,8 @@ package cmd_terminal
 import (
 	"strings"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
+
 )
 
 const (
@@ -23,16 +24,16 @@ const (
 	CommandLineTerminalDevPublisherName = "che-incubator/command-line-terminal-dev/"
 )
 
-func ContainsCmdTerminalComponent(plugins []v1alpha1.ComponentSpec) bool {
-	for _, p := range plugins {
-		if IsCommandLineTerminalPlugin(p) {
+func ContainsCmdTerminalComponent(pluginComponents []devworkspace.Component) bool {
+	for _, pc := range pluginComponents {
+		if IsCommandLineTerminalPlugin(pc.Plugin) {
 			return true
 		}
 	}
 	return false
 }
 
-func IsCommandLineTerminalPlugin(p v1alpha1.ComponentSpec) bool {
+func IsCommandLineTerminalPlugin(p *devworkspace.PluginComponent) bool {
 	if strings.HasPrefix(p.Id, CommandLineTerminalPublisherName) || strings.HasPrefix(p.Id, CommandLineTerminalDevPublisherName) {
 		return true
 	}

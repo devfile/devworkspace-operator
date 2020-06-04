@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/eclipse/che-plugin-broker/model"
@@ -25,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func getArtifactsBrokerComponent(workspaceId, namespace string, components []v1alpha1.ComponentSpec) (*v1alpha1.ComponentDescription, *corev1.ConfigMap, error) {
+func getArtifactsBrokerComponent(workspaceId, namespace string, components []devworkspace.Component) (*v1alpha1.ComponentDescription, *corev1.ConfigMap, error) {
 	const (
 		configMapVolumeName = "broker-config-volume"
 		configMapMountPath  = "/broker-config"
@@ -37,7 +38,7 @@ func getArtifactsBrokerComponent(workspaceId, namespace string, components []v1a
 
 	var fqns []model.PluginFQN
 	for _, component := range components {
-		fqns = append(fqns, getPluginFQN(component))
+		fqns = append(fqns, getPluginFQN(*component.Plugin))
 	}
 	cmData, err := json.Marshal(fqns)
 	if err != nil {

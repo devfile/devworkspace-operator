@@ -30,6 +30,7 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/uuid"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -48,9 +49,9 @@ var log = logf.Log.WithName("controller_workspace")
 
 type currentStatus struct {
 	// List of condition types that are true for the current workspace
-	Conditions []workspacev1alpha1.WorkspaceConditionType
+	Conditions []devworkspace.WorkspaceConditionType
 	// Current workspace phase
-	Phase workspacev1alpha1.WorkspacePhase
+	Phase devworkspace.WorkspacePhase
 }
 
 // Add creates a new Workspace Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -101,7 +102,7 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	}
 
 	// Watch for changes to primary resource Workspace
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Workspace{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &devworkspace.DevWorkspace{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -109,7 +110,7 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	// Watch for changes to secondary resource Deployments and requeue the owner Workspace
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &workspacev1alpha1.Workspace{},
+		OwnerType:    &devworkspace.DevWorkspace{},
 	})
 	if err != nil {
 		return err
@@ -118,12 +119,12 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	// Watch for changes in secondary resource Components and requeue the owner workspace
 	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Component{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &workspacev1alpha1.Workspace{},
+		OwnerType:    &devworkspace.DevWorkspace{},
 	})
 
 	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &workspacev1alpha1.Workspace{},
+		OwnerType:    &devworkspace.DevWorkspace{},
 	})
 
 	// Redirect standard logging to the reconcile's log
@@ -162,7 +163,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 
 	// Fetch the Workspace instance
-	workspace := &workspacev1alpha1.Workspace{}
+	workspace := &devworkspace.DevWorkspace{}
 	err = r.client.Get(context.TODO(), request.NamespacedName, workspace)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -190,7 +191,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return r.stopWorkspace(workspace, reqLogger)
 	}
 
-	if workspace.Status.Phase == workspacev1alpha1.WorkspaceStatusFailed {
+	if workspace.Status.Phase == devworkspace.WorkspaceStatusFailed {
 		// TODO: Figure out when workspace spec is changed and clear failed status to allow reconcile to continue
 		reqLogger.Info("Workspace startup is failed; not attempting to update.")
 		return reconcile.Result{}, nil
@@ -198,7 +199,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 
 	// Prepare handling workspace status and condition
 	reconcileStatus := currentStatus{
-		Phase: workspacev1alpha1.WorkspaceStatusStarting,
+		Phase: devworkspace.WorkspaceStatusStarting,
 	}
 	defer func() (reconcile.Result, error) {
 		return r.updateWorkspaceStatus(workspace, reqLogger, &reconcileStatus, reconcileResult, err)
@@ -207,7 +208,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	immutable := workspace.Annotations[config.WorkspaceImmutableAnnotation]
 	if immutable == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
 		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")
-		reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		return reconcile.Result{}, nil
 	}
 
@@ -218,12 +219,12 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{Requeue: componentsStatus.Requeue}, componentsStatus.Err
 	}
 	componentDescriptions := componentsStatus.ComponentDescriptions
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceComponentsReady)
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceReady)
 
 	// Only add che rest apis if Theia editor is present in the devfile
-	if restapis.IsCheRestApisRequired(workspace.Spec.Devfile.Components) {
+	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
 		if !restapis.IsCheRestApisConfigured() {
-			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			return reconcile.Result{Requeue: false}, errors.New("Che REST API sidecar is not configured but required for used Theia plugin")
 		}
 		// TODO: first half of provisioning rest-apis
@@ -246,13 +247,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
-			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			return reconcile.Result{}, routingStatus.Err
 		}
 		reqLogger.Info("Waiting on routing to be ready")
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceRoutingReady)
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceRoutingReady)
 
 	statusOk, err := syncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
@@ -264,12 +265,12 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 
 	// Step three: setup che-rest-apis configmap
-	if restapis.IsCheRestApisRequired(workspace.Spec.Devfile.Components) {
+	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
 		configMapStatus := restapis.SyncRestAPIsConfigMap(workspace, componentDescriptions, routingStatus.ExposedEndpoints, clusterAPI)
 		if !configMapStatus.Continue {
 			if configMapStatus.FailStartup {
 				reqLogger.Info("Workspace start failed")
-				reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+				reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 				return reconcile.Result{}, configMapStatus.Err
 			}
 			reqLogger.Info("Waiting on che-rest-apis configmap to be ready")
@@ -296,27 +297,27 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if !serviceAcctStatus.Continue {
 		if serviceAcctStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
-			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			return reconcile.Result{}, serviceAcctStatus.Err
 		}
 		reqLogger.Info("Waiting for workspace ServiceAccount")
 		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceServiceAccountReady)
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceServiceAccountReady)
 
 	// Step five: Create deployment and wait for it to be ready
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, componentDescriptions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
-			reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusFailed
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			return reconcile.Result{}, deploymentStatus.Err
 		}
 		reqLogger.Info("Waiting on deployment to be ready")
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, workspacev1alpha1.WorkspaceReady)
+	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceReady)
 
 	serverReady, err := checkServerStatus(workspace)
 	if err != nil {
@@ -325,11 +326,11 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if !serverReady {
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
 	}
-	reconcileStatus.Phase = workspacev1alpha1.WorkspaceStatusRunning
+	reconcileStatus.Phase = devworkspace.WorkspaceStatusRunning
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileWorkspace) stopWorkspace(workspace *workspacev1alpha1.Workspace, logger logr.Logger) (reconcile.Result, error) {
+func (r *ReconcileWorkspace) stopWorkspace(workspace *devworkspace.DevWorkspace, logger logr.Logger) (reconcile.Result, error) {
 	workspaceDeployment := &appsv1.Deployment{}
 	namespaceName := types.NamespacedName{
 		Name:      common.DeploymentName(workspace.Status.WorkspaceId),
@@ -339,13 +340,13 @@ func (r *ReconcileWorkspace) stopWorkspace(workspace *workspacev1alpha1.Workspac
 	err := r.client.Get(context.TODO(), namespaceName, workspaceDeployment)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			status.Phase = workspacev1alpha1.WorkspaceStatusStopped
+			status.Phase = devworkspace.WorkspaceStatusStopped
 			return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
 		}
 		return reconcile.Result{}, err
 	}
 
-	status.Phase = workspacev1alpha1.WorkspaceStatusStopping
+	status.Phase = devworkspace.WorkspaceStatusStopping
 	replicas := workspaceDeployment.Spec.Replicas
 	if replicas == nil || *replicas > 0 {
 		logger.Info("Stopping workspace")
@@ -361,12 +362,12 @@ func (r *ReconcileWorkspace) stopWorkspace(workspace *workspacev1alpha1.Workspac
 
 	if workspaceDeployment.Status.Replicas == 0 {
 		logger.Info("Workspace stopped")
-		status.Phase = workspacev1alpha1.WorkspaceStatusStopped
+		status.Phase = devworkspace.WorkspaceStatusStopped
 	}
 	return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
 }
 
-func getWorkspaceId(instance *workspacev1alpha1.Workspace) (string, error) {
+func getWorkspaceId(instance *devworkspace.DevWorkspace) (string, error) {
 	uid, err := uuid.Parse(string(instance.UID))
 	if err != nil {
 		return "", err

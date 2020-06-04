@@ -30,7 +30,7 @@ const (
 	PVCStorageSize            = "1Gi"
 
 	// WorkspaceIDLabel is label key to store workspace identifier
-	WorkspaceIDLabel = "org.eclipse.che.workspace/id"
+	WorkspaceIDLabel = "che.workspace_id"
 
 	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
 	WorkspaceEndpointNameAnnotation = "org.eclipse.che.workspace/endpoint_name"

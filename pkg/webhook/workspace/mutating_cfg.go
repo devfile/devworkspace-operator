@@ -24,7 +24,7 @@ const (
 	mutateWebhookFailurePolicy = v1beta1.Fail
 )
 
-func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
+func buildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfiguration {
 	mutateWebhookFailurePolicy := mutateWebhookFailurePolicy
 	mutateWebhookPath := mutateWebhookPath
 	labelExistsOp := metav1.LabelSelectorOpExists
@@ -40,7 +40,7 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
 						Name:      "workspace-controller",
-						Namespace: "che-workspace-controller",
+						Namespace: namespace,
 						Path:      &mutateWebhookPath,
 					},
 					CABundle: server.CABundle,
@@ -62,7 +62,7 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
 						Name:      "workspace-controller",
-						Namespace: "che-workspace-controller",
+						Namespace: namespace,
 						Path:      &mutateWebhookPath,
 					},
 					CABundle: server.CABundle,

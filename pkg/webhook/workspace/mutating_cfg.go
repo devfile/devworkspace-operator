@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	mutateWebhookCfgName       = "workspace.che.eclipse.org"
+	mutateWebhookCfgName       = "devworkspace.devfile.io"
 	mutateWebhookPath          = "/mutate"
 	mutateWebhookFailurePolicy = v1beta1.Fail
 )
@@ -35,7 +35,7 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 		},
 		Webhooks: []v1beta1.MutatingWebhook{
 			{
-				Name:          "mutate.che-workspace-controller.svc",
+				Name:          "mutate.workspace-controller.svc",
 				FailurePolicy: &mutateWebhookFailurePolicy,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
@@ -49,15 +49,15 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 					{
 						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
 						Rule: v1beta1.Rule{
-							APIGroups:   []string{"workspace.che.eclipse.org"},
+							APIGroups:   []string{"devfile.io"},
 							APIVersions: []string{"v1alpha1"},
-							Resources:   []string{"workspaces"},
+							Resources:   []string{"devworkspaces"},
 						},
 					},
 				},
 			},
 			{
-				Name:          "mutate-ws-resources.che-workspace-controller.svc",
+				Name:          "mutate-ws-resources.workspace-controller.svc",
 				FailurePolicy: &mutateWebhookFailurePolicy,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{

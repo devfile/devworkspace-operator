@@ -14,9 +14,10 @@ package client
 
 import (
 	"fmt"
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
 	"os/exec"
 	"strings"
+
+	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
 )
 
 func (w *K8sClient) OcApply(filePath string) (err error) {

@@ -20,6 +20,31 @@ import (
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
+func devworkspaceTemplateToDevfileV1(template *devworkspace.DevWorkspaceTemplateSpec) *workspaceApi.DevfileSpec {
+	devfile := &workspaceApi.DevfileSpec{}
+	for _, templateCommand := range template.Commands {
+		command := toDevfileCommand(templateCommand)
+		if command != nil {
+			devfile.Commands = append(devfile.Commands, *command)
+		}
+	}
+
+	for _, templateComponent := range template.Components {
+		component := toDevfileComponent(templateComponent)
+		if component != nil {
+			devfile.Components = append(devfile.Components, *component)
+		}
+	}
+
+	for _, templateProject := range template.Projects {
+		project := toDevfileProject(templateProject)
+		if project != nil {
+			devfile.Projects = append(devfile.Projects, *project)
+		}
+	}
+	return devfile
+}
+
 func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
 	var commandSpec *workspaceApi.CommandSpec = nil
 	c.Visit(devworkspace.CommandVisitor{
@@ -31,7 +56,7 @@ func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
 			commandSpec = &workspaceApi.CommandSpec{
 				Name: name,
 				Actions: []workspaceApi.CommandActionSpec{
-					workspaceApi.CommandActionSpec{
+					{
 						Command:   cmd.CommandLine,
 						Component: cmd.Component,
 						Workdir:   cmd.WorkingDir,
@@ -45,7 +70,7 @@ func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
 			commandSpec = &workspaceApi.CommandSpec{
 				Name: cmd.Id,
 				Actions: []workspaceApi.CommandActionSpec{
-					workspaceApi.CommandActionSpec{
+					{
 						Type:             "vscode-launch",
 						ReferenceContent: cmd.Inlined,
 					},
@@ -57,7 +82,7 @@ func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
 			commandSpec = &workspaceApi.CommandSpec{
 				Name: cmd.Id,
 				Actions: []workspaceApi.CommandActionSpec{
-					workspaceApi.CommandActionSpec{
+					{
 						Type:             "vscode-task",
 						ReferenceContent: cmd.Inlined,
 					},
@@ -68,14 +93,6 @@ func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
 	})
 
 	return commandSpec
-}
-
-func nilIfEmpty(s string) *string {
-	if s == "" {
-		return nil
-	}
-	newString := s
-	return &newString
 }
 
 func toDevfileEndpoints(eps []devworkspace.Endpoint) []workspaceApi.Endpoint {
@@ -104,14 +121,12 @@ func toDevfileComponent(c devworkspace.Component) *workspaceApi.ComponentSpec {
 					Type:  workspaceApi.CheEditor,
 					Alias: plugin.Name,
 					Id:    plugin.Id,
-					//				MemoryLimit: nilIfEmpty(c.Plugin.MemoryLimit),
 				}
 			} else {
 				componentSpec = &workspaceApi.ComponentSpec{
 					Type:  workspaceApi.ChePlugin,
 					Alias: plugin.Name,
 					Id:    plugin.Id,
-					//			MemoryLimit: nilIfEmpty(c.Plugin.MemoryLimit),
 				}
 			}
 			return nil
@@ -168,28 +183,5 @@ func toDevfileProject(p devworkspace.Project) *workspaceApi.ProjectSpec {
 			Location: theLocation,
 			Type:     theType,
 		},
-	}
-}
-
-func completeDevfileFromDevworkspaceTemplate(template *devworkspace.DevWorkspaceTemplateSpec, devfile *workspaceApi.DevfileSpec) {
-	for _, templateCommand := range template.Commands {
-		command := toDevfileCommand(templateCommand)
-		if command != nil {
-			devfile.Commands = append(devfile.Commands, *command)
-		}
-	}
-
-	for _, templateComponent := range template.Components {
-		component := toDevfileComponent(templateComponent)
-		if component != nil {
-			devfile.Components = append(devfile.Components, *component)
-		}
-	}
-
-	for _, templateProject := range template.Projects {
-		project := toDevfileProject(templateProject)
-		if project != nil {
-			devfile.Projects = append(devfile.Projects, *project)
-		}
 	}
 }

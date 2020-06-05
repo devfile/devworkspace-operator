@@ -180,7 +180,7 @@ uninstall: _set_ctx _do_uninstall _reset_ctx
 update_devworkspace_api:
 	go mod edit --require github.com/devfile/kubernetes-api@$(DEVWORKSPACE_API_VERSION)
 	go mod download
-	go mod vendor
+	go mod tidy
 
 ### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
 update_devworkspace_crds:

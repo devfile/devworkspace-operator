@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: devfile.io/v1alpha1
 metadata:
-  name: cloudshell
+  name: cloud-shell
 spec:
   started: true
   template:
@@ -17,4 +17,3 @@ spec:
           env:
             - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
               name: PS1
-        

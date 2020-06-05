@@ -76,7 +76,7 @@ func getSpecConfigMap(
 	if err != nil {
 		return nil, err
 	}
-	devfileYAML, err := getDevfileYaml(workspace.Spec.Template)
+	devfileYAML, err := getDevfileV1Yaml(workspace.Spec.Template)
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +114,8 @@ func getClusterConfigMap(name, namespace string, client runtimeClient.Client) (*
 	return cm, err
 }
 
-func getDevfileYaml(template devworkspace.DevWorkspaceTemplateSpec) (string, error) {
-	devfile := v1alpha1.DevfileSpec{}
-	completeDevfileFromDevworkspaceTemplate(&template, &devfile)
+func getDevfileV1Yaml(template devworkspace.DevWorkspaceTemplateSpec) (string, error) {
+	devfile := devworkspaceTemplateToDevfileV1(&template)
 	devfileYaml, err := yaml.Marshal(devfile)
 	if err != nil {
 		return "", err

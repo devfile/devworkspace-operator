@@ -8,8 +8,7 @@ metadata:
     io.devfile.workspace/restricted-access: "true"
   labels:
     # it's a label OpenShift console uses a flag to mark terminal's workspaces
-    console.openshift.io/cloudshell: "true"
-
+    console.openshift.io/terminal: "true"
 spec:
   started: true
   routingClass: 'basic'

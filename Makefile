@@ -188,10 +188,19 @@ update_devworkspace_crds:
 	cd devworkspace-crds && git init || true
 ifneq ($(shell git --git-dir=devworkspace-crds/.git remote), origin)
 	cd devworkspace-crds && git remote add origin -f https://github.com/devfile/kubernetes-api.git
-	cd devworkspace-crds && git config core.sparsecheckout true 
-	cd devworkspace-crds && echo "deploy/crds/*" >> .git/info/sparse-checkout
+else
+	cd devworkspace-crds && git remote set-url origin https://github.com/devfile/kubernetes-api.git
 endif
-	cd devworkspace-crds && git pull origin master
+	cd devworkspace-crds && git config core.sparsecheckout true
+	cd devworkspace-crds && echo "deploy/crds/*" >> .git/info/sparse-checkout
+	cd devworkspace-crds && git fetch --tags -p origin
+ifeq ($(shell cd devworkspace-crds && git show-ref --verify refs/tags/$(DEVWORKSPACE_API_VERSION) 2> /dev/null && echo "tag" || echo "branch"),tag)
+	@echo 'DevWorkpsace API is specified from tag'
+	cd devworkspace-crds && git checkout tags/$(DEVWORKSPACE_API_VERSION)
+else
+	@echo 'DevWorkpsace API is specified from branch'
+	cd devworkspace-crds && git checkout $(DEVWORKSPACE_API_VERSION) && git reset --hard origin/$(DEVWORKSPACE_API_VERSION)
+endif
 
 ### local: set up cluster for local development
 local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
@@ -248,4 +257,4 @@ help: Makefile
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'
 	@echo '    ADMIN_CTX                  - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
 	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
-	@echo '    DEVWORKSPACE_API_VERSION   - Version, branch or tag of the DevWorkspaceAPI to depend on'
+	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/kubernetes-api to depend on. Defaults to master'

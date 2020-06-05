@@ -12,6 +12,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"io/ioutil"
 	"os"
 
@@ -54,12 +55,7 @@ func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) error {
 
 	CABundle, err = ioutil.ReadFile(webhookServerCertDir + "/ca.crt")
 	if os.IsNotExist(err) {
-		log.Info("CA certificate is not found. Webhook server will now attempt to setup")
-		err = InitWebhookServer(ctx)
-		if err != nil {
-			return err
-		}
-		return nil
+		return errors.New("CA certificate is not found. Unable to setup webhook server")
 	}
 	if err != nil {
 		return err

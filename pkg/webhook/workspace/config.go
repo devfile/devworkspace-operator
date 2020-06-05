@@ -19,18 +19,23 @@ import (
 	"os"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	corev1 "k8s.io/api/core/v1"
+
+	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/devfile/devworkspace-operator/internal/controller"
 	"github.com/devfile/devworkspace-operator/pkg/webhook/server"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
+
+const certGenDeploymentName = "che-workspace-controller-cert-gen"
 
 //Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
 func Configure(ctx context.Context) error {
@@ -45,8 +50,15 @@ func Configure(ctx context.Context) error {
 		return err
 	}
 
+	// At this point we no longer need the cert generation deployment
+	err = deleteCertGenerationDeployment(ctx, c, namespace)
+	if err != nil {
+		return err
+	}
+
 	mutateWebhookCfg := buildMutateWebhookCfg(namespace)
 	validateWebhookCfg := buildValidatingWebhookCfg(namespace)
+
 	if !server.IsSetUp() {
 		_, mutatingWebhookErr := getMutatingWebhook(ctx, c, mutateWebhookCfg)
 		_, validatingWebhookErr := getValidateWebhook(ctx, c, validateWebhookCfg)
@@ -163,4 +175,17 @@ func controllerSAUID(ctx context.Context, c client.Client) (string, string, erro
 	}
 	fullSAName := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
 	return string(sa.UID), fullSAName, nil
+}
+
+func deleteCertGenerationDeployment(ctx context.Context, client crclient.Client, namespace string) error {
+	if err := client.Delete(ctx, &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      certGenDeploymentName,
+			Namespace: namespace,
+		}}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
 }

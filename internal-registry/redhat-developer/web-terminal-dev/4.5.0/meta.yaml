@@ -1,11 +1,11 @@
 apiVersion: v2
-publisher: che-incubator
-name: command-line-terminal-dev
-version: nightly
+publisher: redhat-developer
+name: web-terminal-dev
+version: 4.5.0
 type: Che Editor
-displayName: Dev Command Line Terminal
-title: Dev Command Line Terminal
-description: Command Line Terminal provides the ability to start a terminal inside
+displayName: Web Terminal
+title: Web Terminal
+description: Web provides the ability to start a terminal inside
   the OpenShift Console. The development version does not run with TLS enabled and
   is intended for development purposes only.
 icon: https://www.eclipse.org/che/images/logo-eclipseche.svg
@@ -14,7 +14,7 @@ firstPublicationDate: "2020-06-01"
 category: Other
 spec:
   endpoints:
-    - name: command-line-terminal
+    - name: web-terminal
       public: true
       targetPort: 4444
       attributes:
@@ -24,7 +24,7 @@ spec:
         secure: true
         cookiesAuthEnabled: true
   containers:
-    - name: command-line-terminal
+    - name: web-terminal
       image: "quay.io/eclipse/che-machine-exec:nightly"
       command: ["/go/bin/che-machine-exec",
                 "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",

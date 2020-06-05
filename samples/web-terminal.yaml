@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: devfile.io/v1alpha1
 metadata:
-  name: commandline-terminal
+  name: web-terminal
   annotations:
     # it's important to make workspace immutable to make sure nobody with right access
     # won't set custom editor to steal creator's token
@@ -11,9 +11,9 @@ metadata:
     console.openshift.io/terminal: "true"
 spec:
   started: true
-  routingClass: 'openshift-terminal'
+  routingClass: 'web-terminal'
   template:
     components:
       - plugin:
-          name: command-line-terminal
-          id: che-incubator/command-line-terminal/4.5.0
+          name: web-terminal
+          id: redhat-developer/web-terminal/4.5.0

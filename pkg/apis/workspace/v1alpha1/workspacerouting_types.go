@@ -39,7 +39,7 @@ const (
 	WorkspaceRoutingOpenShiftOauth    WorkspaceRoutingClass = "openshift-oauth"
 	WorkspaceRoutingCluster           WorkspaceRoutingClass = "cluster"
 	WorkspaceRoutingClusterTLS        WorkspaceRoutingClass = "cluster-tls"
-	WorkspaceRoutingOpenShiftTerminal WorkspaceRoutingClass = "openshift-terminal"
+	WorkspaceRoutingOpenShiftTerminal WorkspaceRoutingClass = "web-terminal"
 )
 
 // WorkspaceRoutingStatus defines the observed state of WorkspaceRouting

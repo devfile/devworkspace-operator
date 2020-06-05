@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: devfile.io/v1alpha1
 metadata:
-  name: commandline-terminal-dev
+  name: web-terminal-dev
   annotations:
     # it's important to make workspace immutable to make sure nobody with right access
     # won't set custom editor to steal creator's token
@@ -15,5 +15,5 @@ spec:
   template:
     components:
       - plugin:
-          name: command-line-terminal
-          id: che-incubator/command-line-terminal-dev/4.5.0
+          name: web-terminal
+          id: redhat-developer/web-terminal-dev/4.5.0

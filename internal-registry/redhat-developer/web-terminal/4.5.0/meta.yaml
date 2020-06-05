@@ -1,18 +1,18 @@
 apiVersion: v2
-publisher: che-incubator
-name: command-line-terminal
+publisher: redhat-developer
+name: web-terminal
 version: 4.5.0
 type: Che Editor
-displayName: Command Line Terminal
-title: Command Line Terminal
-description: Command Line Terminal provides the ability to start a terminal inside the OpenShift Console.
+displayName: Web Terminal
+title: Web Terminal
+description: Web Terminal provides the ability to start a terminal inside the OpenShift Console.
 icon: https://www.eclipse.org/che/images/logo-eclipseche.svg
 repository: https://github.com/eclipse/che-machine-exec/
 firstPublicationDate: "2020-05-13"
 category: Other
 spec:
   endpoints:
-   -  name: command-line-terminal
+   -  name: web-terminal
       public: true
       targetPort: 4444
       attributes:
@@ -22,10 +22,10 @@ spec:
         secure: true
         cookiesAuthEnabled: true
   containers:
-   - name: command-line-terminal
+   - name: web-terminal
      image: "quay.io/eclipse/che-machine-exec:nightly"
 #    ^ it'll be replaced with new image below after https://github.com/eclipse/che/issues/16942 is fixed
-     #    image: "quay.io/che-incubator/command-line-terminal:4.5.0"
+     #    image: "quay.io/redhat-developer/web-terminal:4.5.0"
      command: ["/go/bin/che-machine-exec",
                "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
                "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",

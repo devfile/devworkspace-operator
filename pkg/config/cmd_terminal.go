@@ -22,9 +22,9 @@ import (
 
 const (
 	// property name for value with yaml for default dockerimage component
-	// that should be provisioned if devfile DOES have che-incubator/command-line-terminal cheEditor
+	// that should be provisioned if devfile DOES have redhat-developer/web-terminal cheEditor
 	// and DOES NOT have any dockerimage component
-	defaultTerminalDockerimageProperty = "che.workspace.default_dockerimage.che-incubator.command-line-terminal"
+	defaultTerminalDockerimageProperty = "che.workspace.default_dockerimage.redhat-developer.web-terminal"
 )
 
 var (

@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	CommandLineTerminalPublisherName    = "che-incubator/command-line-terminal/"
-	CommandLineTerminalDevPublisherName = "che-incubator/command-line-terminal-dev/"
+	CommandLineTerminalPublisherName    = "redhat-developer/web-terminal/"
+	CommandLineTerminalDevPublisherName = "redhat-developer/web-terminal-dev/"
 )
 
 func ContainsCmdTerminalComponent(pluginComponents []devworkspace.Component) bool {

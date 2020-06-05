@@ -10,7 +10,6 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-
 package client
 
 import (
@@ -22,7 +21,7 @@ type K8sClient struct {
 	kubeClient *kubernetes.Clientset
 }
 
-// NewCodeReady creates C, a workspaces used to expose common testing functions.
+// NewK8sClient creates kubernetes client wrapper with helper functions and direct access to k8s go client
 func NewK8sClient() (*K8sClient, error) {
 	cfg, err := config.GetConfig()
 	if err != nil {

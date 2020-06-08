@@ -12,18 +12,21 @@ firstPublicationDate: "2020-01-29"
 category: Other
 spec:
   endpoints:
-   -  name: cloud-shell
-      public: true
-      targetPort: 4444
-      attributes:
-        protocol: http
-        type: ide
-        path: /static/
-        discoverable: false
-        secure: true
-        cookiesAuthEnabled: true
+  - name: cloud-shell
+    public: true
+    targetPort: 4444
+    attributes:
+      protocol: http
+      type: ide
+      path: /static/
+      discoverable: false
+      secure: true
+      cookiesAuthEnabled: true
   containers:
-   - name: che-machine-exec
-     image: "quay.io/eclipse/che-machine-exec:nightly"
-     ports:
-       - exposedPort: 4444
+  - name: che-machine-exec
+    image: "quay.io/eclipse/che-machine-exec:nightly"
+    ports:
+    - exposedPort: 4444
+    env:
+    - name: "POD_LABEL_SELECTOR"
+      value: "org.eclipse.che.workspace/id"

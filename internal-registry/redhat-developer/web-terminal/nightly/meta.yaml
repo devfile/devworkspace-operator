@@ -29,6 +29,7 @@ spec:
     command: ["/go/bin/che-machine-exec",
               "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
               "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",
+              "--pod-selector", "org.eclipse.che.workspace/id",
               "--use-tls"]
     ports:
       - exposedPort: 4444

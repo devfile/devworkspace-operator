@@ -110,16 +110,17 @@ func buildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 			},
 		},
 	}
-	if config.ControllerCfg.IsOpenShift() {
-		workspaceObjMutateWebhook.Rules = append(workspaceObjMutateWebhook.Rules, v1beta1.RuleWithOperations{
-			Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-			Rule: v1beta1.Rule{
-				APIGroups:   []string{"route.openshift.io"},
-				APIVersions: []string{"v1"},
-				Resources:   []string{"routes"},
-			},
-		})
-	}
+	// TODO: Routes do not get UserInfo.UID filled in webhooks for some reason
+	// if config.ControllerCfg.IsOpenShift() {
+	// 	workspaceObjMutateWebhook.Rules = append(workspaceObjMutateWebhook.Rules, v1beta1.RuleWithOperations{
+	// 		Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+	// 		Rule: v1beta1.Rule{
+	// 			APIGroups:   []string{"route.openshift.io"},
+	// 			APIVersions: []string{"v1"},
+	// 			Resources:   []string{"routes"},
+	// 		},
+	// 	})
+	// }
 
 	return &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{

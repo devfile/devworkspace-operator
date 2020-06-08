@@ -43,7 +43,7 @@ func (m *ResourcesMutator) Handle(ctx context.Context, req admission.Request) ad
 				return m.MutatePodOnCreate(ctx, req)
 			case handler.AppsV1DeploymentKind:
 				return m.MutateDeploymentOnCreate(ctx, req)
-			case handler.V1ServiceKind, handler.V1beta1IngressKind, handler.V1RouteKind,
+			case handler.V1ServiceKind, handler.V1beta1IngressKind,
 				handler.V1alpha1ComponentKind, handler.V1alpha1WorkspaceRoutingKind:
 
 				return m.HandleImmutableCreate(ctx, req)

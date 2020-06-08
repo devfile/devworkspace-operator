@@ -189,8 +189,6 @@ github.com/daviddengcn/go-colortext v0.0.0-20160507010035-511bcaf42ccd/go.mod h1
 github.com/deislabs/oras v0.8.1/go.mod h1:Mx0rMSbBNaNfY9hjpccEnxkOqJL6KGjtxNHPLC4G4As=
 github.com/denisenkom/go-mssqldb v0.0.0-20190515213511-eb9f6a1743f3/go.mod h1:zAg7JM8CkOJ43xKXIj7eRO9kmWm/TW578qo+oDO6tuM=
 github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba/go.mod h1:dV8lFg6daOBZbT6/BDGIz6Y3WFGn8juu6G+CQ6LHtl0=
-github.com/devfile/kubernetes-api v0.0.0-20200603111415-8e1485401159 h1:YWt25627Zf/Eo+YFsk4G6ckEx9650S27AHqsfflUlqs=
-github.com/devfile/kubernetes-api v0.0.0-20200603111415-8e1485401159/go.mod h1:yqOXWQYZvwWrGU+M2bbMPkYobKw67ejseWTNdaKEPGA=
 github.com/devfile/kubernetes-api v0.0.0-20200608141605-bccde9afdf59 h1:cnWhCEada2YVHcb6gCB9VwN65rcCNqFX/Kh3eL+GGZg=
 github.com/devfile/kubernetes-api v0.0.0-20200608141605-bccde9afdf59/go.mod h1:yqOXWQYZvwWrGU+M2bbMPkYobKw67ejseWTNdaKEPGA=
 github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=

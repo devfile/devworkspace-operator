@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	mutateWebhookCfgName       = "devworkspace.devfile.io"
+	mutateWebhookCfgName       = "devworkspace.workspace.devfile.io"
 	mutateWebhookPath          = "/mutate"
 	mutateWebhookFailurePolicy = v1beta1.Fail
 )
@@ -49,7 +49,7 @@ func buildMutateWebhookCfg() *v1beta1.MutatingWebhookConfiguration {
 					{
 						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
 						Rule: v1beta1.Rule{
-							APIGroups:   []string{"devfile.io"},
+							APIGroups:   []string{"workspace.devfile.io"},
 							APIVersions: []string{"v1alpha1"},
 							Resources:   []string{"devworkspaces"},
 						},

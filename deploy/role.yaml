@@ -117,7 +117,7 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - devfile.io
+  - workspace.devfile.io
   resources:
   - '*'
   verbs:

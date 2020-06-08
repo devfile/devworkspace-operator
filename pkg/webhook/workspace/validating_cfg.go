@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	validateWebhookCfgName       = "devworkspace.devfile.io"
+	validateWebhookCfgName       = "devworkspace.workspace.devfile.io"
 	validateWebhookPath          = "/validate"
 	validateWebhookFailurePolicy = v1beta1.Fail
 )

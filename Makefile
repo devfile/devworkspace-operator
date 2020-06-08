@@ -125,12 +125,12 @@ _do_uninstall:
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
 ifneq ($(shell command -v kubectl 2> /dev/null),)
-	kubectl delete devworkspaces.devfile.io --all-namespaces --all
-	kubectl delete devworkspacetemplates.devfile.io --all-namespaces --all
+	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all
+	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all
 # Have to wait for routings to be deleted in case there are finalizers
 	kubectl delete workspaceroutings.workspace.che.eclipse.org --all-namespaces --all --wait
 else
-ifneq ($(TOOL) get devworkspaces.devfile.io --all-namespaces,"No resources found.")
+ifneq ($(TOOL) get devworkspaces.workspace.devfile.io --all-namespaces,"No resources found.")
 	$(info To automatically remove all workspaces when uninstalling, ensure kubectl is installed)
 	$(error Cannot uninstall operator, workspaces still running. Delete all workspaces and workspaceroutings before proceeding)
 endif
@@ -139,8 +139,8 @@ endif
 	$(TOOL) delete namespace $(NAMESPACE)
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.workspace.che.eclipse.org
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.devfile.io
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.devfile.io
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io
 
 ### docker: build and push docker image
 docker: _print_vars

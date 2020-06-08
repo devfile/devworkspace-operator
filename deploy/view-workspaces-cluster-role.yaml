@@ -8,7 +8,7 @@ metadata:
   name: view-workspaces
 rules:
   - apiGroups:
-      - devfile.io
+      - workspace.devfile.io
     resources:
       - devworkspaces
     verbs:
@@ -16,7 +16,7 @@ rules:
       - list
       - watch
   - apiGroups:
-      - devfile.io
+      - workspace.devfile.io
     resources:
       - workspaceroutings
       - components

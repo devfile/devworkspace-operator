@@ -33,20 +33,21 @@ const (
 	WorkspaceIDLabel = "che.workspace_id"
 
 	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
-	WorkspaceEndpointNameAnnotation = "org.eclipse.che.workspace/endpoint_name"
+	WorkspaceEndpointNameAnnotation = "io.devfile.workspace/endpoint_name"
 
 	// WorkspaceNameLabel is label key to store workspace name
-	WorkspaceNameLabel = "org.eclipse.che.workspace/name"
+	WorkspaceNameLabel = "io.devfile.workspace/name"
 
 	// WorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
-	WorkspaceCreatorLabel = "org.eclipse.che.workspace/creator"
+	WorkspaceCreatorLabel = "io.devfile.workspace/creator"
 
-	// WorkspaceImmutableAnnotation marks a workspace as 'immutable' if 'true'
-	WorkspaceImmutableAnnotation = "org.eclipse.che.workspace/immutable"
+	// WorkspaceImmutableAnnotation marks the intention that workspace access is restricted to only the creator; setting this
+	// annotation will cause workspace start to fail if webhooks are disabled.
+	WorkspaceImmutableAnnotation = "io.devfile.workspace/restricted-access"
 
 	// WorkspaceDiscoverableServiceAnnotation marks a service in a workspace as created for a discoverable endpoint,
 	// as opposed to a service created to support the workspace itself.
-	WorkspaceDiscoverableServiceAnnotation = "org.eclipse.che.workspace/discoverable-service"
+	WorkspaceDiscoverableServiceAnnotation = "io.devfile.workspace/discoverable-service"
 )
 
 // Constants for che-rest-apis

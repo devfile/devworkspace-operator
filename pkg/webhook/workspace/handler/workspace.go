@@ -23,8 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-var V1alpha1DevWorkspaceKind = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha1"}
-
 // StopStartDiffOption is comparing options that should be used to check if there is no other changes except changing started
 var StopStartDiffOption = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing

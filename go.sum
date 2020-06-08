@@ -191,6 +191,8 @@ github.com/denisenkom/go-mssqldb v0.0.0-20190515213511-eb9f6a1743f3/go.mod h1:zA
 github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba/go.mod h1:dV8lFg6daOBZbT6/BDGIz6Y3WFGn8juu6G+CQ6LHtl0=
 github.com/devfile/kubernetes-api v0.0.0-20200603111415-8e1485401159 h1:YWt25627Zf/Eo+YFsk4G6ckEx9650S27AHqsfflUlqs=
 github.com/devfile/kubernetes-api v0.0.0-20200603111415-8e1485401159/go.mod h1:yqOXWQYZvwWrGU+M2bbMPkYobKw67ejseWTNdaKEPGA=
+github.com/devfile/kubernetes-api v0.0.0-20200608141605-bccde9afdf59 h1:cnWhCEada2YVHcb6gCB9VwN65rcCNqFX/Kh3eL+GGZg=
+github.com/devfile/kubernetes-api v0.0.0-20200608141605-bccde9afdf59/go.mod h1:yqOXWQYZvwWrGU+M2bbMPkYobKw67ejseWTNdaKEPGA=
 github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible h1:7qlOGliEKZXTDg6OTjfoBKDXWrumCAMpl/TFQ4/5kLM=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=

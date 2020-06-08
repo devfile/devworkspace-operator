@@ -5,16 +5,17 @@ go 1.12
 // Che Plugin Broker branch devworkspace-controller
 require github.com/eclipse/che-plugin-broker v3.1.1-0.20200207223144-b20597f15e4c+incompatible
 
+// use-devfile-2.0-in-workspace-controller
+require github.com/devfile/kubernetes-api v0.0.0-20200608141605-bccde9afdf59
+
 // Operator Framework 0.17.x
 require (
 	github.com/eclipse/che-go-jsonrpc v0.0.0-20181205102516-87cdb8da2597 // indirect
 	github.com/go-logr/logr v0.1.0
-	github.com/go-openapi/spec v0.19.4
 	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1
 	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
 	gopkg.in/yaml.v2 v2.2.8
-	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 )
 
 require (

@@ -13,6 +13,7 @@
 package v1alpha1
 
 import (
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,11 +35,11 @@ type WorkspaceRoutingSpec struct {
 type WorkspaceRoutingClass string
 
 const (
-	WorkspaceRoutingDefault           WorkspaceRoutingClass = "basic"
-	WorkspaceRoutingOpenShiftOauth    WorkspaceRoutingClass = "openshift-oauth"
-	WorkspaceRoutingCluster           WorkspaceRoutingClass = "cluster"
-	WorkspaceRoutingClusterTLS        WorkspaceRoutingClass = "cluster-tls"
-	WorkspaceRoutingOpenShiftTerminal WorkspaceRoutingClass = "openshift-terminal"
+	WorkspaceRoutingDefault        WorkspaceRoutingClass = "basic"
+	WorkspaceRoutingOpenShiftOauth WorkspaceRoutingClass = "openshift-oauth"
+	WorkspaceRoutingCluster        WorkspaceRoutingClass = "cluster"
+	WorkspaceRoutingClusterTLS     WorkspaceRoutingClass = "cluster-tls"
+	WorkspaceRoutingWebTerminal    WorkspaceRoutingClass = "web-terminal"
 )
 
 // WorkspaceRoutingStatus defines the observed state of WorkspaceRouting
@@ -67,10 +68,10 @@ type ExposedEndpoint struct {
 	// Public URL of the exposed endpoint
 	Url string `json:"url"`
 	// Attributes of the exposed endpoint
-	Attributes map[EndpointAttribute]string `json:"attributes"`
+	Attributes map[string]string `json:"attributes"`
 }
 
-type EndpointList []Endpoint
+type EndpointList []devworkspace.Endpoint
 
 type ExposedEndpointList []ExposedEndpoint
 

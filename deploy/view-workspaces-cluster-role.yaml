@@ -8,9 +8,16 @@ metadata:
   name: view-workspaces
 rules:
   - apiGroups:
-      - workspace.che.eclipse.org
+      - workspace.devfile.io
     resources:
-      - workspaces
+      - devworkspaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - workspace.devfile.io
+    resources:
       - workspaceroutings
       - components
     verbs:

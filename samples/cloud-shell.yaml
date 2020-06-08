@@ -1,22 +1,19 @@
-apiVersion: workspace.che.eclipse.org/v1alpha1
-kind: Workspace
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha1
 metadata:
   name: cloud-shell
 spec:
   started: true
-  devfile:
-    apiVersion: 1.0.0
-    metadata:
-      name: cloud-shell
+  template:
     components:
-      - alias: cloud-shell
-        type: cheEditor
-        id: eclipse/cloud-shell/nightly
-      - type: dockerimage
-        memoryLimit: 256Mi
-        alias: dev
-        image: 'quay.io/eclipse/che-sidecar-openshift-connector:0.1.2-2601509'
-        args: ["tail", "-f", "/dev/null"]
-        env:
-          - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
-            name: PS1
+      - plugin:
+          name: cloud-shell
+          id: eclipse/cloud-shell/nightly
+      - container:
+          name: dev
+          image: quay.io/eclipse/che-sidecar-openshift-connector:0.1.2-2601509
+          memoryLimit: 256Mi
+          args: ["tail", "-f", "/dev/null"]
+          env:
+            - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
+              name: PS1

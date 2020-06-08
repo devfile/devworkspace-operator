@@ -22,6 +22,7 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/env"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,7 +53,7 @@ var deploymentDiffOpts = cmp.Options{
 }
 
 func SyncDeploymentToCluster(
-	workspace *v1alpha1.Workspace,
+	workspace *devworkspace.DevWorkspace,
 	podAdditions []v1alpha1.PodAdditions,
 	components []v1alpha1.ComponentDescription,
 	saName string,
@@ -117,7 +118,7 @@ func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
 }
 
 func getSpecDeployment(
-	workspace *v1alpha1.Workspace,
+	workspace *devworkspace.DevWorkspace,
 	podAdditionsList []v1alpha1.PodAdditions,
 	components []v1alpha1.ComponentDescription,
 	saName string,

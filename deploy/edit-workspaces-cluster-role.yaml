@@ -7,9 +7,18 @@ metadata:
   name: edit-workspaces
 rules:
   - apiGroups:
+      - workspace.devfile.io
+    resources:
+      - devworkspaces
+    verbs:
+      - create
+      - delete
+      - deletecollection
+      - patch
+      - update
+  - apiGroups:
       - workspace.che.eclipse.org
     resources:
-      - workspaces
       - workspaceroutings
       - components
     verbs:

@@ -34,20 +34,44 @@ spec:
             endpoints:
               additionalProperties:
                 items:
-                  description: Describes dockerimage component endpoint
                   properties:
                     attributes:
                       additionalProperties:
                         type: string
                       type: object
+                    configuration:
+                      properties:
+                        cookiesAuthEnabled:
+                          type: boolean
+                        discoverable:
+                          type: boolean
+                        path:
+                          type: string
+                        protocol:
+                          description: The is the low-level protocol of traffic coming
+                            through this endpoint. Default value is "tcp"
+                          type: string
+                        public:
+                          type: boolean
+                        scheme:
+                          description: The is the URL scheme to use when accessing
+                            the endpoint. Default value is "http"
+                          type: string
+                        secure:
+                          type: boolean
+                        type:
+                          enum:
+                            - ide
+                            - terminal
+                            - ide-dev
+                          type: string
+                      type: object
                     name:
                       type: string
-                    port:
-                      format: int64
+                    targetPort:
                       type: integer
                   required:
                     - name
-                    - port
                   type: object
                 type: array
               description: Machines to endpoints map

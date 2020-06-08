@@ -19,6 +19,7 @@ import (
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -73,7 +74,7 @@ func (s *ClusterSolver) GetExposedEndpoints(
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
+			if endpoint.Attributes[string(v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
 				continue
 			}
 			url, err := resolveServiceHostnameForEndpoint(endpoint, routingObj.Services)
@@ -91,13 +92,13 @@ func (s *ClusterSolver) GetExposedEndpoints(
 	return exposedEndpoints, true, nil
 }
 
-func resolveServiceHostnameForEndpoint(endpoint v1alpha1.Endpoint, services []corev1.Service) (string, error) {
+func resolveServiceHostnameForEndpoint(endpoint devworkspace.Endpoint, services []corev1.Service) (string, error) {
 	for _, service := range services {
 		if service.Annotations[config.WorkspaceDiscoverableServiceAnnotation] == "true" {
 			continue
 		}
 		for _, servicePort := range service.Spec.Ports {
-			if int64(servicePort.Port) == endpoint.Port {
+			if servicePort.Port == int32(endpoint.TargetPort) {
 				return getHostnameFromService(service, servicePort.Port), nil
 			}
 		}

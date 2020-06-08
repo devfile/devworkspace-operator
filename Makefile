@@ -8,6 +8,7 @@ WEBHOOK_ENABLED ?= false
 DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
+DEVWORKSPACE_API_VERSION ?= master
 
 all: help
 
@@ -19,6 +20,7 @@ _print_vars:
 	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
+	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
 
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
@@ -95,8 +97,9 @@ else
 	rm ./deploy/k8s/controller.yaml.bak
 endif
 
-_update_crds:
+_update_crds: update_devworkspace_crds
 	$(TOOL) apply -f ./deploy/crds
+	$(TOOL) apply -f ./devworkspace-crds/deploy/crds
 
 _update_controller_configmap:
 	$(TOOL) apply -f ./deploy/controller_config.yaml
@@ -122,11 +125,12 @@ _do_uninstall:
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
 ifneq ($(shell command -v kubectl 2> /dev/null),)
-	kubectl delete workspaces.workspace.che.eclipse.org --all-namespaces --all
+	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all
+	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all
 # Have to wait for routings to be deleted in case there are finalizers
 	kubectl delete workspaceroutings.workspace.che.eclipse.org --all-namespaces --all --wait
 else
-ifneq ($(TOOL) get workspaces.workspace.che.eclipse.org --all-namespaces,"No resources found.")
+ifneq ($(TOOL) get devworkspaces.workspace.devfile.io --all-namespaces,"No resources found.")
 	$(info To automatically remove all workspaces when uninstalling, ensure kubectl is installed)
 	$(error Cannot uninstall operator, workspaces still running. Delete all workspaces and workspaceroutings before proceeding)
 endif
@@ -135,7 +139,8 @@ endif
 	$(TOOL) delete namespace $(NAMESPACE)
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.workspace.che.eclipse.org
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaces.workspace.che.eclipse.org
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io
 
 ### docker: build and push docker image
 docker: _print_vars
@@ -170,6 +175,32 @@ update_crds: _set_ctx _update_crds _reset_ctx
 
 ### uninstall: remove namespace and all CRDs from cluster
 uninstall: _set_ctx _do_uninstall _reset_ctx
+
+### update_devworkspace_api: update version of devworkspace crds in go.mod
+update_devworkspace_api:
+	go mod edit --require github.com/devfile/kubernetes-api@$(DEVWORKSPACE_API_VERSION)
+	go mod download
+	go mod tidy
+
+### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
+update_devworkspace_crds:
+	mkdir -p devworkspace-crds
+	cd devworkspace-crds && git init || true
+ifneq ($(shell git --git-dir=devworkspace-crds/.git remote), origin)
+	cd devworkspace-crds && git remote add origin -f https://github.com/devfile/kubernetes-api.git
+else
+	cd devworkspace-crds && git remote set-url origin https://github.com/devfile/kubernetes-api.git
+endif
+	cd devworkspace-crds && git config core.sparsecheckout true
+	cd devworkspace-crds && echo "deploy/crds/*" >> .git/info/sparse-checkout
+	cd devworkspace-crds && git fetch --tags -p origin
+ifeq ($(shell cd devworkspace-crds && git show-ref --verify refs/tags/$(DEVWORKSPACE_API_VERSION) 2> /dev/null && echo "tag" || echo "branch"),tag)
+	@echo 'DevWorkpsace API is specified from tag'
+	cd devworkspace-crds && git checkout tags/$(DEVWORKSPACE_API_VERSION)
+else
+	@echo 'DevWorkpsace API is specified from branch'
+	cd devworkspace-crds && git checkout $(DEVWORKSPACE_API_VERSION) && git reset --hard origin/$(DEVWORKSPACE_API_VERSION)
+endif
 
 ### local: set up cluster for local development
 local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
@@ -215,14 +246,15 @@ endif
 ### help: print this message
 help: Makefile
 	@echo 'Available rules:'
-	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-22s -%s\n", $$1, $$2 }'
+	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-30s -%s\n", $$1, $$2 }'
 	@echo ''
 	@echo 'Supported environment variables:'
-	@echo '    IMG                - Image used for controller'
-	@echo '    NAMESPACE          - Namespace to use for deploying controller'
-	@echo '    TOOL               - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes'
-	@echo '    ROUTING_SUFFIX     - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
-	@echo '    PULL_POLICY        - Image pull policy for controller'
-	@echo '    WEBHOOK_ENABLED    - Whether webhooks should be enabled in the deployment'
-	@echo '    ADMIN_CTX          - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
-	@echo '    REGISTRY_ENABLED   - Whether the plugin registry should be deployed'
+	@echo '    IMG                        - Image used for controller'
+	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
+	@echo '    TOOL                       - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes'
+	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
+	@echo '    PULL_POLICY                - Image pull policy for controller'
+	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'
+	@echo '    ADMIN_CTX                  - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
+	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
+	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/kubernetes-api to depend on. Defaults to master'

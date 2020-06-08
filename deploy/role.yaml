@@ -114,7 +114,12 @@ rules:
   - workspace.che.eclipse.org
   resources:
   - '*'
-  - workspaceroutings
+  verbs:
+  - '*'
+- apiGroups:
+  - workspace.devfile.io
+  resources:
+  - '*'
   verbs:
   - '*'
 - apiGroups:

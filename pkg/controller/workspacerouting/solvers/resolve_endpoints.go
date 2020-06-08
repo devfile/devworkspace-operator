@@ -18,6 +18,7 @@ import (
 
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
 func getExposedEndpoints(
@@ -29,7 +30,7 @@ func getExposedEndpoints(
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE] != "true" {
+			if endpoint.Attributes[string(workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
 				continue
 			}
 			url, err := resolveURLForEndpoint(endpoint, routingObj)
@@ -50,7 +51,7 @@ func getExposedEndpoints(
 }
 
 func resolveURLForEndpoint(
-	endpoint workspacev1alpha1.Endpoint,
+	endpoint devworkspace.Endpoint,
 	routingObj RoutingObjects) (string, error) {
 	for _, route := range routingObj.Routes {
 		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
@@ -69,12 +70,12 @@ func resolveURLForEndpoint(
 	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
 }
 
-func getURLForEndpoint(endpoint workspacev1alpha1.Endpoint, host string, secure bool) string {
-	protocol := endpoint.Attributes[workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE]
-	if secure && endpoint.Attributes[workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE] == "true" {
+func getURLForEndpoint(endpoint devworkspace.Endpoint, host string, secure bool) string {
+	protocol := endpoint.Attributes[string(workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE)]
+	if secure && endpoint.Attributes[string(workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" {
 		protocol = getSecureProtocol(protocol)
 	}
-	path := endpoint.Attributes[workspacev1alpha1.PATH_ENDPOINT_ATTRIBUTE]
+	path := endpoint.Attributes[string(workspacev1alpha1.PATH_ENDPOINT_ATTRIBUTE)]
 	u := url.URL{
 		Scheme: protocol,
 		Host:   host,

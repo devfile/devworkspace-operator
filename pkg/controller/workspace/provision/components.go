@@ -21,6 +21,7 @@ import (
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/component/cmd_terminal"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +45,7 @@ var componentDiffOpts = cmp.Options{
 }
 
 func SyncComponentsToCluster(
-	workspace *v1alpha1.Workspace, clusterAPI ClusterAPI) ComponentProvisioningStatus {
+	workspace *devworkspace.DevWorkspace, clusterAPI ClusterAPI) ComponentProvisioningStatus {
 	specComponents, err := getSpecComponents(workspace, clusterAPI.Scheme)
 	if err != nil {
 		return ComponentProvisioningStatus{
@@ -125,20 +126,24 @@ func checkComponentsReadiness(components []v1alpha1.Component) ComponentProvisio
 	}
 }
 
-func getSpecComponents(workspace *v1alpha1.Workspace, scheme *runtime.Scheme) ([]v1alpha1.Component, error) {
-	dockerComponents, pluginComponents, err := adaptor.SortComponentsByType(workspace.Spec.Devfile.Components)
+func getSpecComponents(workspace *devworkspace.DevWorkspace, scheme *runtime.Scheme) ([]v1alpha1.Component, error) {
+	dockerComponents, pluginComponents, err := adaptor.SortComponentsByType(workspace.Spec.Template.Components)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(dockerComponents) == 0 {
 		if cmd_terminal.ContainsCmdTerminalComponent(pluginComponents) {
-			defaultDockerimage, err := config.ControllerCfg.GetDefaultTerminalDockerimage()
+			defaultContainer, err := config.ControllerCfg.GetDefaultTerminalDockerimage()
 			if err != nil {
 				log.Error(err, fmt.Sprintf("Failed to provision default dockerimage component for '%s'. Cause: %s", cmd_terminal.CommandLineTerminalPublisherName, err.Error()))
 				return nil, errors.New("configure dockerimage component or ask administrator to fix default one for " + cmd_terminal.CommandLineTerminalPublisherName)
 			}
-			dockerComponents = []v1alpha1.ComponentSpec{*defaultDockerimage}
+			dockerComponents = []devworkspace.Component{
+				{
+					Container: defaultContainer,
+				},
+			}
 		}
 	}
 
@@ -155,7 +160,7 @@ func getSpecComponents(workspace *v1alpha1.Workspace, scheme *runtime.Scheme) ([
 			Spec: v1alpha1.WorkspaceComponentSpec{
 				WorkspaceId: workspace.Status.WorkspaceId,
 				Components:  dockerComponents,
-				Commands:    workspace.Spec.Devfile.Commands,
+				Commands:    workspace.Spec.Template.Commands,
 			},
 		}
 		err = controllerutil.SetControllerReference(workspace, &dockerResolver, scheme)
@@ -176,7 +181,7 @@ func getSpecComponents(workspace *v1alpha1.Workspace, scheme *runtime.Scheme) ([
 			Spec: v1alpha1.WorkspaceComponentSpec{
 				WorkspaceId: workspace.Status.WorkspaceId,
 				Components:  pluginComponents,
-				Commands:    workspace.Spec.Devfile.Commands,
+				Commands:    workspace.Spec.Template.Commands,
 			},
 		}
 		err = controllerutil.SetControllerReference(workspace, &pluginResolver, scheme)
@@ -188,7 +193,7 @@ func getSpecComponents(workspace *v1alpha1.Workspace, scheme *runtime.Scheme) ([
 	return components, nil
 }
 
-func getClusterComponents(workspace *v1alpha1.Workspace, client runtimeClient.Client) ([]v1alpha1.Component, error) {
+func getClusterComponents(workspace *devworkspace.DevWorkspace, client runtimeClient.Client) ([]v1alpha1.Component, error) {
 	found := &v1alpha1.ComponentList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, workspace.Status.WorkspaceId))
 	if err != nil {

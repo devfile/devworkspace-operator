@@ -14,10 +14,11 @@ package deploy
 
 import (
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os/exec"
 	"strings"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
 )

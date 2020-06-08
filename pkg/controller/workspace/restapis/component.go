@@ -18,6 +18,7 @@ import (
 	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/common"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -28,9 +29,9 @@ func IsCheRestApisConfigured() bool {
 	return config.ControllerCfg.GetCheAPISidecarImage() != ""
 }
 
-func IsCheRestApisRequired(components []workspacev1alpha1.ComponentSpec) bool {
+func IsCheRestApisRequired(components []devworkspace.Component) bool {
 	for _, comp := range components {
-		if strings.Contains(comp.Id, config.TheiaEditorID) && comp.Type == workspacev1alpha1.CheEditor {
+		if comp.Plugin != nil && strings.Contains(comp.Plugin.Id, config.TheiaEditorID) {
 			return true
 		}
 	}
@@ -107,14 +108,14 @@ func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) works
 					Ports: []int{cheRestApisPort},
 				},
 			},
-			Endpoints: []workspacev1alpha1.Endpoint{
+			Endpoints: []devworkspace.Endpoint{
 				{
-					Attributes: map[workspacev1alpha1.EndpointAttribute]string{
-						workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE:   "false",
-						workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE: "tcp",
+					Attributes: map[string]string{
+						string(workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE):   "false",
+						string(workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE): "tcp",
 					},
-					Name: cheRestAPIsName,
-					Port: int64(cheRestApisPort),
+					Name:       cheRestAPIsName,
+					TargetPort: cheRestApisPort,
 				},
 			},
 		},

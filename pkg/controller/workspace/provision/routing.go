@@ -18,6 +18,7 @@ import (
 
 	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,7 +40,7 @@ var routingDiffOpts = cmp.Options{
 }
 
 func SyncRoutingToCluster(
-	workspace *v1alpha1.Workspace,
+	workspace *devworkspace.DevWorkspace,
 	components []v1alpha1.ComponentDescription,
 	clusterAPI ClusterAPI) RoutingProvisioningStatus {
 
@@ -109,7 +110,7 @@ func SyncRoutingToCluster(
 }
 
 func getSpecRouting(
-	workspace *v1alpha1.Workspace,
+	workspace *devworkspace.DevWorkspace,
 	componentDescriptions []v1alpha1.ComponentDescription,
 	scheme *runtime.Scheme) (*v1alpha1.WorkspaceRouting, error) {
 
@@ -128,7 +129,7 @@ func getSpecRouting(
 		},
 		Spec: v1alpha1.WorkspaceRoutingSpec{
 			WorkspaceId:   workspace.Status.WorkspaceId,
-			RoutingClass:  workspace.Spec.RoutingClass,
+			RoutingClass:  v1alpha1.WorkspaceRoutingClass(workspace.Spec.RoutingClass),
 			RoutingSuffix: config.ControllerCfg.GetRoutingSuffix(),
 			Endpoints:     endpoints,
 			PodSelector: map[string]string{

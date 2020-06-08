@@ -35,7 +35,7 @@ func ServiceAccountName(workspaceId string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, "sa")
 }
 
-func EndpointHostname(workspaceId, endpointName string, endpointPort int64, routingSuffix string) string {
+func EndpointHostname(workspaceId, endpointName string, endpointPort int, routingSuffix string) string {
 	hostname := fmt.Sprintf("%s-%s-%d", workspaceId, endpointName, endpointPort)
 	if len(hostname) > 63 {
 		hostname = strings.TrimSuffix(hostname[:63], "-")

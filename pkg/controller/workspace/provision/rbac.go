@@ -13,8 +13,8 @@
 package provision
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +23,7 @@ import (
 )
 
 // SyncRBAC generates RBAC and synchronizes the runtime objects
-func SyncRBAC(workspace *v1alpha1.Workspace, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
+func SyncRBAC(workspace *devworkspace.DevWorkspace, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
 	rbac := generateRBAC(workspace.Namespace)
 
 	didChange, err := SyncMutableObjects(rbac, client, reqLogger)
@@ -55,8 +55,8 @@ func generateRBAC(namespace string) []runtime.Object {
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
-					Resources: []string{"workspaces"},
-					APIGroups: []string{"workspace.che.eclipse.org"},
+					Resources: []string{"devworkspaces"},
+					APIGroups: []string{"workspace.devfile.io"},
 					Verbs:     []string{"patch"},
 				},
 			},

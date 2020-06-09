@@ -31,7 +31,13 @@ func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.
 	if err != nil {
 		return admission.Denied(err.Error())
 	}
-	allowed, msg := h.handleImmutableObj(oldObj, newObj, req.UserInfo.UID)
+	var allowed bool
+	var msg string
+	if req.Kind == V1RouteKind {
+		allowed, msg = h.handleImmutableRoute(oldObj, newObj, req.UserInfo.Username)
+	} else {
+		allowed, msg = h.handleImmutableObj(oldObj, newObj, req.UserInfo.UID)
+	}
 	if allowed {
 		return admission.Allowed(msg)
 	}
@@ -39,10 +45,15 @@ func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.
 }
 
 func (h *WebhookHandler) HandleImmutableCreate(_ context.Context, req admission.Request) admission.Response {
-	if req.UserInfo.UID != h.ControllerUID {
-		return admission.Denied("Only the workspace controller can create workspace objects.")
+	if req.Kind == V1RouteKind && req.UserInfo.Username == h.ControllerSAName {
+		// Have to handle this case separately since req.UserInfo.UID is empty for Route objects
+		// ref: https://github.com/eclipse/che/issues/17114
+		return admission.Allowed("Object created by workspace controller service account.")
 	}
-	return admission.Allowed("Object created by workspace controller service account.")
+	if req.UserInfo.UID == h.ControllerUID {
+		return admission.Allowed("Object created by workspace controller service account.")
+	}
+	return admission.Denied("Only the workspace controller can create workspace objects.")
 }
 
 func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *devworkspace.DevWorkspace, uid string) (allowed bool, msg string) {
@@ -58,6 +69,16 @@ func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *devworkspace
 
 func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid string) (allowed bool, msg string) {
 	if uid == h.ControllerUID {
+		return true, ""
+	}
+	if reflect.DeepEqual(oldObj, newObj) {
+		return true, ""
+	}
+	return false, "object is owned by workspace and cannot be updated."
+}
+
+func (h *WebhookHandler) handleImmutableRoute(oldObj, newObj runtime.Object, username string) (allowed bool, msg string) {
+	if username == h.ControllerSAName {
 		return true, ""
 	}
 	if reflect.DeepEqual(oldObj, newObj) {

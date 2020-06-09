@@ -27,8 +27,8 @@ type ResourcesMutator struct {
 	*handler.WebhookHandler
 }
 
-func NewResourcesMutator(controllerUID string) *ResourcesMutator {
-	return &ResourcesMutator{&handler.WebhookHandler{ControllerUID: controllerUID}}
+func NewResourcesMutator(controllerUID, controllerSAName string) *ResourcesMutator {
+	return &ResourcesMutator{&handler.WebhookHandler{ControllerUID: controllerUID, ControllerSAName: controllerSAName}}
 }
 
 // ResourcesMutator verify if operation is a valid from Workspace controller perspective
@@ -43,7 +43,7 @@ func (m *ResourcesMutator) Handle(ctx context.Context, req admission.Request) ad
 				return m.MutatePodOnCreate(ctx, req)
 			case handler.AppsV1DeploymentKind:
 				return m.MutateDeploymentOnCreate(ctx, req)
-			case handler.V1ServiceKind, handler.V1beta1IngressKind,
+			case handler.V1ServiceKind, handler.V1beta1IngressKind, handler.V1RouteKind,
 				handler.V1alpha1ComponentKind, handler.V1alpha1WorkspaceRoutingKind:
 
 				return m.HandleImmutableCreate(ctx, req)

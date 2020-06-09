@@ -27,8 +27,8 @@ type ResourcesValidator struct {
 	*handler.WebhookHandler
 }
 
-func NewResourcesValidator(controllerUID string) *ResourcesValidator {
-	return &ResourcesValidator{&handler.WebhookHandler{ControllerUID: controllerUID}}
+func NewResourcesValidator(controllerUID, controllerSAName string) *ResourcesValidator {
+	return &ResourcesValidator{&handler.WebhookHandler{ControllerUID: controllerUID, ControllerSAName: controllerSAName}}
 }
 
 func (v *ResourcesValidator) Handle(ctx context.Context, req admission.Request) admission.Response {

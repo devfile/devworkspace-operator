@@ -22,9 +22,10 @@ import (
 )
 
 type WebhookHandler struct {
-	ControllerUID string
-	Client        client.Client
-	Decoder       *admission.Decoder
+	ControllerUID    string
+	ControllerSAName string
+	Client           client.Client
+	Decoder          *admission.Decoder
 }
 
 func (h *WebhookHandler) parse(req admission.Request, intoOld runtime.Object, intoNew runtime.Object) error {

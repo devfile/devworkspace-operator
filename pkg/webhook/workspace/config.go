@@ -58,7 +58,7 @@ func Configure(ctx context.Context) error {
 		return nil
 	}
 
-	saUID, err := controllerSAUID(ctx, c)
+	saUID, saName, err := controllerSAUID(ctx, c)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func Configure(ctx context.Context) error {
 		log.Info("Created workspace mutating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID)})
+	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID, saName)})
 
 	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
 
@@ -120,7 +120,7 @@ func Configure(ctx context.Context) error {
 		log.Info("Created workspace validating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID)})
+	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID, saName)})
 
 	return nil
 }
@@ -143,14 +143,14 @@ func getValidateWebhook(ctx context.Context, c client.Client, validateWebhookCfg
 	return existingCfg, err
 }
 
-func controllerSAUID(ctx context.Context, c client.Client) (string, error) {
+func controllerSAUID(ctx context.Context, c client.Client) (string, string, error) {
 	saName := os.Getenv(config.ControllerServiceAccountNameEnvVar)
 	if saName == "" {
-		return "", fmt.Errorf("could not get service account name")
+		return "", "", fmt.Errorf("could not get service account name")
 	}
 	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
@@ -159,7 +159,8 @@ func controllerSAUID(ctx context.Context, c client.Client) (string, error) {
 	sa := &corev1.ServiceAccount{}
 	err = c.Get(ctx, namespacedName, sa)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return string(sa.UID), nil
+	fullSAName := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
+	return string(sa.UID), fullSAName, nil
 }

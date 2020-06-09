@@ -9,8 +9,8 @@
 #
 set -ex
 
-# Setup to find nessasary data from cluster setup
-export CI="openshift"
+# Setup to find necessary data from cluster setup
+export CI="openshift" # ENV used by PROW ci to get the oc client
 export ARTIFACTS_DIR="/tmp/artifacts"
 export CUSTOM_HOMEDIR=$ARTIFACTS_DIR
 
@@ -28,22 +28,20 @@ if [ ! -f $KUBEADMIN_PASSWORD_FILE ]; then
     exit 1
 fi
 
-if [ ! -f $KUBECONFIG ]; then
-    echo "Could not find kubeconfig file"
-    exit 1
-fi
-
 # Get kubeadmin password from file
-export KUBEADMIN_PASSWORD=`cat $KUBEADMIN_PASSWORD_FILE`
+export KUBEADMIN_PASSWORD=$(cat KUBEADMIN_PASSWORD_FILE)
 
 # Login as admin user
-oc login -u $KUBEADMIN_USER -p $KUBEADMIN_PASSWORD
+oc login -u $KUBEADMIN_USER -p $KUBEADMIN_PASSWORD --insecure-skip-tls-verify
 
 # Output of e2e binary
-export OUT_TEST=./workspace-controller-e2e
+export OUT_TEST=bin/workspace-controller-e2e
 
 # Compile e2e binary tests
 CGO_ENABLED=0 go test -v -c -o ${OUT_FILE} ./test/e2e/cmd/workspaces_test.go
 
+# Update CRDS
+make update_devworkspace_crds
+
 # Launch tests
-./workspace-controller-e2e
+./bin/workspace-controller-e2e

@@ -9,6 +9,8 @@ _output
 vendor
 devworkspace-crds
 config/devfiles
+auth
+bin
 
 # Test binary, build with `go test -c`
 *.test

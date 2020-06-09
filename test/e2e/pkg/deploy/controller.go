@@ -62,12 +62,20 @@ func (w *Deployment) CreateAllOperatorRoles() error {
 }
 
 func (w *Deployment) CustomResourceDefinitions() error {
-	cmd := exec.Command("oc", "apply", "-f", "deploy/crds")
-	output, err := cmd.CombinedOutput()
+	devWorkspaceCRD := exec.Command("oc", "apply", "-f", "devworkspace-crds/deploy/crds")
+	output, err := devWorkspaceCRD.CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
 		fmt.Println(err)
 		return err
 	}
+
+	eclipseCRD := exec.Command("oc", "apply", "-f", "deploy/crds")
+	output, err = eclipseCRD.CombinedOutput()
+	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
+		fmt.Println(err)
+		return err
+	}
+
 	return nil
 }
 

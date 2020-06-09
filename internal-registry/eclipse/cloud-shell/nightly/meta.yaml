@@ -28,5 +28,5 @@ spec:
     ports:
     - exposedPort: 4444
     env:
-    - name: "POD_LABEL_SELECTOR"
-      value: "org.eclipse.che.workspace/id"
+    - name: "POD_SELECTOR"
+      value: "controller.devfile.io/workspace_id"

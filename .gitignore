@@ -9,7 +9,7 @@ _output
 vendor
 devworkspace-crds
 config/devfiles
-auth
+.e2e/
 bin
 
 # Test binary, build with `go test -c`

@@ -5,7 +5,7 @@ metadata:
   annotations:
     # it's important to make workspace immutable to make sure nobody with right access
     # won't set custom editor to steal creator's token
-    io.devfile.workspace/restricted-access: "true"
+    controller.devfile.io/restricted-access: "true"
   labels:
     # it's a label OpenShift console uses a flag to mark terminal's workspaces
     console.openshift.io/terminal: "true"

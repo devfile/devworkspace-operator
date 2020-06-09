@@ -33,21 +33,21 @@ const (
 	WorkspaceIDLabel = "che.workspace_id"
 
 	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
-	WorkspaceEndpointNameAnnotation = "io.devfile.workspace/endpoint_name"
+	WorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"
 
 	// WorkspaceNameLabel is label key to store workspace name
-	WorkspaceNameLabel = "io.devfile.workspace/name"
+	WorkspaceNameLabel = "controller.devfile.io/name"
 
 	// WorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
-	WorkspaceCreatorLabel = "io.devfile.workspace/creator"
+	WorkspaceCreatorLabel = "controller.devfile.io/creator"
 
 	// WorkspaceImmutableAnnotation marks the intention that workspace access is restricted to only the creator; setting this
 	// annotation will cause workspace start to fail if webhooks are disabled.
-	WorkspaceImmutableAnnotation = "io.devfile.workspace/restricted-access"
+	WorkspaceImmutableAnnotation = "controller.devfile.io/restricted-access"
 
 	// WorkspaceDiscoverableServiceAnnotation marks a service in a workspace as created for a discoverable endpoint,
 	// as opposed to a service created to support the workspace itself.
-	WorkspaceDiscoverableServiceAnnotation = "io.devfile.workspace/discoverable-service"
+	WorkspaceDiscoverableServiceAnnotation = "controller.devfile.io/discoverable-service"
 
 	// ControllerServiceAccountNameEnvVar stores the name of the serviceaccount used in the controller.
 	ControllerServiceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"

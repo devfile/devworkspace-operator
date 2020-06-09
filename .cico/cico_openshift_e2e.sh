@@ -11,6 +11,8 @@ set -ex
 
 # Setup to find nessasary data from cluster setup
 export CI="openshift"
+export ARTIFACTS_DIR="/tmp/artifacts"
+export CUSTOM_HOMEDIR=$ARTIFACTS_DIR
 
 # Overrideable information
 export DEFAULT_INSTALLER_ASSETS_DIR=${DEFAULT_INSTALLER_ASSETS_DIR:-$(pwd)}

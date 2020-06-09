@@ -31,6 +31,7 @@ fi
 # Get kubeadmin password from file
 export KUBEADMIN_PASSWORD=$(cat KUBEADMIN_PASSWORD_FILE)
 
+set +x
 # Login as admin user
 oc login -u $KUBEADMIN_USER -p $KUBEADMIN_PASSWORD --insecure-skip-tls-verify
 

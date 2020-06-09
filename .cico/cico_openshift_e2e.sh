@@ -36,7 +36,7 @@ set +x
 oc login -u $KUBEADMIN_USER -p $KUBEADMIN_PASSWORD --insecure-skip-tls-verify
 
 # Output of e2e binary
-export OUT_TEST=bin/workspace-controller-e2e
+export OUT_FILE=bin/workspace-controller-e2e
 
 # Compile e2e binary tests
 CGO_ENABLED=0 go test -v -c -o ${OUT_FILE} ./test/e2e/cmd/workspaces_test.go

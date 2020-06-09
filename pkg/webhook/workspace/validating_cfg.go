@@ -23,7 +23,7 @@ const (
 	validateWebhookFailurePolicy = v1beta1.Fail
 )
 
-func buildValidatingWebhookCfg() *v1beta1.ValidatingWebhookConfiguration {
+func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfiguration {
 	validateWebhookFailurePolicy := validateWebhookFailurePolicy
 	validateWebhookPath := validateWebhookPath
 	return &v1beta1.ValidatingWebhookConfiguration{
@@ -37,7 +37,7 @@ func buildValidatingWebhookCfg() *v1beta1.ValidatingWebhookConfiguration {
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
 						Name:      "workspace-controller",
-						Namespace: "che-workspace-controller",
+						Namespace: namespace,
 						Path:      &validateWebhookPath,
 					},
 					CABundle: server.CABundle,

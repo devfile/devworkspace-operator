@@ -1,6 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  creationTimestamp: null
   name: che-workspace-controller
 rules:
 - apiGroups:
@@ -22,7 +23,7 @@ rules:
   verbs:
   - get
 - apiGroups:
-  - ''
+  - ""
   resources:
   - serviceaccounts
   verbs:
@@ -129,12 +130,12 @@ rules:
   verbs:
   - create
 - apiGroups:
-    - admissionregistration.k8s.io
+  - admissionregistration.k8s.io
   resources:
-    - mutatingwebhookconfigurations
-    - validatingwebhookconfigurations
+  - mutatingwebhookconfigurations
+  - validatingwebhookconfigurations
   verbs:
-    - '*'
+  - '*'
 - apiGroups:
   - oauth.openshift.io
   resources:
@@ -148,3 +149,16 @@ rules:
   - update
   - watch
   - deletecollection
+- apiGroups:
+  - controller.devfile.io
+  resources:
+  - '*'
+  - workspaceroutings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch

@@ -22,7 +22,7 @@ import (
 
 var _ = ginkgo.Describe("[Create Cloud Shell Workspace]", func() {
 	ginkgo.It("Add cloud shell to cluster", func() {
-		label := "io.devfile.workspace/name=cloud-shell"
+		label := "controller.devfile.io/name=cloud-shell"
 		k8sClient, err := client.NewK8sClient()
 		if err != nil {
 			ginkgo.Fail("Failed to create k8s client: " + err.Error())

@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	mutateWebhookCfgName       = "devworkspace.workspace.devfile.io"
+	mutateWebhookCfgName       = "controller.devfile.io"
 	mutateWebhookPath          = "/mutate"
 	mutateWebhookFailurePolicy = v1beta1.Fail
 )

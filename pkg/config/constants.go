@@ -36,7 +36,7 @@ const (
 	WorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"
 
 	// WorkspaceNameLabel is label key to store workspace name
-	WorkspaceNameLabel = "controller.devfile.io/name"
+	WorkspaceNameLabel = "controller.devfile.io/workspace_name"
 
 	// WorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
 	WorkspaceCreatorLabel = "controller.devfile.io/creator"

@@ -27,6 +27,7 @@ export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
 
 make update_devworkspace_crds
 go mod tidy
+go mod vendor
 
 # Output of e2e binary
 export OUT_FILE=bin/workspace-controller-e2e

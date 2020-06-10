@@ -128,7 +128,7 @@ ifneq ($(shell command -v kubectl 2> /dev/null),)
 	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all
 	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all
 # Have to wait for routings to be deleted in case there are finalizers
-	kubectl delete workspaceroutings.workspace.che.eclipse.org --all-namespaces --all --wait
+	kubectl delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait
 else
 ifneq ($(TOOL) get devworkspaces.workspace.devfile.io --all-namespaces,"No resources found.")
 	$(info To automatically remove all workspaces when uninstalling, ensure kubectl is installed)
@@ -137,8 +137,8 @@ endif
 endif
 	$(TOOL) delete -f ./deploy
 	$(TOOL) delete namespace $(NAMESPACE)
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.workspace.che.eclipse.org
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.workspace.che.eclipse.org
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.controller.devfile.io
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.controller.devfile.io
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io
 

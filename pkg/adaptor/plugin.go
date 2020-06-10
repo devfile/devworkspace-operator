@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 
 	"github.com/che-incubator/che-workspace-operator/pkg/common"

@@ -140,11 +140,11 @@ func getSpecDeployment(
 	creator := workspace.Labels[config.WorkspaceCreatorLabel]
 	commonEnv := env.CommonEnvironmentVariables(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace, creator)
 	for idx := range podAdditions.Containers {
-		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, commonEnv...)
+		podAdditions.Containers[idx].Env = append(commonEnv, podAdditions.Containers[idx].Env...)
 		podAdditions.Containers[idx].VolumeMounts = append(podAdditions.Containers[idx].VolumeMounts, podAdditions.VolumeMounts...)
 	}
 	for idx := range podAdditions.InitContainers {
-		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, commonEnv...)
+		podAdditions.InitContainers[idx].Env = append(commonEnv, podAdditions.InitContainers[idx].Env...)
 		podAdditions.InitContainers[idx].VolumeMounts = append(podAdditions.InitContainers[idx].VolumeMounts, podAdditions.VolumeMounts...)
 	}
 

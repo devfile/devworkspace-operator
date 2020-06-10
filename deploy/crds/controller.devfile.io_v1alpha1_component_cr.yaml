@@ -1,7 +1,0 @@
-apiVersion: controller.devfile.io/v1alpha1
-kind: Component
-metadata:
-  name: example-component
-spec:
-  # Add fields here
-  size: 3

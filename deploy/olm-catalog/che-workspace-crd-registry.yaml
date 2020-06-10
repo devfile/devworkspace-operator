@@ -1,8 +1,0 @@
-apiVersion: operators.coreos.com/v1alpha1
-kind: CatalogSource
-metadata:
-  name: che-workspace-crd-registry
-  namespace: default
-spec:
-  sourceType: grpc
-  image: quay.io/che-incubator/che-workspace-crd-registry:latest

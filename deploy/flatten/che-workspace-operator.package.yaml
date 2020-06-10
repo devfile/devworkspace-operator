@@ -1,4 +1,0 @@
-packageName: che-workspace-operator
-channels:
-- name: alpha
-  currentCSV: che-workspace-operator.v0.0.1

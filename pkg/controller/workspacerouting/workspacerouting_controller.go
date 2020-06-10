@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-const workspaceRoutingFinalizer = "workspacerouting.workspace.eclipse.org"
+const workspaceRoutingFinalizer = "workspacerouting.controller.devfile.io"
 
 var log = logf.Log.WithName("controller_workspacerouting")
 

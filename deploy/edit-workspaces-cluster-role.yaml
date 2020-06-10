@@ -17,7 +17,7 @@ rules:
       - patch
       - update
   - apiGroups:
-      - workspace.che.eclipse.org
+      - controller.devfile.io
     resources:
       - workspaceroutings
       - components

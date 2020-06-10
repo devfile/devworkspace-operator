@@ -54,7 +54,7 @@ func buildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 			{
 				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
 				Rule: v1beta1.Rule{
-					APIGroups:   []string{"workspace.che.eclipse.org"},
+					APIGroups:   []string{"controller.devfile.io"},
 					APIVersions: []string{"v1alpha1"},
 					Resources:   []string{"workspaceroutings", "components"},
 				},

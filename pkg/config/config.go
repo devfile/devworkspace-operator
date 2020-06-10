@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	routeV1 "github.com/openshift/api/route/v1"

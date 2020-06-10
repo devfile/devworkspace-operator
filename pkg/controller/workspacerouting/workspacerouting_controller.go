@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
 	"github.com/che-incubator/che-workspace-operator/pkg/config"
 	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspacerouting/solvers"
 	"github.com/go-logr/logr"

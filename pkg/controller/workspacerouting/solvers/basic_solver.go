@@ -13,7 +13,7 @@
 package solvers
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/workspace/v1alpha1"
+	"github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
 )
 
 var ingressAnnotations = map[string]string{

@@ -30,7 +30,7 @@ const (
 	PVCStorageSize            = "1Gi"
 
 	// WorkspaceIDLabel is label key to store workspace identifier
-	WorkspaceIDLabel = "che.workspace_id"
+	WorkspaceIDLabel = "controller.devfile.io/workspace_id"
 
 	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
 	WorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"

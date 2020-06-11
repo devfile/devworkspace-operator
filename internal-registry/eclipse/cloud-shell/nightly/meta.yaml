@@ -12,18 +12,23 @@ firstPublicationDate: "2020-01-29"
 category: Other
 spec:
   endpoints:
-   -  name: cloud-shell
-      public: true
-      targetPort: 4444
-      attributes:
-        protocol: http
-        type: ide
-        path: /static/
-        discoverable: false
-        secure: true
-        cookiesAuthEnabled: true
+  - name: cloud-shell
+    public: true
+    targetPort: 4444
+    attributes:
+      protocol: http
+      type: ide
+      path: /static/
+      discoverable: false
+      secure: true
+      cookiesAuthEnabled: true
   containers:
-   - name: che-machine-exec
-     image: "quay.io/eclipse/che-machine-exec:nightly"
-     ports:
-       - exposedPort: 4444
+  - name: che-machine-exec
+    image: "quay.io/eclipse/che-machine-exec:nightly"
+    ports:
+    - exposedPort: 4444
+    command: ["/go/bin/che-machine-exec",
+              "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
+              "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",
+              "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+              "--static", "/cloud-shell"]

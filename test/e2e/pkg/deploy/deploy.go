@@ -13,7 +13,7 @@
 package deploy
 
 import (
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/client"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/client"
 )
 
 type Deployment struct {

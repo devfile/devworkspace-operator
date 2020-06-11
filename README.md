@@ -99,7 +99,7 @@ operator-sdk up local --namespace ${NAMESPACE} --enable-delve
 
 Controller behavior can be configured with data from the `che-workspace-controller` config map in the same namespace where controller lives.
 
-For all available configuration properties and their default values, see [pkg/config](https://github.com/che-incubator/che-workspace-operator/tree/master/pkg/config)
+For all available configuration properties and their default values, see [pkg/config](https://github.com/devfile/devworkspace-operator/tree/master/pkg/config)
 
 ### Remove controller from your K8s/OS Cluster
 To uninstall the controller and associated CRDs, use the Makefile uninstall rule:
@@ -111,5 +111,5 @@ This will delete all custom resource definitions created for the controller, as 
 ### CentOS CI
 The following [CentOS CI jobs](https://ci.centos.org/) are associated with the repository:
 
-- [`master`](https://ci.centos.org/job/devtools-che-workspace-operator-build-master/) - builds CentOS images on each commit to the [`master`](https://github.com/che-incubator/che-workspace-operator/tree/master) branch and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller).
-- [`nightly`](https://ci.centos.org/job/devtools-che-workspace-operator-nightly/) - builds CentOS images and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller) on a daily basis from the [`master`](https://github.com/che-incubator/che-workspace-operator/tree/master) branch.
+- [`master`](https://ci.centos.org/job/devtools-che-workspace-operator-build-master/) - builds CentOS images on each commit to the [`master`](https://github.com/devfile/devworkspace-operator/tree/master) branch and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller).
+- [`nightly`](https://ci.centos.org/job/devtools-che-workspace-operator-nightly/) - builds CentOS images and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller) on a daily basis from the [`master`](https://github.com/devfile/devworkspace-operator/tree/master) branch.

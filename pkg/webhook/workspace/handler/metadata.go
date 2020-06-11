@@ -13,7 +13,7 @@ package handler
 import (
 	"fmt"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

@@ -16,10 +16,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspacerouting/solvers"
+	"github.com/devfile/devworkspace-operator/internal/cluster"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/controller/workspacerouting/solvers"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	routeV1 "github.com/openshift/api/route/v1"
@@ -61,7 +61,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource WorkspaceRouting
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &controllerv1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -69,14 +69,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resources: Services, Ingresses, and (on OpenShift) Routes.
 	err = c.Watch(&source.Kind{Type: &corev1.Service{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &workspacev1alpha1.WorkspaceRouting{},
+		OwnerType:    &controllerv1alpha1.WorkspaceRouting{},
 	})
 	if err != nil {
 		return err
 	}
 	err = c.Watch(&source.Kind{Type: &v1beta1.Ingress{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &workspacev1alpha1.WorkspaceRouting{},
+		OwnerType:    &controllerv1alpha1.WorkspaceRouting{},
 	})
 	if err != nil {
 		return err
@@ -90,7 +90,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if isOpenShift {
 		err = c.Watch(&source.Kind{Type: &routeV1.Route{}}, &handler.EnqueueRequestForOwner{
 			IsController: true,
-			OwnerType:    &workspacev1alpha1.WorkspaceRouting{},
+			OwnerType:    &controllerv1alpha1.WorkspaceRouting{},
 		})
 		if err != nil {
 			return err
@@ -118,7 +118,7 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling WorkspaceRouting")
 
 	// Fetch the WorkspaceRouting instance
-	instance := &workspacev1alpha1.WorkspaceRouting{}
+	instance := &controllerv1alpha1.WorkspaceRouting{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -150,14 +150,14 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		RoutingSuffix: instance.Spec.RoutingSuffix,
 	}
 
-	if instance.Status.Phase == workspacev1alpha1.RoutingFailed {
+	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
 		return reconcile.Result{}, err
 	}
 
 	solver, err := getSolverForRoutingClass(instance.Spec.RoutingClass)
 	if err != nil {
 		reqLogger.Error(err, "Could not get solver for routingClass")
-		instance.Status.Phase = workspacev1alpha1.RoutingFailed
+		instance.Status.Phase = controllerv1alpha1.RoutingFailed
 		statusErr := r.client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, statusErr
 	}
@@ -211,7 +211,7 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 	exposedEndpoints, endpointsAreReady, err := solver.GetExposedEndpoints(instance.Spec.Endpoints, clusterRoutingObj)
 	if err != nil {
 		reqLogger.Error(err, "Could not get exposed endpoints for workspace")
-		instance.Status.Phase = workspacev1alpha1.RoutingFailed
+		instance.Status.Phase = controllerv1alpha1.RoutingFailed
 		statusErr := r.client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, statusErr
 	}
@@ -229,7 +229,7 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 }
 
 // setFinalizer ensures a finalizer is set on a workspaceRouting instance; no-op if finalizer is already present.
-func (r *ReconcileWorkspaceRouting) setFinalizer(reqLogger logr.Logger, m *workspacev1alpha1.WorkspaceRouting) error {
+func (r *ReconcileWorkspaceRouting) setFinalizer(reqLogger logr.Logger, m *controllerv1alpha1.WorkspaceRouting) error {
 	if !isFinalizerNecessary(m) || contains(m.GetFinalizers(), workspaceRoutingFinalizer) {
 		return nil
 	}
@@ -245,7 +245,7 @@ func (r *ReconcileWorkspaceRouting) setFinalizer(reqLogger logr.Logger, m *works
 	return nil
 }
 
-func (r *ReconcileWorkspaceRouting) finalize(instance *workspacev1alpha1.WorkspaceRouting) error {
+func (r *ReconcileWorkspaceRouting) finalize(instance *controllerv1alpha1.WorkspaceRouting) error {
 	if contains(instance.GetFinalizers(), workspaceRoutingFinalizer) {
 		// Run finalization logic for workspaceRoutingFinalizer. If the
 		// finalization logic fails, don't remove the finalizer so
@@ -265,38 +265,38 @@ func (r *ReconcileWorkspaceRouting) finalize(instance *workspacev1alpha1.Workspa
 }
 
 func (r *ReconcileWorkspaceRouting) reconcileStatus(
-	instance *workspacev1alpha1.WorkspaceRouting,
+	instance *controllerv1alpha1.WorkspaceRouting,
 	routingObjects solvers.RoutingObjects,
-	exposedEndpoints map[string]workspacev1alpha1.ExposedEndpointList,
+	exposedEndpoints map[string]controllerv1alpha1.ExposedEndpointList,
 	endpointsReady bool) error {
 
 	if !endpointsReady {
-		instance.Status.Phase = workspacev1alpha1.RoutingPreparing
+		instance.Status.Phase = controllerv1alpha1.RoutingPreparing
 		return r.client.Status().Update(context.TODO(), instance)
 	}
-	if instance.Status.Phase == workspacev1alpha1.RoutingReady &&
+	if instance.Status.Phase == controllerv1alpha1.RoutingReady &&
 		cmp.Equal(instance.Status.PodAdditions, routingObjects.PodAdditions) &&
 		cmp.Equal(instance.Status.ExposedEndpoints, exposedEndpoints) {
 		return nil
 	}
-	instance.Status.Phase = workspacev1alpha1.RoutingReady
+	instance.Status.Phase = controllerv1alpha1.RoutingReady
 	instance.Status.PodAdditions = routingObjects.PodAdditions
 	instance.Status.ExposedEndpoints = exposedEndpoints
 	return r.client.Status().Update(context.TODO(), instance)
 }
 
-func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
+func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
 	if routingClass == "" {
-		routingClass = workspacev1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
+		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
 	}
 	switch routingClass {
-	case workspacev1alpha1.WorkspaceRoutingDefault:
+	case controllerv1alpha1.WorkspaceRoutingDefault:
 		return &solvers.BasicSolver{}, nil
-	case workspacev1alpha1.WorkspaceRoutingOpenShiftOauth:
+	case controllerv1alpha1.WorkspaceRoutingOpenShiftOauth:
 		return &solvers.OpenShiftOAuthSolver{}, nil
-	case workspacev1alpha1.WorkspaceRoutingCluster:
+	case controllerv1alpha1.WorkspaceRoutingCluster:
 		return &solvers.ClusterSolver{}, nil
-	case workspacev1alpha1.WorkspaceRoutingClusterTLS, workspacev1alpha1.WorkspaceRoutingWebTerminal:
+	case controllerv1alpha1.WorkspaceRoutingClusterTLS, controllerv1alpha1.WorkspaceRoutingWebTerminal:
 		if !config.ControllerCfg.IsOpenShift() {
 			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
 		}
@@ -306,15 +306,15 @@ func getSolverForRoutingClass(routingClass workspacev1alpha1.WorkspaceRoutingCla
 	}
 }
 
-func isFinalizerNecessary(routing *workspacev1alpha1.WorkspaceRouting) bool {
+func isFinalizerNecessary(routing *controllerv1alpha1.WorkspaceRouting) bool {
 	routingClass := routing.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = workspacev1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
+		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
 	}
 	switch routingClass {
-	case workspacev1alpha1.WorkspaceRoutingOpenShiftOauth:
+	case controllerv1alpha1.WorkspaceRoutingOpenShiftOauth:
 		return true
-	case workspacev1alpha1.WorkspaceRoutingDefault:
+	case controllerv1alpha1.WorkspaceRoutingDefault:
 		return false
 	default:
 		return false

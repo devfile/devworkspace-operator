@@ -13,7 +13,8 @@
 package solvers
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
+	//TODO
+	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
 	v1 "k8s.io/api/core/v1"

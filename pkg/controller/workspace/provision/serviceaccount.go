@@ -15,7 +15,7 @@ package provision
 import (
 	"context"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"

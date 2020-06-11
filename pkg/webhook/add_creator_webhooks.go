@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 package webhook
 
-import "github.com/che-incubator/che-workspace-operator/pkg/webhook/workspace"
+import "github.com/devfile/devworkspace-operator/pkg/webhook/workspace"
 
 func init() {
 	configureWebhookTasks = append(configureWebhookTasks, workspace.Configure)

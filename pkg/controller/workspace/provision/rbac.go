@@ -13,7 +13,7 @@
 package provision
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"

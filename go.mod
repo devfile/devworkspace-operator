@@ -1,4 +1,4 @@
-module github.com/che-incubator/che-workspace-operator
+module github.com/devfile/devworkspace-operator
 
 go 1.12
 

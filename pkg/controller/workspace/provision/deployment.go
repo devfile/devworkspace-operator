@@ -17,11 +17,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/env"
+	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/controller/workspace/env"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"

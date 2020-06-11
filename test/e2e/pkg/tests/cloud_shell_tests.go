@@ -15,7 +15,7 @@ package tests
 import (
 	"fmt"
 
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/client"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/client"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
 )

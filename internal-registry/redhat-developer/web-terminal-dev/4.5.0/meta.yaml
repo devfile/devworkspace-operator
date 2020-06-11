@@ -28,11 +28,10 @@ spec:
       image: "quay.io/eclipse/che-machine-exec:nightly"
       command: ["/go/bin/che-machine-exec",
                 "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
-                "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)"]
+                "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",
+                "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)"]
       ports:
         - exposedPort: 4444
       env:
         - name: USE_BEARER_TOKEN
           value: true
-        - name: "POD_SELECTOR"
-          value: "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)"

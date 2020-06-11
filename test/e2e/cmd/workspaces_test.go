@@ -17,13 +17,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/deploy"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/deploy"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/client"
-	_ "github.com/che-incubator/che-workspace-operator/test/e2e/pkg/tests"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/client"
+	_ "github.com/devfile/devworkspace-operator/test/e2e/pkg/tests"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"

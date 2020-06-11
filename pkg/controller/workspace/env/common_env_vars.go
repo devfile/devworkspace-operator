@@ -13,7 +13,7 @@
 package env
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 )
 

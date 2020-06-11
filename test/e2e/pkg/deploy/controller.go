@@ -20,7 +20,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/che-incubator/che-workspace-operator/test/e2e/pkg/config"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 )
 
 func (w *Deployment) CreateNamespace() error {

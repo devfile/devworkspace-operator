@@ -15,9 +15,9 @@ package restapis
 import (
 	"strings"
 
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
-	"github.com/che-incubator/che-workspace-operator/pkg/common"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -38,7 +38,7 @@ func IsCheRestApisRequired(components []devworkspace.Component) bool {
 	return false
 }
 
-func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) workspacev1alpha1.ComponentDescription {
+func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) controllerv1alpha1.ComponentDescription {
 	container := corev1.Container{
 		Image:           config.ControllerCfg.GetCheAPISidecarImage(),
 		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
@@ -93,14 +93,14 @@ func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) works
 		},
 	}
 
-	return workspacev1alpha1.ComponentDescription{
+	return controllerv1alpha1.ComponentDescription{
 		Name: cheRestAPIsName,
-		PodAdditions: workspacev1alpha1.PodAdditions{
+		PodAdditions: controllerv1alpha1.PodAdditions{
 			Containers: []corev1.Container{container},
 			Volumes:    []corev1.Volume{configmapVolume},
 		},
-		ComponentMetadata: workspacev1alpha1.ComponentMetadata{
-			Containers: map[string]workspacev1alpha1.ContainerDescription{
+		ComponentMetadata: controllerv1alpha1.ComponentMetadata{
+			Containers: map[string]controllerv1alpha1.ContainerDescription{
 				cheRestAPIsName: {
 					Attributes: map[string]string{
 						config.RestApisContainerSourceAttribute: config.RestApisRecipeSourceToolAttribute,
@@ -111,8 +111,8 @@ func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) works
 			Endpoints: []devworkspace.Endpoint{
 				{
 					Attributes: map[string]string{
-						string(workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE):   "false",
-						string(workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE): "tcp",
+						string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE):   "false",
+						string(controllerv1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE): "tcp",
 					},
 					Name:       cheRestAPIsName,
 					TargetPort: cheRestApisPort,

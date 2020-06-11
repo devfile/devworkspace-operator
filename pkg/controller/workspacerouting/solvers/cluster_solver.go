@@ -15,10 +15,10 @@ package solvers
 import (
 	"fmt"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )

@@ -16,7 +16,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/adaptor"
+	"github.com/devfile/devworkspace-operator/pkg/adaptor"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,14 +62,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource Component
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Component{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &controllerv1alpha1.Component{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &workspacev1alpha1.Component{},
+		OwnerType:    &controllerv1alpha1.Component{},
 	})
 
 	return nil
@@ -93,7 +93,7 @@ func (r *ReconcileComponent) Reconcile(request reconcile.Request) (reconcile.Res
 	reqLogger.Info("Reconciling Component")
 
 	// Fetch the Component instance
-	instance := &workspacev1alpha1.Component{}
+	instance := &controllerv1alpha1.Component{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -106,7 +106,7 @@ func (r *ReconcileComponent) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
-	var components []workspacev1alpha1.ComponentDescription
+	var components []controllerv1alpha1.ComponentDescription
 	dockerimageDevfileComponents, pluginDevfileComponents, err := adaptor.SortComponentsByType(instance.Spec.Components)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -142,7 +142,7 @@ func (r *ReconcileComponent) Reconcile(request reconcile.Request) (reconcile.Res
 	return reconcile.Result{}, r.reconcileStatus(instance, components)
 }
 
-func (r *ReconcileComponent) reconcileConfigMap(instance *workspacev1alpha1.Component, cm *corev1.ConfigMap, log logr.Logger) (ok bool, err error) {
+func (r *ReconcileComponent) reconcileConfigMap(instance *controllerv1alpha1.Component, cm *corev1.ConfigMap, log logr.Logger) (ok bool, err error) {
 	err = controllerutil.SetControllerReference(instance, cm, r.scheme)
 	if err != nil {
 		return false, err
@@ -173,7 +173,7 @@ func (r *ReconcileComponent) reconcileConfigMap(instance *workspacev1alpha1.Comp
 	return true, nil
 }
 
-func (r *ReconcileComponent) reconcileStatus(instance *workspacev1alpha1.Component, components []workspacev1alpha1.ComponentDescription) error {
+func (r *ReconcileComponent) reconcileStatus(instance *controllerv1alpha1.Component, components []controllerv1alpha1.ComponentDescription) error {
 	if instance.Status.Ready && cmp.Equal(instance.Status.ComponentDescriptions, components) {
 		return nil
 	}

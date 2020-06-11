@@ -19,10 +19,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
-	"github.com/che-incubator/che-workspace-operator/internal/controller"
+	"github.com/devfile/devworkspace-operator/internal/controller"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"

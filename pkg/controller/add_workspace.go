@@ -13,7 +13,7 @@
 package controller
 
 import (
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace"
+	"github.com/devfile/devworkspace-operator/pkg/controller/workspace"
 )
 
 func init() {

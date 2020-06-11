@@ -17,12 +17,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/common"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	registry "github.com/che-incubator/che-workspace-operator/pkg/internal_registry"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	registry "github.com/devfile/devworkspace-operator/pkg/internal_registry"
 	metadataBroker "github.com/eclipse/che-plugin-broker/brokers/metadata"
 	brokerModel "github.com/eclipse/che-plugin-broker/model"
 	"github.com/eclipse/che-plugin-broker/utils"

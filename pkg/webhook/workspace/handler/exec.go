@@ -14,7 +14,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"

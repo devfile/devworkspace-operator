@@ -21,15 +21,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/che-incubator/che-workspace-operator/internal/cluster"
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/provision"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller/workspace/restapis"
+	"github.com/devfile/devworkspace-operator/internal/cluster"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/controller/workspace/provision"
+	"github.com/devfile/devworkspace-operator/pkg/controller/workspace/restapis"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/uuid"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -117,12 +117,12 @@ func add(mgr manager.Manager, r *ReconcileWorkspace) error {
 	}
 
 	// Watch for changes in secondary resource Components and requeue the owner workspace
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.Component{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &controllerv1alpha1.Component{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &devworkspace.DevWorkspace{},
 	})
 
-	err = c.Watch(&source.Kind{Type: &workspacev1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &controllerv1alpha1.WorkspaceRouting{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &devworkspace.DevWorkspace{},
 	})
@@ -280,7 +280,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 
 	// Step four: Collect all workspace deployment contributions
 	routingPodAdditions := routingStatus.PodAdditions
-	var podAdditions []workspacev1alpha1.PodAdditions
+	var podAdditions []controllerv1alpha1.PodAdditions
 	for _, component := range componentDescriptions {
 		podAdditions = append(podAdditions, component.PodAdditions)
 	}

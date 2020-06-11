@@ -24,10 +24,10 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/apis"
-	"github.com/che-incubator/che-workspace-operator/pkg/controller"
-	"github.com/che-incubator/che-workspace-operator/pkg/webhook"
-	"github.com/che-incubator/che-workspace-operator/version"
+	"github.com/devfile/devworkspace-operator/pkg/apis"
+	"github.com/devfile/devworkspace-operator/pkg/controller"
+	"github.com/devfile/devworkspace-operator/pkg/webhook"
+	"github.com/devfile/devworkspace-operator/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"

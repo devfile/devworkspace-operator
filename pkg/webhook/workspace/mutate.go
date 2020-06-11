@@ -14,7 +14,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/che-incubator/che-workspace-operator/pkg/webhook/workspace/handler"
+	"github.com/devfile/devworkspace-operator/pkg/webhook/workspace/handler"
 	"k8s.io/api/admission/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"

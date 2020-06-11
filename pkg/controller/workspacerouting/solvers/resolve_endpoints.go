@@ -16,21 +16,21 @@ import (
 	"fmt"
 	"net/url"
 
-	workspacev1alpha1 "github.com/che-incubator/che-workspace-operator/pkg/apis/controller/v1alpha1"
-	"github.com/che-incubator/che-workspace-operator/pkg/config"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
 func getExposedEndpoints(
-	endpoints map[string]workspacev1alpha1.EndpointList,
-	routingObj RoutingObjects) (exposedEndpoints map[string]workspacev1alpha1.ExposedEndpointList, ready bool, err error) {
+	endpoints map[string]controllerv1alpha1.EndpointList,
+	routingObj RoutingObjects) (exposedEndpoints map[string]controllerv1alpha1.ExposedEndpointList, ready bool, err error) {
 
-	exposedEndpoints = map[string]workspacev1alpha1.ExposedEndpointList{}
+	exposedEndpoints = map[string]controllerv1alpha1.ExposedEndpointList{}
 	ready = true
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[string(workspacev1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
+			if endpoint.Attributes[string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
 				continue
 			}
 			endpointUrl, err := resolveURLForEndpoint(endpoint, routingObj)
@@ -40,7 +40,7 @@ func getExposedEndpoints(
 			if endpointUrl == "" {
 				ready = false
 			}
-			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], workspacev1alpha1.ExposedEndpoint{
+			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], controllerv1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
 				Url:        endpointUrl,
 				Attributes: endpoint.Attributes,
@@ -71,11 +71,11 @@ func resolveURLForEndpoint(
 }
 
 func getURLForEndpoint(endpoint devworkspace.Endpoint, host string, secure bool) string {
-	protocol := endpoint.Attributes[string(workspacev1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE)]
-	if secure && endpoint.Attributes[string(workspacev1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" {
+	protocol := endpoint.Attributes[string(controllerv1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE)]
+	if secure && endpoint.Attributes[string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" {
 		protocol = getSecureProtocol(protocol)
 	}
-	path := endpoint.Attributes[string(workspacev1alpha1.PATH_ENDPOINT_ATTRIBUTE)]
+	path := endpoint.Attributes[string(controllerv1alpha1.PATH_ENDPOINT_ATTRIBUTE)]
 	u := url.URL{
 		Scheme: protocol,
 		Host:   host,

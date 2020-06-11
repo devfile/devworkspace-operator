@@ -21,7 +21,7 @@ export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
 if ! hash operator-sdk 2>/dev/null; then
     mkdir -p $GOPATH/bin
     export PATH="$PATH:$(pwd):$GOPATH/bin"
-    RELEASE_VERSION=v0.17.0
+    OPERATOR_SDK_VERSION=v0.17.0
 
     curl -LO https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
 

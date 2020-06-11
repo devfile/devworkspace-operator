@@ -176,6 +176,11 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{}, err
 	}
 
+	if workspace.DeletionTimestamp != nil {
+		reqLogger.V(5).Info("Skipping reconcile of deleted resource")
+		return reconcile.Result{}, nil
+	}
+
 	// Ensure workspaceID is set.
 	if workspace.Status.WorkspaceId == "" {
 		workspaceId, err := getWorkspaceId(workspace)

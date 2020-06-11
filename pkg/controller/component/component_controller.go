@@ -106,6 +106,11 @@ func (r *ReconcileComponent) Reconcile(request reconcile.Request) (reconcile.Res
 		return reconcile.Result{}, err
 	}
 
+	if instance.DeletionTimestamp != nil {
+		reqLogger.V(5).Info("Skipping reconcile of deleted resource")
+		return reconcile.Result{}, nil
+	}
+
 	var components []controllerv1alpha1.ComponentDescription
 	dockerimageDevfileComponents, pluginDevfileComponents, err := adaptor.SortComponentsByType(instance.Spec.Components)
 	if err != nil {

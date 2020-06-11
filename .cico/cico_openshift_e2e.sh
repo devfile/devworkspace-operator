@@ -23,11 +23,11 @@ if ! hash operator-sdk 2>/dev/null; then
     export PATH="$PATH:$(pwd):$GOPATH/bin"
     OPERATOR_SDK_VERSION=v0.17.0
 
-    curl -LO https://github.com/operator-framework/operator-sdk/releases/download/${RELEASE_VERSION}/operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
+    curl -LO https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu
 
-    chmod +x operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu && \
-        cp operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu $GOPATH/bin/operator-sdk && \
-        rm operator-sdk-${RELEASE_VERSION}-x86_64-linux-gnu
+    chmod +x operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu && \
+        cp operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu $GOPATH/bin/operator-sdk && \
+        rm operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu
 fi
 
 # Add kubernetes-api CRDS

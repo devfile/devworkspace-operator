@@ -16,7 +16,7 @@ rules:
       - list
       - watch
   - apiGroups:
-      - workspace.devfile.io
+      - workspace.che.eclipse.org
     resources:
       - workspaceroutings
       - components

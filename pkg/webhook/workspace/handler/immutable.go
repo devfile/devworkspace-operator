@@ -17,12 +17,22 @@ import (
 	"reflect"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
+
+// ImmutableWorkspaceDiffOptions is comparing options that should be used to check if there is no other changes except changing started
+var ImmutableWorkspaceDiffOptions = []cmp.Option{
+	// field managed by cluster and should be ignored while comparing
+	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields", "Finalizers", "DeletionTimestamp"),
+	cmpopts.IgnoreFields(devworkspace.DevWorkspaceSpec{}, "Started"),
+}
 
 func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.Request) admission.Response {
 	oldObj := &unstructured.Unstructured{}
@@ -41,6 +51,7 @@ func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.
 	if allowed {
 		return admission.Allowed(msg)
 	}
+	log.Info(fmt.Sprintf("Denied request to %s resource with kind %s by user %s: %s", req.Operation, req.Kind, req.UserInfo.Username, msg))
 	return admission.Denied(msg)
 }
 
@@ -61,9 +72,10 @@ func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *devworkspace
 	if uid == creatorUID || uid == h.ControllerUID {
 		return true, "immutable workspace is updated by owner or controller"
 	}
-	if cmp.Equal(oldWksp, newWksp, StopStartDiffOption[:]...) {
+	if cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) {
 		return true, "immutable workspace is started/stopped"
 	}
+	log.Info(fmt.Sprintf("Denied request on workspace resource by user %s", uid))
 	return false, fmt.Sprintf("workspace '%s' is immutable and can only be modified by its creator.", oldWksp.Name)
 }
 
@@ -71,7 +83,7 @@ func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid s
 	if uid == h.ControllerUID {
 		return true, ""
 	}
-	if reflect.DeepEqual(oldObj, newObj) {
+	if changePermitted(oldObj, newObj) {
 		return true, ""
 	}
 	return false, "object is owned by workspace and cannot be updated."
@@ -81,8 +93,26 @@ func (h *WebhookHandler) handleImmutableRoute(oldObj, newObj runtime.Object, use
 	if username == h.ControllerSAName {
 		return true, ""
 	}
-	if reflect.DeepEqual(oldObj, newObj) {
+	if changePermitted(oldObj, newObj) {
 		return true, ""
 	}
 	return false, "object is owned by workspace and cannot be updated."
+}
+
+func changePermitted(oldObj, newObj runtime.Object) bool {
+	oldCopy := oldObj.DeepCopyObject()
+	newCopy := newObj.DeepCopyObject()
+	oldMeta, ok := oldCopy.(metav1.Object)
+	if !ok {
+		log.Error(fmt.Errorf("Object is not a valid k8s object: does not have metadata"), "Failed to compare objects")
+		return false
+	}
+	newMeta, ok := newCopy.(metav1.Object)
+	if !ok {
+		log.Error(fmt.Errorf("Object is not a valid k8s object: does not have metadata"), "Failed to compare objects")
+		return false
+	}
+	newMeta.SetFinalizers(oldMeta.GetFinalizers())
+	newMeta.SetDeletionTimestamp(oldMeta.GetDeletionTimestamp())
+	return reflect.DeepEqual(oldMeta, newMeta)
 }

@@ -17,18 +17,8 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
-
-// StopStartDiffOption is comparing options that should be used to check if there is no other changes except changing started
-var StopStartDiffOption = []cmp.Option{
-	// field managed by cluster and should be ignored while comparing
-	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields"),
-	cmpopts.IgnoreFields(devworkspace.DevWorkspaceSpec{}, "Started"),
-}
 
 func (h *WebhookHandler) MutateWorkspaceOnCreate(_ context.Context, req admission.Request) admission.Response {
 	wksp := &devworkspace.DevWorkspace{}

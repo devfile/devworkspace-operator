@@ -1,0 +1,10 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: che-workspace-crd-registry
+  namespace: openshift-marketplace
+spec:
+  sourceType: grpc
+  image: quay.io/che-incubator/che-workspace-operator-index:latest
+  publisher: Red Hat
+  displayName: Che Workspace Operator Catalog

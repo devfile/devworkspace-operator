@@ -8,6 +8,8 @@
 _output
 vendor
 devworkspace-crds
+web-terminal-operator
+generated
 config/devfiles
 .e2e/
 bin

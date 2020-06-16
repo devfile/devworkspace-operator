@@ -16,7 +16,7 @@ export ARTIFACTS_DIR="/tmp/artifacts"
 # Pod created by openshift ci don't have user. Using this envs should avoid errors with git user.
 export GIT_COMMITTER_NAME="CI BOT"
 export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
-
+####TEEEST
 # Check if operator-sdk is installed and if not install operator sdk in $GOPATH/bin dir
 if ! hash operator-sdk 2>/dev/null; then
     mkdir -p $GOPATH/bin

@@ -17,11 +17,10 @@ import (
 	"reflect"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -104,12 +103,12 @@ func changePermitted(oldObj, newObj runtime.Object) bool {
 	newCopy := newObj.DeepCopyObject()
 	oldMeta, ok := oldCopy.(metav1.Object)
 	if !ok {
-		log.Error(fmt.Errorf("Object is not a valid k8s object: does not have metadata"), "Failed to compare objects")
+		log.Error(fmt.Errorf("Object %s is not a valid k8s object: does not have metadata", oldObj.GetObjectKind()), "Failed to compare objects")
 		return false
 	}
 	newMeta, ok := newCopy.(metav1.Object)
 	if !ok {
-		log.Error(fmt.Errorf("Object is not a valid k8s object: does not have metadata"), "Failed to compare objects")
+		log.Error(fmt.Errorf("Object %s is not a valid k8s object: does not have metadata", newObj.GetObjectKind()), "Failed to compare objects")
 		return false
 	}
 	newMeta.SetFinalizers(oldMeta.GetFinalizers())

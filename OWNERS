@@ -1,0 +1,9 @@
+reviewers:
+  - sleshchenko
+  - amisevsk
+  - jpinkney
+approvers:
+  - sleshchenko
+  - amisevsk
+  - jpinkney
+component: DevWorkspace Operator

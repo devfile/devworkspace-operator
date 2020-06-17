@@ -167,7 +167,7 @@ docker: _print_vars
 
 ### docker_cert: build and push docker cert image
 docker_cert: _print_vars
-	docker build -t $(CERT_IMG) -f ./cert-generation/Dockerfile .	
+	docker build -t $(CERT_IMG) -f ./cert-generation/Dockerfile .
 	docker push $(CERT_IMG)
 
 ### webhook: generate certificates for webhooks and deploy to cluster; no-op if running on OpenShift
@@ -206,24 +206,27 @@ update_devworkspace_api:
 	go mod tidy
 
 ### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
+.ONESHELL:
 update_devworkspace_crds:
-	mkdir -p devworkspace-crds
-	cd devworkspace-crds && git init || true
-ifneq ($(shell git --git-dir=devworkspace-crds/.git remote), origin)
-	cd devworkspace-crds && git remote add origin -f https://github.com/devfile/kubernetes-api.git
-else
-	cd devworkspace-crds && git remote set-url origin https://github.com/devfile/kubernetes-api.git
-endif
-	cd devworkspace-crds && git config core.sparsecheckout true
-	cd devworkspace-crds && echo "deploy/crds/*" >> .git/info/sparse-checkout
-	cd devworkspace-crds && git fetch --tags -p origin
-ifeq ($(shell cd devworkspace-crds && git show-ref --verify refs/tags/$(DEVWORKSPACE_API_VERSION) 2> /dev/null && echo "tag" || echo "branch"),tag)
-	@echo 'DevWorkpsace API is specified from tag'
-	cd devworkspace-crds && git checkout tags/$(DEVWORKSPACE_API_VERSION)
-else
-	@echo 'DevWorkpsace API is specified from branch'
-	cd devworkspace-crds && git checkout $(DEVWORKSPACE_API_VERSION) && git reset --hard origin/$(DEVWORKSPACE_API_VERSION)
-endif
+	@mkdir -p devworkspace-crds
+	cd devworkspace-crds
+	if [ ! -d ./.git ]; then
+		git init
+		git remote add origin -f https://github.com/devfile/kubernetes-api.git
+		git config core.sparsecheckout true
+		echo "deploy/crds/*" > .git/info/sparse-checkout
+	else
+		git remote set-url origin https://github.com/devfile/kubernetes-api.git
+	fi
+	git fetch --tags -p origin
+	if git show-ref --verify refs/tags/$(DEVWORKSPACE_API_VERSION) --quiet; then
+		echo 'DevWorkspace API is specified from tag'
+		git checkout tags/$(DEVWORKSPACE_API_VERSION)
+	else
+		echo 'DevWorkspace API is specified from branch'
+		git checkout $(DEVWORKSPACE_API_VERSION) && git reset --hard origin/$(DEVWORKSPACE_API_VERSION)
+	fi
+
 
 ### local: set up cluster for local development
 local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx

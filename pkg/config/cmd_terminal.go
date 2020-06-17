@@ -24,7 +24,7 @@ const (
 	// property name for value with yaml for default dockerimage component
 	// that should be provisioned if devfile DOES have redhat-developer/web-terminal cheEditor
 	// and DOES NOT have any dockerimage component
-	defaultTerminalDockerimageProperty = "che.workspace.default_dockerimage.redhat-developer.web-terminal"
+	defaultTerminalDockerimageProperty = "devworkspace.default_dockerimage.redhat-developer.web-terminal"
 )
 
 var (
@@ -53,7 +53,7 @@ func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Conta
 	var dockerimage devworkspace.ContainerComponent
 	if err := yaml.Unmarshal([]byte(*defaultDockerimageYaml), &dockerimage); err != nil {
 		return nil, fmt.Errorf(
-			"%s is configure with invalid dockerimage component. Error: %s", defaultTerminalDockerimageProperty, err)
+			"%s is configured with invalid container component. Error: %s", defaultTerminalDockerimageProperty, err)
 	}
 
 	return &dockerimage, nil

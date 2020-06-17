@@ -4,11 +4,11 @@ kind: ConfigMap
 metadata:
   name: che-workspace-controller
 data:
-  cluster.routing_suffix: 192.168.99.100.nip.io
-  plugin.registry.url: http://che-plugin-registry.192.168.99.100.nip.io/v3
-  che.webhooks.enabled: "true"
-  che.workspace.default_routing_class: "basic"
-  che.workspace.che_api_sidecar.image: amisevsk/che-rest-apis:v0.0.2
-  che.workspace.plugin_broker.artifacts.image: quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0
+  devworkspace.routing.cluster_host_suffix: 192.168.99.100.nip.io
+  controller.plugin_registry.url: http://che-plugin-registry.192.168.99.100.nip.io/v3
+  controller.plugin_artifacts_broker.image: quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0
+  controller.webhooks.enabled: "true"
+  devworkspace.api_sidecar.image: amisevsk/che-rest-apis:v0.0.2
+  devworkspace.default_routing_class: "basic"
   # image pull policy that is applied to all workspace's containers
-  che.workspace.sidecar.image_pull_policy: Always
+  devworkspace.sidecar.image_pull_policy: Always

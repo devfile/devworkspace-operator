@@ -13,34 +13,40 @@
 package config
 
 const (
-	pluginRegistryURL = "plugin.registry.url"
+	// URL of external plugin registry; will be used when devworkspace uses plugin
+	// not included in internal registry or when devfile does not include explicit
+	// registry URL.
+	pluginRegistryURL = "controller.plugin_registry.url"
 
-	routingSuffix        = "cluster.routing_suffix"
-	defaultRoutingSuffix = ""
-
-	webhooksEnabled        = "che.webhooks.enabled"
+	webhooksEnabled        = "controller.webhooks.enabled"
 	defaultWebhooksEnabled = "true"
 
-	cheAPISidecarImage = "che.workspace.che_api_sidecar.image"
+	cheAPISidecarImage = "devworkspace.api_sidecar.image"
 	// by default that functionality is not available since it's not fully supported
 	defaultCheAPISidecarImage = ""
 
-	sidecarPullPolicy        = "che.workspace.sidecar.image_pull_policy"
+	// image pull policy that is applied to every container within workspace
+	sidecarPullPolicy        = "devworkspace.sidecar.image_pull_policy"
 	defaultSidecarPullPolicy = "Always"
 
 	// workspacePVCName config property handles the PVC name that should be created and used for all workspaces within one kubernetes namespace
-	workspacePVCName        = "che.workspace.pvc.name"
+	workspacePVCName        = "devworkspace.pvc.name"
 	defaultWorkspacePVCName = "claim-che-workspace"
 
-	workspacePVCStorageClassName = "che.workspace_pvc.storage_class.name"
+	workspacePVCStorageClassName = "devworkspace.pvc.storage_class.name"
 
-	pluginArtifactsBrokerImage        = "che.workspace.plugin_broker.artifacts.image"
+	pluginArtifactsBrokerImage        = "controller.plugin_artifacts_broker.image"
 	defaultPluginArtifactsBrokerImage = "quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0"
 
 	// routingClass defines the default routing class that should be used if user does not specify it explicitly
-	routingClass        = "che.workspace.default_routing_class"
+	routingClass        = "devworkspace.default_routing_class"
 	defaultRoutingClass = "basic"
 
-	workspaceIdleTimeout        = "che.workspace.idle_timeout"
+	// routingSuffix is the default domain for routes/ingresses created on the cluster. All
+	// routes/ingresses will be created with URL http(s)://<unique-to-workspace-part>.<routingSuffix>
+	routingSuffix        = "devworkspace.routing.cluster_host_suffix"
+	defaultRoutingSuffix = ""
+
+	workspaceIdleTimeout        = "devworkspace.idle_timeout"
 	defaultWorkspaceIdleTimeout = "15m"
 )

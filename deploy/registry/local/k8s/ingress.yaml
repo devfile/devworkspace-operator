@@ -11,7 +11,6 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: che-plugin-registry
-  namespace: che-workspace-controller
   annotations:
     kubernetes.io/ingress.class: nginx
 spec:

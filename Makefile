@@ -1,5 +1,5 @@
-NAMESPACE = che-workspace-controller
 OPERATOR_SDK_VERSION = v0.17.0
+NAMESPACE ?= che-workspace-controller
 IMG ?= quay.io/che-incubator/che-workspace-controller:nightly
 TOOL ?= oc
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
@@ -15,6 +15,7 @@ all: help
 
 _print_vars:
 	@echo "Current env vars:"
+	@echo "    NAMESPACE=$(NAMESPACE)"
 	@echo "    IMG=$(IMG)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
@@ -42,12 +43,12 @@ _create_namespace:
 
 _deploy_registry:
 ifeq ($(REGISTRY_ENABLED),true)
-	$(TOOL) apply -f ./deploy/registry/local
+	$(TOOL) apply -f ./deploy/registry/local -n $(NAMESPACE)
 ifeq ($(TOOL),oc)
-	$(TOOL) apply -f ./deploy/registry/local/os
+	$(TOOL) apply -f ./deploy/registry/local/os -n $(NAMESPACE)
 else
 	sed -i.bak -e  "s|192.168.99.100.nip.io|$(ROUTING_SUFFIX)|g" ./deploy/registry/local/k8s/ingress.yaml
-	$(TOOL) apply -f ./deploy/registry/local/k8s
+	$(TOOL) apply -f ./deploy/registry/local/k8s -n $(NAMESPACE)
 	sed -i.bak -e "s|$(ROUTING_SUFFIX)|192.168.99.100.nip.io|g" ./deploy/registry/local/k8s/ingress.yaml
 	rm ./deploy/registry/local/k8s/ingress.yaml.bak
 endif
@@ -114,23 +115,25 @@ _update_crds: update_devworkspace_crds
 	$(TOOL) apply -f ./devworkspace-crds/deploy/crds
 
 _update_controller_configmap:
-	$(TOOL) apply -f ./deploy/controller_config.yaml
+	$(TOOL) apply -f ./deploy/controller_config.yaml -n $(NAMESPACE)
 
 _apply_controller_cfg:
-	$(TOOL) apply -f ./deploy
+	sed -i.bak -e 's|namespace: $${NAMESPACE}|namespace: $(NAMESPACE)|' ./deploy/role_binding.yaml
+	$(TOOL) apply -f ./deploy -n $(NAMESPACE)
+	mv ./deploy/role_binding.yaml.bak ./deploy/role_binding.yaml
 ifeq ($(TOOL),oc)
 ifeq ($(WEBHOOK_ENABLED),true)
-	$(TOOL) apply -f ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
+	$(TOOL) apply -f ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml -n $(NAMESPACE)
 endif
-	$(TOOL) apply -f ./deploy/os/controller.yaml
+	$(TOOL) apply -f ./deploy/os/controller.yaml -n $(NAMESPACE)
 else
-	$(TOOL) apply -f ./deploy/k8s/controller.yaml
+	$(TOOL) apply -f ./deploy/k8s/controller.yaml -n $(NAMESPACE)
 endif
 
 _do_restart:
 ifeq ($(TOOL),oc)
 	oc patch deployment/che-workspace-controller \
-		-n che-workspace-controller \
+		-n $(NAMESPACE) \
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
 else
 	kubectl rollout restart -n $(NAMESPACE) deployment/che-workspace-controller
@@ -150,7 +153,7 @@ ifneq ($(TOOL) get devworkspaces.workspace.devfile.io --all-namespaces,"No resou
 	$(error Cannot uninstall operator, workspaces still running. Delete all workspaces and workspaceroutings before proceeding)
 endif
 endif
-	$(TOOL) delete -f ./deploy
+	$(TOOL) delete -f ./deploy -n $(NAMESPACE)
 	$(TOOL) delete namespace $(NAMESPACE)
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.controller.devfile.io
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.controller.devfile.io

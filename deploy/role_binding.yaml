@@ -5,7 +5,8 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: che-workspace-controller
-  namespace: che-workspace-controller
+  # Namespace must be replaced with controller's namespace
+  namespace: ${NAMESPACE}
 roleRef:
   kind: ClusterRole
   name: che-workspace-controller

@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: che-workspace-controller
-  namespace: che-workspace-controller
 spec:
   template:
     spec:

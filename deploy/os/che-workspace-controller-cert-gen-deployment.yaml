@@ -2,7 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: che-workspace-controller-cert-gen
-  namespace: che-workspace-controller
 spec:
   replicas: 1
   selector:

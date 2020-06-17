@@ -3,7 +3,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: che-workspace-controller
-  namespace: che-workspace-controller
 spec:
   replicas: 1
   selector:
@@ -44,7 +43,6 @@ metadata:
   labels:
     app: che-workspace-controller
   name: workspace-controller
-  namespace: che-workspace-controller
 spec:
   ports:
     - targetPort: webhook-server

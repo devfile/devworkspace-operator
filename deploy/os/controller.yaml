@@ -36,3 +36,18 @@ spec:
           ports:
             - name: webhook-server
               containerPort: 8443
+          volumeMounts:
+            - name: webhook-tls-certs
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+      volumes:
+        - name: webhook-tls-certs
+          projected:
+            sources:
+              - configMap:
+                  name: che-workspace-controller-secure-service
+                  items:
+                    - key: service-ca.crt
+                      path: ./ca.crt
+              - secret:
+                  name: workspace-controller

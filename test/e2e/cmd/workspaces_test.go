@@ -56,19 +56,19 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 	//TODO: Have better improvement of errors.
 	if err := controller.CreateAllOperatorRoles(); err != nil {
-		_ = fmt.Errorf("Failed to create roles in clusters %s", err)
+		panic("Failed to create roles in clusters")
 	}
 
 	if err := controller.CreateOperatorClusterRole(); err != nil {
-		_ = fmt.Errorf("Failed to create cluster roles in clusters %s", err)
+		panic("Failed to create cluster roles in clusters")
 	}
 
 	if err := controller.CustomResourceDefinitions(); err != nil {
-		_ = fmt.Errorf("Failed to add custom resources definitions to cluster %s", err)
+		panic("Failed to add custom resources definitions to cluster")
 	}
 
 	if err := controller.DeployWorkspacesController(); err != nil {
-		_ = fmt.Errorf("Failed to deploy workspace controller %s", err)
+		panic("Failed to deploy workspace controller")
 	}
 
 	return nil

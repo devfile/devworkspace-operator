@@ -25,7 +25,7 @@ import (
 )
 
 func (w *K8sClient) WaitForPodRunningByLabel(label string) (deployed bool, err error) {
-	timeout := time.After(15 * time.Minute)
+	timeout := time.After(6 * time.Minute)
 	tick := time.Tick(1 * time.Second)
 
 	for {

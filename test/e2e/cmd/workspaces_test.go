@@ -37,7 +37,6 @@ const (
 
 //SynchronizedBeforeSuite blocks is executed before run all test suites
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
-	//!TODO: Try to create a specific function to call all <ginkgo suite> configuration.
 	fmt.Println("Starting to setup objects before run ginkgo suite")
 	config.Namespace = "che-workspace-controller"
 
@@ -54,21 +53,24 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		panic(err)
 	}
 
-	//TODO: Have better improvement of errors.
 	if err := controller.CreateAllOperatorRoles(); err != nil {
-		panic("Failed to create roles in clusters")
+		fmt.Println("Failed to create roles in clusters")
+		panic(err)
 	}
 
 	if err := controller.CreateOperatorClusterRole(); err != nil {
-		panic("Failed to create cluster roles in clusters")
+		fmt.Println("Failed to create cluster roles in clusters")
+		panic(err)
 	}
 
 	if err := controller.CustomResourceDefinitions(); err != nil {
-		panic("Failed to add custom resources definitions to cluster")
+		fmt.Println("Failed to add custom resources definitions to cluster")
+		panic(err)
 	}
 
 	if err := controller.DeployWorkspacesController(); err != nil {
-		panic("Failed to deploy workspace controller")
+		fmt.Println("Failed to deploy workspace controller")
+		panic(err)
 	}
 
 	return nil

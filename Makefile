@@ -217,10 +217,10 @@ update_devworkspace_crds:
 	fi
 	git fetch --tags -p origin
 	if git show-ref --verify refs/tags/$(DEVWORKSPACE_API_VERSION) --quiet; then
-		echo 'DevWorkpsace API is specified from tag'
+		echo 'DevWorkspace API is specified from tag'
 		git checkout tags/$(DEVWORKSPACE_API_VERSION)
 	else
-		echo 'DevWorkpsace API is specified from branch'
+		echo 'DevWorkspace API is specified from branch'
 		git checkout $(DEVWORKSPACE_API_VERSION) && git reset --hard origin/$(DEVWORKSPACE_API_VERSION)
 	fi
 

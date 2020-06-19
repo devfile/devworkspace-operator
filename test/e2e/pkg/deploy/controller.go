@@ -43,10 +43,19 @@ func (w *Deployment) DeployWorkspacesController() error {
 	}
 
 	deploy, err := w.kubeClient.WaitForPodRunningByLabel(label)
+	fmt.Println("Waiting controller pod to be ready")
 	if !deploy || err != nil {
 		fmt.Println("Che Workspaces Controller not deployed")
 		return err
 	}
+
+	deploy, err = w.kubeClient.WaitForMutatingWebhooksConfigurations("controller.devfile.io")
+	fmt.Println("Waiting mutating webhooks to be created")
+	if !deploy || err != nil {
+		fmt.Println("WebHooks configurations are not created in time")
+		return err
+	}
+
 	return nil
 }
 

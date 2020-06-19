@@ -53,13 +53,8 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		panic(err)
 	}
 
-	if err := controller.CreateAllOperatorRoles(); err != nil {
-		fmt.Println("Failed to create roles in clusters")
-		panic(err)
-	}
-
-	if err := controller.CreateOperatorClusterRole(); err != nil {
-		fmt.Println("Failed to create cluster roles in clusters")
+	if err := controller.CreateAdditionalControllerResources(); err != nil {
+		fmt.Println("Failed to create additional controller resources in clusters")
 		panic(err)
 	}
 

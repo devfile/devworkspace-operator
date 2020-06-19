@@ -50,11 +50,16 @@ func (w *Deployment) DeployWorkspacesController() error {
 	return nil
 }
 
-func (w *Deployment) CreateAllOperatorRoles() error {
-	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy")
+func (w *Deployment) CreateAdditionalControllerResources() error {
+	//sed "s/\${NAMESPACE}/che/g" <<< cat *.yaml | oc apply -f -
+	cmd := exec.Command(
+		"bash", "-c",
+		"sed 's/\\${NAMESPACE}/"+config.Namespace+"/g' <<< "+
+			"cat deploy/*.yaml | "+
+			"oc apply --namespace "+config.Namespace+" -f -")
 	output, err := cmd.CombinedOutput()
 	fmt.Println(string(output))
-	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
+	if err != nil {
 		fmt.Println(err)
 		return err
 	}
@@ -76,15 +81,5 @@ func (w *Deployment) CustomResourceDefinitions() error {
 		return err
 	}
 
-	return nil
-}
-
-func (w *Deployment) CreateOperatorClusterRole() error {
-	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy/role.yaml")
-	output, err := cmd.CombinedOutput()
-	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
-		fmt.Println(err)
-		return err
-	}
 	return nil
 }

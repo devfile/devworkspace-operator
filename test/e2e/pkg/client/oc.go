@@ -16,15 +16,21 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 )
 
-func (w *K8sClient) OcApply(filePath string) (err error) {
+func (w *K8sClient) OcApplyWorkspace(filePath string) (err error) {
 	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", filePath)
-	output, err := cmd.CombinedOutput()
-	fmt.Println(string(output))
-	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
+	outBytes, err := cmd.CombinedOutput()
+	output := string(outBytes)
+	if strings.Contains(output, "failed calling webhook") {
+		fmt.Println("Seems controller is not ready yet. Will retry in 2 seconds. Cause: " + output)
+		time.Sleep(2 * time.Second)
+		return w.OcApplyWorkspace(filePath)
+	}
+	if err != nil && !strings.Contains(output, "AlreadyExists") {
 		fmt.Println(err)
 	}
 	return err

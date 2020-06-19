@@ -28,7 +28,11 @@ var _ = ginkgo.Describe("[Create Cloud Shell Workspace]", func() {
 			ginkgo.Fail("Failed to create k8s client: " + err.Error())
 			return
 		}
-		_ = k8sClient.OcApply("samples/cloud-shell.yaml")
+		err = k8sClient.OcApplyWorkspace("samples/cloud-shell.yaml")
+		if err != nil {
+			ginkgo.Fail("Failed to create cloud-shell devworkspace: " + err.Error())
+			return
+		}
 		deploy, err := k8sClient.WaitForPodRunningByLabel(label)
 
 		if !deploy {

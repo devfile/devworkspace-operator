@@ -88,7 +88,7 @@ endif
 
 _reset_yamls: _set_registry_url
 	sed -i.bak -e "s|http://$(PLUGIN_REGISTRY_HOST)|http://che-plugin-registry.192.168.99.100.nip.io/v3|g" ./deploy/controller_config.yaml
-	sed -i.bak -e 's|che.webhooks.enabled: .*|che.webhooks.enabled: "false"|g' ./deploy/controller_config.yaml
+	sed -i.bak -e 's|che.webhooks.enabled: .*|che.webhooks.enabled: "true"|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|che.workspace.default_routing_class: .*|che.workspace.default_routing_class: "basic"|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|cluster.routing_suffix: .*|cluster.routing_suffix: 192.168.99.100.nip.io|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|che.workspace.sidecar.image_pull_policy: .*|che.workspace.sidecar.image_pull_policy: Always|g' ./deploy/controller_config.yaml

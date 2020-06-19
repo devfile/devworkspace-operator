@@ -11,8 +11,8 @@ REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
 CERT_IMG ?= quay.io/che-incubator/che-workspace-controller-cert-gen:latest
 TERMINAL_MANIFEST_VERSION ?= master
-BUNDLE_IMG ?= quay.io/che-incubator/che-workspace-bundle:latest
-INDEX_IMG ?= quay.io/che-incubator/che-workspace-operator-index:latest
+BUNDLE_IMG ?= ""
+INDEX_IMG ?= ""
 
 all: help
 
@@ -288,8 +288,8 @@ else
 	$(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
 endif
 
-### gen_csv: generate the csv for a newer version
-gen_csv: update_devworkspace_crds update_terminal_manifests
+### gen_terminal_csv : generate the csv for a newer version
+gen_terminal_csv : update_devworkspace_crds update_terminal_manifests
 	operator-sdk generate csv --apis-dir ./pkg/apis --csv-version 1.0.0 --make-manifests --update-crds --operator-name "web-terminal" --output-dir ./web-terminal-operator
 	
 	# filter the deployments so that only the valid deployment is available. See: https://github.com/eclipse/che/issues/17010
@@ -300,9 +300,9 @@ gen_csv: update_devworkspace_crds update_terminal_manifests
 
 	cp devworkspace-crds/deploy/crds/workspace.devfile.io_devworkspaces_crd.yaml web-terminal-operator/manifests
 
-### olm_build_bundle: build the bundle that will be stored on quay
+### olm_build_bundle: build the bundle and push it to a docker registry
 olm_build_bundle: _print_vars
-	# Create the bundle and push it to quay
+	# Create the bundle and push it to a docker registry
 	operator-sdk bundle create $(BUNDLE_IMG) --channels alpha --package web-terminal --directory web-terminal-operator/manifests --overwrite --output-dir generated
 	docker push $(BUNDLE_IMG)
 
@@ -322,11 +322,11 @@ olm_start_local: _print_vars
 	rm ./deploy/olm-catalogsource/catalog-source.yaml.bak
 
 ### olm_full_start: build the catalog and deploys the catalog to the cluster without pushing olm files to application registry
-olm_full_start_local: _print_vars olm_build_bundle olm_create_index olm_start_local
+olm_build_start_local: _print_vars olm_build_bundle olm_create_index olm_start_local
 
 ### olm_uninstall: uninstalls the operator
 olm_uninstall:
-	oc delete catalogsource che-workspace-crd-registry
+	oc delete catalogsource che-workspace-crd-registry -n openshift-marketplace
 
 .PHONY: help
 ### help: print this message

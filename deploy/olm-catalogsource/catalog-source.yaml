@@ -1,7 +1,7 @@
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: che-workspace-crd-registry
+  name: devworkspace-crd-registry
   namespace: openshift-marketplace
 spec:
   sourceType: grpc

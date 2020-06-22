@@ -36,7 +36,7 @@ func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfi
 				FailurePolicy: &validateWebhookFailurePolicy,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
-						Name:      "workspace-controller",
+						Name:      "devworkspace-controller",
 						Namespace: namespace,
 						Path:      &validateWebhookPath,
 					},

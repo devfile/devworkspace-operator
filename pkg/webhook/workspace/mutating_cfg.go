@@ -24,14 +24,15 @@ const (
 	mutateWebhookFailurePolicy = v1beta1.Fail
 )
 
-func buildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfiguration {
+// BuildMutateWebhookCfg creates the mutating webhook configuration for the controller
+func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfiguration {
 	mutateWebhookFailurePolicy := mutateWebhookFailurePolicy
 	mutateWebhookPath := mutateWebhookPath
 	labelExistsOp := metav1.LabelSelectorOpExists
 	equivalentMatchPolicy := v1beta1.Equivalent
 	webhookClientConfig := v1beta1.WebhookClientConfig{
 		Service: &v1beta1.ServiceReference{
-			Name:      "workspace-controller",
+			Name:      "devworkspace-controller",
 			Namespace: namespace,
 			Path:      &mutateWebhookPath,
 		},

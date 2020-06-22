@@ -45,7 +45,7 @@ func Configure(ctx context.Context) error {
 		return err
 	}
 
-	mutateWebhookCfg := buildMutateWebhookCfg(namespace)
+	mutateWebhookCfg := BuildMutateWebhookCfg(namespace)
 	validateWebhookCfg := buildValidatingWebhookCfg(namespace)
 
 	if !server.IsSetUp() {

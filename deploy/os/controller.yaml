@@ -58,9 +58,9 @@ spec:
           projected:
             sources:
               - configMap:
-                  name: che-workspace-controller-secure-service
+                  name: devworkspace-controller-secure-service
                   items:
                     - key: service-ca.crt
                       path: ./ca.crt
               - secret:
-                  name: workspace-controller
+                  name: devworkspace-controller

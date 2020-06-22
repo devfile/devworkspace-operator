@@ -17,31 +17,25 @@ import (
 	"log"
 	"os"
 
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
+	"github.com/devfile/devworkspace-operator/cert-generation/config"
+	"github.com/devfile/devworkspace-operator/cert-generation/webhooks"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-)
-
-const (
-	secureServiceName = "workspace-controller"
-	certConfigMapName = "che-workspace-controller-secure-service"
-	certSecretName    = "workspace-controller"
-	webhookServerName = "webhook-server"
 )
 
 func main() {
 	log.SetOutput(os.Stdout)
 
-	config, err := rest.InClusterConfig()
+	clusterConfig, err := rest.InClusterConfig()
 	if err != nil {
 		log.Fatal("Failed when attempting to retrieve in cluster config: ", err)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
 		log.Fatal("Failed when attempting to retrieve in cluster config: ", err)
 	}
@@ -55,7 +49,7 @@ func main() {
 	configMapData := make(map[string]string, 0)
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      certConfigMapName,
+			Name:      config.CertConfigMapName,
 			Namespace: namespace,
 			Annotations: map[string]string{
 				"service.beta.openshift.io/inject-cabundle": "true",
@@ -65,7 +59,7 @@ func main() {
 	}
 
 	// Create the configmap or update if it already exists
-	if _, err := clientset.CoreV1().ConfigMaps(namespace).Get(certConfigMapName, metav1.GetOptions{}); errors.IsNotFound(err) {
+	if _, err := clientset.CoreV1().ConfigMaps(namespace).Get(config.CertConfigMapName, metav1.GetOptions{}); errors.IsNotFound(err) {
 		_, err = clientset.CoreV1().ConfigMaps(namespace).Create(configMap)
 		if err != nil {
 			log.Fatal("Failed when attempting to create configmap: ", err)
@@ -82,11 +76,11 @@ func main() {
 	port := int32(443)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      secureServiceName,
+			Name:      config.SecureServiceName,
 			Namespace: namespace,
 			Labels:    label,
 			Annotations: map[string]string{
-				"service.beta.openshift.io/serving-cert-secret-name": certSecretName,
+				"service.beta.openshift.io/serving-cert-secret-name": config.CertSecretName,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -94,7 +88,7 @@ func main() {
 				{
 					Port:       port,
 					Protocol:   "TCP",
-					TargetPort: intstr.FromString(webhookServerName),
+					TargetPort: intstr.FromString(config.WebhookServerName),
 				},
 			},
 			Selector: label,
@@ -102,7 +96,7 @@ func main() {
 	}
 
 	// Create secure service or update it if it already exists
-	if clusterService, err := clientset.CoreV1().Services(namespace).Get(secureServiceName, metav1.GetOptions{}); errors.IsNotFound(err) {
+	if clusterService, err := clientset.CoreV1().Services(namespace).Get(config.SecureServiceName, metav1.GetOptions{}); errors.IsNotFound(err) {
 		_, err = clientset.CoreV1().Services(namespace).Create(service)
 		if err != nil {
 			log.Fatal("Failed when attempting to create service: ", err)
@@ -118,6 +112,11 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed when attempting to update service: ", err)
 		}
+	}
+
+	err = webhooks.WebhookInit(clientset, namespace)
+	if err != nil {
+		log.Fatal("Failed when attempting to setup the webhook: ", err)
 	}
 
 	log.Println("Certs have been successfully created.")

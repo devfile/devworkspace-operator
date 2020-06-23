@@ -229,24 +229,26 @@ else
 endif
 
 ### update_terminal_manifests: pull latest web terminal manifests to web-terminal-operator. Note: pulls master branch by default
+.ONESHELL:
 update_terminal_manifests:
-	mkdir -p web-terminal-operator
-	cd web-terminal-operator && git init || true
-ifneq ($(shell git --git-dir=web-terminal-operator/.git remote), origin)
-	cd web-terminal-operator && git remote add origin -f https://github.com/redhat-developer/web-terminal-operator.git
-else
-	cd web-terminal-operator && git remote set-url origin https://github.com/redhat-developer/web-terminal-operator.git
-endif
-	cd web-terminal-operator && git config core.sparsecheckout true
-	cd web-terminal-operator && echo "manifests/*" >> .git/info/sparse-checkout
-	cd web-terminal-operator && git fetch --tags -p origin
-ifeq ($(shell cd web-terminal-operator && git show-ref --verify refs/tags/$(TERMINAL_MANIFEST_VERSION) 2> /dev/null && echo "tag" || echo "branch"),tag)
-	@echo 'Terminal Manifests are specified from tag'
-	cd web-terminal-operator && git checkout tags/$(TERMINAL_MANIFEST_VERSION)
-else
-	@echo 'Terminal Manifests are specified from branch'
-	cd web-terminal-operator && git checkout $(TERMINAL_MANIFEST_VERSION) && git reset --hard origin/$(TERMINAL_MANIFEST_VERSION)
-endif
+	@mkdir -p web-terminal-operator
+	cd web-terminal-operator
+	if [ ! -d ./.git ]; then
+		git init
+		git remote add origin -f https://github.com/redhat-developer/web-terminal-operator.git
+		git config core.sparsecheckout true
+		echo "manifests/*" > .git/info/sparse-checkout
+	else
+		git remote set-url origin https://github.com/redhat-developer/web-terminal-operator.git
+	fi
+	git fetch --tags -p origin
+	if git show-ref --verify refs/tags/$(TERMINAL_MANIFEST_VERSION) --quiet; then
+		echo 'Terminal manifests are specified from tag'
+		git checkout tags/$(TERMINAL_MANIFEST_VERSION)
+	else
+		echo 'Terminal manifests are specified from branch'
+		git checkout $(TERMINAL_MANIFEST_VERSION) && git reset --hard origin/$(TERMINAL_MANIFEST_VERSION)
+	fi
 
 ### local: set up cluster for local development
 local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
@@ -300,19 +302,19 @@ gen_terminal_csv : update_devworkspace_crds update_terminal_manifests
 
 	cp devworkspace-crds/deploy/crds/workspace.devfile.io_devworkspaces_crd.yaml web-terminal-operator/manifests
 
-### olm_build_bundle: build the bundle and push it to a docker registry
-olm_build_bundle: _print_vars
+### olm_build_terminal_bundle: build the terminal bundle and push it to a docker registry
+olm_build_terminal_bundle: _print_vars
 	# Create the bundle and push it to a docker registry
 	operator-sdk bundle create $(BUNDLE_IMG) --channels alpha --package web-terminal --directory web-terminal-operator/manifests --overwrite --output-dir generated
 	docker push $(BUNDLE_IMG)
 
-#### olm_create_index: to create / update and push an index that contains the bundle
-olm_create_index:
+#### olm_create_terminal_index: to create / update and push an index that contains the bundle
+olm_create_terminal_index:
 	opm index add -c docker --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG)
 	docker push $(INDEX_IMG)
 
-### olm_start_local: use the catalogsource to make the operator be available on the marketplace. Must have $(INDEX_IMG) available on quay already and have it set to public
-olm_start_local: _print_vars
+### olm_start_terminal_local: use the catalogsource to make the operator be available on the marketplace. Must have $(INDEX_IMG) available on quay already and have it set to public
+olm_start_terminal_local: _print_vars
 	# replace references of catalogsource img with your image
 	sed -i.bak -e  "s|quay.io/che-incubator/che-workspace-operator-index:latest|$(INDEX_IMG)|g" ./deploy/olm-catalogsource/catalog-source.yaml
 	oc apply -f ./deploy/olm-catalogsource/catalog-source.yaml
@@ -321,8 +323,8 @@ olm_start_local: _print_vars
 	# remove the .bak files
 	rm ./deploy/olm-catalogsource/catalog-source.yaml.bak
 
-### olm_full_start: build the catalog and deploys the catalog to the cluster without pushing olm files to application registry
-olm_build_start_local: _print_vars olm_build_bundle olm_create_index olm_start_local
+### olm_build_start_terminal_local: build the catalog and deploys the catalog to the cluster
+olm_build_start_terminal_local: _print_vars olm_build_terminal_bundle olm_create_terminal_index olm_start_terminal_local
 
 ### olm_uninstall: uninstalls the operator
 olm_uninstall:

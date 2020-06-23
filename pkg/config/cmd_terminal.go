@@ -15,6 +15,8 @@ package config
 import (
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/internal/images"
+
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 
 	"gopkg.in/yaml.v2"
@@ -32,12 +34,12 @@ var (
 		MemoryLimit: "256Mi",
 		Container: devworkspace.Container{
 			Name:  "dev",
-			Image: "registry.redhat.io/codeready-workspaces/plugin-openshift-rhel8:2.1",
+			Image: images.GetWebTerminalToolingImage(),
 			Args:  []string{"tail", "-f", "/dev/null"},
 			Env: []devworkspace.EnvVar{
 				{
 					Name:  "PS1",
-					Value: "\\[\\e[34m\\]>\\[\\e[m\\]\\[\\e[33m\\]>\\[\\e[m\\]",
+					Value: `\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]`,
 				},
 			},
 		},

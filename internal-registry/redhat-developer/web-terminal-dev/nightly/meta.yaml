@@ -25,7 +25,7 @@ spec:
         cookiesAuthEnabled: true
   containers:
     - name: web-terminal
-      image: "quay.io/eclipse/che-machine-exec:nightly"
+      image: "${IMAGE_plugin_redhat_developer_web_terminal_dev_nightly}"
       command: ["/go/bin/che-machine-exec",
                 "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
                 "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",

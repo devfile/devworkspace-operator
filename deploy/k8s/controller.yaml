@@ -33,6 +33,16 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName
+            - name: IMAGE_plugin_redhat_developer_web_terminal_4_5_0
+              value: "quay.io/eclipse/che-machine-exec:nightly"
+            - name: IMAGE_plugin_redhat_developer_web_terminal_nightly
+              value: "quay.io/eclipse/che-machine-exec:nightly"
+            - name: IMAGE_plugin_redhat_developer_web_terminal_dev_4_5_0
+              value: "quay.io/eclipse/che-machine-exec:nightly"
+            - name: IMAGE_plugin_redhat_developer_web_terminal_dev_nightly
+              value: "quay.io/eclipse/che-machine-exec:nightly"
+            - name: IMAGE_plugin_eclipse_cloud_shell_nightly
+              value: "quay.io/eclipse/che-machine-exec:nightly"
           ports:
             - name: webhook-server
               containerPort: 8443

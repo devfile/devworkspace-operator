@@ -14,6 +14,7 @@ package registry
 
 import (
 	"fmt"
+	"github.com/devfile/devworkspace-operator/internal/images"
 	"io/ioutil"
 	"os"
 
@@ -52,6 +53,11 @@ func InternalRegistryPluginToMetaYAML(pluginID string) (*brokerModel.PluginMeta,
 	if err := yaml.Unmarshal(yamlFile, &pluginMeta); err != nil {
 		return nil, fmt.Errorf(
 			"failed to unmarshal downloaded meta.yaml for plugin '%s': %s", pluginID, err)
+	}
+
+	pluginMeta, err = images.FillPluginMetaEnvVars(pluginMeta)
+	if err != nil {
+		return nil, fmt.Errorf("could not process plugin %s from internal registry: %s", pluginID, err)
 	}
 
 	// Ensure ID field is set since it is used all over the place in broker

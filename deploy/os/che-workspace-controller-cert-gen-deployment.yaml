@@ -19,3 +19,10 @@ spec:
         - name: che-workspace-controller-cert-gen
           image: quay.io/che-incubator/che-workspace-controller-cert-gen:latest
           imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 50m
+              memory: 50Mi
+            limits:
+              cpu: 100m
+              memory: 100Mi

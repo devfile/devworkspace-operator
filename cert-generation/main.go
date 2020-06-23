@@ -120,8 +120,7 @@ func main() {
 		}
 	}
 
-	// Wait until it's cleaned up by the workspace-controller
-	log.Println("Certs have been successfully created. Waiting to be cleaned up by devworkspace controller")
+	log.Println("Certs have been successfully created.")
 	for {
 	}
 }

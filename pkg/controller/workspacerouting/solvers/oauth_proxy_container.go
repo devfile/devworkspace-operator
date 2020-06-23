@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/devfile/devworkspace-operator/internal/images"
+
 	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -67,7 +69,7 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 			},
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-		Image:                    "openshift/oauth-proxy:latest",
+		Image:                    images.GetOpenShiftOAuthProxyImage(),
 		Args: []string{
 			"--https-address=:" + strconv.FormatInt(int64(proxyEndpoint.publicEndpoint.TargetPort), 10),
 			"--http-address=127.0.0.1:" + strconv.FormatInt(int64(proxyEndpoint.publicEndpointHttpPort), 10),

@@ -14,9 +14,10 @@ package registry
 
 import (
 	"fmt"
-	"github.com/devfile/devworkspace-operator/internal/images"
 	"io/ioutil"
 	"os"
+
+	"github.com/devfile/devworkspace-operator/internal/images"
 
 	"github.com/eclipse/che-plugin-broker/model"
 	brokerModel "github.com/eclipse/che-plugin-broker/model"

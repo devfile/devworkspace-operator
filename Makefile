@@ -301,6 +301,10 @@ gen_terminal_csv : update_devworkspace_crds update_terminal_manifests
 	tee ./web-terminal-operator/manifests/web\ terminal.clusterserviceversion.yaml >>/dev/null
 
 	cp devworkspace-crds/deploy/crds/workspace.devfile.io_devworkspaces_crd.yaml web-terminal-operator/manifests
+	
+	# Add in the edit workspaces and view workspaces cluster roles
+	cp deploy/edit-workspaces-cluster-role.yaml web-terminal-operator/manifests
+	cp deploy/view-workspaces-cluster-role.yaml web-terminal-operator/manifests
 
 ### olm_build_terminal_bundle: build the terminal bundle and push it to a docker registry
 olm_build_terminal_bundle: _print_vars

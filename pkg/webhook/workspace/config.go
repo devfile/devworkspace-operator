@@ -75,17 +75,6 @@ func Configure(ctx context.Context) error {
 		return err
 	}
 
-	ownRef, err := controller.FindControllerOwner(ctx, c)
-	if err != nil {
-		return err
-	}
-
-	//TODO we need to watch owned webhook configuration and clean up old ones
-
-	//TODO For some reasons it's still possible to update reference by user
-	//TODO Investigate if we can block it. The same issue is valid for Deployment owner
-	mutateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
-
 	if err := c.Create(ctx, mutateWebhookCfg); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
@@ -108,8 +97,6 @@ func Configure(ctx context.Context) error {
 	}
 
 	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID, saName)})
-
-	validateWebhookCfg.SetOwnerReferences([]metav1.OwnerReference{*ownRef})
 
 	if err := c.Create(ctx, validateWebhookCfg); err != nil {
 		if !apierrors.IsAlreadyExists(err) {

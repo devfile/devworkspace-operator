@@ -159,6 +159,8 @@ endif
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.controller.devfile.io
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io
+	$(TOOL) delete mutatingwebhookconfigurations controller.devfile.io
+	$(TOOL) delete validatingwebhookconfigurations controller.devfile.io
 
 ### docker: build and push docker image
 docker: _print_vars

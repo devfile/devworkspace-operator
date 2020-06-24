@@ -11,6 +11,7 @@ REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
 CERT_IMG ?= quay.io/che-incubator/che-workspace-controller-cert-gen:latest
 TERMINAL_MANIFEST_VERSION ?= master
+TERMINAL_MANIFEST_REPO ?= https://github.com/redhat-developer/web-terminal-operator.git
 BUNDLE_IMG ?= ""
 INDEX_IMG ?= ""
 
@@ -27,6 +28,7 @@ _print_vars:
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
 	@echo "    CERT_IMG=$(CERT_IMG)"
 	@echo "    TERMINAL_MANIFEST_VERSION=$(TERMINAL_MANIFEST_VERSION)"
+	@echo "    TERMINAL_MANIFEST_REPO=$(TERMINAL_MANIFEST_REPO)"
 	@echo "    BUNDLE_IMG=$(BUNDLE_IMG)"
 	@echo "    INDEX_IMG=$(INDEX_IMG)"
 
@@ -235,11 +237,11 @@ update_terminal_manifests:
 	cd web-terminal-operator
 	if [ ! -d ./.git ]; then
 		git init
-		git remote add origin -f https://github.com/redhat-developer/web-terminal-operator.git
+		git remote add origin -f $(TERMINAL_MANIFEST_REPO)
 		git config core.sparsecheckout true
 		echo "manifests/*" > .git/info/sparse-checkout
 	else
-		git remote set-url origin https://github.com/redhat-developer/web-terminal-operator.git
+		git remote set-url origin $(TERMINAL_MANIFEST_REPO)
 	fi
 	git fetch --tags -p origin
 	if git show-ref --verify refs/tags/$(TERMINAL_MANIFEST_VERSION) --quiet; then
@@ -351,5 +353,7 @@ help: Makefile
 	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
 	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/kubernetes-api to depend on. Defaults to master'
 	@echo '    CERT_IMG                   - The name of the cert generator image'
+	@echo '    TERMINAL_MANIFEST_VERSION  - The branch/tag of the terminal manifests'
+	@echo '    TERMINAL_MANIFEST_REPO     - The repo where the terminal manifests are located'
 	@echo '    BUNDLE_IMG                 - The name of the olm registry bundle image'
 	@echo '    INDEX_ING                  - The name of the olm registry index image'

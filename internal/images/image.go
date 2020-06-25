@@ -23,7 +23,7 @@ import (
 
 var log = logf.Log.WithName("container-images")
 
-var envRegexp = regexp.MustCompile(`\${(.*)}`)
+var envRegexp = regexp.MustCompile(`\${(IMAGE_.*)}`)
 
 const (
 	webTerminalToolingImageEnvVar  = "IMAGE_web_terminal_tooling"

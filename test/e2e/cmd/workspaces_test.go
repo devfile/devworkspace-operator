@@ -81,6 +81,14 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	if err = k8sClient.Kube().CoreV1().Namespaces().Delete(config.Namespace, &metav1.DeleteOptions{}); err != nil {
 		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
 	}
+
+	if err = k8sClient.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(config.WebhookName); err != nil {
+		_ = fmt.Errorf("Failed to delete mutating webhook configuration %s", err)
+	}
+
+	if err = k8sClient.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(config.WebhookName); err != nil {
+		_ = fmt.Errorf("Failed to delete validating webhook configuration %s", err)
+	}
 }, func() {})
 
 func TestWorkspaceController(t *testing.T) {

@@ -13,3 +13,6 @@
 package config
 
 var Namespace string
+
+// WebhookName the name of the webhooks created by the devworkspace operator
+const WebhookName = "controller.devfile.io"

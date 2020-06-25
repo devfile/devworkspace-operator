@@ -11,7 +11,7 @@ REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
 CERT_IMG ?= quay.io/che-incubator/che-workspace-controller-cert-gen:latest
 TERMINAL_MANIFEST_VERSION ?= master
-TERMINAL_MANIFEST_REPO ?= https://github.com/redhat-developer/web-terminal-operator.git
+TERMINAL_MANIFEST_REPO ?= ""
 BUNDLE_IMG ?= ""
 INDEX_IMG ?= ""
 

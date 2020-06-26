@@ -25,7 +25,7 @@ spec:
         cookiesAuthEnabled: true
   containers:
     - name: web-terminal
-      image: "${IMAGE_plugin_redhat_developer_web_terminal_dev_4_5_0}"
+      image: "${RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_4_5_0}"
       command: ["/go/bin/che-machine-exec",
                 "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
                 "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",

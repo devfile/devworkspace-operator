@@ -23,11 +23,11 @@ import (
 
 var log = logf.Log.WithName("container-images")
 
-var envRegexp = regexp.MustCompile(`\${(IMAGE_.*)}`)
+var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 
 const (
-	webTerminalToolingImageEnvVar  = "IMAGE_web_terminal_tooling"
-	openshiftOAuthProxyImageEnvVar = "IMAGE_openshift_oauth_proxy"
+	webTerminalToolingImageEnvVar  = "RELATED_IMAGE_web_terminal_tooling"
+	openshiftOAuthProxyImageEnvVar = "RELATED_IMAGE_openshift_oauth_proxy"
 )
 
 func GetWebTerminalToolingImage() string {

@@ -33,19 +33,19 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName
-            - name: IMAGE_plugin_redhat_developer_web_terminal_4_5_0
+            - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
               value: "quay.io/eclipse/che-machine-exec:nightly"
-            - name: IMAGE_plugin_redhat_developer_web_terminal_nightly
+            - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_nightly
               value: "quay.io/eclipse/che-machine-exec:nightly"
-            - name: IMAGE_plugin_redhat_developer_web_terminal_dev_4_5_0
+            - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_4_5_0
               value: "quay.io/eclipse/che-machine-exec:nightly"
-            - name: IMAGE_plugin_redhat_developer_web_terminal_dev_nightly
+            - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_nightly
               value: "quay.io/eclipse/che-machine-exec:nightly"
-            - name: IMAGE_plugin_eclipse_cloud_shell_nightly
+            - name: RELATED_IMAGE_plugin_eclipse_cloud_shell_nightly
               value: "quay.io/eclipse/che-machine-exec:nightly"
-            - name: "IMAGE_web_terminal_tooling"
+            - name: RELATED_IMAGE_web_terminal_tooling
               value: "registry.redhat.io/codeready-workspaces/plugin-openshift-rhel8:2.1"
-            - name: "IMAGE_openshift_oauth_proxy"
+            - name: RELATED_IMAGE_openshift_oauth_proxy
               value: "openshift/oauth-proxy:latest"
           ports:
             - name: webhook-server

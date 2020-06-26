@@ -66,11 +66,13 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed when attempting to create configmap: ", err)
 		}
+		log.Printf("Created config map %s where certs are going to be injected", config.CertConfigMapName)
 	} else {
 		_, err = clientset.CoreV1().ConfigMaps(namespace).Update(configMap)
 		if err != nil {
 			log.Fatal("Failed when attempting to update configmap: ", err)
 		}
+		log.Printf("Updated config map %s where certs are going to be injected", config.CertConfigMapName)
 	}
 
 	label := map[string]string{"app": "che-workspace-controller"}
@@ -103,6 +105,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed when attempting to create service: ", err)
 		}
+		log.Printf("Created service %s for webhook server", config.SecureServiceName)
 	} else {
 		// Cannot naively copy spec, as clusterIP is unmodifiable
 		clusterIP := clusterService.Spec.ClusterIP
@@ -114,6 +117,7 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed when attempting to update service: ", err)
 		}
+		log.Printf("Updated service %s for webhook server", config.SecureServiceName)
 	}
 
 	err = webhooks.WebhookInit(clientset, namespace)

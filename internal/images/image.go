@@ -10,6 +10,14 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
+// Package images is intended to support deploying the operator on restricted networks. It contains
+// utilities for translating images referenced by environment variables to regular image references,
+// allowing images that are defined by a tag to be replaced by digests automatically. This allows all
+// images used by the controller to be defined as environment variables on the controller deployment.
+//
+// All images defined must be referenced by an environment variable of the form RELATED_IMAGE_<name>.
+// Functions in this package can be called to replace references to ${RELATED_IMAGE_<name>} with the
+// corresponding environment variable.
 package images
 
 import (
@@ -30,6 +38,8 @@ const (
 	openshiftOAuthProxyImageEnvVar = "RELATED_IMAGE_openshift_oauth_proxy"
 )
 
+// GetWebTerminalToolingImage returns the image reference for the default web tooling image. Returns
+// the empty string if environment variable RELATED_IMAGE_web_terminal_tooling is not defined
 func GetWebTerminalToolingImage() string {
 	val, ok := os.LookupEnv(webTerminalToolingImageEnvVar)
 	if !ok {
@@ -39,6 +49,9 @@ func GetWebTerminalToolingImage() string {
 	return val
 }
 
+// GetOpenShiftOAuthProxyImage returns the image reference for the openshift OAuth proxy image, used
+// for openshift-oauth workspace routingClass. Returns empty string if env var RELATED_IMAGE_openshift_oauth_proxy
+// is not defined.
 func GetOpenShiftOAuthProxyImage() string {
 	val, ok := os.LookupEnv(openshiftOAuthProxyImageEnvVar)
 	if !ok {
@@ -48,6 +61,10 @@ func GetOpenShiftOAuthProxyImage() string {
 	return val
 }
 
+// FillPluginMetaEnvVars replaces plugin meta .spec.Containers[].image and .spec.InitContainers[].image environment
+// variables of the form ${RELATED_IMAGE_*} with values from environment variables with the same name.
+//
+// Returns error if any referenced environment variable is undefined.
 func FillPluginMetaEnvVars(pluginMeta model.PluginMeta) (model.PluginMeta, error) {
 	for idx, container := range pluginMeta.Spec.Containers {
 		img, err := getImageForEnvVar(container.Image)

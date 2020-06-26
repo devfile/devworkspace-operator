@@ -49,7 +49,7 @@ func SyncComponentsToCluster(
 	specComponents, err := getSpecComponents(workspace, clusterAPI.Scheme)
 	if err != nil {
 		return ComponentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Err: err},
+			ProvisioningStatus: ProvisioningStatus{Err: err, FailStartup: true},
 		}
 	}
 
@@ -136,7 +136,7 @@ func getSpecComponents(workspace *devworkspace.DevWorkspace, scheme *runtime.Sch
 		if cmd_terminal.ContainsCmdTerminalComponent(pluginComponents) {
 			defaultContainer, err := config.ControllerCfg.GetDefaultTerminalDockerimage()
 			if err != nil {
-				log.Error(err, fmt.Sprintf("Failed to provision default dockerimage component for '%s'. Cause: %s", cmd_terminal.CommandLineTerminalPublisherName, err.Error()))
+				log.Error(err, fmt.Sprintf("Failed to provision default dockerimage component for '%s'", cmd_terminal.CommandLineTerminalPublisherName))
 				return nil, errors.New("configure dockerimage component or ask administrator to fix default one for " + cmd_terminal.CommandLineTerminalPublisherName)
 			}
 			dockerComponents = []devworkspace.Component{

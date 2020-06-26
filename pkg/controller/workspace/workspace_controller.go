@@ -220,7 +220,12 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	// Step one: Create components, and wait for their states to be ready.
 	componentsStatus := provision.SyncComponentsToCluster(workspace, clusterAPI)
 	if !componentsStatus.Continue {
-		reqLogger.Info("Waiting on components to be ready")
+		if componentsStatus.FailStartup {
+			reqLogger.Info("Workspace start failed")
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		} else {
+			reqLogger.Info("Waiting on components to be ready")
+		}
 		return reconcile.Result{Requeue: componentsStatus.Requeue}, componentsStatus.Err
 	}
 	componentDescriptions := componentsStatus.ComponentDescriptions

@@ -16,6 +16,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/devfile/devworkspace-operator/cert-generation/config"
 	"github.com/devfile/devworkspace-operator/cert-generation/webhooks"
@@ -119,7 +121,8 @@ func main() {
 		log.Fatal("Failed when attempting to setup the webhook: ", err)
 	}
 
-	log.Println("Certs have been successfully created.")
-	for {
-	}
+	log.Println("Certificates and webhooks are up to date. Idling until interrupted")
+	var shutdownChan = make(chan os.Signal, 1)
+	signal.Notify(shutdownChan, syscall.SIGTERM)
+	<-shutdownChan
 }

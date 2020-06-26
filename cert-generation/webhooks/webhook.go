@@ -13,6 +13,8 @@
 package webhooks
 
 import (
+	"log"
+
 	"github.com/devfile/devworkspace-operator/pkg/webhook/workspace"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
@@ -24,8 +26,14 @@ func WebhookInit(clientset *kubernetes.Clientset, namespace string) error {
 
 	// Create mutating webhook
 	_, err := clientset.AdmissionregistrationV1beta1().MutatingWebhookConfigurations().Create(configuration)
-	if !apierrors.IsNotFound(err) {
-		return err
+	if err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			log.Printf("Mutating webhooks configuration %s already exists", configuration.Name)
+			return nil
+		} else {
+			return err
+		}
 	}
+	log.Printf("Created Mutating webhooks configuration %s", configuration.Name)
 	return nil
 }

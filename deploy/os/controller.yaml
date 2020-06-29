@@ -60,12 +60,5 @@ spec:
               readOnly: true
       volumes:
         - name: webhook-tls-certs
-          projected:
-            sources:
-              - configMap:
-                  name: devworkspace-controller-secure-service
-                  items:
-                    - key: service-ca.crt
-                      path: ./ca.crt
-              - secret:
-                  name: devworkspace-controller
+          secret:
+            secretName: workspace-controller

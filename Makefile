@@ -70,15 +70,11 @@ _update_yamls: _set_registry_url
 	sed -i.bak -e 's|devworkspace.sidecar.image_pull_policy: .*|devworkspace.sidecar.image_pull_policy: $(PULL_POLICY)|g' ./deploy/controller_config.yaml
 	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
-	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
-	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
-	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/devel/os/controller.yaml
+	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/devel/os/controller.yaml
+	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/devel/os/controller.yaml
 
-	sed -i.bak -e "s|image: .*|image: $(CERT_IMG)|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
-	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
-
-	rm ./deploy/os/controller.yaml.bak
-	rm ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml.bak
+	rm ./deploy/devel/os/controller.yaml.bak
 else
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
@@ -94,15 +90,11 @@ _reset_yamls: _set_registry_url
 	sed -i.bak -e 's|devworkspace.sidecar.image_pull_policy: .*|devworkspace.sidecar.image_pull_policy: Always|g' ./deploy/controller_config.yaml
 	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
-	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/os/controller.yaml
-	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
-	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
+	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/devel/os/controller.yaml
+	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/devel/os/controller.yaml
+	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/devel/os/controller.yaml
 
-	sed -i.bak -e "s|image: $(CERT_IMG)|image: quay.io/che-incubator/che-workspace-controller-cert-gen:latest|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
-	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
-
-	rm ./deploy/os/controller.yaml.bak
-	rm ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml.bak
+	rm ./deploy/devel/os/controller.yaml.bak
 else
 	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
@@ -122,10 +114,7 @@ _apply_controller_cfg:
 	$(TOOL) apply -f ./deploy -n $(NAMESPACE)
 	mv ./deploy/role_binding.yaml.bak ./deploy/role_binding.yaml
 ifeq ($(TOOL),oc)
-ifeq ($(WEBHOOK_ENABLED),true)
-	$(TOOL) apply -f ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml -n $(NAMESPACE)
-endif
-	$(TOOL) apply -f ./deploy/os/controller.yaml -n $(NAMESPACE)
+	$(TOOL) apply -f ./deploy/devel/os -n $(NAMESPACE)
 else
 	$(TOOL) apply -f ./deploy/k8s/controller.yaml -n $(NAMESPACE)
 endif

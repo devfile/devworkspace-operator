@@ -13,8 +13,10 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -26,7 +28,7 @@ import (
 const (
 	webhookServerHost    = "0.0.0.0"
 	webhookServerPort    = 8443
-	webhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
+	webhookServerCertDir = "/apiserver.local.config/certificates/"
 )
 
 var log = logf.Log.WithName("webhook.server")
@@ -53,7 +55,12 @@ func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) error {
 		return nil
 	}
 
-	CABundle, err = ioutil.ReadFile(webhookServerCertDir + "/ca.crt")
+	webhookTLSKeyName, webhookTLSCrtName, err := findTlsCrtAndKey()
+	if err != nil {
+		return err
+	}
+
+	CABundle, err = ioutil.ReadFile(webhookServerCertDir + webhookTLSCrtName)
 	if os.IsNotExist(err) {
 		return errors.New("CA certificate is not found. Unable to setup webhook server")
 	}
@@ -68,6 +75,8 @@ func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) error {
 	webhookServer.Port = webhookServerPort
 	webhookServer.Host = webhookServerHost
 	webhookServer.CertDir = webhookServerCertDir
+	webhookServer.CertName = webhookTLSCrtName
+	webhookServer.KeyName = webhookTLSKeyName
 
 	return nil
 }
@@ -82,4 +91,26 @@ func GetWebhookServer() *webhook.Server {
 //  false otherwise
 func IsSetUp() bool {
 	return webhookServer != nil
+}
+
+func findTlsCrtAndKey() (key, crt string, err error) {
+	// Mounted from service serving-CA secret: tls.key and tls.crt
+	if _, err := os.Stat(filepath.Join(webhookServerCertDir, "tls.key")); err == nil {
+		key = "tls.key"
+		if _, err := os.Stat(filepath.Join(webhookServerCertDir, "tls.crt")); err != nil {
+			return "", "", fmt.Errorf("could not find certificates for webhook: could not find tls.crt")
+		}
+		crt = "tls.crt"
+		return key, crt, nil
+	}
+	// Mounted by OLM: apiserver.key and apiserver.crt
+	if _, err := os.Stat(filepath.Join(webhookServerCertDir, "apiserver.key")); err == nil {
+		key = "apiserver.key"
+		if _, err := os.Stat(filepath.Join(webhookServerCertDir, "apiserver.crt")); err != nil {
+			return "", "", fmt.Errorf("could not find certificates for webhook: could not find apiserver.crt")
+		}
+		crt = "apiserver.crt"
+		return key, crt, nil
+	}
+	return "", "", fmt.Errorf("could not find certificates for webhook")
 }

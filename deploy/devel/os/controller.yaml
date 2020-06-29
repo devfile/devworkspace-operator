@@ -35,3 +35,11 @@ spec:
           ports:
             - name: webhook-server
               containerPort: 8443
+          volumeMounts:
+            - name: webhook-tls-certs
+              mountPath: /apiserver.local.config/certificates/
+              readOnly: true
+      volumes:
+        - name: webhook-tls-certs
+          secret:
+            secretName: workspace-controller

@@ -9,7 +9,7 @@ spec:
         - name: che-workspace-controller
           volumeMounts:
             - name: webhook-tls-certs
-              mountPath: /tmp/k8s-webhook-server/serving-certs
+              mountPath: /apiserver.local.config/certificates/
               readOnly: true
       volumes:
         - name: webhook-tls-certs

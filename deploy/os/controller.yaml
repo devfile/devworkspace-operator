@@ -11,6 +11,8 @@ spec:
     metadata:
       labels:
         app: che-workspace-controller
+        app.kubernetes.io/name: devworkspace-controller
+        app.kubernetes.io/part-of: devworkspace-controller
       annotations:
         kubectl.kubernetes.io/restartedAt: ""
     spec:

@@ -61,4 +61,4 @@ spec:
       volumes:
         - name: webhook-tls-certs
           secret:
-            secretName: workspace-controller
+            secretName: devworkspace-controller

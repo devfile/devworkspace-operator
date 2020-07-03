@@ -2,17 +2,20 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: che-workspace-controller-cert-gen
+  labels:
+    app.kubernetes.io/name: cert-generator
+    app.kubernetes.io/part-of: devworkspace-operator
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: che-workspace-controller-cert-gen
+      app.kubernetes.io/name: cert-generator
+      app.kubernetes.io/part-of: devworkspace-operator
   template:
     metadata:
       labels:
-        app: che-workspace-controller-cert-gen
-        app.kubernetes.io/name: devworkspace-controller
-        app.kubernetes.io/part-of: devworkspace-controller
+        app.kubernetes.io/name: cert-generator
+        app.kubernetes.io/part-of: devworkspace-operator
       annotations:
         kubectl.kubernetes.io/restartedAt: ""
     spec:

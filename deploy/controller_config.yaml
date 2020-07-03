@@ -3,6 +3,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: che-workspace-controller
+  labels:
+    app.kubernetes.io/name: devworkspace-controller
+    app.kubernetes.io/part-of: devworkspace-operator
 data:
   devworkspace.routing.cluster_host_suffix: 192.168.99.100.nip.io
   controller.plugin_registry.url: http://che-plugin-registry.192.168.99.100.nip.io/v3

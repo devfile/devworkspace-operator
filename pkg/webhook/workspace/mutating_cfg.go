@@ -127,6 +127,10 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	return &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mutateWebhookCfgName,
+			Labels: map[string]string{
+				"app.kubernetes.io/name":    "devworkspace-controller",
+				"app.kubernetes.io/part-of": "devworkspace-operator",
+			},
 		},
 		Webhooks: []v1beta1.MutatingWebhook{
 			workspaceMutateWebhook,

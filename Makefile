@@ -9,7 +9,6 @@ DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
-CERT_IMG ?= quay.io/che-incubator/che-workspace-controller-cert-gen:nightly
 
 all: help
 
@@ -23,7 +22,6 @@ _print_vars:
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
-	@echo "    CERT_IMG=$(CERT_IMG)"
 
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
@@ -154,11 +152,6 @@ docker: _print_vars
 	docker build -t $(IMG) -f ./build/Dockerfile .
 	docker push $(IMG)
 
-### docker_cert: build and push docker cert image
-docker_cert: _print_vars
-	docker build -t $(CERT_IMG) -f ./cert-generation/Dockerfile .
-	docker push $(CERT_IMG)
-
 ### webhook: generate certificates for webhooks and deploy to cluster; no-op if running on OpenShift
 webhook:
 ifeq ($(WEBHOOK_ENABLED),true)
@@ -273,4 +266,3 @@ help: Makefile
 	@echo '    ADMIN_CTX                  - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
 	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
 	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/kubernetes-api to depend on. Defaults to master'
-	@echo '    CERT_IMG                   - The name of the cert generator image'

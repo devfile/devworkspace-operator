@@ -25,4 +25,3 @@ install_deps
 
 set_nightly_tag
 build_and_push ./build che-workspace-controller
-build_and_push ./cert-generation che-workspace-controller-cert-gen

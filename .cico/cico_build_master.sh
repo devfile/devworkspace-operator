@@ -23,4 +23,3 @@ export SCRIPT_DIR
 load_jenkins_vars
 install_deps
 build_and_push ./build che-workspace-controller
-build_and_push ./cert-generation che-workspace-controller-cert-gen

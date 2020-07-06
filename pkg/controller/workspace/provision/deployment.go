@@ -14,6 +14,7 @@ package provision
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,7 +28,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -64,7 +65,10 @@ func SyncDeploymentToCluster(
 	specDeployment, err := getSpecDeployment(workspace, podAdditions, components, saName, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Err: err},
+			ProvisioningStatus: ProvisioningStatus{
+				Err:         err,
+				FailStartup: true,
+			},
 		}
 	}
 
@@ -91,7 +95,7 @@ func SyncDeploymentToCluster(
 		clusterDeployment.Spec = specDeployment.Spec
 		err := clusterAPI.Client.Update(context.TODO(), clusterDeployment)
 		if err != nil {
-			if errors.IsConflict(err) {
+			if apierrors.IsConflict(err) {
 				return DeploymentProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
 			}
 			return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
@@ -203,6 +207,10 @@ func getSpecDeployment(
 	if present {
 		deployment.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
 		deployment.Spec.Template.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
+	} else {
+		if config.ControllerCfg.GetWebhooksEnabled() == "true" {
+			return nil, errors.New("workspace must have creator specified to be run. Recreate it to fix an issue")
+		}
 	}
 
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)
@@ -221,7 +229,7 @@ func getClusterDeployment(name string, namespace string, client runtimeClient.Cl
 	}
 	err := client.Get(context.TODO(), namespacedName, deployment)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err

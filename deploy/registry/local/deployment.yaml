@@ -11,14 +11,16 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: che-plugin-registry
+    app.kubernetes.io/name: che-plugin-registry
+    app.kubernetes.io/part-of: devworkspace-operator
   name: che-plugin-registry
 spec:
   replicas: 1
   revisionHistoryLimit: 2
   selector:
     matchLabels:
-      app: che-plugin-registry
+      app.kubernetes.io/name: che-plugin-registry
+      app.kubernetes.io/part-of: devworkspace-operator
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -27,7 +29,8 @@ spec:
   template:
     metadata:
       labels:
-        app: che-plugin-registry
+        app.kubernetes.io/name: che-plugin-registry
+        app.kubernetes.io/part-of: devworkspace-operator
     spec:
       containers:
       - image: quay.io/eclipse/che-plugin-registry:7.8.0

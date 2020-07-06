@@ -33,7 +33,7 @@ func (w *Deployment) CreateNamespace() error {
 }
 
 func (w *Deployment) DeployWorkspacesController() error {
-	label := "app=che-workspace-controller"
+	label := "app.kubernetes.io/name=devworkspace-controller"
 	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy/os")
 	output, err := cmd.CombinedOutput()
 	fmt.Println(string(output))

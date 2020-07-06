@@ -10,6 +10,9 @@ apiVersion: v1
 kind: Route
 metadata:
   name: che-plugin-registry
+  labels:
+    app.kubernetes.io/name: che-plugin-registry
+    app.kubernetes.io/part-of: devworkspace-operator
 spec:
   to:
     kind: Service

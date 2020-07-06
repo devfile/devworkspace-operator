@@ -75,7 +75,10 @@ func main() {
 		log.Printf("Updated config map %s where certs are going to be injected", config.CertConfigMapName)
 	}
 
-	label := map[string]string{"app": "che-workspace-controller"}
+	label := map[string]string{
+		"app.kubernetes.io/name": "devworkspace-controller",
+		"app.kubernetes.io/part-of": "devworkspace-operator",
+	}
 
 	port := int32(443)
 	service := &corev1.Service{

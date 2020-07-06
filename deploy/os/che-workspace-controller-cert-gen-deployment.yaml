@@ -17,7 +17,7 @@ spec:
       serviceAccountName: che-workspace-controller
       containers:
         - name: che-workspace-controller-cert-gen
-          image: quay.io/che-incubator/che-workspace-controller-cert-gen:latest
+          image: quay.io/che-incubator/che-workspace-controller-cert-gen:nightly
           imagePullPolicy: Always
           resources:
             requests:

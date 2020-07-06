@@ -9,7 +9,7 @@ DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
-CERT_IMG ?= quay.io/che-incubator/che-workspace-controller-cert-gen:latest
+CERT_IMG ?= quay.io/che-incubator/che-workspace-controller-cert-gen:nightly
 
 all: help
 
@@ -98,7 +98,7 @@ ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
 
-	sed -i.bak -e "s|image: $(CERT_IMG)|image: quay.io/che-incubator/che-workspace-controller-cert-gen:latest|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
+	sed -i.bak -e "s|image: $(CERT_IMG)|image: quay.io/che-incubator/che-workspace-controller-cert-gen:nightly|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
 
 	rm ./deploy/os/controller.yaml.bak

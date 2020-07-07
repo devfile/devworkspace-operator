@@ -249,6 +249,13 @@ start_local:
 start_local_debug:
 	operator-sdk run --local --watch-namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
+### test_e2e: runs e2e test on the cluster set in context. Includes deploying devworkspace-controller, run test workspace, uninstall devworkspace-controller
+test_e2e: _print_vars _set_ctx _update_yamls update_devworkspace_crds _do_e2e_test _reset_yamls _reset_ctx
+
+_do_e2e_test:
+	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
+	./bin/devworkspace-controller-e2e
+
 ### fmt: format all go files in repository
 fmt:
 ifneq ($(shell command -v goimports 2> /dev/null),)

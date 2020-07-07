@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: che-workspace-controller-cert-gen
+  name: devworkspace-controller-cert-gen
   labels:
     app.kubernetes.io/name: cert-generator
     app.kubernetes.io/part-of: devworkspace-operator
@@ -19,9 +19,9 @@ spec:
       annotations:
         kubectl.kubernetes.io/restartedAt: ""
     spec:
-      serviceAccountName: che-workspace-controller
+      serviceAccountName: devworkspace-controller
       containers:
-        - name: che-workspace-controller-cert-gen
+        - name: devworkspace-controller-cert-gen
           image: quay.io/che-incubator/che-workspace-controller-cert-gen:nightly
           imagePullPolicy: Always
           resources:

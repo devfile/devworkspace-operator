@@ -24,7 +24,7 @@ const (
 
 	AuthEnabled = "false"
 
-	ServiceAccount = "che-workspace"
+	ServiceAccount = "devworkspace"
 
 	SidecarDefaultMemoryLimit = "128M"
 	PVCStorageSize            = "1Gi"

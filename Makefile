@@ -1,10 +1,10 @@
 OPERATOR_SDK_VERSION = v0.17.0
-NAMESPACE ?= che-workspace-controller
+NAMESPACE ?= devworkspace-controller
 IMG ?= quay.io/che-incubator/che-workspace-controller:nightly
 TOOL ?= oc
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 PULL_POLICY ?= Always
-WEBHOOK_ENABLED ?= false
+WEBHOOK_ENABLED ?= true
 DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
@@ -74,11 +74,11 @@ ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/controller.yaml
 
-	sed -i.bak -e "s|image: .*|image: $(CERT_IMG)|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
-	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
+	sed -i.bak -e "s|image: .*|image: $(CERT_IMG)|g" ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
+	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
 
 	rm ./deploy/os/controller.yaml.bak
-	rm ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml.bak
+	rm ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml.bak
 else
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
@@ -98,11 +98,11 @@ ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
 
-	sed -i.bak -e "s|image: $(CERT_IMG)|image: quay.io/che-incubator/che-workspace-controller-cert-gen:nightly|g" ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
-	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml
+	sed -i.bak -e "s|image: $(CERT_IMG)|image: quay.io/che-incubator/che-workspace-controller-cert-gen:nightly|g" ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
+	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
 
 	rm ./deploy/os/controller.yaml.bak
-	rm ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml.bak
+	rm ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml.bak
 else
 	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
@@ -123,7 +123,7 @@ _apply_controller_cfg:
 	mv ./deploy/role_binding.yaml.bak ./deploy/role_binding.yaml
 ifeq ($(TOOL),oc)
 ifeq ($(WEBHOOK_ENABLED),true)
-	$(TOOL) apply -f ./deploy/os/che-workspace-controller-cert-gen-deployment.yaml -n $(NAMESPACE)
+	$(TOOL) apply -f ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml -n $(NAMESPACE)
 endif
 	$(TOOL) apply -f ./deploy/os/controller.yaml -n $(NAMESPACE)
 else
@@ -132,11 +132,11 @@ endif
 
 _do_restart:
 ifeq ($(TOOL),oc)
-	oc patch deployment/che-workspace-controller \
+	oc patch deployment/devworkspace-controller \
 		-n $(NAMESPACE) \
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
 else
-	kubectl rollout restart -n $(NAMESPACE) deployment/che-workspace-controller
+	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-controller
 endif
 
 _do_uninstall:
@@ -175,7 +175,7 @@ webhook:
 ifeq ($(WEBHOOK_ENABLED),true)
 ifeq ($(TOOL),kubectl)
 	./deploy/webhook-server-certs/deploy-webhook-server-certs.sh kubectl
-	kubectl patch deployment -n $(NAMESPACE) che-workspace-controller -p "$$(cat ./deploy/k8s/controller-tls.yaml)"
+	kubectl patch deployment -n $(NAMESPACE) devworkspace-controller -p "$$(cat ./deploy/k8s/controller-tls.yaml)"
 endif
 else
 	@echo "Webhooks disabled, skipping certificate generation"

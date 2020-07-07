@@ -1,12 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: che-workspace-controller
+  name: devworkspace-controller
 spec:
   template:
     spec:
       containers:
-        - name: che-workspace-controller
+        - name: devworkspace-controller
           volumeMounts:
             - name: webhook-tls-certs
               mountPath: /tmp/k8s-webhook-server/serving-certs

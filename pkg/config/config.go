@@ -49,7 +49,7 @@ const (
 
 var ConfigMapReference = client.ObjectKey{
 	Namespace: "",
-	Name:      "che-workspace-controller",
+	Name:      "devworkspace-controller",
 }
 
 type ControllerConfig struct {
@@ -253,12 +253,12 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	testRoute := &routeV1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: configMap.Namespace,
-			Name:      "che-workspace-controller-test-route",
+			Name:      "devworkspace-controller-test-route",
 		},
 		Spec: routeV1.RouteSpec{
 			To: routeV1.RouteTargetReference{
 				Kind: "Service",
-				Name: "che-workspace-controller-test-route",
+				Name: "devworkspace-controller-test-route",
 			},
 		},
 	}
@@ -270,7 +270,7 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	defer nonCachedClient.Delete(context.TODO(), testRoute)
 	host := testRoute.Spec.Host
 	if host != "" {
-		prefixToRemove := "che-workspace-controller-test-route-" + configMap.Namespace + "."
+		prefixToRemove := "devworkspace-controller-test-route-" + configMap.Namespace + "."
 		configMap.Data[routingSuffix] = strings.TrimPrefix(host, prefixToRemove)
 	}
 

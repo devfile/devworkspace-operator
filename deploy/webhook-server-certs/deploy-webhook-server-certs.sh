@@ -11,8 +11,8 @@
 #
 
 # Generate a (self-signed) CA certificate and a certificate and private key to be used by the webhook server.
-# The certificate will be issued for the Common Name (CN) of `workspace-controller.che-workspace-controller.svc`,
-# which is the cluster-internal DNS name for the service.
+# The certificate will be issued for the Common Name (CN) of `devworkspace-controller.devworkspace-controller.svc`,
+# which is the cluster-internal DNS name for the service `devworkspace-controller` in namespace `devworkspace-controller`.
 #
 # NOTE: THIS SCRIPT EXISTS FOR TEST PURPOSES ONLY. DO NOT USE IT FOR YOUR PRODUCTION WORKLOADS.
 
@@ -32,12 +32,12 @@ docker run --name 'webhook-certs' generate-webhook-server-certs:latest exit 0
 docker cp webhook-certs:ca/. ${TARGET_FOLDER}/
 docker rm 'webhook-certs'
 
-$CLI delete secret -n che-workspace-controller webhook-server-tls --ignore-not-found=true
-$CLI -n che-workspace-controller create secret tls webhook-server-tls \
+$CLI delete secret -n devworkspace-controller webhook-server-tls --ignore-not-found=true
+$CLI -n devworkspace-controller create secret tls webhook-server-tls \
     --cert "$TARGET_FOLDER/webhook-server-tls.crt" \
     --key "$TARGET_FOLDER/webhook-server-tls.key"
 CA_BASE_64_CONTENT="$(openssl base64 -A <"${TARGET_FOLDER}/ca.crt")"
-$CLI patch -n che-workspace-controller secret webhook-server-tls -p="{\"data\":{\"ca.crt\": \"${CA_BASE_64_CONTENT}\"}}"
-echo "TLS certificates are stored in 'che-workspace-controller' namespace in 'webhook-server-tls' secret"
+$CLI patch -n devworkspace-controller secret webhook-server-tls -p="{\"data\":{\"ca.crt\": \"${CA_BASE_64_CONTENT}\"}}"
+echo "TLS certificates are stored in 'devworkspace-controller' namespace in 'webhook-server-tls' secret"
 
 rm -r ${TARGET_FOLDER}

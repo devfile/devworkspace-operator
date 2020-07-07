@@ -36,7 +36,7 @@ func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfi
 		},
 		Webhooks: []v1beta1.ValidatingWebhook{
 			{
-				Name:          "validate-exec.che-workspace-controller.svc",
+				Name:          "validate-exec.devworkspace-controller.svc",
 				FailurePolicy: &validateWebhookFailurePolicy,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{

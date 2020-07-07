@@ -38,7 +38,7 @@ const (
 //SynchronizedBeforeSuite blocks is executed before run all test suites
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	fmt.Println("Starting to setup objects before run ginkgo suite")
-	config.Namespace = "che-workspace-controller"
+	config.Namespace = "devworkspace-controller"
 
 	k8sClient, err := client.NewK8sClient()
 	if err != nil {

@@ -61,7 +61,7 @@ Some of the rules supported by the makefile:
 | rollout | rebuild and push docker image and restart cluster deployment |
 | update_cfg | configures already deployed controller according to set env variables |
 | update_crds | update custom resource definitions on cluster |
-| uninstall | delete controller namespace `che-workspace-controller` and remove custom resource definitions from cluster |
+| uninstall | delete controller namespace `devworkspace-controller` and remove custom resource definitions from cluster |
 | help | print all rules and variables |
 
 To see all rules supported by the makefile, run `make help`
@@ -75,7 +75,7 @@ To see all rules supported by the makefile, run `make help`
 It's possible to run an instance of the controller locally while communicating with a cluster. However, this requires webhooks to be disabled, as the webhooks need to be able to access the service created by an in-cluster deployment
 
 ```bash
-export NAMESPACE=che-workspace-controller
+export NAMESPACE=devworkspace-controller
 export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
 export WEBHOOK_ENABLED=false
 make local
@@ -88,7 +88,7 @@ When running locally, only a single namespace is watched; as a result, all works
 Debugging the controller depends on `delve` being installed (`go get -u github.com/go-delve/delve/cmd/dlv`). Note that at the time of writing, executing `go get` in this repo's directory will update go.mod; these changes should be dropped before committing.
 
 ```bash
-export NAMESPACE=che-workspace-controller
+export NAMESPACE=devworkspace-controller
 export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
 export WEBHOOK_ENABLED=false
 make local
@@ -97,7 +97,7 @@ operator-sdk up local --namespace ${NAMESPACE} --enable-delve
 
 ### Controller configuration
 
-Controller behavior can be configured with data from the `che-workspace-controller` config map in the same namespace where controller lives.
+Controller behavior can be configured with data from the `devworkspace-controller` config map in the same namespace where controller lives.
 
 For all available configuration properties and their default values, see [pkg/config](https://github.com/devfile/devworkspace-operator/tree/master/pkg/config)
 
@@ -106,7 +106,7 @@ To uninstall the controller and associated CRDs, use the Makefile uninstall rule
 ```bash
 make uninstall
 ```
-This will delete all custom resource definitions created for the controller, as well as the `che-workspace-controller` namespace.
+This will delete all custom resource definitions created for the controller, as well as the `devworkspace-controller` namespace.
 
 ### CentOS CI
 The following [CentOS CI jobs](https://ci.centos.org/) are associated with the repository:

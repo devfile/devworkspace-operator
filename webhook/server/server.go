@@ -11,13 +11,11 @@
 package server
 
 import (
-	"context"
 	"errors"
 	"io/ioutil"
 	"os"
 
 	"github.com/devfile/devworkspace-operator/internal/cluster"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -33,11 +31,12 @@ var log = logf.Log.WithName("webhook.server")
 var webhookServer *webhook.Server
 var CABundle []byte
 
-func ConfigureWebhookServer(mgr manager.Manager, ctx context.Context) error {
-	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
-		log.Info("Webhooks are disabled. Skipping setting up webhook server")
-		return nil
-	}
+func ConfigureWebhookServer(mgr manager.Manager) error {
+	// FIXME
+	//if config.ControllerCfg.GetWebhooksEnabled() == "false" {
+	//	log.Info("Webhooks are disabled. Skipping setting up webhook server")
+	//	return nil
+	//}
 
 	enabled, err := cluster.IsWebhookConfigurationEnabled()
 

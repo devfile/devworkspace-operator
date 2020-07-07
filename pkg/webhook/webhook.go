@@ -1,43 +1,52 @@
-//
-// Copyright (c) 2019-2020 Red Hat, Inc.
-// This program and the accompanying materials are made
-// available under the terms of the Eclipse Public License 2.0
-// which is available at https://www.eclipse.org/legal/epl-2.0/
-//
-// SPDX-License-Identifier: EPL-2.0
-//
-// Contributors:
-//   Red Hat, Inc. - initial API and implementation
-//
 package webhook
 
 import (
 	"context"
-
-	"github.com/devfile/devworkspace-operator/pkg/webhook/server"
+	"fmt"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+	"k8s.io/client-go/rest"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+
+const (
+	SecureServiceName = "devworkspace-controller"
+	CertConfigMapName = "devworkspace-controller-secure-service"
+	CertSecretName    = "devworkspace-controller"
+	WebhookServerName = "webhook-server"
+	WebhookTLSCertsName = "webhook-tls-certs"
 )
 
 var log = logf.Log.WithName("webhook")
 
-// configureWebhookTasks is a list of functions to add set webhook up and add them to the Manager
-var configureWebhookTasks []func(context.Context) error
+func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 
-// SetUpWebhooks sets up Webhook server and registers webhooks configurations
-// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations;validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
-func SetUpWebhooks(mgr manager.Manager, ctx context.Context) error {
-	err := server.ConfigureWebhookServer(mgr, ctx)
+	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
 		return err
 	}
 
-	for _, f := range configureWebhookTasks {
-		if err := f(ctx); err != nil {
-			return err
-		}
+	client, err := crclient.New(cfg, crclient.Options{})
+	if err != nil {
+		return fmt.Errorf("failed to create new client: %w", err)
 	}
+
+	log.Info("Setting up the secure certs")
+
+	// Set up the certs
+	err = SetupWebhookCerts(client, ctx, namespace)
+	if err != nil {
+		return err
+	}
+
+	log.Info("Creating the webhook server deployment")
+
+	// Set up the deployment
+	err = CreateWebhookServerDeployment(client, ctx, namespace)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

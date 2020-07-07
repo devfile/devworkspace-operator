@@ -17,6 +17,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"os"
 	"runtime"
 
@@ -26,7 +27,6 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/apis"
 	"github.com/devfile/devworkspace-operator/pkg/controller"
-	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"github.com/devfile/devworkspace-operator/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -129,10 +129,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup all webhooks
-	log.Info("Setting up webhooks")
-	if err := webhook.SetUpWebhooks(mgr, ctx); err != nil {
-		log.Error(err, "unable to register webhooks to the manager")
+	// Setup certs for webhook and create seperate webhook server deployment
+	if err := webhook.SetupWebhooks(ctx, cfg); err != nil {
+		log.Error(err, "")
 		os.Exit(1)
 	}
 

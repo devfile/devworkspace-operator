@@ -13,7 +13,7 @@ package workspace
 
 import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/webhook/server"
+	"github.com/devfile/devworkspace-operator/webhook/server"
 	"k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

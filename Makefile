@@ -13,8 +13,6 @@ DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
-CERT_IMG ?= quay.io/che-incubator/che-workspace-controller-cert-gen:nightly
-
 all: help
 
 _print_vars:
@@ -27,7 +25,6 @@ _print_vars:
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
-	@echo "    CERT_IMG=$(CERT_IMG)"
 
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
@@ -78,11 +75,7 @@ ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/controller.yaml
 
-	sed -i.bak -e "s|image: .*|image: $(CERT_IMG)|g" ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
-	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
-
 	rm ./deploy/os/controller.yaml.bak
-	rm ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml.bak
 else
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
@@ -102,11 +95,7 @@ ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
 
-	sed -i.bak -e "s|image: $(CERT_IMG)|image: quay.io/che-incubator/che-workspace-controller-cert-gen:nightly|g" ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
-	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml
-
 	rm ./deploy/os/controller.yaml.bak
-	rm ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml.bak
 else
 	sed -i.bak -e "s|image: $(IMG)|image: quay.io/devfile/devworkspace-controller:next|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
@@ -126,9 +115,6 @@ _apply_controller_cfg:
 	$(TOOL) apply -f ./deploy -n $(NAMESPACE)
 	mv ./deploy/role_binding.yaml.bak ./deploy/role_binding.yaml
 ifeq ($(TOOL),oc)
-ifeq ($(WEBHOOK_ENABLED),true)
-	$(TOOL) apply -f ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml -n $(NAMESPACE)
-endif
 	$(TOOL) apply -f ./deploy/os/controller.yaml -n $(NAMESPACE)
 else
 	$(TOOL) apply -f ./deploy/k8s/controller.yaml -n $(NAMESPACE)
@@ -172,11 +158,6 @@ _do_e2e_test:
 docker: _print_vars
 	docker build -t $(IMG) -f ./build/Dockerfile .
 	docker push $(IMG)
-
-### docker_cert: build and push docker cert image
-docker_cert: _print_vars
-	docker build -t $(CERT_IMG) -f ./cert-generation/Dockerfile .
-	docker push $(CERT_IMG)
 
 ### webhook: generate certificates for webhooks and deploy to cluster; no-op if running on OpenShift
 webhook:
@@ -294,4 +275,3 @@ help: Makefile
 	@echo '    ADMIN_CTX                  - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
 	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
 	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/kubernetes-api to depend on. Defaults to master'
-	@echo '    CERT_IMG                   - The name of the cert generator image'

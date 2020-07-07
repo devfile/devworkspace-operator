@@ -14,15 +14,14 @@ package workspace
 import (
 	"context"
 	"errors"
-
 	"fmt"
+	"github.com/devfile/devworkspace-operator/webhook/server"
 	"os"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/internal/controller"
-	"github.com/devfile/devworkspace-operator/pkg/webhook/server"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"

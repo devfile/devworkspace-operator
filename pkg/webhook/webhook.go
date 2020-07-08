@@ -15,6 +15,7 @@ package webhook
 import (
 	"context"
 	"fmt"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/client-go/rest"
@@ -25,6 +26,12 @@ import (
 var log = logf.Log.WithName("webhook")
 
 func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
+
+	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
+		log.Info("Webhooks are disabled. Skipping deploying webhook server")
+		return nil
+	}
+
 	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
 		return err

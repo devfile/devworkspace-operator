@@ -36,7 +36,19 @@ var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 const (
 	webTerminalToolingImageEnvVar  = "RELATED_IMAGE_web_terminal_tooling"
 	openshiftOAuthProxyImageEnvVar = "RELATED_IMAGE_openshift_oauth_proxy"
+	webhookServerImageEnvVar       = "RELATED_IMAGE_devworkspace_webhook_server"
 )
+
+// GetWebTerminalToolingImage returns the image reference for the default web tooling image. Returns
+// the empty string if environment variable RELATED_IMAGE_web_terminal_tooling is not defined
+func GetWebhookServerImage() string {
+	val, ok := os.LookupEnv(webhookServerImageEnvVar)
+	if !ok {
+		log.Error(fmt.Errorf("environment variable %s is not set", webhookServerImageEnvVar), "Could not get webhook server image")
+		return ""
+	}
+	return val
+}
 
 // GetWebTerminalToolingImage returns the image reference for the default web tooling image. Returns
 // the empty string if environment variable RELATED_IMAGE_web_terminal_tooling is not defined

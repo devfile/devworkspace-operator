@@ -1,7 +1,22 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package webhook
 
 import (
 	"context"
+
+	"github.com/devfile/devworkspace-operator/webhook/server"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,18 +44,18 @@ func SetupWebhookCerts(client crclient.Client, ctx context.Context, namespace st
 
 func createSecureService(client crclient.Client, ctx context.Context, namespace string) error {
 	label := map[string]string{
-		"app.kubernetes.io/name": "devworkspace-controller",
+		"app.kubernetes.io/name":    "devworkspace-webhook-server",
 		"app.kubernetes.io/part-of": "devworkspace-operator",
 	}
 
 	port := int32(443)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      SecureServiceName,
+			Name:      server.WebhookServerServiceName,
 			Namespace: namespace,
 			Labels:    label,
 			Annotations: map[string]string{
-				"service.beta.openshift.io/serving-cert-secret-name": CertSecretName,
+				"service.beta.openshift.io/serving-cert-secret-name": server.CertSecretName,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -48,7 +63,7 @@ func createSecureService(client crclient.Client, ctx context.Context, namespace 
 				{
 					Port:       port,
 					Protocol:   "TCP",
-					TargetPort: intstr.FromString(WebhookServerName),
+					TargetPort: intstr.FromString(server.WebhookServerPortName),
 				},
 			},
 			Selector: label,
@@ -85,10 +100,14 @@ func createConfigMap(client crclient.Client, ctx context.Context, namespace stri
 	configMapData := make(map[string]string, 0)
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      CertConfigMapName,
+			Name:      server.CertConfigMapName,
 			Namespace: namespace,
 			Annotations: map[string]string{
 				"service.beta.openshift.io/inject-cabundle": "true",
+			},
+			Labels: map[string]string{
+				"app.kubernetes.io/name":    "devworkspace-webhook-server",
+				"app.kubernetes.io/part-of": "devworkspace-operator",
 			},
 		},
 		Data: configMapData,
@@ -120,7 +139,7 @@ func getClusterConfigMap(ctx context.Context, namespace string, client crclient.
 	configMap := &corev1.ConfigMap{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
-		Name:      CertConfigMapName,
+		Name:      server.CertConfigMapName,
 	}
 	err := client.Get(ctx, namespacedName, configMap)
 	if err != nil {
@@ -136,7 +155,7 @@ func getClusterService(ctx context.Context, namespace string, client crclient.Cl
 	service := &corev1.Service{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
-		Name:      SecureServiceName,
+		Name:      server.WebhookServerServiceName,
 	}
 	err := client.Get(ctx, namespacedName, service)
 	if err != nil {

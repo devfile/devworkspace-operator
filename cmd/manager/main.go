@@ -17,9 +17,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"os"
 	"runtime"
+
+	"github.com/devfile/devworkspace-operator/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"

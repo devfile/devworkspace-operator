@@ -58,7 +58,14 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 
 	// Set up the service account
 	log.Info("Setting up the service account")
-	err = CreateWebhookSA(client, ctx, saName)
+	err = CreateWebhookSA(client, ctx, saName, namespace)
+	if err != nil {
+		return err
+	}
+
+	// Set up the cluster roles
+	log.Info("Setting up the cluster roles")
+	err = CreateWebhookRole(client, ctx, saName)
 	if err != nil {
 		return err
 	}

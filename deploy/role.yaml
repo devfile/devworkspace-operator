@@ -41,20 +41,14 @@ rules:
   resources:
   - roles
   - rolebindings
+  - clusterrolebindings
+  - clusterroles
   verbs:
   - watch
   - list
   - get
   - create
   - update
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterroles
-  verbs:
-  - list
-  - get
-  - watch
 - apiGroups:
   - apps
   - extensions

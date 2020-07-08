@@ -62,6 +62,7 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 	clusterRoleBinding := &v1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
+			Namespace: namespace,
 			Labels: labels,
 		},
 		Subjects: []v1.Subject{
@@ -73,7 +74,7 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 		},
 		RoleRef: v1.RoleRef{
 			Kind: "ClusterRole",
-			Name: saName,
+			Name: "devworkspace-controller",
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}

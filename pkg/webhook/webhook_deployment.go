@@ -120,8 +120,12 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 							},
 							Env: []corev1.EnvVar{
 								{
-									Name:  config.ControllerServiceAccountNameEnvVar,
+									Name:  config.WebhookServerServiceAccountNameEnvVar,
 									Value: saName,
+								},
+								{
+									Name:  config.ControllerServiceAccountNameEnvVar,
+									Value: "devworkspace-controller",
 								},
 								{
 									Name: "POD_NAME",

@@ -1,3 +1,7 @@
+SHELL := bash
+.SHELLFLAGS = -ec
+.ONESHELL:
+
 OPERATOR_SDK_VERSION = v0.17.0
 NAMESPACE ?= devworkspace-controller
 IMG ?= quay.io/che-incubator/che-workspace-controller:nightly
@@ -143,22 +147,22 @@ _do_uninstall:
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
 ifneq ($(shell command -v kubectl 2> /dev/null),)
-	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all
-	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all
+	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
+	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
 # Have to wait for routings to be deleted in case there are finalizers
-	kubectl delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait
+	kubectl delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
 else
 ifneq ($(TOOL) get devworkspaces.workspace.devfile.io --all-namespaces,"No resources found.")
 	$(info To automatically remove all workspaces when uninstalling, ensure kubectl is installed)
 	$(error Cannot uninstall operator, workspaces still running. Delete all workspaces and workspaceroutings before proceeding)
 endif
 endif
-	$(TOOL) delete -f ./deploy -n $(NAMESPACE)
-	$(TOOL) delete namespace $(NAMESPACE)
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.controller.devfile.io
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.controller.devfile.io
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io
+	$(TOOL) delete -f ./deploy -n $(NAMESPACE) --ignore-not-found=true
+	$(TOOL) delete namespace $(NAMESPACE) --ignore-not-found=true
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.controller.devfile.io --ignore-not-found=true
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.controller.devfile.io --ignore-not-found=true
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io --ignore-not-found=true
+	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io --ignore-not-found=true
 
 ### docker: build and push docker image
 docker: _print_vars
@@ -206,7 +210,6 @@ update_devworkspace_api:
 	go mod tidy
 
 ### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
-.ONESHELL:
 update_devworkspace_crds:
 	@mkdir -p devworkspace-crds
 	cd devworkspace-crds

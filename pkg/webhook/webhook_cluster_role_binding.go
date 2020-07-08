@@ -14,7 +14,6 @@ package webhook
 
 import (
 	"context"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,18 +81,18 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 	return clusterRoleBinding, nil
 }
 
-func getClusterBinding(ctx context.Context, saName string, client crclient.Client) (*corev1.ServiceAccount, error) {
-	serviceAccount := &corev1.ServiceAccount{}
+func getClusterBinding(ctx context.Context, saName string, client crclient.Client) (*v1.ClusterRoleBinding, error) {
+	crb := &v1.ClusterRoleBinding{}
 	namespacedName := types.NamespacedName{
 		Name:      saName,
 	}
-	err := client.Get(ctx, namespacedName, serviceAccount)
+	err := client.Get(ctx, namespacedName, crb)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err
 	}
-	return serviceAccount, nil
+	return crb, nil
 }
 

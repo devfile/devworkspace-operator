@@ -31,7 +31,7 @@ const (
 
 	// workspacePVCName config property handles the PVC name that should be created and used for all workspaces within one kubernetes namespace
 	workspacePVCName        = "devworkspace.pvc.name"
-	defaultWorkspacePVCName = "claim-che-workspace"
+	defaultWorkspacePVCName = "claim-devworkspace"
 
 	workspacePVCStorageClassName = "devworkspace.pvc.storage_class.name"
 

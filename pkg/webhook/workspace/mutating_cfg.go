@@ -40,7 +40,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	}
 
 	workspaceMutateWebhook := v1beta1.MutatingWebhook{
-		Name:          "mutate.che-workspace-controller.svc",
+		Name:          "mutate.devworkspace-controller.svc",
 		FailurePolicy: &mutateWebhookFailurePolicy,
 		ClientConfig:  webhookClientConfig,
 		Rules: []v1beta1.RuleWithOperations{
@@ -64,7 +64,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	}
 
 	workspaceObjMutateWebhook := v1beta1.MutatingWebhook{
-		Name:          "mutate-ws-resources.che-workspace-controller.svc",
+		Name:          "mutate-ws-resources.devworkspace-controller.svc",
 		FailurePolicy: &mutateWebhookFailurePolicy,
 		ClientConfig:  webhookClientConfig,
 		ObjectSelector: &metav1.LabelSelector{

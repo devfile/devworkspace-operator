@@ -97,7 +97,7 @@ func main() {
 
 	ctx := context.TODO()
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "che-workspace-operator-lock")
+	err = leader.Become(ctx, "devworkspace-operator-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)

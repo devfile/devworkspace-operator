@@ -1,6 +1,6 @@
 FROM golang:1.13.7-alpine3.11 as builder
 
-WORKDIR /che-workspace-operator
+WORKDIR /devworkspace-operator
 
 # Populate the module cache based on the go.{mod,sum} files.
 COPY go.mod .
@@ -11,17 +11,17 @@ RUN go mod download
 COPY . .
 # compile workspace controller binaries
 RUN CGO_ENABLED=0 GOOS=linux go build \
-  -o _output/bin/che-workspace-controller \
+  -o _output/bin/devworkspace-controller \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
   cmd/manager/main.go
 
 FROM registry.access.redhat.com/ubi8-minimal:8.1-279
-COPY --from=builder /che-workspace-operator/_output/bin/che-workspace-controller /usr/local/bin/che-workspace-controller
-COPY --from=builder /che-workspace-operator/internal-registry  internal-registry
+COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
+COPY --from=builder /devworkspace-operator/internal-registry  internal-registry
 
 ENV USER_UID=1001 \
-    USER_NAME=che-workspace-controller
+    USER_NAME=devworkspace-controller
 
 COPY build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
@@ -29,4 +29,4 @@ RUN  /usr/local/bin/user_setup
 USER ${USER_UID}
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
-CMD /usr/local/bin/che-workspace-controller
+CMD /usr/local/bin/devworkspace-controller

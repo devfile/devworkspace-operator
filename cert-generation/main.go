@@ -76,7 +76,7 @@ func main() {
 	}
 
 	label := map[string]string{
-		"app.kubernetes.io/name": "devworkspace-controller",
+		"app.kubernetes.io/name":    "devworkspace-controller",
 		"app.kubernetes.io/part-of": "devworkspace-operator",
 	}
 

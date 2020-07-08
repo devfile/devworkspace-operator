@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: che-workspace-controller
+  name: devworkspace-controller
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
@@ -20,9 +20,9 @@ spec:
       annotations:
         kubectl.kubernetes.io/restartedAt: ""
     spec:
-      serviceAccountName: che-workspace-controller
+      serviceAccountName: devworkspace-controller
       containers:
-        - name: che-workspace-controller
+        - name: devworkspace-controller
           image: quay.io/che-incubator/che-workspace-controller:nightly
           imagePullPolicy: Always
           env:
@@ -33,7 +33,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "che-workspace-operator"
+              value: "devworkspace-operator"
             - name: SERVICE_ACCOUNT_NAME
               valueFrom:
                 fieldRef:

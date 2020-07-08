@@ -38,10 +38,10 @@ go mod tidy
 go mod vendor
 
 # Output of e2e binary
-export OUT_FILE=bin/workspace-controller-e2e
+export OUT_FILE=bin/devworkspace-controller-e2e
 
 # Compile e2e binary tests
 CGO_ENABLED=0 go test -v -c -o ${OUT_FILE} ./test/e2e/cmd/workspaces_test.go
 
 # Launch tests
-./bin/workspace-controller-e2e
+./bin/devworkspace-controller-e2e

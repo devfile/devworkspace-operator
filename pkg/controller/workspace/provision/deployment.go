@@ -319,12 +319,12 @@ func precreateSubpathsInitContainer(workspaceId string) corev1.Container {
 			"-v",
 			"-m",
 			"777",
-			"/tmp/che-workspaces/" + workspaceId,
+			"/tmp/devworkspaces/" + workspaceId,
 		},
 		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
 		VolumeMounts: []corev1.VolumeMount{
 			{
-				MountPath: "/tmp/che-workspaces",
+				MountPath: "/tmp/devworkspaces",
 				Name:      config.ControllerCfg.GetWorkspacePVCName(),
 				ReadOnly:  false,
 			},

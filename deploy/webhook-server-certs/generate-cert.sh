@@ -11,8 +11,8 @@
 #
 
 # Generate a (self-signed) CA certificate and a certificate and private key to be used by the webhook server.
-# The certificate will be issued for the Common Name (CN) of `workspace-controller.che-workspace-controller.svc`,
-# which is the cluster-internal DNS name for the service.
+# The certificate will be issued for the Common Name (CN) of `devworkspace-controller.devworkspace-controller.svc`,
+# which is the cluster-internal DNS name for the service `devworkspace-controller` in namespace `devworkspace-controller`.
 #
 # NOTE: THIS SCRIPT EXISTS FOR TEST PURPOSES ONLY. DO NOT USE IT FOR YOUR PRODUCTION WORKLOADS.
 set -e
@@ -25,9 +25,9 @@ chmod 0700 "$key_dir"
 cd "$key_dir"
 
 # Generate the CA cert and private key
-openssl req -nodes -new -x509 -keyout ca.key -out ca.crt -days 1024 -subj "/CN=Admission Workspace Controller Webhook"
+openssl req -nodes -new -x509 -keyout ca.key -out ca.crt -days 1024 -subj "/CN=Admission DevWorkspace Controller Webhook"
 # Generate the private key for the webhook server
 openssl genrsa -out webhook-server-tls.key 2048
 # Generate a Certificate Signing Request (CSR) for the private key, and sign it with the private key of the CA.
-openssl req -new -key webhook-server-tls.key -subj "/CN=workspace-controller.che-workspace-controller.svc" \
+openssl req -new -key webhook-server-tls.key -subj "/CN=devworkspace-controller.devworkspace-controller.svc" \
     | openssl x509 -req -CA ca.crt -CAkey ca.key -CAcreateserial -days 365 -out webhook-server-tls.crt

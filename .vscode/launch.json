@@ -6,10 +6,10 @@
       "type": "go",
       "request": "launch",
       "mode": "exec",
-      "program": "${workspaceFolder}/build/_output/bin/che-workspace-operator-local",
+      "program": "${workspaceFolder}/build/_output/bin/devworkspace-local",
       "env": {
-        "WATCH_NAMESPACE": "che-workspace-controller",
-        "CONTROLLER_CONFIG_MAP_NAMESPACE": "che-workspace-controller"
+        "WATCH_NAMESPACE": "devworkspace-controller",
+        "CONTROLLER_CONFIG_MAP_NAMESPACE": "devworkspace-controller"
       }
     },
     {
@@ -19,8 +19,8 @@
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/manager/",
       "env": {
-        "WATCH_NAMESPACE": "che-workspace-controller",
-        "CONTROLLER_CONFIG_MAP_NAMESPACE": "che-workspace-controller"
+        "WATCH_NAMESPACE": "devworkspace-controller",
+        "CONTROLLER_CONFIG_MAP_NAMESPACE": "devworkspace-controller"
       },
       "args": []
     },

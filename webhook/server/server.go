@@ -40,12 +40,6 @@ var webhookServer *webhook.Server
 var CABundle []byte
 
 func ConfigureWebhookServer(mgr manager.Manager) error {
-	// FIXME
-	//if config.ControllerCfg.GetWebhooksEnabled() == "false" {
-	//	log.Info("Webhooks are disabled. Skipping setting up webhook server")
-	//	return nil
-	//}
-
 	enabled, err := cluster.IsWebhookConfigurationEnabled()
 
 	if err != nil {

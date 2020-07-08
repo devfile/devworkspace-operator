@@ -37,6 +37,8 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName
+            - name: WEBHOOK_SERVER_SERVICE_ACCOUNT_NAME
+              value: "devworkspace-webhook-server"
             - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
               value: "quay.io/eclipse/che-machine-exec:nightly"
             - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_nightly

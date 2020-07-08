@@ -51,6 +51,9 @@ const (
 
 	// ControllerServiceAccountNameEnvVar stores the name of the serviceaccount used in the controller.
 	ControllerServiceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"
+
+	// WebhookServerServiceAccountNameEnvVar stores the name of the serviceaccount used in the webhook server deployment.
+	WebhookServerServiceAccountNameEnvVar = "WEBHOOK_SERVER_SERVICE_ACCOUNT_NAME"
 )
 
 // Constants for che-rest-apis

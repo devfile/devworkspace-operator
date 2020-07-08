@@ -1,27 +1,30 @@
+//
+// Copyright (c) 2019-2020 Red Hat, Inc.
+// This program and the accompanying materials are made
+// available under the terms of the Eclipse Public License 2.0
+// which is available at https://www.eclipse.org/legal/epl-2.0/
+//
+// SPDX-License-Identifier: EPL-2.0
+//
+// Contributors:
+//   Red Hat, Inc. - initial API and implementation
+//
+
 package webhook
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/client-go/rest"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-
-const (
-	SecureServiceName = "devworkspace-controller"
-	CertConfigMapName = "devworkspace-controller-secure-service"
-	CertSecretName    = "devworkspace-controller"
-	WebhookServerName = "webhook-server"
-	WebhookTLSCertsName = "webhook-tls-certs"
-)
-
 var log = logf.Log.WithName("webhook")
 
 func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
-
 	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
 		return err
@@ -31,18 +34,22 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to create new client: %w", err)
 	}
-
-	log.Info("Setting up the secure certs")
+	// Set up the certs
+	log.Info("Setting up the init webhooks configurations")
+	err = WebhookCfgsInit(client, ctx, namespace)
+	if err != nil {
+		return err
+	}
 
 	// Set up the certs
+	log.Info("Setting up the secure certs")
 	err = SetupWebhookCerts(client, ctx, namespace)
 	if err != nil {
 		return err
 	}
 
-	log.Info("Creating the webhook server deployment")
-
 	// Set up the deployment
+	log.Info("Creating the webhook server deployment")
 	err = CreateWebhookServerDeployment(client, ctx, namespace)
 	if err != nil {
 		return err

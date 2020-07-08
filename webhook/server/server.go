@@ -23,8 +23,16 @@ import (
 
 const (
 	webhookServerHost    = "0.0.0.0"
-	webhookServerPort    = 8443
-	webhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
+	WebhookServerPort    = 8443
+	WebhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
+
+	WebhookServerServiceName = "devworkspace-webhookserver"
+	WebhookServerPortName    = "webhook-server"
+
+	CertConfigMapName = "devworkspace-webhookserver-secure-service"
+	CertSecretName    = "devworkspace-webhookserver"
+
+	WebhookCertsVolumeName = "webhook-tls-certs"
 )
 
 var log = logf.Log.WithName("webhook.server")
@@ -52,7 +60,7 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 		return nil
 	}
 
-	CABundle, err = ioutil.ReadFile(webhookServerCertDir + "/ca.crt")
+	CABundle, err = ioutil.ReadFile(WebhookServerCertDir + "/ca.crt")
 	if os.IsNotExist(err) {
 		return errors.New("CA certificate is not found. Unable to setup webhook server")
 	}
@@ -64,9 +72,9 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 
 	webhookServer = mgr.GetWebhookServer()
 
-	webhookServer.Port = webhookServerPort
+	webhookServer.Port = WebhookServerPort
 	webhookServer.Host = webhookServerHost
-	webhookServer.CertDir = webhookServerCertDir
+	webhookServer.CertDir = WebhookServerCertDir
 
 	return nil
 }

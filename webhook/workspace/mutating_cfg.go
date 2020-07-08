@@ -32,7 +32,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	equivalentMatchPolicy := v1beta1.Equivalent
 	webhookClientConfig := v1beta1.WebhookClientConfig{
 		Service: &v1beta1.ServiceReference{
-			Name:      "devworkspace-controller",
+			Name:      server.WebhookServerServiceName,
 			Namespace: namespace,
 			Path:      &mutateWebhookPath,
 		},
@@ -128,7 +128,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 		ObjectMeta: metav1.ObjectMeta{
 			Name: mutateWebhookCfgName,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":    "devworkspace-controller",
+				"app.kubernetes.io/name":    "devworkspace-webhookserver",
 				"app.kubernetes.io/part-of": "devworkspace-operator",
 			},
 		},

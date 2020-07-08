@@ -14,13 +14,19 @@ package webhook
 
 import (
 	"context"
+	"errors"
+	"os"
+
+	"github.com/devfile/devworkspace-operator/webhook/server"
+
+	"github.com/devfile/devworkspace-operator/internal/images"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"os"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -33,7 +39,11 @@ func CreateWebhookServerDeployment(
 	ctx context.Context,
 	namespace string) error {
 
-	deployment := getSpecDeployment(namespace)
+	deployment, err := getSpecDeployment(namespace)
+	if err != nil {
+		return err
+	}
+
 	if err := client.Create(ctx, deployment); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
@@ -54,58 +64,79 @@ func CreateWebhookServerDeployment(
 	return nil
 }
 
-func getSpecDeployment(namespace string) *appsv1.Deployment {
+func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
-
+	trueBool := true
 	var user *int64
 	if !config.ControllerCfg.IsOpenShift() {
 		uID := int64(1234)
 		user = &uID
 	}
 
+	labels := map[string]string{
+		"app.kubernetes.io/name":    "devworkspace-webhook-server",
+		"app.kubernetes.io/part-of": "devworkspace-operator",
+	}
+
 	saName := os.Getenv(config.ControllerServiceAccountNameEnvVar)
 	if saName == "" {
-		return nil
+		return nil, errors.New("Webhooks server needs controller SA be configured")
 	}
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      devworkspaceWebhookServerName,
 			Namespace: namespace,
-			Labels:    map[string]string{},
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/name":    devworkspaceWebhookServerName,
-					"app.kubernetes.io/part-of": "devworkspace-operator",
-				},
+				MatchLabels: labels,
 			},
 			Strategy: appsv1.DeploymentStrategy{
+				//TODO Can it be RollingUpdate?
 				Type: appsv1.RecreateDeploymentStrategyType,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      devworkspaceWebhookServerName,
 					Namespace: namespace,
-					Labels: map[string]string{
-						"app.kubernetes.io/name":    devworkspaceWebhookServerName,
-						"app.kubernetes.io/part-of": "devworkspace-operator",
-					},
+					Labels:    labels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: "webhook-server",
-							Image: "quay.io/jpinkney/che-workspace-controller:latest",
-							Command: []string{"/usr/local/bin/entrypoint", "/usr/local/bin/webhook-server"},
+							Name:            "webhook-server",
+							Image:           images.GetWebhookServerImage(),
+							Command:         []string{"/usr/local/bin/entrypoint", "/usr/local/bin/webhook-server"},
+							ImagePullPolicy: corev1.PullAlways,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name: WebhookTLSCertsName,
-									MountPath: "/tmp/k8s-webhook-server/serving-certs",
-									ReadOnly: true,
+									Name:      server.WebhookCertsVolumeName,
+									MountPath: server.WebhookServerCertDir,
+									ReadOnly:  true,
+								},
+							},
+							Ports: []corev1.ContainerPort{
+								{
+									Name:          server.WebhookServerPortName,
+									ContainerPort: server.WebhookServerPort,
+								},
+							},
+							Env: []corev1.EnvVar{
+								{
+									Name:  config.ControllerServiceAccountNameEnvVar,
+									Value: saName,
+								},
+								{
+									Name: "POD_NAME",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.name",
+										},
+									},
 								},
 							},
 						},
@@ -116,22 +147,23 @@ func getSpecDeployment(namespace string) *appsv1.Deployment {
 						RunAsUser: user,
 						FSGroup:   user,
 					},
+					// TODO Webhook server needs a dedicated SA since main is going to be removed by OLM
 					ServiceAccountName:           saName,
-					AutomountServiceAccountToken: nil,
+					AutomountServiceAccountToken: &trueBool,
 					Volumes: []corev1.Volume{
 						{
-							Name: WebhookTLSCertsName,
+							Name: server.WebhookCertsVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Projected: &corev1.ProjectedVolumeSource{
 									Sources: []corev1.VolumeProjection{
 										{
 											ConfigMap: &corev1.ConfigMapProjection{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: CertConfigMapName,
+													Name: server.CertConfigMapName,
 												},
 												Items: []corev1.KeyToPath{
 													{
-														Key: "service-ca.crt",
+														Key:  "service-ca.crt",
 														Path: "./ca.crt",
 													},
 												},
@@ -140,7 +172,7 @@ func getSpecDeployment(namespace string) *appsv1.Deployment {
 										{
 											Secret: &corev1.SecretProjection{
 												LocalObjectReference: corev1.LocalObjectReference{
-													Name: SecureServiceName,
+													Name: server.CertSecretName,
 												},
 											},
 										},
@@ -154,7 +186,7 @@ func getSpecDeployment(namespace string) *appsv1.Deployment {
 		},
 	}
 
-	return deployment
+	return deployment, nil
 }
 
 func getClusterDeployment(ctx context.Context, namespace string, client crclient.Client) (*appsv1.Deployment, error) {

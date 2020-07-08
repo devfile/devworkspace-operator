@@ -72,12 +72,14 @@ _update_yamls: _set_registry_url
 	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|value: \"quay.io/devfile/devworkspace-controller:next\"|value: $(IMG)|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/os/controller.yaml
 
 	rm ./deploy/os/controller.yaml.bak
 else
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
+	sed -i.bak -e "s|value: \"quay.io/devfile/devworkspace-controller:next\"|value: $(IMG)|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/k8s/controller.yaml
 	rm ./deploy/k8s/controller.yaml.bak
@@ -92,12 +94,16 @@ _reset_yamls: _set_registry_url
 	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|image: $(IMG)|image: quay.io/devfile/devworkspace-controller:next|g" ./deploy/os/controller.yaml
+	# webhook server related image
+	sed -i.bak -e "s|value: $(IMG)|value: \"quay.io/devfile/devworkspace-controller:next\"|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
 
 	rm ./deploy/os/controller.yaml.bak
 else
 	sed -i.bak -e "s|image: $(IMG)|image: quay.io/devfile/devworkspace-controller:next|g" ./deploy/k8s/controller.yaml
+	# webhook server related image
+	sed -i.bak -e "s|value: $(IMG)|value: \"quay.io/devfile/devworkspace-controller:next\"|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/k8s/controller.yaml
 	rm ./deploy/k8s/controller.yaml.bak
@@ -127,6 +133,15 @@ ifeq ($(TOOL),oc)
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
 else
 	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-controller
+endif
+
+_do_restart_webhook_server:
+ifeq ($(TOOL),oc)
+	oc patch deployment/devworkspace-operator-webhook-server \
+		-n $(NAMESPACE) \
+		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
+else
+	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-operator-webhook-server
 endif
 
 _do_uninstall:
@@ -175,6 +190,9 @@ deploy: _print_vars _set_ctx _create_namespace _deploy_registry _update_yamls _u
 
 ### restart: restart cluster controller deployment
 restart: _set_ctx _do_restart _reset_ctx
+
+### restart: restart cluster controller deployment
+restart_webhook_server: _set_ctx _do_restart_webhook_server _reset_ctx
 
 ### rollout: rebuild and push docker image and restart cluster deployment
 rollout: docker restart

@@ -14,9 +14,6 @@ package webhook
 
 import (
 	"context"
-	"errors"
-	"os"
-
 	"github.com/devfile/devworkspace-operator/webhook/server"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -37,9 +34,10 @@ const (
 func CreateWebhookServerDeployment(
 	client crclient.Client,
 	ctx context.Context,
-	namespace string) error {
+	namespace string,
+	saName string) error {
 
-	deployment, err := getSpecDeployment(namespace)
+	deployment, err := getSpecDeployment(namespace, saName)
 	if err != nil {
 		return err
 	}
@@ -64,7 +62,7 @@ func CreateWebhookServerDeployment(
 	return nil
 }
 
-func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
+func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
 	trueBool := true
@@ -77,11 +75,6 @@ func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 	labels := map[string]string{
 		"app.kubernetes.io/name":    "devworkspace-webhook-server",
 		"app.kubernetes.io/part-of": "devworkspace-operator",
-	}
-
-	saName := os.Getenv(config.ControllerServiceAccountNameEnvVar)
-	if saName == "" {
-		return nil, errors.New("Webhooks server needs controller SA be configured")
 	}
 
 	deployment := &appsv1.Deployment{
@@ -147,7 +140,6 @@ func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 						RunAsUser: user,
 						FSGroup:   user,
 					},
-					// TODO Webhook server needs a dedicated SA since main is going to be removed by OLM
 					ServiceAccountName:           saName,
 					AutomountServiceAccountToken: &trueBool,
 					Volumes: []corev1.Volume{

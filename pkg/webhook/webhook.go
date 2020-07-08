@@ -14,8 +14,10 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"os"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/client-go/rest"
@@ -48,6 +50,26 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		return err
 	}
 
+
+	saName := os.Getenv(config.WebhookServerServiceAccountNameEnvVar)
+	if saName == "" {
+		return errors.New("Webhooks server needs webhook server SA be configured")
+	}
+
+	// Set up the service account
+	log.Info("Setting up the service account")
+	err = CreateWebhookSA(client, ctx, saName)
+	if err != nil {
+		return err
+	}
+
+	// Set up the cluster role binding
+	log.Info("Setting up the cluster role binding")
+	err = CreateWebhookClusterRoleBinding(client, ctx, saName, namespace)
+	if err != nil {
+		return err
+	}
+
 	// Set up the certs
 	log.Info("Setting up the secure certs")
 	err = SetupWebhookCerts(client, ctx, namespace)
@@ -57,7 +79,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 
 	// Set up the deployment
 	log.Info("Creating the webhook server deployment")
-	err = CreateWebhookServerDeployment(client, ctx, namespace)
+	err = CreateWebhookServerDeployment(client, ctx, namespace, saName)
 	if err != nil {
 		return err
 	}

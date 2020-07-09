@@ -32,13 +32,6 @@ func SetupWebhookCerts(client crclient.Client, ctx context.Context, namespace st
 		log.Info("Failed creating the secure service")
 		return err
 	}
-
-	log.Info("Attempting to create the secure configmap")
-	err = createConfigMap(client, ctx, namespace)
-	if err != nil {
-		log.Info("Failed creating the secure configmap")
-		return err
-	}
 	return nil
 }
 
@@ -61,7 +54,7 @@ func createSecureService(client crclient.Client, ctx context.Context, namespace 
 					TargetPort: intstr.FromString(server.WebhookServerPortName),
 				},
 			},
-			Selector: label,
+			Selector: server.WebhookServerAppLabels(),
 		},
 	}
 
@@ -89,58 +82,6 @@ func createSecureService(client crclient.Client, ctx context.Context, namespace 
 		log.Info("Updating webhook server secure cert service")
 	}
 	return nil
-}
-
-func createConfigMap(client crclient.Client, ctx context.Context, namespace string) error {
-	configMapData := make(map[string]string, 0)
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      server.CertConfigMapName,
-			Namespace: namespace,
-			Annotations: map[string]string{
-				"service.beta.openshift.io/inject-cabundle": "true",
-			},
-			Labels: server.WebhookServerAppLabels(),
-		},
-		Data: configMapData,
-	}
-
-	if err := client.Create(ctx, configMap); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-		existingCfg, err := getClusterConfigMap(ctx, namespace, client)
-		if err != nil {
-			return err
-		}
-
-		configMap.ResourceVersion = existingCfg.ResourceVersion
-		err = client.Update(ctx, configMap)
-		if err != nil {
-			return err
-		}
-		log.Info("Updating webhook server secure cert configmap")
-	} else {
-		log.Info("Creating webhook server secure cert configmap")
-	}
-
-	return nil
-}
-
-func getClusterConfigMap(ctx context.Context, namespace string, client crclient.Client) (*corev1.ConfigMap, error) {
-	configMap := &corev1.ConfigMap{}
-	namespacedName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      server.CertConfigMapName,
-	}
-	err := client.Get(ctx, namespacedName, configMap)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return configMap, nil
 }
 
 func getClusterService(ctx context.Context, namespace string, client crclient.Client) (*corev1.Service, error) {

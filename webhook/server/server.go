@@ -26,11 +26,14 @@ const (
 	WebhookServerPort    = 8443
 	WebhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
 
+	WebhookServerDeploymentName = WebhookServerAppName
+
+	WebhookServerAppName = "devworkspace-webhook-server"
+
 	WebhookServerServiceName = "devworkspace-webhookserver"
 	WebhookServerPortName    = "webhook-server"
 
-	CertConfigMapName = "devworkspace-webhookserver-secure-service"
-	CertSecretName    = "devworkspace-webhookserver"
+	CertSecretName    = "devworkspace-webhookserver-tls"
 
 	WebhookCertsVolumeName = "webhook-tls-certs"
 )
@@ -41,7 +44,7 @@ var CABundle []byte
 
 var WebhookServerAppLabels = func()map[string]string{
 	return map[string]string{
-		"app.kubernetes.io/name":    "devworkspace-webhook-server",
+		"app.kubernetes.io/name":    WebhookServerAppName,
 		"app.kubernetes.io/part-of": "devworkspace-operator",
 	}
 }
@@ -61,7 +64,7 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 		return nil
 	}
 
-	CABundle, err = ioutil.ReadFile(WebhookServerCertDir + "/ca.crt")
+	CABundle, err = ioutil.ReadFile(WebhookServerCertDir + "/tls.crt")
 	if os.IsNotExist(err) {
 		return errors.New("CA certificate is not found. Unable to setup webhook server")
 	}

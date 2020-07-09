@@ -234,10 +234,7 @@ func WatchControllerConfig(ctr controller.Controller, mgr manager.Manager) error
 func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Name = ConfigMapReference.Name
 	cm.Namespace = ConfigMapReference.Namespace
-	cm.Labels = map[string]string{
-		"app.kubernetes.io/name":    "devworkspace-controller",
-		"app.kubernetes.io/part-of": "devworkspace-operator",
-	}
+	cm.Labels = ControllerAppLabels()
 
 	cm.Data = map[string]string{}
 }

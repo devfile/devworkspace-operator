@@ -72,21 +72,16 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 		user = &uID
 	}
 
-	labels := map[string]string{
-		"app.kubernetes.io/name":    "devworkspace-webhook-server",
-		"app.kubernetes.io/part-of": "devworkspace-operator",
-	}
-
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      devworkspaceWebhookServerName,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    server.WebhookServerAppLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: server.WebhookServerAppLabels(),
 			},
 			Strategy: appsv1.DeploymentStrategy{
 				//TODO Can it be RollingUpdate?

@@ -39,6 +39,13 @@ var log = logf.Log.WithName("webhook.server")
 var webhookServer *webhook.Server
 var CABundle []byte
 
+var WebhookServerAppLabels = func()map[string]string{
+	return map[string]string{
+		"app.kubernetes.io/name":    "devworkspace-webhook-server",
+		"app.kubernetes.io/part-of": "devworkspace-operator",
+	}
+}
+
 func ConfigureWebhookServer(mgr manager.Manager) error {
 	enabled, err := cluster.IsWebhookConfigurationEnabled()
 

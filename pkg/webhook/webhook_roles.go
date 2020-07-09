@@ -72,6 +72,17 @@ func getSpecRoleBinding(saName string) (*v1.ClusterRole, error) {
 					"*",
 				},
 			},
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"serviceaccounts",
+				},
+				Verbs: []string{
+					"get",
+				},
+			},
 		},
 	}
 

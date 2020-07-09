@@ -1,0 +1,30 @@
+#
+# Copyright (c) 2020 Red Hat, Inc.
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+name: Next Dockerimage
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout devworkspace-operator source code
+      uses: actions/checkout@v2
+    - name: Docker Build & Push
+      uses: docker/build-push-action@v1.1.0
+      with:
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+        registry: quay.io
+        repository: devfile/devworkspace-controller
+        dockerfile: ./build/Dockerfile
+        tags: next

@@ -43,17 +43,12 @@ func SetupWebhookCerts(client crclient.Client, ctx context.Context, namespace st
 }
 
 func createSecureService(client crclient.Client, ctx context.Context, namespace string) error {
-	label := map[string]string{
-		"app.kubernetes.io/name":    "devworkspace-webhook-server",
-		"app.kubernetes.io/part-of": "devworkspace-operator",
-	}
-
 	port := int32(443)
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      server.WebhookServerServiceName,
 			Namespace: namespace,
-			Labels:    label,
+			Labels:    server.WebhookServerAppLabels(),
 			Annotations: map[string]string{
 				"service.beta.openshift.io/serving-cert-secret-name": server.CertSecretName,
 			},
@@ -105,10 +100,7 @@ func createConfigMap(client crclient.Client, ctx context.Context, namespace stri
 			Annotations: map[string]string{
 				"service.beta.openshift.io/inject-cabundle": "true",
 			},
-			Labels: map[string]string{
-				"app.kubernetes.io/name":    "devworkspace-webhook-server",
-				"app.kubernetes.io/part-of": "devworkspace-operator",
-			},
+			Labels: server.WebhookServerAppLabels(),
 		},
 		Data: configMapData,
 	}

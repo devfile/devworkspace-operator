@@ -14,6 +14,7 @@ package webhook
 
 import (
 	"context"
+	"github.com/devfile/devworkspace-operator/webhook/server"
 	v1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,16 +53,10 @@ func CreateWebhookRole(client crclient.Client,
 }
 
 func getSpecRoleBinding(saName string) (*v1.ClusterRole, error) {
-
-	labels := map[string]string{
-		"app.kubernetes.io/name":    saName,
-		"app.kubernetes.io/part-of": "devworkspace-operator",
-	}
-
 	clusterRole := &v1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
-			Labels: labels,
+			Labels: server.WebhookServerAppLabels(),
 		},
 		Rules: []v1.PolicyRule{
 			{

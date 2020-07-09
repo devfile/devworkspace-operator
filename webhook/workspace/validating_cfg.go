@@ -29,10 +29,7 @@ func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfi
 	return &v1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: validateWebhookCfgName,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":    "devworkspace-webhookserver",
-				"app.kubernetes.io/part-of": "devworkspace-operator",
-			},
+			Labels: server.WebhookServerAppLabels(),
 		},
 		Webhooks: []v1beta1.ValidatingWebhook{
 			{

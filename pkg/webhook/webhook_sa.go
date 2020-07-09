@@ -14,6 +14,7 @@ package webhook
 
 import (
 	"context"
+	"github.com/devfile/devworkspace-operator/webhook/server"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,17 +54,11 @@ func CreateWebhookSA(client crclient.Client,
 }
 
 func getSpecServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
-
-	labels := map[string]string{
-		"app.kubernetes.io/name":    saName,
-		"app.kubernetes.io/part-of": "devworkspace-operator",
-	}
-
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: namespace,
-			Labels: labels,
+			Labels: server.WebhookServerAppLabels(),
 		},
 	}
 

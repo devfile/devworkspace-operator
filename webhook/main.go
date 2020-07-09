@@ -46,7 +46,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = createWebhooks(clusterConfig, namespace)
+	// Create a new Cmd to provide shared dependencies and start components
+	mgr, err := manager.New(clusterConfig, manager.Options{
+		Namespace: namespace,
+	})
+	if err != nil {
+		log.Error(err, "Failed to get create manager")
+		os.Exit(1)
+	}
+
+	err = createWebhooks(mgr, clusterConfig, namespace)
 	if err != nil {
 		log.Error(err, "Failed to get create webhooks")
 		os.Exit(1)
@@ -55,24 +64,16 @@ func main() {
 	var shutdownChan = make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, syscall.SIGTERM)
 
-	log.Info("Starting webhook server")
-	if err := server.GetWebhookServer().Start(signals.SetupSignalHandler()); err != nil {
-		log.Error(err, "Webhook server exited non-zero")
+	log.Info("Starting manager")
+	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}
 }
 
-func createWebhooks(clusterConfig *rest.Config, namespace string) error {
-	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(clusterConfig, manager.Options{
-		Namespace: namespace,
-	})
-	if err != nil {
-		return err
-	}
-
+func createWebhooks(mgr manager.Manager, clusterConfig *rest.Config, namespace string) error {
 	log.Info("Configuring Webhook Server")
-	err = server.ConfigureWebhookServer(mgr)
+	err := server.ConfigureWebhookServer(mgr)
 	if err != nil {
 		return err
 	}

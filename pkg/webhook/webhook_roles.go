@@ -14,6 +14,7 @@ package webhook
 
 import (
 	"context"
+
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	v1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -55,7 +56,7 @@ func CreateWebhookRole(client crclient.Client,
 func getSpecRoleBinding(saName string) (*v1.ClusterRole, error) {
 	clusterRole := &v1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      saName,
+			Name:   saName,
 			Labels: server.WebhookServerAppLabels(),
 		},
 		Rules: []v1.PolicyRule{
@@ -80,7 +81,7 @@ func getSpecRoleBinding(saName string) (*v1.ClusterRole, error) {
 func getClusterRole(ctx context.Context, saName string, client crclient.Client) (*v1.ClusterRole, error) {
 	clusterRole := &v1.ClusterRole{}
 	namespacedName := types.NamespacedName{
-		Name:      saName,
+		Name: saName,
 	}
 	err := client.Get(ctx, namespacedName, clusterRole)
 	if err != nil {
@@ -91,4 +92,3 @@ func getClusterRole(ctx context.Context, saName string, client crclient.Client) 
 	}
 	return clusterRole, nil
 }
-

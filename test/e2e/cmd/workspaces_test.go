@@ -17,6 +17,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	workspaceWebhook "github.com/devfile/devworkspace-operator/webhook/workspace"
+
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/deploy"
 
@@ -80,6 +82,15 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 
 	if err = k8sClient.Kube().CoreV1().Namespaces().Delete(config.Namespace, &metav1.DeleteOptions{}); err != nil {
 		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
+	}
+
+	//TODO Remove is case we recover ownerRef for webhooks configuration to webhook deployment
+	if err = k8sClient.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(workspaceWebhook.MutateWebhookCfgName, &metav1.DeleteOptions{}); err != nil {
+		_ = fmt.Errorf("Failed to delete mutating webhook configuration %s", err)
+	}
+
+	if err = k8sClient.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(workspaceWebhook.ValidateWebhookCfgName, &metav1.DeleteOptions{}); err != nil {
+		_ = fmt.Errorf("Failed to delete validating webhook configuration %s", err)
 	}
 }, func() {})
 

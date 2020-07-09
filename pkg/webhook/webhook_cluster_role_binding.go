@@ -14,6 +14,7 @@ package webhook
 
 import (
 	"context"
+
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	v1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,19 +59,19 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: namespace,
-			Labels: server.WebhookServerAppLabels(),
+			Labels:    server.WebhookServerAppLabels(),
 		},
 		Subjects: []v1.Subject{
 			{
-				Kind: "ServiceAccount",
-				Name: saName,
+				Kind:      "ServiceAccount",
+				Name:      saName,
 				Namespace: namespace,
 			},
 		},
 		RoleRef: v1.RoleRef{
 			Kind: "ClusterRole",
 			//Isn't that role removed along with Operator? Should not we create a dedicated role for webhook server?
-			Name: "devworkspace-controller",
+			Name:     "devworkspace-controller",
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
@@ -81,7 +82,7 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 func getClusterBinding(ctx context.Context, saName string, client crclient.Client) (*v1.ClusterRoleBinding, error) {
 	crb := &v1.ClusterRoleBinding{}
 	namespacedName := types.NamespacedName{
-		Name:      saName,
+		Name: saName,
 	}
 	err := client.Get(ctx, namespacedName, crb)
 	if err != nil {
@@ -92,4 +93,3 @@ func getClusterBinding(ctx context.Context, saName string, client crclient.Clien
 	}
 	return crb, nil
 }
-

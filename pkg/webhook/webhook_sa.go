@@ -14,6 +14,7 @@ package webhook
 
 import (
 	"context"
+
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,7 +59,7 @@ func getSpecServiceAccount(saName, namespace string) (*corev1.ServiceAccount, er
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: namespace,
-			Labels: server.WebhookServerAppLabels(),
+			Labels:    server.WebhookServerAppLabels(),
 		},
 	}
 
@@ -80,4 +81,3 @@ func getClusterServiceAccount(client crclient.Client, ctx context.Context, saNam
 	}
 	return serviceAccount, nil
 }
-

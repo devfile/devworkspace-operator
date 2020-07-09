@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	mutateWebhookCfgName       = "controller.devfile.io"
+	MutateWebhookCfgName       = "controller.devfile.io"
 	mutateWebhookPath          = "/mutate"
 	mutateWebhookFailurePolicy = v1beta1.Fail
 )
@@ -126,7 +126,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 
 	return &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: mutateWebhookCfgName,
+			Name:   MutateWebhookCfgName,
 			Labels: server.WebhookServerAppLabels(),
 		},
 		Webhooks: []v1beta1.MutatingWebhook{

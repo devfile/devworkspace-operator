@@ -14,6 +14,7 @@ package webhook
 
 import (
 	"context"
+
 	"github.com/devfile/devworkspace-operator/webhook/server"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -98,7 +99,7 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 							ImagePullPolicy: corev1.PullAlways,
 							VolumeMounts: []corev1.VolumeMount{
 								{
-									Name:      server.WebhookCertsVolumeName,
+									Name:      server.WebhookServerCertsVolumeName,
 									MountPath: server.WebhookServerCertDir,
 									ReadOnly:  true,
 								},
@@ -115,7 +116,7 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 									Value: saName,
 								},
 								{
-									Name:  config.ControllerServiceAccountNameEnvVar,
+									Name: config.ControllerServiceAccountNameEnvVar,
 									//TODO It should not be hard-coded
 									Value: "devworkspace-controller",
 								},
@@ -140,10 +141,10 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 					AutomountServiceAccountToken: &trueBool,
 					Volumes: []corev1.Volume{
 						{
-							Name: server.WebhookCertsVolumeName,
+							Name: server.WebhookServerCertsVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: server.CertSecretName,
+									SecretName: server.WebhookServerTLSSecretName,
 								},
 							},
 						},

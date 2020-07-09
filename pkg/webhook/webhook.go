@@ -16,8 +16,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"os"
+
+	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/client-go/rest"
@@ -48,7 +49,6 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
 
 	//TODO Should it be really configured or can we just get it from like server.WebhookServerSAName ?
 	saName := os.Getenv(config.WebhookServerServiceAccountNameEnvVar)

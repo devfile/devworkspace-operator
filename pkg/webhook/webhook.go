@@ -50,9 +50,10 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	}
 
 
+	//TODO Should it be really configured or can we just get it from like server.WebhookServerSAName ?
 	saName := os.Getenv(config.WebhookServerServiceAccountNameEnvVar)
 	if saName == "" {
-		return errors.New("Webhooks server needs webhook server SA be configured")
+		return errors.New("Webhooks server needs SA be configured")
 	}
 
 	// Set up the service account

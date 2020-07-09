@@ -69,6 +69,7 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 		},
 		RoleRef: v1.RoleRef{
 			Kind: "ClusterRole",
+			//Isn't that role removed along with Operator? Should not we create a dedicated role for webhook server?
 			Name: "devworkspace-controller",
 			APIGroup: "rbac.authorization.k8s.io",
 		},

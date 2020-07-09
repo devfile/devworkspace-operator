@@ -27,10 +27,6 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	devworkspaceWebhookServerName = "devworkspace-operator-webhook-server"
-)
-
 func CreateWebhookServerDeployment(
 	client crclient.Client,
 	ctx context.Context,
@@ -74,7 +70,7 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      devworkspaceWebhookServerName,
+			Name:      server.WebhookServerDeploymentName,
 			Namespace: namespace,
 			Labels:    server.WebhookServerAppLabels(),
 		},
@@ -89,9 +85,9 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      devworkspaceWebhookServerName,
+					Name:      server.WebhookServerDeploymentName,
 					Namespace: namespace,
-					Labels:    labels,
+					Labels:    server.WebhookServerAppLabels(),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -120,6 +116,7 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 								},
 								{
 									Name:  config.ControllerServiceAccountNameEnvVar,
+									//TODO It should not be hard-coded
 									Value: "devworkspace-controller",
 								},
 								{
@@ -145,29 +142,8 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 						{
 							Name: server.WebhookCertsVolumeName,
 							VolumeSource: corev1.VolumeSource{
-								Projected: &corev1.ProjectedVolumeSource{
-									Sources: []corev1.VolumeProjection{
-										{
-											ConfigMap: &corev1.ConfigMapProjection{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: server.CertConfigMapName,
-												},
-												Items: []corev1.KeyToPath{
-													{
-														Key:  "service-ca.crt",
-														Path: "./ca.crt",
-													},
-												},
-											},
-										},
-										{
-											Secret: &corev1.SecretProjection{
-												LocalObjectReference: corev1.LocalObjectReference{
-													Name: server.CertSecretName,
-												},
-											},
-										},
-									},
+								Secret: &corev1.SecretVolumeSource{
+									SecretName: server.CertSecretName,
 								},
 							},
 						},
@@ -184,7 +160,7 @@ func getClusterDeployment(ctx context.Context, namespace string, client crclient
 	deployment := &appsv1.Deployment{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
-		Name:      devworkspaceWebhookServerName,
+		Name:      server.WebhookServerDeploymentName,
 	}
 	err := client.Get(ctx, namespacedName, deployment)
 	if err != nil {

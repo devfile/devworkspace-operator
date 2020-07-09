@@ -50,7 +50,8 @@ func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.
 	if allowed {
 		return admission.Allowed(msg)
 	}
-	log.Info(fmt.Sprintf("Denied request to %s resource with kind %s by user %s: %s", req.Operation, req.Kind, req.UserInfo.Username, msg))
+
+	log.Info(fmt.Sprintf("Denied request to %s '%s' %s by user %s: %s", req.Operation, req.Name, req.Kind.Kind, req.UserInfo.Username, msg))
 	return admission.Denied(msg)
 }
 

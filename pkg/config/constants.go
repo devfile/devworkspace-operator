@@ -13,7 +13,7 @@
 package config
 
 // Labels which should be used for controller related objects
-var ControllerAppLabels = func()map[string]string{
+var ControllerAppLabels = func() map[string]string {
 	return map[string]string{
 		"app.kubernetes.io/name":    "devworkspace-controller",
 		"app.kubernetes.io/part-of": "devworkspace-operator",

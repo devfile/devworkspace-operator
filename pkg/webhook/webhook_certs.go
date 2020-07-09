@@ -43,7 +43,7 @@ func createSecureService(client crclient.Client, ctx context.Context, namespace 
 			Namespace: namespace,
 			Labels:    server.WebhookServerAppLabels(),
 			Annotations: map[string]string{
-				"service.beta.openshift.io/serving-cert-secret-name": server.CertSecretName,
+				"service.beta.openshift.io/serving-cert-secret-name": server.WebhookServerTLSSecretName,
 			},
 		},
 		Spec: corev1.ServiceSpec{

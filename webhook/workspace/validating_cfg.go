@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	validateWebhookCfgName       = "controller.devfile.io"
+	ValidateWebhookCfgName       = "controller.devfile.io"
 	validateWebhookPath          = "/validate"
 	validateWebhookFailurePolicy = v1beta1.Fail
 )
@@ -28,7 +28,7 @@ func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfi
 	validateWebhookPath := validateWebhookPath
 	return &v1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: validateWebhookCfgName,
+			Name:   ValidateWebhookCfgName,
 			Labels: server.WebhookServerAppLabels(),
 		},
 		Webhooks: []v1beta1.ValidatingWebhook{

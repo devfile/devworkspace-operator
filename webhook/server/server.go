@@ -33,16 +33,16 @@ const (
 	WebhookServerServiceName = "devworkspace-webhookserver"
 	WebhookServerPortName    = "webhook-server"
 
-	CertSecretName    = "devworkspace-webhookserver-tls"
+	WebhookServerCertsVolumeName = "webhook-tls-certs"
 
-	WebhookCertsVolumeName = "webhook-tls-certs"
+	WebhookServerTLSSecretName = "devworkspace-webhookserver-tls"
 )
 
 var log = logf.Log.WithName("webhook.server")
 var webhookServer *webhook.Server
 var CABundle []byte
 
-var WebhookServerAppLabels = func()map[string]string{
+var WebhookServerAppLabels = func() map[string]string {
 	return map[string]string{
 		"app.kubernetes.io/name":    WebhookServerAppName,
 		"app.kubernetes.io/part-of": "devworkspace-operator",

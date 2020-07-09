@@ -28,7 +28,6 @@ import (
 var log = logf.Log.WithName("webhook")
 
 func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
-
 	if config.ControllerCfg.GetWebhooksEnabled() == "false" {
 		log.Info("Webhooks are disabled. Skipping deploying webhook server")
 		return nil

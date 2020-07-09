@@ -22,7 +22,7 @@ spec:
       serviceAccountName: devworkspace-controller
       containers:
         - name: devworkspace-controller
-          image: quay.io/che-incubator/che-workspace-controller:nightly
+          image: quay.io/devfile/devworkspace-controller:next
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE

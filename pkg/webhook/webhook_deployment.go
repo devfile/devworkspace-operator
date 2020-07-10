@@ -31,10 +31,9 @@ import (
 func CreateWebhookServerDeployment(
 	client crclient.Client,
 	ctx context.Context,
-	namespace string,
-	saName string) error {
+	namespace string) error {
 
-	deployment, err := getSpecDeployment(namespace, saName)
+	deployment, err := getSpecDeployment(namespace)
 	if err != nil {
 		return err
 	}
@@ -59,7 +58,7 @@ func CreateWebhookServerDeployment(
 	return nil
 }
 
-func getSpecDeployment(namespace string, webhookServerSAName string) (*appsv1.Deployment, error) {
+func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
 	trueBool := true
@@ -117,10 +116,6 @@ func getSpecDeployment(namespace string, webhookServerSAName string) (*appsv1.De
 							},
 							Env: []corev1.EnvVar{
 								{
-									Name:  config.WebhookServerServiceAccountNameEnvVar,
-									Value: webhookServerSAName,
-								},
-								{
 									Name:  config.ControllerServiceAccountNameEnvVar,
 									Value: controllerSA,
 								},
@@ -141,7 +136,7 @@ func getSpecDeployment(namespace string, webhookServerSAName string) (*appsv1.De
 						RunAsUser: user,
 						FSGroup:   user,
 					},
-					ServiceAccountName:           webhookServerSAName,
+					ServiceAccountName:           server.WebhookServerSAName,
 					AutomountServiceAccountToken: &trueBool,
 					Volumes: []corev1.Volume{
 						{

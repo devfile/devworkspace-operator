@@ -25,10 +25,9 @@ import (
 
 func CreateWebhookClusterRoleBinding(client crclient.Client,
 	ctx context.Context,
-	saName string,
 	namespace string) error {
 
-	clusterRoleBinding, err := getSpecClusterRoleBinding(saName, namespace)
+	clusterRoleBinding, err := getSpecClusterRoleBinding(namespace)
 	if err != nil {
 		return err
 	}
@@ -37,7 +36,7 @@ func CreateWebhookClusterRoleBinding(client crclient.Client,
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg, err := getClusterBinding(ctx, saName, client)
+		existingCfg, err := getClusterRoleBinding(ctx, client)
 		if err != nil {
 			return err
 		}
@@ -54,23 +53,23 @@ func CreateWebhookClusterRoleBinding(client crclient.Client,
 	return nil
 }
 
-func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRoleBinding, error) {
+func getSpecClusterRoleBinding(namespace string) (*v1.ClusterRoleBinding, error) {
 	clusterRoleBinding := &v1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      saName,
+			Name:      server.WebhookServerSAName,
 			Namespace: namespace,
 			Labels:    server.WebhookServerAppLabels(),
 		},
 		Subjects: []v1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      saName,
+				Name:      server.WebhookServerSAName,
 				Namespace: namespace,
 			},
 		},
 		RoleRef: v1.RoleRef{
 			Kind:     "ClusterRole",
-			Name:     saName,
+			Name:     server.WebhookServerSAName,
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
@@ -78,10 +77,10 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 	return clusterRoleBinding, nil
 }
 
-func getClusterBinding(ctx context.Context, saName string, client crclient.Client) (*v1.ClusterRoleBinding, error) {
+func getClusterRoleBinding(ctx context.Context, client crclient.Client) (*v1.ClusterRoleBinding, error) {
 	crb := &v1.ClusterRoleBinding{}
 	namespacedName := types.NamespacedName{
-		Name: saName,
+		Name: server.WebhookServerSAName,
 	}
 	err := client.Get(ctx, namespacedName, crb)
 	if err != nil {

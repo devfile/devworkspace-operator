@@ -58,12 +58,7 @@ const (
 	WorkspaceDiscoverableServiceAnnotation = "controller.devfile.io/discoverable-service"
 
 	// ControllerServiceAccountNameEnvVar stores the name of the serviceaccount used in the controller.
-	ControllerServiceAccountNameEnvVar = "SERVICE_ACCOUNT_NAME"
-
-	//TODO Is it needed?
-	// Controller SA is configured because it should be added to allowList on modify operations... But I'm not sure about it. Investigate if it can be just removed
-	// WebhookServerServiceAccountNameEnvVar stores the name of the serviceaccount used in the webhook server deployment.
-	WebhookServerServiceAccountNameEnvVar = "WEBHOOK_SERVER_SERVICE_ACCOUNT_NAME"
+	ControllerServiceAccountNameEnvVar = "CONTROLLER_SERVICE_ACCOUNT_NAME"
 )
 
 // Constants for che-rest-apis

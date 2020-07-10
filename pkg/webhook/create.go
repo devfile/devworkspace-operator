@@ -57,7 +57,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 
 	// Set up the cluster roles
 	log.Info("Setting up the cluster roles")
-	err = CreateWebhookRole(client, ctx)
+	err = CreateWebhookClusterRole(client, ctx)
 	if err != nil {
 		return err
 	}

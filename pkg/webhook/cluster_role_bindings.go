@@ -14,6 +14,8 @@ package webhook
 
 import (
 	"context"
+	"fmt"
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	v1 "k8s.io/api/rbac/v1"
@@ -27,12 +29,12 @@ func CreateWebhookClusterRoleBinding(client crclient.Client,
 	ctx context.Context,
 	namespace string) error {
 
-	clusterRoleBinding, err := getSpecClusterRoleBinding(namespace)
+	roleBinding, err := getSpecClusterRoleBinding(namespace)
 	if err != nil {
 		return err
 	}
 
-	if err := client.Create(ctx, clusterRoleBinding); err != nil {
+	if err := client.Create(ctx, roleBinding); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
@@ -40,8 +42,9 @@ func CreateWebhookClusterRoleBinding(client crclient.Client,
 		if err != nil {
 			return err
 		}
-		clusterRoleBinding.ResourceVersion = existingCfg.ResourceVersion
-		err = client.Update(ctx, clusterRoleBinding)
+		fmt.Printf("\n%s\n\n", cmp.Diff(roleBinding, existingCfg))
+		roleBinding.ResourceVersion = existingCfg.ResourceVersion
+		err = client.Update(ctx, roleBinding)
 		if err != nil {
 			return err
 		}
@@ -57,7 +60,6 @@ func getSpecClusterRoleBinding(namespace string) (*v1.ClusterRoleBinding, error)
 	clusterRoleBinding := &v1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      server.WebhookServerSAName,
-			Namespace: namespace,
 			Labels:    server.WebhookServerAppLabels(),
 		},
 		Subjects: []v1.Subject{

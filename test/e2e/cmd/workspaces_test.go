@@ -84,7 +84,6 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
 	}
 
-	//TODO Remove is case we recover ownerRef for webhooks configuration to webhook deployment
 	if err = k8sClient.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(workspaceWebhook.MutateWebhookCfgName, &metav1.DeleteOptions{}); err != nil {
 		_ = fmt.Errorf("Failed to delete mutating webhook configuration %s", err)
 	}

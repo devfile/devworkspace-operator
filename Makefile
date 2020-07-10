@@ -160,7 +160,6 @@ endif
 endif
 	$(TOOL) delete -f ./deploy -n $(NAMESPACE) --ignore-not-found=true
 	$(TOOL) delete namespace $(NAMESPACE) --ignore-not-found=true
-	#TODO Remove is case we recover ownerRef for webhooks configuration to webhook deployment
 	$(TOOL) delete mutatingwebhookconfigurations controller.devfile.io --ignore-not-found=true
 	$(TOOL) delete validatingwebhookconfigurations controller.devfile.io --ignore-not-found=true
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.controller.devfile.io --ignore-not-found=true

@@ -85,8 +85,7 @@ func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 				MatchLabels: server.WebhookServerAppLabels(),
 			},
 			Strategy: appsv1.DeploymentStrategy{
-				//TODO Can it be RollingUpdate?
-				Type: appsv1.RecreateDeploymentStrategyType,
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

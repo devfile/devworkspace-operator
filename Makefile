@@ -164,6 +164,10 @@ endif
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io --ignore-not-found=true
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io --ignore-not-found=true
 
+_do_e2e_test:
+	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
+	./bin/devworkspace-controller-e2e
+
 ### docker: build and push docker image
 docker: _print_vars
 	docker build -t $(IMG) -f ./build/Dockerfile .
@@ -251,6 +255,9 @@ start_local:
 ### start_local_debug: start local instance of controller with debugging enabled
 start_local_debug:
 	operator-sdk run --local --watch-namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
+
+### test_e2e: runs e2e test on the cluster set in context. Includes deploying devworkspace-controller, run test workspace, uninstall devworkspace-controller
+test_e2e: _print_vars _set_ctx _update_yamls update_devworkspace_crds _do_e2e_test _reset_yamls _reset_ctx
 
 ### fmt: format all go files in repository
 fmt:

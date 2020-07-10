@@ -10,7 +10,7 @@
 set -ex
 
 # ENV used by PROW ci
-export CI="openshift" 
+export CI="openshift"
 export ARTIFACTS_DIR="/tmp/artifacts"
 
 # Pod created by openshift ci don't have user. Using this envs should avoid errors with git user.
@@ -30,18 +30,9 @@ if ! hash operator-sdk 2>/dev/null; then
         rm operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu
 fi
 
-# Add kubernetes-api CRDS
-make update_devworkspace_crds
-
-# Install go modules
+# For some reason go on PROW force usage vendor folder
+# This workaround is here until we don't figure out cause
 go mod tidy
 go mod vendor
 
-# Output of e2e binary
-export OUT_FILE=bin/devworkspace-controller-e2e
-
-# Compile e2e binary tests
-CGO_ENABLED=0 go test -v -c -o ${OUT_FILE} ./test/e2e/cmd/workspaces_test.go
-
-# Launch tests
-./bin/devworkspace-controller-e2e
+make test_e2e

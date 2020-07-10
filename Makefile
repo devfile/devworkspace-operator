@@ -137,7 +137,7 @@ endif
 
 _do_restart_webhook_server:
 ifeq ($(TOOL),oc)
-	oc patch deployment/devworkspace-operator-webhook-server \
+	oc patch deployment/devworkspace-webhook-server \
 		-n $(NAMESPACE) \
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
 else
@@ -162,6 +162,8 @@ endif
 	$(TOOL) delete namespace $(NAMESPACE) --ignore-not-found=true
 	$(TOOL) delete mutatingwebhookconfigurations controller.devfile.io --ignore-not-found=true
 	$(TOOL) delete validatingwebhookconfigurations controller.devfile.io --ignore-not-found=true
+	$(TOOL) delete clusterrole devworkspace-webhook-server --ignore-not-found=true
+	$(TOOL) delete clusterrolebinding devworkspace-webhook-server --ignore-not-found=true
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.controller.devfile.io --ignore-not-found=true
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.controller.devfile.io --ignore-not-found=true
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io --ignore-not-found=true

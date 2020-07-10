@@ -23,10 +23,10 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CreateWebhookRole(client crclient.Client,
+func CreateWebhookClusterRole(client crclient.Client,
 	ctx context.Context) error {
 
-	clusterRole, err := getSpecRoleBinding()
+	clusterRole, err := getSpecClusterRole()
 	if err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func CreateWebhookRole(client crclient.Client,
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg, err := getClusterRole(ctx, client)
+		existingCfg, err := getExistingClusterRole(ctx, client)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func CreateWebhookRole(client crclient.Client,
 	return nil
 }
 
-func getSpecRoleBinding() (*v1.ClusterRole, error) {
+func getSpecClusterRole() (*v1.ClusterRole, error) {
 	clusterRole := &v1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   server.WebhookServerSAName,
@@ -88,7 +88,7 @@ func getSpecRoleBinding() (*v1.ClusterRole, error) {
 	return clusterRole, nil
 }
 
-func getClusterRole(ctx context.Context, client crclient.Client) (*v1.ClusterRole, error) {
+func getExistingClusterRole(ctx context.Context, client crclient.Client) (*v1.ClusterRole, error) {
 	clusterRole := &v1.ClusterRole{}
 	namespacedName := types.NamespacedName{
 		Name: server.WebhookServerSAName,

@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 
 	"github.com/devfile/devworkspace-operator/webhook/server"
 
@@ -131,9 +130,9 @@ func getValidateWebhook(ctx context.Context, c client.Client, validateWebhookCfg
 }
 
 func controllerSAUID(ctx context.Context, c client.Client) (string, string, error) {
-	saName := os.Getenv(config.ControllerServiceAccountNameEnvVar)
-	if saName == "" {
-		return "", "", fmt.Errorf("could not get service account name")
+	saName, err := config.ControllerCfg.GetWorkspaceControllerSA()
+	if err != nil {
+		return "", "", err
 	}
 	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {

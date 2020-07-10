@@ -25,10 +25,9 @@ import (
 
 func CreateWebhookSA(client crclient.Client,
 	ctx context.Context,
-	saName string,
 	namespace string) error {
 
-	serviceAccount, err := getSpecServiceAccount(saName, namespace)
+	serviceAccount, err := getSpecServiceAccount(namespace)
 	if err != nil {
 		return err
 	}
@@ -37,7 +36,7 @@ func CreateWebhookSA(client crclient.Client,
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg, err := getClusterServiceAccount(client, ctx, saName, namespace)
+		existingCfg, err := getClusterServiceAccount(client, ctx, namespace)
 		if err != nil {
 			return err
 		}
@@ -54,10 +53,10 @@ func CreateWebhookSA(client crclient.Client,
 	return nil
 }
 
-func getSpecServiceAccount(saName, namespace string) (*corev1.ServiceAccount, error) {
+func getSpecServiceAccount(namespace string) (*corev1.ServiceAccount, error) {
 	serviceAccount := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      saName,
+			Name:      server.WebhookServerSAName,
 			Namespace: namespace,
 			Labels:    server.WebhookServerAppLabels(),
 		},
@@ -66,10 +65,10 @@ func getSpecServiceAccount(saName, namespace string) (*corev1.ServiceAccount, er
 	return serviceAccount, nil
 }
 
-func getClusterServiceAccount(client crclient.Client, ctx context.Context, saName, namespace string) (*corev1.ServiceAccount, error) {
+func getClusterServiceAccount(client crclient.Client, ctx context.Context, namespace string) (*corev1.ServiceAccount, error) {
 	serviceAccount := &corev1.ServiceAccount{}
 	namespacedName := types.NamespacedName{
-		Name:      saName,
+		Name:      server.WebhookServerSAName,
 		Namespace: namespace,
 	}
 	err := client.Get(ctx, namespacedName, serviceAccount)

@@ -24,10 +24,9 @@ import (
 )
 
 func CreateWebhookRole(client crclient.Client,
-	ctx context.Context,
-	saName string) error {
+	ctx context.Context) error {
 
-	clusterRole, err := getSpecRoleBinding(saName)
+	clusterRole, err := getSpecRoleBinding()
 	if err != nil {
 		return err
 	}
@@ -36,7 +35,7 @@ func CreateWebhookRole(client crclient.Client,
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg, err := getClusterRole(ctx, saName, client)
+		existingCfg, err := getClusterRole(ctx, client)
 		if err != nil {
 			return err
 		}
@@ -53,10 +52,10 @@ func CreateWebhookRole(client crclient.Client,
 	return nil
 }
 
-func getSpecRoleBinding(saName string) (*v1.ClusterRole, error) {
+func getSpecRoleBinding() (*v1.ClusterRole, error) {
 	clusterRole := &v1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   saName,
+			Name:   server.WebhookServerSAName,
 			Labels: server.WebhookServerAppLabels(),
 		},
 		Rules: []v1.PolicyRule{
@@ -89,10 +88,10 @@ func getSpecRoleBinding(saName string) (*v1.ClusterRole, error) {
 	return clusterRole, nil
 }
 
-func getClusterRole(ctx context.Context, saName string, client crclient.Client) (*v1.ClusterRole, error) {
+func getClusterRole(ctx context.Context, client crclient.Client) (*v1.ClusterRole, error) {
 	clusterRole := &v1.ClusterRole{}
 	namespacedName := types.NamespacedName{
-		Name: saName,
+		Name: server.WebhookServerSAName,
 	}
 	err := client.Get(ctx, namespacedName, clusterRole)
 	if err != nil {

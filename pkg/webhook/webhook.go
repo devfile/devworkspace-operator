@@ -14,9 +14,7 @@ package webhook
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 
@@ -50,29 +48,23 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		return err
 	}
 
-	//TODO Should it be really configured or can we just get it from like server.WebhookServerSAName ?
-	saName := os.Getenv(config.WebhookServerServiceAccountNameEnvVar)
-	if saName == "" {
-		return errors.New("Webhooks server needs SA be configured")
-	}
-
 	// Set up the service account
 	log.Info("Setting up the service account")
-	err = CreateWebhookSA(client, ctx, saName, namespace)
+	err = CreateWebhookSA(client, ctx, namespace)
 	if err != nil {
 		return err
 	}
 
 	// Set up the cluster roles
 	log.Info("Setting up the cluster roles")
-	err = CreateWebhookRole(client, ctx, saName)
+	err = CreateWebhookRole(client, ctx)
 	if err != nil {
 		return err
 	}
 
 	// Set up the cluster role binding
 	log.Info("Setting up the cluster role binding")
-	err = CreateWebhookClusterRoleBinding(client, ctx, saName, namespace)
+	err = CreateWebhookClusterRoleBinding(client, ctx, namespace)
 	if err != nil {
 		return err
 	}
@@ -86,7 +78,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 
 	// Set up the deployment
 	log.Info("Creating the webhook server deployment")
-	err = CreateWebhookServerDeployment(client, ctx, namespace, saName)
+	err = CreateWebhookServerDeployment(client, ctx, namespace)
 	if err != nil {
 		return err
 	}

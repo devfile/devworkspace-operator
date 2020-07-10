@@ -34,7 +34,7 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "devworkspace-operator"
-            - name: SERVICE_ACCOUNT_NAME
+            - name: CONTROLLER_SERVICE_ACCOUNT_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.serviceAccountName

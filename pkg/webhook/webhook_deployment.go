@@ -59,7 +59,7 @@ func CreateWebhookServerDeployment(
 	return nil
 }
 
-func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, error) {
+func getSpecDeployment(namespace string, webhookServerSAName string) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
 	trueBool := true
@@ -67,6 +67,11 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 	if !config.ControllerCfg.IsOpenShift() {
 		uID := int64(1234)
 		user = &uID
+	}
+
+	controllerSA, err := config.ControllerCfg.GetWorkspaceControllerSA()
+	if err != nil {
+		return nil, err
 	}
 
 	deployment := &appsv1.Deployment{
@@ -113,12 +118,11 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 							Env: []corev1.EnvVar{
 								{
 									Name:  config.WebhookServerServiceAccountNameEnvVar,
-									Value: saName,
+									Value: webhookServerSAName,
 								},
 								{
-									Name: config.ControllerServiceAccountNameEnvVar,
-									//TODO It should not be hard-coded
-									Value: "devworkspace-controller",
+									Name:  config.ControllerServiceAccountNameEnvVar,
+									Value: controllerSA,
 								},
 								{
 									Name: "POD_NAME",
@@ -137,7 +141,7 @@ func getSpecDeployment(namespace string, saName string) (*appsv1.Deployment, err
 						RunAsUser: user,
 						FSGroup:   user,
 					},
-					ServiceAccountName:           saName,
+					ServiceAccountName:           webhookServerSAName,
 					AutomountServiceAccountToken: &trueBool,
 					Volumes: []corev1.Volume{
 						{

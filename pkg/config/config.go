@@ -133,6 +133,14 @@ func (wc *ControllerConfig) GetWorkspaceIdleTimeout() string {
 	return wc.GetPropertyOrDefault(workspaceIdleTimeout, defaultWorkspaceIdleTimeout)
 }
 
+func (wc *ControllerConfig) GetWorkspaceControllerSA() (string, error) {
+	saName := os.Getenv(ControllerServiceAccountNameEnvVar)
+	if saName == "" {
+		return "", fmt.Errorf("could not get service account name")
+	}
+	return saName, nil
+}
+
 func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {
 	if meta.GetNamespace() != ConfigMapReference.Namespace ||
 		meta.GetName() != ConfigMapReference.Name {

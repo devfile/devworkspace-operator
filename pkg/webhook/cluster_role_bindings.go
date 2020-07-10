@@ -15,6 +15,7 @@ package webhook
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/devfile/devworkspace-operator/webhook/server"
@@ -59,8 +60,8 @@ func CreateWebhookClusterRoleBinding(client crclient.Client,
 func getSpecClusterRoleBinding(namespace string) (*v1.ClusterRoleBinding, error) {
 	clusterRoleBinding := &v1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      server.WebhookServerSAName,
-			Labels:    server.WebhookServerAppLabels(),
+			Name:   server.WebhookServerSAName,
+			Labels: server.WebhookServerAppLabels(),
 		},
 		Subjects: []v1.Subject{
 			{

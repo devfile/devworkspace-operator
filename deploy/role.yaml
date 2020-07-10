@@ -132,7 +132,11 @@ rules:
   - mutatingwebhookconfigurations
   - validatingwebhookconfigurations
   verbs:
-  - '*'
+  - get
+  - list
+  - create
+  - patch
+  - update
 - apiGroups:
   - oauth.openshift.io
   resources:

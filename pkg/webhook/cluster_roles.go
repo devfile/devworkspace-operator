@@ -68,7 +68,11 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 					"validatingwebhookconfigurations",
 				},
 				Verbs: []string{
-					"*",
+					"create",
+					"list",
+					"get",
+					"patch",
+					"update",
 				},
 			},
 			{

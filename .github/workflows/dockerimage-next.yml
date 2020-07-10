@@ -28,3 +28,4 @@ jobs:
         repository: devfile/devworkspace-controller
         dockerfile: ./build/Dockerfile
         tags: next
+        tag_with_sha: true

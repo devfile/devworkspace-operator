@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
+const serviceCAUsername = "system:serviceaccount:openshift-service-ca:service-ca"
+
 // ImmutableWorkspaceDiffOptions is comparing options that should be used to check if there is no other changes except changing started
 var ImmutableWorkspaceDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
@@ -44,6 +46,8 @@ func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.
 	var msg string
 	if req.Kind == V1RouteKind {
 		allowed, msg = h.handleImmutableRoute(oldObj, newObj, req.UserInfo.Username)
+	} else if req.Kind == V1ServiceKind {
+		allowed, msg = h.handleImmutableService(oldObj, newObj, req.UserInfo.UID, req.UserInfo.Username)
 	} else {
 		allowed, msg = h.handleImmutableObj(oldObj, newObj, req.UserInfo.UID)
 	}
@@ -91,6 +95,18 @@ func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid s
 
 func (h *WebhookHandler) handleImmutableRoute(oldObj, newObj runtime.Object, username string) (allowed bool, msg string) {
 	if username == h.ControllerSAName {
+		return true, ""
+	}
+	if changePermitted(oldObj, newObj) {
+		return true, ""
+	}
+	return false, "object is owned by workspace and cannot be updated."
+}
+
+func (h *WebhookHandler) handleImmutableService(oldObj, newObj runtime.Object, uid, username string) (allowed bool, msg string) {
+	// Special case: secure services are updated by the service-ca serviceaccount once a secret is created to contain
+	// tls key and cert.
+	if uid == h.ControllerUID || username == serviceCAUsername {
 		return true, ""
 	}
 	if changePermitted(oldObj, newObj) {

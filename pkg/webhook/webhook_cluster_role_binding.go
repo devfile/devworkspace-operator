@@ -69,7 +69,7 @@ func getSpecClusterRoleBinding(saName string, namespace string) (*v1.ClusterRole
 			},
 		},
 		RoleRef: v1.RoleRef{
-			Kind: "ClusterRole",
+			Kind:     "ClusterRole",
 			Name:     saName,
 			APIGroup: "rbac.authorization.k8s.io",
 		},

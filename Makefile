@@ -4,7 +4,7 @@ SHELL := bash
 
 OPERATOR_SDK_VERSION = v0.17.0
 NAMESPACE ?= devworkspace-controller
-IMG ?= quay.io/che-incubator/che-workspace-controller:nightly
+IMG ?= quay.io/devfile/devworkspace-controller:next
 TOOL ?= oc
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 PULL_POLICY ?= Always
@@ -98,7 +98,7 @@ _reset_yamls: _set_registry_url
 	sed -i.bak -e 's|devworkspace.sidecar.image_pull_policy: .*|devworkspace.sidecar.image_pull_policy: Always|g' ./deploy/controller_config.yaml
 	rm ./deploy/controller_config.yaml.bak
 ifeq ($(TOOL),oc)
-	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|image: $(IMG)|image: quay.io/devfile/devworkspace-controller:next|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/os/controller.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/os/controller.yaml
 
@@ -108,7 +108,7 @@ ifeq ($(TOOL),oc)
 	rm ./deploy/os/controller.yaml.bak
 	rm ./deploy/os/devworkspace-controller-cert-gen-deployment.yaml.bak
 else
-	sed -i.bak -e "s|image: $(IMG)|image: quay.io/che-incubator/che-workspace-controller:nightly|g" ./deploy/k8s/controller.yaml
+	sed -i.bak -e "s|image: $(IMG)|image: quay.io/devfile/devworkspace-controller:next|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: $(PULL_POLICY)|imagePullPolicy: Always|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/k8s/controller.yaml
 	rm ./deploy/k8s/controller.yaml.bak

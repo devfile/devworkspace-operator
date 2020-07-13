@@ -10,7 +10,7 @@ Che workspace operator repository that contains K8s API for Che workspace and co
 The controller can be deployed to a cluster provided you are logged in with cluster-admin credentials:
 
 ```bash
-export IMG=quay.io/che-incubator/che-workspace-controller:nightly
+export IMG=quay.io/devfile/devworkspace-controller:next
 export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
 make deploy
 ```
@@ -41,7 +41,7 @@ The repository contains a Makefile; building and deploying can be configured via
 
 |variable|purpose|default value|
 |---|---|---|
-| `IMG` | Image used for controller | `quay.io/che-incubator/che-workspace-controller:nightly` |
+| `IMG` | Image used for controller | `quay.io/devfile/devworkspace-controller:next` |
 | `TOOL` | CLI tool for interfacing with the cluster: `kubectl` or `oc`; if `oc` is used, deployment is tailored to OpenShift, otherwise Kubernetes | `oc` |
 | `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |
@@ -108,7 +108,13 @@ make uninstall
 ```
 This will delete all custom resource definitions created for the controller, as well as the `devworkspace-controller` namespace.
 
-### CentOS CI
+### CI
+
+#### GitHub actions
+
+- [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/master/.github/workflows/dockerimage-next.yml) action build master and push it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
+
+#### CentOS CI
 The following [CentOS CI jobs](https://ci.centos.org/) are associated with the repository:
 
 - [`master`](https://ci.centos.org/job/devtools-che-workspace-operator-build-master/) - builds CentOS images on each commit to the [`master`](https://github.com/devfile/devworkspace-operator/tree/master) branch and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller).

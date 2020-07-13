@@ -86,6 +86,19 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 					"get",
 				},
 			},
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"pods",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
 		},
 	}
 

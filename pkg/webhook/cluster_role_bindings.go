@@ -14,9 +14,6 @@ package webhook
 
 import (
 	"context"
-	"fmt"
-
-	"github.com/google/go-cmp/cmp"
 
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	v1 "k8s.io/api/rbac/v1"
@@ -43,7 +40,6 @@ func CreateWebhookClusterRoleBinding(client crclient.Client,
 		if err != nil {
 			return err
 		}
-		fmt.Printf("\n%s\n\n", cmp.Diff(roleBinding, existingCfg))
 		roleBinding.ResourceVersion = existingCfg.ResourceVersion
 		err = client.Update(ctx, roleBinding)
 		if err != nil {

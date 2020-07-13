@@ -141,7 +141,7 @@ ifeq ($(TOOL),oc)
 		-n $(NAMESPACE) \
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
 else
-	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-operator-webhook-server
+	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-webhook-server
 endif
 
 _do_uninstall:

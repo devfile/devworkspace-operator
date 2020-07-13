@@ -49,28 +49,28 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	}
 
 	// Set up the service account
-	log.Info("Setting up the service account")
+	log.Info("Setting up the webhook server service account")
 	err = CreateWebhookSA(client, ctx, namespace)
 	if err != nil {
 		return err
 	}
 
 	// Set up the cluster roles
-	log.Info("Setting up the cluster roles")
+	log.Info("Setting up the webhook server cluster roles")
 	err = CreateWebhookClusterRole(client, ctx)
 	if err != nil {
 		return err
 	}
 
 	// Set up the cluster role binding
-	log.Info("Setting up the cluster role binding")
+	log.Info("Setting up the webhook server cluster role binding")
 	err = CreateWebhookClusterRoleBinding(client, ctx, namespace)
 	if err != nil {
 		return err
 	}
 
 	// Set up the certs
-	log.Info("Setting up the secure certs")
+	log.Info("Setting up the webhook server secure certs")
 	err = SetupWebhookCerts(client, ctx, namespace)
 	if err != nil {
 		return err

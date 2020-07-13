@@ -77,9 +77,9 @@ func createSecureService(client crclient.Client, ctx context.Context, namespace 
 		if err != nil {
 			return err
 		}
-		log.Info("Updating webhook server secure cert service")
+		log.Info("Updated webhook server service")
 	} else {
-		log.Info("Updating webhook server secure cert service")
+		log.Info("Created webhook server service")
 	}
 	return nil
 }

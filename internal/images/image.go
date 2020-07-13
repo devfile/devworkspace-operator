@@ -39,8 +39,8 @@ const (
 	webhookServerImageEnvVar       = "RELATED_IMAGE_devworkspace_webhook_server"
 )
 
-// GetWebTerminalToolingImage returns the image reference for the default web tooling image. Returns
-// the empty string if environment variable RELATED_IMAGE_web_terminal_tooling is not defined
+// GetWebTerminalToolingImage returns the image reference for the webhook server image. Returns
+// the empty string if environment variable RELATED_IMAGE_devworkspace_webhook_server is not defined
 func GetWebhookServerImage() string {
 	val, ok := os.LookupEnv(webhookServerImageEnvVar)
 	if !ok {

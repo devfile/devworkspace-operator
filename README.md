@@ -113,9 +113,3 @@ This will delete all custom resource definitions created for the controller, as 
 #### GitHub actions
 
 - [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/master/.github/workflows/dockerimage-next.yml) action build master and push it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
-
-#### CentOS CI
-The following [CentOS CI jobs](https://ci.centos.org/) are associated with the repository:
-
-- [`master`](https://ci.centos.org/job/devtools-che-workspace-operator-build-master/) - builds CentOS images on each commit to the [`master`](https://github.com/devfile/devworkspace-operator/tree/master) branch and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller).
-- [`nightly`](https://ci.centos.org/job/devtools-che-workspace-operator-nightly/) - builds CentOS images and pushes them to [quay.io/che-incubator/che-workspace-controller](https://quay.io/repository/che-incubator/che-workspace-controller) on a daily basis from the [`master`](https://github.com/devfile/devworkspace-operator/tree/master) branch.

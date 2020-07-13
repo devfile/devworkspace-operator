@@ -18,6 +18,7 @@ import (
 	"syscall"
 
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
@@ -34,20 +35,21 @@ var log = logf.Log.WithName("cmd")
 func main() {
 	logf.SetLogger(zap.Logger())
 
-	clusterConfig, err := rest.InClusterConfig()
+	// Get a config to talk to the apiserver
+	cfg, err := config.GetConfig()
 	if err != nil {
-		log.Error(err, "Failed when attempting to retrieve in cluster config")
+		log.Error(err, "")
 		os.Exit(1)
 	}
 
-	namespace, err := k8sutil.GetOperatorNamespace()
+	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
-		log.Error(err, "Failed to get Operator Namespace")
+		log.Error(err, "Failed to get watch namespace")
 		os.Exit(1)
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(clusterConfig, manager.Options{
+	mgr, err := manager.New(cfg, manager.Options{
 		Namespace: namespace,
 	})
 	if err != nil {
@@ -55,7 +57,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = createWebhooks(mgr, clusterConfig, namespace)
+	err = createWebhooks(mgr, cfg)
 	if err != nil {
 		log.Error(err, "Failed to get create webhooks")
 		os.Exit(1)
@@ -71,7 +73,7 @@ func main() {
 	}
 }
 
-func createWebhooks(mgr manager.Manager, clusterConfig *rest.Config, namespace string) error {
+func createWebhooks(mgr manager.Manager, clusterConfig *rest.Config) error {
 	log.Info("Configuring Webhook Server")
 	err := server.ConfigureWebhookServer(mgr)
 	if err != nil {

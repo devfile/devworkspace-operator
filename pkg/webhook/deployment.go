@@ -126,6 +126,9 @@ func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 										},
 									},
 								},
+								{
+									Name: "WATCH_NAMESPACE",
+								},
 							},
 						},
 					},

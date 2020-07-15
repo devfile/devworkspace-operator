@@ -12,7 +12,7 @@ set -ex
 # ENV used by PROW ci
 export CI="openshift" 
 export ARTIFACTS_DIR="/tmp/artifacts"
-export DOCKER_IMAGE=registry.svc.ci.openshift.org/ci-op-${OPENSHIFT_BUILD_NAMESPACE}/stable:devworkspace-operator
+export DOCKER_IMAGE=registry.svc.ci.openshift.org/${OPENSHIFT_BUILD_NAMESPACE}/stable:devworkspace-operator
 echo ${DOCKER_IMAGE}
 
 # Pod created by openshift ci don't have user. Using this envs should avoid errors with git user.

@@ -13,7 +13,11 @@ set -ex
 export CI="openshift" 
 export ARTIFACTS_DIR="/tmp/artifacts"
 export DOCKER_IMAGE=registry.svc.ci.openshift.org/${OPENSHIFT_BUILD_NAMESPACE}/stable:devworkspace-operator
-echo ${DOCKER_IMAGE}
+export SCRIPT=$(readlink -f "$0")
+export SCRIPTPATH=$(dirname "$SCRIPT") 
+export OPERATOR_REPO=$(dirname "$SCRIPTPATH")
+
+sed -i.bak -e "s|image: .*|image: ${DOCKER_IMAGE}|g" ${OPERATOR_REPO}/deploy/os/controller.yaml
 
 # Pod created by openshift ci don't have user. Using this envs should avoid errors with git user.
 export GIT_COMMITTER_NAME="CI BOT"

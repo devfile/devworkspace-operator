@@ -5,6 +5,7 @@ SHELL := bash
 OPERATOR_SDK_VERSION = v0.17.0
 NAMESPACE ?= devworkspace-controller
 IMG ?= quay.io/devfile/devworkspace-controller:next
+CI_CONTROLLER_IMAGE ?= quay.io/devfile/devworkspace-controller:next
 TOOL ?= oc
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 PULL_POLICY ?= Always
@@ -19,6 +20,7 @@ _print_vars:
 	@echo "Current env vars:"
 	@echo "    NAMESPACE=$(NAMESPACE)"
 	@echo "    IMG=$(IMG)"
+	@echo "    CI_CONTROLLER_IMAGE=$(CI_CONTROLLER_IMAGE)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"
@@ -170,6 +172,7 @@ endif
 	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io --ignore-not-found=true
 
 _do_e2e_test:
+	sed -i.bak -e "s|image: .*|image: $(CI_CONTROLLER_IMAGE)|g" ./deploy/os/controller.yaml
 	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
 	./bin/devworkspace-controller-e2e
 
@@ -289,6 +292,7 @@ help: Makefile
 	@echo ''
 	@echo 'Supported environment variables:'
 	@echo '    IMG                        - Image used for controller'
+	@echo '    CI_CONTROLLER_IMAGE        - Image builded in Openshift CI and used to run e2e tests'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
 	@echo '    TOOL                       - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'

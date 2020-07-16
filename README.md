@@ -1,6 +1,3 @@
-[![Master Build Status](https://ci.centos.org/buildStatus/icon?subject=master&job=devtools-che-workspace-operator-build-master/)](https://ci.centos.org/view/Devtools/job/devtools-che-workspace-operator-build-master/)
-[![Nightly Build Status](https://ci.centos.org/buildStatus/icon?subject=nightly&job=devtools-che-workspace-operator-nightly/)](https://ci.centos.org/view/Devtools/job/devtools-che-workspace-operator-nightly/)
-
 # Che Workspace Operator
 
 Che workspace operator repository that contains K8s API for Che workspace and controller for them.

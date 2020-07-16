@@ -21,21 +21,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/types"
-
 	"github.com/devfile/devworkspace-operator/internal/cluster"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/controller/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/controller/workspace/restapis"
+	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -213,7 +213,16 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if config.ControllerCfg.GetWebhooksEnabled() == "true" {
 		if _, present := workspace.Labels[config.WorkspaceCreatorLabel]; !present {
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			return reconcile.Result{}, fmt.Errorf("workspace does not have creator label -- it must be recreated to resolve the issue")
+			return reconcile.Result{}, fmt.Errorf("devworkspace does not have creator label -- it must be recreated to resolve the issue")
+		}
+
+		webhooksTimestamp, err := webhook.GetWebhooksCreationTimestamp(r.client)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("webhooks not set up yet: %w", err)
+		}
+		if workspace.CreationTimestamp.Before(&webhooksTimestamp) {
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			return reconcile.Result{}, fmt.Errorf("devworkspace created before webhooks -- it must be recreated to resolve the issue")
 		}
 	}
 

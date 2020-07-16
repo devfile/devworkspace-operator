@@ -41,3 +41,6 @@ go mod tidy
 go mod vendor
 
 make test_e2e
+
+# grab devworkspace-controller namespace events after running e2e
+oc get events -n devworkspace-controller | tee ${ARTIFACTS_DIR}/devworkspace-controller-events.log

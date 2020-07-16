@@ -13,6 +13,11 @@ set -ex
 export CI="openshift"
 export ARTIFACTS_DIR="/tmp/artifacts"
 
+# Component is defined in Openshift CI job configuration. See: https://github.com/openshift/release/blob/master/ci-operator/config/devfile/devworkspace-operator/devfile-devworkspace-operator-master__v4.yaml#L8
+export CI_COMPONENT="devworkspace-operator"
+# OPENSHIFT_BUILD_NAMESPACE env var exposed by Openshift CI. More info about how images are builded in Openshift CI: https://github.com/openshift/ci-tools/blob/master/TEMPLATES.md#parameters-available-to-templates
+export IMG=registry.svc.ci.openshift.org/${OPENSHIFT_BUILD_NAMESPACE}/stable:${CI_COMPONENT}
+
 # Pod created by openshift ci don't have user. Using this envs should avoid errors with git user.
 export GIT_COMMITTER_NAME="CI BOT"
 export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
@@ -36,3 +41,6 @@ go mod tidy
 go mod vendor
 
 make test_e2e
+
+# grab devworkspace-controller namespace events after running e2e
+oc get events -n devworkspace-controller | tee ${ARTIFACTS_DIR}/devworkspace-controller-events.log

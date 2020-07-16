@@ -20,24 +20,25 @@ import (
 	"github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("[Create Cloud Shell Workspace]", func() {
-	ginkgo.It("Add cloud shell to cluster", func() {
-		label := "controller.devfile.io/workspace_name=cloud-shell"
+var _ = ginkgo.Describe("[Create Openshift Web Terminal Workspace]", func() {
+	ginkgo.It("Add openshift web terminal to cluster", func() {
+		label := "controller.devfile.io/workspace_name=web-terminal"
 		k8sClient, err := client.NewK8sClient()
 		if err != nil {
 			ginkgo.Fail("Failed to create k8s client: " + err.Error())
 			return
 		}
-		err = k8sClient.OcApplyWorkspace("samples/cloud-shell.yaml")
+		err = k8sClient.OcApplyWorkspace("samples/web-terminal.yaml")
 		if err != nil {
-			ginkgo.Fail("Failed to create cloud-shell devworkspace: " + err.Error())
+			ginkgo.Fail("Failed to create openshift web terminal workspace: " + err.Error())
 			return
 		}
 		deploy, err := k8sClient.WaitForPodRunningByLabel(label)
 
 		if !deploy {
-			fmt.Println("Cloud Shell not deployed")
+			fmt.Println("Openshift Web terminal workspace didn't start properly")
 		}
+
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
 })

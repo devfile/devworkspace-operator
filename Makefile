@@ -19,7 +19,6 @@ _print_vars:
 	@echo "Current env vars:"
 	@echo "    NAMESPACE=$(NAMESPACE)"
 	@echo "    IMG=$(IMG)"
-	@echo "    CI_CONTROLLER_IMAGE=$(CI_CONTROLLER_IMAGE)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"

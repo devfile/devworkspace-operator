@@ -210,6 +210,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return r.updateWorkspaceStatus(workspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
+	if config.ControllerCfg.GetWebhooksEnabled() == "true" {
+		if _, present := workspace.Labels[config.WorkspaceCreatorLabel]; !present {
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			return reconcile.Result{}, fmt.Errorf("workspace does not have creator label -- it must be recreated to resolve the issue")
+		}
+	}
+
 	immutable := workspace.Annotations[config.WorkspaceImmutableAnnotation]
 	if immutable == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
 		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")

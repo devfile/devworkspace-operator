@@ -70,6 +70,7 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 				Verbs: []string{
 					"create",
 					"list",
+					"watch",
 					"get",
 					"patch",
 					"update",

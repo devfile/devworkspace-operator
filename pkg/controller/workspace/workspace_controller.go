@@ -27,7 +27,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/controller/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/controller/workspace/restapis"
-	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -210,20 +209,10 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return r.updateWorkspaceStatus(workspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
-	if config.ControllerCfg.GetWebhooksEnabled() == "true" {
-		if _, present := workspace.Labels[config.WorkspaceCreatorLabel]; !present {
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			return reconcile.Result{}, fmt.Errorf("devworkspace does not have creator label -- it must be recreated to resolve the issue")
-		}
-
-		webhooksTimestamp, err := webhook.GetWebhooksCreationTimestamp(r.client)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("webhooks not set up yet: %w", err)
-		}
-		if workspace.CreationTimestamp.Before(&webhooksTimestamp) {
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			return reconcile.Result{}, fmt.Errorf("devworkspace created before webhooks -- it must be recreated to resolve the issue")
-		}
+	err = r.validateCreatorTimestamp(workspace)
+	if err != nil {
+		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		return reconcile.Result{}, err
 	}
 
 	immutable := workspace.Annotations[config.WorkspaceImmutableAnnotation]

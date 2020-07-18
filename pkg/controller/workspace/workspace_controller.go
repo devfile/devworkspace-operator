@@ -296,13 +296,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
 		configMapStatus := restapis.SyncRestAPIsConfigMap(workspace, componentDescriptions, routingStatus.ExposedEndpoints, clusterAPI)
 		if !configMapStatus.Continue {
-			if configMapStatus.FailStartup {
-				reqLogger.Info("Workspace start failed")
-				reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-				// Note: Currently this is impossible; syncRestAPIsConfigMap does not return FailStartup
-				reconcileStatus.Conditions[WorkspaceFailedStart] = "Failed to install configmap required for devworkspace"
-				return reconcile.Result{}, configMapStatus.Err
-			}
+			// FailStartup is not possible for generating the configmap
 			reqLogger.Info("Waiting on che-rest-apis configmap to be ready")
 			return reconcile.Result{Requeue: configMapStatus.Requeue}, configMapStatus.Err
 		}
@@ -325,12 +319,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	}
 	serviceAcctStatus := provision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
 	if !serviceAcctStatus.Continue {
-		if serviceAcctStatus.FailStartup {
-			reqLogger.Info("Workspace start failed")
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[WorkspaceFailedStart] = "Failed to install service account required for devworkspace"
-			return reconcile.Result{}, serviceAcctStatus.Err
-		}
+		// FailStartup is not possible for generating the serviceaccount
 		reqLogger.Info("Waiting for workspace ServiceAccount")
 		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}

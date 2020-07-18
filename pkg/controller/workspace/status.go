@@ -49,12 +49,13 @@ var healthHttpClient = &http.Client{
 func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *devworkspace.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
 	workspace.Status.Phase = status.Phase
 	currTransitionTime := metav1.Time{Time: clock.Now()}
-	for _, conditionType := range status.Conditions {
+	for conditionType, conditionMsg := range status.Conditions {
 		conditionExists := false
 		for idx, condition := range workspace.Status.Conditions {
 			if condition.Type == conditionType && condition.LastTransitionTime.Before(&currTransitionTime) {
 				workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
 				workspace.Status.Conditions[idx].Status = corev1.ConditionTrue
+				workspace.Status.Conditions[idx].Message = conditionMsg
 				conditionExists = true
 				break
 			}
@@ -62,6 +63,7 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *devworkspace.DevWo
 		if !conditionExists {
 			workspace.Status.Conditions = append(workspace.Status.Conditions, devworkspace.WorkspaceCondition{
 				Type:               conditionType,
+				Message:            conditionMsg,
 				Status:             corev1.ConditionTrue,
 				LastTransitionTime: currTransitionTime,
 			})
@@ -71,6 +73,7 @@ func (r *ReconcileWorkspace) updateWorkspaceStatus(workspace *devworkspace.DevWo
 		if condition.LastTransitionTime.Before(&currTransitionTime) {
 			workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
 			workspace.Status.Conditions[idx].Status = corev1.ConditionUnknown
+			workspace.Status.Conditions[idx].Message = ""
 		}
 	}
 	sort.SliceStable(workspace.Status.Conditions, func(i, j int) bool {

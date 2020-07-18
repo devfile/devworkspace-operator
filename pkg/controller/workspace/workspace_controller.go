@@ -46,9 +46,13 @@ import (
 
 var log = logf.Log.WithName("controller_workspace")
 
+// TODO temporary condition name; remove once included in devworkspace-api
+const WorkspaceFailedStart devworkspace.WorkspaceConditionType = "FailedStart"
+
 type currentStatus struct {
-	// List of condition types that are true for the current workspace
-	Conditions []devworkspace.WorkspaceConditionType
+	// Map of condition types that are true for the current workspace. Key is valid condition, value is optional
+	// message to be filled into condition's 'Message' field.
+	Conditions map[devworkspace.WorkspaceConditionType]string
 	// Current workspace phase
 	Phase devworkspace.WorkspacePhase
 }
@@ -203,15 +207,17 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 
 	// Prepare handling workspace status and condition
 	reconcileStatus := currentStatus{
-		Phase: devworkspace.WorkspaceStatusStarting,
+		Conditions: map[devworkspace.WorkspaceConditionType]string{},
+		Phase:      devworkspace.WorkspaceStatusStarting,
 	}
 	defer func() (reconcile.Result, error) {
 		return r.updateWorkspaceStatus(workspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
-	err = r.validateCreatorTimestamp(workspace)
+	msg, err := r.validateCreatorTimestamp(workspace)
 	if err != nil {
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		reconcileStatus.Conditions[WorkspaceFailedStart] = msg
 		return reconcile.Result{}, err
 	}
 
@@ -219,6 +225,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if immutable == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
 		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		reconcileStatus.Conditions[WorkspaceFailedStart] = "Workspace has restricted-access annotation " +
+			"applied but operator does not have webhooks enabled"
 		return reconcile.Result{}, nil
 	}
 
@@ -228,18 +236,21 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		if componentsStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			// TODO: Propagate more information from sync step to show a more useful message -- which plugin couldn't be installed?
+			reconcileStatus.Conditions[WorkspaceFailedStart] = "Could not find plugins for devworkspace"
 		} else {
 			reqLogger.Info("Waiting on components to be ready")
 		}
 		return reconcile.Result{Requeue: componentsStatus.Requeue}, componentsStatus.Err
 	}
 	componentDescriptions := componentsStatus.ComponentDescriptions
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceReady)
+	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
 
 	// Only add che rest apis if Theia editor is present in the devfile
 	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
 		if !restapis.IsCheRestApisConfigured() {
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			reconcileStatus.Conditions[WorkspaceFailedStart] = "Che REST API sidecar is not configured but required for the Theia plugin"
 			return reconcile.Result{Requeue: false}, errors.New("Che REST API sidecar is not configured but required for used Theia plugin")
 		}
 		// TODO: first half of provisioning rest-apis
@@ -263,12 +274,14 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		if routingStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			// TODO: Propagate failure reason from workspaceRouting
+			reconcileStatus.Conditions[WorkspaceFailedStart] = "Failed to install network objects required for devworkspace"
 			return reconcile.Result{}, routingStatus.Err
 		}
 		reqLogger.Info("Waiting on routing to be ready")
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceRoutingReady)
+	reconcileStatus.Conditions[devworkspace.WorkspaceRoutingReady] = ""
 
 	statusOk, err := syncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
@@ -286,6 +299,8 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 			if configMapStatus.FailStartup {
 				reqLogger.Info("Workspace start failed")
 				reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+				// Note: Currently this is impossible; syncRestAPIsConfigMap does not return FailStartup
+				reconcileStatus.Conditions[WorkspaceFailedStart] = "Failed to install configmap required for devworkspace"
 				return reconcile.Result{}, configMapStatus.Err
 			}
 			reqLogger.Info("Waiting on che-rest-apis configmap to be ready")
@@ -313,13 +328,14 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		if serviceAcctStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			reconcileStatus.Conditions[WorkspaceFailedStart] = "Failed to install service account required for devworkspace"
 			return reconcile.Result{}, serviceAcctStatus.Err
 		}
 		reqLogger.Info("Waiting for workspace ServiceAccount")
 		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceServiceAccountReady)
+	reconcileStatus.Conditions[devworkspace.WorkspaceServiceAccountReady] = ""
 
 	// Step five: Create deployment and wait for it to be ready
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, componentDescriptions, serviceAcctName, clusterAPI)
@@ -327,12 +343,13 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			reconcileStatus.Conditions[WorkspaceFailedStart] = fmt.Sprintf("Devworkspace spec is invalid: %s", deploymentStatus.Err)
 			return reconcile.Result{}, deploymentStatus.Err
 		}
 		reqLogger.Info("Waiting on deployment to be ready")
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
-	reconcileStatus.Conditions = append(reconcileStatus.Conditions, devworkspace.WorkspaceReady)
+	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
 
 	serverReady, err := checkServerStatus(workspace)
 	if err != nil {

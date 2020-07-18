@@ -20,21 +20,29 @@ import (
 	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
-func (r *ReconcileWorkspace) validateCreatorTimestamp(workspace *devworkspace.DevWorkspace) error {
+// validateCreatorTimestamp checks that a devworkspace was created after workspace-related mutating webhooks
+// and ensures a creator ID label is applied to the workspace. If webhooks are disabled, validation succeeds by
+// default.
+//
+// If error is not nil, a user-readable message is returned that can be propagated to the user to explain the issue.
+func (r *ReconcileWorkspace) validateCreatorTimestamp(workspace *devworkspace.DevWorkspace) (msg string, err error) {
 	if config.ControllerCfg.GetWebhooksEnabled() != "true" {
-		return nil
+		return "", nil
 	}
 	if _, present := workspace.Labels[config.WorkspaceCreatorLabel]; !present {
-		return fmt.Errorf("devworkspace does not have creator label -- it must be recreated to resolve the issue")
+		return "Devworkspace was created without creator ID label. It must be recreated to resolve the issue",
+			fmt.Errorf("devworkspace does not have creator label applied")
 	}
 
 	webhooksTimestamp, err := webhook.GetWebhooksCreationTimestamp(r.client)
 	if err != nil {
-		return fmt.Errorf("webhooks not set up yet: %w", err)
+		return "Could not read devworkspace webhooks on cluster. Devworkspace must be recreated.",
+			fmt.Errorf("failed getting webhooks creation timestamp: %w", err)
 	}
 	if workspace.CreationTimestamp.Before(&webhooksTimestamp) {
-		return fmt.Errorf("devworkspace created before webhooks -- it must be recreated to resolve the issue")
+		return "Devworkspace was created before current webhooks were installed and must be recreated to successfully start",
+			fmt.Errorf("devworkspace created before webhooks")
 	}
 
-	return nil
+	return "", nil
 }

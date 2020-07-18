@@ -55,7 +55,7 @@ func SyncRestAPIsConfigMap(workspace *devworkspace.DevWorkspace, components []v1
 	}
 
 	if !cmp.Equal(specCM, clusterCM, configmapDiffOpts) {
-		clusterAPI.Logger.Info("Updateing che-rest-apis configmap")
+		clusterAPI.Logger.Info("Updating che-rest-apis configmap")
 		clusterCM.Data = specCM.Data
 		err := clusterAPI.Client.Update(context.TODO(), clusterCM)
 		if err != nil && !errors.IsConflict(err) {

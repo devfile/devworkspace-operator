@@ -46,9 +46,6 @@ import (
 
 var log = logf.Log.WithName("controller_workspace")
 
-// TODO temporary condition name; remove once included in devworkspace-api
-const WorkspaceFailedStart devworkspace.WorkspaceConditionType = "FailedStart"
-
 type currentStatus struct {
 	// Map of condition types that are true for the current workspace. Key is valid condition, value is optional
 	// message to be filled into condition's 'Message' field.
@@ -217,7 +214,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	msg, err := r.validateCreatorTimestamp(workspace)
 	if err != nil {
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[WorkspaceFailedStart] = msg
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = msg
 		return reconcile.Result{}, err
 	}
 
@@ -225,7 +222,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if immutable == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
 		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[WorkspaceFailedStart] = "Workspace has restricted-access annotation " +
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Workspace has restricted-access annotation " +
 			"applied but operator does not have webhooks enabled. " +
 			"Remove restricted-access annotation or ask an administrator " +
 			"to reconfigure Operator."
@@ -239,7 +236,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 			reqLogger.Info("DevWorkspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			// TODO: Propagate more information from sync step to show a more useful message -- which plugin couldn't be installed?
-			reconcileStatus.Conditions[WorkspaceFailedStart] = "Could not find plugins for devworkspace"
+			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Could not find plugins for devworkspace"
 		} else {
 			reqLogger.Info("Waiting on components to be ready")
 		}
@@ -252,7 +249,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
 		if !restapis.IsCheRestApisConfigured() {
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[WorkspaceFailedStart] = "Che REST API sidecar is not configured but required for the Theia plugin"
+			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Che REST API sidecar is not configured but required for the Theia plugin"
 			return reconcile.Result{Requeue: false}, errors.New("Che REST API sidecar is not configured but required for used Theia plugin")
 		}
 		// TODO: first half of provisioning rest-apis
@@ -277,7 +274,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 			reqLogger.Info("DevWorkspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			// TODO: Propagate failure reason from workspaceRouting
-			reconcileStatus.Conditions[WorkspaceFailedStart] = "Failed to install network objects required for devworkspace"
+			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Failed to install network objects required for devworkspace"
 			return reconcile.Result{}, routingStatus.Err
 		}
 		reqLogger.Info("Waiting on routing to be ready")
@@ -334,7 +331,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[WorkspaceFailedStart] = fmt.Sprintf("Devworkspace spec is invalid: %s", deploymentStatus.Err)
+			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Devworkspace spec is invalid: %s", deploymentStatus.Err)
 			return reconcile.Result{}, deploymentStatus.Err
 		}
 		reqLogger.Info("Waiting on deployment to be ready")

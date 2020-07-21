@@ -100,8 +100,10 @@ func toDevfileEndpoints(eps []devworkspace.Endpoint) []workspaceApi.Endpoint {
 	devfileEndpoints := []workspaceApi.Endpoint{}
 	for _, e := range eps {
 		attributes := map[workspaceApi.EndpointAttribute]string{}
-		if e.Configuration != nil {
-			attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = e.Configuration.Scheme
+		if e.Protocol != "" {
+			attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = e.Protocol
+		} else {
+			attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = "http"
 		}
 
 		devfileEndpoints = append(devfileEndpoints, workspaceApi.Endpoint{

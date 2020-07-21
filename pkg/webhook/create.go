@@ -14,7 +14,9 @@ package webhook
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 
@@ -34,7 +36,12 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 
 	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
-		return err
+		if errors.Is(err, k8sutil.ErrRunLocal) {
+			// local mode. Just read watch namespace env var set by operator sdk
+			namespace = os.Getenv("WATCH_NAMESPACE")
+		} else {
+			return err
+		}
 	}
 
 	client, err := crclient.New(cfg, crclient.Options{})

@@ -188,7 +188,6 @@ endif
 else
 	@echo "Webhooks disabled, skipping certificate generation"
 endif
-
 ### deploy: deploy controller to cluster
 deploy: _print_vars _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds _apply_controller_cfg webhook _reset_yamls _reset_ctx
 
@@ -253,10 +252,22 @@ endif
 
 ### start_local: start local instance of controller using operator-sdk
 start_local:
+ifeq ($(WEBHOOK_ENABLED),true)
+	#in cluster mode it comes from Deployment env var
+	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
+	#in cluster mode it comes from configured SA propogated via env var
+	export CONTROLLER_SERVICE_ACCOUNT_NAME=$(shell oc whoami)
+endif
 	operator-sdk run --local --watch-namespace $(NAMESPACE) 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
 ### start_local_debug: start local instance of controller with debugging enabled
 start_local_debug:
+ifeq ($(WEBHOOK_ENABLED),true)
+	#in cluster mode it comes from Deployment env var
+	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
+	#in cluster mode it comes from configured SA propogated via env var
+	export CONTROLLER_SERVICE_ACCOUNT_NAME=$(shell oc whoami)
+endif
 	operator-sdk run --local --watch-namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
 .PHONY: test

@@ -79,8 +79,7 @@ make local
 operator-sdk up local --namespace ${NAMESPACE}
 ```
 
-When running locally, only a single namespace is wat
-d; as a result, all workspaces have to be deployed to `${NAMESPACE}`
+When running locally, only a single namespace is watched; as a result, all workspaces have to be deployed to `${NAMESPACE}`
 
 ### Run controller locally and debug
 Debugging the controller depends on `delve` being installed (`go get -u github.com/go-delve/delve/cmd/dlv`). Note that at the time of writing, executing `go get` in this repo's directory will update go.mod; these changes should be dropped before committing.

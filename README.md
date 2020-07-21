@@ -1,6 +1,6 @@
-# Che Workspace Operator
+# Dev Workspace Operator
 
-Che workspace operator repository that contains K8s API for Che workspace and controller for them.
+Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/kubernetes-api repository.
 
 ## Running the controller in a cluster
 

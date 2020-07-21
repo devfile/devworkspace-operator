@@ -30,17 +30,18 @@ func (r *ReconcileWorkspace) validateCreatorTimestamp(workspace *devworkspace.De
 		return "", nil
 	}
 	if _, present := workspace.Labels[config.WorkspaceCreatorLabel]; !present {
-		return "Devworkspace was created without creator ID label. It must be recreated to resolve the issue",
+		return "DevWorkspace was created without creator ID label. It must be recreated to resolve the issue",
 			fmt.Errorf("devworkspace does not have creator label applied")
 	}
 
 	webhooksTimestamp, err := webhook.GetWebhooksCreationTimestamp(r.client)
 	if err != nil {
-		return "Could not read devworkspace webhooks on cluster. Devworkspace must be recreated.",
+		return "Could not read devworkspace webhooks on cluster. Contact an administrator " +
+				"to check logs and fix Operator installation.",
 			fmt.Errorf("failed getting webhooks creation timestamp: %w", err)
 	}
 	if workspace.CreationTimestamp.Before(&webhooksTimestamp) {
-		return "Devworkspace was created before current webhooks were installed and must be recreated to successfully start",
+		return "DevWorkspace was created before current webhooks were installed and must be recreated to successfully start",
 			fmt.Errorf("devworkspace created before webhooks")
 	}
 

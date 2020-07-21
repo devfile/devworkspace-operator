@@ -226,7 +226,9 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[WorkspaceFailedStart] = "Workspace has restricted-access annotation " +
-			"applied but operator does not have webhooks enabled"
+			"applied but operator does not have webhooks enabled. " +
+			"Remove restricted-access annotation or ask an administrator " +
+			"to reconfigure Operator."
 		return reconcile.Result{}, nil
 	}
 
@@ -234,7 +236,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	componentsStatus := provision.SyncComponentsToCluster(workspace, clusterAPI)
 	if !componentsStatus.Continue {
 		if componentsStatus.FailStartup {
-			reqLogger.Info("Workspace start failed")
+			reqLogger.Info("DevWorkspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			// TODO: Propagate more information from sync step to show a more useful message -- which plugin couldn't be installed?
 			reconcileStatus.Conditions[WorkspaceFailedStart] = "Could not find plugins for devworkspace"
@@ -272,7 +274,7 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 	routingStatus := provision.SyncRoutingToCluster(workspace, componentDescriptions, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
-			reqLogger.Info("Workspace start failed")
+			reqLogger.Info("DevWorkspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			// TODO: Propagate failure reason from workspaceRouting
 			reconcileStatus.Conditions[WorkspaceFailedStart] = "Failed to install network objects required for devworkspace"

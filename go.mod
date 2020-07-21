@@ -6,7 +6,7 @@ go 1.12
 require github.com/eclipse/che-plugin-broker v3.1.1-0.20200207223144-b20597f15e4c+incompatible
 
 // use-devfile-2.0-in-devworkspace-controller
-require github.com/devfile/kubernetes-api v0.0.0-20200610142627-e6a761a9ecb3
+require github.com/devfile/kubernetes-api v0.0.0-20200721203247-1ae49a1fac4c
 
 // Operator Framework 0.17.x
 require (

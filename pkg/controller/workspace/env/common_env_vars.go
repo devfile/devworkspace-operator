@@ -59,11 +59,11 @@ func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator s
 			Value: config.ControllerCfg.GetWebhooksEnabled(),
 		},
 		{
-			Name:  "CHE_WORKSPACE_CREATOR",
+			Name:  "DEVWORKSPACE_CREATOR",
 			Value: creator,
 		},
 		{
-			Name:  "CHE_WORKSPACE_IDLE_TIMEOUT",
+			Name:  "DEVWORKSPACE_IDLE_TIMEOUT",
 			Value: config.ControllerCfg.GetWorkspaceIdleTimeout(),
 		},
 	}

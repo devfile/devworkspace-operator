@@ -25,8 +25,8 @@ spec:
    - name: web-terminal
      image: "${RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0}"
      command: ["/go/bin/che-machine-exec",
-               "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
-               "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",
+               "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
+               "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
                "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
                "--use-tls"]
      ports:

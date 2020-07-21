@@ -6,7 +6,7 @@ type: Che Editor
 displayName: Web Terminal
 title: Web Terminal
 description: Web Terminal provides the ability to start a terminal inside the OpenShift Console.
-icon: https://www.eclipse.org/che/images/logo-eclipseche.svg
+icon: null
 repository: https://github.com/eclipse/che-machine-exec/
 firstPublicationDate: "2020-05-13"
 category: Other

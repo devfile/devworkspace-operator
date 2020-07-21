@@ -8,7 +8,7 @@ title: Web Terminal
 description: Web provides the ability to start a terminal inside
   the OpenShift Console. The development version does not run with TLS enabled and
   is intended for development purposes only.
-icon: https://www.eclipse.org/che/images/logo-eclipseche.svg
+icon: null
 repository: https://github.com/eclipse/che-machine-exec/
 firstPublicationDate: "2020-06-01"
 category: Other

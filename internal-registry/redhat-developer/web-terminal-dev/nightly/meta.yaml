@@ -8,7 +8,7 @@ title: Web Terminal
 description: Web provides the ability to start a terminal inside
   the OpenShift Console. The development version does not run with TLS enabled and
   is intended for development purposes only.
-icon: https://www.eclipse.org/che/images/logo-eclipseche.svg
+icon: null
 repository: https://github.com/eclipse/che-machine-exec/
 firstPublicationDate: "2020-06-01"
 category: Other
@@ -27,8 +27,8 @@ spec:
     - name: web-terminal
       image: "${RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_nightly}"
       command: ["/go/bin/che-machine-exec",
-                "--authenticated-user-id", "$(CHE_WORKSPACE_CREATOR)",
-                "--idle-timeout", "$(CHE_WORKSPACE_IDLE_TIMEOUT)",
+                "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
+                "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
                 "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)"]
       ports:
         - exposedPort: 4444

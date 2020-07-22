@@ -45,7 +45,7 @@ func (w *Deployment) DeployWorkspacesController() error {
 	deploy, err := w.kubeClient.WaitForPodRunningByLabel(label)
 	fmt.Println("Waiting controller pod to be ready")
 	if !deploy || err != nil {
-		fmt.Println("Che Workspaces Controller not deployed")
+		fmt.Println("DevWorkspace Controller not deployed")
 		return err
 	}
 
@@ -60,7 +60,7 @@ func (w *Deployment) DeployWorkspacesController() error {
 }
 
 func (w *Deployment) CreateAdditionalControllerResources() error {
-	//sed "s/\${NAMESPACE}/che/g" <<< cat *.yaml | oc apply -f -
+	//sed "s/\${NAMESPACE}/config.Namespace/g" <<< cat *.yaml | oc apply -f -
 	cmd := exec.Command(
 		"bash", "-c",
 		"sed 's/\\${NAMESPACE}/"+config.Namespace+"/g' <<< "+

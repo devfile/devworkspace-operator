@@ -24,7 +24,7 @@ import (
 
 const (
 	// property name for value with yaml for default dockerimage component
-	// that should be provisioned if devfile DOES have redhat-developer/web-terminal cheEditor
+	// that should be provisioned if devfile DOES have redhat-developer/web-terminal plugin
 	// and DOES NOT have any dockerimage component
 	defaultTerminalDockerimageProperty = "devworkspace.default_dockerimage.redhat-developer.web-terminal"
 )

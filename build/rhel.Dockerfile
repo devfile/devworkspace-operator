@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
   cmd/manager/main.go
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
-FROM registry.access.redhat.com/ubi8-minimal:8.2
+FROM registry.access.redhat.com/ubi8-minimal:8.2-339
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
 COPY --from=builder /devworkspace-operator/internal-registry  internal-registry
 

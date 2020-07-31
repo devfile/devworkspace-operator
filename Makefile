@@ -259,6 +259,11 @@ start_local:
 start_local_debug:
 	operator-sdk run --local --watch-namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
+.PHONY: test
+### test: run unit tests
+test:
+	go test $(shell go list ./... | grep -v test/e2e)
+
 ### test_e2e: runs e2e test on the cluster set in context. Includes deploying devworkspace-controller, run test workspace, uninstall devworkspace-controller
 test_e2e: _print_vars _set_ctx _update_yamls update_devworkspace_crds _do_e2e_test _reset_yamls _reset_ctx
 

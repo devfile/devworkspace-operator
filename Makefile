@@ -13,6 +13,11 @@ DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
+
+#internal params
+BUMPED_KUBECONFIG_FLD=/tmp/devworkspace-ctrl-kubeconfig
+BUMPED_KUBECONFIG=$(BUMPED_KUBECONFIG_FLD)/config
+
 all: help
 
 _print_vars:
@@ -70,6 +75,7 @@ _update_yamls: _set_registry_url
 	sed -i.bak -e 's|devworkspace.routing.cluster_host_suffix: .*|devworkspace.routing.cluster_host_suffix: $(ROUTING_SUFFIX)|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|devworkspace.sidecar.image_pull_policy: .*|devworkspace.sidecar.image_pull_policy: $(PULL_POLICY)|g' ./deploy/controller_config.yaml
 	rm ./deploy/controller_config.yaml.bak
+	sed -i.bak -e 's|namespace: $${NAMESPACE}|namespace: $(NAMESPACE)|' ./deploy/role_binding.yaml
 ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/os/controller.yaml
 	sed -i.bak -e "s|value: \"quay.io/devfile/devworkspace-controller:next\"|value: $(IMG)|g" ./deploy/os/controller.yaml
@@ -92,6 +98,7 @@ _reset_yamls: _set_registry_url
 	sed -i.bak -e 's|devworkspace.routing.cluster_host_suffix: .*|devworkspace.routing.cluster_host_suffix: 192.168.99.100.nip.io|g' ./deploy/controller_config.yaml
 	sed -i.bak -e 's|devworkspace.sidecar.image_pull_policy: .*|devworkspace.sidecar.image_pull_policy: Always|g' ./deploy/controller_config.yaml
 	rm ./deploy/controller_config.yaml.bak
+	mv ./deploy/role_binding.yaml.bak ./deploy/role_binding.yaml
 ifeq ($(TOOL),oc)
 	sed -i.bak -e "s|image: $(IMG)|image: quay.io/devfile/devworkspace-controller:next|g" ./deploy/os/controller.yaml
 	# webhook server related image
@@ -113,13 +120,14 @@ _update_crds: update_devworkspace_crds
 	$(TOOL) apply -f ./deploy/crds
 	$(TOOL) apply -f ./devworkspace-crds/deploy/crds
 
-_update_controller_configmap:
+_update_controller_deps:
 	$(TOOL) apply -f ./deploy/controller_config.yaml -n $(NAMESPACE)
+	$(TOOL) apply -f ./deploy/service_account.yaml -n $(NAMESPACE)
+	$(TOOL) apply -f ./deploy/role.yaml -n $(NAMESPACE)
+	$(TOOL) apply -f ./deploy/role_binding.yaml -n $(NAMESPACE)
 
 _apply_controller_cfg:
-	sed -i.bak -e 's|namespace: $${NAMESPACE}|namespace: $(NAMESPACE)|' ./deploy/role_binding.yaml
 	$(TOOL) apply -f ./deploy -n $(NAMESPACE)
-	mv ./deploy/role_binding.yaml.bak ./deploy/role_binding.yaml
 ifeq ($(TOOL),oc)
 	$(TOOL) apply -f ./deploy/os/controller.yaml -n $(NAMESPACE)
 else
@@ -172,6 +180,21 @@ endif
 _do_e2e_test:
 	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
 	./bin/devworkspace-controller-e2e
+
+# it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
+_bump_kubeconfig:
+	mkdir -p $(BUMPED_KUBECONFIG_FLD)
+ifndef KUBECONFIG
+	$(eval CONFIG_FILE = ${HOME}/.kube/config)
+else
+	$(eval CONFIG_FILE = ${KUBECONFIG})
+endif
+	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
+
+_login_with_devworkspace_sa:
+	$(eval SA_TOKEN := $(shell $(TOOL) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "devworkspace-controller")][0].data.token' | base64 --decode ))
+	@echo "Logging as devworkspace controller SA"
+	@oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### docker: build and push docker image
 docker: _print_vars
@@ -238,7 +261,7 @@ update_devworkspace_crds:
 
 
 ### local: set up cluster for local development
-local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_configmap _reset_yamls _reset_ctx
+local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_deps _reset_yamls _reset_ctx
 
 ### generate: generates CRDs and Kubernetes code for custom resource
 generate:
@@ -251,22 +274,24 @@ else
 endif
 
 ### start_local: start local instance of controller using operator-sdk
-start_local:
+start_local: _bump_kubeconfig _login_with_devworkspace_sa
 ifeq ($(WEBHOOK_ENABLED),true)
 	#in cluster mode it comes from Deployment env var
 	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
 	#in cluster mode it comes from configured SA propogated via env var
-	export CONTROLLER_SERVICE_ACCOUNT_NAME=$(shell oc whoami)
+	export CONTROLLER_SERVICE_ACCOUNT_NAME=devworkspace-controller
+	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 endif
 	operator-sdk run --local --watch-namespace $(NAMESPACE) 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
 ### start_local_debug: start local instance of controller with debugging enabled
-start_local_debug:
+start_local_debug: _bump_kubeconfig _login_with_devworkspace_sa
 ifeq ($(WEBHOOK_ENABLED),true)
 	#in cluster mode it comes from Deployment env var
 	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
 	#in cluster mode it comes from configured SA propogated via env var
-	export CONTROLLER_SERVICE_ACCOUNT_NAME=$(shell oc whoami)
+	export CONTROLLER_SERVICE_ACCOUNT_NAME=devworkspace-controller
+	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 endif
 	operator-sdk run --local --watch-namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 

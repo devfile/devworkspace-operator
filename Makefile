@@ -183,7 +183,7 @@ _do_e2e_test:
 
 # it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
 _bump_kubeconfig:
-	mkdir -p $(BUMPED_KUBECONFIG_FLD)
+	@mkdir -p $(BUMPED_KUBECONFIG_FLD)
 ifndef KUBECONFIG
 	$(eval CONFIG_FILE = ${HOME}/.kube/config)
 else
@@ -192,9 +192,9 @@ endif
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
 _login_with_devworkspace_sa:
-	$(eval SA_TOKEN := $(shell $(TOOL) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "devworkspace-controller")][0].data.token' | base64 --decode ))
-	@echo "Logging as devworkspace controller SA"
-	@oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
+	@$(eval SA_TOKEN := $(shell $(TOOL) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "devworkspace-controller")][0].data.token' | base64 --decode ))
+	echo "Logging as devworkspace controller SA"
+	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### docker: build and push docker image
 docker: _print_vars

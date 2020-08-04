@@ -15,8 +15,9 @@ REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= master
 
 #internal params
-BUMPED_KUBECONFIG_FLD=/tmp/devworkspace-ctrl-kubeconfig
-BUMPED_KUBECONFIG=$(BUMPED_KUBECONFIG_FLD)/config
+INTERNAL_TMP_DIR=/tmp/devworkspace-controller
+BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
+RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
 
 all: help
 
@@ -183,13 +184,23 @@ _do_e2e_test:
 
 # it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
 _bump_kubeconfig:
-	@mkdir -p $(BUMPED_KUBECONFIG_FLD)
+	@mkdir -p $(INTERNAL_TMP_DIR)
 ifndef KUBECONFIG
 	$(eval CONFIG_FILE = ${HOME}/.kube/config)
 else
 	$(eval CONFIG_FILE = ${KUBECONFIG})
 endif
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
+
+_generate_related_images_env:
+	@mkdir -p $(INTERNAL_TMP_DIR)
+	cat ./deploy/os/controller.yaml \
+		| yq -r \
+			'.spec.template.spec.containers[].env[]
+				| select(.name | startswith("RELATED_IMAGE"))
+				| "export \(.name)=\"$${\(.name):-\(.value)}\""' \
+		> $(RELATED_IMAGES_FILE)
+	cat $(RELATED_IMAGES_FILE)
 
 _login_with_devworkspace_sa:
 	@$(eval SA_TOKEN := $(shell $(TOOL) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "devworkspace-controller")][0].data.token' | base64 --decode ))
@@ -274,8 +285,9 @@ else
 endif
 
 ### start_local: start local instance of controller using operator-sdk
-start_local: _bump_kubeconfig _login_with_devworkspace_sa
+start_local: _bump_kubeconfig _generate_related_images_env _login_with_devworkspace_sa
 ifeq ($(WEBHOOK_ENABLED),true)
+	@source $(RELATED_IMAGES_FILE)
 	#in cluster mode it comes from Deployment env var
 	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
 	#in cluster mode it comes from configured SA propogated via env var
@@ -285,7 +297,8 @@ endif
 	operator-sdk run --local --watch-namespace $(NAMESPACE) 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
 
 ### start_local_debug: start local instance of controller with debugging enabled
-start_local_debug: _bump_kubeconfig _login_with_devworkspace_sa
+start_local_debug: _bump_kubeconfig _generate_related_images_env _login_with_devworkspace_sa
+	@source $(RELATED_IMAGES_FILE)
 ifeq ($(WEBHOOK_ENABLED),true)
 	#in cluster mode it comes from Deployment env var
 	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)

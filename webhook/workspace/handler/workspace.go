@@ -15,8 +15,8 @@ import (
 	"fmt"
 	"net/http"
 
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 

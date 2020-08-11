@@ -15,9 +15,9 @@ package workspace
 import (
 	"fmt"
 
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 )
 
 // validateCreatorTimestamp checks that a devworkspace was created after workspace-related mutating webhooks

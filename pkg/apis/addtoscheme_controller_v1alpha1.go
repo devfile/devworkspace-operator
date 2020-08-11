@@ -13,9 +13,9 @@
 package apis
 
 import (
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
 	templateV1 "github.com/openshift/api/template/v1"

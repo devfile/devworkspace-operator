@@ -13,7 +13,7 @@
 package adaptor
 
 import (
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"

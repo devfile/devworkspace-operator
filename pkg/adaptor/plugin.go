@@ -17,8 +17,8 @@ import (
 	"strconv"
 	"strings"
 
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"

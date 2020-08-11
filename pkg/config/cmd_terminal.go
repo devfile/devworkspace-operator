@@ -17,7 +17,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 
 	"gopkg.in/yaml.v2"
 )

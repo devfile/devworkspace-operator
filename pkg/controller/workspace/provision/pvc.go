@@ -13,9 +13,9 @@
 package provision
 
 import (
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

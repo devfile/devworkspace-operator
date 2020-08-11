@@ -15,10 +15,10 @@ package solvers
 import (
 	"fmt"
 
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	devworkspace "github.com/devfile/kubernetes-api/pkg/apis/workspaces/v1alpha1"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

@@ -1,6 +1,6 @@
 # Dev Workspace Operator
 
-Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/kubernetes-api repository.
+Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
 
 ## Running the controller in a cluster
 

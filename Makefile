@@ -212,7 +212,7 @@ uninstall: _set_ctx _do_uninstall _reset_ctx
 
 ### update_devworkspace_api: update version of devworkspace crds in go.mod
 update_devworkspace_api:
-	go mod edit --require github.com/devfile/kubernetes-api@$(DEVWORKSPACE_API_VERSION)
+	go mod edit --require github.com/devfile/api@$(DEVWORKSPACE_API_VERSION)
 	go mod download
 	go mod tidy
 
@@ -222,11 +222,11 @@ update_devworkspace_crds:
 	cd devworkspace-crds
 	if [ ! -d ./.git ]; then
 		git init
-		git remote add origin -f https://github.com/devfile/kubernetes-api.git
+		git remote add origin -f https://github.com/devfile/api.git
 		git config core.sparsecheckout true
 		echo "deploy/crds/*" > .git/info/sparse-checkout
 	else
-		git remote set-url origin https://github.com/devfile/kubernetes-api.git
+		git remote set-url origin https://github.com/devfile/api.git
 	fi
 	git fetch --tags -p origin
 	if git show-ref --verify refs/tags/$(DEVWORKSPACE_API_VERSION) --quiet; then
@@ -301,4 +301,4 @@ help: Makefile
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'
 	@echo '    ADMIN_CTX                  - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
 	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
-	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/kubernetes-api to depend on. Defaults to master'
+	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/api to depend on. Defaults to master'

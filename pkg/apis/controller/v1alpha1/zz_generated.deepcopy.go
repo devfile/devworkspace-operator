@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	workspacesv1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -296,7 +296,7 @@ func (in *ComponentMetadata) DeepCopyInto(out *ComponentMetadata) {
 	}
 	if in.Endpoints != nil {
 		in, out := &in.Endpoints, &out.Endpoints
-		*out = make([]devworkspace.Endpoint, len(*in))
+		*out = make([]workspacesv1alpha1.Endpoint, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -696,14 +696,14 @@ func (in *WorkspaceComponentSpec) DeepCopyInto(out *WorkspaceComponentSpec) {
 	*out = *in
 	if in.Components != nil {
 		in, out := &in.Components, &out.Components
-		*out = make([]devworkspace.Component, len(*in))
+		*out = make([]workspacesv1alpha1.Component, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 	if in.Commands != nil {
 		in, out := &in.Commands, &out.Commands
-		*out = make([]devworkspace.Command, len(*in))
+		*out = make([]workspacesv1alpha1.Command, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
@@ -812,7 +812,7 @@ func (in *WorkspaceRoutingSpec) DeepCopyInto(out *WorkspaceRoutingSpec) {
 		in, out := &in.Endpoints, &out.Endpoints
 		*out = make(map[string]EndpointList, len(*in))
 		for key, val := range *in {
-			var outVal []devworkspace.Endpoint
+			var outVal []workspacesv1alpha1.Endpoint
 			if val == nil {
 				(*out)[key] = nil
 			} else {

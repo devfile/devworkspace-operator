@@ -12,7 +12,7 @@ WEBHOOK_ENABLED ?= true
 DEFAULT_ROUTING ?= basic
 ADMIN_CTX ?= ""
 REGISTRY_ENABLED ?= true
-DEVWORKSPACE_API_VERSION ?= master
+DEVWORKSPACE_API_VERSION ?= v1alpha1
 
 #internal params
 INTERNAL_TMP_DIR=/tmp/devworkspace-controller
@@ -265,9 +265,12 @@ update_devworkspace_crds:
 	if git show-ref --verify refs/tags/$(DEVWORKSPACE_API_VERSION) --quiet; then
 		echo 'DevWorkspace API is specified from tag'
 		git checkout tags/$(DEVWORKSPACE_API_VERSION)
-	else
+	elif git rev-parse --verify $(DEVWORKSPACE_API_VERSION); then
 		echo 'DevWorkspace API is specified from branch'
 		git checkout $(DEVWORKSPACE_API_VERSION) && git reset --hard origin/$(DEVWORKSPACE_API_VERSION)
+	else
+		echo 'DevWorkspace API is specified from revision'
+		git checkout $(DEVWORKSPACE_API_VERSION)
 	fi
 
 

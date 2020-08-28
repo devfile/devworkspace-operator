@@ -6,7 +6,7 @@ go 1.12
 require github.com/eclipse/che-plugin-broker v3.1.1-0.20200207223144-b20597f15e4c+incompatible
 
 // Devfile 2.0 APIs
-require github.com/devfile/api v0.0.0-20200811183618-b6daa2c997a5
+require github.com/devfile/api v0.0.0-20200826083800-9e2280a95680
 
 // Operator Framework 0.17.x
 require (

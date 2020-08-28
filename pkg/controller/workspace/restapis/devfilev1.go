@@ -13,6 +13,7 @@
 package restapis
 
 import (
+	"errors"
 	"strings"
 
 	//TODO
@@ -165,12 +166,20 @@ func toDevfileProject(p devworkspace.Project) *workspaceApi.ProjectSpec {
 
 	p.Visit(devworkspace.ProjectSourceVisitor{
 		Git: func(src *devworkspace.GitProjectSource) error {
-			theLocation = src.Location
+			l, err := resolveLocation(src.Remotes, src.CheckoutFrom)
+			if err != nil {
+				return err
+			}
+			theLocation = *l
 			theType = "git"
 			return nil
 		},
 		Github: func(src *devworkspace.GithubProjectSource) error {
-			theLocation = src.Location
+			l, err := resolveLocation(src.Remotes, src.CheckoutFrom)
+			if err != nil {
+				return err
+			}
+			theLocation = *l
 			theType = "github"
 			return nil
 		},
@@ -187,4 +196,29 @@ func toDevfileProject(p devworkspace.Project) *workspaceApi.ProjectSpec {
 			Type:     theType,
 		},
 	}
+}
+
+func resolveLocation(remotes map[string]string, checkoutFrom *devworkspace.CheckoutFrom) (location *string, err error) {
+	if len(remotes) == 0 {
+		return nil, errors.New("at least one remote is required")
+	}
+
+	if len(remotes) == 1 {
+		//return the location of the only remote
+		for _, l := range remotes {
+			return &l, nil
+		}
+	}
+
+	remote := checkoutFrom.Remote
+	if remote == "" {
+		return nil, errors.New("multiple remotes are specified but checkoutFrom is not configured")
+	}
+
+	l, exist := remotes[remote]
+	if !exist {
+		return nil, errors.New("the configured remote is not found in the remotes")
+	}
+
+	return &l, nil
 }

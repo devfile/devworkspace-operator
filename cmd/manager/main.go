@@ -14,12 +14,15 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime"
 
+	operatorConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -128,6 +131,11 @@ func main() {
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
+	}
+
+	if operatorConfig.ControllerCfg.GetTlsInsecureSkipVerify() == "true" {
+		log.Info("Warning: TLS InsecureSkipVerify is enabled")
+		http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
 	// Setup certs for webhook and create seperate webhook server deployment

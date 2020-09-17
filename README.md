@@ -66,7 +66,7 @@ To see all rules supported by the makefile, run `make help`
 ### Test run controller
 1. Take a look samples workspace configuration in `./samples` folder.
 2. Apply any of them by executing `kubectl apply -f ./samples/workspace_java_mysql.yaml -n <namespace>`
-3. As soon as workspace is started you're able to get IDE url by executing `kubectl get workspace -n <namespace>`
+3. As soon as workspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
 
 ### Run controller locally
 It's possible to run an instance of the controller locally while communicating with a cluster. However, this requires webhooks to be disabled, as the webhooks need to be able to access the service created by an in-cluster deployment

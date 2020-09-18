@@ -23,7 +23,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
   -asmflags all=-trimpath=/ \
   webhook/main.go
 
-FROM registry.access.redhat.com/ubi8-minimal:8.1-279
+FROM registry.access.redhat.com/ubi8-minimal:8.2-349
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
 COPY --from=builder /devworkspace-operator/_output/bin/webhook-server /usr/local/bin/webhook-server
 COPY --from=builder /devworkspace-operator/internal-registry  internal-registry

@@ -23,7 +23,7 @@ trap 'Catch_Finish $?' EXIT SIGINT
 # Catch the finish of the job and write logs in artifacts.
 function Catch_Finish() {
     # grab devworkspace-controller namespace events after running e2e
-    getCheClusterLogs
+    getDevWorkspaceOperatorLogs
 }
 
 # ENV used by PROW ci
@@ -56,7 +56,7 @@ if ! hash operator-sdk 2>/dev/null; then
 fi
 
 # Function to get all logs and events from devworkspace operator deployments
-function getCheClusterLogs() {
+function getDevWorkspaceOperatorLogs() {
     mkdir -p ${ARTIFACTS_DIR}/devworkspace-operator
     cd ${ARTIFACTS_DIR}/devworkspace-operator
     for POD in $(oc get pods -o name -n ${NAMESPACE}); do

@@ -3,7 +3,12 @@
 participant Client
 participant K8s
 participant Controller
-participant Workspace
+
+box Workspace
+participant WorkspaceAuth
+participant WorkspaceSecureServer
+end box
+
 participant OpenID
 
 autonumber

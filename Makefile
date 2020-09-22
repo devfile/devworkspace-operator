@@ -279,8 +279,8 @@ endif
 
 ### start_local: start local instance of controller using operator-sdk
 start_local: _bump_kubeconfig _generate_related_images_env _login_with_devworkspace_sa
-ifeq ($(WEBHOOK_ENABLED),true)
 	@source $(RELATED_IMAGES_FILE)
+ifeq ($(WEBHOOK_ENABLED),true)
 	#in cluster mode it comes from Deployment env var
 	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
 	#in cluster mode it comes from configured SA propogated via env var

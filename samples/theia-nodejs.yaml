@@ -7,9 +7,10 @@ spec:
   routingClass: 'openshift-oauth'
   template:
     projects:
-      - name: project   
+      - name: project
         git:
-          location: "https://github.com/che-samples/web-nodejs-sample.git"
+          remotes:
+            origin: "https://github.com/che-samples/web-nodejs-sample.git"
     components:
       - plugin:
           id: eclipse/che-theia/latest
@@ -52,7 +53,7 @@ spec:
           component: nodejs
           commandLine: >-
               node_server_pids=$(pgrep -fx '.*nodemon (--inspect )?app.js' | tr "\\n" " ") &&
-              echo "Stopping node server with PIDs: ${node_server_pids}" && 
+              echo "Stopping node server with PIDs: ${node_server_pids}" &&
               kill -15 ${node_server_pids} &>/dev/null && echo 'Done.'
       - vscodeLaunch:
           id: Attach remote debugger

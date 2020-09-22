@@ -1,0 +1,44 @@
+@startuml
+
+participant Client
+participant K8s
+participant Controller
+box Workspace
+participant DevWorkspaceJWTProxy
+participant DevWorkspaceSecureServer
+end box
+participant AuthBridge
+participant OpenID
+
+autonumber
+
+== DevWorkspace Start ==
+
+Client -> K8s: Create started DevWorkspace CR
+K8s -> Controller: DevWorkspace CR is created
+Controller -> Controller: Start the DevWorkspace
+Controller -> Controller: Create keys for jwt token
+Controller -> Controller: Inject public key into DevWorkspace
+Controller -> K8s: DevWorkspace is started
+
+== Secure Server Access ==
+
+Client -> DevWorkspaceJWTProxy: Open secure server
+DevWorkspaceJWTProxy -> DevWorkspaceJWTProxy: check if cookies are set
+
+DevWorkspaceJWTProxy -> Client: redirects to AuthBridge
+Client -> AuthBridge: authenticate on the DevWorkspace
+
+AuthBridge -> OpenID: authenticate user
+AuthBridge <- OpenID: user is authenticated
+
+AuthBridge -> K8s: read devworkspace with authenticated user + authorize
+AuthBridge -> DevWorkspaceJWTProxy: set cookies with devworkspace jwt token
+AuthBridge -> Client: redirects to devworkspace
+
+Client -> DevWorkspaceJWTProxy: Open a secure server
+DevWorkspaceJWTProxy -> DevWorkspaceJWTProxy: Check if cookies are set
+DevWorkspaceJWTProxy -> DevWorkspaceSecureServer: proxy request
+DevWorkspaceSecureServer -> Client: response
+
+@enduml

@@ -1,0 +1,42 @@
+@startuml
+
+participant keycloak
+participant loader.html
+participant Client
+participant Server
+box Workspace
+participant WorkspaceJWTProxy
+participant WorkspaceSecureServer
+end box
+
+autonumber
+
+== Workspace Start ==
+
+Client -> Server: Start a workspace
+Server -> Server: Generate keys for jwttokens
+Server -> WorkspaceJWTProxy: Configure public key for jwt tokens validations
+Server -> Client: Workspace is started
+
+== Secure Server Access ==
+
+Client -> WorkspaceJWTProxy: Open a secure server
+WorkspaceJWTProxy -> WorkspaceJWTProxy: Check if cookies are set
+WorkspaceJWTProxy -> Client: Redirects to loader.html to set cookies.
+Client -> loader.html: authenticate for workspace server
+
+loader.html -> keycloak: authenticate user
+keycloak -> loader.html: user is authenticated
+
+loader.html -> Server: get workspace by id
+Server --> loader.html: return workspace config with servers and machine token
+
+loader.html -> loader.html: authorize workspace server access
+loader.html -> WorkspaceJWTProxy: set cookies with machine token
+loader.html -> Client: redirects to Workspace
+Client -> WorkspaceJWTProxy: Open a secure server
+WorkspaceJWTProxy -> WorkspaceJWTProxy: Check if cookies are set
+WorkspaceJWTProxy -> WorkspaceSecureServer: proxy request
+WorkspaceSecureServer -> Client: response
+
+@enduml

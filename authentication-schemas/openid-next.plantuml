@@ -1,0 +1,26 @@
+@startuml
+
+participant Client
+participant K8s
+participant Controller
+participant Workspace
+participant OpenID
+
+autonumber
+
+Client -> K8s: Create started DevWorkspace CR
+K8s -> Controller: DevWorkspace CR is created
+Controller -> Controller: Start the DevWorkspace
+
+
+Client -> WorkspaceAuth: Open a secure server
+WorkspaceAuth -> WorkspaceAuth: Check if cookies are set
+WorkspaceAuth -> OpenID: Authenticate user
+WorkspaceAuth <- OpenID: User is authenticated
+
+Client -> WorkspaceAuth: Open a secure server
+WorkspaceAuth -> WorkspaceAuth: Check if cookies are set
+WorkspaceAuth -> WorkspaceSecureServer: proxy request
+WorkspaceSecureServer -> Client: response
+
+@enduml

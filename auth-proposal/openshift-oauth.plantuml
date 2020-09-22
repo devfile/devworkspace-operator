@@ -1,0 +1,34 @@
+@startuml
+
+participant Client
+participant K8s
+participant Controller
+
+box Workspace
+participant WorkspaceAuthProxy
+participant WorkspaceSecureServer
+end box
+
+participant OpenShiftOAuth
+
+autonumber
+skinparam SequenceGroupBodyBackgroundColor transparent
+
+Client -> K8s: Create started DevWorkspace CR
+K8s -> Controller: DevWorkspace CR is created
+Controller -> WorkspaceAuthProxy: Create OAuthClient ID + Secret
+Controller -> Controller: Start the DevWorkspace with created ID and Secret
+
+Client -> WorkspaceAuthProxy: Open a secure server
+WorkspaceAuthProxy -> WorkspaceAuthProxy: Check if cookies are set
+
+WorkspaceAuthProxy -> OpenShiftOAuth: Authenticate user
+OpenShiftOAuth -> WorkspaceAuthProxy: user is authenticated (with OpenShift token)
+
+Client -> WorkspaceAuthProxy: Open a secure server
+WorkspaceAuthProxy -> WorkspaceAuthProxy: Check if cookies are set
+WorkspaceAuthProxy -[#green]> K8s: Authorize (Check user access (SAR) + Make sure it belongs to the workspace creator)
+WorkspaceAuthProxy -> WorkspaceSecureServer: proxy request
+WorkspaceSecureServer -> Client: response
+
+@enduml

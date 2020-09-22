@@ -17,8 +17,9 @@ It's the mainly the same schema as Che Workspaces have difference here that DevW
 ![](openid-next.png)
 
 Pros:
-- no additional component is required
+- no additional component is required;
+
 Cons:
-- probably different clients should be registered on OpenID provider side with workspaces specific endpoints
-- users should authenticate separately for each workspace. User will be asked if they rely that particular domain
+- probably different clients should be registered on OpenID provider side with workspaces specific endpoints;
+- users should authenticate separately for each workspace. User will be asked if they rely that particular domain;
 * we should be able to run everything on one host, and SSO could be implemented but that's not safe to do without additional authorization since OpenID token will be sent to workspace which may be fake just to steal token.

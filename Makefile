@@ -29,6 +29,12 @@ INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
 
+# minikube handling
+ifeq ($(shell $(TOOL) config current-context),minikube)
+	ROUTING_SUFFIX := $(shell minikube ip).nip.io
+	TOOL := kubectl
+endif
+
 all: help
 
 _print_vars:

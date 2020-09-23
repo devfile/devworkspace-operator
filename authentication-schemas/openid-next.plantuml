@@ -12,16 +12,21 @@ end box
 participant OpenID
 
 autonumber
+skinparam SequenceGroupBodyBackgroundColor transparent
 
 Client -> K8s: Create started DevWorkspace CR
 K8s -> Controller: DevWorkspace CR is created
 Controller -> Controller: Start the DevWorkspace
-
+Controller -[#blue]> WorkspaceAuth: Create OIDC client
 
 Client -> WorkspaceAuth: Open a secure server
 WorkspaceAuth -> WorkspaceAuth: Check if cookies are set
+
+group OAuth flow
 WorkspaceAuth -> OpenID: Authenticate user
 WorkspaceAuth <- OpenID: User is authenticated
+end
+WorkspaceAuth -[#green]> K8s: Check user access (SAR)
 
 Client -> WorkspaceAuth: Open a secure server
 WorkspaceAuth -> WorkspaceAuth: Check if cookies are set

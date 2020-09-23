@@ -47,6 +47,7 @@ _print_vars:
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
+	@echo "    TOOL=$(TOOL)"
 
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
@@ -238,6 +239,10 @@ endif
 else
 	@echo "Webhooks disabled, skipping certificate generation"
 endif
+
+### info: display info
+info: _print_vars
+
 ### deploy: deploy controller to cluster
 deploy: _print_vars _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds _apply_controller_cfg webhook _reset_yamls _reset_ctx
 

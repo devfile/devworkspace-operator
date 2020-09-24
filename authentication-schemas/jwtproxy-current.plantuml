@@ -25,8 +25,10 @@ WorkspaceJWTProxy -> WorkspaceJWTProxy: Check if cookies are set
 WorkspaceJWTProxy -> Client: Redirects to loader.html to set cookies.
 Client -> loader.html: authenticate for workspace server
 
+group OAuth flow
 loader.html -> keycloak: authenticate user
 keycloak -> loader.html: user is authenticated
+end group
 
 loader.html -> Server: get workspace by id
 Server --> loader.html: return workspace config with servers and machine token

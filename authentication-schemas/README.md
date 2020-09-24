@@ -28,7 +28,7 @@ Pros:
 - No need to solve problem of getting secrets into devworkspaces
 
 Cons:
-- probably different clients should be registered on OpenID provider side with workspaces specific endpoints;
+- different clients MUST be registered on OpenID provider side with workspaces specific endpoints; it's must because during oauth flow at first time user confirm that OAuthClient is trusted but not host, which mean once you logged in your devworkspace with OAuth - your token can be sent to foreign workspace without your confirmation if you open malicious  URL;
   - Difficult to support arbitrary OAuth providers (we can create clients on OpenShift easily, otherwise it's hard.)
 - users should authenticate separately for each workspace. User will be asked if they trust that particular domain;
 

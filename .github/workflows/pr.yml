@@ -53,6 +53,12 @@ jobs:
           exit 1
         fi
     -
+      name: Check license headers
+      run: |
+        pushd $(mktemp -d); go get -u github.com/google/addlicense; popd
+        addlicense --check -v -f license_header.txt $(find . -name '*.go' -not -path '*/vendor/*') \
+          || { echo 'Go sources are missing license headers'. Use addlicense to ensure license headers are included; exit 1; }
+    -
       name: Run Go Tests
       run: make test
 

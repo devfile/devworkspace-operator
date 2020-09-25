@@ -34,7 +34,7 @@ func (w *Deployment) CreateNamespace() error {
 
 func (w *Deployment) DeployWorkspacesController() error {
 	label := "app.kubernetes.io/name=devworkspace-controller"
-	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy/os")
+	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy")
 	output, err := cmd.CombinedOutput()
 	fmt.Println(string(output))
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {

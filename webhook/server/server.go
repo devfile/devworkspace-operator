@@ -38,6 +38,7 @@ const (
 
 	WebhookServerCertsVolumeName = "webhook-tls-certs"
 
+	//Secret name with TLS certs inside (tls.crt + tls.key) that is mounted to webhook server
 	WebhookServerTLSSecretName = "devworkspace-webhookserver-tls"
 )
 

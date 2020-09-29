@@ -36,3 +36,4 @@ Cons:
 
 # TODO:
 - Think more about Single Host mode, where AuthBridge and Workspaces live on the same cluster. Can it helps use to provide SSO with creator access only?
+- Could we use two levels authentication: OpenID provider (Google, Github, ...) <- One Client -> Dex <- ClientPerWorkspace -> Workspace

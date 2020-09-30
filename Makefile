@@ -103,7 +103,7 @@ ifeq ($(TOOL),oc)
 	rm ./deploy/os/controller.yaml.bak
 else
 	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/k8s/controller.yaml
-	sed -i.bak -e "s|value: \"quay.io/devfile/devworkspace-controller:next\"|value: $(IMG)|g" ./deploy/os/controller.yaml
+	sed -i.bak -e "s|value: \"quay.io/devfile/devworkspace-controller:next\"|value: $(IMG)|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/k8s/controller.yaml
 	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/k8s/controller.yaml
 	rm ./deploy/k8s/controller.yaml.bak

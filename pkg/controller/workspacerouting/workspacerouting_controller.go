@@ -138,18 +138,6 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, r.finalize(instance)
 	}
 
-	// Add finalizer for this CR if not already present
-	if err := r.setFinalizer(reqLogger, instance); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	workspaceMeta := solvers.WorkspaceMetadata{
-		WorkspaceId:   instance.Spec.WorkspaceId,
-		Namespace:     instance.Namespace,
-		PodSelector:   instance.Spec.PodSelector,
-		RoutingSuffix: instance.Spec.RoutingSuffix,
-	}
-
 	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
 		return reconcile.Result{}, err
 	}
@@ -160,6 +148,18 @@ func (r *ReconcileWorkspaceRouting) Reconcile(request reconcile.Request) (reconc
 		instance.Status.Phase = controllerv1alpha1.RoutingFailed
 		statusErr := r.client.Status().Update(context.TODO(), instance)
 		return reconcile.Result{}, statusErr
+	}
+
+	// Add finalizer for this CR if not already present
+	if err := r.setFinalizer(reqLogger, instance); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	workspaceMeta := solvers.WorkspaceMetadata{
+		WorkspaceId:   instance.Spec.WorkspaceId,
+		Namespace:     instance.Namespace,
+		PodSelector:   instance.Spec.PodSelector,
+		RoutingSuffix: instance.Spec.RoutingSuffix,
 	}
 
 	routingObjects := solver.GetSpecObjects(instance.Spec, workspaceMeta)
@@ -293,6 +293,9 @@ func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingCl
 	case controllerv1alpha1.WorkspaceRoutingDefault:
 		return &solvers.BasicSolver{}, nil
 	case controllerv1alpha1.WorkspaceRoutingOpenShiftOauth:
+		if !config.ControllerCfg.IsOpenShift() {
+			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
+		}
 		return &solvers.OpenShiftOAuthSolver{}, nil
 	case controllerv1alpha1.WorkspaceRoutingCluster:
 		return &solvers.ClusterSolver{}, nil

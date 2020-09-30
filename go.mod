@@ -3,7 +3,7 @@ module github.com/devfile/devworkspace-operator
 go 1.12
 
 // Che Plugin Broker v3.1.1
-require github.com/eclipse/che-plugin-broker v3.1.1-0.20200207223144-b20597f15e4c+incompatible
+require github.com/eclipse/che-plugin-broker v3.4.0+incompatible
 
 // Devfile 2.0 APIs
 require github.com/devfile/api v0.0.0-20200826083800-9e2280a95680
@@ -14,7 +14,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1
-	github.com/openshift/api v3.9.1-0.20190424152011-77b8897ec79a+incompatible
+	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87
 	gopkg.in/yaml.v2 v2.2.8
 )
 

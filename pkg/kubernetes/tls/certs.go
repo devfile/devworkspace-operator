@@ -35,6 +35,8 @@ type GenCertParams struct {
 	CASecretName string
 }
 
+//GenerateCerts generates TLS certificates according to the specified parameters
+//Currently it's powered by Job which image lives in https://github.com/che-dockerfiles/che-tls-secret-creator
 func GenerateCerts(client crclient.Client, ctx context.Context, params GenCertParams) error {
 	// Remove CA certificate secret if any
 	err := removeCACertificate(client, params.CASecretName, params.Namespace)

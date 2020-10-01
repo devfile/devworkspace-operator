@@ -16,28 +16,27 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CleanupPods removes all pods which match the specified selector
-func CleanupPods(client crclient.Client, namespace string, selector string) error {
-	pods, err := GetPodsBySelector(client, namespace, selector)
+// DeletePod removes all pods which match the specified selector
+func DeletePod(client crclient.Client, namespace, name string) error {
+	// Get the pod from the cluster as a runtime object and then delete it
+	clusterPod := &corev1.Pod{}
+	err := client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: name}, clusterPod)
 	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
-	for _, pod := range pods.Items {
-		// Get the pod from the cluster as a runtime object and then delete it
-		clusterPod := &corev1.Pod{}
-		err = client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: namespace}, clusterPod)
-		if err != nil {
-			return err
-		}
-		err = client.Delete(context.TODO(), clusterPod)
-		if err != nil {
-			return err
-		}
+	err = client.Delete(context.TODO(), clusterPod)
+	if err != nil {
+		return err
 	}
 	return nil
 }

@@ -33,7 +33,7 @@ spec:
         app.kubernetes.io/part-of: devworkspace-operator
     spec:
       containers:
-      - image: quay.io/eclipse/che-plugin-registry:7.8.0
+      - image: quay.io/eclipse/che-plugin-registry:nightly
         imagePullPolicy: Always
         name: che-plugin-registry
         ports:

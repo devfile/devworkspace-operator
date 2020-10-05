@@ -47,6 +47,26 @@ func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []de
 	}
 
 	for _, plugin := range plugins {
+		if plugin.Name == "che-machine-exec-plugin" {
+			for _, value := range plugin.Containers {
+				for i, command := range value.Command {
+					if strings.Contains(command, "127.0.0.1:4444") {
+						value.Command[i] = "0.0.0.0:4444"
+					}
+				}
+			}
+		}
+
+		if plugin.Name == "che-theia" {
+			for _, container := range plugin.Containers {
+				for i, env := range container.Env {
+					if env.Name == "THEIA_HOST" {
+						container.Env[i].Value = "0.0.0.0"
+					}
+				}
+			}
+		}
+
 		component, err := adaptChePluginToComponent(workspaceId, plugin)
 		if err != nil {
 			return nil, nil, err

@@ -14,3 +14,4 @@ data:
   devworkspace.default_routing_class: "basic"
   # image pull policy that is applied to all workspace's containers
   devworkspace.sidecar.image_pull_policy: Always
+  devworkspace.api_sidecar.image: quay.io/che-incubator/che-api-sidecar:next

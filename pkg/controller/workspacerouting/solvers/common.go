@@ -73,13 +73,25 @@ func getServicesForEndpoints(endpoints map[string]v1alpha1.EndpointList, meta Wo
 	var servicePorts []corev1.ServicePort
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			servicePort := corev1.ServicePort{
-				Name:       common.EndpointName(endpoint.Name),
-				Protocol:   corev1.ProtocolTCP,
-				Port:       int32(endpoint.TargetPort),
-				TargetPort: intstr.FromInt(int(endpoint.TargetPort)),
+			isExposed := func(port int) bool {
+				for _, port := range servicePorts {
+					if port.TargetPort.IntVal == int32(endpoint.TargetPort) {
+						//port is already exposed
+						return true
+					}
+				}
+				return false
 			}
-			servicePorts = append(servicePorts, servicePort)
+
+			if !isExposed(endpoint.TargetPort) {
+				servicePort := corev1.ServicePort{
+					Name:       common.EndpointName(endpoint.Name),
+					Protocol:   corev1.ProtocolTCP,
+					Port:       int32(endpoint.TargetPort),
+					TargetPort: intstr.FromInt(endpoint.TargetPort),
+				}
+				servicePorts = append(servicePorts, servicePort)
+			}
 		}
 	}
 

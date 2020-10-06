@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/devfile/devworkspace-operator/pkg/adaptor/plugin_patch"
+
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
 
@@ -47,24 +49,8 @@ func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []de
 	}
 
 	for _, plugin := range plugins {
-		if plugin.Name == "che-machine-exec-plugin" {
-			for _, value := range plugin.Containers {
-				for i, command := range value.Command {
-					if strings.Contains(command, "127.0.0.1:4444") {
-						value.Command[i] = "0.0.0.0:4444"
-					}
-				}
-			}
-		}
-
-		if plugin.Name == "che-theia" {
-			for _, container := range plugin.Containers {
-				for i, env := range container.Env {
-					if env.Name == "THEIA_HOST" {
-						container.Env[i].Value = "0.0.0.0"
-					}
-				}
-			}
+		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+			plugin_patch.PublicAccessPatch(&plugin)
 		}
 
 		component, err := adaptChePluginToComponent(workspaceId, plugin)

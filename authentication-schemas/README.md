@@ -48,7 +48,16 @@ Cons:
   - AuthBridge that will be OpenID/OAuth authentication + Authorization;
   - DevWorkspaceAuth Proxy that will do Authorization on K8s server level to provide creator access only;
 
+# DevWorkspace Servers Authentication with Custom OpenID Flow
 
-# TODO:
-- Q: Could we use two levels authentication: OpenID provider (Google, Github, ...) <- One Client -> Dex <- ClientPerWorkspace -> Workspace
-A: It makes sense to consider that way only if we're able to reuse existing solution if such exists. In any case we seems to need custom authorization where we check creator access only;
+![](two-levels-oauth.png)
+
+Pros:
+- the same as Custom OpenID flow + Auth protocol is used which is safer option to follow;
+- I can imagine that we can remove WorkspaceOAuthServer for OpenShift infra and just reuse the existing OpenShiftOAuth, but with SSO leak - users need explicitly grant workspace to access their token.
+
+Cons:
+- some persistence is needed. Probably the most convenient storage for clients - CRs.
+  need to check if it still needs Database for tokens storage;
+
+The implementation details are still not very clear... Maybe instead of proxying original OpenID token, we need to generate token new per workspace/oauth client and then on WorkspaceAuthProxy, instead of authorization via k8s cluster - do authorization via our WorkspaceOAuthServer.

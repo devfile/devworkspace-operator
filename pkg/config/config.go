@@ -74,6 +74,13 @@ func (wc *ControllerConfig) GetPluginRegistry() string {
 	return wc.GetPropertyOrDefault(pluginRegistryURL, "")
 }
 
+//GetExperimentalFeaturesEnabled returns true if experimental features should be enabled.
+//DO NOT TURN ON IT IN THE PRODUCTION.
+//Experimental features are not well tested and may be totally removed without announcement.
+func (wc *ControllerConfig) GetExperimentalFeaturesEnabled() bool {
+	return wc.GetPropertyOrDefault(experimentalFeaturesEnabled, defaultExperimentalFeaturesEnabled) == "true"
+}
+
 func (wc *ControllerConfig) GetRoutingSuffix() string {
 	return wc.GetPropertyOrDefault(routingSuffix, defaultRoutingSuffix)
 }

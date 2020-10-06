@@ -47,6 +47,9 @@ const (
 	routingSuffix        = "devworkspace.routing.cluster_host_suffix"
 	defaultRoutingSuffix = ""
 
+	experimentalFeaturesEnabled        = "devworkspace.experimental_features_enabled"
+	defaultExperimentalFeaturesEnabled = "false"
+
 	workspaceIdleTimeout        = "devworkspace.idle_timeout"
 	defaultWorkspaceIdleTimeout = "15m"
 

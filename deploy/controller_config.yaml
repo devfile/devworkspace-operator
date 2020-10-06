@@ -15,3 +15,5 @@ data:
   # image pull policy that is applied to all workspace's containers
   devworkspace.sidecar.image_pull_policy: Always
   devworkspace.api_sidecar.image: quay.io/che-incubator/che-api-sidecar:next
+  # Do not enable it in production!!!
+  devworkspace.experimental_features_enabled: "true"

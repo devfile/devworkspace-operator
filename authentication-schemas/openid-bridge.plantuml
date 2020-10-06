@@ -1,0 +1,40 @@
+@startuml
+
+participant Client
+participant K8s
+participant Controller
+
+box Workspace
+participant WorkspaceAuth
+participant WorkspaceSecureServer
+end box
+
+participant AuthBridge
+participant OpenID
+
+autonumber
+skinparam SequenceGroupBodyBackgroundColor transparent
+
+Client -> K8s: Create started DevWorkspace CR
+K8s -> Controller: DevWorkspace CR is created
+Controller -> Controller: Start the DevWorkspace
+
+Client -> WorkspaceAuth: Open a secure server
+WorkspaceAuth -> WorkspaceAuth: Check if cookies are set
+
+group Extended OAuth flow
+WorkspaceAuth -> AuthBridge: Authenticate user
+AuthBridge -> OpenID: Authenticate user
+AuthBridge <- OpenID: User is authenticated
+AuthBridge -[#green]> K8s: Authorize (Check user access (SAR) + Make sure it redirect URL belongs to the workspace of the current user)
+AuthBridge -> WorkspaceAuth: Store OpenID Token in cookies
+AuthBridge -> Client: Redirects to Workspace
+end
+
+Client -> WorkspaceAuth: Open a secure server
+WorkspaceAuth -> WorkspaceAuth: Check if cookies are set
+WorkspaceAuth -[#green]> K8s: Authorize (Check user access (SAR) + Make sure it belongs to the workspace creator)
+WorkspaceAuth -> WorkspaceSecureServer: proxy request
+WorkspaceSecureServer -> Client: response
+
+@enduml

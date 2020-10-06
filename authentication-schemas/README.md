@@ -34,6 +34,21 @@ Cons:
 
   \* we should be able to run everything on one host, and SSO could be implemented but that's not safe to do without additional authorization since OpenID token will be sent to workspace which may be fake just to steal token.
 
+# DevWorkspace Servers Authentication with Custom OpenID Flow
+
+![](openid-bridge.png)
+
+Pros:
+- one openid/oauth client can be safely reused;
+- only creator access is provided;
+- supports SSO when user logs in once on AuthBridge application;
+
+Cons:
+- we need to have two additional components, probably custom:
+  - AuthBridge that will be OpenID/OAuth authentication + Authorization;
+  - DevWorkspaceAuth Proxy that will do Authorization on K8s server level to provide creator access only;
+
+
 # TODO:
-- Think more about Single Host mode, where AuthBridge and Workspaces live on the same cluster. Can it helps use to provide SSO with creator access only?
-- Could we use two levels authentication: OpenID provider (Google, Github, ...) <- One Client -> Dex <- ClientPerWorkspace -> Workspace
+- Q: Could we use two levels authentication: OpenID provider (Google, Github, ...) <- One Client -> Dex <- ClientPerWorkspace -> Workspace
+A: It makes sense to consider that way only if we're able to reuse existing solution if such exists. In any case we seems to need custom authorization where we check creator access only;

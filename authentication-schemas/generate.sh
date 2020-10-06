@@ -5,3 +5,4 @@ PLANTUML=${PLANTUML:-plantuml}
 $PLANTUML jwtproxy-current.plantuml
 $PLANTUML jwtproxy+auth_bridge-next.plantuml
 $PLANTUML openid-next.plantuml
+$PLANTUML openid-bridge.plantuml

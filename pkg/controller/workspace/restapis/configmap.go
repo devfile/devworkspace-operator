@@ -144,7 +144,7 @@ func constructRuntimeAnnotation(components []v1alpha1.ComponentDescription, endp
 
 func getMachinesAnnotation(components []v1alpha1.ComponentDescription, endpoints map[string]v1alpha1.ExposedEndpointList) map[string]v1alpha1.CheWorkspaceMachine {
 	machines := map[string]v1alpha1.CheWorkspaceMachine{}
-
+	machineRunningString := v1alpha1.RunningMachineEventType
 	for _, component := range components {
 		for containerName, container := range component.ComponentMetadata.Containers {
 			servers := map[string]v1alpha1.CheWorkspaceServer{}
@@ -159,6 +159,7 @@ func getMachinesAnnotation(components []v1alpha1.ComponentDescription, endpoints
 			machines[containerName] = v1alpha1.CheWorkspaceMachine{
 				Attributes: container.Attributes,
 				Servers:    servers,
+				Status:     &machineRunningString,
 			}
 		}
 	}

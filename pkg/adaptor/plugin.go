@@ -52,6 +52,7 @@ func AdaptPluginComponents(workspaceId, namespace string, devfileComponents []de
 		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
 			plugin_patch.PublicAccessPatch(&plugin)
 			plugin_patch.PatchMachineSelector(&plugin, workspaceId)
+			plugin_patch.AddMachineNameEnv(&plugin)
 		}
 
 		component, err := adaptChePluginToComponent(workspaceId, plugin)

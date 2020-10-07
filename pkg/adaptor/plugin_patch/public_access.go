@@ -18,10 +18,10 @@ import (
 	"github.com/eclipse/che-plugin-broker/model"
 )
 
-//PublicAccessPatch patches plugin's configuration to make endpoints publicly available
-//Plugins are configured to listen to only localhost only since they don't provide any authentication
+// PublicAccessPatch patches plugin's configuration to make endpoints publicly available
+// Plugins are configured to listen to only localhost only since they don't provide any authentication
 // and their endpoint is supposed to be accessed though some proxy that provides authentication/authorization.
-//Since authentication is not solved for devworkspace endpoints, it's the workaround to make endpoints available somehow for testing
+// Since authentication is not solved for devworkspace endpoints, it's the workaround to make endpoints available somehow for testing
 func PublicAccessPatch(plugin *model.ChePlugin) {
 	if plugin.Name == "che-machine-exec-plugin" {
 		for _, value := range plugin.Containers {

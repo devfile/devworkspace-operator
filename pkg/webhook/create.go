@@ -78,7 +78,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		if err != nil {
 			return err
 		}
-		log.Info("The provided webhook server cert is not production ready. If you want to use this in production please set up certs with a certification manager")
+		log.Info("Warning: the webhook server cert in use is not suitable for production. If you want to use this in production please set up certs with a certificate manager")
 	}
 
 	// Set up the deployment

@@ -34,9 +34,10 @@ var log = logf.Log.WithName("container-images")
 var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 
 const (
-	webTerminalToolingImageEnvVar  = "RELATED_IMAGE_web_terminal_tooling"
-	openshiftOAuthProxyImageEnvVar = "RELATED_IMAGE_openshift_oauth_proxy"
-	webhookServerImageEnvVar       = "RELATED_IMAGE_devworkspace_webhook_server"
+	webTerminalToolingImageEnvVar       = "RELATED_IMAGE_web_terminal_tooling"
+	openshiftOAuthProxyImageEnvVar      = "RELATED_IMAGE_openshift_oauth_proxy"
+	webhookServerImageEnvVar            = "RELATED_IMAGE_devworkspace_webhook_server"
+	webhookKubernetesCertJobImageEnvVar = "RELATED_IMAGE_default_tls_secrets_creation_job"
 )
 
 // GetWebTerminalToolingImage returns the image reference for the webhook server image. Returns
@@ -68,6 +69,17 @@ func GetOpenShiftOAuthProxyImage() string {
 	val, ok := os.LookupEnv(openshiftOAuthProxyImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", openshiftOAuthProxyImageEnvVar), "Could not get OpenShift OAuth proxy image")
+		return ""
+	}
+	return val
+}
+
+// GetWebhookCertJobImage returns the image reference for the webhook cert job image. Returns
+// the empty string if environment variable RELATED_IMAGE_default_tls_secrets_creation_job is not defined
+func GetWebhookCertJobImage() string {
+	val, ok := os.LookupEnv(webhookKubernetesCertJobImageEnvVar)
+	if !ok {
+		log.Error(fmt.Errorf("environment variable %s is not set", webhookKubernetesCertJobImageEnvVar), "Could not get webhook cert job image")
 		return ""
 	}
 	return val

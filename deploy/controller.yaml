@@ -1,4 +1,3 @@
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -53,20 +52,6 @@ spec:
             - name: RELATED_IMAGE_openshift_oauth_proxy
               value: "openshift/oauth-proxy:latest"
             - name: RELATED_IMAGE_devworkspace_webhook_server
-              value: "quay.io/devfile/devworkspace-controller:next"
----
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    app.kubernetes.io/name: devworkspace-controller
-    app.kubernetes.io/part-of: devworkspace-operator
-  name: workspace-controller
-spec:
-  ports:
-    - targetPort: webhook-server
-      protocol: TCP
-      port: 443
-  selector:
-    app.kubernetes.io/name: devworkspace-controller
-    app.kubernetes.io/part-of: devworkspace-operator
+              value: quay.io/devfile/devworkspace-controller:next
+            - name: RELATED_IMAGE_default_tls_secrets_creation_job
+              value: quay.io/eclipse/che-tls-secret-creator:alpine-3029769

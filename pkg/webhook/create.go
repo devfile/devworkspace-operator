@@ -18,6 +18,9 @@ import (
 	"fmt"
 	"os"
 
+	webhook_k8s "github.com/devfile/devworkspace-operator/pkg/webhook/kubernetes"
+	webhook_openshift "github.com/devfile/devworkspace-operator/pkg/webhook/openshift"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -48,6 +51,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to create new client: %w", err)
 	}
+
 	// Set up the certs
 	log.Info("Setting up the init webhooks configurations")
 	err = WebhookCfgsInit(client, ctx, namespace)
@@ -55,6 +59,41 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		return err
 	}
 
+	err = setUpWebhookServerRBAC(ctx, err, client, namespace)
+	if err != nil {
+		return err
+	}
+
+	if config.ControllerCfg.IsOpenShift() {
+		// Set up the certs for OpenShift
+		log.Info("Setting up the OpenShift webhook server secure service")
+		err := webhook_openshift.SetupSecureService(client, ctx, namespace)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Set up the certs for kubernetes
+		log.Info("Setting up the Kubernetes webhook server secure service")
+		err := webhook_k8s.SetupSecureService(client, ctx, namespace)
+		if err != nil {
+			return err
+		}
+		log.Info("Warning: the webhook server cert in use is not suitable for production. If you want to use this in production please set up certs with a certificate manager")
+	}
+
+	// Set up the deployment
+	log.Info("Creating the webhook server deployment")
+	err = CreateWebhookServerDeployment(client, ctx, namespace)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// setUpWebhookServerRBAC sets required service account, cluster role, and cluster role binding
+// for creating a webhook server
+func setUpWebhookServerRBAC(ctx context.Context, err error, client crclient.Client, namespace string) error {
 	// Set up the service account
 	log.Info("Setting up the webhook server service account")
 	err = CreateWebhookSA(client, ctx, namespace)
@@ -75,20 +114,5 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
-	// Set up the certs
-	log.Info("Setting up the webhook server secure certs")
-	err = SetupWebhookCerts(client, ctx, namespace)
-	if err != nil {
-		return err
-	}
-
-	// Set up the deployment
-	log.Info("Creating the webhook server deployment")
-	err = CreateWebhookServerDeployment(client, ctx, namespace)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

@@ -141,7 +141,7 @@ func main() {
 	// Setup certs for webhook and create seperate webhook server deployment
 	log.Info("Setting up webhooks")
 	if err := webhook.SetupWebhooks(ctx, cfg); err != nil {
-		log.Error(err, "")
+		log.Error(err, "Failed to setup webhooks")
 		os.Exit(1)
 	}
 

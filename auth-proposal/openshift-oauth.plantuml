@@ -16,7 +16,7 @@ skinparam SequenceGroupBodyBackgroundColor transparent
 
 Client -> K8s: Create started DevWorkspace CR
 K8s -> Controller: DevWorkspace CR is created
-Controller -> WorkspaceAuthProxy: Create OAuthClient ID + Secret
+Controller -> K8s: Create OAuthClient ID + Secret
 Controller -> Controller: Start the DevWorkspace with created ID and Secret
 
 Client -> WorkspaceAuthProxy: Open a secure server

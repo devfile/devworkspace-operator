@@ -26,7 +26,6 @@ import (
 
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -57,7 +56,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = createWebhooks(mgr, cfg)
+	err = createWebhooks(mgr)
 	if err != nil {
 		log.Error(err, "Failed to get create webhooks")
 		os.Exit(1)
@@ -73,8 +72,7 @@ func main() {
 	}
 }
 
-func createWebhooks(mgr manager.Manager, clusterConfig *rest.Config) error {
-	log.Info("Configuring Webhook Server")
+func createWebhooks(mgr manager.Manager) error {
 	err := server.ConfigureWebhookServer(mgr)
 	if err != nil {
 		return err

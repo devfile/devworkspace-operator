@@ -24,9 +24,15 @@ import (
 
 // WebhookCfgsInit initializes the webhook that denies everything until webhook server is started successfully
 func WebhookCfgsInit(client crclient.Client, ctx context.Context, namespace string) error {
-	configuration := workspace.BuildMutateWebhookCfg(namespace)
 
-	err := client.Create(ctx, configuration, &crclient.CreateOptions{})
+	webhookAnnotations, err := workspace.GetWebhookAnnotations(client, namespace)
+	if err != nil {
+		return err
+	}
+
+	configuration := workspace.BuildMutateWebhookCfg(namespace, webhookAnnotations)
+
+	err = client.Create(ctx, configuration, &crclient.CreateOptions{})
 	if err != nil {
 		if apierrors.IsAlreadyExists(err) {
 			log.Info(fmt.Sprintf("Mutating webhooks configuration %s already exists", configuration.Name))

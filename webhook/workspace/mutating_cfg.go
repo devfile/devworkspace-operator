@@ -25,7 +25,7 @@ const (
 )
 
 // BuildMutateWebhookCfg creates the mutating webhook configuration for the controller
-func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfiguration {
+func BuildMutateWebhookCfg(namespace string, annotations map[string]string) *v1beta1.MutatingWebhookConfiguration {
 	mutateWebhookFailurePolicy := mutateWebhookFailurePolicy
 	mutateWebhookPath := mutateWebhookPath
 	labelExistsOp := metav1.LabelSelectorOpExists
@@ -36,7 +36,12 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 			Namespace: namespace,
 			Path:      &mutateWebhookPath,
 		},
-		CABundle: server.CABundle,
+	}
+
+	// If annotations[CertManagerInjectKey] is not found then it is not a cert manager cert. I.e. either created
+	// by the job or by openshift automatically so we should use the provided CABundle
+	if _, ok := annotations[CertManagerInjectKey]; !ok {
+		webhookClientConfig.CABundle = server.CABundle
 	}
 
 	workspaceMutateWebhook := v1beta1.MutatingWebhook{
@@ -126,8 +131,9 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 
 	return &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   MutateWebhookCfgName,
-			Labels: server.WebhookServerAppLabels(),
+			Name:        MutateWebhookCfgName,
+			Labels:      server.WebhookServerAppLabels(),
+			Annotations: annotations,
 		},
 		Webhooks: []v1beta1.MutatingWebhook{
 			workspaceMutateWebhook,

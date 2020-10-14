@@ -93,6 +93,7 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 				},
 				Resources: []string{
 					"pods",
+					"secrets",
 				},
 				Verbs: []string{
 					"get",

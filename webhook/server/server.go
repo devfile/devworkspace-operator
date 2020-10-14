@@ -40,6 +40,9 @@ const (
 
 	//Secret name with TLS certs inside (tls.crt + tls.key) that is mounted to webhook server
 	WebhookServerTLSSecretName = "devworkspace-webhookserver-tls"
+
+	// Holds the name of the certificate used for managing webhooks
+	WebhookServerCertManagerCertificateName = "devworkspace-webhook-certificate"
 )
 
 var log = logf.Log.WithName("webhook.server")

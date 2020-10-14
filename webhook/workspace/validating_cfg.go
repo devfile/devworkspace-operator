@@ -23,26 +23,35 @@ const (
 	validateWebhookFailurePolicy = v1beta1.Fail
 )
 
-func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfiguration {
+func buildValidatingWebhookCfg(namespace string, annotations map[string]string) *v1beta1.ValidatingWebhookConfiguration {
 	validateWebhookFailurePolicy := validateWebhookFailurePolicy
 	validateWebhookPath := validateWebhookPath
+
+	webhookClientConfig := v1beta1.WebhookClientConfig{
+		Service: &v1beta1.ServiceReference{
+			Name:      server.WebhookServerServiceName,
+			Namespace: namespace,
+			Path:      &validateWebhookPath,
+		},
+	}
+
+	// If annotations[CertManagerInjectKey] is not found then it is not a cert manager cert. I.e. either created
+	// by the job or by openshift automatically so we should use the provided CABundle
+	if _, ok := annotations[CertManagerInjectKey]; !ok {
+		webhookClientConfig.CABundle = server.CABundle
+	}
+
 	return &v1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   ValidateWebhookCfgName,
-			Labels: server.WebhookServerAppLabels(),
+			Name:        ValidateWebhookCfgName,
+			Labels:      server.WebhookServerAppLabels(),
+			Annotations: annotations,
 		},
 		Webhooks: []v1beta1.ValidatingWebhook{
 			{
 				Name:          "validate-exec.devworkspace-controller.svc",
 				FailurePolicy: &validateWebhookFailurePolicy,
-				ClientConfig: v1beta1.WebhookClientConfig{
-					Service: &v1beta1.ServiceReference{
-						Name:      server.WebhookServerServiceName,
-						Namespace: namespace,
-						Path:      &validateWebhookPath,
-					},
-					CABundle: server.CABundle,
-				},
+				ClientConfig:  webhookClientConfig,
 				Rules: []v1beta1.RuleWithOperations{
 					{
 						Operations: []v1beta1.OperationType{v1beta1.Connect},

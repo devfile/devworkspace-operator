@@ -15,16 +15,14 @@ package webhook_k8s
 import (
 	"context"
 
-	"github.com/devfile/devworkspace-operator/pkg/webhook/service"
-
 	"github.com/devfile/devworkspace-operator/pkg/kubernetes/tls"
+	"github.com/devfile/devworkspace-operator/pkg/webhook/service"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
 var log = logf.Log.WithName("webhook-k8s")
@@ -54,6 +52,7 @@ func SetupSecureService(client crclient.Client, ctx context.Context, namespace s
 			if err != nil {
 				return err
 			}
+			log.Info("Warning: the webhook server cert in use is not suitable for production. If you want to use this in production please set up certs with a certificate manager")
 		}
 	}
 

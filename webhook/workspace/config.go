@@ -32,7 +32,6 @@ import (
 
 //Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
 func Configure(ctx context.Context) error {
-	log.Info("Configuring workspace webhooks")
 	c, err := controller.CreateClient()
 	if err != nil {
 		return err
@@ -43,8 +42,13 @@ func Configure(ctx context.Context) error {
 		return err
 	}
 
-	mutateWebhookCfg := BuildMutateWebhookCfg(namespace)
-	validateWebhookCfg := buildValidatingWebhookCfg(namespace)
+	webhookAnnotations, err := GetWebhookAnnotations(c, namespace)
+	if err != nil {
+		return err
+	}
+
+	mutateWebhookCfg := BuildMutateWebhookCfg(namespace, webhookAnnotations)
+	validateWebhookCfg := buildValidatingWebhookCfg(namespace, webhookAnnotations)
 
 	if !server.IsSetUp() {
 		_, mutatingWebhookErr := getMutatingWebhook(ctx, c, mutateWebhookCfg)

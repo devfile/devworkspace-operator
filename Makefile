@@ -15,7 +15,7 @@ SHELL := bash
 OPERATOR_SDK_VERSION = v0.17.0
 NAMESPACE ?= devworkspace-controller
 IMG ?= quay.io/devfile/devworkspace-controller:next
-TOOL ?= oc
+PLATFORM ?= openshift
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 PULL_POLICY ?= Always
 WEBHOOK_ENABLED ?= true
@@ -30,9 +30,11 @@ BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
 
 # minikube handling
-ifeq ($(shell $(TOOL) config current-context),minikube)
+ifeq ($(PLATFORM),kubernetes)
 	ROUTING_SUFFIX := $(shell minikube ip).nip.io
 	TOOL := kubectl
+else ifeq ($(PLATFORM),openshift)
+	TOOL := oc
 endif
 
 all: help
@@ -47,7 +49,7 @@ _print_vars:
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
-	@echo "    TOOL=$(TOOL)"
+	@echo "    PLATFORM=$(PLATFORM)"
 
 _set_ctx:
 ifneq ($(ADMIN_CTX),"")
@@ -79,7 +81,7 @@ endif
 endif
 
 _set_registry_url:
-ifeq ($(TOOL),oc)
+ifeq ($(PLATFORM),openshift)
 	$(eval PLUGIN_REGISTRY_HOST := $(shell $(TOOL) get route che-plugin-registry -n $(NAMESPACE) -o jsonpath='{.spec.host}' || echo ""))
 else
 	$(eval PLUGIN_REGISTRY_HOST := $(shell $(TOOL) get ingress che-plugin-registry -n $(NAMESPACE) -o jsonpath='{.spec.rules[0].host}' || echo ""))
@@ -129,7 +131,7 @@ _apply_controller_cfg:
 	$(TOOL) apply -f ./deploy/controller.yaml -n $(NAMESPACE)
 
 _do_restart:
-ifeq ($(TOOL),oc)
+ifeq ($(PLATFORM),openshift)
 	oc patch deployment/devworkspace-controller \
 		-n $(NAMESPACE) \
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
@@ -138,7 +140,7 @@ else
 endif
 
 _do_restart_webhook_server:
-ifeq ($(TOOL),oc)
+ifeq ($(PLATFORM),openshift)
 	oc patch deployment/devworkspace-webhook-server \
 		-n $(NAMESPACE) \
 		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
@@ -205,11 +207,22 @@ docker: _print_vars
 	docker build -t $(IMG) -f ./build/Dockerfile .
 	docker push $(IMG)
 
+.PHONY: webhook
+### webhook: generate cert manager certificates for kubernetes webhooks and deploy to cluster; no-op if running on OpenShift
+webhook:
+ifeq ($(WEBHOOK_ENABLED),true)
+ifeq ($(PLATFORM),kubernetes)
+	./scripts/webhook.sh -n $(NAMESPACE)
+endif
+else
+	@echo "Webhooks disabled, skipping certificate generation"
+endif
+
 ### info: display info
 info: _print_vars
 
 ### deploy: deploy controller to cluster
-deploy: _print_vars _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds _apply_controller_cfg _reset_yamls _reset_ctx
+deploy: _print_vars _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds _apply_controller_cfg webhook _reset_yamls _reset_ctx
 
 ### restart: restart cluster controller deployment
 restart: _set_ctx _do_restart _reset_ctx
@@ -313,7 +326,7 @@ help: Makefile
 	@echo 'Supported environment variables:'
 	@echo '    IMG                        - Image used for controller'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
-	@echo '    TOOL                       - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes'
+	@echo '    PLATFORM                   - The platform you will be running the operator on. CLI tools will automatically be set up. Platform is either kubernetes or openshift.'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'

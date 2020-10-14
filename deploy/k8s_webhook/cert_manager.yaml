@@ -1,0 +1,21 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: devworkspace-webhook-certificate
+  namespace: devworkspace-controller
+spec:
+  secretName: devworkspace-webhookserver-tls
+  dnsNames:
+    - devworkspace-webhookserver.devworkspace-controller.svc
+  issuerRef:
+    name: selfsignedissuer
+  duration: 1h
+  renewBefore: 5m
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsignedissuer
+  namespace: devworkspace-controller
+spec:
+  selfSigned: {}

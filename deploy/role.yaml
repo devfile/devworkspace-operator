@@ -161,3 +161,9 @@ rules:
   - watch
   - update
   - delete
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - clusteroperators
+  verbs:
+  - get

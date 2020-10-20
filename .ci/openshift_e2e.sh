@@ -7,7 +7,7 @@
 #
 # SPDX-License-Identifier: EPL-2.0
 #
-
+####TEST####
 #!/usr/bin/env bash
 # exit immediately when a command fails
 set -e

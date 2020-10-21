@@ -37,10 +37,11 @@ var log = logf.Log.WithName("container-images")
 var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 
 const (
-	webTerminalToolingImageEnvVar       = "RELATED_IMAGE_web_terminal_tooling"
-	openshiftOAuthProxyImageEnvVar      = "RELATED_IMAGE_openshift_oauth_proxy"
-	webhookServerImageEnvVar            = "RELATED_IMAGE_devworkspace_webhook_server"
-	webhookKubernetesCertJobImageEnvVar = "RELATED_IMAGE_default_tls_secrets_creation_job"
+	webTerminalToolingImageEnvVar        = "RELATED_IMAGE_web_terminal_tooling"
+	webTerminalToolingImageEnvVarDefault = "RELATED_IMAGE_web_terminal_tooling_default"
+	openshiftOAuthProxyImageEnvVar       = "RELATED_IMAGE_openshift_oauth_proxy"
+	webhookServerImageEnvVar             = "RELATED_IMAGE_devworkspace_webhook_server"
+	webhookKubernetesCertJobImageEnvVar  = "RELATED_IMAGE_default_tls_secrets_creation_job"
 )
 
 // GetWebhookServerImage returns the image reference for the webhook server image. Returns
@@ -54,10 +55,11 @@ func GetWebhookServerImage() string {
 	return val
 }
 
-// GetWebTerminalToolingImage returns the image reference for the default web tooling image. Returns
-// the empty string if environment variable RELATED_IMAGE_web_terminal_tooling is not defined
-// or failed to evaluate cluster version. On OpenShift the tooling image will be derived from the
-// OpenShift version e.g. RELATED_IMAGE_web_terminal_tooling_4_5
+// GetWebTerminalToolingImage returns the image reference for the default web tooling image. It first looks at the
+// environment variable RELATED_IMAGE_web_terminal_tooling. If that is not defined it will try to look for
+// RELATED_IMAGE_web_terminal_tooling_default. On OpenShift the tooling image will be derived from the
+// OpenShift version e.g. RELATED_IMAGE_web_terminal_tooling_4_5. If no environment variables are found or the cluster
+// version could not be determined the empty string is returned.
 func GetWebTerminalToolingImage() string {
 
 	isOpenshift, err := cluster.IsOpenShift()
@@ -81,8 +83,12 @@ func GetWebTerminalToolingImage() string {
 
 	val, ok := os.LookupEnv(webTerminalToolingImageEnvVar + optionalOpenShiftVersion)
 	if !ok {
-		log.Error(fmt.Errorf("environment variable %s is not set", webTerminalToolingImageEnvVar), "Could not get web terminal tooling image")
-		return ""
+		val, ok := os.LookupEnv(webTerminalToolingImageEnvVarDefault)
+		if !ok {
+			log.Error(fmt.Errorf("environment variables %s and %s are not set", webTerminalToolingImageEnvVar, webTerminalToolingImageEnvVarDefault), "Could not get web terminal tooling image")
+			return ""
+		}
+		return val
 	}
 	return val
 }

@@ -52,6 +52,6 @@ spec:
             - name: RELATED_IMAGE_openshift_oauth_proxy
               value: "openshift/oauth-proxy:latest"
             - name: RELATED_IMAGE_devworkspace_webhook_server
-              value: quay.io/devfile/devworkspace-controller:next
+              value: "quay.io/devfile/devworkspace-controller:next"
             - name: RELATED_IMAGE_default_tls_secrets_creation_job
-              value: quay.io/eclipse/che-tls-secret-creator:alpine-3029769
+              value: "quay.io/eclipse/che-tls-secret-creator:alpine-3029769"

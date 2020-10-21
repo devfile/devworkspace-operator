@@ -25,14 +25,11 @@ func openShiftClient() (*configv1client.ConfigV1Client, error) {
 		return nil, err
 	}
 
-	if config != nil {
-		client, err := configv1client.NewForConfig(config)
-		if err != nil {
-			return client, err
-		}
-		return client, nil
+	client, err := configv1client.NewForConfig(config)
+	if err != nil {
+		return client, err
 	}
-	return nil, nil
+	return client, nil
 }
 
 // Get the version of the current running OpenShift cluster in semver format E.g. 4.5.9

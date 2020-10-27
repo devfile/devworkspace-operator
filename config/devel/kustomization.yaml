@@ -1,0 +1,15 @@
+namespace: ${NAMESPACE}
+
+bases:
+- ../default
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: devworkspace-controller
+  envs: 
+  - config.properties
+
+patchesStrategicMerge:
+- manager_image_patch.yaml

@@ -1,3 +1,7 @@
+devworkspace-crds
+config/crd/bases/workspace.devfile.io_devworkspaces.yaml
+testbin
+.vscode
 
 # Binaries for programs and plugins
 *.exe
@@ -5,11 +9,6 @@
 *.dll
 *.so
 *.dylib
-_output
-vendor
-devworkspace-crds
-config/devfiles
-.e2e/
 bin
 
 # Test binary, build with `go test -c`

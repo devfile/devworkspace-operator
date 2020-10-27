@@ -10,29 +10,33 @@
 #   Red Hat, Inc. - initial API and implementation
 #
 
-set -e
+set -ex
 
 DEVWORKSPACE_API_VERSION=${1:-v1alpha1}
 
-mkdir -p devworkspace-crds
-cd devworkspace-crds
-if [ ! -d ./.git ]; then
-	git init
-	git remote add origin -f https://github.com/devfile/api.git
-	git config core.sparsecheckout true
-	echo "deploy/crds/*" > .git/info/sparse-checkout
-else
-	git remote set-url origin https://github.com/devfile/api.git
-fi
-git fetch --tags -p origin
+SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+TMP_DIR=$(mktemp -d)
+echo "Downloading devfile/api CRDs to $TMP_DIR"
+
+cd $TMP_DIR
+# mkdir -p devworkspace-crds
+# cd devworkspace-crds
+git init
+git remote add origin https://github.com/devfile/api.git
+git config core.sparsecheckout true
+echo "deploy/crds/*" > .git/info/sparse-checkout
+git fetch --quiet --tags -p origin 
 if git show-ref --verify refs/tags/"${DEVWORKSPACE_API_VERSION}" --quiet; then
 	echo 'DevWorkspace API is specified from tag'
-	git checkout tags/"${DEVWORKSPACE_API_VERSION}"
+	git checkout --quiet tags/"${DEVWORKSPACE_API_VERSION}"
 elif git rev-parse --verify "${DEVWORKSPACE_API_VERSION}"; then
 	echo 'DevWorkspace API is specified from branch'
-	git checkout "${DEVWORKSPACE_API_VERSION}" && git reset --hard origin/"${DEVWORKSPACE_API_VERSION}"
+	git checkout --quiet "${DEVWORKSPACE_API_VERSION}" && git reset --hard origin/"${DEVWORKSPACE_API_VERSION}"
 else
 	echo 'DevWorkspace API is specified from revision'
-	git checkout "${DEVWORKSPACE_API_VERSION}"
+	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 fi
+cp deploy/crds/workspace.devfile.io_devworkspaces_crd.yaml \
+   $SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspaces.yaml
 
+cd $SCRIPT_DIR

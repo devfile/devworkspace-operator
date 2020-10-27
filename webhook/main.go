@@ -21,11 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	"github.com/devfile/devworkspace-operator/webhook/server"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -42,7 +42,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	namespace, err := k8sutil.GetWatchNamespace()
+	namespace, err := cluster.GetWatchNamespace()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
 		os.Exit(1)

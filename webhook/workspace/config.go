@@ -16,13 +16,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/webhook/server"
+	clientConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/devfile/devworkspace-operator/internal/controller"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,12 +33,12 @@ import (
 //Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
 func Configure(ctx context.Context) error {
 	log.Info("Configuring workspace webhooks")
-	c, err := controller.CreateClient()
+	c, err := createClient()
 	if err != nil {
 		return err
 	}
 
-	namespace, err := k8sutil.GetOperatorNamespace()
+	namespace, err := cluster.GetOperatorNamespace()
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func controllerSAUID(ctx context.Context, c client.Client) (string, string, erro
 	if err != nil {
 		return "", "", err
 	}
-	namespace, err := k8sutil.GetOperatorNamespace()
+	namespace, err := cluster.GetOperatorNamespace()
 	if err != nil {
 		return "", "", err
 	}
@@ -149,4 +149,20 @@ func controllerSAUID(ctx context.Context, c client.Client) (string, string, erro
 	}
 	fullSAName := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
 	return string(sa.UID), fullSAName, nil
+}
+
+// createClient creates Controller client with default config
+// or returns error if any happens
+func createClient() (client.Client, error) {
+	cfg, err := clientConfig.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := client.New(cfg, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
 }

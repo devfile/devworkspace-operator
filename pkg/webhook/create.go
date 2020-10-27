@@ -14,16 +14,15 @@ package webhook
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 
+	"github.com/devfile/devworkspace-operator/internal/cluster"
 	webhook_k8s "github.com/devfile/devworkspace-operator/pkg/webhook/kubernetes"
 	webhook_openshift "github.com/devfile/devworkspace-operator/pkg/webhook/openshift"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/client-go/rest"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,14 +36,9 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		return nil
 	}
 
-	namespace, err := k8sutil.GetOperatorNamespace()
+	namespace, err := cluster.GetOperatorNamespace()
 	if err != nil {
-		if errors.Is(err, k8sutil.ErrRunLocal) {
-			// local mode. Just read watch namespace env var set by operator sdk
-			namespace = os.Getenv("WATCH_NAMESPACE")
-		} else {
-			return err
-		}
+		config.ConfigMapReference.Namespace = os.Getenv(cluster.WatchNamespaceEnvVar)
 	}
 
 	client, err := crclient.New(cfg, crclient.Options{})

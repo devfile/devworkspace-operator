@@ -20,8 +20,8 @@
 
 set -e
 
-COMPONENTS_CRD_PATH="deploy/crds/controller.devfile.io_components_crd.yaml"
-ROUTINGS_CRD_PATH="deploy/crds/controller.devfile.io_workspaceroutings_crd.yaml"
+COMPONENTS_CRD_PATH="config/crd/bases/controller.devfile.io_components.yaml"
+ROUTINGS_CRD_PATH="config/crd/bases/controller.devfile.io_workspaceroutings.yaml"
 
 # CRD path from root to status field, in jq filter format
 STATUS_PATH='.spec.validation.openAPIV3Schema.properties["status"]'

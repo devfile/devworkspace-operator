@@ -8,19 +8,21 @@
 # Contributors:
 #   Red Hat, Inc. - initial API and implementation
 #
+
+#### TODOS ####
+## - Port over e2e tests.
+####
+
 SHELL := bash
 .SHELLFLAGS = -ec
-.ONESHELL:
+# .ONESHELL:
 
-OPERATOR_SDK_VERSION = v0.17.0
-NAMESPACE ?= devworkspace-controller
-IMG ?= quay.io/devfile/devworkspace-controller:next
-TOOL ?= oc
-ROUTING_SUFFIX ?= 192.168.99.100.nip.io
-PULL_POLICY ?= Always
-WEBHOOK_ENABLED ?= true
-DEFAULT_ROUTING ?= basic
-ADMIN_CTX ?= ""
+export NAMESPACE ?= devworkspace-controller
+export IMG ?= quay.io/devfile/devworkspace-controller:next
+export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
+export PULL_POLICY ?= Always
+export WEBHOOK_ENABLED ?= true
+export DEFAULT_ROUTING ?= basic
 REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= v1alpha1
 
@@ -29,10 +31,40 @@ INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
 
+ifeq ($(shell kubectl api-resources --api-group='route.openshift.io' | grep -o routes),routes)
+PLATFORM := openshift
+else
+PLATFORM := kubernetes
+endif
+
 # minikube handling
-ifeq ($(shell $(TOOL) config current-context),minikube)
-	ROUTING_SUFFIX := $(shell minikube ip).nip.io
-	TOOL := kubectl
+ifeq ($(shell kubectl config current-context),minikube)
+export ROUTING_SUFFIX := $(shell minikube ip).nip.io
+endif
+
+
+# Bootstrapped by Operator-SDK v1.1.0
+# Current Operator version
+VERSION ?= 0.0.1
+# Default bundle image tag
+BUNDLE_IMG ?= controller-bundle:$(VERSION)
+# Options for 'bundle-build'
+ifneq ($(origin CHANNELS), undefined)
+BUNDLE_CHANNELS := --channels=$(CHANNELS)
+endif
+ifneq ($(origin DEFAULT_CHANNEL), undefined)
+BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
+endif
+BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+
+# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+CRD_OPTIONS ?= "crd:trivialVersions=true"
+
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
 endif
 
 all: help
@@ -47,188 +79,19 @@ _print_vars:
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
-	@echo "    TOOL=$(TOOL)"
-
-_set_ctx:
-ifneq ($(ADMIN_CTX),"")
-	$(eval CURRENT_CTX := $(shell $(TOOL) config current-context))
-	@echo "Switching current ctx to $(ADMIN_CTX) from $(CURRENT_CTX)"
-	$(TOOL) config use-context $(ADMIN_CTX)
-endif
-
-_reset_ctx:
-ifneq ($(ADMIN_CTX),"")
-	@echo "Restoring the current context to $(CURRENT_CTX)"
-	$(TOOL) config use-context $(CURRENT_CTX)
-endif
 
 _create_namespace:
-	$(TOOL) create namespace $(NAMESPACE) || true
-
-_deploy_registry:
-ifeq ($(REGISTRY_ENABLED),true)
-	$(TOOL) apply -f ./deploy/registry/local -n $(NAMESPACE)
-ifeq ($(TOOL),oc)
-	$(TOOL) apply -f ./deploy/registry/local/os -n $(NAMESPACE)
-else
-	sed -i.bak -e  "s|192.168.99.100.nip.io|$(ROUTING_SUFFIX)|g" ./deploy/registry/local/k8s/ingress.yaml
-	$(TOOL) apply -f ./deploy/registry/local/k8s -n $(NAMESPACE)
-	sed -i.bak -e "s|$(ROUTING_SUFFIX)|192.168.99.100.nip.io|g" ./deploy/registry/local/k8s/ingress.yaml
-	rm ./deploy/registry/local/k8s/ingress.yaml.bak
-endif
-endif
-
-_set_registry_url:
-ifeq ($(TOOL),oc)
-	$(eval PLUGIN_REGISTRY_HOST := $(shell $(TOOL) get route che-plugin-registry -n $(NAMESPACE) -o jsonpath='{.spec.host}' || echo ""))
-else
-	$(eval PLUGIN_REGISTRY_HOST := $(shell $(TOOL) get ingress che-plugin-registry -n $(NAMESPACE) -o jsonpath='{.spec.rules[0].host}' || echo ""))
-endif
-
-# -i.bak is needed for compatibility between OS X and Linux versions of sed
-_update_yamls: _set_registry_url
-	sed -i.bak -e "s|controller.plugin_registry.url: .*|controller.plugin_registry.url: http://$(PLUGIN_REGISTRY_HOST)|g" ./deploy/controller_config.yaml
-	sed -i.bak -e 's|controller.webhooks.enabled: .*|controller.webhooks.enabled: "$(WEBHOOK_ENABLED)"|g' ./deploy/controller_config.yaml
-	sed -i.bak -e 's|devworkspace.default_routing_class: .*|devworkspace.default_routing_class: "$(DEFAULT_ROUTING)"|g' ./deploy/controller_config.yaml
-	sed -i.bak -e 's|devworkspace.routing.cluster_host_suffix: .*|devworkspace.routing.cluster_host_suffix: $(ROUTING_SUFFIX)|g' ./deploy/controller_config.yaml
-	sed -i.bak -e 's|devworkspace.sidecar.image_pull_policy: .*|devworkspace.sidecar.image_pull_policy: $(PULL_POLICY)|g' ./deploy/controller_config.yaml
-	rm ./deploy/controller_config.yaml.bak
-	sed -i.bak -e 's|namespace: $${NAMESPACE}|namespace: $(NAMESPACE)|' ./deploy/role_binding.yaml
-	sed -i.bak -e "s|image: .*|image: $(IMG)|g" ./deploy/controller.yaml
-	sed -i.bak -e "s|value: \"quay.io/devfile/devworkspace-controller:next\"|value: $(IMG)|g" ./deploy/controller.yaml
-	sed -i.bak -e "s|imagePullPolicy: Always|imagePullPolicy: $(PULL_POLICY)|g" ./deploy/controller.yaml
-	sed -i.bak -e "s|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: '$$(date +%Y-%m-%dT%H:%M:%S%z)'|g" ./deploy/controller.yaml
-
-_reset_yamls: _set_registry_url
-	sed -i.bak -e "s|http://$(PLUGIN_REGISTRY_HOST)|http://che-plugin-registry.192.168.99.100.nip.io/v3|g" ./deploy/controller_config.yaml
-	sed -i.bak -e 's|controller.webhooks.enabled: .*|controller.webhooks.enabled: "true"|g' ./deploy/controller_config.yaml
-	sed -i.bak -e 's|devworkspace.default_routing_class: .*|devworkspace.default_routing_class: "basic"|g' ./deploy/controller_config.yaml
-	sed -i.bak -e 's|devworkspace.routing.cluster_host_suffix: .*|devworkspace.routing.cluster_host_suffix: 192.168.99.100.nip.io|g' ./deploy/controller_config.yaml
-	sed -i.bak -e 's|devworkspace.sidecar.image_pull_policy: .*|devworkspace.sidecar.image_pull_policy: Always|g' ./deploy/controller_config.yaml
-	rm ./deploy/controller_config.yaml.bak
-	mv ./deploy/role_binding.yaml.bak ./deploy/role_binding.yaml
-	sed -i.bak -e "s|image: .*|image: quay.io/devfile/devworkspace-controller:next|g" ./deploy/controller.yaml
-	# webhook server related image
-	sed -i.bak -e "s|value: $(IMG)|value: \"quay.io/devfile/devworkspace-controller:next\"|g" ./deploy/controller.yaml
-	sed -i.bak -e "s|imagePullPolicy: .*|imagePullPolicy: Always|g" ./deploy/controller.yaml
-	sed -i.bak -e 's|kubectl.kubernetes.io/restartedAt: .*|kubectl.kubernetes.io/restartedAt: ""|g' ./deploy/controller.yaml
-	rm ./deploy/controller.yaml.bak
-
-_update_crds: update_devworkspace_crds
-	$(TOOL) apply -f ./deploy/crds
-	$(TOOL) apply -f ./devworkspace-crds/deploy/crds
-
-_update_controller_deps:
-	$(TOOL) apply -f ./deploy/controller_config.yaml -n $(NAMESPACE)
-	$(TOOL) apply -f ./deploy/service_account.yaml -n $(NAMESPACE)
-	$(TOOL) apply -f ./deploy/role.yaml -n $(NAMESPACE)
-	$(TOOL) apply -f ./deploy/role_binding.yaml -n $(NAMESPACE)
-
-_apply_controller_cfg:
-	$(TOOL) apply -f ./deploy -n $(NAMESPACE)
-	$(TOOL) apply -f ./deploy/controller.yaml -n $(NAMESPACE)
-
-_do_restart:
-ifeq ($(TOOL),oc)
-	oc patch deployment/devworkspace-controller \
-		-n $(NAMESPACE) \
-		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
-else
-	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-controller
-endif
-
-_do_restart_webhook_server:
-ifeq ($(TOOL),oc)
-	oc patch deployment/devworkspace-webhook-server \
-		-n $(NAMESPACE) \
-		--patch "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"kubectl.kubernetes.io/restartedAt\":\"$$(date --iso-8601=seconds)\"}}}}}"
-else
-	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-webhook-server
-endif
-
-_do_uninstall:
-# It's safer to delete all workspaces before deleting the controller; otherwise we could
-# leave workspaces in a hanging state if we add finalizers.
-ifneq ($(shell command -v kubectl 2> /dev/null),)
-	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
-	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
-# Have to wait for routings to be deleted in case there are finalizers
-	kubectl delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
-else
-ifneq ($(TOOL) get devworkspaces.workspace.devfile.io --all-namespaces,"No resources found.")
-	$(info To automatically remove all workspaces when uninstalling, ensure kubectl is installed)
-	$(error Cannot uninstall operator, workspaces still running. Delete all workspaces and workspaceroutings before proceeding)
-endif
-endif
-	$(TOOL) delete -f ./deploy -n $(NAMESPACE) --ignore-not-found=true
-	$(TOOL) delete namespace $(NAMESPACE) --ignore-not-found=true
-	$(TOOL) delete mutatingwebhookconfigurations controller.devfile.io --ignore-not-found=true
-	$(TOOL) delete validatingwebhookconfigurations controller.devfile.io --ignore-not-found=true
-	$(TOOL) delete clusterrole devworkspace-webhook-server --ignore-not-found=true
-	$(TOOL) delete clusterrolebinding devworkspace-webhook-server --ignore-not-found=true
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io workspaceroutings.controller.devfile.io --ignore-not-found=true
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io components.controller.devfile.io --ignore-not-found=true
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspaces.workspace.devfile.io --ignore-not-found=true
-	$(TOOL) delete customresourcedefinitions.apiextensions.k8s.io devworkspacetemplates.workspace.devfile.io --ignore-not-found=true
-
-_do_e2e_test:
-	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
-	./bin/devworkspace-controller-e2e
-
-# it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
-_bump_kubeconfig:
-	@mkdir -p $(INTERNAL_TMP_DIR)
-ifndef KUBECONFIG
-	$(eval CONFIG_FILE = ${HOME}/.kube/config)
-else
-	$(eval CONFIG_FILE = ${KUBECONFIG})
-endif
-	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
+	kubectl create namespace $(NAMESPACE) || true
 
 _generate_related_images_env:
 	@mkdir -p $(INTERNAL_TMP_DIR)
-	cat ./deploy/controller.yaml \
+	cat ./config/components/manager/manager.yaml \
 		| yq -r \
-			'.spec.template.spec.containers[].env[]
-				| select(.name | startswith("RELATED_IMAGE"))
-				| "export \(.name)=\"$${\(.name):-\(.value)}\""' \
+			'.spec.template.spec.containers[]?.env[] | select(.name | startswith("RELATED_IMAGE")) | "export \(.name)=\"$${\(.name):-\(.value)}\""' \
 		> $(RELATED_IMAGES_FILE)
 	cat $(RELATED_IMAGES_FILE)
 
-_login_with_devworkspace_sa:
-	@$(eval SA_TOKEN := $(shell $(TOOL) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "devworkspace-controller")][0].data.token' | base64 --decode ))
-	echo "Logging as devworkspace controller SA"
-	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
-
-### docker: build and push docker image
-docker: _print_vars
-	docker build -t $(IMG) -f ./build/Dockerfile .
-	docker push $(IMG)
-
-### info: display info
-info: _print_vars
-
-### deploy: deploy controller to cluster
-deploy: _print_vars _set_ctx _create_namespace _deploy_registry _update_yamls _update_crds _apply_controller_cfg _reset_yamls _reset_ctx
-
-### restart: restart cluster controller deployment
-restart: _set_ctx _do_restart _reset_ctx
-
-### restart: restart cluster controller deployment
-restart_webhook_server: _set_ctx _do_restart_webhook_server _reset_ctx
-
-### rollout: rebuild and push docker image and restart cluster deployment
-rollout: docker restart
-
-### update_cfg: configures already deployed controller according to set env variables
-update_cfg: _print_vars _set_ctx _update_yamls _apply_controller_cfg _reset_yamls _reset_ctx
-
-### update_crds: update custom resource definitions on cluster
-update_crds: _set_ctx _update_crds _reset_ctx
-
-### uninstall: remove namespace and all CRDs from cluster
-uninstall: _set_ctx _do_uninstall _reset_ctx
-
+##### Rules for dealing with devfile/api
 ### update_devworkspace_api: update version of devworkspace crds in go.mod
 update_devworkspace_api:
 	go mod edit --require github.com/devfile/api@$(DEVWORKSPACE_API_VERSION)
@@ -238,54 +101,80 @@ update_devworkspace_api:
 ### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
 update_devworkspace_crds:
 	./update_devworkspace_crds.sh $(DEVWORKSPACE_API_VERSION)
+###### End rules for dealing with devfile/api
 
+### test: Run tests
+ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
+test: generate fmt vet manifests
+	mkdir -p $(ENVTEST_ASSETS_DIR)
+	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
+	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
-### local: set up cluster for local development
-local: _print_vars _set_ctx _create_namespace _deploy_registry _set_registry_url _update_yamls _update_crds _update_controller_deps _reset_yamls _reset_ctx
+### manager: Build manager binary
+manager: generate fmt vet
+	go build -o bin/manager main.go
 
-### generate: generates CRDs and Kubernetes code for custom resource
-generate:
-ifeq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
-	operator-sdk generate k8s
-	operator-sdk generate crds
-	patch/patch_crds.sh
+### run: Run against the configured Kubernetes cluster in ~/.kube/config
+run: _print_vars _generate_related_images_env
+	source $(RELATED_IMAGES_FILE)
+	WATCH_NAMESPACE=$(NAMESPACE) go run ./main.go
+
+debug: _print_vars _generate_related_images_env
+	source $(RELATED_IMAGES_FILE)
+	WATCH_NAMESPACE=$(NAMESPACE) dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
+
+### install: Install CRDs into a cluster
+install: manifests _kustomize
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+
+#### uninstall: Uninstall CRDs from a cluster
+uninstall: manifests _kustomize
+	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+
+### deploy: Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy: _print_vars _kustomize _create_namespace deploy_registry
+	mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
+	mv config/devel/config.properties config/devel/config.properties.bak
+	mv config/devel/manager_image_patch.yaml config/devel/manager_image_patch.yaml.bak
+
+	envsubst < config/devel/kustomization.yaml.bak > config/devel/kustomization.yaml
+	envsubst < config/devel/config.properties.bak > config/devel/config.properties
+	envsubst < config/devel/manager_image_patch.yaml.bak > config/devel/manager_image_patch.yaml
+	$(KUSTOMIZE) build config/devel | kubectl apply -f - || true
+
+	mv config/devel/kustomization.yaml.bak config/devel/kustomization.yaml
+	mv config/devel/config.properties.bak config/devel/config.properties
+	mv config/devel/manager_image_patch.yaml.bak config/devel/manager_image_patch.yaml
+
+### restart: Restart devworkspace-controller deployment
+restart:
+	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-controller-manager
+
+### uninstall_controller: Remove controller resources from the cluster
+uninstall_controller: _kustomize
+	kustomize build config/devel | kubectl delete --ignore-not-found -f -
+	kubectl delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
+	kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io
+	kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io
+	kubectl delete namespace $(NAMESPACE)
+
+### deploy_registry: Deploy plugin registry
+deploy_registry: _print_vars _create_namespace
+	kubectl apply -f config/registry/local -n $(NAMESPACE)
+ifeq ($(PLATFORM),kubernetes)
+	envsubst < config/registry/local/k8s/ingress.yaml | kubectl apply -n $(NAMESPACE) -f -
 else
-	$(error operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used during CRDs and k8s objects generating while $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found)
+	kubectl apply -f config/registry/local/os -n $(NAMESPACE)
 endif
 
-### start_local: start local instance of controller using operator-sdk
-start_local: _bump_kubeconfig _generate_related_images_env _login_with_devworkspace_sa
-	@source $(RELATED_IMAGES_FILE)
-ifeq ($(WEBHOOK_ENABLED),true)
-	#in cluster mode it comes from Deployment env var
-	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
-	#in cluster mode it comes from configured SA propogated via env var
-	export CONTROLLER_SERVICE_ACCOUNT_NAME=devworkspace-controller
-	export KUBECONFIG=$(BUMPED_KUBECONFIG)
-endif
-	operator-sdk run --local --watch-namespace $(NAMESPACE) 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
+### manifests: Generate manifests e.g. CRD, RBAC etc.
+manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." \
+			output:crd:artifacts:config=config/crd/bases \
+			output:rbac:artifacts:config=config/components/rbac
+	patch/patch_crds.sh
 
-### start_local_debug: start local instance of controller with debugging enabled
-start_local_debug: _bump_kubeconfig _generate_related_images_env _login_with_devworkspace_sa
-	@source $(RELATED_IMAGES_FILE)
-ifeq ($(WEBHOOK_ENABLED),true)
-	#in cluster mode it comes from Deployment env var
-	export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)
-	#in cluster mode it comes from configured SA propogated via env var
-	export CONTROLLER_SERVICE_ACCOUNT_NAME=devworkspace-controller
-	export KUBECONFIG=$(BUMPED_KUBECONFIG)
-endif
-	operator-sdk run --local --watch-namespace $(NAMESPACE) --enable-delve 2>&1 | grep --color=always -E '"msg":"[^"]*"|$$'
-
-.PHONY: test
-### test: run unit tests
-test:
-	go test $(shell go list ./... | grep -v test/e2e)
-
-### test_e2e: runs e2e test on the cluster set in context. Includes deploying devworkspace-controller, run test workspace, uninstall devworkspace-controller
-test_e2e: _print_vars _set_ctx _update_yamls update_devworkspace_crds _do_e2e_test _reset_yamls _reset_ctx
-
-### fmt: format all go files in repository
+### fmt: Run go fmt against code
 fmt:
 ifneq ($(shell command -v goimports 2> /dev/null),)
 	find . -name '*.go' -exec goimports -w {} \;
@@ -304,6 +193,70 @@ else
 	$(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
 endif
 
+### vet: Run go vet against code
+vet:
+	go vet ./...
+
+### generate: Generate code
+generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+### docker: Build and push controller image
+docker: _print_vars docker-build docker-push
+
+### docker-build: Build the controller image
+docker-build:
+	docker build . -t ${IMG} -f build/Dockerfile
+
+### docker-push: Push the controller image
+docker-push:
+	docker push ${IMG}
+
+### controller-gen: find or download controller-gen
+# download controller-gen if necessary
+controller-gen:
+ifeq (, $(shell which controller-gen))
+	@{ \
+	set -e ;\
+	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$CONTROLLER_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	}
+CONTROLLER_GEN=$(GOBIN)/controller-gen
+else
+CONTROLLER_GEN=$(shell which controller-gen)
+endif
+
+_kustomize:
+ifeq (, $(shell which kustomize))
+	@{ \
+	set -e ;\
+	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
+	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
+	}
+KUSTOMIZE=$(GOBIN)/kustomize
+else
+KUSTOMIZE=$(shell which kustomize)
+endif
+
+# Generate bundle manifests and metadata, then validate generated files.
+.PHONY: bundle
+bundle: manifests
+	operator-sdk generate kustomize manifests -q
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	operator-sdk bundle validate ./bundle
+
+# Build the bundle image.
+.PHONY: bundle-build
+bundle-build:
+	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
 .PHONY: help
 ### help: print this message
 help: Makefile
@@ -313,7 +266,6 @@ help: Makefile
 	@echo 'Supported environment variables:'
 	@echo '    IMG                        - Image used for controller'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
-	@echo '    TOOL                       - CLI tool for interfacing with the cluster: kubectl or oc; if oc is used, deployment is tailored to OpenShift, otherwise Kubernetes'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'

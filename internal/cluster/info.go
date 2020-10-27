@@ -13,10 +13,45 @@
 package cluster
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
+
+const (
+	WatchNamespaceEnvVar = "WATCH_NAMESPACE"
+)
+
+// GetOperatorNamespace returns the namespace the operator should be running in.
+//
+// This function was ported over from Operator SDK 0.17.0 and modified.
+func GetOperatorNamespace() (string, error) {
+	nsBytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", fmt.Errorf("could not read namespace from mounted serviceaccount info")
+		}
+		return "", err
+	}
+	ns := strings.TrimSpace(string(nsBytes))
+	return ns, nil
+}
+
+// GetWatchNamespace returns the namespace the operator should be watching for changes
+//
+// This function was ported over from Operator SDK 0.17.0
+func GetWatchNamespace() (string, error) {
+	ns, found := os.LookupEnv(WatchNamespaceEnvVar)
+	if !found {
+		return "", fmt.Errorf("%s must be set", WatchNamespaceEnvVar)
+	}
+	return ns, nil
+}
 
 func IsOpenShift() (bool, error) {
 	kubeCfg, err := config.GetConfig()

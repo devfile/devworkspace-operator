@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: controller-manager
+  name: system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manager
+  namespace: system
+  labels:
+    control-plane: controller-manager
+spec:
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: controller-manager
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - image: quay.io/devfile/devworkspace-controller:next
+        name: devworkspace-controller
+        args:
+        - /usr/local/bin/devworkspace-controller
+        - --enable-leader-election
+        resources:
+          limits:
+            cpu: 100m
+            memory: 30Mi
+          requests:
+            cpu: 100m
+            memory: 20Mi
+        env:
+          - name: WATCH_NAMESPACE
+            value: ""
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: OPERATOR_NAME
+            value: "devworkspace-operator"
+          - name: CONTROLLER_SERVICE_ACCOUNT_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.serviceAccountName
+          - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
+            value: "quay.io/wto/web-terminal-exec:1.0"
+          - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_nightly
+            value: "quay.io/eclipse/che-machine-exec:nightly"
+          - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_4_5_0
+            value: "quay.io/wto/web-terminal-exec:1.0"
+          - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_nightly
+            value: "quay.io/eclipse/che-machine-exec:nightly"
+          - name: RELATED_IMAGE_plugin_eclipse_cloud_shell_nightly
+            value: "quay.io/eclipse/che-machine-exec:nightly"
+          - name: RELATED_IMAGE_web_terminal_tooling
+            value: "quay.io/wto/web-terminal-tooling:latest"
+          - name: RELATED_IMAGE_openshift_oauth_proxy
+            value: "openshift/oauth-proxy:latest"
+          - name: RELATED_IMAGE_devworkspace_webhook_server
+            value: quay.io/devfile/devworkspace-controller:next
+          - name: RELATED_IMAGE_default_tls_secrets_creation_job
+            value: quay.io/eclipse/che-tls-secret-creator:alpine-3029769

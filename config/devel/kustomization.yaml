@@ -1,0 +1,17 @@
+bases:
+- ../default
+
+commonLabels:
+  app.kubernetes.io/name: devworkspace-controller
+  app.kubernetes.io/part-of: devworkspace-operator
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+configMapGenerator:
+- name: devworkspace-controller
+  envs: 
+  - config.properties
+
+patchesStrategicMerge:
+- manager_image_patch.yaml

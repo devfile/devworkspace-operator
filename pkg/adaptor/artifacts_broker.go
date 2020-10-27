@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/eclipse/che-plugin-broker/model"

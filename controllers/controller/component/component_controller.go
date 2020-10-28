@@ -119,11 +119,11 @@ func (r *ComponentReconciler) reconcileConfigMap(instance *controllerv1alpha1.Co
 		Namespace: cm.Namespace,
 		Name:      cm.Name,
 	}
-	err = r.Get(ctx, namespacedName, clusterConfigMap)
+	err = r.Get(context.TODO(), namespacedName, clusterConfigMap)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			log.Info("Creating broker ConfigMap")
-			err := r.Create(ctx, cm)
+			err := r.Create(context.TODO(), cm)
 			return false, err
 		}
 		return false, err
@@ -133,7 +133,7 @@ func (r *ComponentReconciler) reconcileConfigMap(instance *controllerv1alpha1.Co
 		log.Info("Updating broker ConfigMap")
 		log.V(2).Info(fmt.Sprintf("Diff: %s\n", cmp.Diff(cm, clusterConfigMap, configMapDiffOpts)))
 		clusterConfigMap.Data = cm.Data
-		err := r.Update(ctx, clusterConfigMap)
+		err := r.Update(context.TODO(), clusterConfigMap)
 		return false, err
 	}
 
@@ -146,7 +146,7 @@ func (r *ComponentReconciler) reconcileStatus(instance *controllerv1alpha1.Compo
 	}
 	instance.Status.ComponentDescriptions = components
 	instance.Status.Ready = true
-	return r.Status().Update(ctx, instance)
+	return r.Status().Update(context.TODO(), instance)
 }
 
 func (r *ComponentReconciler) SetupWithManager(mgr ctrl.Manager) error {

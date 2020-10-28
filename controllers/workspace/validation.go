@@ -34,7 +34,7 @@ func (r *DevWorkspaceReconciler) validateCreatorTimestamp(workspace *devworkspac
 			fmt.Errorf("devworkspace does not have creator label applied")
 	}
 
-	webhooksTimestamp, err := webhook.GetWebhooksCreationTimestamp(r.client)
+	webhooksTimestamp, err := webhook.GetWebhooksCreationTimestamp(r.Client)
 	if err != nil {
 		return "Could not read devworkspace webhooks on cluster. Contact an administrator " +
 				"to check logs and fix Operator installation.",

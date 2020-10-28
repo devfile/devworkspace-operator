@@ -1,0 +1,37 @@
+name: "Should return all components when devfile contains no events"
+
+input:
+  template:
+    components:
+      - container:
+          name: test-container1
+          image: my-image
+      - container:
+          name: test-container2
+          image: my-image
+    commands:
+      - exec:
+          id: test_preStart_command
+          component: test-container1
+          command: "test_command"
+      - exec:
+          id: test_regular_command
+          component: test-container1
+          command: "test_command"
+    events:
+      preStart:
+        - "test_preStart_command"
+
+output:
+  initContainers:
+    - container:
+        name: test-container1
+        image: my-image
+  mainContainers:
+    - container:
+        name: test-container1
+        image: my-image
+    - container:
+        name: test-container2
+        image: my-image
+  errRegexp:

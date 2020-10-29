@@ -7,6 +7,7 @@ require (
 	github.com/devfile/api v0.0.0-20200826083800-9e2280a95680
 	github.com/eclipse/che-go-jsonrpc v0.0.0-20200317130110-931966b891fe // indirect
 	github.com/eclipse/che-plugin-broker v3.4.0+incompatible
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.1.0
 	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1

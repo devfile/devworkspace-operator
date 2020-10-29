@@ -1,22 +1,21 @@
-name: "Should return all components when devfile contains no events"
+name: "Should return init container with prestart exec command"
 
 input:
-  template:
-    components:
-      - container:
-          name: test-container1
-          image: my-image
-      - container:
-          name: test-container2
-          image: my-image
-    commands:
-      - exec:
-          id: test_command
-          component: test-container1
-          command: "test_command"
-    events:
-      preStart:
-        - "test_command"
+  components:
+    - container:
+        name: test-container1
+        image: my-image
+    - container:
+        name: test-container2
+        image: my-image
+  commands:
+    - exec:
+        id: test_command
+        component: test-container1
+        command: "test_command"
+  events:
+    preStart:
+      - "test_command"
 
 output:
   initContainers:

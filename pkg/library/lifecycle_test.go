@@ -20,13 +20,16 @@ import (
 
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+
+	// ghodss/yaml is required instead of the default gopkg.in/yaml.v2 since the latter
+	// only supports yaml struct tags and the DevWorkspace API only uses json.
+	"github.com/ghodss/yaml"
 )
 
 type testCase struct {
-	Name   string                    `json:"name,omitempty"`
-	Input  v1alpha1.DevWorkspaceSpec `json:"input,omitempty"`
-	Output testOutput                `json:"output,omitempty"`
+	Name   string                                   `json:"name,omitempty"`
+	Input  v1alpha1.DevWorkspaceTemplateSpecContent `json:"input,omitempty"`
+	Output testOutput                               `json:"output,omitempty"`
 }
 
 type testOutput struct {
@@ -60,13 +63,13 @@ func TestGetInitContainers(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file reads correctly.
-			assert.True(t, len(tt.Input.Template.Components) > 0, "Input defines no components")
+			assert.True(t, len(tt.Input.Components) > 0, "Input defines no components")
 			gotInitContainers, gotMainComponents, err := GetInitContainers(tt.Input)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
-				assert.Equal(t, tt.Output.InitContainers, gotInitContainers)
-				assert.Equal(t, tt.Output.MainContainers, gotMainComponents)
+				assert.Equal(t, tt.Output.InitContainers, gotInitContainers, "Init containers should match expected")
+				assert.Equal(t, tt.Output.MainContainers, gotMainComponents, "Main containers should match expected")
 			}
 		})
 	}

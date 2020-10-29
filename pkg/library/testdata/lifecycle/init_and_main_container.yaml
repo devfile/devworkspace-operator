@@ -1,26 +1,25 @@
-name: "Should return all components when devfile contains no events"
+name: "Should use container as both init and main when multiple commands apply"
 
 input:
-  template:
-    components:
-      - container:
-          name: test-container1
-          image: my-image
-      - container:
-          name: test-container2
-          image: my-image
-    commands:
-      - exec:
-          id: test_preStart_command
-          component: test-container1
-          command: "test_command"
-      - exec:
-          id: test_regular_command
-          component: test-container1
-          command: "test_command"
-    events:
-      preStart:
-        - "test_preStart_command"
+  components:
+    - container:
+        name: test-container1
+        image: my-image
+    - container:
+        name: test-container2
+        image: my-image
+  commands:
+    - exec:
+        id: test_preStart_command
+        component: test-container1
+        command: "test_command"
+    - exec:
+        id: test_regular_command
+        component: test-container1
+        command: "test_command"
+  events:
+    preStart:
+      - "test_preStart_command"
 
 output:
   initContainers:

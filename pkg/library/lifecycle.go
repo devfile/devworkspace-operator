@@ -16,10 +16,10 @@ import (
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 )
 
-func GetInitContainers(devfile v1alpha1.DevWorkspaceSpec) (initContainers, mainComponents []v1alpha1.Component, err error) {
-	components := devfile.Template.Components
-	commands := devfile.Template.Commands
-	events := devfile.Template.Events
+func GetInitContainers(devfile v1alpha1.DevWorkspaceTemplateSpecContent) (initContainers, mainComponents []v1alpha1.Component, err error) {
+	components := devfile.Components
+	commands := devfile.Commands
+	events := devfile.Events
 	if events == nil || commands == nil {
 		// All components are
 		return nil, components, nil

@@ -18,12 +18,4 @@ input:
       - "test_command"
 
 output:
-  initContainers:
-    - container:
-        name: test-container1
-        image: my-image
-  mainContainers:
-    - container:
-        name: test-container2
-        image: my-image
-  errRegexp:
+  errRegexp: "only apply-type commands are supported in the prestart lifecycle binding"

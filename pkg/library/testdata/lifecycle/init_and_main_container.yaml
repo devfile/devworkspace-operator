@@ -9,10 +9,9 @@ input:
         name: test-container2
         image: my-image
   commands:
-    - exec:
+    - apply:
         id: test_preStart_command
         component: test-container1
-        command: "test_command"
     - exec:
         id: test_regular_command
         component: test-container1

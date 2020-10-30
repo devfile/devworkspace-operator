@@ -26,11 +26,11 @@ func getCommandType(command v1alpha1.Command) (v1alpha1.CommandType, error) {
 	return command.CommandType, nil
 }
 
-func getCommandsForIds(ids []string, commands []v1alpha1.Command) ([]v1alpha1.Command, error) {
+func getCommandsForKeys(key []string, commands []v1alpha1.Command) ([]v1alpha1.Command, error) {
 	var resolvedCommands []v1alpha1.Command
 
-	for _, id := range ids {
-		resolvedCommand, err := getCommandById(id, commands)
+	for _, id := range key {
+		resolvedCommand, err := getCommandByKey(id, commands)
 		if err != nil {
 			return nil, err
 		}
@@ -40,17 +40,17 @@ func getCommandsForIds(ids []string, commands []v1alpha1.Command) ([]v1alpha1.Co
 	return resolvedCommands, nil
 }
 
-func getCommandById(id string, commands []v1alpha1.Command) (*v1alpha1.Command, error) {
+func getCommandByKey(key string, commands []v1alpha1.Command) (*v1alpha1.Command, error) {
 	for _, command := range commands {
 		commandKey, err := command.Key()
 		if err != nil {
 			return nil, err
 		}
-		if commandKey == id {
+		if commandKey == key {
 			return &command, nil
 		}
 	}
-	return nil, fmt.Errorf("no command with key %s is defined", id)
+	return nil, fmt.Errorf("no command with ID %s is defined", key)
 }
 
 func commandListToComponentKeys(commands []v1alpha1.Command) (map[string]bool, error) {

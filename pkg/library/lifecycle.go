@@ -13,20 +13,29 @@
 package library
 
 import (
+	"fmt"
+
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 )
 
+// GetInitContainers partitions the components in a devfile's flattened spec into initContainer and non-initContainer lists
+// based off devfile lifecycle bindings and commands. Note that a component can appear in both lists, if e.g. it referred to
+// in a preStart command and in a regular command.
 func GetInitContainers(devfile v1alpha1.DevWorkspaceTemplateSpecContent) (initContainers, mainComponents []v1alpha1.Component, err error) {
 	components := devfile.Components
 	commands := devfile.Commands
 	events := devfile.Events
 	if events == nil || commands == nil {
-		// All components are
+		// All components should be run in the main deployment
 		return nil, components, nil
 	}
 
-	initCommands, err := getCommandsForIds(events.PreStart, commands)
+	initCommands, err := getCommandsForKeys(events.PreStart, commands)
 	if err != nil {
+		return nil, nil, err
+	}
+	// Check that commands in PreStart lifecycle binding are supported
+	if err = checkPreStartEventCommandsValidity(initCommands); err != nil {
 		return nil, nil, err
 	}
 	initComponentKeys, err := commandListToComponentKeys(initCommands)
@@ -63,4 +72,22 @@ func GetInitContainers(devfile v1alpha1.DevWorkspaceTemplateSpecContent) (initCo
 	}
 
 	return initContainers, mainComponents, nil
+}
+
+func checkPreStartEventCommandsValidity(initCommands []v1alpha1.Command) error {
+	for _, cmd := range initCommands {
+		commandType, err := getCommandType(cmd)
+		if err != nil {
+			return err
+		}
+		switch commandType {
+		case v1alpha1.ApplyCommandType:
+			continue
+		default:
+			// How a prestart exec command should be implemented is undefined currently, so we reject it.
+			// Other types of commands cannot be included in the preStart event hook.
+			return fmt.Errorf("only apply-type commands are supported in the prestart lifecycle binding")
+		}
+	}
+	return nil
 }

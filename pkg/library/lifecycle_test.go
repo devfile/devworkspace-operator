@@ -48,7 +48,7 @@ func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
-	t.Log(fmt.Printf("Read file:\n %+v \n\n", test))
+	t.Log(fmt.Sprintf("Read file:\n%+v\n\n", test))
 	return test
 }
 
@@ -66,7 +66,7 @@ func TestGetInitContainers(t *testing.T) {
 			assert.True(t, len(tt.Input.Components) > 0, "Input defines no components")
 			gotInitContainers, gotMainComponents, err := GetInitContainers(tt.Input)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
-				assert.Regexp(t, tt.Output.ErrRegexp, err.Error(), "Error message should match")
+				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				assert.Equal(t, tt.Output.InitContainers, gotInitContainers, "Init containers should match expected")
 				assert.Equal(t, tt.Output.MainContainers, gotMainComponents, "Main containers should match expected")

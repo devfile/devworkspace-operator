@@ -21,8 +21,8 @@ import (
 
 	"github.com/eclipse/che-plugin-broker/model"
 	brokerModel "github.com/eclipse/che-plugin-broker/model"
-	"gopkg.in/yaml.v2"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
 )
 
 const (

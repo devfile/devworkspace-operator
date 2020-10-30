@@ -19,7 +19,7 @@ import (
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 const (

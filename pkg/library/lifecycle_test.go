@@ -20,10 +20,7 @@ import (
 
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/stretchr/testify/assert"
-
-	// ghodss/yaml is required instead of the default gopkg.in/yaml.v2 since the latter
-	// only supports yaml struct tags and the DevWorkspace API only uses json.
-	"github.com/ghodss/yaml"
+	"sigs.k8s.io/yaml"
 )
 
 type testCase struct {

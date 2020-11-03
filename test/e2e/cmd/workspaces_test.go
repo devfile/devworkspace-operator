@@ -56,11 +56,6 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		panic(err)
 	}
 
-	if err := controller.CreateAdditionalControllerResources(); err != nil {
-		fmt.Println("Failed to create additional controller resources in clusters")
-		panic(err)
-	}
-
 	if err := controller.CustomResourceDefinitions(); err != nil {
 		fmt.Println("Failed to add custom resources definitions to cluster")
 		panic(err)

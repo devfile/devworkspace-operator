@@ -18,6 +18,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -30,12 +32,15 @@ func (w *Deployment) CreateNamespace() error {
 			Name: config.Namespace,
 		},
 	}, metav1.CreateOptions{})
+	if errors.IsAlreadyExists(err) {
+		return nil
+	}
 	return err
 }
 
 func (w *Deployment) DeployWorkspacesController() error {
 	label := "app.kubernetes.io/name=devworkspace-controller"
-	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", "deploy")
+	cmd := exec.Command("make", "deploy")
 	output, err := cmd.CombinedOutput()
 	fmt.Println(string(output))
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
@@ -60,36 +65,12 @@ func (w *Deployment) DeployWorkspacesController() error {
 	return nil
 }
 
-func (w *Deployment) CreateAdditionalControllerResources() error {
-	//sed "s/\${NAMESPACE}/config.Namespace/g" <<< cat *.yaml | oc apply -f -
-	cmd := exec.Command(
-		"bash", "-c",
-		"sed 's/\\${NAMESPACE}/"+config.Namespace+"/g' <<< "+
-			"cat deploy/*.yaml | "+
-			"oc apply --namespace "+config.Namespace+" -f -")
-	output, err := cmd.CombinedOutput()
-	fmt.Println(string(output))
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-	return nil
-}
-
 func (w *Deployment) CustomResourceDefinitions() error {
-	devWorkspaceCRD := exec.Command("oc", "apply", "-f", "devworkspace-crds/deploy/crds")
+	devWorkspaceCRD := exec.Command("make", "install")
 	output, err := devWorkspaceCRD.CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
 		fmt.Println(err)
 		return err
 	}
-
-	eclipseCRD := exec.Command("oc", "apply", "-f", "deploy/crds")
-	output, err = eclipseCRD.CombinedOutput()
-	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
-		fmt.Println(err)
-		return err
-	}
-
 	return nil
 }

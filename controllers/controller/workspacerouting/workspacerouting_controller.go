@@ -43,11 +43,13 @@ type WorkspaceRoutingReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings,verbs=*
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=services,verbs=*
+// +kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=*
+// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=*
+// +kubebuidler:rbac:groups=route.openshift.io,resources=routes/status,verbs=get,list,watch
+// +kubebuilder:rbac:groups=route.openshift.io,resources=routes/custom-host,verbs=create
 
 func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()

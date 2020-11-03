@@ -56,21 +56,23 @@ type DevWorkspaceReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=components,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=components/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=components/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=pods;serviceaccounts;secrets;configmaps;persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+/////// CRD-related RBAC roles
+// +kubebuilder:rbac:groups=workspace.devfile.io,resources=*,verbs=*
+// +kubebuilder:rbac:groups=controller.devfile.io,resources=*,verbs=*
+/////// Required permissions for controller
+// +kubebuilder:rbac:groups=apps;extensions,resources=deployments;replicasets,verbs=*
+// +kubebuilder:rbac:groups="",resources=pods;serviceaccounts;secrets;configmaps;persistentvolumeclaims,verbs=*
+// +kubebuilder:rbac:groups="",resources=namespaces,verbs=get
 // +kubebuilder:rbac:groups="batch",resources=jobs,verbs=get;create;watch;update;delete
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations;validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=get;list;watch;create;update
 // +kubebuilder:rbac:groups=oauth.openshift.io,resources=oauthclients,verbs=get;list;watch;create;update;patch;delete;deletecollection
+// +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create
+// +kubebuilder:rbac:groups=apps,resourceNames=devworkspace-controller,resources=deployments/finalizers,verbs=update
+/////// Required permissions for workspace ServiceAccount
+// +kubebuilder:rbac:groups="",resources=pods/exec,verbs=create
+// +kubebuilder:rbac:groups=apps;extensions,resources=replicasets,verbs=get;list;watch
+// +kubebuilder:rbac:groups=apps;extensions,resources=deployments,verbs=get;list;watch
 
 func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	ctx := context.Background()

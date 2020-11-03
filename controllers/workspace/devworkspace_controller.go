@@ -186,12 +186,12 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 	pvcStatus := provision.SyncPVC(workspace, componentDescriptions, r.Client, reqLogger)
 	if pvcStatus.Err != nil || !pvcStatus.Continue {
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{Requeue: true}, pvcStatus.Err
 	}
 
 	rbacStatus := provision.SyncRBAC(workspace, r.Client, reqLogger)
 	if rbacStatus.Err != nil || !rbacStatus.Continue {
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{Requeue: true}, rbacStatus.Err
 	}
 
 	// Step two: Create routing, and wait for routing to be ready

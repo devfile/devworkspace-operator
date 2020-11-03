@@ -15,6 +15,11 @@ jobs:
       with:
         go-version: ^1.12
     -
+      name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    -
       name: Check out code into the Go module directory
       uses: actions/checkout@v2
     -
@@ -43,6 +48,7 @@ jobs:
       name: Check format
       run: |
         go get -u github.com/google/addlicense
+        go get -u golang.org/x/tools/cmd/goimports
         git reset HEAD --hard
 
         make fmt
@@ -54,7 +60,9 @@ jobs:
         fi
     -
       name: Run Go Tests
-      run: make test
+      run: |
+        python -m pip install --upgrade pip yq
+        make test
 
   docker:
     name: Check docker build

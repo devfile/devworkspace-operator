@@ -9,13 +9,8 @@
 #   Red Hat, Inc. - initial API and implementation
 #
 
-#### TODOS ####
-## - Port over e2e tests.
-####
-
 SHELL := bash
 .SHELLFLAGS = -ec
-# .ONESHELL:
 
 export NAMESPACE ?= devworkspace-controller
 export IMG ?= quay.io/devfile/devworkspace-controller:next
@@ -132,10 +127,6 @@ debug: _print_vars _generate_related_images_env
 install: manifests _kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-#### uninstall: Uninstall CRDs from a cluster
-uninstall: manifests _kustomize
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
-
 ### deploy: Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 deploy: _print_vars _kustomize _create_namespace deploy_registry
 	mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
@@ -155,12 +146,12 @@ deploy: _print_vars _kustomize _create_namespace deploy_registry
 restart:
 	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-controller-manager
 
-### uninstall_controller: Remove controller resources from the cluster
-uninstall_controller: _kustomize
+### uninstall: Remove controller resources from the cluster
+uninstall: _kustomize
 	kustomize build config/devel | kubectl delete --ignore-not-found -f -
 	kubectl delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
-	kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io
-	kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io
+	kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
+	kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	kubectl delete namespace $(NAMESPACE)
 
 ### deploy_registry: Deploy plugin registry

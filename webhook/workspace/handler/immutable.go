@@ -33,6 +33,7 @@ var ImmutableWorkspaceDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
 	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields", "Finalizers", "DeletionTimestamp"),
 	cmpopts.IgnoreFields(devworkspace.DevWorkspaceSpec{}, "Started"),
+	cmpopts.IgnoreMapEntries(func(key string, value string) bool { return key == config.WorkspaceStopReasonAnnotation }),
 }
 
 func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.Request) admission.Response {

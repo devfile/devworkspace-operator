@@ -50,7 +50,9 @@ func buildSecretVolume(secretName string) corev1.Volume {
 }
 
 func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume corev1.Volume, meta WorkspaceMetadata) corev1.Container {
-	proxyContainerName := fmt.Sprintf("oauth-proxy-%s", strconv.FormatInt(int64(proxyEndpoint.upstreamEndpoint.TargetPort), 10))
+	upstreamPortString := strconv.FormatInt(int64(proxyEndpoint.upstreamEndpoint.TargetPort), 10)
+	containerPortString := strconv.FormatInt(int64(proxyEndpoint.publicEndpoint.TargetPort), 10)
+	proxyContainerName := fmt.Sprintf("oauth-proxy-%s-%s", upstreamPortString, containerPortString)
 
 	return corev1.Container{
 		Name: proxyContainerName,
@@ -71,10 +73,10 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
 		Image:                    images.GetOpenShiftOAuthProxyImage(),
 		Args: []string{
-			"--https-address=:" + strconv.FormatInt(int64(proxyEndpoint.publicEndpoint.TargetPort), 10),
+			"--https-address=:" + containerPortString,
 			"--http-address=127.0.0.1:" + strconv.FormatInt(int64(proxyEndpoint.publicEndpointHttpPort), 10),
 			"--provider=openshift",
-			"--upstream=http://localhost:" + strconv.FormatInt(int64(proxyEndpoint.upstreamEndpoint.TargetPort), 10),
+			"--upstream=http://localhost:" + upstreamPortString,
 			"--tls-cert=/etc/tls/private/tls.crt",
 			"--tls-key=/etc/tls/private/tls.key",
 			"--cookie-secret=0123456789abcdefabcd",

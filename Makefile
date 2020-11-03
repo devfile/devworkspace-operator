@@ -110,6 +110,11 @@ test: generate fmt vet manifests
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out
 
+### test_e2e: runs e2e test on the cluster set in context. Includes deploying devworkspace-controller, run test workspace, uninstall devworkspace-controller
+test_e2e: generate fmt vet manifests
+	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
+	./bin/devworkspace-controller-e2e
+
 ### manager: Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go

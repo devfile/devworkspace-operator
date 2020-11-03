@@ -13,6 +13,7 @@
 package deploy
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -24,11 +25,11 @@ import (
 )
 
 func (w *Deployment) CreateNamespace() error {
-	_, err := w.kubeClient.Kube().CoreV1().Namespaces().Create(&corev1.Namespace{
+	_, err := w.kubeClient.Kube().CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: config.Namespace,
 		},
-	})
+	}, metav1.CreateOptions{})
 	return err
 }
 

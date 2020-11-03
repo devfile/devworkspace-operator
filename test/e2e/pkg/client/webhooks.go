@@ -13,6 +13,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"time"
 
@@ -28,7 +29,7 @@ func (w *K8sClient) WaitForMutatingWebhooksConfigurations(name string) (deployed
 		case <-timeout:
 			return false, errors.New("timed out")
 		case <-tick:
-			_, err := w.kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(name, metav1.GetOptions{})
+			_, err := w.kubeClient.AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(context.TODO(), name, metav1.GetOptions{})
 			if err == nil {
 				return true, nil
 			}

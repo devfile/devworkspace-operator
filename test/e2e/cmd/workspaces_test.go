@@ -13,6 +13,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"testing"
@@ -80,11 +81,11 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
 	}
 
-	if err = k8sClient.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(workspaceWebhook.MutateWebhookCfgName, &metav1.DeleteOptions{}); err != nil {
+	if err = k8sClient.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.TODO(), workspaceWebhook.MutateWebhookCfgName, metav1.DeleteOptions{}); err != nil {
 		_ = fmt.Errorf("Failed to delete mutating webhook configuration %s", err)
 	}
 
-	if err = k8sClient.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(workspaceWebhook.ValidateWebhookCfgName, &metav1.DeleteOptions{}); err != nil {
+	if err = k8sClient.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(context.TODO(), workspaceWebhook.ValidateWebhookCfgName, metav1.DeleteOptions{}); err != nil {
 		_ = fmt.Errorf("Failed to delete validating webhook configuration %s", err)
 	}
 }, func() {})

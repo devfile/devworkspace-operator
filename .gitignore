@@ -1,5 +1,6 @@
 devworkspace-crds
 config/crd/bases/workspace.devfile.io_devworkspaces.yaml
+config/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml
 testbin
 .vscode
 

@@ -5,6 +5,7 @@ resources:
 - bases/controller.devfile.io_components.yaml
 - bases/controller.devfile.io_workspaceroutings.yaml
 - bases/workspace.devfile.io_devworkspaces.yaml
+- bases/workspace.devfile.io_devworkspacetemplates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

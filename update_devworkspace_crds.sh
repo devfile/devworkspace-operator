@@ -38,7 +38,7 @@ cd $TMP_DIR
 git init
 git remote add origin https://github.com/devfile/api.git
 git config core.sparsecheckout true
-echo "deploy/crds/*" > .git/info/sparse-checkout
+echo "crds/*" > .git/info/sparse-checkout
 git fetch --quiet --tags -p origin 
 if git show-ref --verify refs/tags/"${DEVWORKSPACE_API_VERSION}" --quiet; then
 	echo 'DevWorkspace API is specified from tag'
@@ -50,8 +50,8 @@ else
 	echo 'DevWorkspace API is specified from revision'
 	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 fi
-
-cp deploy/crds/workspace.devfile.io_devworkspaces_crd.yaml \
-   $SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspaces.yaml
+cp crds/workspace.devfile.io_devworkspaces.yaml \
+   crds/workspace.devfile.io_devworkspacetemplates.yaml \
+   $SCRIPT_DIR/config/crd/bases/
 
 cd $SCRIPT_DIR

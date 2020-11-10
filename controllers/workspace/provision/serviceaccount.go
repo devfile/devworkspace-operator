@@ -15,7 +15,7 @@ package provision
 import (
 	"context"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"

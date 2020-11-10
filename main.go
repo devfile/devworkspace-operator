@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	workspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
 	oauthv1 "github.com/openshift/api/oauth/v1"
@@ -49,6 +50,7 @@ func init() {
 
 	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(workspacev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(workspacev1alpha2.AddToScheme(scheme))
 
 	if isOS, err := cluster.IsOpenShift(); isOS && err == nil {
 		utilruntime.Must(routev1.Install(scheme))

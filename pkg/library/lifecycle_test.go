@@ -18,20 +18,20 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/yaml"
 )
 
 type testCase struct {
 	Name   string                                   `json:"name,omitempty"`
-	Input  v1alpha1.DevWorkspaceTemplateSpecContent `json:"input,omitempty"`
+	Input  v1alpha2.DevWorkspaceTemplateSpecContent `json:"input,omitempty"`
 	Output testOutput                               `json:"output,omitempty"`
 }
 
 type testOutput struct {
-	InitContainers []v1alpha1.Component `json:"initContainers,omitempty"`
-	MainContainers []v1alpha1.Component `json:"mainContainers,omitempty"`
+	InitContainers []v1alpha2.Component `json:"initContainers,omitempty"`
+	MainContainers []v1alpha2.Component `json:"mainContainers,omitempty"`
 	ErrRegexp      *string              `json:"errRegexp,omitempty"`
 }
 

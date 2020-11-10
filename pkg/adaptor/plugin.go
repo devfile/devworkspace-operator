@@ -19,7 +19,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/adaptor/plugin_patch"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -232,7 +232,7 @@ func getMetasForComponents(components []devworkspace.Component) (metas []brokerM
 			return nil, nil, err
 		}
 		metas = append(metas, *meta)
-		aliases[meta.ID] = component.Plugin.Name
+		aliases[meta.ID] = component.Name
 	}
 	err = utils.ResolveRelativeExtensionPaths(metas, defaultRegistry)
 	if err != nil {

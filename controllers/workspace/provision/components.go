@@ -17,7 +17,7 @@ import (
 	"errors"
 	"fmt"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/controller/component/cmd_terminal"
 	"github.com/devfile/devworkspace-operator/pkg/adaptor"
@@ -139,11 +139,7 @@ func getSpecComponents(workspace *devworkspace.DevWorkspace, scheme *runtime.Sch
 				log.Error(err, fmt.Sprintf("Failed to provision default dockerimage component for '%s'", cmd_terminal.CommandLineTerminalPublisherName))
 				return nil, errors.New("configure dockerimage component or ask administrator to fix default one for " + cmd_terminal.CommandLineTerminalPublisherName)
 			}
-			dockerComponents = []devworkspace.Component{
-				{
-					Container: defaultContainer,
-				},
-			}
+			dockerComponents = []devworkspace.Component{*defaultContainer}
 		}
 	}
 

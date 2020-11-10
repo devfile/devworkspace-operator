@@ -16,12 +16,12 @@ import (
 	"errors"
 	"strings"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	workspaceApi "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
-func devworkspaceTemplateToDevfileV1(template *devworkspace.DevWorkspaceTemplateSpec) *workspaceApi.DevfileSpec {
+func devworkspaceTemplateToDevfileV1(template *devworkspace.DevWorkspaceTemplateSpec) (*workspaceApi.DevfileSpec, error) {
 	devfile := &workspaceApi.DevfileSpec{}
 	for _, templateCommand := range template.Commands {
 		command := toDevfileCommand(templateCommand)
@@ -38,60 +38,57 @@ func devworkspaceTemplateToDevfileV1(template *devworkspace.DevWorkspaceTemplate
 	}
 
 	for _, templateProject := range template.Projects {
-		project := toDevfileProject(templateProject)
+		project, err := toDevfileProject(templateProject)
+		if err != nil {
+			return nil, err
+		}
 		if project != nil {
 			devfile.Projects = append(devfile.Projects, *project)
 		}
 	}
-	return devfile
+	return devfile, nil
 }
 
-func toDevfileCommand(c devworkspace.Command) *workspaceApi.CommandSpec {
+func toDevfileCommand(cmd devworkspace.Command) *workspaceApi.CommandSpec {
 	var commandSpec *workspaceApi.CommandSpec = nil
-	c.Visit(devworkspace.CommandVisitor{
-		Exec: func(cmd *devworkspace.ExecCommand) error {
-			name := cmd.Label
-			if name == "" {
-				name = cmd.Id
-			}
-			commandSpec = &workspaceApi.CommandSpec{
-				Name: name,
-				Actions: []workspaceApi.CommandActionSpec{
-					{
-						Command:   cmd.CommandLine,
-						Component: cmd.Component,
-						Workdir:   cmd.WorkingDir,
-						Type:      "exec",
-					},
+	switch {
+	case cmd.Exec != nil:
+		name := cmd.Exec.Label
+		if name == "" {
+			name = cmd.Id
+		}
+		commandSpec = &workspaceApi.CommandSpec{
+			Name: name,
+			Actions: []workspaceApi.CommandActionSpec{
+				{
+					Command:   cmd.Exec.CommandLine,
+					Component: cmd.Exec.Component,
+					Workdir:   cmd.Exec.WorkingDir,
+					Type:      "exec",
 				},
-			}
-			return nil
-		},
-		VscodeLaunch: func(cmd *devworkspace.VscodeConfigurationCommand) error {
-			commandSpec = &workspaceApi.CommandSpec{
-				Name: cmd.Id,
-				Actions: []workspaceApi.CommandActionSpec{
-					{
-						Type:             "vscode-launch",
-						ReferenceContent: cmd.Inlined,
-					},
+			},
+		}
+	case cmd.VscodeLaunch != nil:
+		commandSpec = &workspaceApi.CommandSpec{
+			Name: cmd.Id,
+			Actions: []workspaceApi.CommandActionSpec{
+				{
+					Type:             "vscode-launch",
+					ReferenceContent: cmd.VscodeLaunch.Inlined,
 				},
-			}
-			return nil
-		},
-		VscodeTask: func(cmd *devworkspace.VscodeConfigurationCommand) error {
-			commandSpec = &workspaceApi.CommandSpec{
-				Name: cmd.Id,
-				Actions: []workspaceApi.CommandActionSpec{
-					{
-						Type:             "vscode-task",
-						ReferenceContent: cmd.Inlined,
-					},
+			},
+		}
+	case cmd.VscodeTask != nil:
+		commandSpec = &workspaceApi.CommandSpec{
+			Name: cmd.Id,
+			Actions: []workspaceApi.CommandActionSpec{
+				{
+					Type:             "vscode-task",
+					ReferenceContent: cmd.VscodeTask.Inlined,
 				},
-			}
-			return nil
-		},
-	})
+			},
+		}
+	}
 
 	return commandSpec
 }
@@ -101,7 +98,7 @@ func toDevfileEndpoints(eps []devworkspace.Endpoint) []workspaceApi.Endpoint {
 	for _, e := range eps {
 		attributes := map[workspaceApi.EndpointAttribute]string{}
 		if e.Protocol != "" {
-			attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = e.Protocol
+			attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = string(e.Protocol)
 		} else {
 			attributes[workspaceApi.PROTOCOL_ENDPOINT_ATTRIBUTE] = "http"
 		}
@@ -117,53 +114,40 @@ func toDevfileEndpoints(eps []devworkspace.Endpoint) []workspaceApi.Endpoint {
 
 func toDevfileComponent(c devworkspace.Component) *workspaceApi.ComponentSpec {
 	var componentSpec *workspaceApi.ComponentSpec = nil
-	c.Visit(devworkspace.ComponentVisitor{
-		Plugin: func(plugin *devworkspace.PluginComponent) error {
-			if strings.Contains(plugin.Id, config.TheiaEditorID) {
-				componentSpec = &workspaceApi.ComponentSpec{
-					Type:  workspaceApi.CheEditor,
-					Alias: plugin.Name,
-					Id:    plugin.Id,
-				}
-			} else {
-				componentSpec = &workspaceApi.ComponentSpec{
-					Type:  workspaceApi.ChePlugin,
-					Alias: plugin.Name,
-					Id:    plugin.Id,
-				}
-			}
-			return nil
-		},
-		Container: func(container *devworkspace.ContainerComponent) error {
+	switch {
+	case c.Plugin != nil:
+		if strings.Contains(c.Plugin.Id, config.TheiaEditorID) {
 			componentSpec = &workspaceApi.ComponentSpec{
-				Type:         workspaceApi.Dockerimage,
-				Alias:        c.Container.Name,
-				Image:        c.Container.Image,
-				MemoryLimit:  c.Container.MemoryLimit,
-				MountSources: c.Container.MountSources,
-				Endpoints:    toDevfileEndpoints(c.Container.Endpoints),
+				Type:  workspaceApi.CheEditor,
+				Alias: c.Name,
+				Id:    c.Plugin.Id,
 			}
-			return nil
-		},
-		Kubernetes: func(k8s *devworkspace.KubernetesComponent) error {
-			return nil
-		},
-		Openshift: func(os *devworkspace.OpenshiftComponent) error {
-			return nil
-		},
-		Volume: func(vol *devworkspace.VolumeComponent) error {
-			return nil
-		},
-	})
+		} else {
+			componentSpec = &workspaceApi.ComponentSpec{
+				Type:  workspaceApi.ChePlugin,
+				Alias: c.Name,
+				Id:    c.Plugin.Id,
+			}
+		}
+	case c.Container != nil:
+		componentSpec = &workspaceApi.ComponentSpec{
+			Type:         workspaceApi.Dockerimage,
+			Alias:        c.Name,
+			Image:        c.Container.Image,
+			MemoryLimit:  c.Container.MemoryLimit,
+			MountSources: c.Container.MountSources == nil || *c.Container.MountSources,
+			Endpoints:    toDevfileEndpoints(c.Container.Endpoints),
+		}
+	}
 
 	return componentSpec
 }
 
-func toDevfileProject(p devworkspace.Project) *workspaceApi.ProjectSpec {
+func toDevfileProject(p devworkspace.Project) (*workspaceApi.ProjectSpec, error) {
 	var theLocation string
 	var theType string
 
-	p.Visit(devworkspace.ProjectSourceVisitor{
+	err := p.Visit(devworkspace.ProjectSourceVisitor{
 		Git: func(src *devworkspace.GitProjectSource) error {
 			l, err := resolveLocation(src.Remotes, src.CheckoutFrom)
 			if err != nil {
@@ -188,13 +172,16 @@ func toDevfileProject(p devworkspace.Project) *workspaceApi.ProjectSpec {
 			return nil
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
 	return &workspaceApi.ProjectSpec{
 		Name: p.Name,
 		Source: workspaceApi.ProjectSourceSpec{
 			Location: theLocation,
 			Type:     theType,
 		},
-	}
+	}, nil
 }
 
 func resolveLocation(remotes map[string]string, checkoutFrom *devworkspace.CheckoutFrom) (location *string, err error) {

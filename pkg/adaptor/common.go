@@ -13,7 +13,7 @@
 package adaptor
 
 import (
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +22,7 @@ import (
 
 func SortComponentsByType(components []devworkspace.Component) (dockerimages []devworkspace.Component, plugins []devworkspace.Component, err error) {
 	for _, component := range components {
-		err := component.Visit(devworkspace.ComponentVisitor{
+		err := component.Visit(devworkspace.ComponentUnionVisitor{
 			Plugin: func(plugin *devworkspace.PluginComponent) error {
 				plugins = append(plugins, component)
 				return nil

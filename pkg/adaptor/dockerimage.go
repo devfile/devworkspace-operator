@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -26,7 +26,7 @@ import (
 func AdaptDockerimageComponents(workspaceId string, containerComponents []devworkspace.Component, commands []devworkspace.Command) ([]v1alpha1.ComponentDescription, error) {
 	var components []v1alpha1.ComponentDescription
 	for _, containerComponent := range containerComponents {
-		component, err := adaptDockerimageComponent(workspaceId, *containerComponent.Container, commands)
+		component, err := adaptDockerimageComponent(workspaceId, containerComponent, commands)
 		if err != nil {
 			return nil, err
 		}
@@ -37,12 +37,16 @@ func AdaptDockerimageComponents(workspaceId string, containerComponents []devwor
 	return components, nil
 }
 
-func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace.ContainerComponent, commands []devworkspace.Command) (v1alpha1.ComponentDescription, error) {
-	container, containerDescription, err := getContainerFromDevfile(workspaceId, devfileComponent)
+func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace.Component, commands []devworkspace.Command) (v1alpha1.ComponentDescription, error) {
+	if devfileComponent.Container == nil {
+		return v1alpha1.ComponentDescription{}, fmt.Errorf("trying to adapt devfile v1 dockerimage from non-container component")
+	}
+	devfileContainer := *devfileComponent.Container
+	container, containerDescription, err := getContainerFromDevfile(workspaceId, devfileComponent.Key(), devfileContainer)
 	if err != nil {
 		return v1alpha1.ComponentDescription{}, nil
 	}
-	if devfileComponent.MountSources {
+	if devfileContainer.MountSources != nil && *devfileContainer.MountSources {
 		container.VolumeMounts = append(container.VolumeMounts, GetProjectSourcesVolumeMount(workspaceId))
 	}
 
@@ -50,8 +54,8 @@ func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace
 		Containers: map[string]v1alpha1.ContainerDescription{
 			container.Name: containerDescription,
 		},
-		ContributedRuntimeCommands: GetDockerfileComponentCommands(devfileComponent, commands),
-		Endpoints:                  devfileComponent.Endpoints,
+		ContributedRuntimeCommands: GetDockerfileComponentCommands(devfileComponent.Key(), commands),
+		Endpoints:                  devfileContainer.Endpoints,
 	}
 
 	component := v1alpha1.ComponentDescription{
@@ -64,7 +68,7 @@ func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace
 	return component, nil
 }
 
-func getContainerFromDevfile(workspaceId string, devfileComponent devworkspace.ContainerComponent) (corev1.Container, v1alpha1.ContainerDescription, error) {
+func getContainerFromDevfile(workspaceId, componentName string, devfileComponent devworkspace.ContainerComponent) (corev1.Container, v1alpha1.ContainerDescription, error) {
 	containerResources, err := adaptResourcesFromString(devfileComponent.MemoryLimit)
 	if err != nil {
 		return corev1.Container{}, v1alpha1.ContainerDescription{}, err
@@ -80,11 +84,11 @@ func getContainerFromDevfile(workspaceId string, devfileComponent devworkspace.C
 	}
 	env = append(env, corev1.EnvVar{
 		Name:  "CHE_MACHINE_NAME",
-		Value: devfileComponent.Name,
+		Value: componentName,
 	})
 
 	container := corev1.Container{
-		Name:            devfileComponent.Name,
+		Name:            componentName,
 		Image:           devfileComponent.Image,
 		Command:         devfileComponent.Command,
 		Args:            devfileComponent.Args,
@@ -136,28 +140,26 @@ func adaptVolumesMountsFromDevfile(workspaceId string, devfileVolumes []devworks
 	return volumeMounts
 }
 
-func GetDockerfileComponentCommands(component devworkspace.ContainerComponent, commands []devworkspace.Command) []v1alpha1.CheWorkspaceCommand {
+func GetDockerfileComponentCommands(componentName string, commands []devworkspace.Command) []v1alpha1.CheWorkspaceCommand {
 	var componentCommands []v1alpha1.CheWorkspaceCommand
 	for _, command := range commands {
-		command.Visit(devworkspace.CommandVisitor{
-			Exec: func(exec *devworkspace.ExecCommand) error {
-				if exec.Component == component.Name {
-					attributes := map[string]string{
-						config.CommandWorkingDirectoryAttribute: exec.WorkingDir, // TODO: Env var substitution?
-						config.CommandMachineNameAttribute:      component.Name,
-						config.ComponentAliasCommandAttribute:   component.Name,
-					}
+		if command.Exec == nil {
+			continue
+		}
+		if command.Exec.Component == componentName {
+			attributes := map[string]string{
+				config.CommandWorkingDirectoryAttribute: command.Exec.WorkingDir, // TODO: Env var substitution?
+				config.CommandMachineNameAttribute:      componentName,
+				config.ComponentAliasCommandAttribute:   componentName,
+			}
 
-					componentCommands = append(componentCommands, v1alpha1.CheWorkspaceCommand{
-						Name:        exec.Id,
-						Type:        "exec",
-						CommandLine: exec.CommandLine,
-						Attributes:  attributes,
-					})
-				}
-				return nil
-			},
-		})
+			componentCommands = append(componentCommands, v1alpha1.CheWorkspaceCommand{
+				Name:        command.Id,
+				Type:        "exec",
+				CommandLine: command.Exec.CommandLine,
+				Attributes:  attributes,
+			})
+		}
 	}
 	return componentCommands
 }

@@ -13,7 +13,7 @@
 package v1alpha1
 
 import (
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 

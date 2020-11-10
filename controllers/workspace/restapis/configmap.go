@@ -16,7 +16,7 @@ import (
 	"context"
 	"encoding/json"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -115,7 +115,10 @@ func getClusterConfigMap(name, namespace string, client runtimeClient.Client) (*
 }
 
 func getDevfileV1Yaml(template devworkspace.DevWorkspaceTemplateSpec) (string, error) {
-	devfile := devworkspaceTemplateToDevfileV1(&template)
+	devfile, err := devworkspaceTemplateToDevfileV1(&template)
+	if err != nil {
+		return "", err
+	}
 	devfileYaml, err := yaml.Marshal(devfile)
 	if err != nil {
 		return "", err

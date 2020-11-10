@@ -15,7 +15,7 @@ package cmd_terminal
 import (
 	"strings"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 )
 
 const (

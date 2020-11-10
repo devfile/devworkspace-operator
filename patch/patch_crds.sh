@@ -24,7 +24,7 @@ COMPONENTS_CRD_PATH="config/crd/bases/controller.devfile.io_components.yaml"
 ROUTINGS_CRD_PATH="config/crd/bases/controller.devfile.io_workspaceroutings.yaml"
 
 # CRD path from root to status field, in jq filter format
-STATUS_PATH='.spec.validation.openAPIV3Schema.properties["status"]'
+STATUS_PATH='.spec.versions[].schema.openAPIV3Schema.properties["status"]'
 # CRD path podAdditions to containerPorts required field, in jq filter format
 # Note this path takes one jq arg: "CONTAINERS_FIELD" can be used to specify
 # "containers" or "initContainers", as both have containerPorts that must be patched.

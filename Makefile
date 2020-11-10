@@ -64,7 +64,7 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
+CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -183,6 +183,10 @@ install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy
 restart:
 	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-controller-manager
 
+### restart_webhook: Restart devworkspace-controller webhook deployment
+restart_webhook:
+	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-webhook-server
+
 ### uninstall: Remove controller resources from the cluster
 uninstall: _kustomize
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
@@ -267,6 +271,10 @@ CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
+
+### install_cert_manager: install Cert Mananger on the cluster
+install_cert_manager:
+	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
 
 _kustomize:
 ifeq (, $(shell which kustomize))

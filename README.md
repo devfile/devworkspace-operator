@@ -8,18 +8,16 @@ The controller can be deployed to a cluster provided you are logged in with clus
 
 ```bash
 export IMG=quay.io/devfile/devworkspace-controller:next
-export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
-make deploy
+make install
 ```
 
 By default, controller will expose workspace servers without any authentication; this is not advisable for public clusters, as any user could access the created workspace via URL.
 
-In case of OpenShift, you're able to configure controller to secure your workspaces server deploy with the following options:
+In case of OpenShift, you're able to configure DevWorkspace CR to secure your servers with the following piece of configuration:
 
-```bash
-export WEBHOOK_ENABLED=true
-export DEFAULT_ROUTING=openshift-oauth
-make deploy
+```yaml
+spec:
+  routingClass: openshift-oauth
 ```
 
 See below for all environment variables used in the makefile.
@@ -39,26 +37,22 @@ The repository contains a Makefile; building and deploying can be configured via
 |variable|purpose|default value|
 |---|---|---|
 | `IMG` | Image used for controller | `quay.io/devfile/devworkspace-controller:next` |
-| `TOOL` | CLI tool for interfacing with the cluster: `kubectl` or `oc`; if `oc` is used, deployment is tailored to OpenShift, otherwise Kubernetes | `oc` |
+| `NAMESPACE` | Namespace to use for deploying controller | `devworkspace-controller` |
 | `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |
 | `WEBHOOK_ENABLED` | Whether webhooks should be enabled in the deployment | `false` |
-| `DEFAULT_ROUTING` | Default routingClass to apply to workspaces that don't specify one | `basic` |
-| `ADMIN_CTX` | Kubectx entry that should be used during work with cluster. The current will be used if omitted |-|
 | `REGISTRY_ENABLED` | Whether the plugin registry should be deployed | `true` |
+| `DEVWORKSPACE_API_VERSION` | Branch or tag of the github.com/devfile/api to depend on | `v1alpha1` | 
 
 Some of the rules supported by the makefile:
 
 |rule|purpose|
 |---|---|
 | docker | build and push docker image |
-| webhook | generate certificates for webhooks and deploy to cluster; no-op if webhooks are disabled or running on OpenShift |
-| deploy | deploy controller to cluster |
+| install | install controller to cluster |
 | restart | restart cluster controller deployment |
-| rollout | rebuild and push docker image and restart cluster deployment |
-| update_cfg | configures already deployed controller according to set env variables |
-| update_crds | update custom resource definitions on cluster |
-| uninstall | delete controller namespace `devworkspace-controller` and remove custom resource definitions from cluster |
+| install_crds | update CRDs on cluster |
+| uninstall | delete controller namespace `devworkspace-controller` and remove CRDs from cluster |
 | help | print all rules and variables |
 
 To see all rules supported by the makefile, run `make help`
@@ -72,11 +66,9 @@ To see all rules supported by the makefile, run `make help`
 It's possible to run an instance of the controller locally while communicating with a cluster. However, this requires webhooks to be disabled, as the webhooks need to be able to access the service created by an in-cluster deployment
 
 ```bash
-export NAMESPACE=devworkspace-controller
-export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
-export WEBHOOK_ENABLED=false
-make local
-operator-sdk up local --namespace ${NAMESPACE}
+make install
+oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}"
+make debug
 ```
 
 When running locally, only a single namespace is watched; as a result, all workspaces have to be deployed to `${NAMESPACE}`
@@ -85,11 +77,9 @@ When running locally, only a single namespace is watched; as a result, all works
 Debugging the controller depends on `delve` being installed (`go get -u github.com/go-delve/delve/cmd/dlv`). Note that at the time of writing, executing `go get` in this repo's directory will update go.mod; these changes should be dropped before committing.
 
 ```bash
-export NAMESPACE=devworkspace-controller
-export TOOL=oc # Use 'export TOOL=kubectl' for kubernetes
-export WEBHOOK_ENABLED=false
-make local
-operator-sdk up local --namespace ${NAMESPACE} --enable-delve
+make install
+oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}"
+make debug
 ```
 
 ### Controller configuration

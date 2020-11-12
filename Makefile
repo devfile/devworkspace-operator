@@ -37,10 +37,10 @@ ifeq ($(shell kubectl config current-context),minikube)
 export ROUTING_SUFFIX := $(shell minikube ip).nip.io
 endif
 
-
 # Bootstrapped by Operator-SDK v1.1.0
 # Current Operator version
 VERSION ?= 0.0.1
+OPERATOR_SDK_VERSION = v1.1.0
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -240,9 +240,15 @@ else
 KUSTOMIZE=$(shell which kustomize)
 endif
 
+_operator_sdk:
+ifneq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
+	@echo 'WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found.'
+	@echo 'WARN: Please use the recommended operator-sdk if you face any issue.'
+endif
+
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests
+bundle: manifests _operator_sdk
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)

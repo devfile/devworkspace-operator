@@ -130,8 +130,8 @@ debug: _print_vars _generate_related_images_env
 install_crds: manifests _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-### deploy: Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
+### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
+install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
 	mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
 	mv config/devel/config.properties config/devel/config.properties.bak
 	mv config/devel/manager_image_patch.yaml config/devel/manager_image_patch.yaml.bak

@@ -14,9 +14,12 @@ bases:
 - ../components/rbac
 - ../crd
 
+generatorOptions:
+  disableNameSuffixHash: true
+
 configMapGenerator:
-- name: devworkspace-controller
-  envs: 
+- name: configmap
+  envs:
   - config.properties
 
 patchesStrategicMerge:

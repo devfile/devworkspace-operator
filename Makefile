@@ -117,14 +117,36 @@ test_e2e: generate fmt vet manifests
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
-### run: Run against the configured Kubernetes cluster in ~/.kube/config
-run: _print_vars _generate_related_images_env
-	source $(RELATED_IMAGES_FILE)
-	WATCH_NAMESPACE=$(NAMESPACE) go run ./main.go
+# it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
+_bump_kubeconfig:
+	@mkdir -p $(INTERNAL_TMP_DIR)
+ifndef KUBECONFIG
+	$(eval CONFIG_FILE = ${HOME}/.kube/config)
+else
+	$(eval CONFIG_FILE = ${KUBECONFIG})
+endif
+	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
-debug: _print_vars _generate_related_images_env
+_login_with_devworkspace_sa:
+	@$(eval SA_TOKEN := $(shell kubectl get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "default")][0].data.token' | base64 --decode ))
+	@echo "Logging as controller's SA in $(NAMESPACE)"
+	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
+
+### run: Run against the configured Kubernetes cluster in ~/.kube/config
+run: _print_vars _generate_related_images_env _bump_kubeconfig _login_with_devworkspace_sa
 	source $(RELATED_IMAGES_FILE)
-	WATCH_NAMESPACE=$(NAMESPACE) dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
+	export KUBECONFIG=$(BUMPED_KUBECONFIG)
+	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
+		WATCH_NAMESPACE=$(NAMESPACE) \
+		go run ./main.go
+
+
+debug: _print_vars _generate_related_images_env _bump_kubeconfig _login_with_devworkspace_sa
+	source $(RELATED_IMAGES_FILE)
+	export KUBECONFIG=$(BUMPED_KUBECONFIG)
+	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
+		WATCH_NAMESPACE=$(NAMESPACE) \
+		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
 ### install_crds: Install CRDs into a cluster
 install_crds: manifests _kustomize _init_devworkspace_crds

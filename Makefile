@@ -280,6 +280,5 @@ help: Makefile
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'
-	@echo '    ADMIN_CTX                  - Kubectx entry that should be used during work with cluster. The current will be used if omitted'
 	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
 	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/api to depend on. Defaults to master'

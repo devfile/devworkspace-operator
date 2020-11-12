@@ -151,6 +151,12 @@ restart:
 
 ### uninstall: Remove controller resources from the cluster
 uninstall: _kustomize
+# It's safer to delete all workspaces before deleting the controller; otherwise we could
+# leave workspaces in a hanging state if we add finalizers.
+	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
+	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
+# Have to wait for routings to be deleted in case there are finalizers
+	kubectl delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
 	kustomize build config/devel | kubectl delete --ignore-not-found -f -
 	kubectl delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found

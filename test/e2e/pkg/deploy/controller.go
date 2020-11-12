@@ -40,7 +40,7 @@ func (w *Deployment) CreateNamespace() error {
 
 func (w *Deployment) DeployWorkspacesController() error {
 	label := "app.kubernetes.io/name=devworkspace-controller"
-	cmd := exec.Command("make", "deploy")
+	cmd := exec.Command("make", "install")
 	output, err := cmd.CombinedOutput()
 	fmt.Println(string(output))
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
@@ -66,7 +66,7 @@ func (w *Deployment) DeployWorkspacesController() error {
 }
 
 func (w *Deployment) CustomResourceDefinitions() error {
-	devWorkspaceCRD := exec.Command("make", "install")
+	devWorkspaceCRD := exec.Command("make", "install_crds")
 	output, err := devWorkspaceCRD.CombinedOutput()
 	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
 		fmt.Println(err)

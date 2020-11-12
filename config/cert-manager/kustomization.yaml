@@ -1,0 +1,32 @@
+bases:
+- ../base
+- ../components/certificates/cert-manager
+
+
+patchesStrategicMerge:
+- manager_certmanager_patch.yaml
+- crd_webhooks_patch.yaml
+
+vars:
+- name: WEBHOOK_CA_SECRET_NAME
+  objref:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: serving-cert
+  fieldref:
+    fieldpath: spec.secretName
+- name: CERTIFICATE_NAMESPACE
+  objref:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: serving-cert
+  fieldref:
+    fieldpath: metadata.namespace
+- name: CERTIFICATE_NAME
+  objref:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: serving-cert

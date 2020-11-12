@@ -152,7 +152,7 @@ uninstall: _kustomize
 	kubectl delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
-	kubectl delete namespace $(NAMESPACE)
+	kubectl delete namespace $(NAMESPACE) --ignore-not-found
 
 ### deploy_registry: Deploy plugin registry
 deploy_registry: _print_vars _create_namespace

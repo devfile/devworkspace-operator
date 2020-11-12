@@ -123,8 +123,8 @@ debug: _print_vars _generate_related_images_env
 	source $(RELATED_IMAGES_FILE)
 	WATCH_NAMESPACE=$(NAMESPACE) dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
-### install: Install CRDs into a cluster
-install: manifests _kustomize
+### install_crds: Install CRDs into a cluster
+install_crds: manifests _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 ### deploy: Deploy controller in the configured Kubernetes cluster in ~/.kube/config

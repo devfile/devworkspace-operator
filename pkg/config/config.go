@@ -43,7 +43,7 @@ const (
 
 var ConfigMapReference = client.ObjectKey{
 	Namespace: "",
-	Name:      "devworkspace-controller",
+	Name:      "devworkspace-controller-configmap",
 }
 
 type ControllerConfig struct {

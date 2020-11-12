@@ -166,22 +166,22 @@ install_crds: _kustomize _init_devworkspace_crds
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
-	@mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
-	mv config/devel/config.properties config/devel/config.properties.bak
-	mv config/devel/manager_image_patch.yaml config/devel/manager_image_patch.yaml.bak
+	@mv config/base/kustomization.yaml config/base/kustomization.yaml.bak
+	mv config/base/config.properties config/base/config.properties.bak
+	mv config/base/manager_image_patch.yaml config/base/manager_image_patch.yaml.bak
 
-	envsubst < config/devel/kustomization.yaml.bak > config/devel/kustomization.yaml
-	envsubst < config/devel/config.properties.bak > config/devel/config.properties
-	envsubst < config/devel/manager_image_patch.yaml.bak > config/devel/manager_image_patch.yaml
+	envsubst < config/base/kustomization.yaml.bak > config/base/kustomization.yaml
+	envsubst < config/base/config.properties.bak > config/base/config.properties
+	envsubst < config/base/manager_image_patch.yaml.bak > config/base/manager_image_patch.yaml
 ifeq ($(PLATFORM),kubernetes)
 	$(KUSTOMIZE) build config/cert-manager | $(K8S_CLI) apply -f - || true
 else
 	@echo "TODO: OpenShift certificates support not implemented"
 endif
 
-	mv config/devel/kustomization.yaml.bak config/devel/kustomization.yaml
-	mv config/devel/config.properties.bak config/devel/config.properties
-	mv config/devel/manager_image_patch.yaml.bak config/devel/manager_image_patch.yaml
+	mv config/base/kustomization.yaml.bak config/base/kustomization.yaml
+	mv config/base/config.properties.bak config/base/config.properties
+	mv config/base/manager_image_patch.yaml.bak config/base/manager_image_patch.yaml
 
 ### restart: Restart devworkspace-controller deployment
 restart:
@@ -203,7 +203,7 @@ ifeq ($(PLATFORM),kubernetes)
 	$(KUSTOMIZE) build config/cert-manager | $(K8S_CLI) delete --ignore-not-found -f -
 else
 	echo "Support for the OpenShift-CA operator not implemented yet"
-	$(KUSTOMIZE) build config/devel | $(K8S_CLI) delete --ignore-not-found -f -
+	$(KUSTOMIZE) build config/base | $(K8S_CLI) delete --ignore-not-found -f -
 endif
 	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found

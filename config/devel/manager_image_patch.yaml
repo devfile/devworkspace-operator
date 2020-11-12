@@ -1,3 +1,4 @@
+# This patch sets the image used for deployment according to environment variables.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -11,5 +12,5 @@ spec:
         image: ${IMG}
         imagePullPolicy: Always
         env:
-        - name: RELATED_IMAGE_devworkspace_webhook_server
-          value: ${IMG}
+          - name: RELATED_IMAGE_devworkspace_webhook_server
+            value: ${IMG}

@@ -1,0 +1,39 @@
+# Add webhooks to the devfile/api CRDs
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: devworkspaces.workspace.devfile.io
+  annotations:
+    cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      conversionReviewVersions: ["v1"]
+      clientConfig:
+        service:
+          namespace: devworkspace-operator
+          name: devworkspace-webhookserver # TODO
+          path: /convert
+        # caBundle will be filled by kustomize later
+        caBundle: Cg==
+---
+# Add webhooks to the devfile/api CRDs
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: devworkspacetemplates.workspace.devfile.io
+  annotations:
+    cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)  
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      conversionReviewVersions: ["v1"]
+      clientConfig:
+        service:
+          namespace: devworkspace-operator
+          name: devworkspace-webhookserver # TODO
+          path: /convert
+        # caBundle will be filled by kustomize later
+        caBundle: Cg==

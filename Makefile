@@ -166,14 +166,18 @@ install_crds: _kustomize _init_devworkspace_crds
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
-	mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
+	@mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
 	mv config/devel/config.properties config/devel/config.properties.bak
 	mv config/devel/manager_image_patch.yaml config/devel/manager_image_patch.yaml.bak
 
 	envsubst < config/devel/kustomization.yaml.bak > config/devel/kustomization.yaml
 	envsubst < config/devel/config.properties.bak > config/devel/config.properties
 	envsubst < config/devel/manager_image_patch.yaml.bak > config/devel/manager_image_patch.yaml
-	$(KUSTOMIZE) build config/devel | $(K8S_CLI) apply -f - || true
+ifeq ($(PLATFORM),kubernetes)
+	$(KUSTOMIZE) build config/cert-manager | $(K8S_CLI) apply -f - || true
+else
+	@echo "TODO: OpenShift certificates support not implemented"
+endif
 
 	mv config/devel/kustomization.yaml.bak config/devel/kustomization.yaml
 	mv config/devel/config.properties.bak config/devel/config.properties
@@ -191,11 +195,16 @@ restart_webhook:
 uninstall: _kustomize
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
-	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
+	@$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
 	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
 # Have to wait for routings to be deleted in case there are finalizers
 	$(K8S_CLI) delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
-	kustomize build config/devel | $(K8S_CLI) delete --ignore-not-found -f -
+ifeq ($(PLATFORM),kubernetes)
+	$(KUSTOMIZE) build config/cert-manager | $(K8S_CLI) delete --ignore-not-found -f -
+else
+	echo "Support for the OpenShift-CA operator not implemented yet"
+	$(KUSTOMIZE) build config/devel | $(K8S_CLI) delete --ignore-not-found -f -
+endif
 	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	$(K8S_CLI) delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found

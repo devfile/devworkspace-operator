@@ -1,0 +1,15 @@
+# This patch adds an environment variable to the workspace deployment
+# to allow it to figure out which secret to use for the webhooks deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: devworkspace-controller
+        env:
+        - name: WEBHOOK_SECRET_NAME
+          value: $(WEBHOOK_CA_SECRET_NAME)

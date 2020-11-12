@@ -1,0 +1,22 @@
+# Create a self-signed issuer for development
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: selfsigned-issuer
+  namespace: devworkspace-operator # TODO
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: serving-cert
+  namespace: devworkspace-operator # TODO
+spec:
+  secretName: devworkspace-operator-webhook-cert
+  dnsNames:
+  - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc # TODO
+  - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc.cluster.local # TODO
+  issuerRef:
+    kind: Issuer
+    name: selfsigned-issuer

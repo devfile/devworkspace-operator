@@ -37,10 +37,10 @@ ifeq ($(shell kubectl config current-context),minikube)
 export ROUTING_SUFFIX := $(shell minikube ip).nip.io
 endif
 
-
 # Bootstrapped by Operator-SDK v1.1.0
 # Current Operator version
 VERSION ?= 0.0.1
+OPERATOR_SDK_VERSION = v1.1.0
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -93,9 +93,12 @@ update_devworkspace_api:
 	go mod download
 	go mod tidy
 
+_init_devworkspace_crds:
+	./update_devworkspace_crds.sh --init --api-version $(DEVWORKSPACE_API_VERSION)
+
 ### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
 update_devworkspace_crds:
-	./update_devworkspace_crds.sh $(DEVWORKSPACE_API_VERSION)
+	./update_devworkspace_crds.sh --api-version $(DEVWORKSPACE_API_VERSION)
 ###### End rules for dealing with devfile/api
 
 ### test: Run tests
@@ -123,12 +126,12 @@ debug: _print_vars _generate_related_images_env
 	source $(RELATED_IMAGES_FILE)
 	WATCH_NAMESPACE=$(NAMESPACE) dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
-### install: Install CRDs into a cluster
-install: manifests _kustomize
+### install_crds: Install CRDs into a cluster
+install_crds: manifests _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 ### deploy: Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: _print_vars _kustomize _create_namespace deploy_registry
+deploy: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
 	mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
 	mv config/devel/config.properties config/devel/config.properties.bak
 	mv config/devel/manager_image_patch.yaml config/devel/manager_image_patch.yaml.bak
@@ -148,11 +151,17 @@ restart:
 
 ### uninstall: Remove controller resources from the cluster
 uninstall: _kustomize
+# It's safer to delete all workspaces before deleting the controller; otherwise we could
+# leave workspaces in a hanging state if we add finalizers.
+	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
+	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
+# Have to wait for routings to be deleted in case there are finalizers
+	kubectl delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
 	kustomize build config/devel | kubectl delete --ignore-not-found -f -
 	kubectl delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
-	kubectl delete namespace $(NAMESPACE)
+	kubectl delete namespace $(NAMESPACE) --ignore-not-found
 
 ### deploy_registry: Deploy plugin registry
 deploy_registry: _print_vars _create_namespace
@@ -240,9 +249,15 @@ else
 KUSTOMIZE=$(shell which kustomize)
 endif
 
+_operator_sdk:
+ifneq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
+	@echo 'WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found.'
+	@echo 'WARN: Please use the recommended operator-sdk if you face any issue.'
+endif
+
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests
+bundle: manifests _operator_sdk
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)

@@ -12,15 +12,29 @@
 
 set -ex
 
-DEVWORKSPACE_API_VERSION=${1:-v1alpha1}
+DEVWORKSPACE_API_VERSION=v1alpha1
+INIT_ONLY=0
+
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    '--api-version') DEVWORKSPACE_API_VERSION=$2; shift 1;;
+    '--init') INIT_ONLY=1; shift 0;;
+    *) echo "Unknown argument $1 is specified."; exit 1;;
+  esac
+  shift 1
+done
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+
+if [[ ($INIT_ONLY -eq 1) && (-f "$SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspaces.yaml") ]]; then
+  # devworkspace crd is already initialized
+  exit 0
+fi
+
 TMP_DIR=$(mktemp -d)
 echo "Downloading devfile/api CRDs to $TMP_DIR"
 
 cd $TMP_DIR
-# mkdir -p devworkspace-crds
-# cd devworkspace-crds
 git init
 git remote add origin https://github.com/devfile/api.git
 git config core.sparsecheckout true
@@ -36,6 +50,7 @@ else
 	echo 'DevWorkspace API is specified from revision'
 	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 fi
+
 cp deploy/crds/workspace.devfile.io_devworkspaces_crd.yaml \
    $SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspaces.yaml
 

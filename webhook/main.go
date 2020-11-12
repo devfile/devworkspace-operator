@@ -17,9 +17,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/operator-framework/operator-sdk/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
@@ -33,7 +33,7 @@ import (
 var log = logf.Log.WithName("cmd")
 
 func main() {
-	logf.SetLogger(zap.Logger())
+	logf.SetLogger(zap.New(zap.UseDevMode(false)))
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()

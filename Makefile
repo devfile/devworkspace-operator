@@ -11,6 +11,7 @@
 
 SHELL := bash
 .SHELLFLAGS = -ec
+.ONESHELL:
 
 export NAMESPACE ?= devworkspace-controller
 export IMG ?= quay.io/devfile/devworkspace-controller:next

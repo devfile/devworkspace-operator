@@ -10,7 +10,7 @@
 #   Red Hat, Inc. - initial API and implementation
 #
 
-set -ex
+set -e
 
 DEVWORKSPACE_API_VERSION=v1alpha1
 INIT_ONLY=0

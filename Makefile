@@ -93,9 +93,12 @@ update_devworkspace_api:
 	go mod download
 	go mod tidy
 
+_init_devworkspace_crds:
+	./update_devworkspace_crds.sh --init --api-version $(DEVWORKSPACE_API_VERSION)
+
 ### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
 update_devworkspace_crds:
-	./update_devworkspace_crds.sh $(DEVWORKSPACE_API_VERSION)
+	./update_devworkspace_crds.sh --api-version $(DEVWORKSPACE_API_VERSION)
 ###### End rules for dealing with devfile/api
 
 ### test: Run tests
@@ -128,7 +131,7 @@ install_crds: manifests _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 ### deploy: Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: _print_vars _kustomize _create_namespace deploy_registry
+deploy: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
 	mv config/devel/kustomization.yaml config/devel/kustomization.yaml.bak
 	mv config/devel/config.properties config/devel/config.properties.bak
 	mv config/devel/manager_image_patch.yaml config/devel/manager_image_patch.yaml.bak

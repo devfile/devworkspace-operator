@@ -18,17 +18,15 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/webhook/service"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"github.com/devfile/devworkspace-operator/webhook/server"
-
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var log = logf.Log.WithName("webhook-openshift")
 
-func SetupSecureService(client crclient.Client, ctx context.Context, namespace string) error {
+func SetupSecureService(client crclient.Client, ctx context.Context, secretName, namespace string) error {
 	log.Info("Attempting to create the secure service")
 	err := service.CreateOrUpdateSecureService(client, ctx, namespace, map[string]string{
-		"service.beta.openshift.io/serving-cert-secret-name": server.WebhookServerTLSSecretName,
+		"service.beta.openshift.io/serving-cert-secret-name": secretName, // TODO
 	})
 	if err != nil {
 		log.Info("Failed creating the secure service")

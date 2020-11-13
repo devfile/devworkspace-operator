@@ -31,9 +31,10 @@ import (
 func CreateWebhookServerDeployment(
 	client crclient.Client,
 	ctx context.Context,
+	webhooksSecretName string,
 	namespace string) error {
 
-	deployment, err := getSpecDeployment(namespace)
+	deployment, err := getSpecDeployment(webhooksSecretName, namespace)
 	if err != nil {
 		return err
 	}
@@ -58,7 +59,7 @@ func CreateWebhookServerDeployment(
 	return nil
 }
 
-func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
+func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
 	trueBool := true
@@ -145,7 +146,7 @@ func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 							Name: server.WebhookServerCertsVolumeName,
 							VolumeSource: corev1.VolumeSource{
 								Secret: &corev1.SecretVolumeSource{
-									SecretName: server.WebhookServerTLSSecretName,
+									SecretName: webhooksSecretName,
 								},
 							},
 						},

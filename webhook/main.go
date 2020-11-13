@@ -15,22 +15,36 @@ import (
 	"context"
 	"os"
 	"os/signal"
+
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	"syscall"
 
+	workspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/internal/cluster"
+	"github.com/devfile/devworkspace-operator/webhook/server"
+	"github.com/devfile/devworkspace-operator/webhook/workspace"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-
-	"github.com/devfile/devworkspace-operator/internal/cluster"
-	"github.com/devfile/devworkspace-operator/webhook/workspace"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-
-	"github.com/devfile/devworkspace-operator/webhook/server"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
-var log = logf.Log.WithName("cmd")
+var (
+	scheme = runtime.NewScheme()
+	log    = logf.Log.WithName("cmd")
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(workspacev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(workspacev1alpha2.AddToScheme(scheme))
+}
 
 func main() {
 	logf.SetLogger(zap.New(zap.UseDevMode(true)))
@@ -49,18 +63,27 @@ func main() {
 	}
 
 	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Namespace: namespace,
+		Scheme:    scheme,
+		CertDir:   server.WebhookServerCertDir,
 	})
 	if err != nil {
 		log.Error(err, "Failed to create manager")
 		os.Exit(1)
 	}
 
-	err = createWebhooks(mgr, cfg)
+	err = createWebhooks(mgr)
 	if err != nil {
 		log.Error(err, "Failed to create webhooks")
 		os.Exit(1)
+	}
+
+	if err := ctrl.NewWebhookManagedBy(mgr).For(&workspacev1alpha1.DevWorkspace{}).Complete(); err != nil {
+		log.Error(err, "failed creating conversion webhook")
+	}
+	if err := ctrl.NewWebhookManagedBy(mgr).For(&workspacev1alpha2.DevWorkspace{}).Complete(); err != nil {
+		log.Error(err, "failed creating conversion webhook")
 	}
 
 	var shutdownChan = make(chan os.Signal, 1)
@@ -73,7 +96,7 @@ func main() {
 	}
 }
 
-func createWebhooks(mgr manager.Manager, clusterConfig *rest.Config) error {
+func createWebhooks(mgr manager.Manager) error {
 	log.Info("Configuring Webhook Server")
 	err := server.ConfigureWebhookServer(mgr)
 	if err != nil {

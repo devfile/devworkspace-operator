@@ -81,10 +81,11 @@ _create_namespace:
 
 _generate_related_images_env:
 	@mkdir -p $(INTERNAL_TMP_DIR)
+	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)" > $(RELATED_IMAGES_FILE)
 	cat ./config/components/manager/manager.yaml \
 		| yq -r \
 			'.spec.template.spec.containers[]?.env[] | select(.name | startswith("RELATED_IMAGE")) | "export \(.name)=\"$${\(.name):-\(.value)}\""' \
-		> $(RELATED_IMAGES_FILE)
+		>> $(RELATED_IMAGES_FILE)
 	cat $(RELATED_IMAGES_FILE)
 
 ##### Rules for dealing with devfile/api

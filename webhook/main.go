@@ -33,7 +33,7 @@ import (
 var log = logf.Log.WithName("cmd")
 
 func main() {
-	logf.SetLogger(zap.New(zap.UseDevMode(false)))
+	logf.SetLogger(zap.New(zap.UseDevMode(true)))
 
 	// Get a config to talk to the apiserver
 	cfg, err := config.GetConfig()

@@ -27,14 +27,24 @@ INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
 
-ifeq ($(shell kubectl api-resources --api-group='route.openshift.io' | grep -o routes),routes)
+ifeq (,$(shell which kubectl))
+ifeq (,$(shell which oc))
+$(error oc or kubectl is required to proceed)
+else
+K8S_CLI := oc
+endif
+else
+K8S_CLI := kubectl
+endif
+
+ifeq ($(shell $(K8S_CLI) api-resources --api-group='route.openshift.io' | grep -o routes),routes)
 PLATFORM := openshift
 else
 PLATFORM := kubernetes
 endif
 
 # minikube handling
-ifeq ($(shell kubectl config current-context),minikube)
+ifeq ($(shell $(K8S_CLI) config current-context),minikube)
 export ROUTING_SUFFIX := $(shell minikube ip).nip.io
 endif
 
@@ -77,7 +87,7 @@ _print_vars:
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
 
 _create_namespace:
-	kubectl create namespace $(NAMESPACE) || true
+	$(K8S_CLI) create namespace $(NAMESPACE) || true
 
 _generate_related_images_env:
 	@mkdir -p $(INTERNAL_TMP_DIR)
@@ -130,7 +140,7 @@ endif
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
 _login_with_devworkspace_sa:
-	@$(eval SA_TOKEN := $(shell kubectl get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "default")][0].data.token' | base64 --decode ))
+	@$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "default")][0].data.token' | base64 --decode ))
 	@echo "Logging as controller's SA in $(NAMESPACE)"
 	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
@@ -152,7 +162,7 @@ debug: _print_vars _generate_related_images_env _bump_kubeconfig _login_with_dev
 
 ### install_crds: Install CRDs into a cluster
 install_crds: manifests _kustomize _init_devworkspace_crds
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | $(K8S_CLI) apply -f -
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
@@ -163,7 +173,7 @@ install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy
 	envsubst < config/devel/kustomization.yaml.bak > config/devel/kustomization.yaml
 	envsubst < config/devel/config.properties.bak > config/devel/config.properties
 	envsubst < config/devel/manager_image_patch.yaml.bak > config/devel/manager_image_patch.yaml
-	$(KUSTOMIZE) build config/devel | kubectl apply -f - || true
+	$(KUSTOMIZE) build config/devel | $(K8S_CLI) apply -f - || true
 
 	mv config/devel/kustomization.yaml.bak config/devel/kustomization.yaml
 	mv config/devel/config.properties.bak config/devel/config.properties
@@ -171,29 +181,29 @@ install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy
 
 ### restart: Restart devworkspace-controller deployment
 restart:
-	kubectl rollout restart -n $(NAMESPACE) deployment/devworkspace-controller-manager
+	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-controller-manager
 
 ### uninstall: Remove controller resources from the cluster
 uninstall: _kustomize
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
-	kubectl delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
-	kubectl delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
+	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
+	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
 # Have to wait for routings to be deleted in case there are finalizers
-	kubectl delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
-	kustomize build config/devel | kubectl delete --ignore-not-found -f -
-	kubectl delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
-	kubectl delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
-	kubectl delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
-	kubectl delete namespace $(NAMESPACE) --ignore-not-found
+	$(K8S_CLI) delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
+	kustomize build config/devel | $(K8S_CLI) delete --ignore-not-found -f -
+	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
+	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
+	$(K8S_CLI) delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
+	$(K8S_CLI) delete namespace $(NAMESPACE) --ignore-not-found
 
 ### deploy_registry: Deploy plugin registry
 deploy_registry: _print_vars _create_namespace
-	kubectl apply -f config/registry/local -n $(NAMESPACE)
+	$(K8S_CLI) apply -f config/registry/local -n $(NAMESPACE)
 ifeq ($(PLATFORM),kubernetes)
-	envsubst < config/registry/local/k8s/ingress.yaml | kubectl apply -n $(NAMESPACE) -f -
+	envsubst < config/registry/local/k8s/ingress.yaml | $(K8S_CLI) apply -n $(NAMESPACE) -f -
 else
-	kubectl apply -f config/registry/local/os -n $(NAMESPACE)
+	$(K8S_CLI) apply -f config/registry/local/os -n $(NAMESPACE)
 endif
 
 ### manifests: Generate manifests e.g. CRD, RBAC etc.

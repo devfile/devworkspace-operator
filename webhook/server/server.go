@@ -26,9 +26,8 @@ const (
 	WebhookServerPort    = 8443
 	WebhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
 
+	WebhookServerAppName        = "devworkspace-webhook-server"
 	WebhookServerDeploymentName = WebhookServerAppName
-
-	WebhookServerAppName = "devworkspace-webhook-server"
 
 	WebhookServerServiceName = "devworkspace-webhookserver"
 	WebhookServerPortName    = "webhook-server"
@@ -37,9 +36,6 @@ const (
 	WebhookServerSAName = "devworkspace-webhook-server"
 
 	WebhookServerCertsVolumeName = "webhook-tls-certs"
-
-	//Secret name with TLS certs inside (tls.crt + tls.key) that is mounted to webhook server
-	WebhookServerTLSSecretName = "devworkspace-webhookserver-tls"
 )
 
 var log = logf.Log.WithName("webhook.server")

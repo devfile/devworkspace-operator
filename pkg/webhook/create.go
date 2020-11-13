@@ -59,26 +59,29 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		return err
 	}
 
+	secretName, err := config.GetWebhooksSecretName()
+	if err != nil {
+		return fmt.Errorf("failed to create webhooks deployment: %w", err)
+	}
 	if config.ControllerCfg.IsOpenShift() {
 		// Set up the certs for OpenShift
 		log.Info("Setting up the OpenShift webhook server secure service")
-		err := webhook_openshift.SetupSecureService(client, ctx, namespace)
+		err := webhook_openshift.SetupSecureService(client, ctx, secretName, namespace)
 		if err != nil {
 			return err
 		}
 	} else {
 		// Set up the certs for kubernetes
 		log.Info("Setting up the Kubernetes webhook server secure service")
-		err := webhook_k8s.SetupSecureService(client, ctx, namespace)
+		err := webhook_k8s.SetupSecureService(client, ctx, secretName, namespace)
 		if err != nil {
 			return err
 		}
-		log.Info("Warning: the webhook server cert in use is not suitable for production. If you want to use this in production please set up certs with a certificate manager")
 	}
 
 	// Set up the deployment
 	log.Info("Creating the webhook server deployment")
-	err = CreateWebhookServerDeployment(client, ctx, namespace)
+	err = CreateWebhookServerDeployment(client, ctx, secretName, namespace)
 	if err != nil {
 		return err
 	}

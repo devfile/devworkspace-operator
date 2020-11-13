@@ -161,7 +161,7 @@ debug: _print_vars _generate_related_images_env _bump_kubeconfig _login_with_dev
 		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
 ### install_crds: Install CRDs into a cluster
-install_crds: manifests _kustomize _init_devworkspace_crds
+install_crds: _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | $(K8S_CLI) apply -f -
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config

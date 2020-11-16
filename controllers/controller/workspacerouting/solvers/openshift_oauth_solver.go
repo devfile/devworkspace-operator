@@ -103,8 +103,8 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			proxyEndpoint := portMappings[upstreamEndpoint.Name]
 			endpoint := proxyEndpoint.publicEndpoint
 			var tls *routeV1.TLSConfig = nil
-			if endpoint.Attributes[string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" {
-				if endpoint.Attributes[string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] == "terminal" {
+			if endpoint.Attributes.Strings()[string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" {
+				if endpoint.Attributes.Strings()[string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] == "terminal" {
 					tls = &routeV1.TLSConfig{
 						Termination:                   routeV1.TLSTerminationEdge,
 						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
@@ -171,9 +171,10 @@ func getProxyEndpointMappings(
 }
 
 func endpointNeedsProxy(endpoint devworkspace.Endpoint) bool {
-	publicAttr, exists := endpoint.Attributes[string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)]
+	stringAttributes := endpoint.Attributes.Strings()
+	publicAttr, exists := stringAttributes[string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)]
 	endpointIsPublic := !exists || (publicAttr == "true")
 	return endpointIsPublic &&
-		endpoint.Attributes[string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" &&
-		endpoint.Attributes[string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] != "terminal"
+		stringAttributes[string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" &&
+		stringAttributes[string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] != "terminal"
 }

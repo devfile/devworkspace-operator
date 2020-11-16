@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/devfile/api/pkg/attributes"
+
 	"github.com/devfile/devworkspace-operator/pkg/adaptor/plugin_patch"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
@@ -125,12 +127,13 @@ func createEndpointsFromPlugin(plugin brokerModel.ChePlugin) []devworkspace.Endp
 	var endpoints []devworkspace.Endpoint
 
 	for _, pluginEndpoint := range plugin.Endpoints {
-		attributes := map[string]string{}
 		// Default value of http for protocol, may be overwritten by pluginEndpoint attributes
-		attributes[string(v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE)] = "http"
-		attributes[string(v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] = strconv.FormatBool(pluginEndpoint.Public)
+		attributes := attributes.Attributes{}.FromStringMap(map[string]string{
+			string(v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE): "http",
+			string(v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE):   strconv.FormatBool(pluginEndpoint.Public),
+		})
 		for key, val := range pluginEndpoint.Attributes {
-			attributes[key] = val
+			attributes.PutString(key, val)
 		}
 		endpoints = append(endpoints, devworkspace.Endpoint{
 			Name:       common.EndpointName(pluginEndpoint.Name),

@@ -35,7 +35,7 @@ func getDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[string(controllerv1alpha1.DISCOVERABLE_ATTRIBUTE)] == "true" {
+			if endpoint.Attributes.GetString(string(controllerv1alpha1.DISCOVERABLE_ATTRIBUTE)) == "true" {
 				// Create service with name matching endpoint
 				// TODO: This could cause a reconcile conflict if multiple workspaces define the same discoverable endpoint
 				// Also endpoint names may not be valid as service names
@@ -118,7 +118,7 @@ func getRoutingForSpec(endpoints map[string]controllerv1alpha1.EndpointList, met
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes[string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
+			if endpoint.Attributes.GetString(string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)) != "true" {
 				continue
 			}
 			if config.ControllerCfg.IsOpenShift() {

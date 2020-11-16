@@ -13,6 +13,10 @@ SHELL := bash
 .SHELLFLAGS = -ec
 .ONESHELL:
 
+ifndef VERBOSE
+MAKEFLAGS += --silent
+endif
+
 export NAMESPACE ?= devworkspace-controller
 export IMG ?= quay.io/devfile/devworkspace-controller:next
 export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
@@ -90,7 +94,7 @@ _create_namespace:
 	$(K8S_CLI) create namespace $(NAMESPACE) || true
 
 _generate_related_images_env:
-	@mkdir -p $(INTERNAL_TMP_DIR)
+	mkdir -p $(INTERNAL_TMP_DIR)
 	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)" > $(RELATED_IMAGES_FILE)
 	cat ./config/components/manager/manager.yaml \
 		| yq -r \
@@ -131,7 +135,7 @@ manager: generate fmt vet
 
 # it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
 _bump_kubeconfig:
-	@mkdir -p $(INTERNAL_TMP_DIR)
+	mkdir -p $(INTERNAL_TMP_DIR)
 ifndef KUBECONFIG
 	$(eval CONFIG_FILE = ${HOME}/.kube/config)
 else
@@ -140,8 +144,8 @@ endif
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
 _login_with_devworkspace_sa:
-	@$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "default")][0].data.token' | base64 --decode ))
-	@echo "Logging as controller's SA in $(NAMESPACE)"
+	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "default")][0].data.token' | base64 --decode ))
+	echo "Logging as controller's SA in $(NAMESPACE)"
 	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### run: Run against the configured Kubernetes cluster in ~/.kube/config
@@ -166,7 +170,15 @@ install_crds: _kustomize _init_devworkspace_crds
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
-	@mv config/base/kustomization.yaml config/base/kustomization.yaml.bak
+	# workaround since applying CRDs when artifacts already exist hangs forever on minikube
+	$(K8S_CLI) delete crds \
+		components.controller.devfile.io \
+		workspaceroutings.controller.devfile.io \
+		devworkspaces.workspace.devfile.io \
+		devworkspacetemplates.workspace.devfile.io \
+		--ignore-not-found
+
+	mv config/base/kustomization.yaml config/base/kustomization.yaml.bak
 	mv config/base/config.properties config/base/config.properties.bak
 	mv config/base/manager_image_patch.yaml config/base/manager_image_patch.yaml.bak
 
@@ -195,7 +207,7 @@ restart_webhook:
 uninstall: _kustomize
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
-	@$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
+	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
 	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
 # Have to wait for routings to be deleted in case there are finalizers
 	$(K8S_CLI) delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true
@@ -240,7 +252,7 @@ endif
 fmt_license:
 ifneq ($(shell command -v addlicense 2> /dev/null),)
 	@echo 'addlicense -v -f license_header.txt **/*.go'
-	@addlicense -v -f license_header.txt $$(find . -name '*.go')
+	addlicense -v -f license_header.txt $$(find . -name '*.go')
 else
 	$(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
 endif

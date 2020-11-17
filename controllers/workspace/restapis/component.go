@@ -116,6 +116,8 @@ func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) contr
 					},
 					Name:       cheRestAPIsName,
 					TargetPort: cheRestApisPort,
+					Exposure:   devworkspace.PublicEndpointExposure,
+					Protocol:   devworkspace.HTTPEndpointProtocol,
 				},
 			},
 		},

@@ -1,7 +1,9 @@
+# Adds namespace to all resources.
+namespace: ${NAMESPACE}
+
 bases:
 - ../base
 - ../components/certificates/cert-manager
-
 
 patchesStrategicMerge:
 - manager_certmanager_patch.yaml

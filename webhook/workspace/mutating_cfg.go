@@ -48,7 +48,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
 				Rule: v1beta1.Rule{
 					APIGroups:   []string{"workspace.devfile.io"},
-					APIVersions: []string{"v1alpha2"},
+					APIVersions: []string{"v1alpha1", "v1alpha2"},
 					Resources:   []string{"devworkspaces"},
 				},
 			},

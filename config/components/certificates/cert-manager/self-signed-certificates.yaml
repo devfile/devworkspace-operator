@@ -3,7 +3,7 @@ apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:
   name: selfsigned-issuer
-  namespace: devworkspace-operator # TODO
+  namespace: system
 spec:
   selfSigned: {}
 ---
@@ -11,12 +11,13 @@ apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: serving-cert
-  namespace: devworkspace-operator # TODO
+  namespace: system
 spec:
   secretName: devworkspace-operator-webhook-cert
   dnsNames:
-  - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc # TODO
-  - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc.cluster.local # TODO
+  # Note: service name is hard-coded in pkg/webhook/server/server.go
+  - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc
+  - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer

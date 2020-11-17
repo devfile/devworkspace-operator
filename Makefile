@@ -178,11 +178,11 @@ install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy
 		devworkspacetemplates.workspace.devfile.io \
 		--ignore-not-found
 
-	mv config/base/kustomization.yaml config/base/kustomization.yaml.bak
+	mv config/cert-manager/kustomization.yaml config/cert-manager/kustomization.yaml.bak
 	mv config/base/config.properties config/base/config.properties.bak
 	mv config/base/manager_image_patch.yaml config/base/manager_image_patch.yaml.bak
 
-	envsubst < config/base/kustomization.yaml.bak > config/base/kustomization.yaml
+	envsubst < config/cert-manager/kustomization.yaml.bak > config/cert-manager/kustomization.yaml
 	envsubst < config/base/config.properties.bak > config/base/config.properties
 	envsubst < config/base/manager_image_patch.yaml.bak > config/base/manager_image_patch.yaml
 ifeq ($(PLATFORM),kubernetes)
@@ -191,7 +191,7 @@ else
 	@echo "TODO: OpenShift certificates support not implemented"
 endif
 
-	mv config/base/kustomization.yaml.bak config/base/kustomization.yaml
+	mv config/cert-manager/kustomization.yaml.bak config/cert-manager/kustomization.yaml
 	mv config/base/config.properties.bak config/base/config.properties
 	mv config/base/manager_image_patch.yaml.bak config/base/manager_image_patch.yaml
 

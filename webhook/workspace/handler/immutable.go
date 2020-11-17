@@ -16,7 +16,8 @@ import (
 	"fmt"
 	"reflect"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	devworkspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -32,7 +33,8 @@ const serviceCAUsername = "system:serviceaccount:openshift-service-ca:service-ca
 var ImmutableWorkspaceDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
 	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields", "Finalizers", "DeletionTimestamp"),
-	cmpopts.IgnoreFields(devworkspace.DevWorkspaceSpec{}, "Started"),
+	cmpopts.IgnoreFields(devworkspacev1alpha1.DevWorkspaceSpec{}, "Started"),
+	cmpopts.IgnoreFields(devworkspacev1alpha2.DevWorkspaceSpec{}, "Started"),
 	cmpopts.IgnoreMapEntries(func(key string, value string) bool { return key == config.WorkspaceStopReasonAnnotation }),
 }
 
@@ -72,7 +74,19 @@ func (h *WebhookHandler) HandleImmutableCreate(_ context.Context, req admission.
 	return admission.Denied("Only the workspace controller can create workspace objects.")
 }
 
-func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *devworkspace.DevWorkspace, uid string) (allowed bool, msg string) {
+func (h *WebhookHandler) handleImmutableWorkspaceV1alpha1(oldWksp, newWksp *devworkspacev1alpha1.DevWorkspace, uid string) (allowed bool, msg string) {
+	creatorUID := oldWksp.Labels[config.WorkspaceCreatorLabel]
+	if uid == creatorUID || uid == h.ControllerUID {
+		return true, "immutable workspace is updated by owner or controller"
+	}
+	if cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) {
+		return true, "immutable workspace is started/stopped"
+	}
+	log.Info(fmt.Sprintf("Denied request on workspace resource by user %s", uid))
+	return false, fmt.Sprintf("workspace '%s' is immutable and can only be modified by its creator.", oldWksp.Name)
+}
+
+func (h *WebhookHandler) handleImmutableWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
 	creatorUID := oldWksp.Labels[config.WorkspaceCreatorLabel]
 	if uid == creatorUID || uid == h.ControllerUID {
 		return true, "immutable workspace is updated by owner or controller"

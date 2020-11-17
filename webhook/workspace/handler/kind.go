@@ -15,6 +15,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 var (
 	V1alpha1DevWorkspaceKind     = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha1"}
+	V1alpha2DevWorkspaceKind     = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha2"}
 	V1alpha1WorkspaceRoutingKind = metav1.GroupVersionKind{Kind: "WorkspaceRouting", Group: "controller.devfile.io", Version: "v1alpha1"}
 	V1alpha1ComponentKind        = metav1.GroupVersionKind{Kind: "Component", Group: "controller.devfile.io", Version: "v1alpha1"}
 

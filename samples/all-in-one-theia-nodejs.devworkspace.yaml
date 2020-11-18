@@ -1,0 +1,260 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: theia-nodejs
+spec:
+  started: true
+  template:
+    projects:
+      - name: project
+        git:
+          remotes:
+            origin: "https://github.com/che-samples/web-nodejs-sample.git"
+
+    components:
+
+      - name: theia-ide
+        attributes:
+          "app.kubernetes.io/name": che-theia.eclipse.org
+          "app.kubernetes.io/part-of": che.eclipse.org
+          "app.kubernetes.io/component": editor
+
+          # Added by Che-theia at start when detecting, after cloning, that the extensions.json in the repo
+          # contains the vscode-pull-request-github vscode plugin.
+          "che-theia.eclipse.org/vscode-extensions":
+            - https://github.com/microsoft/vscode-pull-request-github/releases/download/v0.8.0/vscode-pull-request-github-0.8.0.vsix
+
+        container:
+          image: "quay.io/eclipse/che-theia:7.20.0"
+          env:
+            - name: THEIA_PLUGINS
+              value: local-dir:///plugins
+            - name: HOSTED_PLUGIN_HOSTNAME
+              value: 0.0.0.0
+            - name: HOSTED_PLUGIN_PORT
+              value: "3130"
+            - name: THEIA_HOST
+              value: 0.0.0.0
+          volumeMounts:
+            - path: "/plugins"
+              name: plugins
+          mountSources: true
+          memoryLimit: "512M"
+          endpoints:
+            - name: "theia"
+              exposure: public
+              targetPort: 3100
+              secure: true
+              protocol: http
+              attributes:
+                type: ide
+                cookiesAuthEnabled: "true"
+            - name: "webviews"
+              exposure: public
+              targetPort: 3100
+              protocol: http
+              secure: true
+              attributes:
+                type: webview
+                cookiesAuthEnabled: "true"
+                unique: "true"
+            - name: "theia-dev"
+              exposure: public
+              targetPort: 3130
+              protocol: http
+              attributes:
+                type: ide-dev
+            - name: "theia-redir-1"
+              exposure: public
+              targetPort: 13131
+              protocol: http
+            - name: "theia-redir-2"
+              exposure: public
+              targetPort: 13132
+              protocol: http
+            - name: "theia-redir-3"
+              exposure: public
+              targetPort: 13133
+              protocol: http      
+
+      - name: plugins
+        volume: {} 
+          
+      - name: vsx-installer  # Mainly reads the container objects and searches for those
+                            # with che-theia.eclipse.org/vscode-extensions attributes to get VSX urls
+                            # Those found in the dedicated containers components are with a sidecar,
+                            # Those found in the che-theia container are without a sidecar.
+        attributes:
+          "app.kubernetes.io/part-of": che-theia.eclipse.org
+          "app.kubernetes.io/component": bootstrapper
+        container:
+          args:
+            - /bin/sh
+            - '-c'
+            - >
+              workspace=$(curl -fsS --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/apis/workspace.devfile.io/v1alpha2/namespaces/${CHE_WORKSPACE_NAMESPACE}/devworkspaces/${CHE_WORKSPACE_NAME}) && for container in $(echo $workspace | sed -e 's;[[,]\({"attributes":{"app.kubernetes.io\);\n\1;g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do dest=$(echo "$container" | sed 's;.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*;\1;' - ) ; urls=$(echo "$container" | sed 's;.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*;\1;' - ) ; mkdir -p $dest; for url in $(echo $urls | sed 's/[",]/ /g' - ); do echo; echo downloading $urls to $dest; curl -L $url > $dest/$(basename $url); done; done
+          image: 'quay.io/samsahai/curl:latest'
+          volumeMounts:
+            - path: "/plugins"
+              name: plugins
+
+      - name: remote-endpoint
+        volume: {}
+          # ephemeral: true                #### We should add it in the Devfile 2.0 spec ! Not critical to implement at start though
+
+      - name: remote-runtime-injector
+        attributes:
+          "app.kubernetes.io/part-of": che-theia.eclipse.org
+          "app.kubernetes.io/component": bootstrapper
+        container:                          #### corresponds to `initContainer` definition in old meta.yaml.
+          image: "quay.io/eclipse/che-theia-endpoint-runtime-binary:7.20.0"
+          volumeMounts:
+            - path: "/remote-endpoint"
+              name: remote-endpoint
+          env:
+            - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
+              value: /remote-endpoint/plugin-remote-endpoint
+            - name: REMOTE_ENDPOINT_VOLUME_NAME
+              value: remote-endpoint
+
+      - name: che-machine-exec
+        attributes:
+          "app.kubernetes.io/name": che-terminal.eclipse.org
+          "app.kubernetes.io/part-of": che.eclipse.org
+          "app.kubernetes.io/component": terminal
+        container:
+          image: "quay.io/eclipse/che-machine-exec:7.20.0"
+          command: ['/go/bin/che-machine-exec']
+          args:
+            - '--url'
+            - '0.0.0.0:4444'
+            - '--pod-selector'
+            - controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)
+          endpoints:
+            - name: "che-mach-exec"
+              exposure: public
+              targetPort: 4444
+              protocol: ws
+              secure: true
+              attributes:
+                type: terminal
+                cookiesAuthEnabled: "true"
+      - name: vscode-typescript
+        attributes:
+          "app.kubernetes.io/part-of": che-theia.eclipse.org
+          "app.kubernetes.io/component": vscode-plugin
+          
+          # Added by Che-theia at start when detecting, after cloning, that the extensions.json in the repo
+          # contains the typescript vscode plugin.
+          "che-theia.eclipse.org/vscode-extensions":
+            - https://download.jboss.org/jbosstools/vscode/3rdparty/ms-code.typescript/che-typescript-language-1.35.1.vsix
+
+        container:
+          image: "quay.io/eclipse/che-sidecar-node:10-0cb5d78"
+          memoryLimit: '512Mi'
+          env:
+            - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
+              value: /remote-endpoint/plugin-remote-endpoint 
+            - name: THEIA_PLUGINS
+              value: local-dir:///plugins/sidecars/vscode-typescript
+          volumeMounts:
+            - path: "/remote-endpoint"
+              name: remote-endpoint
+            - name: plugins
+              path: /plugins
+              
+      # plugin:
+      #   name: node-debug-plugin
+      #   id: ms-vscode/node-debug2/latest
+
+      - name: vscode-node-debug
+        attributes:
+          "app.kubernetes.io/part-of": che-theia.eclipse.org
+          "app.kubernetes.io/component": vscode-plugin
+          
+          # Added by Che-theia at start when detecting, after cloning, that the extensions.json in the repo
+          # contains the typescript vscode plugin.
+          "che-theia.eclipse.org/vscode-extensions":
+            - https://download.jboss.org/jbosstools/vscode/3rdparty/vscode-node-debug/node-debug-1.41.1.vsix
+            - https://download.jboss.org/jbosstools/vscode/3rdparty/vscode-node-debug2/node-debug2-1.42.3.vsix
+            
+        container:
+          image: "quay.io/eclipse/che-sidecar-node:12-026416c"
+          memoryLimit: '512Mi'
+          env:
+            - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
+              value: /remote-endpoint/plugin-remote-endpoint 
+            - name: THEIA_PLUGINS
+              value: local-dir:///plugins/sidecars/vscode-node-debug
+          volumeMounts:
+            - path: "/remote-endpoint"
+              name: remote-endpoint
+            - name: plugins-node-debug-plugin
+              path: /plugins
+
+      # User runtime container 
+      - name: nodejs
+        container:
+          image: quay.io/eclipse/che-nodejs10-ubi:nightly
+          memoryLimit: 512Mi
+          endpoints:
+            - name: nodejs
+              protocol: http
+              targetPort: 3000
+          mountSources: true
+
+    commands:
+
+      # Commands coming from plugin editor
+      - id: inject-theia-in-remote-sidecar
+        apply:
+          component: remote-runtime-injector
+      - id: copy-vsx
+        apply:
+          component: vsx-installer
+
+      # User commands
+      - id: download dependencies
+        exec:
+          component: nodejs
+          commandLine: npm install
+          workingDir: ${PROJECTS_ROOT}/project/app
+      - id: run the app
+        exec:
+          component: nodejs
+          commandLine: nodemon app.js
+          workingDir: ${PROJECTS_ROOT}/project/app
+      - id: run the app (debugging enabled)
+        exec:
+          component: nodejs
+          commandLine: nodemon --inspect app.js
+          workingDir: ${PROJECTS_ROOT}/project/app
+      - id: stop the app
+        exec:
+          component: nodejs
+          commandLine: >-
+              node_server_pids=$(pgrep -fx '.*nodemon (--inspect )?app.js' | tr "\\n" " ") &&
+              echo "Stopping node server with PIDs: ${node_server_pids}" &&
+              kill -15 ${node_server_pids} &>/dev/null && echo 'Done.'
+      - id: Attach remote debugger
+        vscodeLaunch:
+          inlined: |
+            {
+              "version": "0.2.0",
+              "configurations": [
+                {
+                  "type": "node",
+                  "request": "attach",
+                  "name": "Attach to Remote",
+                  "address": "localhost",
+                  "port": 9229,
+                  "localRoot": "${workspaceFolder}",
+                  "remoteRoot": "${workspaceFolder}"
+                }
+              ]
+            }
+    
+    events:
+      preStart:
+        - inject-theia-in-remote-sidecar
+        - copy-vsx

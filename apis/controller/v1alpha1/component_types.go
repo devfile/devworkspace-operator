@@ -26,6 +26,8 @@ type WorkspaceComponentSpec struct {
 	Components []devworkspace.Component `json:"components"`
 	// Commands from devfile, to be matched to components
 	Commands []devworkspace.Command `json:"commands,omitempty"`
+	// Events
+	Events *devworkspace.Events  `json:"events,omitempty"`
 }
 
 // ComponentStatus defines the observed state of Component

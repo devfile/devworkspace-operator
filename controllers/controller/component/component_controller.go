@@ -31,6 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+
+	"github.com/devfile/devworkspace-operator/pkg/library"
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 )
 
 var configMapDiffOpts = cmp.Options{
@@ -73,8 +76,18 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, nil
 	}
 
+
+    initContainers, mainComponents, err := library.GetInitContainers(devworkspace.DevWorkspaceTemplateSpecContent {
+		Components: instance.Spec.Components,
+		Commands: instance.Spec.Commands,
+		Events: instance.Spec.Events,
+	})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	
 	var components []controllerv1alpha1.ComponentDescription
-	dockerimageDevfileComponents, pluginDevfileComponents, err := adaptor.SortComponentsByType(instance.Spec.Components)
+	dockerimageDevfileComponents, pluginDevfileComponents, err := adaptor.SortComponentsByType(mainComponents)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -94,6 +107,22 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 	components = append(components, pluginComponents...)
+
+	initContainerComponents, err := adaptor.AdaptDockerimageComponents(instance.Spec.WorkspaceId, initContainers, []devworkspace.Command{})
+
+	for compIndex := range initContainerComponents {
+		initContainerComponents[compIndex].ComponentMetadata = controllerv1alpha1.ComponentMetadata{}
+		initContainerComponents[compIndex].PodAdditions.InitContainers = initContainerComponents[compIndex].PodAdditions.Containers
+		for containerIndex := range initContainerComponents[compIndex].PodAdditions.InitContainers {
+			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].LivenessProbe = nil
+			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].ReadinessProbe = nil
+			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].Resources = corev1.ResourceRequirements{}
+			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].Ports = []corev1.ContainerPort{}
+		}
+		initContainerComponents[compIndex].PodAdditions.Containers = []corev1.Container{}
+	}
+
+	components = append(components, initContainerComponents...)
 
 	if brokerConfigMap != nil {
 		reqLogger.Info("Reconciling broker ConfigMap")

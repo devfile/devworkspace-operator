@@ -74,15 +74,15 @@ func (s *ClusterSolver) GetExposedEndpoints(
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			endpointAttributes := map[string]string{}
-			endpoint.Attributes.DecodeInto(&endpointAttributes)
-			if endpointAttributes[string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
+			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
 				continue
 			}
 			url, err := resolveServiceHostnameForEndpoint(endpoint, routingObj.Services)
 			if err != nil {
 				return nil, false, err
 			}
+			endpointAttributes := map[string]string{}
+			endpoint.Attributes.Into(&endpointAttributes)
 			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], controllerv1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
 				Url:        url,

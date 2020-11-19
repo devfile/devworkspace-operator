@@ -103,7 +103,7 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			proxyEndpoint := portMappings[upstreamEndpoint.Name]
 			endpoint := proxyEndpoint.publicEndpoint
 			var tls *routeV1.TLSConfig = nil
-			if endpoint.Attributes.Strings()[string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" {
+			if endpoint.Secure {
 				if endpoint.Attributes.Strings()[string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] == "terminal" {
 					tls = &routeV1.TLSConfig{
 						Termination:                   routeV1.TLSTerminationEdge,
@@ -171,10 +171,8 @@ func getProxyEndpointMappings(
 }
 
 func endpointNeedsProxy(endpoint devworkspace.Endpoint) bool {
-	stringAttributes := endpoint.Attributes.Strings()
-	publicAttr, exists := stringAttributes[string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)]
-	endpointIsPublic := !exists || (publicAttr == "true")
+	endpointIsPublic := endpoint.Exposure == "" || endpoint.Exposure == devworkspace.PublicEndpointExposure
 	return endpointIsPublic &&
-		stringAttributes[string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)] == "true" &&
-		stringAttributes[string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] != "terminal"
+		endpoint.Secure &&
+		endpoint.Attributes.Get(string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)) != "terminal"
 }

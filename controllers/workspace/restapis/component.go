@@ -16,7 +16,6 @@ import (
 	"strings"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/api/pkg/attributes"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -33,6 +32,9 @@ func IsCheRestApisConfigured() bool {
 func IsCheRestApisRequired(components []devworkspace.Component) bool {
 	for _, comp := range components {
 		if comp.Plugin != nil && strings.Contains(comp.Plugin.Id, config.TheiaEditorID) {
+			return true
+		}
+		if comp.Attributes.Get("app.kubernetes.io/name") == "che-theia.eclipse.org" {
 			return true
 		}
 	}
@@ -111,14 +113,10 @@ func GetCheRestApisComponent(workspaceName, workspaceId, namespace string) contr
 			},
 			Endpoints: []devworkspace.Endpoint{
 				{
-					Attributes: attributes.Attributes{}.FromStringMap(map[string]string{
-						string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE):   "false",
-						string(controllerv1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE): "tcp",
-					}),
+					Exposure: devworkspace.InternalEndpointExposure,
+					Protocol: devworkspace.TCPEndpointProtocol,
 					Name:       cheRestAPIsName,
 					TargetPort: cheRestApisPort,
-					Exposure:   devworkspace.PublicEndpointExposure,
-					Protocol:   devworkspace.HTTPEndpointProtocol,
 				},
 			},
 		},

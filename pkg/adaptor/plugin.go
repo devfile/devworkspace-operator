@@ -14,7 +14,6 @@ package adaptor
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/devfile/api/pkg/attributes"
@@ -128,18 +127,34 @@ func createEndpointsFromPlugin(plugin brokerModel.ChePlugin) []devworkspace.Endp
 
 	for _, pluginEndpoint := range plugin.Endpoints {
 		// Default value of http for protocol, may be overwritten by pluginEndpoint attributes
-		attributes := attributes.Attributes{}.FromStringMap(map[string]string{
-			string(v1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE): "http",
-			string(v1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE):   strconv.FormatBool(pluginEndpoint.Public),
-		})
-		for key, val := range pluginEndpoint.Attributes {
-			attributes.PutString(key, val)
+		exposure := devworkspace.PublicEndpointExposure
+		if !pluginEndpoint.Public {
+			exposure = devworkspace.InternalEndpointExposure
 		}
-		endpoints = append(endpoints, devworkspace.Endpoint{
+		endpoint := devworkspace.Endpoint{
 			Name:       common.EndpointName(pluginEndpoint.Name),
 			TargetPort: pluginEndpoint.TargetPort,
-			Attributes: attributes,
-		})
+			Protocol:   devworkspace.HTTPEndpointProtocol,
+			Exposure:   exposure,
+		}
+		attributes := attributes.Attributes{}
+		for key, val := range pluginEndpoint.Attributes {
+			if key == "path" {
+				endpoint.Path = val
+				continue
+			}
+			if key == "secure" && val == "true" {
+				endpoint.Secure = true
+				continue
+			}
+			if key == "protocol" {
+				endpoint.Protocol = devworkspace.EndpointProtocol(val)
+				continue
+			}
+			attributes.PutString(key, val)
+		}
+		endpoint.Attributes = attributes
+		endpoints = append(endpoints, endpoint)
 	}
 
 	return endpoints

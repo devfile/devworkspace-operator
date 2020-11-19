@@ -118,7 +118,7 @@ func getRoutingForSpec(endpoints map[string]controllerv1alpha1.EndpointList, met
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Attributes.GetString(string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)) != "true" {
+			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
 				continue
 			}
 			if config.ControllerCfg.IsOpenShift() {

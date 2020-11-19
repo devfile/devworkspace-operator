@@ -31,8 +31,8 @@ func getExposedEndpoints(
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			endpointAttributes := map[string]string{}
-			endpoint.Attributes.DecodeInto(&endpointAttributes)
-			if endpointAttributes[string(controllerv1alpha1.PUBLIC_ENDPOINT_ATTRIBUTE)] != "true" {
+			endpoint.Attributes.Into(&endpointAttributes)
+			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
 				continue
 			}
 			endpointUrl, err := resolveURLForEndpoint(endpoint, routingObj)
@@ -73,13 +73,13 @@ func resolveURLForEndpoint(
 }
 
 func getURLForEndpoint(endpoint devworkspace.Endpoint, host string, secure bool) string {
-	protocol := endpoint.Attributes.GetString(string(controllerv1alpha1.PROTOCOL_ENDPOINT_ATTRIBUTE))
-	if secure && endpoint.Attributes.GetString(string(controllerv1alpha1.SECURE_ENDPOINT_ATTRIBUTE)) == "true" {
-		protocol = getSecureProtocol(protocol)
+	protocol := endpoint.Protocol
+	if secure && endpoint.Secure {
+		protocol = devworkspace.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
-	path := endpoint.Attributes.GetString(string(controllerv1alpha1.PATH_ENDPOINT_ATTRIBUTE))
+	path := endpoint.Path
 	u := url.URL{
-		Scheme: protocol,
+		Scheme: string(protocol),
 		Host:   host,
 		Path:   path,
 	}

@@ -42,7 +42,7 @@ func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace
 		return v1alpha1.ComponentDescription{}, fmt.Errorf("trying to adapt devfile v1 dockerimage from non-container component")
 	}
 	devfileContainer := *devfileComponent.Container
-	container, containerDescription, err := getContainerFromDevfile(workspaceId, devfileComponent.Key(), devfileContainer)
+	container, containerDescription, err := getContainerFromDevfile(workspaceId, devfileComponent.Key(), devfileComponent)
 	if err != nil {
 		return v1alpha1.ComponentDescription{}, nil
 	}
@@ -68,7 +68,8 @@ func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace
 	return component, nil
 }
 
-func getContainerFromDevfile(workspaceId, componentName string, devfileComponent devworkspace.ContainerComponent) (corev1.Container, v1alpha1.ContainerDescription, error) {
+func getContainerFromDevfile(workspaceId, componentName string, component devworkspace.Component) (corev1.Container, v1alpha1.ContainerDescription, error) {
+	devfileComponent := component.Container
 	containerResources, err := adaptResourcesFromString(devfileComponent.MemoryLimit)
 	if err != nil {
 		return corev1.Container{}, v1alpha1.ContainerDescription{}, err
@@ -99,9 +100,14 @@ func getContainerFromDevfile(workspaceId, componentName string, devfileComponent
 		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
 	}
 
+	source := config.RestApisRecipeSourceContainerAttribute
+	if component.Attributes.Exists("app.kubernetes.io/component") {
+		source = config.RestApisRecipeSourceToolAttribute
+	}
+
 	containerDescription := v1alpha1.ContainerDescription{
 		Attributes: map[string]string{
-			config.RestApisContainerSourceAttribute: config.RestApisRecipeSourceContainerAttribute,
+			config.RestApisContainerSourceAttribute: source,
 		},
 		Ports: endpointInts,
 	}

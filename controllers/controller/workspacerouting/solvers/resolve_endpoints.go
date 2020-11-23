@@ -31,7 +31,10 @@ func getExposedEndpoints(
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			endpointAttributes := map[string]string{}
-			endpoint.Attributes.Into(&endpointAttributes)
+			err := endpoint.Attributes.Into(&endpointAttributes)
+			if err != nil {
+				return nil, false, err
+			}
 			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
 				continue
 			}

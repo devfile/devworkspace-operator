@@ -82,7 +82,10 @@ func (s *ClusterSolver) GetExposedEndpoints(
 				return nil, false, err
 			}
 			endpointAttributes := map[string]string{}
-			endpoint.Attributes.Into(&endpointAttributes)
+			err = endpoint.Attributes.Into(&endpointAttributes)
+			if err != nil {
+				return nil, false, err
+			}
 			exposedEndpoints[machineName] = append(exposedEndpoints[machineName], controllerv1alpha1.ExposedEndpoint{
 				Name:       endpoint.Name,
 				Url:        url,

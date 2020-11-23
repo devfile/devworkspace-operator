@@ -34,7 +34,7 @@ func IsCheRestApisRequired(components []devworkspace.Component) bool {
 		if comp.Plugin != nil && strings.Contains(comp.Plugin.Id, config.TheiaEditorID) {
 			return true
 		}
-		if comp.Attributes.Get("app.kubernetes.io/name") == "che-theia.eclipse.org" {
+		if comp.Attributes.Get("app.kubernetes.io/name", nil) == "che-theia.eclipse.org" {
 			return true
 		}
 	}

@@ -32,8 +32,8 @@ import (
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 
-	"github.com/devfile/devworkspace-operator/pkg/library"
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/library"
 )
 
 var configMapDiffOpts = cmp.Options{
@@ -76,16 +76,15 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, nil
 	}
 
-
-    initContainers, mainComponents, err := library.GetInitContainers(devworkspace.DevWorkspaceTemplateSpecContent {
+	initContainers, mainComponents, err := library.GetInitContainers(devworkspace.DevWorkspaceTemplateSpecContent{
 		Components: instance.Spec.Components,
-		Commands: instance.Spec.Commands,
-		Events: instance.Spec.Events,
+		Commands:   instance.Spec.Commands,
+		Events:     instance.Spec.Events,
 	})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	
+
 	var components []controllerv1alpha1.ComponentDescription
 	dockerimageDevfileComponents, pluginDevfileComponents, err := adaptor.SortComponentsByType(mainComponents)
 	if err != nil {

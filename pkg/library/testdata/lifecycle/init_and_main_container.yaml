@@ -2,18 +2,18 @@ name: "Should use container as both init and main when multiple commands apply"
 
 input:
   components:
-    - container:
-        name: test-container1
+    - name: test-container1
+      container:
         image: my-image
-    - container:
-        name: test-container2
+    - name: test-container2
+      container:
         image: my-image
   commands:
-    - apply:
-        id: test_preStart_command
+    - id: test_preStart_command
+      apply:
         component: test-container1
-    - exec:
-        id: test_regular_command
+    - id: test_regular_command
+      exec:
         component: test-container1
         command: "test_command"
   events:
@@ -22,14 +22,14 @@ input:
 
 output:
   initContainers:
-    - container:
-        name: test-container1
+    - name: test-container1
+      container:
         image: my-image
   mainContainers:
-    - container:
-        name: test-container1
+    - name: test-container1
+      container:
         image: my-image
-    - container:
-        name: test-container2
+    - name: test-container2
+      container:
         image: my-image
   errRegexp:

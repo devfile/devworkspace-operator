@@ -2,11 +2,11 @@ name: "Should return all components when devfile contains no events"
 
 input:
   components:
-    - container:
-        name: test-container1
+    - name: test-container1
+      container:
         image: my-image
-    - container:
-        name: test-container2
+    - name: test-container2
+      container:
         image: my-image
   commands:
     - exec:
@@ -16,10 +16,10 @@ input:
 output:
   initContainers:
   mainContainers:
-    - container:
-        name: test-container1
+    - name: test-container1
+      container:
         image: my-image
-    - container:
-        name: test-container2
+    - name: test-container2
+      container:
         image: my-image
   errRegexp:

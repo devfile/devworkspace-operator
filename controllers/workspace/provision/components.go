@@ -157,7 +157,7 @@ func getSpecComponents(workspace *devworkspace.DevWorkspace, scheme *runtime.Sch
 				WorkspaceId: workspace.Status.WorkspaceId,
 				Components:  dockerComponents,
 				Commands:    workspace.Spec.Template.Commands,
-				Events: workspace.Spec.Template.Events,
+				Events:      workspace.Spec.Template.Events,
 			},
 		}
 		err = controllerutil.SetControllerReference(workspace, &dockerResolver, scheme)
@@ -179,7 +179,7 @@ func getSpecComponents(workspace *devworkspace.DevWorkspace, scheme *runtime.Sch
 				WorkspaceId: workspace.Status.WorkspaceId,
 				Components:  pluginComponents,
 				Commands:    workspace.Spec.Template.Commands,
-				Events: workspace.Spec.Template.Events,
+				Events:      workspace.Spec.Template.Events,
 			},
 		}
 		err = controllerutil.SetControllerReference(workspace, &pluginResolver, scheme)

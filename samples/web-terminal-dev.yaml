@@ -14,6 +14,6 @@ spec:
   routingClass: 'basic'
   template:
     components:
-      - name: web-terminal
-        plugin:
+      - plugin:
+          name: web-terminal
           id: redhat-developer/web-terminal-dev/4.5.0

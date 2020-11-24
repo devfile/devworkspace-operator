@@ -41,12 +41,13 @@ spec:
                       properties:
                         attributes:
                           additionalProperties:
-                            type: string
+                            x-kubernetes-preserve-unknown-fields: true
                           description: "Map of implementation-dependant string-based\
                             \ free-form attributes. \n Examples of Che-specific attributes:\
                             \ \n - cookiesAuthEnabled: \"true\" / \"false\", \n -\
                             \ type: \"terminal\" / \"ide\" / \"ide-dev\","
                           type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         exposure:
                           default: public
                           description: "Describes how the endpoint should be exposed\

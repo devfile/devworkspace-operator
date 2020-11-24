@@ -12,16 +12,13 @@ spec:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
     components:
-      - name: editor
-        plugin:
+      - plugin:
           id: eclipse/che-theia/latest
-      - 
-        name: terminal
-        plugin:
+      - plugin:
           id: eclipse/che-machine-exec-plugin/latest
     commands:
-      - id: say hello
-        exec:
+      - exec:
+          id: say hello
           component: plugin
           commandLine: echo "Hello from $(pwd)"
           workingDir: ${PROJECTS_ROOT}/project/app

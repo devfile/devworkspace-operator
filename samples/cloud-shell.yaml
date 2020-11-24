@@ -6,11 +6,11 @@ spec:
   started: true
   template:
     components:
-      - name: cloud-shell
-        plugin:
+      - plugin:
+          name: cloud-shell
           id: eclipse/cloud-shell/nightly
-      - name: dev
-        container:
+      - container:
+          name: dev
           image: quay.io/eclipse/che-sidecar-openshift-connector:0.1.2-2601509
           memoryLimit: 256Mi
           args: ["tail", "-f", "/dev/null"]

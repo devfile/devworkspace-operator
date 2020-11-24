@@ -96,6 +96,9 @@ _create_namespace:
 _generate_related_images_env:
 	mkdir -p $(INTERNAL_TMP_DIR)
 	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)" > $(RELATED_IMAGES_FILE)
+ifeq ($(PLATFORM),kubernetes)
+	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" > $(RELATED_IMAGES_FILE)
+endif
 	cat ./config/components/manager/manager.yaml \
 		| yq -r \
 			'.spec.template.spec.containers[]?.env[] | select(.name | startswith("RELATED_IMAGE")) | "export \(.name)=\"$${\(.name):-\(.value)}\""' \

@@ -2,15 +2,15 @@ name: "Should return init container with prestart apply command"
 
 input:
   components:
-    - container:
-        name: test-container1
+    - name: test-container1
+      container:
         image: my-image
-    - container:
-        name: test-container2
+    - name: test-container2
+      container:
         image: my-image
   commands:
-    - apply:
-        id: test_apply_command
+    - id: test_apply_command
+      apply:
         component: test-container1
   events:
     preStart:
@@ -18,11 +18,11 @@ input:
 
 output:
   initContainers:
-    - container:
-        name: test-container1
+    - name: test-container1
+      container:
         image: my-image
   mainContainers:
-    - container:
-        name: test-container2
+    - name: test-container2
+      container:
         image: my-image
   errRegexp:

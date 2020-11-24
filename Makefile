@@ -179,19 +179,22 @@ install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy
 		--ignore-not-found
 
 	mv config/cert-manager/kustomization.yaml config/cert-manager/kustomization.yaml.bak
+	mv config/service-ca/kustomization.yaml config/service-ca/kustomization.yaml.bak
 	mv config/base/config.properties config/base/config.properties.bak
 	mv config/base/manager_image_patch.yaml config/base/manager_image_patch.yaml.bak
 
 	envsubst < config/cert-manager/kustomization.yaml.bak > config/cert-manager/kustomization.yaml
+	envsubst < config/service-ca/kustomization.yaml.bak > config/service-ca/kustomization.yaml
 	envsubst < config/base/config.properties.bak > config/base/config.properties
 	envsubst < config/base/manager_image_patch.yaml.bak > config/base/manager_image_patch.yaml
 ifeq ($(PLATFORM),kubernetes)
 	$(KUSTOMIZE) build config/cert-manager | $(K8S_CLI) apply -f - || true
 else
-	@echo "TODO: OpenShift certificates support not implemented"
+	$(KUSTOMIZE) build config/service-ca | $(K8S_CLI) apply -f - || true
 endif
 
 	mv config/cert-manager/kustomization.yaml.bak config/cert-manager/kustomization.yaml
+	mv config/service-ca/kustomization.yaml.bak config/service-ca/kustomization.yaml
 	mv config/base/config.properties.bak config/base/config.properties
 	mv config/base/manager_image_patch.yaml.bak config/base/manager_image_patch.yaml
 
@@ -214,8 +217,7 @@ uninstall: _kustomize
 ifeq ($(PLATFORM),kubernetes)
 	$(KUSTOMIZE) build config/cert-manager | $(K8S_CLI) delete --ignore-not-found -f -
 else
-	echo "Support for the OpenShift-CA operator not implemented yet"
-	$(KUSTOMIZE) build config/base | $(K8S_CLI) delete --ignore-not-found -f -
+	$(KUSTOMIZE) build config/service-ca | $(K8S_CLI) delete --ignore-not-found -f -
 endif
 	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found

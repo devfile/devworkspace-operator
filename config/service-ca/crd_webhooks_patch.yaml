@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   name: devworkspaces.workspace.devfile.io
   annotations:
-    cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+    service.beta.openshift.io/inject-cabundle: "true"
 spec:
   conversion:
     strategy: Webhook
@@ -16,7 +16,7 @@ spec:
           # Note: service name is hard-coded in pkg/webhook/server/server.go
           name: devworkspace-webhookserver
           path: /convert
-        # caBundle will be filled by cert-manager on creation
+        # caBundle will be filled by Service CA operator
         caBundle: Cg==
 ---
 # Add webhooks to the devfile/api CRDs
@@ -25,7 +25,7 @@ kind: CustomResourceDefinition
 metadata:
   name: devworkspacetemplates.workspace.devfile.io
   annotations:
-    cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+    service.beta.openshift.io/inject-cabundle: "true"
 spec:
   conversion:
     strategy: Webhook
@@ -37,5 +37,5 @@ spec:
           # Note: service name is hard-coded in pkg/webhook/server/server.go
           name: devworkspace-webhookserver
           path: /convert
-        # caBundle will be filled by cert-manager on creation
+        # caBundle will be filled by Service CA operator
         caBundle: Cg==

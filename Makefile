@@ -24,7 +24,7 @@ export PULL_POLICY ?= Always
 export WEBHOOK_ENABLED ?= true
 export DEFAULT_ROUTING ?= basic
 REGISTRY_ENABLED ?= true
-DEVWORKSPACE_API_VERSION ?= v1alpha1
+DEVWORKSPACE_API_VERSION ?= 1103496bda97425017e4f7fb01e4896ecfa2b5d8
 
 #internal params
 INTERNAL_TMP_DIR=/tmp/devworkspace-controller

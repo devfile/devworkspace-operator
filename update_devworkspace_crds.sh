@@ -45,7 +45,7 @@ if git show-ref --verify refs/tags/"${DEVWORKSPACE_API_VERSION}" --quiet; then
 	git checkout --quiet tags/"${DEVWORKSPACE_API_VERSION}"
 elif git rev-parse --verify "${DEVWORKSPACE_API_VERSION}"; then
 	echo 'DevWorkspace API is specified from branch'
-	git checkout --quiet "${DEVWORKSPACE_API_VERSION}" && git reset --hard origin/"${DEVWORKSPACE_API_VERSION}"
+	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 else
 	echo 'DevWorkspace API is specified from revision'
 	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"

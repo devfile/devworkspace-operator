@@ -72,7 +72,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	} else {
 		secretName, err := config.GetWebhooksSecretName()
 		if err != nil {
-			return fmt.Errorf("failed to create webhooks deployment: %w", err)
+			return fmt.Errorf("could not deploy webhooks server: %w", err)
 		}
 		// Set up the certs for kubernetes
 		log.Info("Setting up the Kubernetes webhook server secure service")

@@ -93,7 +93,7 @@ _print_vars:
 _create_namespace:
 	$(K8S_CLI) create namespace $(NAMESPACE) || true
 
-_generate_related_images_env:
+_gen_configuration_env:
 	mkdir -p $(INTERNAL_TMP_DIR)
 	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)" > $(RELATED_IMAGES_FILE)
 ifeq ($(PLATFORM),kubernetes)
@@ -152,7 +152,7 @@ _login_with_devworkspace_sa:
 	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### run: Run against the configured Kubernetes cluster in ~/.kube/config
-run: _print_vars _generate_related_images_env _bump_kubeconfig _login_with_devworkspace_sa
+run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
@@ -160,7 +160,7 @@ run: _print_vars _generate_related_images_env _bump_kubeconfig _login_with_devwo
 		go run ./main.go
 
 
-debug: _print_vars _generate_related_images_env _bump_kubeconfig _login_with_devworkspace_sa
+debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
@@ -298,7 +298,7 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
-### install_cert_manager: install Cert Mananger on the cluster
+### install_cert_manager: install Cert Mananger v1.0.4 on the cluster
 install_cert_manager:
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
 

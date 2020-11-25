@@ -104,7 +104,7 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			endpoint := proxyEndpoint.publicEndpoint
 			var tls *routeV1.TLSConfig = nil
 			if endpoint.Secure {
-				if endpoint.Attributes.Strings(nil)[string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE)] == "terminal" {
+				if endpoint.Attributes.GetString(string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE), nil) == "terminal" {
 					tls = &routeV1.TLSConfig{
 						Termination:                   routeV1.TLSTerminationEdge,
 						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,

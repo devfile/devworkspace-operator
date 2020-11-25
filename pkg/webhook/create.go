@@ -70,7 +70,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 			return err
 		}
 	} else {
-		secretName, err := config.GetWebhooksSecretName()
+		secretName, err = config.GetWebhooksSecretName()
 		if err != nil {
 			return fmt.Errorf("could not deploy webhooks server: %w", err)
 		}

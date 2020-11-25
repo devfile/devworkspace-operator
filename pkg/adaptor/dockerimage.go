@@ -30,21 +30,19 @@ func AdaptDockerimageComponents(workspaceId string, containerComponents []devwor
 		if err != nil {
 			return nil, err
 		}
-
-		components = append(components, component)
+		components = append(components, *component)
 	}
-
 	return components, nil
 }
 
-func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace.Component, commands []devworkspace.Command) (v1alpha1.ComponentDescription, error) {
+func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace.Component, commands []devworkspace.Command) (*v1alpha1.ComponentDescription, error) {
 	if devfileComponent.Container == nil {
-		return v1alpha1.ComponentDescription{}, fmt.Errorf("trying to adapt devfile v1 dockerimage from non-container component")
+		return nil, fmt.Errorf("trying to adapt devfile v1 dockerimage from non-container component")
 	}
 	devfileContainer := *devfileComponent.Container
 	container, containerDescription, err := getContainerFromDevfile(workspaceId, devfileComponent.Key(), devfileComponent)
 	if err != nil {
-		return v1alpha1.ComponentDescription{}, nil
+		return nil, err
 	}
 	if devfileContainer.MountSources != nil && *devfileContainer.MountSources {
 		container.VolumeMounts = append(container.VolumeMounts, GetProjectSourcesVolumeMount(workspaceId))
@@ -58,7 +56,7 @@ func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace
 		Endpoints:                  devfileContainer.Endpoints,
 	}
 
-	component := v1alpha1.ComponentDescription{
+	component := &v1alpha1.ComponentDescription{
 		Name: devfileComponent.Name,
 		PodAdditions: v1alpha1.PodAdditions{
 			Containers: []corev1.Container{container},
@@ -66,6 +64,31 @@ func adaptDockerimageComponent(workspaceId string, devfileComponent devworkspace
 		ComponentMetadata: componentMetadata,
 	}
 	return component, nil
+}
+
+func AdaptInitContainerComponents(workspaceId string, containerComponents []devworkspace.Component) ([]v1alpha1.ComponentDescription, error) {
+	var initContainerComponents []v1alpha1.ComponentDescription
+	for _, component := range containerComponents {
+		if component.Container == nil {
+			return nil, fmt.Errorf("trying to adapt devfile v1 dockerimage from non-container component")
+		}
+		initContainerComponent := *component.Container
+		container, _, err := getContainerFromDevfile(workspaceId, component.Key(), component)
+		if err != nil {
+			return nil, err
+		}
+		if initContainerComponent.MountSources != nil && *initContainerComponent.MountSources {
+			container.VolumeMounts = append(container.VolumeMounts, GetProjectSourcesVolumeMount(workspaceId))
+		}
+
+		initContainerComponents = append(initContainerComponents, v1alpha1.ComponentDescription{
+			Name: component.Name,
+			PodAdditions: v1alpha1.PodAdditions{
+				InitContainers: []corev1.Container{container},
+			},
+		})
+	}
+	return initContainerComponents, nil
 }
 
 func getContainerFromDevfile(workspaceId, componentName string, component devworkspace.Component) (corev1.Container, v1alpha1.ContainerDescription, error) {

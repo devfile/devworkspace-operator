@@ -107,18 +107,9 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	components = append(components, pluginComponents...)
 
-	initContainerComponents, err := adaptor.AdaptDockerimageComponents(instance.Spec.WorkspaceId, initContainers, []devworkspace.Command{})
-
-	for compIndex := range initContainerComponents {
-		initContainerComponents[compIndex].ComponentMetadata = controllerv1alpha1.ComponentMetadata{}
-		initContainerComponents[compIndex].PodAdditions.InitContainers = initContainerComponents[compIndex].PodAdditions.Containers
-		for containerIndex := range initContainerComponents[compIndex].PodAdditions.InitContainers {
-			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].LivenessProbe = nil
-			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].ReadinessProbe = nil
-			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].Resources = corev1.ResourceRequirements{}
-			initContainerComponents[compIndex].PodAdditions.InitContainers[containerIndex].Ports = []corev1.ContainerPort{}
-		}
-		initContainerComponents[compIndex].PodAdditions.Containers = []corev1.Container{}
+	initContainerComponents, err := adaptor.AdaptInitContainerComponents(instance.Spec.WorkspaceId, initContainers)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	components = append(components, initContainerComponents...)

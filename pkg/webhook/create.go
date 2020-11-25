@@ -65,6 +65,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		secretName = server.WebhookServerTLSSecretName
 		// Set up the certs for OpenShift
 		log.Info("Setting up the OpenShift webhook server secure service")
+		log.Info("Injecting serving cert using the Service CA operator")
 		err := webhook_openshift.SetupSecureService(client, ctx, secretName, namespace)
 		if err != nil {
 			return err
@@ -74,8 +75,8 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		if err != nil {
 			return fmt.Errorf("could not deploy webhooks server: %w", err)
 		}
-		// Set up the certs for kubernetes
 		log.Info("Setting up the Kubernetes webhook server secure service")
+		log.Info(fmt.Sprintf("Using certificate stored in secret '%s' to serve webhooks", secretName))
 		err = webhook_k8s.SetupSecureService(client, ctx, secretName, namespace)
 		if err != nil {
 			return err

@@ -81,8 +81,8 @@ func (s *ClusterSolver) GetExposedEndpoints(
 			if err != nil {
 				return nil, false, err
 			}
-			endpointAttributes := map[string]string{}
-			err = endpoint.Attributes.Into(&endpointAttributes)
+
+			endpointAttributes := endpoint.Attributes.Strings(&err)
 			if err != nil {
 				return nil, false, err
 			}

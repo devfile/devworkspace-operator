@@ -8,8 +8,6 @@ resources:
 - bases/workspace.devfile.io_devworkspacetemplates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource
 
-patchesStrategicMerge:
-
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 configurations:
 - kustomizeconfig.yaml

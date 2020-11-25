@@ -173,14 +173,6 @@ install_crds: _kustomize _init_devworkspace_crds
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
-	# workaround since applying CRDs when artifacts already exist hangs forever on minikube
-	$(K8S_CLI) delete crds \
-		components.controller.devfile.io \
-		workspaceroutings.controller.devfile.io \
-		devworkspaces.workspace.devfile.io \
-		devworkspacetemplates.workspace.devfile.io \
-		--ignore-not-found
-
 	mv config/cert-manager/kustomization.yaml config/cert-manager/kustomization.yaml.bak
 	mv config/service-ca/kustomization.yaml config/service-ca/kustomization.yaml.bak
 	mv config/base/config.properties config/base/config.properties.bak

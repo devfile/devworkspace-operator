@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/apex/log v1.9.0
-	github.com/devfile/api v0.0.0-20201124045316-1103496bda97
+	github.com/devfile/api v0.0.0-20201125082321-aeda60d43619
 	github.com/eclipse/che-go-jsonrpc v0.0.0-20200317130110-931966b891fe // indirect
 	github.com/eclipse/che-plugin-broker v3.4.0+incompatible
 	github.com/go-logr/logr v0.1.0

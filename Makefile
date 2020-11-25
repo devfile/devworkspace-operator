@@ -24,7 +24,7 @@ export PULL_POLICY ?= Always
 export WEBHOOK_ENABLED ?= true
 export DEFAULT_ROUTING ?= basic
 REGISTRY_ENABLED ?= true
-DEVWORKSPACE_API_VERSION ?= 1103496bda97425017e4f7fb01e4896ecfa2b5d8
+DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
 
 #internal params
 INTERNAL_TMP_DIR=/tmp/devworkspace-controller
@@ -97,7 +97,7 @@ _gen_configuration_env:
 	mkdir -p $(INTERNAL_TMP_DIR)
 	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)" > $(RELATED_IMAGES_FILE)
 ifeq ($(PLATFORM),kubernetes)
-	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" > $(RELATED_IMAGES_FILE)
+	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" >> $(RELATED_IMAGES_FILE)
 endif
 	cat ./config/components/manager/manager.yaml \
 		| yq -r \

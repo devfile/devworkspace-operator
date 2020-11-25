@@ -12,7 +12,6 @@
 
 set -e
 
-DEVWORKSPACE_API_VERSION=v1alpha1
 INIT_ONLY=0
 
 while [[ "$#" -gt 0 ]]; do
@@ -24,9 +23,16 @@ while [[ "$#" -gt 0 ]]; do
   shift 1
 done
 
+if [ -z $DEVWORKSPACE_API_VERSION ]; then
+  echo "Argument --api-version is required"
+  exit 1
+fi
+
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
-if [[ ($INIT_ONLY -eq 1) && (-f "$SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspaces.yaml") ]]; then
+if [[ ($INIT_ONLY -eq 1) &&
+      (-f "$SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspaces.yaml") &&
+      (-f "$SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml")]]; then
   # devworkspace crd is already initialized
   exit 0
 fi

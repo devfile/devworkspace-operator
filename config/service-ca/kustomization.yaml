@@ -1,6 +1,9 @@
 # Adds namespace to all resources.
 namespace: ${NAMESPACE}
 
+# Prefix for names of all resources created by this kustomization
+namePrefix: devworkspace-controller-
+
 bases:
 - ../base
 

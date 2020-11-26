@@ -24,6 +24,7 @@ import (
 	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/timing"
 	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -114,6 +115,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 
 	if !workspace.Spec.Started {
+		timing.ClearAnnotations(workspace)
+		r.syncTimingToCluster(ctx, workspace, reqLogger)
 		return r.stopWorkspace(workspace, reqLogger)
 	}
 
@@ -128,7 +131,9 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		Conditions: map[devworkspace.WorkspaceConditionType]string{},
 		Phase:      devworkspace.WorkspaceStatusStarting,
 	}
+	timing.SetTime(workspace, timing.WorkspaceStarted)
 	defer func() (reconcile.Result, error) {
+		r.syncTimingToCluster(ctx, workspace, reqLogger)
 		return r.updateWorkspaceStatus(workspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
@@ -158,6 +163,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 
 	// Step one: Create components, and wait for their states to be ready.
+	timing.SetTime(workspace, timing.ComponentsCreated)
 	componentsStatus := provision.SyncComponentsToCluster(workspace, clusterAPI)
 	if !componentsStatus.Continue {
 		if componentsStatus.FailStartup {
@@ -175,6 +181,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 	componentDescriptions := componentsStatus.ComponentDescriptions
 	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
+	timing.SetTime(workspace, timing.ComponentsReady)
 
 	// Only add che rest apis if Theia editor is present in the devfile
 	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
@@ -199,6 +206,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
+	timing.SetTime(workspace, timing.RoutingCreated)
 	routingStatus := provision.SyncRoutingToCluster(workspace, componentDescriptions, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
@@ -212,6 +220,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
 	reconcileStatus.Conditions[devworkspace.WorkspaceRoutingReady] = ""
+	timing.SetTime(workspace, timing.RoutingReady)
 
 	statusOk, err := syncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
@@ -257,6 +266,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	reconcileStatus.Conditions[devworkspace.WorkspaceServiceAccountReady] = ""
 
 	// Step five: Create deployment and wait for it to be ready
+	timing.SetTime(workspace, timing.DeploymentCreated)
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, componentDescriptions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
@@ -269,6 +279,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
 	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
+	timing.SetTime(workspace, timing.DeploymentReady)
 
 	serverReady, err := checkServerStatus(workspace)
 	if err != nil {
@@ -277,6 +288,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if !serverReady {
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
 	}
+	timing.SetTime(workspace, timing.ServersReady)
+	timing.SummarizeStartup(workspace)
 	reconcileStatus.Phase = devworkspace.WorkspaceStatusRunning
 	return reconcile.Result{}, nil
 }
@@ -316,6 +329,19 @@ func (r *DevWorkspaceReconciler) stopWorkspace(workspace *devworkspace.DevWorksp
 		status.Phase = devworkspace.WorkspaceStatusStopped
 	}
 	return r.updateWorkspaceStatus(workspace, logger, status, reconcile.Result{}, nil)
+}
+
+func (r *DevWorkspaceReconciler) syncTimingToCluster(
+	ctx context.Context, workspace *devworkspace.DevWorkspace, reqLogger logr.Logger) {
+	if timing.IsEnabled() {
+		if err := r.Update(ctx, workspace); err != nil {
+			if k8sErrors.IsConflict(err) {
+				reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")
+			} else {
+				reqLogger.Error(err, "Error trying to apply timing annotations to devworkspace")
+			}
+		}
+	}
 }
 
 func getWorkspaceId(instance *devworkspace.DevWorkspace) (string, error) {

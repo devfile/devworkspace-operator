@@ -4,6 +4,11 @@ namespace: ${NAMESPACE}
 # Prefix for names of all resources created by this kustomization
 namePrefix: devworkspace-controller-
 
+# Labels to add to all resources and selectors.
+commonLabels:
+  app.kubernetes.io/name: devworkspace-controller
+  app.kubernetes.io/part-of: devworkspace-operator
+
 bases:
 - ../base
 

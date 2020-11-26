@@ -159,6 +159,8 @@ func getProxyEndpointMappings(
 					Attributes: endpoint.Attributes,
 					Name:       fmt.Sprintf("%s-proxy", endpoint.Name),
 					TargetPort: proxyHttpsPort,
+					Secure:     endpoint.Secure,
+					Exposure:   endpoint.Exposure,
 				},
 				publicEndpointHttpPort: proxyHttpPort,
 			}

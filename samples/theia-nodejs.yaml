@@ -4,7 +4,6 @@ metadata:
   name: theia-nodejs
 spec:
   started: true
-  routingClass: 'openshift-oauth'
   template:
     projects:
       - name: project

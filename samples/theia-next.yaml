@@ -1,10 +1,9 @@
 kind: DevWorkspace
-apiVersion: workspace.devfile.io/v1alpha1
+apiVersion: workspace.devfile.io/v1alpha2
 metadata:
   name: theia
 spec:
   started: true
-  routingClass: 'basic'
   template:
     projects:
       - name: project
@@ -12,13 +11,15 @@ spec:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
     components:
-      - plugin:
-          id: eclipse/che-theia/latest
-      - plugin:
-          id: eclipse/che-machine-exec-plugin/latest
+      - name: theia
+        plugin:
+          id: eclipse/che-theia/next
+      - name: terminal
+        plugin:
+          id: eclipse/che-machine-exec-plugin/nightly
     commands:
-      - exec:
-          id: say hello
+      - id: say hello
+        exec:
           component: plugin
           commandLine: echo "Hello from $(pwd)"
           workingDir: ${PROJECTS_ROOT}/project/app

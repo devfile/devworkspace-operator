@@ -1,0 +1,25 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: theia
+spec:
+  started: true
+  template:
+    projects:
+      - name: project
+        git:
+          remotes:
+            origin: "https://github.com/che-samples/web-nodejs-sample.git"
+    components:
+      - name: theia
+        plugin:
+          id: eclipse/che-theia/latest
+      - name: terminal
+        plugin:
+          id: eclipse/che-machine-exec-plugin/latest
+    commands:
+      - id: say hello
+        exec:
+          component: plugin
+          commandLine: echo "Hello from $(pwd)"
+          workingDir: ${PROJECTS_ROOT}/project/app

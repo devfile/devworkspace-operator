@@ -44,7 +44,8 @@ func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admissio
 		return admission.Denied("The workspace info is missing in the workspace-related pod")
 	}
 
-	if creator != req.UserInfo.UID {
+	if p.Annotations[config.WorkspaceRestrictedAccessAnnotation] == "true" &&
+		creator != req.UserInfo.UID {
 		return admission.Denied("The only workspace creator has exec access")
 	}
 

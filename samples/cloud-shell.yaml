@@ -2,8 +2,11 @@ kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha1
 metadata:
   name: cloud-shell
+  annotations:
+    controller.devfile.io/restricted-access: "true"
 spec:
   started: true
+  routingClass: openshift-oauth
   template:
     components:
       - plugin:

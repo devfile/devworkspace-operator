@@ -29,7 +29,8 @@ spec:
       command: ["/go/bin/che-machine-exec",
                 "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
                 "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
-                "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)"]
+                "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+                "--use-bearer-token"]
       ports:
         - exposedPort: 4444
       env:

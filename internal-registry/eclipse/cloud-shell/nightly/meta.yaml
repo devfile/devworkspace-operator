@@ -6,6 +6,8 @@ type: Che Editor
 displayName: Cloud Shell Editor
 title: Cloud Shell Editor
 description: Cloud Shell provides an ability to use terminal widget like an editor.
+  Requires OpenShift token to be propagated with requests. It's currently supported
+  only by openshift-oauth routing.
 icon: https://www.eclipse.org/che/images/logo-eclipseche.svg
 repository: https://github.com/eclipse/che-machine-exec/
 firstPublicationDate: "2020-01-29"
@@ -31,4 +33,5 @@ spec:
               "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
               "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
               "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+              "--use-bearer-token",
               "--static", "/cloud-shell"]

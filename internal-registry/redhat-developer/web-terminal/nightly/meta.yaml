@@ -28,6 +28,7 @@ spec:
               "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
               "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
               "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+              "--use-bearer-token",
               "--use-tls"]
     ports:
       - exposedPort: 4444

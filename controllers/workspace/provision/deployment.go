@@ -159,6 +159,7 @@ func getSpecDeployment(
 			Labels: map[string]string{
 				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
+			Annotations: map[string]string{},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -179,6 +180,7 @@ func getSpecDeployment(
 						config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
 						config.WorkspaceNameLabel: workspace.Name,
 					},
+					Annotations: map[string]string{},
 				},
 				Spec: corev1.PodSpec{
 					InitContainers:                podAdditions.InitContainers,
@@ -211,6 +213,16 @@ func getSpecDeployment(
 		if config.ControllerCfg.GetWebhooksEnabled() == "true" {
 			return nil, errors.New("workspace must have creator specified to be run. Recreate it to fix an issue")
 		}
+	}
+
+	restrictedAccess, present := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	if present {
+		if config.ControllerCfg.GetWebhooksEnabled() == "false" {
+			return nil, errors.New("workspace is configured to have restricted access but webhooks are not enabled")
+		}
+
+		deployment.Annotations[config.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
+		deployment.Spec.Template.Annotations[config.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
 	}
 
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)

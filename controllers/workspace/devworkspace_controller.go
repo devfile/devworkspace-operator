@@ -146,9 +146,9 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	immutable := workspace.Annotations[config.WorkspaceImmutableAnnotation]
-	if immutable == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
-		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")
+	restrictedAccess := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	if restrictedAccess == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
+		reqLogger.Info("Workspace is configured to have restricted access but webhooks are not enabled.")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Workspace has restricted-access annotation " +
 			"applied but operator does not have webhooks enabled. " +

@@ -55,10 +55,6 @@ func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator s
 			Value: namespace,
 		},
 		{
-			Name:  "USE_BEARER_TOKEN",
-			Value: config.ControllerCfg.GetWebhooksEnabled(),
-		},
-		{
 			Name:  "DEVWORKSPACE_CREATOR",
 			Value: creator,
 		},

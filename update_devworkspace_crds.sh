@@ -33,7 +33,7 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 if [[ ($INIT_ONLY -eq 1) &&
       (-f "$SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspaces.yaml") &&
       (-f "$SCRIPT_DIR/config/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml")]]; then
-  # devworkspace crd is already initialized
+  echo "CRDs from devfile/api are already initialized"
   exit 0
 fi
 
@@ -47,13 +47,13 @@ git config core.sparsecheckout true
 echo "crds/*" > .git/info/sparse-checkout
 git fetch --quiet --tags -p origin 
 if git show-ref --verify refs/tags/"${DEVWORKSPACE_API_VERSION}" --quiet; then
-	echo 'DevWorkspace API is specified from tag'
+	echo "DevWorkspace API is specified from tag ${DEVWORKSPACE_API_VERSION}"
 	git checkout --quiet tags/"${DEVWORKSPACE_API_VERSION}"
-elif git rev-parse --verify "${DEVWORKSPACE_API_VERSION}"; then
-	echo 'DevWorkspace API is specified from branch'
+elif [[ -z $(git ls-remote --heads origin ${DEVWORKSPACE_API_VERSION}) ]]; then
+	echo "DevWorkspace API is specified from revision ${DEVWORKSPACE_API_VERSION}"
 	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 else
-	echo 'DevWorkspace API is specified from revision'
+	echo "DevWorkspace API is specified from branch ${DEVWORKSPACE_API_VERSION}"
 	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 fi
 cp crds/workspace.devfile.io_devworkspaces.yaml \

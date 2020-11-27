@@ -64,13 +64,3 @@ func (w *Deployment) DeployWorkspacesController() error {
 
 	return nil
 }
-
-func (w *Deployment) CustomResourceDefinitions() error {
-	devWorkspaceCRD := exec.Command("make", "install_crds")
-	output, err := devWorkspaceCRD.CombinedOutput()
-	if err != nil && !strings.Contains(string(output), "AlreadyExists") {
-		fmt.Println(err)
-		return err
-	}
-	return nil
-}

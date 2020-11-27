@@ -45,7 +45,7 @@ git init
 git remote add origin https://github.com/devfile/api.git
 git config core.sparsecheckout true
 echo "crds/*" > .git/info/sparse-checkout
-git fetch --quiet --tags -p origin 
+git fetch --quiet -p origin
 if git show-ref --verify refs/tags/"${DEVWORKSPACE_API_VERSION}" --quiet; then
 	echo "DevWorkspace API is specified from tag ${DEVWORKSPACE_API_VERSION}"
 	git checkout --quiet tags/"${DEVWORKSPACE_API_VERSION}"

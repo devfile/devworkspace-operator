@@ -110,7 +110,7 @@ func checkServerStatus(workspace *devworkspace.DevWorkspace) (ok bool, err error
 	if err != nil {
 		return false, err
 	}
-	healthz.Path = "healthz"
+	healthz.Path = healthz.Path + "healthz"
 
 	resp, err := healthHttpClient.Get(healthz.String())
 	if err != nil {

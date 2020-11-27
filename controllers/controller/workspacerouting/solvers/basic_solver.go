@@ -14,14 +14,29 @@ package solvers
 
 import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
-var ingressAnnotations = map[string]string{
-	"kubernetes.io/ingress.class":                "nginx",
-	"nginx.ingress.kubernetes.io/rewrite-target": "/",
-	"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+var routeAnnotations = func(endpointName string) map[string]string {
+	return map[string]string{
+		"haproxy.router.openshift.io/rewrite-target": "/",
+		config.WorkspaceEndpointNameAnnotation:       endpointName,
+	}
 }
 
+var nginxIngressAnnotations = func(endpointName string) map[string]string {
+	return map[string]string{
+		"kubernetes.io/ingress.class":                "nginx",
+		"nginx.ingress.kubernetes.io/rewrite-target": "/",
+		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+		config.WorkspaceEndpointNameAnnotation:       endpointName,
+	}
+}
+
+// Basic solver exposes endpoints without any authentication
+// According to the current cluster there is different behavior:
+// Kubernetes: use Ingresses without TLS
+// OpenShift: use Routes with TLS enabled
 type BasicSolver struct{}
 
 var _ RoutingSolver = (*BasicSolver)(nil)

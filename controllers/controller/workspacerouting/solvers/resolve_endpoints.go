@@ -15,6 +15,7 @@ package solvers
 import (
 	"fmt"
 	"net/url"
+	"path"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -60,13 +61,13 @@ func resolveURLForEndpoint(
 	routingObj RoutingObjects) (string, error) {
 	for _, route := range routingObj.Routes {
 		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
-			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.TLS != nil), nil
+			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.Path, route.Spec.TLS != nil), nil
 		}
 	}
 	for _, ingress := range routingObj.Ingresses {
 		if ingress.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
 			if len(ingress.Spec.Rules) == 1 {
-				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, false), nil // no TLS supported for ingresses yet
+				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, "", false), nil // no TLS supported for ingresses yet
 			} else {
 				return "", fmt.Errorf("ingress %s contains multiple rules", ingress.Name)
 			}
@@ -75,16 +76,15 @@ func resolveURLForEndpoint(
 	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
 }
 
-func getURLForEndpoint(endpoint devworkspace.Endpoint, host string, secure bool) string {
+func getURLForEndpoint(endpoint devworkspace.Endpoint, host, basePath string, secure bool) string {
 	protocol := endpoint.Protocol
 	if secure && endpoint.Secure {
 		protocol = devworkspace.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
-	path := endpoint.Path
 	u := url.URL{
 		Scheme: string(protocol),
 		Host:   host,
-		Path:   path,
+		Path:   path.Join(basePath, endpoint.Path),
 	}
 	return u.String()
 }

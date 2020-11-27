@@ -140,12 +140,15 @@ func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata)
 			Labels: map[string]string{
 				config.WorkspaceIDLabel: meta.WorkspaceId,
 			},
-			Annotations: map[string]string{
-				config.WorkspaceEndpointNameAnnotation: endpoint.Name,
-			},
+			Annotations: routeAnnotations(endpointName),
 		},
 		Spec: routeV1.RouteSpec{
-			Host: common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.TargetPort, meta.RoutingSuffix),
+			Host: common.WorkspaceHostname(meta.WorkspaceId, meta.RoutingSuffix),
+			Path: common.EndpointPath(endpointName),
+			TLS: &routeV1.TLSConfig{
+				InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
+				Termination:                   routeV1.TLSTerminationEdge,
+			},
 			To: routeV1.RouteTargetReference{
 				Kind: "Service",
 				Name: common.ServiceName(meta.WorkspaceId),
@@ -158,15 +161,9 @@ func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata)
 }
 
 func getIngressForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata) v1beta1.Ingress {
-	targetEndpoint := intstr.FromInt(int(endpoint.TargetPort))
+	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
 	hostname := common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.TargetPort, meta.RoutingSuffix)
-	annotations := map[string]string{
-		config.WorkspaceEndpointNameAnnotation: endpoint.Name,
-	}
-	for k, v := range ingressAnnotations {
-		annotations[k] = v
-	}
 	ingressPathType := v1beta1.PathTypeImplementationSpecific
 	return v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -175,7 +172,7 @@ func getIngressForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadat
 			Labels: map[string]string{
 				config.WorkspaceIDLabel: meta.WorkspaceId,
 			},
-			Annotations: annotations,
+			Annotations: nginxIngressAnnotations(endpoint.Name),
 		},
 		Spec: v1beta1.IngressSpec{
 			Rules: []v1beta1.IngressRule{

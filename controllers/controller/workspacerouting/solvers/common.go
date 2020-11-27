@@ -43,7 +43,7 @@ func getDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 					Name:       common.EndpointName(endpoint.Name),
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(endpoint.TargetPort),
-					TargetPort: intstr.FromInt(int(endpoint.TargetPort)),
+					TargetPort: intstr.FromInt(endpoint.TargetPort),
 				}
 				services = append(services, corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
@@ -69,7 +69,6 @@ func getDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 }
 
 func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
-	var services []corev1.Service
 	var servicePorts []corev1.ServicePort
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
@@ -95,22 +94,22 @@ func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointLis
 		}
 	}
 
-	services = append(services, corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.ServiceName(meta.WorkspaceId),
-			Namespace: meta.Namespace,
-			Labels: map[string]string{
-				config.WorkspaceIDLabel: meta.WorkspaceId,
+	return []corev1.Service{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      common.ServiceName(meta.WorkspaceId),
+				Namespace: meta.Namespace,
+				Labels: map[string]string{
+					config.WorkspaceIDLabel: meta.WorkspaceId,
+				},
+			},
+			Spec: corev1.ServiceSpec{
+				Ports:    servicePorts,
+				Selector: meta.PodSelector,
+				Type:     corev1.ServiceTypeClusterIP,
 			},
 		},
-		Spec: corev1.ServiceSpec{
-			Ports:    servicePorts,
-			Selector: meta.PodSelector,
-			Type:     corev1.ServiceTypeClusterIP,
-		},
-	})
-
-	return services
+	}
 }
 
 func getRoutingForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) ([]v1beta1.Ingress, []routeV1.Route) {
@@ -132,7 +131,7 @@ func getRoutingForSpec(endpoints map[string]controllerv1alpha1.EndpointList, met
 }
 
 func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata) routeV1.Route {
-	targetEndpoint := intstr.FromInt(int(endpoint.TargetPort))
+	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
 	return routeV1.Route{
 		ObjectMeta: metav1.ObjectMeta{

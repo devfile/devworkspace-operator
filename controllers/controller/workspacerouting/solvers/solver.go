@@ -29,6 +29,12 @@ type RoutingObjects struct {
 }
 
 type RoutingSolver interface {
+	// GetSpecObjects constructs cluster routing objects which should be applied on the cluster
 	GetSpecObjects(spec controllerv1alpha1.WorkspaceRoutingSpec, workspaceMeta WorkspaceMetadata) RoutingObjects
+
+	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.
+	// Returns is a map from component ids (as defined in the devfile) to the list of endpoints for that component
+	// Return value "ready" specifies if all endpoints are resolved on the cluster; if false it is necessary to retry, as
+	// URLs will be undefined.
 	GetExposedEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, routingObj RoutingObjects) (exposedEndpoints map[string]controllerv1alpha1.ExposedEndpointList, ready bool, err error)
 }

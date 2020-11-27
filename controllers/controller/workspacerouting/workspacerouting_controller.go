@@ -79,7 +79,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 
 	solver, err := getSolverForRoutingClass(instance.Spec.RoutingClass)

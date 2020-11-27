@@ -102,25 +102,15 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 		for _, upstreamEndpoint := range machineEndpoints {
 			proxyEndpoint := portMappings[upstreamEndpoint.Name]
 			endpoint := proxyEndpoint.publicEndpoint
-			var tls *routeV1.TLSConfig = nil
-			if endpoint.Secure {
-				if endpoint.Attributes.GetString(string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE), nil) == "terminal" {
-					tls = &routeV1.TLSConfig{
-						Termination:                   routeV1.TLSTerminationEdge,
-						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
-					}
-				} else {
-					tls = &routeV1.TLSConfig{
-						Termination:                   routeV1.TLSTerminationReencrypt,
-						InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
-					}
-				}
-			}
 			route := getRouteForEndpoint(endpoint, workspaceMeta)
-			route.Spec.TLS = tls
+			route.Spec.TLS = &routeV1.TLSConfig{
+				Termination:                   routeV1.TLSTerminationReencrypt,
+				InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
+			}
 			if route.Annotations == nil {
 				route.Annotations = map[string]string{}
 			}
+			//override the original endpointName
 			route.Annotations[config.WorkspaceEndpointNameAnnotation] = upstreamEndpoint.Name
 			routes = append(routes, route)
 		}
@@ -176,5 +166,7 @@ func endpointNeedsProxy(endpoint devworkspace.Endpoint) bool {
 	endpointIsPublic := endpoint.Exposure == "" || endpoint.Exposure == devworkspace.PublicEndpointExposure
 	return endpointIsPublic &&
 		endpoint.Secure &&
+		// Terminal is temporarily excluded from secure servers
+		// because Theia is not aware how to authenticate against OpenShift OAuth
 		endpoint.Attributes.Get(string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE), nil) != "terminal"
 }

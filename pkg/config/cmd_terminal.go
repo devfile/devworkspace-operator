@@ -49,6 +49,9 @@ func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Compo
 						Value: `\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]`,
 					},
 				},
+				// Must be set as it is defaulted in ContainerComponent. Otherwise
+				// spec and cluster objects will be different.
+				SourceMapping: "/projects",
 			},
 		}
 		return defaultTerminalDockerimage, nil

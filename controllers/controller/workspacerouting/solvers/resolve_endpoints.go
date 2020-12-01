@@ -15,7 +15,7 @@ package solvers
 import (
 	"fmt"
 	"net/url"
-	"path"
+	"strings"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -81,10 +81,18 @@ func getURLForEndpoint(endpoint devworkspace.Endpoint, host, basePath string, se
 	if secure && endpoint.Secure {
 		protocol = devworkspace.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
+	var p string
+	if endpoint.Path != "" {
+		// the only one slash should be between these path segments.
+		// Path.join does not suite here since it eats trailing slash which may be critical for the application
+		p = fmt.Sprintf("%s/%s", strings.TrimRight(basePath, "/"), strings.TrimLeft(p, endpoint.Path))
+	} else {
+		p = basePath
+	}
 	u := url.URL{
 		Scheme: string(protocol),
 		Host:   host,
-		Path:   path.Join(basePath, endpoint.Path),
+		Path:   p,
 	}
 	return u.String()
 }

@@ -227,6 +227,12 @@ ifeq ($(PLATFORM),kubernetes)
 else
 	$(K8S_CLI) apply -f config/registry/local/os -n $(NAMESPACE)
 endif
+#evaluate plugin registry URL to use in other targets
+ifeq ($(PLATFORM),kubernetes)
+export PLUGIN_REGISTRY_URL=http://che-plugin-registry.$(ROUTING_SUFFIX)/v3)
+else
+export PLUGIN_REGISTRY_URL=http://$(shell $(K8S_CLI) get route -n $(NAMESPACE) che-plugin-registry -o=yaml | yq -r '.status.ingress[].host')/v3
+endif
 
 ### manifests: Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen

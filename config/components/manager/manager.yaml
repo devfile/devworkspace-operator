@@ -8,6 +8,7 @@ spec:
   template:
     spec:
       terminationGracePeriodSeconds: 10
+      serviceAccountName: $(CONTROLLER_SERVICE_ACCOUNT)
       containers:
       - image: quay.io/devfile/devworkspace-controller:next
         name: devworkspace-controller

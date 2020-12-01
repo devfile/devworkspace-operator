@@ -230,7 +230,7 @@ endif
 
 ### manifests: Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./..." \
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=role webhook paths="./..." \
 			output:crd:artifacts:config=config/crd/bases \
 			output:rbac:artifacts:config=config/components/rbac
 	patch/patch_crds.sh

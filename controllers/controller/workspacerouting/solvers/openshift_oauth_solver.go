@@ -107,6 +107,10 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 				Termination:                   routeV1.TLSTerminationReencrypt,
 				InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
 			}
+			// Reverting single host feature since OpenShift OAuth uses absolute references
+			route.Spec.Host = common.EndpointHostname(workspaceMeta.WorkspaceId, endpoint.Name, endpoint.TargetPort, workspaceMeta.RoutingSuffix)
+			route.Spec.Path = "/"
+
 			if route.Annotations == nil {
 				route.Annotations = map[string]string{}
 			}

@@ -100,3 +100,6 @@ This will delete all custom resource definitions created for the controller, as 
 #### GitHub actions
 
 - [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/master/.github/workflows/dockerimage-next.yml) action build master and push it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
+
+
+Test changes

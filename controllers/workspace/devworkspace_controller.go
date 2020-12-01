@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apex/log"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -326,7 +325,7 @@ func getWorkspaceId(instance *devworkspace.DevWorkspace) (string, error) {
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
-
+	setupLog := ctrl.Log.WithName("devworkspace-controller-setup")
 	operatorNamespace, err := cluster.GetOperatorNamespace()
 	if err == nil {
 		config.ConfigMapReference.Namespace = operatorNamespace
@@ -348,7 +347,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	err = config.ControllerCfg.Validate()
 	if err != nil {
-		log.Errorf("Controller configuration is invalid: %s", err)
+		setupLog.Error(err, "Controller configuration is invalid")
 		return err
 	}
 

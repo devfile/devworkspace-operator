@@ -2,6 +2,30 @@
 
 Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
 
+## DevWorkspace CR
+
+### Annotations
+
+You can add these Kubernetes annotations to specific DevWorkspace CR to customize their behavior.
+
+|Name|Value|
+|----|----|
+|[controller.devfile.io/restricted-access](#restricted-access)|true or false|
+
+#### Restricted Access
+
+Using `restricted-access` is possible to define that DevWorkspace needs additional(to RBAC) authorization that guarantee that the only DevWorkspace CR creators has access to the containers terminals and secure server.
+May be needed when personal information(like access tokens, ssh keys) is stored in the containers.
+
+Since it's powered by webhooks, DevWorkspaces with such annotations will fails to start when webhooks are disabled on Operator level. 
+
+Example:
+```yaml
+metadata:
+  annotations:
+    controller.devfile.io/restricted-access: true
+```
+
 ## Running the controller in a cluster
 
 The controller can be deployed to a cluster provided you are logged in with cluster-admin credentials:

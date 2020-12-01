@@ -152,15 +152,15 @@ _login_with_devworkspace_sa:
 	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### run: Run against the configured Kubernetes cluster in ~/.kube/config
-run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
+run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _eval_plugin_registry_url
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
 		WATCH_NAMESPACE=$(NAMESPACE) \
 		go run ./main.go
 
-
-debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
+### debug: Run controller locally with debugging enabled, watching cluster defined in ~/.kube/config
+debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _eval_plugin_registry_url
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
@@ -172,7 +172,7 @@ install_crds: _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | $(K8S_CLI) apply -f -
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
-install: _print_vars _kustomize _init_devworkspace_crds _create_namespace deploy_registry
+install: _print_vars _kustomize _init_devworkspace_crds _create_namespace _eval_plugin_registry_url
 	mv config/cert-manager/kustomization.yaml config/cert-manager/kustomization.yaml.bak
 	mv config/service-ca/kustomization.yaml config/service-ca/kustomization.yaml.bak
 	mv config/base/config.properties config/base/config.properties.bak
@@ -226,12 +226,6 @@ ifeq ($(PLATFORM),kubernetes)
 	envsubst < config/registry/local/k8s/ingress.yaml | $(K8S_CLI) apply -n $(NAMESPACE) -f -
 else
 	$(K8S_CLI) apply -f config/registry/local/os -n $(NAMESPACE)
-endif
-#evaluate plugin registry URL to use in other targets
-ifeq ($(PLATFORM),kubernetes)
-export PLUGIN_REGISTRY_URL=http://che-plugin-registry.$(ROUTING_SUFFIX)/v3)
-else
-export PLUGIN_REGISTRY_URL=http://$(shell $(K8S_CLI) get route -n $(NAMESPACE) che-plugin-registry -o=yaml | yq -r '.status.ingress[].host')/v3
 endif
 
 ### manifests: Generate manifests e.g. CRD, RBAC etc.
@@ -299,6 +293,14 @@ endif
 ### install_cert_manager: install Cert Mananger v1.0.4 on the cluster
 install_cert_manager:
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
+
+# export plugin registry url for other rules to use
+_eval_plugin_registry_url: deploy_registry
+ifeq ($(PLATFORM),kubernetes)
+	$(eval export PLUGIN_REGISTRY_URL=http://che-plugin-registry.$(ROUTING_SUFFIX)/v3))
+else
+	$(eval export PLUGIN_REGISTRY_URL=http://$(shell $(K8S_CLI) get route -n $(NAMESPACE) che-plugin-registry -o=yaml | yq -r '.spec.host')/v3)
+endif
 
 _kustomize:
 ifeq (, $(shell which kustomize))

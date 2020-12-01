@@ -1,2 +1,13 @@
 resources:
 - manager.yaml
+- serviceaccount.yaml
+
+vars:
+- name: CONTROLLER_SERVICE_ACCOUNT
+  objref:
+    kind: ServiceAccount
+    version: v1
+    name: serviceaccount
+
+configurations:
+- kustomizeconfig.yaml

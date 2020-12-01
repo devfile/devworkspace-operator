@@ -8,5 +8,5 @@ roleRef:
   name: proxy-role
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: $(CONTROLLER_SERVICE_ACCOUNT)
   namespace: system

@@ -1483,7 +1483,8 @@ spec:
               description: ComponentStatus defines the observed state of Component
               properties:
                 componentDescriptions:
-                  description: Descriptions of processed components from spec
+                  description: ComponentDescriptions of processed components from
+                    spec
                   items:
                     description: Description of a devfile component's workspace additions
                     properties:
@@ -5434,11 +5435,19 @@ spec:
                       - podAdditions
                     type: object
                   type: array
+                failed:
+                  description: Failed indicates that an unresolvable problem prevents
+                    this component from being ready.
+                  type: boolean
+                message:
+                  description: Message stores additional context about the Component's
+                    current state (e.g. reason for failure)
+                  type: string
                 ready:
-                  description: Whether the component has finished processing its spec
+                  description: Ready indicates whether the component has finished
+                    processing its spec
                   type: boolean
               required:
-                - componentDescriptions
                 - ready
               type: object
           type: object

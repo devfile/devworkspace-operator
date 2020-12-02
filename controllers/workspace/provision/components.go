@@ -111,6 +111,14 @@ func SyncComponentsToCluster(
 func checkComponentsReadiness(components []v1alpha1.Component) ComponentProvisioningStatus {
 	var componentDescriptions []v1alpha1.ComponentDescription
 	for _, component := range components {
+		if component.Status.Failed {
+			return ComponentProvisioningStatus{
+				ProvisioningStatus: ProvisioningStatus{
+					FailStartup: true,
+					Message:     component.Status.Message,
+				},
+			}
+		}
 		if !component.Status.Ready {
 			return ComponentProvisioningStatus{
 				ProvisioningStatus: ProvisioningStatus{},

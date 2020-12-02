@@ -33,10 +33,16 @@ type WorkspaceComponentSpec struct {
 // ComponentStatus defines the observed state of Component
 // +k8s:openapi-gen=true
 type WorkspaceComponentStatus struct {
-	// Whether the component has finished processing its spec
+	// Ready indicates whether the component has finished processing its spec
 	Ready bool `json:"ready"`
-	// Descriptions of processed components from spec
-	ComponentDescriptions []ComponentDescription `json:"componentDescriptions"`
+	// Failed indicates that an unresolvable problem prevents this component
+	// from being ready.
+	Failed bool `json:"failed,omitempty"`
+	// Message stores additional context about the Component's current state (e.g.
+	// reason for failure)
+	Message string `json:"message,omitempty"`
+	// ComponentDescriptions of processed components from spec
+	ComponentDescriptions []ComponentDescription `json:"componentDescriptions,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

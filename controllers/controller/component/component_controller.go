@@ -14,6 +14,7 @@ package component
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/adaptor"
@@ -102,8 +103,14 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	pluginComponents, brokerConfigMap, err := adaptor.AdaptPluginComponents(instance.Spec.WorkspaceId, instance.Namespace, pluginDevfileComponents)
 	if err != nil {
-		reqLogger.Info("Failed to adapt plugin components")
-		return reconcile.Result{}, err
+		var downloadErr *adaptor.DownloadMetasError
+		if errors.As(err, &downloadErr) {
+			reqLogger.Info("Failed to download plugin metas", "err", downloadErr.Unwrap())
+			return reconcile.Result{}, r.FailComponent(instance, downloadErr.Error())
+		} else {
+			reqLogger.Info("Failed to adapt plugin components")
+			return reconcile.Result{}, err
+		}
 	}
 	components = append(components, pluginComponents...)
 
@@ -165,6 +172,12 @@ func (r *ComponentReconciler) reconcileStatus(instance *controllerv1alpha1.Compo
 	}
 	instance.Status.ComponentDescriptions = components
 	instance.Status.Ready = true
+	return r.Status().Update(context.TODO(), instance)
+}
+
+func (r *ComponentReconciler) FailComponent(instance *controllerv1alpha1.Component, message string) error {
+	instance.Status.Failed = true
+	instance.Status.Message = message
 	return r.Status().Update(context.TODO(), instance)
 }
 

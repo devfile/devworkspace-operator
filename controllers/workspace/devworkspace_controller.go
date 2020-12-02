@@ -163,8 +163,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		if componentsStatus.FailStartup {
 			reqLogger.Info("DevWorkspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			// TODO: Propagate more information from sync step to show a more useful message -- which plugin couldn't be installed?
-			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Could not find plugins for devworkspace"
+			if componentsStatus.Message != "" {
+				reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = componentsStatus.Message
+			} else {
+				reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Could not find plugins for devworkspace"
+			}
 		} else {
 			reqLogger.Info("Waiting on components to be ready")
 		}

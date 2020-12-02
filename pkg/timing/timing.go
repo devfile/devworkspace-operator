@@ -79,7 +79,7 @@ func ClearAnnotations(workspace *devworkspace.DevWorkspace) {
 	delete(workspace.Annotations, RoutingReady)
 	delete(workspace.Annotations, DeploymentCreated)
 	delete(workspace.Annotations, DeploymentReady)
-	delete(workspace.Annotations, ServersReady)
+	delete(workspace.Annotations, WorkspaceReady)
 	delete(workspace.Annotations, workspaceTotalTime)
 	delete(workspace.Annotations, workspaceComponentsTime)
 	delete(workspace.Annotations, workspaceRoutingsTime)

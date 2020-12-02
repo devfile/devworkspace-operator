@@ -58,19 +58,6 @@ function getDevWorkspaceOperatorLogs() {
     oc get events -n ${NAMESPACE}| tee get_events.log
 }
 
-# Check if operator-sdk is installed and if not install operator sdk in $GOPATH/bin dir
-if ! hash operator-sdk 2>/dev/null; then
-    mkdir -p $GOPATH/bin
-    export PATH="$PATH:$(pwd):$GOPATH/bin"
-    OPERATOR_SDK_VERSION=v0.17.0
-
-    curl -LO https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu
-
-    chmod +x operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu && \
-        cp operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu $GOPATH/bin/operator-sdk && \
-        rm operator-sdk-${OPERATOR_SDK_VERSION}-x86_64-linux-gnu
-fi
-
 # For some reason go on PROW force usage vendor folder
 # This workaround is here until we don't figure out cause
 go mod tidy

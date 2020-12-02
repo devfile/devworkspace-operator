@@ -74,28 +74,32 @@ func (h *WebhookHandler) HandleImmutableCreate(_ context.Context, req admission.
 	return admission.Denied("Only the workspace controller can create workspace objects.")
 }
 
-func (h *WebhookHandler) handleImmutableWorkspaceV1alpha1(oldWksp, newWksp *devworkspacev1alpha1.DevWorkspace, uid string) (allowed bool, msg string) {
-	creatorUID := oldWksp.Labels[config.WorkspaceCreatorLabel]
-	if uid == creatorUID || uid == h.ControllerUID {
-		return true, "immutable workspace is updated by owner or controller"
-	}
-	if cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) {
-		return true, "immutable workspace is started/stopped"
-	}
-	log.Info(fmt.Sprintf("Denied request on workspace resource by user %s", uid))
-	return false, fmt.Sprintf("workspace '%s' is immutable and can only be modified by its creator.", oldWksp.Name)
+func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp *devworkspacev1alpha1.DevWorkspace, uid string) (allowed bool, msg string) {
+	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[config.WorkspaceCreatorLabel],
+		oldWksp.Annotations[config.WorkspaceRestrictedAccessAnnotation],
+		uid,
+		func() bool { return cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) })
 }
 
-func (h *WebhookHandler) handleImmutableWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
-	creatorUID := oldWksp.Labels[config.WorkspaceCreatorLabel]
-	if uid == creatorUID || uid == h.ControllerUID {
-		return true, "immutable workspace is updated by owner or controller"
+func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
+	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[config.WorkspaceCreatorLabel],
+		oldWksp.Annotations[config.WorkspaceRestrictedAccessAnnotation],
+		uid,
+		func() bool { return cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) })
+}
+
+func (h *WebhookHandler) checkRestrictedAccessWorkspace(creatorUID, restrictedAccess, uid string, isStartedStopped func() bool) (allowed bool, msg string) {
+	if restrictedAccess != "true" {
+		return true, "workspace does not have restricted access configured"
 	}
-	if cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) {
-		return true, "immutable workspace is started/stopped"
+	if uid == creatorUID || uid == h.ControllerUID {
+		return true, "workspace with restricted-access is updated by owner or controller"
+	}
+	if isStartedStopped() {
+		return true, "workspace with restricted-access  workspace is started/stopped"
 	}
 	log.Info(fmt.Sprintf("Denied request on workspace resource by user %s", uid))
-	return false, fmt.Sprintf("workspace '%s' is immutable and can only be modified by its creator.", oldWksp.Name)
+	return false, "workspace has restricted-access enabled and can only be modified by its creator."
 }
 
 func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid string) (allowed bool, msg string) {

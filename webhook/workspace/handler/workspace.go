@@ -56,7 +56,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req 
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	allowed, msg := h.handleImmutableWorkspaceV1alpha1(oldWksp, newWksp, req.UserInfo.UID)
+	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp, req.UserInfo.UID)
 	if !allowed {
 		return admission.Denied(msg)
 	}
@@ -86,7 +86,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(_ context.Context, req 
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	allowed, msg := h.handleImmutableWorkspaceV1alpha2(oldWksp, newWksp, req.UserInfo.UID)
+	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp, req.UserInfo.UID)
 	if !allowed {
 		return admission.Denied(msg)
 	}

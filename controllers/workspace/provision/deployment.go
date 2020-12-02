@@ -201,7 +201,6 @@ func getSpecDeployment(
 	}
 
 	if IsPVCRequired(components) {
-		deployment.Spec.Template.Spec.InitContainers = append(deployment.Spec.Template.Spec.InitContainers, precreateSubpathsInitContainer(workspace.Status.WorkspaceId))
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
 	}
 
@@ -319,29 +318,4 @@ func getPersistentVolumeClaim() corev1.Volume {
 		},
 	}
 	return pvcVolume
-}
-
-func precreateSubpathsInitContainer(workspaceId string) corev1.Container {
-	initContainer := corev1.Container{
-		Name:    "precreate-subpaths",
-		Image:   "registry.access.redhat.com/ubi8/ubi-minimal",
-		Command: []string{"/usr/bin/mkdir"},
-		Args: []string{
-			"-p",
-			"-v",
-			"-m",
-			"777",
-			"/tmp/devworkspaces/" + workspaceId,
-		},
-		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				MountPath: "/tmp/devworkspaces",
-				Name:      config.ControllerCfg.GetWorkspacePVCName(),
-				ReadOnly:  false,
-			},
-		},
-		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-	}
-	return initContainer
 }

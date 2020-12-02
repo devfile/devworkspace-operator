@@ -22,27 +22,27 @@ const (
 	// WorkspaceStarted denotes when a workspace was first started
 	WorkspaceStarted = "controller.devfile.io/timing.started"
 	// ComponentsCreated denotes when components were created for the workspace
-	ComponentsCreated = "controller.devfile.io/timing.components_created"
+	ComponentsCreated = "controller.devfile.io/timing.components.created"
 	// ComponentsReady denotes when components were ready for the workspace
-	ComponentsReady = "controller.devfile.io/timing.components_ready"
+	ComponentsReady = "controller.devfile.io/timing.components.ready"
 	// RoutingCreated denotes when the workspacerouting was created for the workspace
-	RoutingCreated = "controller.devfile.io/timing.routing_created"
+	RoutingCreated = "controller.devfile.io/timing.routing.created"
 	// RoutingReady denotes when the workspacerouting was ready for the workspace
-	RoutingReady = "controller.devfile.io/timing.routing_ready"
+	RoutingReady = "controller.devfile.io/timing.routing.ready"
 	// DeploymentCreated denotes when the deployment was created for the workspace
-	DeploymentCreated = "controller.devfile.io/timing.deployment_created"
+	DeploymentCreated = "controller.devfile.io/timing.deployment.created"
 	// DeploymentReady denotes when the deployment was ready for the workspace
-	DeploymentReady = "controller.devfile.io/timing.deployment_ready"
-	// ServersReady denotes when all health checks were completed and the workspace was ready
-	ServersReady = "controller.devfile.io/timing.servers_ready"
+	DeploymentReady = "controller.devfile.io/timing.deployment.ready"
+	// WorkspaceReady denotes when all health checks were completed and the workspace was ready
+	WorkspaceReady = "controller.devfile.io/timing.ready"
 )
 
 const (
-	workspaceTotalTime      = "controller.devfile.io/timing.total_time"
-	workspaceComponentsTime = "controller.devfile.io/timing.wait_components"
-	workspaceRoutingsTime   = "controller.devfile.io/timing.wait_routing"
-	workspaceDeploymentTime = "controller.devfile.io/timing.wait_deployment"
-	workspaceServersTime    = "controller.devfile.io/timing.wait_servers"
+	workspaceTotalTime      = "controller.devfile.io/timing.duration"
+	workspaceComponentsTime = "controller.devfile.io/timing.components.duration"
+	workspaceRoutingsTime   = "controller.devfile.io/timing.routing.duration"
+	workspaceDeploymentTime = "controller.devfile.io/timing.deployment.duration"
+	workspaceServersTime    = "controller.devfile.io/timing.healthchecks.duration"
 )
 
 type workspaceTimes struct {
@@ -94,7 +94,7 @@ func getTimestamps(workspace *devworkspace.DevWorkspace) (*workspaceTimes, error
 		return nil, err
 	}
 	times.deploymentReady = t
-	t, err = strconv.ParseInt(workspace.Annotations[ServersReady], 10, 0)
+	t, err = strconv.ParseInt(workspace.Annotations[WorkspaceReady], 10, 0)
 	if err != nil {
 		return nil, err
 	}

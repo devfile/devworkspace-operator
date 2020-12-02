@@ -285,7 +285,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if !serverReady {
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
 	}
-	timing.SetTime(workspace, timing.ServersReady)
+	timing.SetTime(workspace, timing.WorkspaceReady)
 	timing.SummarizeStartup(workspace)
 	reconcileStatus.Phase = devworkspace.WorkspaceStatusRunning
 	return reconcile.Result{}, nil

@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"net/http"
 
+	maputils "github.com/devfile/devworkspace-operator/internal/map"
+
 	devworkspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	devworkspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -28,10 +30,8 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnCreate(_ context.Context, req 
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if wksp.Labels == nil {
-		wksp.Labels = map[string]string{}
-	}
-	wksp.Labels[config.WorkspaceCreatorLabel] = req.UserInfo.UID
+	wksp.Labels = maputils.Append(wksp.Labels, config.WorkspaceCreatorLabel, req.UserInfo.UID)
+
 	return h.returnPatched(req, wksp)
 }
 
@@ -42,10 +42,8 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnCreate(_ context.Context, req 
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	if wksp.Labels == nil {
-		wksp.Labels = map[string]string{}
-	}
-	wksp.Labels[config.WorkspaceCreatorLabel] = req.UserInfo.UID
+	wksp.Labels = maputils.Append(wksp.Labels, config.WorkspaceCreatorLabel, req.UserInfo.UID)
+
 	return h.returnPatched(req, wksp)
 }
 

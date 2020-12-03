@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"strings"
 
+	maputils "github.com/devfile/devworkspace-operator/internal/map"
+
 	"github.com/devfile/devworkspace-operator/pkg/common"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
@@ -159,7 +161,6 @@ func getSpecDeployment(
 			Labels: map[string]string{
 				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
-			Annotations: map[string]string{},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -180,7 +181,6 @@ func getSpecDeployment(
 						config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
 						config.WorkspaceNameLabel: workspace.Name,
 					},
-					Annotations: map[string]string{},
 				},
 				Spec: corev1.PodSpec{
 					InitContainers:                podAdditions.InitContainers,
@@ -221,8 +221,8 @@ func getSpecDeployment(
 			return nil, errors.New("workspace is configured to have restricted access but webhooks are not enabled")
 		}
 
-		deployment.Annotations[config.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
-		deployment.Spec.Template.Annotations[config.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
+		deployment.Annotations = maputils.Append(deployment.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+		deployment.Spec.Template.Annotations = maputils.Append(deployment.Spec.Template.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)

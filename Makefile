@@ -27,6 +27,7 @@ REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
 
 #internal params
+DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
 INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
@@ -147,7 +148,7 @@ endif
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
 _login_with_devworkspace_sa:
-	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "default")][0].data.token' | base64 --decode ))
+	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' | base64 --decode ))
 	echo "Logging as controller's SA in $(NAMESPACE)"
 	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
@@ -155,7 +156,7 @@ _login_with_devworkspace_sa:
 run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _eval_plugin_registry_url
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
-	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
+	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
 		WATCH_NAMESPACE=$(NAMESPACE) \
 		go run ./main.go
 
@@ -163,7 +164,7 @@ run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspac
 debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _eval_plugin_registry_url
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
-	CONTROLLER_SERVICE_ACCOUNT_NAME=default \
+	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
 		WATCH_NAMESPACE=$(NAMESPACE) \
 		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 

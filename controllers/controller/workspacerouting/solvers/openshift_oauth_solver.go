@@ -15,6 +15,8 @@ package solvers
 import (
 	"fmt"
 
+	maputils "github.com/devfile/devworkspace-operator/internal/map"
+
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -111,11 +113,8 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			route.Spec.Host = common.EndpointHostname(workspaceMeta.WorkspaceId, endpoint.Name, endpoint.TargetPort, workspaceMeta.RoutingSuffix)
 			route.Spec.Path = "/"
 
-			if route.Annotations == nil {
-				route.Annotations = map[string]string{}
-			}
 			//override the original endpointName
-			route.Annotations[config.WorkspaceEndpointNameAnnotation] = upstreamEndpoint.Name
+			route.Annotations = maputils.Append(route.Annotations, config.WorkspaceEndpointNameAnnotation, upstreamEndpoint.Name)
 			routes = append(routes, route)
 		}
 	}

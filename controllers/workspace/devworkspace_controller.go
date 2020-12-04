@@ -120,6 +120,14 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return r.stopWorkspace(workspace, reqLogger)
 	}
 
+	// If the workspace is marked as "start only", we stop reconcile here. This is to enable the use case
+	// where a DevWorkspace is used to develop the DevWorkspace controller.
+	if config.ControllerCfg.GetExperimentalFeaturesEnabled() &&
+		workspace.Annotations[config.WorkspaceStartOnlyLabel] == "true" &&
+		workspace.Status.Phase == devworkspace.WorkspaceStatusRunning {
+		return reconcile.Result{}, nil
+	}
+
 	if workspace.Status.Phase == devworkspace.WorkspaceStatusFailed {
 		// TODO: Figure out when workspace spec is changed and clear failed status to allow reconcile to continue
 		reqLogger.Info("Workspace startup is failed; not attempting to update.")

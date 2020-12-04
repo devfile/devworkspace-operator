@@ -37,6 +37,11 @@ const (
 	SidecarDefaultMemoryLimit = "128M"
 	PVCStorageSize            = "1Gi"
 
+	// WorkspaceStartOnlyLabel is used to specify that the DevWorkspace should not be reconciled further once
+	// it has entered the "Running" phase. This is to enable development of the DevWorkspace operator from within
+	// a DevWorkspace. This label is ignored when `devworkspace.experimental_features_enabled` is set to false.
+	WorkspaceStartOnlyLabel = "controller.devfile.io/development.start_only"
+
 	// WorkspaceIDLabel is label key to store workspace identifier
 	WorkspaceIDLabel = "controller.devfile.io/workspace_id"
 

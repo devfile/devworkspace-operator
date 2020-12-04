@@ -54,10 +54,6 @@ const (
 	// Operator also propagates it to the workspace-related objects to perform authorization.
 	WorkspaceRestrictedAccessAnnotation = "controller.devfile.io/restricted-access"
 
-	// WorkspaceExternalRoutingAnnotation is the annotation applied to workspace routing objects when they are expected
-	// to be handled by an independent controller.
-	WorkspaceExternalRoutingAnnotation = "controller.devfile.io/external_routing"
-
 	// WorkspaceDiscoverableServiceAnnotation marks a service in a workspace as created for a discoverable endpoint,
 	// as opposed to a service created to support the workspace itself.
 	WorkspaceDiscoverableServiceAnnotation = "controller.devfile.io/discoverable-service"

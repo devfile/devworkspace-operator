@@ -14,27 +14,28 @@ package workspacerouting
 
 import (
 	"context"
+	"errors"
 	"fmt"
-
-	maputils "github.com/devfile/devworkspace-operator/internal/map"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/go-logr/logr"
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	"github.com/go-logr/logr"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
+
+var externalRoutingError = errors.New("routingclass not supported by this controller")
 
 const workspaceRoutingFinalizer = "workspacerouting.controller.devfile.io"
 
@@ -63,7 +64,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	instance := &controllerv1alpha1.WorkspaceRouting{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -85,15 +86,11 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	solver, err := getSolverForRoutingClass(instance.Spec.RoutingClass)
-	if err != nil {
-		// No solver in this controller for this routingClass
-		reqLogger.Info("Could not find solver for routing class; assuming external routing", "routingClass", instance.Spec.RoutingClass)
-		instance.Annotations = maputils.Append(instance.Annotations, config.WorkspaceExternalRoutingAnnotation, "true")
-		updateErr := r.Update(ctx, instance)
-		if updateErr != nil && errors.IsConflict(err) {
-			return reconcile.Result{Requeue: true}, nil
-		}
-		return reconcile.Result{}, updateErr
+	if err != nil && !errors.Is(err, externalRoutingError) {
+		reqLogger.Error(err, "Could not get solver for routingClass")
+		instance.Status.Phase = controllerv1alpha1.RoutingFailed
+		statusErr := r.Status().Update(ctx, instance)
+		return reconcile.Result{}, statusErr
 	}
 
 	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
@@ -235,7 +232,7 @@ func (r *WorkspaceRoutingReconciler) reconcileStatus(
 	return r.Status().Update(context.TODO(), instance)
 }
 
-func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
+func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solver solvers.RoutingSolver, err error) {
 	if routingClass == "" {
 		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
 	}
@@ -255,7 +252,7 @@ func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingCl
 		}
 		return &solvers.ClusterSolver{TLS: true}, nil
 	default:
-		return nil, fmt.Errorf("routing class %s not supported in this controller", routingClass)
+		return nil, externalRoutingError
 	}
 }
 
@@ -293,12 +290,14 @@ func remove(list []string, s string) []string {
 }
 
 func (r *WorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).
+	bld := ctrl.NewControllerManagedBy(mgr).
 		For(&controllerv1alpha1.WorkspaceRouting{}).
 		Owns(&corev1.Service{}).
 		Owns(&v1beta1.Ingress{})
 	if config.ControllerCfg.IsOpenShift() {
-		builder.Owns(&routeV1.Route{})
+		bld.Owns(&routeV1.Route{})
 	}
-	return builder.Complete(r)
+	bld.WithEventFilter(routingPredicates)
+
+	return bld.Complete(r)
 }

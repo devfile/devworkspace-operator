@@ -81,16 +81,16 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, r.finalize(instance)
 	}
 
+	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
+		return reconcile.Result{}, nil
+	}
+
 	solver, err := getSolverForRoutingClass(instance.Spec.RoutingClass)
-	if err != nil && !errors.Is(err, externalRoutingError) {
+	if err != nil {
 		reqLogger.Error(err, "Could not get solver for routingClass")
 		instance.Status.Phase = controllerv1alpha1.RoutingFailed
 		statusErr := r.Status().Update(ctx, instance)
 		return reconcile.Result{}, statusErr
-	}
-
-	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
-		return reconcile.Result{}, nil
 	}
 
 	// Add finalizer for this CR if not already present
@@ -228,7 +228,7 @@ func (r *WorkspaceRoutingReconciler) reconcileStatus(
 	return r.Status().Update(context.TODO(), instance)
 }
 
-func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solver solvers.RoutingSolver, err error) {
+func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
 	if routingClass == "" {
 		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
 	}

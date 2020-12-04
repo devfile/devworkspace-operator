@@ -16,6 +16,8 @@ import (
 	"context"
 	"fmt"
 
+	maputils "github.com/devfile/devworkspace-operator/internal/map"
+
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
@@ -71,6 +73,10 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, err
 	}
 
+	if instance.Annotations[config.WorkspaceExternalRoutingAnnotation] != "" {
+		return reconcile.Result{}, nil
+	}
+
 	// Check if the WorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if instance.GetDeletionTimestamp() != nil {
@@ -78,16 +84,20 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, r.finalize(instance)
 	}
 
-	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
-		return reconcile.Result{}, nil
-	}
-
 	solver, err := getSolverForRoutingClass(instance.Spec.RoutingClass)
 	if err != nil {
-		reqLogger.Error(err, "Could not get solver for routingClass")
-		instance.Status.Phase = controllerv1alpha1.RoutingFailed
-		statusErr := r.Status().Update(ctx, instance)
-		return reconcile.Result{}, statusErr
+		// No solver in this controller for this routingClass
+		reqLogger.Info("Could not find solver for routing class; assuming external routing", "routingClass", instance.Spec.RoutingClass)
+		instance.Annotations = maputils.Append(instance.Annotations, config.WorkspaceExternalRoutingAnnotation, "true")
+		updateErr := r.Update(ctx, instance)
+		if updateErr != nil && errors.IsConflict(err) {
+			return reconcile.Result{Requeue: true}, nil
+		}
+		return reconcile.Result{}, updateErr
+	}
+
+	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
+		return reconcile.Result{}, nil
 	}
 
 	// Add finalizer for this CR if not already present
@@ -245,7 +255,7 @@ func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingCl
 		}
 		return &solvers.ClusterSolver{TLS: true}, nil
 	default:
-		return nil, fmt.Errorf("routing class %s not supported", routingClass)
+		return nil, fmt.Errorf("routing class %s not supported in this controller", routingClass)
 	}
 }
 

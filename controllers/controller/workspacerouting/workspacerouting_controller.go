@@ -82,7 +82,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	solver, err := getSolverForRoutingClass(instance.Spec.RoutingClass)
-	if err != nil && !errors.Is(err, externalRoutingError) {
+	if err != nil {
 		reqLogger.Error(err, "Could not get solver for routingClass")
 		instance.Status.Phase = controllerv1alpha1.RoutingFailed
 		statusErr := r.Status().Update(ctx, instance)

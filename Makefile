@@ -298,7 +298,7 @@ install_cert_manager:
 # export plugin registry url for other rules to use
 _eval_plugin_registry_url: deploy_registry
 ifeq ($(PLATFORM),kubernetes)
-	$(eval export PLUGIN_REGISTRY_URL=http://che-plugin-registry.$(ROUTING_SUFFIX)/v3))
+	$(eval export PLUGIN_REGISTRY_URL=http://che-plugin-registry.$(ROUTING_SUFFIX)/v3)
 else
 	$(eval export PLUGIN_REGISTRY_URL=http://$(shell $(K8S_CLI) get route -n $(NAMESPACE) che-plugin-registry -o=yaml | yq -r '.spec.host')/v3)
 endif

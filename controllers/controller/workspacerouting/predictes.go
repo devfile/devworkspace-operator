@@ -20,39 +20,41 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-var routingPredicates = predicate.Funcs{
-	CreateFunc: func(ev event.CreateEvent) bool {
-		obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
-		if !ok {
+func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(ev event.CreateEvent) bool {
+			obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
+			if !ok {
+				return true
+			}
+			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, ExternalRoutingError) {
+				return false
+			}
 			return true
-		}
-		if _, err := getSolverForRoutingClass(obj.Spec.RoutingClass); errors.Is(err, externalRoutingError) {
-			return false
-		}
-		return true
-	},
-	DeleteFunc: func(_ event.DeleteEvent) bool {
-		// Return true to ensure finalizers are removed
-		return true
-	},
-	UpdateFunc: func(ev event.UpdateEvent) bool {
-		newObj, ok := ev.ObjectNew.(*controllerv1alpha1.WorkspaceRouting)
-		if !ok {
+		},
+		DeleteFunc: func(_ event.DeleteEvent) bool {
+			// Return true to ensure finalizers are removed
 			return true
-		}
-		if _, err := getSolverForRoutingClass(newObj.Spec.RoutingClass); errors.Is(err, externalRoutingError) {
-			return false
-		}
-		return true
-	},
-	GenericFunc: func(ev event.GenericEvent) bool {
-		obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
-		if !ok {
+		},
+		UpdateFunc: func(ev event.UpdateEvent) bool {
+			newObj, ok := ev.ObjectNew.(*controllerv1alpha1.WorkspaceRouting)
+			if !ok {
+				return true
+			}
+			if _, err := getSolver(newObj.Spec.RoutingClass); errors.Is(err, ExternalRoutingError) {
+				return false
+			}
 			return true
-		}
-		if _, err := getSolverForRoutingClass(obj.Spec.RoutingClass); errors.Is(err, externalRoutingError) {
-			return false
-		}
-		return true
-	},
+		},
+		GenericFunc: func(ev event.GenericEvent) bool {
+			obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
+			if !ok {
+				return true
+			}
+			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, ExternalRoutingError) {
+				return false
+			}
+			return true
+		},
+	}
 }

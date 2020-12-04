@@ -74,10 +74,6 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, err
 	}
 
-	if instance.Annotations[config.WorkspaceExternalRoutingAnnotation] != "" {
-		return reconcile.Result{}, nil
-	}
-
 	// Check if the WorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if instance.GetDeletionTimestamp() != nil {

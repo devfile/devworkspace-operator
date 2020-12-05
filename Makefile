@@ -324,6 +324,22 @@ ifneq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" 
 	@echo 'WARN: Please use the recommended operator-sdk if you face any issue.'
 endif
 
+inject_kubeconfig:
+	@{ \
+	MACHINE_EXEC_ENDPOINT=$$($(K8S_CLI) get ingress -o json | jq -r '.items[] | select(.metadata.name | test("che-mach-exec")).spec.rules[].host') ;\
+	SA_TOKEN=$$($(K8S_CLI) get secrets -o json | jq -r '.items[] | select(.metadata.name | test("^devworkspace-controller")).data.token' | base64 -d) ;\
+	curl --location -X POST $${MACHINE_EXEC_ENDPOINT}/exec/init \
+	  -H "Content-Type: application/json" \
+		--data-raw '{
+			"container": "go-cli",
+			"kubeconfig": {
+				"username": "developer"
+			}
+		}'
+	} ;\
+	POD_NAME=$$($(K8S_CLI) get po -l 'controller.devfile.io/workspace_name=devworkspace-operator-dev' -o=jsonpath="{.items[*].metadata.name}") ;\
+	$(K8S_CLI) exec $${POD_NAME} -c go-cli -- kubectl config set 'users.developer.token' "$${SA_TOKEN}" --set-raw-bytes=true
+
 .PHONY: help
 ### help: print this message
 help: Makefile

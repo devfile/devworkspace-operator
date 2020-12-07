@@ -57,15 +57,16 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 	enabled, err := cluster.IsWebhookConfigurationEnabled()
 
 	if err != nil {
-		log.Info("ERROR: Could not evaluate if admission webhook configurations are available", "error", err)
-		return err
-	}
-
-	if !enabled {
-		log.Info("WARN: AdmissionWebhooks are not configured at your cluster." +
-			"    To make your workspaces more secure, please configure them." +
-			"    Skipping setting up Webhook Server")
-		return nil
+		log.Info("ERROR: Could not evaluate if admission webhook configurations are available."+
+			" Fix the reported error or make sure admission webhook are enabled on your cluster manually."+
+			" If they are not enabled configure them otherwise workspace security mechanisms won't work properly", "error", err)
+	} else {
+		if !enabled {
+			log.Info("WARN: AdmissionWebhooks are not configured at your cluster." +
+				"    To make your workspaces more secure, please configure them." +
+				"    Skipping setting up Webhook Server")
+			return nil
+		}
 	}
 
 	CABundle, err = ioutil.ReadFile(WebhookServerCertDir + "/tls.crt")

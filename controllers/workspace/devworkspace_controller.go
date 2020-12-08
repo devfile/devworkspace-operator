@@ -192,7 +192,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		}
 		// TODO: first half of provisioning rest-apis
 		cheRestApisComponent := restapis.GetCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
-		componentDescriptions = append(componentDescriptions, cheRestApisComponent)
+		// some of containers, like theia needs Che API Sidecar be availble just after start up. So, putting Che API Sidecar first before all
+		componentDescriptions = append([]controllerv1alpha1.ComponentDescription{cheRestApisComponent}, componentDescriptions...)
 	}
 
 	pvcStatus := provision.SyncPVC(workspace, componentDescriptions, r.Client, reqLogger)

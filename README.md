@@ -28,8 +28,9 @@ metadata:
 
 ## Running the controller in a cluster
 
-The controller requires [cert-manager](https://cert-manager.io) running in the cluster. You can install it using `make install_cert_manager` if you 
-don't run it already. The minimum version of cert-manager is `v1.0.4`.
+When deployed to Kubernetes, the controller requires [cert-manager](https://cert-manager.io) running in the cluster. 
+You can install it using `make install_cert_manager` if you don't run it already. 
+The minimum version of cert-manager is `v1.0.4`.
 
 The controller can be deployed to a cluster provided you are logged in with cluster-admin credentials:
 
@@ -79,7 +80,7 @@ Some of the rules supported by the makefile:
 | install | install controller to cluster |
 | restart | restart cluster controller deployment |
 | install_crds | update CRDs on cluster |
-| install_cert_manager | installs the cert-manager to the cluster |
+| install_cert_manager | installs the cert-manager to the cluster (only required for Kubernetes) |
 | uninstall | delete controller namespace `devworkspace-controller` and remove CRDs from cluster |
 | help | print all rules and variables |
 

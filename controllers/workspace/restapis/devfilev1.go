@@ -14,6 +14,7 @@ package restapis
 
 import (
 	"errors"
+	"path"
 	"strings"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
@@ -175,12 +176,14 @@ func toDevfileProject(p devworkspace.Project) (*workspaceApi.ProjectSpec, error)
 	if err != nil {
 		return nil, err
 	}
+	clonePath := resolveClonePath(p.ClonePath, p.Name, config.DefaultProjectsSourcesRoot)
 	return &workspaceApi.ProjectSpec{
 		Name: p.Name,
 		Source: workspaceApi.ProjectSourceSpec{
 			Location: theLocation,
 			Type:     theType,
 		},
+		ClonePath: clonePath,
 	}, nil
 }
 
@@ -207,4 +210,45 @@ func resolveLocation(remotes map[string]string, checkoutFrom *devworkspace.Check
 	}
 
 	return &l, nil
+}
+
+// Clone Path is the path relative to the root of the projects to which this project should be cloned into.
+// This is a unix-style relative path (i.e. uses forward slashes).
+// The path is invalid if it is absolute or tries to escape the project root through the usage of '..'.
+// If not specified, defaults to the project name.
+func resolveClonePath(clonePath string, projectName string, projectRoot string) string {
+
+	// clonePath isn't specified
+	if clonePath == "" {
+		return projectName
+	}
+
+	// Absolute paths are invalid
+	isAbs := path.IsAbs(clonePath)
+	if isAbs {
+		return projectName
+	}
+
+	// Check to make sure that the path doesn't escape the project root
+	// The idea is that since everything is relative to the root, if we find a new directory
+	// then add it to the currentPath. If we find ".." then remove the last item in currentPath because
+	// we've gone up a section in the currentPath. If we escape the projects root then return the projectName
+	trimmedProjectRoot := strings.TrimLeft(projectRoot, "/")
+	newPaths := strings.Split(clonePath, "/")
+	currentPath := strings.Split(trimmedProjectRoot, "/")
+	for _, newPathPart := range newPaths {
+		if newPathPart == ".." {
+			// If you can then move up one directory
+			if len(currentPath) > 1 {
+				currentPath = currentPath[:len(currentPath)-1]
+			} else {
+				// Tried to escape the projects root so default to projectName
+				return projectName
+			}
+		} else {
+			currentPath = append(currentPath, newPathPart)
+		}
+	}
+
+	return clonePath
 }

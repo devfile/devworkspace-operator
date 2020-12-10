@@ -21,7 +21,7 @@ func TestResolveClonePath(t *testing.T) {
 	t.Run("When path isn't specified it defaults to the project name", testResolveClonePathFunc("", "mySampleProject", "/projects", "mySampleProject"))
 	t.Run("When path is absolute then it defaults to the project name", testResolveClonePathFunc("/Documents/myProject", "mySampleProject", "/projects", "mySampleProject"))
 	t.Run("If path escapes the project root then default to the project name", testResolveClonePathFunc("../../..", "mySampleProject", "/projects", "mySampleProject"))
-	t.Run("If path escapes the project root then back in once then default to the project name", testResolveClonePathFunc("../projects/test", "mySampleProject", "/projects", "mySampleProject"))
+	t.Run("If path escapes the project root then goes back in then then return the path", testResolveClonePathFunc("../projects/test", "mySampleProject", "/projects", "../projects/test"))
 	t.Run("If path escapes the project root once then default to the project name", testResolveClonePathFunc("..", "mySampleProject", "/projects", "mySampleProject"))
 	t.Run("If path is valid then return the path", testResolveClonePathFunc("src/github.com/devfile/devworkspace-operator", "mySampleProject", "/projects", "src/github.com/devfile/devworkspace-operator"))
 }

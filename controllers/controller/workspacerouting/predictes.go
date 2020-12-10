@@ -27,7 +27,7 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 			if !ok {
 				return true
 			}
-			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, ExternalRoutingError) {
+			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {
 				return false
 			}
 			return true
@@ -41,7 +41,7 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 			if !ok {
 				return true
 			}
-			if _, err := getSolver(newObj.Spec.RoutingClass); errors.Is(err, ExternalRoutingError) {
+			if _, err := getSolver(newObj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {
 				return false
 			}
 			return true
@@ -51,7 +51,7 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 			if !ok {
 				return true
 			}
-			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, ExternalRoutingError) {
+			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {
 				return false
 			}
 			return true

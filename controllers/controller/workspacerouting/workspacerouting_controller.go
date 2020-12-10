@@ -35,13 +35,16 @@ import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
-var ExternalRoutingError = errors.New("routingclass not supported by this controller")
+var (
+	RoutingNotSupported = errors.New("routingclass not supported by this controller")
+	NoSolversEnabled    = errors.New("reconciler does not define GetSolverFunc")
+)
 
 const workspaceRoutingFinalizer = "workspacerouting.controller.devfile.io"
 
 // WorkspaceRoutingSolverFunc is a function that obtains a Solver
 // (see github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers)
-// for a particular WorkspaceRouting instance. This function should return an ExternalRoutingError if
+// for a particular WorkspaceRouting instance. This function should return an RoutingNotSupported if
 // the routingClass is not recognized, and any other error if the routingClass is invalid (e.g. an OpenShift-only
 // routingClass on a vanilla Kubernetes platform).
 type WorkspaceRoutingSolverFunc func(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solver solvers.RoutingSolver, err error)
@@ -237,7 +240,7 @@ func (r *WorkspaceRoutingReconciler) reconcileStatus(
 	return r.Status().Update(context.TODO(), instance)
 }
 
-func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
+func GetSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
 	if routingClass == "" {
 		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
 	}
@@ -257,7 +260,7 @@ func getSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingCl
 		}
 		return &solvers.ClusterSolver{TLS: true}, nil
 	default:
-		return nil, ExternalRoutingError
+		return nil, RoutingNotSupported
 	}
 }
 
@@ -303,7 +306,7 @@ func (r *WorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		bld.Owns(&routeV1.Route{})
 	}
 	if r.GetSolverFunc == nil {
-		r.GetSolverFunc = getSolverForRoutingClass
+		return NoSolversEnabled
 	}
 	bld.WithEventFilter(getRoutingPredicatesForSolverFunc(r.GetSolverFunc))
 

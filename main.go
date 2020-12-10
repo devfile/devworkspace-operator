@@ -93,9 +93,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&workspacerouting.WorkspaceRoutingReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("WorkspaceRouting"),
-		Scheme: mgr.GetScheme(),
+		Client:        mgr.GetClient(),
+		Log:           ctrl.Log.WithName("controllers").WithName("WorkspaceRouting"),
+		Scheme:        mgr.GetScheme(),
+		GetSolverFunc: workspacerouting.GetSolverForRoutingClass,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "WorkspaceRouting")
 		os.Exit(1)

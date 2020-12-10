@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     git \
     vim nano \
     jq \
+    gettext-base \
     python3-pip \
     # podman \ # TODO: podman not available in golang:1.14-stretch which is upstream for quay.io/eclipse/che-golang-1.14:nightly
     && apt-get clean \

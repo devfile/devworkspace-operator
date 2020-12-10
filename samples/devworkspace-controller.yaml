@@ -49,7 +49,6 @@ spec:
               protocol: http
               attributes:
                 type: ide
-                cookiesAuthEnabled: "true"
             - name: "webviews"
               exposure: public
               targetPort: 3100
@@ -57,7 +56,6 @@ spec:
               secure: true
               attributes:
                 type: webview
-                cookiesAuthEnabled: "true"
                 unique: "true"
             - name: "theia-dev"
               exposure: public
@@ -141,7 +139,6 @@ spec:
               secure: true
               attributes:
                 type: terminal
-                cookiesAuthEnabled: "true"
       - name: vscode-go
         attributes:
           "app.kubernetes.io/part-of": che-theia.eclipse.org

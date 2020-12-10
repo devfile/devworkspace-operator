@@ -159,7 +159,7 @@ spec:
             - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
               value: /remote-endpoint/plugin-remote-endpoint 
             - name: THEIA_PLUGINS
-              value: local-dir:///plugins/sidecars/vscode-typescript
+              value: local-dir:///plugins/sidecars/vscode-go
             - name: PROJECTS_ROOT # Automatically adding this built-in is not implemented yet
               value: "/projects"
           volumeMounts:

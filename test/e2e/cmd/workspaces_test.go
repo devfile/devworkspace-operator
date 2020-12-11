@@ -14,6 +14,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,7 +61,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 	//create the test workspace for the test user under kube admin
 
-	err = config.AdminK8sClient.CreateProjectWithKubernetesContext(config.WorkspaceNamespace)
+	err = config.AdminK8sClient.CreateNamespace(config.WorkspaceNamespace)
 	if err != nil {
 		ginkgo.Fail(fmt.Sprintf("Cannot create the namespace: Cause: %s %s", config.WorkspaceNamespace, err.Error()))
 	}
@@ -94,12 +95,18 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 }, func(data []byte) {})
 
 var _ = ginkgo.SynchronizedAfterSuite(func() {
-
-	if os.Getenv("CLEAN_UP_AFTER_SUITE") == "true" {
-		err := config.AdminK8sClient.DeleteProjectWithKubernetesContext(config.WorkspaceNamespace)
+	cleanUpAfterSuite := os.Getenv("CLEAN_UP_AFTER_SUITE")
+	//clean up by default or when user configured it explicitly
+	if cleanUpAfterSuite == "" || cleanUpAfterSuite == "true" {
+		log.Printf("Cleaning up test namespace %s", config.WorkspaceNamespace)
+		err := config.AdminK8sClient.DeleteNamespace(config.WorkspaceNamespace)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Cannot remove the terminal test workspace: %s the error: %s", config.WorkspaceNamespace, err.Error()))
 		}
+		//TODO 1. Wait until namespace is really removed, otherwise the next e2e run will fail due no objects creation is allowed in Terminating namespace.
+		//TODO 2. Alternative - in the set up, before creating a namespace, if it already exists and is terminating - wait until it's removed and recreate it from the scratch
+		//TODO To make sure finalizers works as expected the first is better
+		_, _ = config.AdminK8sClient.IsNamespaceExist(config.WorkspaceNamespace)
 	}
 
 }, func() {})

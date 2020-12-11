@@ -15,22 +15,37 @@ package client
 import (
 	"context"
 
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//create a project under login user using oc client
-func (w *K8sClient) CreateProjectWithKubernetesContext(projectName string) error {
-	_, err := w.kubeClient.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: projectName}}, metav1.CreateOptions{})
+//CreateNamespace creates a new namespace
+func (w *K8sClient) CreateNamespace(namespace string) error {
+	_, err := w.kubeClient.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {
 		return nil
 	}
 	return err
 }
 
-//delete a project under login user using oc client
-func (w *K8sClient) DeleteProjectWithKubernetesContext(projectName string) error {
-	err := w.kubeClient.CoreV1().Namespaces().Delete(context.TODO(), projectName, metav1.DeleteOptions{})
+//DeleteNamespace deletes a namespace
+func (w *K8sClient) DeleteNamespace(namespace string) error {
+	err := w.kubeClient.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 	return err
+}
+
+//DeleteNamespace deletes a namespace
+func (w *K8sClient) IsNamespaceExist(namespace string) (isRemoved bool, err error) {
+	_, err = w.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+
+	return false, nil
 }

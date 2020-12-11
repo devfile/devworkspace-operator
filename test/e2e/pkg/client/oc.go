@@ -17,21 +17,37 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 )
 
-func (w *K8sClient) OcApplyWorkspace(filePath string) (err error) {
-	cmd := exec.Command("oc", "apply", "--namespace", config.Namespace, "-f", filePath)
+func (w *K8sClient) OcApplyWorkspace(namespace string, filePath string) (commandResult string, err error) {
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(
+		"KUBECONFIG=%s oc apply --namespace %s -f %s",
+		w.kubeCfgFile,
+		namespace,
+		filePath))
 	outBytes, err := cmd.CombinedOutput()
 	output := string(outBytes)
+
 	if strings.Contains(output, "failed calling webhook") {
 		fmt.Println("Seems DevWorkspace Webhook Server is not ready yet. Will retry in 2 seconds. Cause: " + output)
 		time.Sleep(2 * time.Second)
-		return w.OcApplyWorkspace(filePath)
+		return w.OcApplyWorkspace(namespace, filePath)
 	}
 	if err != nil && !strings.Contains(output, "AlreadyExists") {
 		fmt.Println(err)
 	}
-	return err
+
+	return output, err
+}
+
+//launch 'exec' oc command in the defined pod and container
+func (w *K8sClient) ExecCommandInContainer(podName string, namespace, commandInContainer string) (output string, err error) {
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(
+		"KUBECONFIG=%s oc exec %s -n %s -c dev -- %s",
+		w.kubeCfgFile,
+		podName,
+		namespace,
+		commandInContainer))
+	outBytes, err := cmd.CombinedOutput()
+	return string(outBytes), err
 }

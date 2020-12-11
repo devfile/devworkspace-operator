@@ -16,25 +16,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
-
-	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-func (w *K8sClient) WaitForPodRunningByLabel(label string) (deployed bool, err error) {
+func (w *K8sClient) WaitForPodRunningByLabel(namespace, label string) (deployed bool, err error) {
 	timeout := time.After(6 * time.Minute)
 	tick := time.Tick(1 * time.Second)
 
 	for {
 		select {
 		case <-timeout:
-			return false, errors.New("timed out")
+			return false, errors.New("timed out for waiting pod by label " + label)
 		case <-tick:
-			err := w.WaitForRunningPodBySelector(config.Namespace, label, 3*time.Minute)
+			err = w.WaitForRunningPodBySelector(namespace, label, 3*time.Minute)
 			if err == nil {
 				return true, nil
 			}
@@ -51,7 +50,6 @@ func (w *K8sClient) WaitForRunningPodBySelector(namespace, selector string, time
 	}
 	if len(podList.Items) == 0 {
 		fmt.Println("Pod not created yet with selector " + selector + " in namespace " + namespace)
-
 		return fmt.Errorf("Pod not created yet in %s with label %s", namespace, selector)
 	}
 
@@ -98,4 +96,18 @@ func (w *K8sClient) isPodRunning(podName, namespace string) wait.ConditionFunc {
 		}
 		return false, nil
 	}
+}
+
+// return the pod name from the dev user namespace (config.WorkspaceNamespace)
+func (w *K8sClient) GetPodNameFromUserNameSpaceByLabel(selector, namespace string) string {
+	podList, err := w.ListPods(namespace, selector)
+
+	if err != nil {
+		log.Fatal(fmt.Sprintf("Cannot obtain pods from developer namespace: %s, error: %s", namespace, err.Error()))
+	}
+	if len(podList.Items) == 0 {
+		log.Fatal(fmt.Sprintf("Cannot find pods in developer namespace: %s with selector: %s", namespace, selector))
+	}
+	// we expect just 1 pod in test namespace and return the first value from the list
+	return podList.Items[0].Name
 }

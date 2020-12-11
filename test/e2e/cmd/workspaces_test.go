@@ -13,19 +13,15 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
-
-	workspaceWebhook "github.com/devfile/devworkspace-operator/webhook/workspace"
-
-	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
-	"github.com/devfile/devworkspace-operator/test/e2e/pkg/deploy"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/client"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 	_ "github.com/devfile/devworkspace-operator/test/e2e/pkg/tests"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
@@ -36,48 +32,76 @@ import (
 const (
 	testResultsDirectory = "/tmp/artifacts"
 	jUnitOutputFilename  = "junit-workspaces-operator.xml"
+	testServiceAccount   = "terminal-test"
 )
 
 //SynchronizedBeforeSuite blocks is executed before run all test suites
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	fmt.Println("Starting to setup objects before run ginkgo suite")
-	config.Namespace = "devworkspace-controller"
 
-	k8sClient, err := client.NewK8sClient()
-	if err != nil {
-		fmt.Println("Failed to create workspace client")
-		panic(err)
+	var err error
+	kubeConfig := os.Getenv("KUBECONFIG_PATH")
+	config.ClusterEndpoint = os.Getenv("KUBERNETES_API_ENDPOINT")
+
+	if len(kubeConfig) == 0 || len(config.ClusterEndpoint) == 0 {
+		failMess := "The mandatory environment variable(s) is not set.\nMake sure that all variables have been set properly. " +
+			"The variable  list:\nKUBECONFIG_PATH=%s\nKUBERNETES_API_ENDPOINT=%s"
+		ginkgo.Fail(fmt.Sprintf(failMess, kubeConfig, config.ClusterEndpoint))
 	}
 
-	controller := deploy.NewDeployment(k8sClient)
+	config.AdminK8sClient, err = client.NewK8sClientWithKubeConfig(kubeConfig)
 
-	err = controller.CreateNamespace()
 	if err != nil {
-		panic(err)
+		ginkgo.Fail("Cannot create admin k8s client. Cause: " + err.Error())
 	}
 
-	if err := controller.DeployWorkspacesController(); err != nil {
-		fmt.Println("Failed to deploy workspace controller")
-		panic(err)
+	config.OperatorNamespace = "devworkspace-controller"
+	config.WorkspaceNamespace = "test-terminal-namespace"
+
+	//create the test workspace for the test user under kube admin
+
+	err = config.AdminK8sClient.CreateProjectWithKubernetesContext(config.WorkspaceNamespace)
+	if err != nil {
+		ginkgo.Fail(fmt.Sprintf("Cannot create the namespace: Cause: %s %s", config.WorkspaceNamespace, err.Error()))
+	}
+
+	err = config.AdminK8sClient.CreateSA(testServiceAccount, config.WorkspaceNamespace)
+	if err != nil {
+		ginkgo.Fail("Cannot create test SA. Cause: " + err.Error())
+
+	}
+	err = config.AdminK8sClient.AssignRoleToSA(config.WorkspaceNamespace, testServiceAccount, "admin")
+	if err != nil {
+		ginkgo.Fail("Cannot create test rolebinding for SA. Cause: " + err.Error())
+	}
+
+	token, err := config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
+	//sometimes the Service Account token is not applied immediately in this case we wait 1 sec.
+	// and try obtain it again
+	if err != nil && strings.Contains(err.Error(), "is not found") {
+		time.Sleep(1 * time.Second)
+		token, err = config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
+	} else if err != nil {
+		ginkgo.Fail("Cannot get test SA token. Cause: " + err.Error())
+	}
+
+	config.DevK8sClient, err = client.NewK8sClientWithToken(token, config.ClusterEndpoint)
+	if err != nil {
+		ginkgo.Fail("Cannot create k8s client for the test ServiceAccount " + err.Error())
 	}
 
 	return nil
 }, func(data []byte) {})
 
 var _ = ginkgo.SynchronizedAfterSuite(func() {
-	k8sClient, err := client.NewK8sClient()
 
-	if err != nil {
-		_ = fmt.Errorf("Failed to uninstall workspace controller %s", err)
+	if os.Getenv("CLEAN_UP_AFTER_SUITE") == "true" {
+		err := config.AdminK8sClient.DeleteProjectWithKubernetesContext(config.WorkspaceNamespace)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Cannot remove the terminal test workspace: %s the error: %s", config.WorkspaceNamespace, err.Error()))
+		}
 	}
 
-	if err = k8sClient.Kube().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(context.TODO(), workspaceWebhook.MutateWebhookCfgName, metav1.DeleteOptions{}); err != nil {
-		_ = fmt.Errorf("Failed to delete mutating webhook configuration %s", err)
-	}
-
-	if err = k8sClient.Kube().AdmissionregistrationV1().ValidatingWebhookConfigurations().Delete(context.TODO(), workspaceWebhook.ValidateWebhookCfgName, metav1.DeleteOptions{}); err != nil {
-		_ = fmt.Errorf("Failed to delete validating webhook configuration %s", err)
-	}
 }, func() {})
 
 func TestWorkspaceController(t *testing.T) {

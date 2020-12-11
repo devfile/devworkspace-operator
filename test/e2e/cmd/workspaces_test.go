@@ -40,12 +40,12 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	fmt.Println("Starting to setup objects before run ginkgo suite")
 
 	var err error
-	kubeConfig := os.Getenv("KUBECONFIG_PATH")
+	kubeConfig := os.Getenv("KUBECONFIG")
 	config.ClusterEndpoint = os.Getenv("KUBERNETES_API_ENDPOINT")
 
 	if len(kubeConfig) == 0 || len(config.ClusterEndpoint) == 0 {
 		failMess := "The mandatory environment variable(s) is not set.\nMake sure that all variables have been set properly. " +
-			"The variable  list:\nKUBECONFIG_PATH=%s\nKUBERNETES_API_ENDPOINT=%s"
+			"The variable list:\nKUBECONFIG=%s\nKUBERNETES_API_ENDPOINT=%s"
 		ginkgo.Fail(fmt.Sprintf(failMess, kubeConfig, config.ClusterEndpoint))
 	}
 

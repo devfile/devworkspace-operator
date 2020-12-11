@@ -23,6 +23,7 @@ export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export WEBHOOK_ENABLED ?= true
 export DEFAULT_ROUTING ?= basic
+export KUBECONFIG ?= ${HOME}/.kube/config
 REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
 
@@ -338,6 +339,7 @@ help: Makefile
 	@echo 'Supported environment variables:'
 	@echo '    IMG                        - Image used for controller'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
+	@echo '    KUBECONFIG                 - Kubeconfig which should be used for accessing to the cluster. Currently is: $(KUBECONFIG)'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'

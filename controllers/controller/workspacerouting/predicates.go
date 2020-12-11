@@ -25,6 +25,9 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 		CreateFunc: func(ev event.CreateEvent) bool {
 			obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
 			if !ok {
+				// If object is not a WorkspaceRouting, it must be a service/ingress/route related to the workspace
+				// The safe choice here is to trigger a reconcile to ensure that all resources are in sync; it's the job
+				// of the controller to ignore WorkspaceRoutings for other routing classes.
 				return true
 			}
 			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {
@@ -33,12 +36,16 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 			return true
 		},
 		DeleteFunc: func(_ event.DeleteEvent) bool {
-			// Return true to ensure finalizers are removed
+			// Return true to ensure objects are recreated if needed, and that finalizers are
+			// removed on deletion.
 			return true
 		},
 		UpdateFunc: func(ev event.UpdateEvent) bool {
 			newObj, ok := ev.ObjectNew.(*controllerv1alpha1.WorkspaceRouting)
 			if !ok {
+				// If object is not a WorkspaceRouting, it must be a service/ingress/route related to the workspace
+				// The safe choice here is to trigger a reconcile to ensure that all resources are in sync; it's the job
+				// of the controller to ignore WorkspaceRoutings for other routing classes.
 				return true
 			}
 			if _, err := getSolver(newObj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {

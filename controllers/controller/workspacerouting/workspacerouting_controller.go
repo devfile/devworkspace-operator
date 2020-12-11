@@ -99,7 +99,10 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	solver, err := r.GetSolverFunc(instance.Spec.RoutingClass)
 	if err != nil {
-		reqLogger.Error(err, "Could not get solver for routingClass")
+		if errors.Is(err, RoutingNotSupported) {
+			return reconcile.Result{}, nil
+		}
+		reqLogger.Error(err, "Invalid routing class for workspace")
 		instance.Status.Phase = controllerv1alpha1.RoutingFailed
 		statusErr := r.Status().Update(ctx, instance)
 		return reconcile.Result{}, statusErr

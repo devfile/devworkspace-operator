@@ -122,6 +122,12 @@ func getSpecRouting(
 		}
 	}
 
+	var annotations map[string]string
+	if val, ok := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]; ok {
+		annotations = map[string]string{}
+		annotations[config.WorkspaceRestrictedAccessAnnotation] = val
+	}
+
 	routing := &v1alpha1.WorkspaceRouting{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      fmt.Sprintf("routing-%s", workspace.Status.WorkspaceId),
@@ -129,6 +135,7 @@ func getSpecRouting(
 			Labels: map[string]string{
 				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
+			Annotations: annotations,
 		},
 		Spec: v1alpha1.WorkspaceRoutingSpec{
 			WorkspaceId:   workspace.Status.WorkspaceId,

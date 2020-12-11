@@ -69,6 +69,9 @@ func getDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 }
 
 func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
+	if len(endpoints) == 0 {
+		return nil
+	}
 	var servicePorts []corev1.ServicePort
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {

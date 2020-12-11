@@ -37,7 +37,8 @@ type proxyEndpoint struct {
 	publicEndpointHttpPort int64
 }
 
-func (s *OpenShiftOAuthSolver) GetSpecObjects(spec controllerv1alpha1.WorkspaceRoutingSpec, workspaceMeta WorkspaceMetadata) RoutingObjects {
+func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) RoutingObjects {
+	spec := routing.Spec
 	proxy, noProxy := getProxiedEndpoints(spec)
 	defaultIngresses, defaultRoutes := getRoutingForSpec(noProxy, workspaceMeta)
 

@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
+	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
 
@@ -120,12 +121,16 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		RoutingSuffix: instance.Spec.RoutingSuffix,
 	}
 
-	routingObjects := solver.GetSpecObjects(instance.Spec, workspaceMeta)
+	restrictedAccess, setRestrictedAccess := instance.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	routingObjects := solver.GetSpecObjects(instance, workspaceMeta)
 	services := routingObjects.Services
 	for idx := range services {
 		err := controllerutil.SetControllerReference(instance, &services[idx], r.Scheme)
 		if err != nil {
 			return reconcile.Result{}, err
+		}
+		if setRestrictedAccess {
+			services[idx].Annotations = maputils.Append(services[idx].Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 	ingresses := routingObjects.Ingresses
@@ -134,12 +139,18 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		if setRestrictedAccess {
+			ingresses[idx].Annotations = maputils.Append(ingresses[idx].Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+		}
 	}
 	routes := routingObjects.Routes
 	for idx := range routes {
 		err := controllerutil.SetControllerReference(instance, &routes[idx], r.Scheme)
 		if err != nil {
 			return reconcile.Result{}, err
+		}
+		if setRestrictedAccess {
+			routes[idx].Annotations = maputils.Append(routes[idx].Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 
@@ -176,6 +187,9 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	if config.ControllerCfg.IsOpenShift() {
 		oauthClient := routingObjects.OAuthClient
+		if setRestrictedAccess {
+			oauthClient.Annotations = maputils.Append(oauthClient.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+		}
 		oauthClientInSync, err := r.syncOAuthClient(instance, oauthClient)
 		if err != nil || !oauthClientInSync {
 			reqLogger.Info("OAuthClient not in sync")

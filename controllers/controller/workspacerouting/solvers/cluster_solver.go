@@ -33,7 +33,8 @@ type ClusterSolver struct {
 
 var _ RoutingSolver = (*ClusterSolver)(nil)
 
-func (s *ClusterSolver) GetSpecObjects(spec controllerv1alpha1.WorkspaceRoutingSpec, workspaceMeta WorkspaceMetadata) RoutingObjects {
+func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) RoutingObjects {
+	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	podAdditions := &controllerv1alpha1.PodAdditions{}
 	if s.TLS {

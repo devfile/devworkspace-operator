@@ -151,6 +151,12 @@ func getSpecComponents(workspace *devworkspace.DevWorkspace, scheme *runtime.Sch
 		}
 	}
 
+	var annotations map[string]string
+	if val, ok := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]; ok {
+		annotations = map[string]string{}
+		annotations[config.WorkspaceRestrictedAccessAnnotation] = val
+	}
+
 	var components []v1alpha1.Component
 	if len(dockerComponents) > 0 {
 		dockerResolver := v1alpha1.Component{
@@ -160,6 +166,7 @@ func getSpecComponents(workspace *devworkspace.DevWorkspace, scheme *runtime.Sch
 				Labels: map[string]string{
 					config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 				},
+				Annotations: annotations,
 			},
 			Spec: v1alpha1.WorkspaceComponentSpec{
 				WorkspaceId: workspace.Status.WorkspaceId,

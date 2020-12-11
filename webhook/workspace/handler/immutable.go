@@ -39,9 +39,17 @@ var ImmutableWorkspaceDiffOptions = []cmp.Option{
 }
 
 func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.Request) admission.Response {
+	isRestricted, err := h.checkRestrictedAccessAnnotation(req)
+	if err != nil {
+		return admission.Denied(err.Error())
+	}
+	if !isRestricted {
+		return admission.Allowed("Workspace does not have restricted-access annotation")
+	}
+
 	oldObj := &unstructured.Unstructured{}
 	newObj := &unstructured.Unstructured{}
-	err := h.parse(req, oldObj, newObj)
+	err = h.parse(req, oldObj, newObj)
 	if err != nil {
 		return admission.Denied(err.Error())
 	}
@@ -63,6 +71,14 @@ func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.
 }
 
 func (h *WebhookHandler) HandleImmutableCreate(_ context.Context, req admission.Request) admission.Response {
+	isRestricted, err := h.checkRestrictedAccessAnnotation(req)
+	if err != nil {
+		return admission.Denied(err.Error())
+	}
+	if !isRestricted {
+		return admission.Allowed("Workspace does not have restricted-access annotation")
+	}
+
 	if req.Kind == V1RouteKind && req.UserInfo.Username == h.ControllerSAName {
 		// Have to handle this case separately since req.UserInfo.UID is empty for Route objects
 		// ref: https://github.com/eclipse/che/issues/17114
@@ -96,7 +112,7 @@ func (h *WebhookHandler) checkRestrictedAccessWorkspace(creatorUID, restrictedAc
 		return true, "workspace with restricted-access is updated by owner or controller"
 	}
 	if isStartedStopped() {
-		return true, "workspace with restricted-access  workspace is started/stopped"
+		return true, "workspace with restricted-access workspace is started/stopped"
 	}
 	log.Info(fmt.Sprintf("Denied request on workspace resource by user %s", uid))
 	return false, "workspace has restricted-access enabled and can only be modified by its creator."
@@ -132,6 +148,18 @@ func (h *WebhookHandler) handleImmutableService(oldObj, newObj runtime.Object, u
 		return true, ""
 	}
 	return false, "object is owned by workspace and cannot be updated."
+}
+
+func (h *WebhookHandler) checkRestrictedAccessAnnotation(req admission.Request) (restrictedAccess bool, err error) {
+	obj := &unstructured.Unstructured{}
+	// If request is UPDATE/DELETE, use old object to check annotation; otherwise, use new object
+	if len(req.OldObject.Raw) > 0 {
+		err = h.Decoder.DecodeRaw(req.OldObject, obj)
+	} else {
+		err = h.Decoder.DecodeRaw(req.Object, obj)
+	}
+	annotations := obj.GetAnnotations()
+	return annotations[config.WorkspaceRestrictedAccessAnnotation] == "true", nil
 }
 
 func changePermitted(oldObj, newObj runtime.Object) bool {

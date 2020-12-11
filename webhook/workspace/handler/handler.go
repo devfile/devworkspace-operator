@@ -28,6 +28,8 @@ type WebhookHandler struct {
 	Decoder          *admission.Decoder
 }
 
+// parse decodes the old and new objects in an admission request. Returns an error if req.OldObject is empty (the field
+// is filled only if the request is an UPDATE or DELETE.
 func (h *WebhookHandler) parse(req admission.Request, intoOld runtime.Object, intoNew runtime.Object) error {
 	err := h.Decoder.Decode(req, intoNew)
 	if err != nil {

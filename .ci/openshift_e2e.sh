@@ -50,7 +50,7 @@ function getDevWorkspaceOperatorLogs() {
     for POD in $(oc get pods -o name -n ${NAMESPACE}); do
        for CONTAINER in $(oc get -n ${NAMESPACE} ${POD} -o jsonpath="{.spec.containers[*].name}"); do
             echo ""
-            echo "<=========================Getting logs from $POD==================================>"
+            echo "<=========================Getting logs from container $CONTAINER in $POD==================================>"
             echo ""
             oc logs ${POD} -c ${CONTAINER} -n ${NAMESPACE} | tee $(echo ${POD}-${CONTAINER}.log | sed 's|pod/||g')
         done

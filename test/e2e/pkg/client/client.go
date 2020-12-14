@@ -61,14 +61,8 @@ func NewK8sClientWithKubeConfig(kubeconfigFile string) (*K8sClient, error) {
 		return nil, err
 	}
 
-	//TODO we need admins KUBECONFIG or credentials as arguments
-	//TODO copy files with go
 	cfgBump := fmt.Sprintf("/tmp/admin.%s.kubeconfig", generateUniqPrefixForFile())
 	err = copyFile(kubeconfigFile, cfgBump)
-
-	if err != nil {
-		log.Fatal(fmt.Sprintf("Can't bump kubeconfig %s", err))
-	}
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -89,7 +83,6 @@ func NewK8sClientWithKubeConfig(kubeconfigFile string) (*K8sClient, error) {
 
 // NewK8sClientWithKubeConfig creates kubernetes client wrapper with the token
 func NewK8sClientWithToken(token, clusterConsoleUrl string) (*K8sClient, error) {
-	//TODO generate the suffix for the file
 	cfgBump := fmt.Sprintf("/tmp/dev.%s.kubeconfig", generateUniqPrefixForFile())
 	cmd := exec.Command("bash",
 		"-c", fmt.Sprintf(
@@ -141,7 +134,7 @@ func copyFile(sourceFile string, destinationFile string) error {
 	return nil
 }
 
-//generate unq prefix for using current time in milliseconds and get last 5 numbers
+//generateUniqPrefixForFile generates unique prefix by using current time in milliseconds and get last 5 numbers
 func generateUniqPrefixForFile() string {
 	//get the uniq time in seconds as string
 	prefix := strconv.FormatInt(int64(int(time.Now().UnixNano())), 10)

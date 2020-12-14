@@ -71,7 +71,4 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 		}
 		gomega.Expect(resultOfExecCommand).To(gomega.ContainSubstring(expectedMessageSuffix))
 	})
-
-	//TODO Implement tear down where clean up all resources
-
 })

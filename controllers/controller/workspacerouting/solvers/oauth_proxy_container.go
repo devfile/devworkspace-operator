@@ -71,7 +71,7 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 			},
 		},
 		TerminationMessagePolicy: corev1.TerminationMessageFallbackToLogsOnError,
-		Image:                    images.GetOpenShiftOAuthProxyImage(),
+		Image: images.GetOpenShiftOAuthProxyImage(),
 		Args: []string{
 			"--https-address=:" + containerPortString,
 			"--http-address=127.0.0.1:" + strconv.FormatInt(int64(proxyEndpoint.publicEndpointHttpPort), 10),

@@ -13,6 +13,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -35,6 +36,31 @@ const (
 	jUnitOutputFilename  = "junit-workspaces-operator.xml"
 	testServiceAccount   = "terminal-test"
 )
+
+func waitDeletionWorkspace() error {
+	var isRemoved = false
+	var err error
+	thresholdAttempts := 10
+	delayBetweenAttempts := 1
+
+	for i := 0; i < thresholdAttempts; i++ {
+		isRemoved, err = config.AdminK8sClient.IsNamespaceExist(config.WorkspaceNamespace)
+		if isRemoved {
+			break
+			return nil
+		}
+		time.Sleep(time.Duration(delayBetweenAttempts) * time.Second)
+		if err != nil || !isRemoved {
+			fmt.Println("The created namespace " + config.WorkspaceNamespace + " is not removed yet " + err.Error())
+		}
+	}
+	fmt.Println(fmt.Sprintf("The created namespace %s  is not deleted after %d attemps", config.WorkspaceNamespace, thresholdAttempts))
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	return errors.New("timeout after removing namespace " + config.WorkspaceNamespace)
+}
 
 //SynchronizedBeforeSuite blocks is executed before run all test suites
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
@@ -99,13 +125,10 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	if cleanUpAfterSuite == "" || cleanUpAfterSuite == "true" {
 		log.Printf("Cleaning up test namespace %s", config.WorkspaceNamespace)
 		err := config.AdminK8sClient.DeleteNamespace(config.WorkspaceNamespace)
+		err = waitDeletionWorkspace()
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Cannot remove the terminal test workspace: %s the error: %s", config.WorkspaceNamespace, err.Error()))
 		}
-		//TODO 1. Wait until namespace is really removed, otherwise the next e2e run will fail due no objects creation is allowed in Terminating namespace.
-		//TODO 2. Alternative - in the set up, before creating a namespace, if it already exists and is terminating - wait until it's removed and recreate it from the scratch
-		//TODO To make sure finalizers works as expected the first is better
-		_, _ = config.AdminK8sClient.IsNamespaceExist(config.WorkspaceNamespace)
 	}
 
 }, func() {})

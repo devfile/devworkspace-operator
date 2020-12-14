@@ -16,5 +16,5 @@ import "github.com/devfile/devworkspace-operator/test/e2e/pkg/client"
 
 var OperatorNamespace string
 var WorkspaceNamespace string
-var ClusterEndpoint string
+
 var DevK8sClient, AdminK8sClient *client.K8sClient

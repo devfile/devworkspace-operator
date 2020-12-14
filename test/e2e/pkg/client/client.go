@@ -82,13 +82,18 @@ func NewK8sClientWithKubeConfig(kubeconfigFile string) (*K8sClient, error) {
 }
 
 // NewK8sClientWithKubeConfig creates kubernetes client wrapper with the token
-func NewK8sClientWithToken(token, clusterConsoleUrl string) (*K8sClient, error) {
+func NewK8sClientWithToken(baseKubeConfig, token string) (*K8sClient, error) {
 	cfgBump := fmt.Sprintf("/tmp/dev.%s.kubeconfig", generateUniqPrefixForFile())
+	err := copyFile(baseKubeConfig, cfgBump)
+	if err != nil {
+		return nil, err
+	}
+
 	cmd := exec.Command("bash",
 		"-c", fmt.Sprintf(
 			"KUBECONFIG=%s"+
-				" oc login --token %s --insecure-skip-tls-verify=true %s",
-			cfgBump, token, clusterConsoleUrl))
+				" oc login --token %s --insecure-skip-tls-verify=true",
+			cfgBump, token))
 	outBytes, err := cmd.CombinedOutput()
 	output := string(outBytes)
 	cfg, err := clientcmd.BuildConfigFromFlags("", cfgBump)
@@ -139,7 +144,7 @@ func generateUniqPrefixForFile() string {
 	//get the uniq time in seconds as string
 	prefix := strconv.FormatInt(int64(int(time.Now().UnixNano())), 10)
 	//cut the string to last 5 uniq numbers
-	prefix = prefix[14:len(prefix)]
+	prefix = prefix[14:]
 	return prefix
 
 }

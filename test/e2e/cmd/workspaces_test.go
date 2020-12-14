@@ -42,12 +42,11 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 	var err error
 	kubeConfig := os.Getenv("KUBECONFIG")
-	config.ClusterEndpoint = os.Getenv("KUBERNETES_API_ENDPOINT")
 
-	if len(kubeConfig) == 0 || len(config.ClusterEndpoint) == 0 {
+	if len(kubeConfig) == 0 {
 		failMess := "The mandatory environment variable(s) is not set.\nMake sure that all variables have been set properly. " +
-			"The variable list:\nKUBECONFIG=%s\nKUBERNETES_API_ENDPOINT=%s"
-		ginkgo.Fail(fmt.Sprintf(failMess, kubeConfig, config.ClusterEndpoint))
+			"The variable list:\nKUBECONFIG=%s"
+		ginkgo.Fail(fmt.Sprintf(failMess, kubeConfig))
 	}
 
 	config.AdminK8sClient, err = client.NewK8sClientWithKubeConfig(kubeConfig)
@@ -86,7 +85,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		ginkgo.Fail("Cannot get test SA token. Cause: " + err.Error())
 	}
 
-	config.DevK8sClient, err = client.NewK8sClientWithToken(token, config.ClusterEndpoint)
+	config.DevK8sClient, err = client.NewK8sClientWithToken(kubeConfig, token)
 	if err != nil {
 		ginkgo.Fail("Cannot create k8s client for the test ServiceAccount " + err.Error())
 	}

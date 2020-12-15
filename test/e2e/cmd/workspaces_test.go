@@ -47,19 +47,22 @@ func waitDeletionWorkspace() error {
 		isRemoved, err = config.AdminK8sClient.IsNamespaceExist(config.WorkspaceNamespace)
 		if isRemoved {
 			break
-			return nil
 		}
-		time.Sleep(time.Duration(delayBetweenAttempts) * time.Second)
 		if err != nil || !isRemoved {
 			fmt.Println("The created namespace " + config.WorkspaceNamespace + " is not removed yet " + err.Error())
 		}
+		time.Sleep(time.Duration(delayBetweenAttempts) * time.Second)
 	}
-	fmt.Println(fmt.Sprintf("The created namespace %s  is not deleted after %d attemps", config.WorkspaceNamespace, thresholdAttempts))
+
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Cannot remove the created namespace" + config.WorkspaceNamespace + "error: " + err.Error())
 		return err
 	}
-	return errors.New("timeout after removing namespace " + config.WorkspaceNamespace)
+
+	if !isRemoved {
+		return errors.New(fmt.Sprintf("The created namespace %s  is not deleted after %d attemps. Delay between atteps %d sec", config.WorkspaceNamespace, thresholdAttempts, delayBetweenAttempts))
+	}
+	return nil
 }
 
 //SynchronizedBeforeSuite blocks is executed before run all test suites

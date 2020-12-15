@@ -7,7 +7,6 @@ require (
 	github.com/eclipse/che-go-jsonrpc v0.0.0-20200317130110-931966b891fe // indirect
 	github.com/eclipse/che-plugin-broker v3.4.0+incompatible
 	github.com/go-logr/logr v0.1.0
-	github.com/google/addlicense v0.0.0-20200906110928-a0294312aa76 // indirect
 	github.com/google/go-cmp v0.5.0
 	github.com/google/uuid v1.1.1
 	github.com/kr/pretty v0.2.0 // indirect
@@ -18,7 +17,6 @@ require (
 	go.uber.org/zap v1.16.0 // indirect
 	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
 	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
-	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
 	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
 	golang.org/x/tools v0.0.0-20200403190813-44a64ad78b9b // indirect
 	google.golang.org/protobuf v1.25.0 // indirect

@@ -27,7 +27,6 @@ function Catch_Finish() {
 }
 
 # ENV used by PROW ci
-export CLEAN_UP_AFTER_SUITE="false"
 export CI="openshift"
 export ARTIFACTS_DIR="/tmp/artifacts"
 export NAMESPACE="devworkspace-controller"
@@ -63,5 +62,8 @@ go mod tidy
 go mod vendor
 
 make install
+# configure e2e tests not to clean up the resources since it's just for tests instance
+# and we might need to grab data from there
+export CLEAN_UP_AFTER_SUITE="false"
 make test_e2e
 make uninstall

@@ -13,7 +13,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -37,37 +36,9 @@ const (
 	testServiceAccount   = "terminal-test"
 )
 
-func waitDeletionWorkspace() error {
-	var isRemoved = false
-	var err error
-	thresholdAttempts := 10
-	delayBetweenAttempts := 1
-
-	for i := 0; i < thresholdAttempts; i++ {
-		isRemoved, err = config.AdminK8sClient.IsNamespaceExist(config.WorkspaceNamespace)
-		if isRemoved {
-			break
-		}
-		if err != nil || !isRemoved {
-			fmt.Println("The created namespace " + config.WorkspaceNamespace + " is not removed yet " + err.Error())
-		}
-		time.Sleep(time.Duration(delayBetweenAttempts) * time.Second)
-	}
-
-	if err != nil {
-		fmt.Println("Cannot remove the created namespace" + config.WorkspaceNamespace + "error: " + err.Error())
-		return err
-	}
-
-	if !isRemoved {
-		return errors.New(fmt.Sprintf("The created namespace %s  is not deleted after %d attemps. Delay between atteps %d sec", config.WorkspaceNamespace, thresholdAttempts, delayBetweenAttempts))
-	}
-	return nil
-}
-
 //SynchronizedBeforeSuite blocks is executed before run all test suites
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
-	fmt.Println("Starting to setup objects before run ginkgo suite")
+	log.Println("Starting to setup objects before run ginkgo suite")
 
 	var err error
 	kubeConfig := os.Getenv("KUBECONFIG")
@@ -127,22 +98,27 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	//clean up by default or when user configured it explicitly
 	if cleanUpAfterSuite == "" || cleanUpAfterSuite == "true" {
 		log.Printf("Cleaning up test namespace %s", config.WorkspaceNamespace)
+		log.Printf("If you need resources for investigation, set the following env var CLEAN_UP_AFTER_SUITE=false")
 		err := config.AdminK8sClient.DeleteNamespace(config.WorkspaceNamespace)
-		err = waitDeletionWorkspace()
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Cannot remove the terminal test workspace: %s the error: %s", config.WorkspaceNamespace, err.Error()))
+			ginkgo.Fail(fmt.Sprintf("Failed to remove test namespace '%s'. Cause: %s", config.WorkspaceNamespace, err.Error()))
 		}
+		err = config.AdminK8sClient.WaitNamespaceIsTerminated(config.WorkspaceNamespace)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Test namespace '%s' is not cleaned up after test. Cause: %s", config.WorkspaceNamespace, err.Error()))
+		}
+	} else {
+		log.Printf("Cleaning up test resources are disabled")
 	}
-
 }, func() {})
 
 func TestWorkspaceController(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 
-	fmt.Println("Creating ginkgo reporter for Test Harness: Junit and Debug Detail reporter")
+	log.Println("Creating ginkgo reporter for Test Harness: Junit and Debug Detail reporter")
 	var r []ginkgo.Reporter
 	r = append(r, reporters.NewJUnitReporter(filepath.Join(testResultsDirectory, jUnitOutputFilename)))
 
-	fmt.Println("Running Workspace Controller e2e tests...")
+	log.Println("Running Workspace Controller e2e tests...")
 	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Workspaces Controller Operator Tests", r)
 }

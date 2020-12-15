@@ -14,18 +14,21 @@ package client
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"log"
+	"time"
 
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 //CreateNamespace creates a new namespace
 func (w *K8sClient) CreateNamespace(namespace string) error {
 	_, err := w.kubeClient.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}, metav1.CreateOptions{})
-	if errors.IsAlreadyExists(err) {
+	if k8sErrors.IsAlreadyExists(err) {
 		return nil
 	}
 	return err
@@ -33,19 +36,32 @@ func (w *K8sClient) CreateNamespace(namespace string) error {
 
 //DeleteNamespace deletes a namespace
 func (w *K8sClient) DeleteNamespace(namespace string) error {
-	err := w.kubeClient.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
-	return err
+	return w.kubeClient.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 }
 
-//DeleteNamespace deletes a namespace
-func (w *K8sClient) IsNamespaceExist(namespace string) (isRemoved bool, err error) {
-	_, err = w.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return true, nil
+//WaitNamespaceIsTerminated waits until namespace that is marked to be removed, is fully cleaned up
+func (w *K8sClient) WaitNamespaceIsTerminated(namespace string) (err error) {
+	thresholdAttempts := 60
+	delayBetweenAttempts := 1
+
+	for i := thresholdAttempts; i > 0; i-- {
+		var ns *corev1.Namespace
+		ns, err = w.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return nil
+			}
+			log.Printf("Failed to get namespace '%s' to verify if it's fully removed, will try again. Err: %s", namespace, err.Error())
 		}
-		return false, err
+
+		log.Printf("Namespace '%s' is in %s phase. Waiting %d until it's removed. Will time out in %d", namespace, ns.Status.Phase, delayBetweenAttempts, i*delayBetweenAttempts)
+		time.Sleep(time.Duration(delayBetweenAttempts) * time.Second)
 	}
 
-	return false, nil
+	if err != nil {
+		log.Printf("Failed to get namespace '%s' to verify if it's fully removed. Err: %s", namespace, err.Error())
+		return err
+	}
+
+	return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %d.", namespace, thresholdAttempts*delayBetweenAttempts))
 }

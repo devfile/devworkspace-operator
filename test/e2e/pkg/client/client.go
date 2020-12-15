@@ -63,6 +63,9 @@ func NewK8sClientWithKubeConfig(kubeconfigFile string) (*K8sClient, error) {
 
 	cfgBump := fmt.Sprintf("/tmp/admin.%s.kubeconfig", generateUniqPrefixForFile())
 	err = copyFile(kubeconfigFile, cfgBump)
+	if err != nil {
+		return nil, err
+	}
 
 	client, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
@@ -126,14 +129,11 @@ func (c *K8sClient) Kube() kubernetes.Interface {
 func copyFile(sourceFile string, destinationFile string) error {
 	input, err := ioutil.ReadFile(sourceFile)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
 	err = ioutil.WriteFile(destinationFile, input, 0644)
 	if err != nil {
-		fmt.Println("Cannot create file  copy for config ", destinationFile)
-		fmt.Println(err)
 		return err
 	}
 	return nil

@@ -14,6 +14,7 @@ package client
 
 import (
 	"fmt"
+	"log"
 	"os/exec"
 	"strings"
 	"time"
@@ -29,15 +30,15 @@ func (w *K8sClient) OcApplyWorkspace(namespace string, filePath string) (command
 	output := string(outBytes)
 
 	if strings.Contains(output, "failed calling webhook") {
-		fmt.Println("Seems DevWorkspace Webhook Server is not ready yet. Will retry in 2 seconds. Cause: " + output)
+		log.Print("Seems DevWorkspace Webhook Server is not ready yet. Will retry in 2 seconds. Cause: " + output)
 		time.Sleep(2 * time.Second)
 		return w.OcApplyWorkspace(namespace, filePath)
 	}
 	if err != nil && !strings.Contains(output, "AlreadyExists") {
-		fmt.Println(err)
+		return output, err
 	}
 
-	return output, err
+	return output, nil
 }
 
 //launch 'exec' oc command in the defined pod and container

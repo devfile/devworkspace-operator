@@ -49,12 +49,12 @@ func (w *K8sClient) WaitForRunningPodBySelector(namespace, selector string, time
 		return err
 	}
 	if len(podList.Items) == 0 {
-		fmt.Println("Pod not created yet with selector " + selector + " in namespace " + namespace)
+		log.Printf("Pod not created yet with selector '%s' in namespace %s", selector, namespace)
 		return fmt.Errorf("Pod not created yet in %s with label %s", namespace, selector)
 	}
 
 	for _, pod := range podList.Items {
-		fmt.Println("Pod " + pod.Name + " created in namespace " + namespace + "...Checking startup data.")
+		log.Printf("Pod '%s' created in namespace %s... Checking startup data.", pod.Name, namespace)
 		if err := w.waitForPodRunning(namespace, pod.Name, timeout); err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ func (w *K8sClient) isPodRunning(podName, namespace string) wait.ConditionFunc {
 
 		switch pod.Status.Phase {
 		case v1.PodRunning:
-			fmt.Println("Pod started after", age, "seconds")
+			log.Printf("Pod started after %f seconds", age)
 			return true, nil
 		case v1.PodFailed, v1.PodSucceeded:
 			return false, nil
@@ -98,16 +98,17 @@ func (w *K8sClient) isPodRunning(podName, namespace string) wait.ConditionFunc {
 	}
 }
 
-// return the pod name from the dev user namespace (config.WorkspaceNamespace)
-func (w *K8sClient) GetPodNameFromUserNameSpaceByLabel(selector, namespace string) string {
+// GetPodNameBySelector returns the pod name that matches selector
+// error is returned when
+func (w *K8sClient) GetPodNameBySelector(selector, namespace string) (string, error) {
 	podList, err := w.ListPods(namespace, selector)
 
 	if err != nil {
-		log.Fatal(fmt.Sprintf("Cannot obtain pods from developer namespace: %s, error: %s", namespace, err.Error()))
+		return "", err
 	}
 	if len(podList.Items) == 0 {
-		log.Fatal(fmt.Sprintf("Cannot find pods in developer namespace: %s with selector: %s", namespace, selector))
+		return "", errors.New(fmt.Sprintf("There is no pod that matches '%s' in namespace %s ", selector, namespace))
 	}
 	// we expect just 1 pod in test namespace and return the first value from the list
-	return podList.Items[0].Name
+	return podList.Items[0].Name, nil
 }

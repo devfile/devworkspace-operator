@@ -14,38 +14,27 @@ package client
 
 import (
 	"fmt"
+	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"io/ioutil"
-	"strconv"
-	"time"
-
-	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/clientcmd"
 	"log"
 	"os/exec"
-
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"strconv"
+	"time"
 )
 
 var (
-	Scheme             = runtime.NewScheme()
-	SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-	AddToScheme        = SchemeBuilder.AddToScheme
-	SchemeGroupVersion = schema.GroupVersion{Group: v1alpha2.SchemeGroupVersion.Group, Version: v1alpha2.SchemeGroupVersion.Version}
+	Scheme = runtime.NewScheme()
 )
 
 func init() {
-	if err := AddToScheme(scheme.Scheme); err != nil {
-		log.Fatalf("Failed to add CRD to scheme")
-	}
-	if err := api.AddToScheme(Scheme); err != nil {
-		log.Fatalf("Failed to add CRD to scheme")
-	}
+	utilruntime.Must(clientgoscheme.AddToScheme(Scheme))
+	utilruntime.Must(workspacev1alpha2.AddToScheme(Scheme))
 }
 
 type K8sClient struct {

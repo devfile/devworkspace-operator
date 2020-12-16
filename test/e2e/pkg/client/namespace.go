@@ -41,27 +41,29 @@ func (w *K8sClient) DeleteNamespace(namespace string) error {
 
 //WaitNamespaceIsTerminated waits until namespace that is marked to be removed, is fully cleaned up
 func (w *K8sClient) WaitNamespaceIsTerminated(namespace string) (err error) {
-	thresholdAttempts := 60
-	delayBetweenAttempts := 1
+	timeout := time.After(60 * time.Second)
+	tick := time.Tick(1 * time.Second)
 
-	for i := thresholdAttempts; i > 0; i-- {
-		var ns *corev1.Namespace
-		ns, err = w.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
-		if err != nil {
-			if k8sErrors.IsNotFound(err) {
-				return nil
+	for {
+		select {
+		case <-timeout:
+			return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %v.", namespace, timeout))
+		case <-tick:
+			var ns *corev1.Namespace
+			ns, err = w.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
+			if err != nil {
+				if k8sErrors.IsNotFound(err) {
+					return nil
+				}
+				log.Printf("Failed to get namespace '%s'to verify if it's fully removed, will try again. Err: %s", namespace, err.Error())
 			}
-			log.Printf("Failed to get namespace '%s' to verify if it's fully removed, will try again. Err: %s", namespace, err.Error())
+			log.Printf("Namespace '%s' is in %s phase. Waiting %v until it's removed. Will time out in %v", namespace, ns.Status.Phase, tick, timeout)
 		}
-
-		log.Printf("Namespace '%s' is in %s phase. Waiting %d until it's removed. Will time out in %d", namespace, ns.Status.Phase, delayBetweenAttempts, i*delayBetweenAttempts)
-		time.Sleep(time.Duration(delayBetweenAttempts) * time.Second)
 	}
-
 	if err != nil {
 		log.Printf("Failed to get namespace '%s' to verify if it's fully removed. Err: %s", namespace, err.Error())
 		return err
 	}
 
-	return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %d.", namespace, thresholdAttempts*delayBetweenAttempts))
+	return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %d.", namespace, timeout))
 }

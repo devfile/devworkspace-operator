@@ -54,7 +54,12 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		ginkgo.Fail("Cannot create admin k8s client. Cause: " + err.Error())
 	}
 
-	config.OperatorNamespace = "devworkspace-controller"
+	operatorNamespace := os.Getenv("NAMESPACE")
+	if operatorNamespace != "" {
+		config.OperatorNamespace = operatorNamespace
+	} else {
+		config.OperatorNamespace = "devworkspace-controller"
+	}
 	config.WorkspaceNamespace = "test-terminal-namespace"
 
 	//create the test workspace for the test user under kube admin

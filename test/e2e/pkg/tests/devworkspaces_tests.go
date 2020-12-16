@@ -62,17 +62,19 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 		}
 		resultOfExecCommand, err := config.DevK8sClient.ExecCommandInContainer(podName, config.WorkspaceNamespace, "echo hello dev")
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Cannot execute command in the devworkspace container. Error: %s: %s", resultOfExecCommand, err))
+			ginkgo.Fail(fmt.Sprintf("Cannot execute command in the devworkspace container. Error: `%s`. Exec output: `%s`", err, resultOfExecCommand))
 		}
 		gomega.Expect(resultOfExecCommand).To(gomega.ContainSubstring("hello dev"))
 	})
 
 	ginkgo.It("Check that not pod owner cannot execute a command in the container", func() {
-		expectedMessageSuffix := "denied the request: The only workspace creator has exec access"
 		resultOfExecCommand, err := config.AdminK8sClient.ExecCommandInContainer(podName, config.WorkspaceNamespace, "echo hello dev")
-		if err != nil && !strings.Contains(resultOfExecCommand, expectedMessageSuffix) {
-			ginkgo.Fail(fmt.Sprintf("Cannot execute command in the devworkspace container. Error: %s: %s", err, resultOfExecCommand))
+		if err == nil {
+			ginkgo.Fail(fmt.Sprintf("Admin is not supposed to be able to exec into test terminal but exec is executed successfully and returned: %s", resultOfExecCommand))
 		}
-		gomega.Expect(resultOfExecCommand).To(gomega.ContainSubstring(expectedMessageSuffix))
+		if !strings.Contains(resultOfExecCommand, "denied the request: The only workspace creator has exec access") {
+			ginkgo.Fail(fmt.Sprintf("Exec command is failed due different reason than expected restricted access. Error: `%s`. Exec output: `%s`", err, resultOfExecCommand))
+		}
+		// as expected exec is failed due restricted access
 	})
 })

@@ -19,8 +19,6 @@ import (
 	"time"
 
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -50,10 +48,10 @@ func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus v1alp
 			return false, errors.New("timed out")
 		case <-tick:
 			currentStatus, err := w.GetDevWsStatus(name, namespace)
-			log.Printf("Now current status of developer workspace is: %s", *currentStatus)
 			if err != nil {
 				return false, err
 			}
+			log.Printf("Now current status of developer workspace is: %s", *currentStatus)
 			if *currentStatus == v1alpha1.WorkspaceStatusFailed {
 				return false, errors.New("workspace has been failed unexpectedly")
 			}
@@ -64,10 +62,11 @@ func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus v1alp
 	}
 }
 
-func addKnownTypes(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypes(SchemeGroupVersion,
-		&v1alpha1.DevWorkspace{},
-	)
-	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-	return nil
-}
+//TODO i am not sure that it is right
+//func addKnownTypes(scheme *runtime.Scheme) error {
+//	scheme.AddKnownTypes(SchemeGroupVersion,
+//		&v1alpha1.DevWorkspace{},
+//	)
+//	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
+//	return nil
+//}

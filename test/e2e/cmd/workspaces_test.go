@@ -17,7 +17,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -78,7 +77,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	token, err := config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
 	//sometimes the Service Account token is not applied immediately in this case we wait 1 sec.
 	// and try obtain it again
-	if err != nil && strings.Contains(err.Error(), "is not found") {
+	if len(token) == 0 {
 		time.Sleep(1 * time.Second)
 		token, err = config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
 	} else if err != nil {

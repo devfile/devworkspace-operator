@@ -14,8 +14,6 @@ package client
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -76,5 +74,6 @@ func (w *K8sClient) GetSAToken(namespace, serviceAccount string) (string, error)
 			return string(token), nil
 		}
 	}
-	return "", errors.New(fmt.Sprintf("token for service account '%s' is not found", serviceAccount))
+	//TODO tried to used return k8sErrors.NewNotFound() but i am not sure is it right way or not
+	return "", nil
 }

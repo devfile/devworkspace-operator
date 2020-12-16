@@ -142,7 +142,7 @@ func copyFile(sourceFile string, destinationFile string) error {
 //generateUniqPrefixForFile generates unique prefix by using current time in milliseconds and get last 5 numbers
 func generateUniqPrefixForFile() string {
 	//get the uniq time in seconds as string
-	prefix := strconv.FormatInt(int64(int(time.Now().UnixNano())), 10)
+	prefix := strconv.FormatInt(time.Now().UnixNano(), 10)
 	//cut the string to last 5 uniq numbers
 	prefix = prefix[14:]
 	return prefix

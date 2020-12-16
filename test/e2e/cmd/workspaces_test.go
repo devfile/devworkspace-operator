@@ -61,7 +61,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 
 	err = config.AdminK8sClient.CreateNamespace(config.WorkspaceNamespace)
 	if err != nil {
-		ginkgo.Fail(fmt.Sprintf("Cannot create the namespace: Cause: %s %s", config.WorkspaceNamespace, err.Error()))
+		ginkgo.Fail(fmt.Sprintf("Cannot create the namespace %q: Cause: %s", config.WorkspaceNamespace, err.Error()))
 	}
 
 	err = config.AdminK8sClient.CreateSA(testServiceAccount, config.WorkspaceNamespace)

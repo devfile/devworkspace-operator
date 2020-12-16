@@ -18,18 +18,18 @@ import (
 	"log"
 	"time"
 
-	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 //get workspace current dev workspace status from the Custom Resource object
-func (w *K8sClient) GetDevWsStatus(name, namespace string) (*v1alpha1.WorkspacePhase, error) {
+func (w *K8sClient) GetDevWsStatus(name, namespace string) (*workspacev1alpha2.WorkspacePhase, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,
 		Namespace: namespace,
 	}
 
-	workspace := &v1alpha1.DevWorkspace{}
+	workspace := &workspacev1alpha2.DevWorkspace{}
 	err := w.crClient.Get(context.TODO(), namespacedName, workspace)
 
 	if err != nil {
@@ -38,7 +38,7 @@ func (w *K8sClient) GetDevWsStatus(name, namespace string) (*v1alpha1.WorkspaceP
 	return &workspace.Status.Phase, nil
 }
 
-func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus v1alpha1.WorkspacePhase) (bool, error) {
+func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus workspacev1alpha2.WorkspacePhase) (bool, error) {
 	timeout := time.After(15 * time.Minute)
 	tick := time.Tick(2 * time.Second)
 
@@ -52,7 +52,7 @@ func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus v1alp
 				return false, err
 			}
 			log.Printf("Now current status of developer workspace is: %s", *currentStatus)
-			if *currentStatus == v1alpha1.WorkspaceStatusFailed {
+			if *currentStatus == workspacev1alpha2.WorkspaceStatusFailed {
 				return false, errors.New("workspace has been failed unexpectedly")
 			}
 			if *currentStatus == expectedStatus {
@@ -61,12 +61,3 @@ func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus v1alp
 		}
 	}
 }
-
-//TODO i am not sure that it is right
-//func addKnownTypes(scheme *runtime.Scheme) error {
-//	scheme.AddKnownTypes(SchemeGroupVersion,
-//		&v1alpha1.DevWorkspace{},
-//	)
-//	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-//	return nil
-//}

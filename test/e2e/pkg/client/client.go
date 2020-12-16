@@ -14,29 +14,30 @@ package client
 
 import (
 	"fmt"
+
+	workspacev1v1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	"io/ioutil"
 	"log"
 	"os/exec"
 	"strconv"
 	"time"
 
-	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	Scheme = runtime.NewScheme()
+	scheme = runtime.NewScheme()
 )
 
-//TODO need check i am not sure that it works as expected
 func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(Scheme))
-	utilruntime.Must(workspacev1alpha2.AddToScheme(Scheme))
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(workspacev1v1alpha2.AddToScheme(scheme))
 }
 
 type K8sClient struct {
@@ -100,7 +101,9 @@ func NewK8sClientWithToken(baseKubeConfig, token string) (*K8sClient, error) {
 		return nil, err
 	}
 
-	crClient, err := crclient.New(cfg, crclient.Options{})
+	crClient, err := crclient.New(cfg, crclient.Options{
+		Scheme: scheme,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -137,5 +140,4 @@ func generateUniqPrefixForFile() string {
 	//cut the string to last 5 uniq numbers
 	prefix = prefix[14:]
 	return prefix
-
 }

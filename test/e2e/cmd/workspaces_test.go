@@ -75,13 +75,17 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	}
 
 	token, err := config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
-	//sometimes the Service Account token is not applied immediately in this case we wait 1 sec.
-	// and try obtain it again
-	if len(token) == 0 {
+	if token == "" {
+		//sometimes the Service Account token is not applied immediately in this case we wait 1 sec.
+		// and try obtain it again
 		time.Sleep(1 * time.Second)
 		token, err = config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
-	} else if err != nil {
-		ginkgo.Fail("Cannot get test SA token. Cause: " + err.Error())
+		if err != nil {
+			ginkgo.Fail("Cannot get test SA token. Cause: " + err.Error())
+		}
+		if token == "" {
+			ginkgo.Fail(fmt.Sprintf("ServiceAccount '%s' token is not initialized in time", testServiceAccount))
+		}
 	}
 
 	config.DevK8sClient, err = client.NewK8sClientWithToken(kubeConfig, token)

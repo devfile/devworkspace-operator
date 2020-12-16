@@ -58,6 +58,8 @@ func (w *K8sClient) AssignRoleToSA(namespace, serviceAccount, role string) error
 	return err
 }
 
+//GetSAToken finds secret with the token related to the specified SA
+//empty string is returned if no secret is found that matches SA
 func (w *K8sClient) GetSAToken(namespace, serviceAccount string) (string, error) {
 	secrets, err := w.kubeClient.CoreV1().Secrets(namespace).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -74,6 +76,6 @@ func (w *K8sClient) GetSAToken(namespace, serviceAccount string) (string, error)
 			return string(token), nil
 		}
 	}
-	//TODO tried to used return k8sErrors.NewNotFound() but i am not sure is it right way or not
+
 	return "", nil
 }

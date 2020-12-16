@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
+	workspacesv1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -46,7 +46,7 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 			return
 		}
 
-		deploy, err := config.DevK8sClient.WaitDevWsStatus("web-terminal", config.WorkspaceNamespace, v1alpha1.WorkspaceStatusRunning)
+		deploy, err := config.DevK8sClient.WaitDevWsStatus("web-terminal", config.WorkspaceNamespace, workspacesv1alpha2.WorkspaceStatusRunning)
 		if !deploy {
 			ginkgo.Fail(fmt.Sprintf("OpenShift Web terminal workspace didn't start properly. Error: %s", err))
 		}

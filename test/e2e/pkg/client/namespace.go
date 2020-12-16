@@ -41,14 +41,18 @@ func (w *K8sClient) DeleteNamespace(namespace string) error {
 
 //WaitNamespaceIsTerminated waits until namespace that is marked to be removed, is fully cleaned up
 func (w *K8sClient) WaitNamespaceIsTerminated(namespace string) (err error) {
-	timeout := time.After(60 * time.Second)
-	tick := time.Tick(1 * time.Second)
+	var delay time.Duration = 1
+	var timeout time.Duration = 60
+	left := timeout
+
+	timeoutC := time.After(timeout * time.Second)
+	tickC := time.Tick(delay * time.Second)
 
 	for {
 		select {
-		case <-timeout:
-			return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %v.", namespace, timeout))
-		case <-tick:
+		case <-timeoutC:
+			return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %v.", namespace, timeoutC))
+		case <-tickC:
 			var ns *corev1.Namespace
 			ns, err = w.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})
 			if err != nil {
@@ -57,13 +61,8 @@ func (w *K8sClient) WaitNamespaceIsTerminated(namespace string) (err error) {
 				}
 				log.Printf("Failed to get namespace '%s'to verify if it's fully removed, will try again. Err: %s", namespace, err.Error())
 			}
-			log.Printf("Namespace '%s' is in %s phase. Waiting %v until it's removed. Will time out in %v", namespace, ns.Status.Phase, tick, timeout)
+			left--
+			log.Printf("Namespace '%s' is in %s phase. Waiting %ds until it's removed. Will time out in %ds", namespace, ns.Status.Phase, delay, left)
 		}
 	}
-	if err != nil {
-		log.Printf("Failed to get namespace '%s' to verify if it's fully removed. Err: %s", namespace, err.Error())
-		return err
-	}
-
-	return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %d.", namespace, timeout))
 }

@@ -31,6 +31,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -117,6 +118,25 @@ func SyncDeploymentToCluster(
 	}
 
 	return DeploymentProvisioningStatus{}
+}
+
+// DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace
+func DeleteWorkspaceDeployment(ctx context.Context, workspace *devworkspace.DevWorkspace, client runtimeClient.Client) (wait bool, err error) {
+	clusterDeployment, err := getClusterDeployment(common.DeploymentName(workspace.Status.WorkspaceId), workspace.Namespace, client)
+	if err != nil {
+		return false, err
+	}
+	if clusterDeployment == nil {
+		return false, nil
+	}
+	err = client.Delete(ctx, clusterDeployment)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {

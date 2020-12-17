@@ -15,7 +15,6 @@ package workspacerouting
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
@@ -37,26 +36,18 @@ import (
 )
 
 var (
-	RoutingNotSupported = errors.New("routingclass not supported by this controller")
-	NoSolversEnabled    = errors.New("reconciler does not define GetSolverFunc")
+	NoSolversEnabled = errors.New("reconciler does not define GetSolverFunc")
 )
 
 const workspaceRoutingFinalizer = "workspacerouting.controller.devfile.io"
-
-// WorkspaceRoutingSolverFunc is a function that obtains a Solver
-// (see github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers)
-// for a particular WorkspaceRouting instance. This function should return an RoutingNotSupported if
-// the routingClass is not recognized, and any other error if the routingClass is invalid (e.g. an OpenShift-only
-// routingClass on a vanilla Kubernetes platform).
-type WorkspaceRoutingSolverFunc func(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solver solvers.RoutingSolver, err error)
 
 // WorkspaceRoutingReconciler reconciles a WorkspaceRouting object
 type WorkspaceRoutingReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-	// GetSolverFunc is an optional function that will be used to get solvers for a particular workspaceRouting
-	GetSolverFunc WorkspaceRoutingSolverFunc
+	// SolverGetter will be used to get solvers for a particular workspaceRouting
+	SolverGetter solvers.RoutingSolverGetter
 }
 
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings,verbs=*
@@ -98,9 +89,9 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, nil
 	}
 
-	solver, err := r.GetSolverFunc(instance.Spec.RoutingClass)
+	solver, err := r.SolverGetter.GetSolver(r.Client, instance.Spec.RoutingClass)
 	if err != nil {
-		if errors.Is(err, RoutingNotSupported) {
+		if errors.Is(err, solvers.RoutingNotSupported) {
 			return reconcile.Result{}, nil
 		}
 		reqLogger.Error(err, "Invalid routing class for workspace")
@@ -257,30 +248,6 @@ func (r *WorkspaceRoutingReconciler) reconcileStatus(
 	return r.Status().Update(context.TODO(), instance)
 }
 
-func GetSolverForRoutingClass(routingClass controllerv1alpha1.WorkspaceRoutingClass) (solvers.RoutingSolver, error) {
-	if routingClass == "" {
-		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
-	}
-	switch routingClass {
-	case controllerv1alpha1.WorkspaceRoutingDefault:
-		return &solvers.BasicSolver{}, nil
-	case controllerv1alpha1.WorkspaceRoutingOpenShiftOauth:
-		if !config.ControllerCfg.IsOpenShift() {
-			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
-		}
-		return &solvers.OpenShiftOAuthSolver{}, nil
-	case controllerv1alpha1.WorkspaceRoutingCluster:
-		return &solvers.ClusterSolver{}, nil
-	case controllerv1alpha1.WorkspaceRoutingClusterTLS, controllerv1alpha1.WorkspaceRoutingWebTerminal:
-		if !config.ControllerCfg.IsOpenShift() {
-			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
-		}
-		return &solvers.ClusterSolver{TLS: true}, nil
-	default:
-		return nil, RoutingNotSupported
-	}
-}
-
 func isFinalizerNecessary(routing *controllerv1alpha1.WorkspaceRouting) bool {
 	routingClass := routing.Spec.RoutingClass
 	if routingClass == "" {
@@ -322,10 +289,10 @@ func (r *WorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if config.ControllerCfg.IsOpenShift() {
 		bld.Owns(&routeV1.Route{})
 	}
-	if r.GetSolverFunc == nil {
+	if r.SolverGetter == nil {
 		return NoSolversEnabled
 	}
-	bld.WithEventFilter(getRoutingPredicatesForSolverFunc(r.GetSolverFunc))
+	bld.WithEventFilter(getRoutingPredicatesForSolverFunc(r.SolverGetter))
 
 	return bld.Complete(r)
 }

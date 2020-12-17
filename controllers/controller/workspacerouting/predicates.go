@@ -13,14 +13,14 @@
 package workspacerouting
 
 import (
-	"errors"
+	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) predicate.Funcs {
+func getRoutingPredicatesForSolverFunc(solverProvider solvers.RoutingSolverGetter) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(ev event.CreateEvent) bool {
 			obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
@@ -30,7 +30,7 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 				// of the controller to ignore WorkspaceRoutings for other routing classes.
 				return true
 			}
-			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {
+			if !solverProvider.HasSolver(obj.Spec.RoutingClass) {
 				return false
 			}
 			return true
@@ -48,7 +48,9 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 				// of the controller to ignore WorkspaceRoutings for other routing classes.
 				return true
 			}
-			if _, err := getSolver(newObj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {
+			if !solverProvider.HasSolver(newObj.Spec.RoutingClass) {
+				// Future improvement: handle case where old object has a supported routingClass and new project does not
+				// to allow for cleanup when routingClass is switched.
 				return false
 			}
 			return true
@@ -58,7 +60,7 @@ func getRoutingPredicatesForSolverFunc(getSolver WorkspaceRoutingSolverFunc) pre
 			if !ok {
 				return true
 			}
-			if _, err := getSolver(obj.Spec.RoutingClass); errors.Is(err, RoutingNotSupported) {
+			if !solverProvider.HasSolver(obj.Spec.RoutingClass) {
 				return false
 			}
 			return true

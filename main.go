@@ -17,6 +17,8 @@ import (
 	"flag"
 	"os"
 
+	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
+
 	"github.com/devfile/devworkspace-operator/controllers/controller/component"
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting"
 	"github.com/devfile/devworkspace-operator/internal/cluster"
@@ -93,10 +95,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&workspacerouting.WorkspaceRoutingReconciler{
-		Client:        mgr.GetClient(),
-		Log:           ctrl.Log.WithName("controllers").WithName("WorkspaceRouting"),
-		Scheme:        mgr.GetScheme(),
-		GetSolverFunc: workspacerouting.GetSolverForRoutingClass,
+		Client:       mgr.GetClient(),
+		Log:          ctrl.Log.WithName("controllers").WithName("WorkspaceRouting"),
+		Scheme:       mgr.GetScheme(),
+		SolverGetter: &solvers.SolverGetter{},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "WorkspaceRouting")
 		os.Exit(1)

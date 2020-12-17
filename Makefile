@@ -23,6 +23,7 @@ export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export WEBHOOK_ENABLED ?= true
 export DEFAULT_ROUTING ?= basic
+export KUBECONFIG ?= ${HOME}/.kube/config
 REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
 
@@ -128,10 +129,14 @@ test: generate fmt vet manifests
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out
 
-### test_e2e: runs e2e test on the cluster set in context. Includes deploying devworkspace-controller, run test workspace, uninstall devworkspace-controller
+### test_e2e: runs e2e test on the cluster set in context. DevWorkspace Operator must be already deployed
 test_e2e:
 	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
-	./bin/devworkspace-controller-e2e
+	./bin/devworkspace-controller-e2e -ginkgo.failFast
+
+### test_e2e_debug: runs e2e test in debug mode, so it's possible to connect to execution via remote debugger
+test_e2e_debug:
+	dlv test --listen=:2345 --headless=true --api-version=2 ./test/e2e/cmd/workspaces_test.go -- --ginkgo.failFast
 
 ### manager: Build manager binary
 manager: generate fmt vet
@@ -333,6 +338,7 @@ help: Makefile
 	@echo 'Supported environment variables:'
 	@echo '    IMG                        - Image used for controller'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
+	@echo '    KUBECONFIG                 - Kubeconfig which should be used for accessing to the cluster. Currently is: $(KUBECONFIG)'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'

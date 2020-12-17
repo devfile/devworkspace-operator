@@ -41,7 +41,24 @@ type ComponentProvisioningStatus struct {
 }
 
 var componentDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(v1alpha1.Component{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(v1alpha1.Component{}, "TypeMeta", "Status"),
+	// To ensure updates to annotations and labels are noticed, we need to ignore all fields in ObjectMeta
+	// *except* labels and annotations.
+	cmpopts.IgnoreFields(v1alpha1.Component{},
+		"ObjectMeta.Name",
+		"ObjectMeta.GenerateName",
+		"ObjectMeta.Namespace",
+		"ObjectMeta.SelfLink",
+		"ObjectMeta.UID",
+		"ObjectMeta.ResourceVersion",
+		"ObjectMeta.Generation",
+		"ObjectMeta.CreationTimestamp",
+		"ObjectMeta.DeletionTimestamp",
+		"ObjectMeta.DeletionGracePeriodSeconds",
+		"ObjectMeta.OwnerReferences",
+		"ObjectMeta.Finalizers",
+		"ObjectMeta.ClusterName",
+		"ObjectMeta.ManagedFields"),
 }
 
 func SyncComponentsToCluster(

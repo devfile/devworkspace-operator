@@ -22,7 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,7 +36,24 @@ type RoutingProvisioningStatus struct {
 }
 
 var routingDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(v1alpha1.WorkspaceRouting{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(v1alpha1.WorkspaceRouting{}, "TypeMeta", "Status"),
+	// To ensure updates to annotations and labels are noticed, we need to ignore all fields in ObjectMeta
+	// *except* labels and annotations.
+	cmpopts.IgnoreFields(v1alpha1.WorkspaceRouting{},
+		"ObjectMeta.Name",
+		"ObjectMeta.GenerateName",
+		"ObjectMeta.Namespace",
+		"ObjectMeta.SelfLink",
+		"ObjectMeta.UID",
+		"ObjectMeta.ResourceVersion",
+		"ObjectMeta.Generation",
+		"ObjectMeta.CreationTimestamp",
+		"ObjectMeta.DeletionTimestamp",
+		"ObjectMeta.DeletionGracePeriodSeconds",
+		"ObjectMeta.OwnerReferences",
+		"ObjectMeta.Finalizers",
+		"ObjectMeta.ClusterName",
+		"ObjectMeta.ManagedFields"),
 }
 
 func SyncRoutingToCluster(
@@ -73,6 +90,8 @@ func SyncRoutingToCluster(
 	}
 
 	if !cmp.Equal(specRouting, clusterRouting, routingDiffOpts) {
+		clusterRouting.Labels = specRouting.Labels
+		clusterRouting.Annotations = specRouting.Annotations
 		clusterRouting.Spec = specRouting.Spec
 		err := clusterAPI.Client.Update(context.TODO(), clusterRouting)
 		if err != nil {
@@ -129,7 +148,7 @@ func getSpecRouting(
 	}
 
 	routing := &v1alpha1.WorkspaceRouting{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("routing-%s", workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{

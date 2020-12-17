@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	batchv1 "k8s.io/api/batch/v1"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -63,7 +65,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=apps;extensions,resources=deployments;replicasets,verbs=*
 // +kubebuilder:rbac:groups="",resources=pods;serviceaccounts;secrets;configmaps;persistentvolumeclaims,verbs=*
 // +kubebuilder:rbac:groups="",resources=namespaces,verbs=get
-// +kubebuilder:rbac:groups="batch",resources=jobs,verbs=get;create;watch;update;delete
+// +kubebuilder:rbac:groups="batch",resources=jobs,verbs=get;create;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations;validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles;rolebindings;clusterroles;clusterrolebindings,verbs=get;list;watch;create;update
 // +kubebuilder:rbac:groups=oauth.openshift.io,resources=oauthclients,verbs=get;list;watch;create;update;patch;delete;deletecollection
@@ -98,9 +100,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, err
 	}
 
-	if workspace.DeletionTimestamp != nil {
-		reqLogger.V(5).Info("Skipping reconcile of deleted resource")
-		return reconcile.Result{}, nil
+	// Check if the WorkspaceRouting instance is marked to be deleted, which is
+	// indicated by the deletion timestamp being set.
+	if workspace.GetDeletionTimestamp() != nil {
+		reqLogger.Info("Finalizing DevWorkspace")
+		return r.finalize(ctx, reqLogger, workspace)
 	}
 
 	// Ensure workspaceID is set.
@@ -114,10 +118,18 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: true}, err
 	}
 
+	// Handle stopped workspaces
 	if !workspace.Spec.Started {
 		timing.ClearAnnotations(workspace)
 		r.syncTimingToCluster(ctx, workspace, reqLogger)
 		return r.stopWorkspace(workspace, reqLogger)
+	}
+
+	// Set finalizer on DevWorkspace if necessary
+	if ok, err := r.setFinalizer(ctx, workspace); err != nil {
+		return reconcile.Result{}, err
+	} else if !ok {
+		return reconcile.Result{Requeue: true}, nil
 	}
 
 	// Prepare handling workspace status and condition
@@ -186,7 +198,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		}
 		// TODO: first half of provisioning rest-apis
 		cheRestApisComponent := restapis.GetCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
-		// some of containers, like theia needs Che API Sidecar be availble just after start up. So, putting Che API Sidecar first before all
+		// Some containers (e.g. Theia) need Che API Sidecar to be available just after start up. So, putting Che API Sidecar first before all
 		componentDescriptions = append([]controllerv1alpha1.ComponentDescription{cheRestApisComponent}, componentDescriptions...)
 	}
 
@@ -378,6 +390,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&devworkspace.DevWorkspace{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&batchv1.Job{}).
 		Owns(&controllerv1alpha1.Component{}).
 		Owns(&controllerv1alpha1.WorkspaceRouting{}).
 		WithEventFilter(predicates).

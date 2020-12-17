@@ -178,7 +178,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 
 	if config.ControllerCfg.IsOpenShift() {
 		oauthClient := routingObjects.OAuthClient
-		if setRestrictedAccess {
+		if oauthClient != nil && setRestrictedAccess {
 			oauthClient.Annotations = maputils.Append(oauthClient.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 		oauthClientInSync, err := r.syncOAuthClient(instance, oauthClient)

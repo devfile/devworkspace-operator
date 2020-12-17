@@ -29,8 +29,8 @@ import (
 
 const serviceCAUsername = "system:serviceaccount:openshift-service-ca:service-ca"
 
-// ImmutableWorkspaceDiffOptions is comparing options that should be used to check if there is no other changes except changing started
-var ImmutableWorkspaceDiffOptions = []cmp.Option{
+// RestrictedAccessDiffOptions is comparing options that should be used to check if there is no other changes except changing started
+var RestrictedAccessDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
 	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields", "Finalizers", "DeletionTimestamp"),
 	cmpopts.IgnoreFields(devworkspacev1alpha1.DevWorkspaceSpec{}, "Started"),
@@ -38,7 +38,7 @@ var ImmutableWorkspaceDiffOptions = []cmp.Option{
 	cmpopts.IgnoreMapEntries(func(key string, value string) bool { return key == config.WorkspaceStopReasonAnnotation }),
 }
 
-func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) HandleRestrictedAccessMutate(_ context.Context, req admission.Request) admission.Response {
 	isRestricted, err := h.checkRestrictedAccessAnnotation(req)
 	if err != nil {
 		return admission.Denied(err.Error())
@@ -70,7 +70,7 @@ func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.
 	return admission.Denied(msg)
 }
 
-func (h *WebhookHandler) HandleImmutableCreate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) HandleRestrictedAccessCreate(_ context.Context, req admission.Request) admission.Response {
 	isRestricted, err := h.checkRestrictedAccessAnnotation(req)
 	if err != nil {
 		return admission.Denied(err.Error())
@@ -94,14 +94,14 @@ func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp
 	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[config.WorkspaceCreatorLabel],
 		oldWksp.Annotations[config.WorkspaceRestrictedAccessAnnotation],
 		uid,
-		func() bool { return cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) })
+		func() bool { return cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) })
 }
 
 func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
 	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[config.WorkspaceCreatorLabel],
 		oldWksp.Annotations[config.WorkspaceRestrictedAccessAnnotation],
 		uid,
-		func() bool { return cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) })
+		func() bool { return cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) })
 }
 
 func (h *WebhookHandler) checkRestrictedAccessWorkspace(creatorUID, restrictedAccess, uid string, isStartedStopped func() bool) (allowed bool, msg string) {

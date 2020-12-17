@@ -120,12 +120,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return r.stopWorkspace(workspace, reqLogger)
 	}
 
-	if workspace.Status.Phase == devworkspace.WorkspaceStatusFailed {
-		// TODO: Figure out when workspace spec is changed and clear failed status to allow reconcile to continue
-		reqLogger.Info("Workspace startup is failed; not attempting to update.")
-		return reconcile.Result{}, nil
-	}
-
 	// Prepare handling workspace status and condition
 	reconcileStatus := currentStatus{
 		Conditions: map[devworkspace.WorkspaceConditionType]string{},
@@ -386,5 +380,6 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&controllerv1alpha1.Component{}).
 		Owns(&controllerv1alpha1.WorkspaceRouting{}).
+		WithEventFilter(predicates).
 		Complete(r)
 }

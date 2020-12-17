@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/client"
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
@@ -79,18 +78,9 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 		ginkgo.Fail("Cannot create test rolebinding for SA. Cause: " + err.Error())
 	}
 
-	token, err := config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
-	if token == "" {
-		//sometimes the Service Account token is not applied immediately in this case we wait 1 sec.
-		// and try obtain it again
-		time.Sleep(1 * time.Second)
-		token, err = config.AdminK8sClient.GetSAToken(config.WorkspaceNamespace, testServiceAccount)
-		if err != nil {
-			ginkgo.Fail("Cannot get test SA token. Cause: " + err.Error())
-		}
-		if token == "" {
-			ginkgo.Fail(fmt.Sprintf("ServiceAccount '%s' token is not initialized in time", testServiceAccount))
-		}
+	token, err := config.AdminK8sClient.WaitSAToken(config.WorkspaceNamespace, testServiceAccount)
+	if err != nil {
+		ginkgo.Fail("Cannot get test SA token. Cause: " + err.Error())
 	}
 
 	config.DevK8sClient, err = client.NewK8sClientWithToken(kubeConfig, token)

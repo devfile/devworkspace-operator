@@ -41,8 +41,6 @@ export IMG=${DEVWORKSPACE_OPERATOR}
 export GIT_COMMITTER_NAME="CI BOT"
 export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
 
-# For some reason go on PROW force usage vendor folder
-# This workaround is here until we don't figure out cause
 function getDevWorkspaceOperatorLogs() {
     mkdir -p ${ARTIFACTS_DIR}/devworkspace-operator
     cd ${ARTIFACTS_DIR}/devworkspace-operator
@@ -58,6 +56,8 @@ function getDevWorkspaceOperatorLogs() {
     oc get events -n ${NAMESPACE}| tee get_events.log
 }
 
+# For some reason go on PROW force usage vendor folder
+# This workaround is here until we don't figure out cause
 go mod tidy
 go mod vendor
 

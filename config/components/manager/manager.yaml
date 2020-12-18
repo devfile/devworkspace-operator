@@ -53,3 +53,5 @@ spec:
             value: "quay.io/devfile/devworkspace-controller:next"
           - name: RELATED_IMAGE_default_tls_secrets_creation_job
             value: "quay.io/eclipse/che-tls-secret-creator:alpine-3029769"
+          - name: RELATED_IMAGE_pvc_cleanup_job
+            value: "quay.io/libpod/busybox:1.30.1"

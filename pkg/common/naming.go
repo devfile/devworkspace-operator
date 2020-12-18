@@ -80,3 +80,7 @@ func DeploymentName(workspaceId string) string {
 func ServingCertVolumeName(serviceName string) string {
 	return fmt.Sprintf("workspace-serving-cert-%s", serviceName)
 }
+
+func PVCCleanupJobName(workspaceId string) string {
+	return fmt.Sprintf("cleanup-%s", workspaceId)
+}

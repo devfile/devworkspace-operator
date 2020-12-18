@@ -19,6 +19,8 @@ import (
 
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
+	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"github.com/go-logr/logr"
@@ -109,7 +111,7 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 	pvcName := config.ControllerCfg.GetWorkspacePVCName()
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cleanup-" + workspaceId, // TODO
+			Name:      common.PVCCleanupJobName(workspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				config.WorkspaceIDLabel: workspaceId,
@@ -133,8 +135,8 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 					},
 					Containers: []corev1.Container{
 						{
-							Name:    "cleanup-" + workspaceId,   // TODO,
-							Image:   "quay.io/fedora/fedora:34", // TODO
+							Name:    common.PVCCleanupJobName(workspaceId),
+							Image:   images.GetPVCCleanupJobImage(),
 							Command: []string{"/bin/sh"},
 							Args: []string{
 								"-c",
@@ -142,7 +144,7 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse("64Mi"), // TODO
+									corev1.ResourceMemory: resource.MustParse(config.PVCCleanupPodMemoryLimit),
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -167,7 +169,7 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 
 func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, workspace *v1alpha2.DevWorkspace) (*batchv1.Job, error) {
 	namespacedName := types.NamespacedName{
-		Name:      "cleanup-" + workspace.Status.WorkspaceId,
+		Name:      common.PVCCleanupJobName(workspace.Status.WorkspaceId),
 		Namespace: workspace.Namespace,
 	}
 	clusterJob := &batchv1.Job{}
@@ -183,8 +185,9 @@ func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, works
 	return clusterJob, nil
 }
 
-func isFinalizerNecessary(_ *v1alpha2.DevWorkspace) bool {
+func isFinalizerNecessary(workspace *v1alpha2.DevWorkspace) bool {
 	// TODO: Implement checking whether persistent storage is used (once other choices are possible)
+	// Note this could interfere with cloud-shell until this TODO is resolved.
 	return true
 }
 

@@ -64,6 +64,9 @@ const (
 	// WorkspaceStopReasonAnnotation marks the reason why the workspace was stopped; when a workspace is restarted
 	// this annotation will be cleared
 	WorkspaceStopReasonAnnotation = "controller.devfile.io/stopped-by"
+
+	// PVCCleanupPodMemoryLimit is the memory limit used for PVC clean up pods
+	PVCCleanupPodMemoryLimit = "32Mi"
 )
 
 // Constants for che-rest-apis

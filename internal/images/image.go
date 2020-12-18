@@ -38,6 +38,7 @@ const (
 	openshiftOAuthProxyImageEnvVar      = "RELATED_IMAGE_openshift_oauth_proxy"
 	webhookServerImageEnvVar            = "RELATED_IMAGE_devworkspace_webhook_server"
 	webhookKubernetesCertJobImageEnvVar = "RELATED_IMAGE_default_tls_secrets_creation_job"
+	pvcCleanupJobImageEnvVar            = "RELATED_IMAGE_pvc_cleanup_job"
 )
 
 // GetWebTerminalToolingImage returns the image reference for the webhook server image. Returns
@@ -80,6 +81,17 @@ func GetWebhookCertJobImage() string {
 	val, ok := os.LookupEnv(webhookKubernetesCertJobImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", webhookKubernetesCertJobImageEnvVar), "Could not get webhook cert job image")
+		return ""
+	}
+	return val
+}
+
+// GetPVCCleanupJobImage returns the image reference for the PVC cleanup job used to clean workspace
+// files from the common PVC in a namespace.
+func GetPVCCleanupJobImage() string {
+	val, ok := os.LookupEnv(pvcCleanupJobImageEnvVar)
+	if !ok {
+		log.Error(fmt.Errorf("environment variable %s is not set", pvcCleanupJobImageEnvVar), "Could not get PVC cleanup job image")
 		return ""
 	}
 	return val

@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.13 as builder
+FROM quay.io/libpod/golang:1.13 as builder
 
 RUN go env GOPROXY
 WORKDIR /devworkspace-operator

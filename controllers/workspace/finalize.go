@@ -44,6 +44,8 @@ const (
 var (
 	cleanupJobCompletions  = int32(1)
 	cleanupJobBackoffLimit = int32(3)
+	// PVCCleanupPodMemoryLimit is the memory limit used for PVC clean up pods
+	PVCCleanupPodMemoryLimit = resource.MustParse("32Mi")
 )
 
 func (r *DevWorkspaceReconciler) setFinalizer(ctx context.Context, workspace *v1alpha2.DevWorkspace) (ok bool, err error) {
@@ -109,6 +111,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorkspace) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.WorkspaceId
 	pvcName := config.ControllerCfg.GetWorkspacePVCName()
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.PVCCleanupJobName(workspaceId),
@@ -122,7 +125,8 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 			BackoffLimit: &cleanupJobBackoffLimit,
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					RestartPolicy: "Never",
+					RestartPolicy:   "Never",
+					SecurityContext: provision.GetDevWorkspaceSecurityContext(),
 					Volumes: []corev1.Volume{
 						{
 							Name: pvcName,
@@ -144,7 +148,7 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 							},
 							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: resource.MustParse(config.PVCCleanupPodMemoryLimit),
+									corev1.ResourceMemory: PVCCleanupPodMemoryLimit,
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{
@@ -185,7 +189,7 @@ func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, works
 	return clusterJob, nil
 }
 
-func isFinalizerNecessary(workspace *v1alpha2.DevWorkspace) bool {
+func isFinalizerNecessary(_ *v1alpha2.DevWorkspace) bool {
 	// TODO: Implement checking whether persistent storage is used (once other choices are possible)
 	// Note this could interfere with cloud-shell until this TODO is resolved.
 	return true

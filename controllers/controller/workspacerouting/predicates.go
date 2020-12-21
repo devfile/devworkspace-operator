@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-func getRoutingPredicatesForSolverFunc(solverProvider solvers.RoutingSolverGetter) predicate.Funcs {
+func getRoutingPredicatesForSolverFunc(solverGetter solvers.RoutingSolverGetter) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(ev event.CreateEvent) bool {
 			obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
@@ -30,7 +30,7 @@ func getRoutingPredicatesForSolverFunc(solverProvider solvers.RoutingSolverGette
 				// of the controller to ignore WorkspaceRoutings for other routing classes.
 				return true
 			}
-			if !solverProvider.HasSolver(obj.Spec.RoutingClass) {
+			if !solverGetter.HasSolver(obj.Spec.RoutingClass) {
 				return false
 			}
 			return true
@@ -48,8 +48,8 @@ func getRoutingPredicatesForSolverFunc(solverProvider solvers.RoutingSolverGette
 				// of the controller to ignore WorkspaceRoutings for other routing classes.
 				return true
 			}
-			if !solverProvider.HasSolver(newObj.Spec.RoutingClass) {
-				// Future improvement: handle case where old object has a supported routingClass and new project does not
+			if !solverGetter.HasSolver(newObj.Spec.RoutingClass) {
+				// Future improvement: handle case where old object has a supported routingClass and new object does not
 				// to allow for cleanup when routingClass is switched.
 				return false
 			}
@@ -60,7 +60,7 @@ func getRoutingPredicatesForSolverFunc(solverProvider solvers.RoutingSolverGette
 			if !ok {
 				return true
 			}
-			if !solverProvider.HasSolver(obj.Spec.RoutingClass) {
+			if !solverGetter.HasSolver(obj.Spec.RoutingClass) {
 				return false
 			}
 			return true

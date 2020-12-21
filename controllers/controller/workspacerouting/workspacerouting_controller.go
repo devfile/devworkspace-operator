@@ -36,7 +36,7 @@ import (
 )
 
 var (
-	NoSolversEnabled = errors.New("reconciler does not define GetSolverFunc")
+	NoSolversEnabled = errors.New("reconciler does not define SolverGetter")
 )
 
 const workspaceRoutingFinalizer = "workspacerouting.controller.devfile.io"
@@ -256,7 +256,7 @@ func isFinalizerNecessary(routing *controllerv1alpha1.WorkspaceRouting) bool {
 	switch routingClass {
 	case controllerv1alpha1.WorkspaceRoutingOpenShiftOauth:
 		return true
-	case controllerv1alpha1.WorkspaceRoutingDefault:
+	case controllerv1alpha1.WorkspaceRoutingBasic:
 		return false
 	default:
 		return false

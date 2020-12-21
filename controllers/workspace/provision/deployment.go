@@ -139,6 +139,20 @@ func DeleteWorkspaceDeployment(ctx context.Context, workspace *devworkspace.DevW
 	return true, nil
 }
 
+func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
+	if !config.ControllerCfg.IsOpenShift() {
+		uID := int64(1234)
+		rootGID := int64(0)
+		nonRoot := true
+		return &corev1.PodSecurityContext{
+			RunAsUser:    &uID,
+			RunAsGroup:   &rootGID,
+			RunAsNonRoot: &nonRoot,
+		}
+	}
+	return &corev1.PodSecurityContext{}
+}
+
 func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
 	return deployment.Status.ReadyReplicas > 0
 }
@@ -151,12 +165,6 @@ func getSpecDeployment(
 	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
-
-	var user *int64
-	if !config.ControllerCfg.IsOpenShift() {
-		uID := int64(1234)
-		user = &uID
-	}
 
 	podAdditions, err := mergePodAdditions(podAdditionsList)
 	if err != nil {
@@ -209,12 +217,9 @@ func getSpecDeployment(
 					Volumes:                       podAdditions.Volumes,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					SecurityContext: &corev1.PodSecurityContext{
-						RunAsUser: user,
-						FSGroup:   user,
-					},
-					ServiceAccountName:           saName,
-					AutomountServiceAccountToken: nil,
+					SecurityContext:               GetDevWorkspaceSecurityContext(),
+					ServiceAccountName:            saName,
+					AutomountServiceAccountToken:  nil,
 				},
 			},
 		},

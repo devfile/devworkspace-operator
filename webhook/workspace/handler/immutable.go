@@ -38,7 +38,7 @@ var RestrictedAccessDiffOptions = []cmp.Option{
 	cmpopts.IgnoreMapEntries(func(key string, value string) bool { return key == config.WorkspaceStopReasonAnnotation }),
 }
 
-func (h *WebhookHandler) HandleRestrictedAccessMutate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) HandleRestrictedAccessUpdate(_ context.Context, req admission.Request) admission.Response {
 	isRestricted, err := h.checkRestrictedAccessAnnotation(req)
 	if err != nil {
 		return admission.Denied(err.Error())

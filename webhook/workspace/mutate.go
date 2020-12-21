@@ -65,7 +65,7 @@ func (m *ResourcesMutator) Handle(ctx context.Context, req admission.Request) ad
 			case handler.V1ServiceKind, handler.V1beta1IngressKind, handler.V1RouteKind,
 				handler.V1alpha1ComponentKind, handler.V1alpha1WorkspaceRoutingKind:
 
-				return m.HandleRestrictedAccessMutate(ctx, req)
+				return m.HandleRestrictedAccessUpdate(ctx, req)
 			}
 		}
 	}

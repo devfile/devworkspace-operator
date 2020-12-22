@@ -109,6 +109,14 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 					Resources:   []string{"ingresses"},
 				},
 			},
+			{
+				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+				Rule: v1beta1.Rule{
+					APIGroups:   []string{"batch"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"jobs"},
+				},
+			},
 		},
 	}
 	// n.b. Routes do not get UserInfo.UID filled in webhooks for some reason

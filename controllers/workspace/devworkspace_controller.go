@@ -272,7 +272,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.Conditions[devworkspace.WorkspaceServiceAccountReady] = ""
 
-	// Step five: Create deployment and wait for it to be ready
+	// Step six: Create deployment and wait for it to be ready
 	timing.SetTime(workspace, timing.DeploymentCreated)
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, componentDescriptions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {

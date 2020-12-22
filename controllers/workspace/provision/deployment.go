@@ -227,6 +227,19 @@ func getSpecDeployment(
 
 	if IsPVCRequired(components) {
 		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
+		// Kubernetes creates directories in a PVC to support subpaths such that only the leaf directory has g+rwx permissions.
+		// This means that mounting the subpath e.g. <workspace-id>/plugins will result in the <workspace-id> directory being
+		// created with 755 permissions, requiring the root UID to remove it.
+		// To avoid this issue, we need to ensure that the first volumeMount encountered is for the <workspace-id> subpath.
+		if len(deployment.Spec.Template.Spec.InitContainers) > 0 {
+			volumeMounts := deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts
+			volumeMounts = append([]corev1.VolumeMount{getWorkspaceSubpathVolumeMount(workspace.Status.WorkspaceId)}, volumeMounts...)
+			deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts = volumeMounts
+		} else {
+			volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+			volumeMounts = append([]corev1.VolumeMount{getWorkspaceSubpathVolumeMount(workspace.Status.WorkspaceId)}, volumeMounts...)
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
+		}
 	}
 
 	workspaceCreator, present := workspace.Labels[config.WorkspaceCreatorLabel]
@@ -343,4 +356,16 @@ func getPersistentVolumeClaim() corev1.Volume {
 		},
 	}
 	return pvcVolume
+}
+
+func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {
+	volumeName := config.ControllerCfg.GetWorkspacePVCName()
+
+	workspaceVolumeMount := corev1.VolumeMount{
+		Name:      volumeName,
+		MountPath: "/tmp/workspace-storage",
+		SubPath:   workspaceId,
+	}
+
+	return workspaceVolumeMount
 }

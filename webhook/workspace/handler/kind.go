@@ -11,7 +11,9 @@
 //
 package handler
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 var (
 	V1alpha1DevWorkspaceKind     = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha1"}
@@ -23,5 +25,6 @@ var (
 	V1PodKind            = metav1.GroupVersionKind{Kind: "Pod", Group: "", Version: "v1"}
 	V1ServiceKind        = metav1.GroupVersionKind{Kind: "Service", Group: "", Version: "v1"}
 	V1beta1IngressKind   = metav1.GroupVersionKind{Kind: "Ingress", Group: "extensions", Version: "v1beta1"}
+	V1JobKind            = metav1.GroupVersionKind{Kind: "Job", Group: "batch", Version: "v1"}
 	V1RouteKind          = metav1.GroupVersionKind{Kind: "Route", Group: "route.openshift.io", Version: "v1"}
 )

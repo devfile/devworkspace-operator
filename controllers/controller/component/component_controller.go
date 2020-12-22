@@ -167,11 +167,13 @@ func (r *ComponentReconciler) reconcileConfigMap(instance *controllerv1alpha1.Co
 }
 
 func (r *ComponentReconciler) reconcileStatus(instance *controllerv1alpha1.Component, components []controllerv1alpha1.ComponentDescription) error {
-	if instance.Status.Ready && cmp.Equal(instance.Status.ComponentDescriptions, components) {
+	if !instance.Status.Failed && instance.Status.Message == "" && instance.Status.Ready && cmp.Equal(instance.Status.ComponentDescriptions, components) {
 		return nil
 	}
 	instance.Status.ComponentDescriptions = components
 	instance.Status.Ready = true
+	instance.Status.Failed = false
+	instance.Status.Message = ""
 	return r.Status().Update(context.TODO(), instance)
 }
 

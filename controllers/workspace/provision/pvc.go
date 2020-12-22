@@ -74,6 +74,13 @@ func IsPVCRequired(components []v1alpha1.ComponentDescription) bool {
 				}
 			}
 		}
+		for _, cont := range comp.PodAdditions.InitContainers {
+			for _, vm := range cont.VolumeMounts {
+				if vm.Name == volumeName {
+					return true
+				}
+			}
+		}
 	}
 	return false
 }

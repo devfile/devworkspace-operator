@@ -111,14 +111,17 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorkspace) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.WorkspaceId
 	pvcName := config.ControllerCfg.GetWorkspacePVCName()
-
+	jobLabels := map[string]string{
+		config.WorkspaceIDLabel: workspaceId,
+	}
+	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
+		jobLabels[config.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
+	}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.PVCCleanupJobName(workspaceId),
 			Namespace: workspace.Namespace,
-			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspaceId,
-			},
+			Labels:    jobLabels,
 		},
 		Spec: batchv1.JobSpec{
 			Completions:  &cleanupJobCompletions,

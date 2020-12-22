@@ -23,12 +23,13 @@ import (
 	workspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/internal/cluster"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	clientconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -47,10 +48,10 @@ func init() {
 }
 
 func main() {
-	logf.SetLogger(zap.New(zap.UseDevMode(true)))
+	logf.SetLogger(zap.New(zap.UseDevMode(config.GetDevModeEnabled())))
 
 	// Get a config to talk to the apiserver
-	cfg, err := config.GetConfig()
+	cfg, err := clientconfig.GetConfig()
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)

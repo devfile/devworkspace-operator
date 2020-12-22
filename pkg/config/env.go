@@ -22,6 +22,7 @@ type ControllerEnv struct{}
 const (
 	webhooksSecretNameEnvVar      = "WEBHOOK_SECRET_NAME"
 	webhooksCertificateNameEnvVar = "WEBHOOK_CERTIFICATE_NAME"
+	developmentModeEnvVar         = "DEVELOPMENT_MODE"
 )
 
 func GetWebhooksSecretName() (string, error) {
@@ -38,4 +39,8 @@ func GetWebhooksCertName() (string, error) {
 		return "", fmt.Errorf("environment variable %s is unset", webhooksCertificateNameEnvVar)
 	}
 	return env, nil
+}
+
+func GetDevModeEnabled() bool {
+	return os.Getenv(developmentModeEnvVar) == "true"
 }

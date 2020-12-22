@@ -40,6 +40,9 @@ const (
 	// WorkspaceIDLabel is label key to store workspace identifier
 	WorkspaceIDLabel = "controller.devfile.io/workspace_id"
 
+	// WorkspaceIDLoggerKey is the key used to log workspace ID in the reconcile
+	WorkspaceIDLoggerKey = "workspace_id"
+
 	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
 	WorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"
 

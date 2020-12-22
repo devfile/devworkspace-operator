@@ -62,7 +62,6 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	ctx := context.Background()
 
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling WorkspaceRouting")
 
 	// Fetch the WorkspaceRouting instance
 	instance := &controllerv1alpha1.WorkspaceRouting{}
@@ -77,6 +76,8 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	reqLogger = reqLogger.WithValues(config.WorkspaceIDLoggerKey, instance.Spec.WorkspaceId)
+	reqLogger.Info("Reconciling WorkspaceRouting")
 
 	// Check if the WorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.

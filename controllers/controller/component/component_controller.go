@@ -17,6 +17,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/config"
+
 	"github.com/devfile/devworkspace-operator/pkg/adaptor"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -56,7 +58,6 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling Component")
 
 	// Fetch the Component instance
 	instance := &controllerv1alpha1.Component{}
@@ -71,6 +72,8 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	reqLogger = reqLogger.WithValues(config.WorkspaceIDLoggerKey, instance.Spec.WorkspaceId)
+	reqLogger.Info("Reconciling Component")
 
 	if instance.DeletionTimestamp != nil {
 		reqLogger.V(5).Info("Skipping reconcile of deleted resource")

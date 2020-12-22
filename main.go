@@ -17,28 +17,28 @@ import (
 	"flag"
 	"os"
 
-	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
-
 	"github.com/devfile/devworkspace-operator/controllers/controller/component"
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting"
+	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/internal/cluster"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	workspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
+
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	templatev1 "github.com/openshift/api/template/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	ctrl "sigs.k8s.io/controller-runtime"
+	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -72,7 +72,7 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.SetLogger(zap.New(zap.UseDevMode(config.GetDevModeEnabled())))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -83,6 +83,10 @@ func main() {
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+	if err = setupControllerConfig(mgr); err != nil {
+		setupLog.Error(err, "unable to read controller configuration")
 		os.Exit(1)
 	}
 
@@ -114,7 +118,7 @@ func main() {
 	// +kubebuilder:scaffold:builder
 
 	// Get a config to talk to the apiserver
-	cfg, err := config.GetConfig()
+	cfg, err := ctrlconfig.GetConfig()
 	if err != nil {
 		setupLog.Error(err, "")
 		os.Exit(1)
@@ -131,4 +135,31 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func setupControllerConfig(mgr ctrl.Manager) error {
+	operatorNamespace, err := cluster.GetOperatorNamespace()
+	if err == nil {
+		config.ConfigMapReference.Namespace = operatorNamespace
+	} else {
+		config.ConfigMapReference.Namespace = os.Getenv(cluster.WatchNamespaceEnvVar)
+	}
+	err = config.WatchControllerConfig(mgr)
+	if err != nil {
+		return err
+	}
+
+	// Check if we're running on OpenShift
+	isOS, err := cluster.IsOpenShift()
+	if err != nil {
+		return err
+	}
+	config.ControllerCfg.SetIsOpenShift(isOS)
+
+	err = config.ControllerCfg.Validate()
+	if err != nil {
+		setupLog.Error(err, "Controller configuration is invalid")
+		return err
+	}
+	return nil
 }

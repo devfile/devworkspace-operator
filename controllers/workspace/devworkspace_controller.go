@@ -16,12 +16,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
@@ -77,7 +75,6 @@ type DevWorkspaceReconciler struct {
 func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	ctx := context.Background()
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	reqLogger.Info("Reconciling Workspace")
 	clusterAPI := provision.ClusterAPI{
 		Client: r.Client,
 		Scheme: r.Scheme,
@@ -97,6 +94,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	reqLogger = reqLogger.WithValues(config.WorkspaceIDLoggerKey, workspace.Status.WorkspaceId)
+	reqLogger.Info("Reconciling Workspace")
 
 	if workspace.DeletionTimestamp != nil {
 		reqLogger.V(5).Info("Skipping reconcile of deleted resource")
@@ -349,32 +348,6 @@ func getWorkspaceId(instance *devworkspace.DevWorkspace) (string, error) {
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
-	setupLog := ctrl.Log.WithName("devworkspace-controller-setup")
-	operatorNamespace, err := cluster.GetOperatorNamespace()
-	if err == nil {
-		config.ConfigMapReference.Namespace = operatorNamespace
-	} else {
-		config.ConfigMapReference.Namespace = os.Getenv(cluster.WatchNamespaceEnvVar)
-	}
-
-	err = config.WatchControllerConfig(mgr)
-	if err != nil {
-		return err
-	}
-
-	// Check if we're running on OpenShift
-	isOS, err := cluster.IsOpenShift()
-	if err != nil {
-		return err
-	}
-	config.ControllerCfg.SetIsOpenShift(isOS)
-
-	err = config.ControllerCfg.Validate()
-	if err != nil {
-		setupLog.Error(err, "Controller configuration is invalid")
-		return err
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&devworkspace.DevWorkspace{}).
 		Owns(&appsv1.Deployment{}).

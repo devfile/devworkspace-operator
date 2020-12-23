@@ -272,7 +272,7 @@ endif
 		if [[ $$(find . -name '*.go' -exec goimports -l {} \;) != "" ]]; then \
 			echo "Files not formatted; run 'make fmt'"; exit 1 ;\
 		fi ;\
-		if ! addlicense -c -f license_header.txt $$(find . -name '*.go'); then \
+		if ! addlicense -check -f license_header.txt $$(find . -name '*.go'); then \
 			echo "Licenses are not formatted; run 'make fmt_license'"; exit 1 ;\
 		fi \
 	}

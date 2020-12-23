@@ -100,9 +100,15 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			clearFinalizer(workspace)
 			return reconcile.Result{}, r.Update(ctx, workspace)
 		case batchv1.JobFailed:
-			log.Error(fmt.Errorf("PVC clean up job failed: message %q", condition.Message),
+			log.Error(fmt.Errorf("PVC clean up job failed: message: %q", condition.Message),
 				"Failed to clean PVC on workspace deletion")
-			return reconcile.Result{}, nil
+			failedStatus := &currentStatus{
+				Conditions: map[v1alpha2.WorkspaceConditionType]string{
+					"Error": fmt.Sprintf("Failed to clean PVC on deletion. See logs for job %q for details", clusterJob.Name),
+				},
+				Phase: "Error",
+			}
+			return r.updateWorkspaceStatus(workspace, r.Log, failedStatus, reconcile.Result{}, nil)
 		}
 	}
 	return reconcile.Result{}, nil

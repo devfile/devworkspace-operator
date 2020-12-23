@@ -51,9 +51,8 @@ jobs:
         go get -u golang.org/x/tools/cmd/goimports
         git reset HEAD --hard
 
-        make fmt
-        make fmt_license
-        if [[ ! -z $(git status -s) ]]
+        make check_fmt
+        if [[ $? != 0 ]]
         then
           echo "not well formatted sources are found"
           exit 1

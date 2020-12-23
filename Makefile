@@ -260,6 +260,23 @@ else
 	$(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
 endif
 
+### check_fmt: check formatting on files in repo
+check_fmt:
+ifeq ($(shell command -v goimports 2> /dev/null),)
+	$(error "goimports must be installed for this rule" && exit 1)
+endif
+ifeq ($(shell command -v addlicense 2> /dev/null),)
+	$(error "error addlicense must be installed for this rule: go get -u github.com/google/addlicense")
+endif
+	@{
+		if [[ $$(find . -name '*.go' -exec goimports -l {} \;) != "" ]]; then \
+			echo "Files not formatted; run 'make fmt'"; exit 1 ;\
+		fi ;\
+		if ! addlicense -check -f license_header.txt $$(find . -name '*.go'); then \
+			echo "Licenses are not formatted; run 'make fmt_license'"; exit 1 ;\
+		fi \
+	}
+
 ### vet: Run go vet against code
 vet:
 	go vet ./...

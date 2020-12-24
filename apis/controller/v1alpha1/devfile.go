@@ -44,8 +44,9 @@ type DevfileAttributes struct {
 }
 
 type ProjectSpec struct {
-	Name   string            `json:"name" yaml:"name"`
-	Source ProjectSourceSpec `json:"source" yaml:"source"` // Describes the project's source - type and location
+	Name      string            `json:"name" yaml:"name"`
+	Source    ProjectSourceSpec `json:"source" yaml:"source"` // Describes the project's source - type and location
+	ClonePath string            `json:"clonePath" yaml:"clonePath"`
 }
 
 // Describes the project's source - type and location

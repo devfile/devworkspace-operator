@@ -14,6 +14,7 @@ package restapis
 
 import (
 	"errors"
+	"path"
 	"strings"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
@@ -175,12 +176,14 @@ func toDevfileProject(p devworkspace.Project) (*workspaceApi.ProjectSpec, error)
 	if err != nil {
 		return nil, err
 	}
+	clonePath := resolveClonePath(p.ClonePath, p.Name, config.DefaultProjectsSourcesRoot)
 	return &workspaceApi.ProjectSpec{
 		Name: p.Name,
 		Source: workspaceApi.ProjectSourceSpec{
 			Location: theLocation,
 			Type:     theType,
 		},
+		ClonePath: clonePath,
 	}, nil
 }
 
@@ -207,4 +210,33 @@ func resolveLocation(remotes map[string]string, checkoutFrom *devworkspace.Check
 	}
 
 	return &l, nil
+}
+
+// Clone Path is the path relative to the root of the projects to which this project should be cloned into.
+// This is a unix-style relative path (i.e. uses forward slashes).
+// The path is invalid if it is absolute or tries to escape the project root through the usage of '..'.
+// If path is not specified or the path is invalid then defaults to the project name.
+// otherwise the path is returned
+func resolveClonePath(clonePath string, projectName string, projectRoot string) string {
+
+	// clonePath isn't specified
+	if clonePath == "" {
+		return projectName
+	}
+
+	// Absolute paths are invalid
+	isAbs := path.IsAbs(clonePath)
+	if isAbs {
+		return projectName
+	}
+
+	// Make sure projectRoot has a following / so that we can append projectRoot and clonePath
+	if !strings.HasSuffix(projectRoot, "/") {
+		projectRoot += "/"
+	}
+	resolved := path.Clean(projectRoot + clonePath)
+	if !strings.HasPrefix(resolved, projectRoot) {
+		return projectName
+	}
+	return clonePath
 }

@@ -211,7 +211,7 @@ restart_webhook:
 uninstall: _kustomize
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
-	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all | true
+	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all --wait | true
 	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all | true
 # Have to wait for routings to be deleted in case there are finalizers
 	$(K8S_CLI) delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait | true

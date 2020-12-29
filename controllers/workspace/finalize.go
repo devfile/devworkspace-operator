@@ -16,6 +16,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"time"
 
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
@@ -86,6 +87,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		//PVC does not exist. nothing to clean up
 		log.Info("PVC does not exit; clearing storage finalizer")
 		clearFinalizer(workspace)
+		// job will be clean up by k8s garbage collector
 		return reconcile.Result{}, r.Update(ctx, workspace)
 	}
 
@@ -133,7 +135,8 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			return r.updateWorkspaceStatus(workspace, r.Log, failedStatus, reconcile.Result{}, nil)
 		}
 	}
-	return reconcile.Result{}, nil
+	// Requeue at least each 10 seconds to check if PVC is not removed by someone else
+	return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
 func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorkspace) (*batchv1.Job, error) {

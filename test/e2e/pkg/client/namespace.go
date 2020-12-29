@@ -51,7 +51,7 @@ func (w *K8sClient) WaitNamespaceIsTerminated(namespace string) (err error) {
 	for {
 		select {
 		case <-timeoutC:
-			return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %d.", namespace, timeoutC))
+			return errors.New(fmt.Sprintf("The namespace %s is not terminated and removed after %ds.", namespace, timeout))
 		case <-tickC:
 			var ns *corev1.Namespace
 			ns, err = w.kubeClient.CoreV1().Namespaces().Get(context.TODO(), namespace, metav1.GetOptions{})

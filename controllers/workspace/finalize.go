@@ -68,10 +68,32 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	if wait {
 		return reconcile.Result{Requeue: true}, nil
 	}
+
+	terminating, err := r.namespaceIsTerminating(ctx, workspace.Namespace)
+	if err != nil {
+		return reconcile.Result{Requeue: true}, err
+	} else if terminating {
+		//Namespace is terminating, it's redundant to clean PVC files since it's going to be removed
+		log.Info("Namespace is terminating; clearing storage finalizer")
+		clearFinalizer(workspace)
+		return reconcile.Result{}, r.Update(ctx, workspace)
+	}
+
+	pvcExists, err := r.pvcExists(ctx, workspace)
+	if err != nil {
+		return reconcile.Result{Requeue: true}, err
+	} else if pvcExists {
+		//PVC does not exist. nothing to clean up
+		log.Info("PVC does not exit; clearing storage finalizer")
+		clearFinalizer(workspace)
+		return reconcile.Result{}, r.Update(ctx, workspace)
+	}
+
 	specJob, err := r.getSpecCleanupJob(workspace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
 	clusterJob, err := r.getClusterCleanupJob(ctx, workspace)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -221,4 +243,34 @@ func clearFinalizer(workspace *v1alpha2.DevWorkspace) {
 		}
 	}
 	workspace.SetFinalizers(newFinalizers)
+}
+
+func (r *DevWorkspaceReconciler) namespaceIsTerminating(ctx context.Context, namespace string) (bool, error) {
+	namespacedName := types.NamespacedName{
+		Name: namespace,
+	}
+	n := &corev1.Namespace{}
+
+	err := r.Get(ctx, namespacedName, n)
+	if err != nil {
+		return false, err
+	}
+
+	return n.Status.Phase == corev1.NamespaceTerminating, nil
+}
+
+func (r *DevWorkspaceReconciler) pvcExists(ctx context.Context, workspace *v1alpha2.DevWorkspace) (bool, error) {
+	namespacedName := types.NamespacedName{
+		Name:      config.ControllerCfg.GetWorkspacePVCName(),
+		Namespace: workspace.Namespace,
+	}
+	err := r.Get(ctx, namespacedName, &corev1.PersistentVolumeClaim{})
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return false, nil
+		}
+
+		return false, err
+	}
+	return true, nil
 }

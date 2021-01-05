@@ -17,6 +17,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"github.com/devfile/devworkspace-operator/pkg/adaptor"
@@ -36,7 +38,6 @@ import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/library"
 )
 
 var configMapDiffOpts = cmp.Options{
@@ -80,7 +81,7 @@ func (r *ComponentReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, nil
 	}
 
-	initContainers, mainComponents, err := library.GetInitContainers(devworkspace.DevWorkspaceTemplateSpecContent{
+	initContainers, mainComponents, err := lifecycle.GetInitContainers(devworkspace.DevWorkspaceTemplateSpecContent{
 		Components: instance.Spec.Components,
 		Commands:   instance.Spec.Commands,
 		Events:     instance.Spec.Events,

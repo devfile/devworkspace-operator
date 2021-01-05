@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package library
+package lifecycle
 
 func listContains(query string, list []string) bool {
 	for _, elem := range list {

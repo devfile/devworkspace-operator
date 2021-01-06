@@ -19,17 +19,22 @@ import (
 	"strings"
 	"time"
 
-	batchv1 "k8s.io/api/batch/v1"
+	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
+	shimlib "github.com/devfile/devworkspace-operator/pkg/library/shim"
+	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/restapis"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
-	appsv1 "k8s.io/api/apps/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,8 +42,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/restapis"
 )
 
 type currentStatus struct {
@@ -167,24 +170,31 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, nil
 	}
 
-	// Step one: Create components, and wait for their states to be ready.
 	timing.SetTime(workspace, timing.ComponentsCreated)
-	componentsStatus := provision.SyncComponentsToCluster(workspace, clusterAPI)
-	if !componentsStatus.Continue {
-		if componentsStatus.FailStartup {
-			reqLogger.Info("DevWorkspace start failed")
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			if componentsStatus.Message != "" {
-				reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = componentsStatus.Message
-			} else {
-				reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Could not find plugins for devworkspace"
-			}
-		} else {
-			reqLogger.Info("Waiting on components to be ready")
-		}
-		return reconcile.Result{Requeue: componentsStatus.Requeue}, componentsStatus.Err
+	// TODO#185 : Move away from using devfile 1.0 constructs; only work on flattened devfiles until
+	// TODO#185 : plugins is figured out.
+	// TODO#185 : Implement defaulting container component for Web Terminals for compatibility
+	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(workspace.Spec.Template)
+	if err != nil {
+		reqLogger.Info("DevWorkspace start failed")
+		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
+		return reconcile.Result{}, err
 	}
-	componentDescriptions := componentsStatus.ComponentDescriptions
+	err = storagelib.RewriteContainerVolumeMounts(workspace.Status.WorkspaceId, devfilePodAdditions, workspace.Spec.Template)
+	if err != nil {
+		reqLogger.Info("DevWorkspace start failed")
+		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile persistent storage: %s", err)
+		return reconcile.Result{}, err
+	}
+	componentDescriptions, err := shimlib.GetComponentDescriptionsFromPodAdditions(devfilePodAdditions, workspace.Spec.Template)
+	if err != nil {
+		reqLogger.Info("DevWorkspace start failed")
+		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile for Theia: %s", err)
+		return reconcile.Result{}, err
+	}
 	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
 	timing.SetTime(workspace, timing.ComponentsReady)
 

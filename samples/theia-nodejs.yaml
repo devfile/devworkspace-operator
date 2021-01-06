@@ -33,29 +33,29 @@ spec:
           mountSources: true
     commands:
       - exec:
-          id: download dependencies
+          id: download-dependencies
           component: nodejs
           commandLine: npm install
           workingDir: ${PROJECTS_ROOT}/project/app
       - exec:
-          id: run the app
+          id: run-the-app
           component: nodejs
           commandLine: nodemon app.js
           workingDir: ${PROJECTS_ROOT}/project/app
       - exec:
-          id: run the app (debugging enabled)
+          id: run-the-app-(debugging-enabled)
           component: nodejs
           commandLine: nodemon --inspect app.js
           workingDir: ${PROJECTS_ROOT}/project/app
       - exec:
-          id: stop the app
+          id: stop-the-app
           component: nodejs
           commandLine: >-
               node_server_pids=$(pgrep -fx '.*nodemon (--inspect )?app.js' | tr "\\n" " ") &&
               echo "Stopping node server with PIDs: ${node_server_pids}" &&
               kill -15 ${node_server_pids} &>/dev/null && echo 'Done.'
       - vscodeLaunch:
-          id: Attach remote debugger
+          id: Attach-remote-debugger
           inlined: |
             {
               "version": "0.2.0",

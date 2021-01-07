@@ -12,6 +12,13 @@
 
 // Package container contains library functions for converting DevWorkspace Container components to Kubernetes
 // components
+//
+// TODO:
+// - Devfile API spec is unclear on how mountSources should be handled -- mountPath is assumed to be /projects
+//   and volume name is assumed to be "projects"
+//   see issues:
+//     - https://github.com/devfile/api/issues/290
+//     - https://github.com/devfile/api/issues/291
 package container
 
 import (
@@ -19,22 +26,18 @@ import (
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/library"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-)
-
-const (
-	ProjectsRootEnvVar   = "PROJECTS_ROOT"
-	ProjectsSourceEnvVar = "PROJECTS_SOURCE"
-	ProjecstVolumeName   = "projects"
 )
 
 // GetKubeContainersFromDevfile converts container components in a DevWorkspace into Kubernetes containers.
 // If a DevWorkspace container is an init container (i.e. is bound to a preStart event), it will be returned as an
 // init container.
+//
+// This function also provisions volume mounts on containers as follows:
+// - Container component's volume mounts are provisioned with the mount path and name specified in the devworkspace
+// However, no Volumes are added to the returned PodAdditions at this stage; the volumeMounts above are expected to be
+// rewritten as Volumes are added to PodAdditions, in order to support e.g. using one PVC to hold all volumes
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
 func GetKubeContainersFromDevfile(workspace devworkspace.DevWorkspaceTemplateSpec) (*v1alpha1.PodAdditions, error) {
@@ -56,6 +59,7 @@ func GetKubeContainersFromDevfile(workspace devworkspace.DevWorkspaceTemplateSpe
 		if err != nil {
 			return nil, err
 		}
+		handleMountSources(k8sContainer, component.Container)
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)
 	}
 
@@ -64,130 +68,9 @@ func GetKubeContainersFromDevfile(workspace devworkspace.DevWorkspaceTemplateSpe
 		if err != nil {
 			return nil, err
 		}
+		handleMountSources(k8sContainer, container.Container)
 		podAdditions.InitContainers = append(podAdditions.InitContainers, *k8sContainer)
 	}
 
-	fillDefaultEnvVars(podAdditions, workspace)
-
 	return podAdditions, nil
-}
-
-func convertContainerToK8s(devfileComponent devworkspace.Component) (*corev1.Container, error) {
-	if devfileComponent.Container == nil {
-		return nil, fmt.Errorf("cannot get k8s container from non-container component")
-	}
-	devfileContainer := devfileComponent.Container
-
-	containerResources, err := devfileResourcesToContainerResources(devfileContainer)
-	if err != nil {
-		return nil, err
-	}
-
-	var mountSources bool
-	if devfileContainer.MountSources == nil {
-		mountSources = true
-	} else {
-		mountSources = *devfileContainer.MountSources
-	}
-
-	container := &corev1.Container{
-		Name:            devfileComponent.Name,
-		Image:           devfileContainer.Image,
-		Command:         devfileContainer.Command,
-		Args:            devfileContainer.Args,
-		Resources:       *containerResources,
-		Ports:           devfileEndpointsToContainerPorts(devfileContainer.Endpoints),
-		Env:             devfileEnvToContainerEnv(devfileContainer.Env),
-		VolumeMounts:    devfileVolumeMountsToContainerVolumeMounts(devfileContainer.VolumeMounts, mountSources),
-		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
-	}
-
-	return container, nil
-}
-
-func devfileEndpointsToContainerPorts(endpoints []devworkspace.Endpoint) []corev1.ContainerPort {
-	var containerPorts []corev1.ContainerPort
-	for _, endpoint := range endpoints {
-		containerPorts = append(containerPorts, corev1.ContainerPort{
-			Name:          endpoint.Name,
-			ContainerPort: int32(endpoint.TargetPort),
-			Protocol:      corev1.ProtocolTCP,
-		})
-	}
-	return containerPorts
-}
-
-func devfileResourcesToContainerResources(devfileContainer *devworkspace.ContainerComponent) (*corev1.ResourceRequirements, error) {
-	// TODO: Handle memory request and CPU when implemented in devfile API
-	memLimit := devfileContainer.MemoryLimit
-	if memLimit == "" {
-		memLimit = config.SidecarDefaultMemoryLimit
-	}
-	memLimitQuantity, err := resource.ParseQuantity(memLimit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse memory limit %q: %w", memLimit, err)
-	}
-	return &corev1.ResourceRequirements{
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: memLimitQuantity,
-		},
-	}, nil
-}
-
-func devfileVolumeMountsToContainerVolumeMounts(devfileVolumeMounts []devworkspace.VolumeMount, mountSources bool) []corev1.VolumeMount {
-	var volumeMounts []corev1.VolumeMount
-	for _, vm := range devfileVolumeMounts {
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      vm.Name,
-			MountPath: vm.Path,
-		})
-	}
-	if mountSources {
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      ProjecstVolumeName,
-			MountPath: config.DefaultProjectsSourcesRoot,
-		})
-	}
-	return volumeMounts
-}
-
-func devfileEnvToContainerEnv(devfileEnvVars []devworkspace.EnvVar) []corev1.EnvVar {
-	var env []corev1.EnvVar
-	for _, devfileEnv := range devfileEnvVars {
-		env = append(env, corev1.EnvVar{
-			Name:  devfileEnv.Name,
-			Value: devfileEnv.Value,
-		})
-	}
-	return env
-}
-
-func fillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspaceTemplateSpec) {
-	var projectsSource string
-	if len(workspace.Projects) > 0 {
-		// TODO: Unclear from devfile spec how this should work when there are multiple projects
-		projectsSource = fmt.Sprintf("%s/%s", config.DefaultProjectsSourcesRoot, workspace.Projects[0].ClonePath)
-	} else {
-		projectsSource = config.DefaultProjectsSourcesRoot
-	}
-
-	// Add devfile reserved env var and legacy env var for Che-Theia
-	for idx, container := range podAdditions.Containers {
-		podAdditions.Containers[idx].Env = append(container.Env, corev1.EnvVar{
-			Name:  ProjectsRootEnvVar,
-			Value: config.DefaultProjectsSourcesRoot,
-		}, corev1.EnvVar{
-			Name:  ProjectsSourceEnvVar,
-			Value: projectsSource,
-		})
-	}
-	for idx, container := range podAdditions.InitContainers {
-		podAdditions.InitContainers[idx].Env = append(container.Env, corev1.EnvVar{
-			Name:  ProjectsRootEnvVar,
-			Value: config.DefaultProjectsSourcesRoot,
-		}, corev1.EnvVar{
-			Name:  ProjectsSourceEnvVar,
-			Value: projectsSource,
-		})
-	}
 }

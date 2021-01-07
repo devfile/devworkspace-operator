@@ -1,0 +1,11 @@
+name: "Checks for flattened devfile (parent)"
+
+input:
+  components:
+    - name: testing-container
+      container:
+        image: testing-image
+        memoryLimit: "x"
+
+output:
+  errRegexp: "failed to parse memory limit.*"

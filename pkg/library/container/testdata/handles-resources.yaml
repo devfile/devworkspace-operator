@@ -1,0 +1,30 @@
+name: "Processes memoryLimit correctly"
+
+input:
+  components:
+    - name: testing-container-1
+      container:
+        image: testing-image-1
+        memoryLimit: 999Mi
+        mountSources: false
+    - name: testing-container-2
+      container:
+        image: testing-image-2
+        # Omitted memory limit - should use default
+        mountSources: false
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"
+      - name: testing-container-2
+        image: testing-image-2
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "128M"

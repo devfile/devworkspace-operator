@@ -1,0 +1,27 @@
+name: "Returns error when workspace defines duplicate volumes"
+
+input:
+  workspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects-mountpath"
+          - name: "my-defined-volume"
+            mountPath: "/test-1"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          sourceMapping: "/plugins-mountpath"
+      - name: my-defined-volume
+        volume: {}
+      - name: my-defined-volume
+        volume: {}
+
+output:
+  errRegexp: "volume component 'my-defined-volume' is defined multiple times"

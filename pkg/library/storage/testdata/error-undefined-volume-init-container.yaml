@@ -1,0 +1,24 @@
+name: "Returns error on undefined volume in init container"
+
+input:
+  workspaceId: "test-workspaceid"
+  podAdditions:
+    initContainers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects-mountpath"
+          - name: "my-defined-volume"
+            mountPath: "/test-1"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          sourceMapping: "/plugins-mountpath"
+
+
+output:
+  errRegexp: "container 'testing-container-1' references undefined volume 'my-defined-volume'"

@@ -1,0 +1,60 @@
+name: "Handle mountSources correctly"
+
+input:
+  components:
+    - name: testing-container-1
+      container:
+        image: testing-image-1
+        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        sourceMapping: "/testdir1"
+        # no mountSources defined -> should mount sources
+    - name: testing-container-2
+      container:
+        image: testing-image-2
+        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        # No sourceMapping -> defaults to "/projects"
+        mountSources: true # mountSources: true -> should mount sources
+    - name: testing-container-3
+      container:
+        image: testing-image-3
+        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        sourceMapping: "/projects"
+        mountSources: false # mountSources: false -> should not mount sources
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/testdir1"
+        env:
+          - name: "PROJECTS_ROOT"
+            value: "/testdir1"
+          - name: "PROJECTS_SOURCE"
+            value: "/testdir1" # Temp value until projects is figured out
+      - name: testing-container-2
+        image: testing-image-2
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects"
+        env:
+          - name: "PROJECTS_ROOT"
+            value: "/projects"
+          - name: "PROJECTS_SOURCE"
+            value: "/projects" # Temp value until projects is figured out
+
+      - name: testing-container-3
+        image: testing-image-3
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"

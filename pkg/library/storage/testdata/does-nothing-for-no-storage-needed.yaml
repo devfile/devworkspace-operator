@@ -1,0 +1,22 @@
+name: "Does not modify PodAdditions when storage is not required"
+
+input:
+  workspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          mountSources: false
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always

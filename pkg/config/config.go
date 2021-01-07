@@ -251,6 +251,10 @@ func WatchControllerConfig(mgr manager.Manager) error {
 	return err
 }
 
+func SetupConfigForTesting(cm *corev1.ConfigMap) {
+	ControllerCfg.update(cm)
+}
+
 func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Name = ConfigMapReference.Name
 	cm.Namespace = ConfigMapReference.Namespace

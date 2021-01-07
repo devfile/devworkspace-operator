@@ -1,0 +1,13 @@
+name: "Checks for flattened devfile (parent)"
+
+input:
+  components:
+    - name: testing-container
+      container:
+        image: testing-image
+    - name: my-plugin
+      plugin:
+        id: "test-id"
+
+output:
+  errRegexp: "devfile is not flattened"

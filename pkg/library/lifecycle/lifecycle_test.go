@@ -65,6 +65,9 @@ func TestGetInitContainers(t *testing.T) {
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
+				if !assert.NoError(t, err, "Should not return error") {
+					return
+				}
 				assert.Equal(t, tt.Output.InitContainers, gotInitContainers, "Init containers should match expected")
 				assert.Equal(t, tt.Output.MainContainers, gotMainComponents, "Main containers should match expected")
 			}

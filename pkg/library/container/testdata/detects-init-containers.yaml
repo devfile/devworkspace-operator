@@ -1,0 +1,37 @@
+name: "Gets initContainers correctly"
+
+input:
+  components:
+    - name: testing-container-1
+      container:
+        image: testing-image-1
+        mountSources: false # isolate test to not include volumes
+        memoryLimit: "999Mi"  # isolate test to not include memoryLimit
+    - name: testing-container-2
+      container:
+        image: testing-image-2
+        mountSources: false # isolate test to not include volumes
+        memoryLimit: "999Mi"  # isolate test to not include memoryLimit
+  commands:
+    - id: test_preStart_command
+      apply:
+        component: testing-container-2
+  events:
+    preStart:
+      - "test_preStart_command"
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"
+    initContainers:
+      - name: testing-container-2
+        image: testing-image-2
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"

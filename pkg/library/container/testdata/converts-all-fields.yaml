@@ -1,0 +1,74 @@
+name: "Converts all applicable fields"
+
+input:
+  components:
+    - name: testing-container-1
+      container:
+        image: testing-image-1
+        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        sourceMapping: "/source-mapping"
+        command: ["test", "command"]
+        args: ["test", "args"]
+        env:
+          - name: "TEST_ENVVAR"
+            value: "TEST_VALUE"
+        endpoints:
+          - name: "test-endpoint-1"
+            exposure: public
+            targetPort: 3100
+            secure: true
+            protocol: wss
+            attributes:
+              type: ide
+              cookiesAuthEnabled: "true"
+          - name: "test-endpoint-2"
+            exposure: public
+            targetPort: 8080
+            secure: true
+            protocol: http
+            attributes:
+              cookiesAuthEnabled: "true"
+        volumeMounts:
+          - name: "test-volume1"
+            path: "/test-volume1-path"
+          - name: "test-volume2"
+            # path omitted; should use name as mountpath
+    - name: "should-be-ignored"
+      volume: {}
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"
+        env:
+          - name: "TEST_ENVVAR"
+            value: "TEST_VALUE"
+          - name: "PROJECTS_ROOT"
+            value: "/source-mapping"
+          - name: "PROJECTS_SOURCE"
+            value: "/source-mapping" # Temp value until projects is figured out
+        command:
+          - "test"
+          - "command"
+        args:
+          - "test"
+          - "args"
+        ports:
+          - name: "3100-wss"
+            containerPort: 3100
+            protocol: TCP
+          - name: "8080-http"
+            containerPort: 8080
+            protocol: TCP
+        volumeMounts:
+          - name: "test-volume1"
+            mountPath: "/test-volume1-path"
+          - name: "test-volume2"
+            mountPath: "/test-volume2"
+          - name: "projects"
+            mountPath: "/source-mapping"

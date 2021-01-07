@@ -1,0 +1,20 @@
+name: "Ignores non-container components"
+
+input:
+  components:
+    - name: testing-container-1
+      container:
+        image: testing-image-1
+        mountSources: false # isolate test to not include volumes
+        memoryLimit: "999Mi"  # isolate test to not include memoryLimit
+    - name: test-volume
+      volume: {}
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"

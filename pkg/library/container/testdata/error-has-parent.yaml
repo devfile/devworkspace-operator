@@ -1,0 +1,12 @@
+name: "Checks for flattened devfile (parent)"
+
+input:
+  parent:
+    registryUrl: "has-parent"
+  components:
+    - name: testing-container
+      container:
+        image: testing-image
+
+output:
+  errRegexp: "devfile is not flattened"

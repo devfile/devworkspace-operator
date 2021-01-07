@@ -49,13 +49,18 @@ func convertContainerToK8s(devfileComponent v1alpha2.Component) (*v1.Container, 
 
 func devfileEndpointsToContainerPorts(endpoints []v1alpha2.Endpoint) []v1.ContainerPort {
 	var containerPorts []v1.ContainerPort
+	exposedPorts := map[int]bool{}
 	for _, endpoint := range endpoints {
+		if exposedPorts[endpoint.TargetPort] {
+			continue
+		}
 		containerPorts = append(containerPorts, v1.ContainerPort{
 			// Use meaningless name for port since endpoint.Name does not match requirements for ContainerPort name
 			Name:          fmt.Sprintf("%d-%s", endpoint.TargetPort, endpoint.Protocol),
 			ContainerPort: int32(endpoint.TargetPort),
 			Protocol:      v1.ProtocolTCP,
 		})
+		exposedPorts[endpoint.TargetPort] = true
 	}
 	return containerPorts
 }

@@ -67,6 +67,7 @@ func TestGetKubeContainersFromDevfile(t *testing.T) {
 		loadTestCaseOrPanic(t, "detects-init-containers.yaml"),
 		loadTestCaseOrPanic(t, "handles-mountSources.yaml"),
 		loadTestCaseOrPanic(t, "handles-resources.yaml"),
+		loadTestCaseOrPanic(t, "handles-endpoints-with-common-port.yaml"),
 		loadTestCaseOrPanic(t, "ignores-non-container-components.yaml"),
 		loadTestCaseOrPanic(t, "converts-all-fields.yaml"),
 		loadTestCaseOrPanic(t, "error-has-parent.yaml"),

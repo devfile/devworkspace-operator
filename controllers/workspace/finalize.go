@@ -18,6 +18,8 @@ import (
 	"path"
 	"time"
 
+	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
+
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -223,10 +225,8 @@ func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, works
 	return clusterJob, nil
 }
 
-func isFinalizerNecessary(_ *v1alpha2.DevWorkspace) bool {
-	// TODO: Implement checking whether persistent storage is used (once other choices are possible)
-	// Note this could interfere with cloud-shell until this TODO is resolved.
-	return true
+func isFinalizerNecessary(workspace *v1alpha2.DevWorkspace) bool {
+	return storagelib.NeedsStorage(workspace.Spec.Template)
 }
 
 func hasFinalizer(workspace *v1alpha2.DevWorkspace) bool {

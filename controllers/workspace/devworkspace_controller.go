@@ -179,21 +179,21 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		reqLogger.Info("DevWorkspace start failed")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 	err = storagelib.RewriteContainerVolumeMounts(workspace.Status.WorkspaceId, devfilePodAdditions, workspace.Spec.Template)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile persistent storage: %s", err)
-		return reconcile.Result{}, err
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile volumes: %s", err)
+		return reconcile.Result{}, nil
 	}
 	componentDescriptions, err := shimlib.GetComponentDescriptionsFromPodAdditions(devfilePodAdditions, workspace.Spec.Template)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile for Theia: %s", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{}, nil
 	}
 	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
 	timing.SetTime(workspace, timing.ComponentsReady)
@@ -211,9 +211,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		componentDescriptions = append([]controllerv1alpha1.ComponentDescription{cheRestApisComponent}, componentDescriptions...)
 	}
 
-	pvcStatus := provision.SyncPVC(workspace, componentDescriptions, r.Client, reqLogger)
-	if pvcStatus.Err != nil || !pvcStatus.Continue {
-		return reconcile.Result{Requeue: true}, pvcStatus.Err
+	if storagelib.NeedsStorage(workspace.Spec.Template) {
+		pvcStatus := provision.SyncPVC(workspace, r.Client, reqLogger)
+		if pvcStatus.Err != nil || !pvcStatus.Continue {
+			return reconcile.Result{Requeue: true}, pvcStatus.Err
+		}
 	}
 
 	rbacStatus := provision.SyncRBAC(workspace, r.Client, reqLogger)
@@ -283,7 +285,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 	// Step six: Create deployment and wait for it to be ready
 	timing.SetTime(workspace, timing.DeploymentCreated)
-	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, componentDescriptions, serviceAcctName, clusterAPI)
+	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")

@@ -83,15 +83,14 @@ func TestRewriteContainerVolumeMounts(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
-			podAdditions := v1alpha1.PodAdditions(tt.Input.PodAdditions)
-			err := RewriteContainerVolumeMounts(tt.Input.WorkspaceID, &podAdditions, tt.Input.Workspace)
+			err := RewriteContainerVolumeMounts(tt.Input.WorkspaceID, &tt.Input.PodAdditions, tt.Input.Workspace)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Equal(t, tt.Output.PodAdditions, podAdditions, "PodAdditions should match expected output")
+				assert.Equal(t, tt.Output.PodAdditions, tt.Input.PodAdditions, "PodAdditions should match expected output")
 			}
 		})
 	}

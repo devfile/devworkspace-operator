@@ -14,7 +14,6 @@ package provision
 
 import (
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -23,11 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func SyncPVC(workspace *devworkspace.DevWorkspace, components []v1alpha1.ComponentDescription, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
-	if !IsPVCRequired(components) {
-		return ProvisioningStatus{Continue: true}
-	}
-
+func SyncPVC(workspace *devworkspace.DevWorkspace, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
 	pvc, err := generatePVC(workspace)
 	if err != nil {
 		return ProvisioningStatus{Err: err}
@@ -60,27 +55,4 @@ func generatePVC(workspace *devworkspace.DevWorkspace) (*corev1.PersistentVolume
 			StorageClassName: config.ControllerCfg.GetPVCStorageClassName(),
 		},
 	}, nil
-}
-
-// IsPVCRequired checks to see if we need a PVC for the given devfile.
-// If there is any Containers with VolumeMounts that have the same name as the workspace PVC name then we need a PVC
-func IsPVCRequired(components []v1alpha1.ComponentDescription) bool {
-	volumeName := config.ControllerCfg.GetWorkspacePVCName()
-	for _, comp := range components {
-		for _, cont := range comp.PodAdditions.Containers {
-			for _, vm := range cont.VolumeMounts {
-				if vm.Name == volumeName {
-					return true
-				}
-			}
-		}
-		for _, cont := range comp.PodAdditions.InitContainers {
-			for _, vm := range cont.VolumeMounts {
-				if vm.Name == volumeName {
-					return true
-				}
-			}
-		}
-	}
-	return false
 }

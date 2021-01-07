@@ -59,13 +59,12 @@ var deploymentDiffOpts = cmp.Options{
 func SyncDeploymentToCluster(
 	workspace *devworkspace.DevWorkspace,
 	podAdditions []v1alpha1.PodAdditions,
-	components []v1alpha1.ComponentDescription,
 	saName string,
 	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
 
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
-	specDeployment, err := getSpecDeployment(workspace, podAdditions, components, saName, clusterAPI.Scheme)
+	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -160,7 +159,6 @@ func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
 func getSpecDeployment(
 	workspace *devworkspace.DevWorkspace,
 	podAdditionsList []v1alpha1.PodAdditions,
-	components []v1alpha1.ComponentDescription,
 	saName string,
 	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	replicas := int32(1)
@@ -225,8 +223,7 @@ func getSpecDeployment(
 		},
 	}
 
-	if IsPVCRequired(components) {
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, getPersistentVolumeClaim())
+	if len(podAdditions.Volumes) > 0 {
 		// Kubernetes creates directories in a PVC to support subpaths such that only the leaf directory has g+rwx permissions.
 		// This means that mounting the subpath e.g. <workspace-id>/plugins will result in the <workspace-id> directory being
 		// created with 755 permissions, requiring the root UID to remove it.
@@ -343,19 +340,6 @@ func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions,
 		}
 	}
 	return podAdditions, nil
-}
-
-func getPersistentVolumeClaim() corev1.Volume {
-	var workspaceClaim = corev1.PersistentVolumeClaimVolumeSource{
-		ClaimName: config.ControllerCfg.GetWorkspacePVCName(),
-	}
-	pvcVolume := corev1.Volume{
-		Name: config.ControllerCfg.GetWorkspacePVCName(),
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &workspaceClaim,
-		},
-	}
-	return pvcVolume
 }
 
 func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {

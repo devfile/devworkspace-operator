@@ -26,6 +26,7 @@ const (
 func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfiguration {
 	validateWebhookFailurePolicy := validateWebhookFailurePolicy
 	validateWebhookPath := validateWebhookPath
+	sideEffectsNone := v1beta1.SideEffectClassNone
 	return &v1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ValidateWebhookCfgName,
@@ -35,6 +36,7 @@ func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfi
 			{
 				Name:          "validate-exec.devworkspace-controller.svc",
 				FailurePolicy: &validateWebhookFailurePolicy,
+				SideEffects:   &sideEffectsNone,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					Service: &v1beta1.ServiceReference{
 						Name:      server.WebhookServerServiceName,

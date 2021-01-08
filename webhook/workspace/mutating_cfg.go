@@ -30,6 +30,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	mutateWebhookPath := mutateWebhookPath
 	labelExistsOp := metav1.LabelSelectorOpExists
 	equivalentMatchPolicy := v1beta1.Equivalent
+	sideEffectsNone := v1beta1.SideEffectClassNone
 	webhookClientConfig := v1beta1.WebhookClientConfig{
 		Service: &v1beta1.ServiceReference{
 			Name:      server.WebhookServerServiceName,
@@ -43,6 +44,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 		Name:          "mutate.devworkspace-controller.svc",
 		FailurePolicy: &mutateWebhookFailurePolicy,
 		ClientConfig:  webhookClientConfig,
+		SideEffects:   &sideEffectsNone,
 		Rules: []v1beta1.RuleWithOperations{
 			{
 				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},

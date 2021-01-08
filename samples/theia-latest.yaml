@@ -18,7 +18,7 @@ spec:
         plugin:
           id: eclipse/che-machine-exec-plugin/latest
     commands:
-      - id: say hello
+      - id: say-hello
         exec:
           component: plugin
           commandLine: echo "Hello from $(pwd)"

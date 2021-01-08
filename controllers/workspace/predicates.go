@@ -38,6 +38,10 @@ var predicates = predicate.Funcs{
 			// Should never happen
 			return true
 		}
+		// always reconcile if resource is deleted
+		if newObj.GetDeletionTimestamp() != nil {
+			return true
+		}
 		// Trigger a reconcile on failed workspaces if spec is updated.
 		return !equality.Semantic.DeepEqual(oldObj.Spec, newObj.Spec)
 	},

@@ -25,7 +25,7 @@ export WEBHOOK_ENABLED ?= true
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
 REGISTRY_ENABLED ?= true
-DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
+DEVWORKSPACE_API_VERSION ?= f33d2987d137225cd1e8975f6fdfdd2663195a37
 
 #internal params
 DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
@@ -110,7 +110,7 @@ endif
 ##### Rules for dealing with devfile/api
 ### update_devworkspace_api: update version of devworkspace crds in go.mod
 update_devworkspace_api:
-	go mod edit --require github.com/devfile/api@$(DEVWORKSPACE_API_VERSION)
+	go mod edit --require github.com/devfile/api/v2@$(DEVWORKSPACE_API_VERSION)
 	go mod download
 	go mod tidy
 

@@ -18,7 +18,7 @@ import (
 	"log"
 	"time"
 
-	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	workspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/types"
 )
 

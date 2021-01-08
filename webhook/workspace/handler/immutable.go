@@ -16,8 +16,8 @@ import (
 	"fmt"
 	"reflect"
 
-	devworkspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
-	devworkspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
+	devworkspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"

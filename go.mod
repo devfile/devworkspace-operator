@@ -3,7 +3,7 @@ module github.com/devfile/devworkspace-operator
 go 1.13
 
 require (
-	github.com/devfile/api v0.0.0-20201125082321-aeda60d43619
+	github.com/devfile/api/v2 v2.0.0-20210105203253-f33d2987d137
 	github.com/eclipse/che-go-jsonrpc v0.0.0-20200317130110-931966b891fe // indirect
 	github.com/eclipse/che-plugin-broker v3.4.0+incompatible
 	github.com/go-logr/logr v0.1.0

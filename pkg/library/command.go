@@ -15,7 +15,7 @@ package library
 import (
 	"fmt"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
 func getCommandType(command devworkspace.Command) (devworkspace.CommandType, error) {

@@ -24,8 +24,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 
-	workspacev1alpha1 "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
-	workspacev1alpha2 "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	workspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
+	workspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
 

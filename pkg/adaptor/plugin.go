@@ -16,11 +16,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/devfile/api/pkg/attributes"
+	"github.com/devfile/api/v2/pkg/attributes"
 
 	"github.com/devfile/devworkspace-operator/pkg/adaptor/plugin_patch"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"

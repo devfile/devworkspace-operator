@@ -125,7 +125,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	// Handle stopped workspaces
 	if !workspace.Spec.Started {
 		timing.ClearAnnotations(workspace)
-		r.syncTimingToCluster(ctx, workspace, reqLogger)
+		r.syncTimingToCluster(ctx, workspace, map[string]string{}, reqLogger)
 		return r.stopWorkspace(workspace, reqLogger)
 	}
 
@@ -141,27 +141,28 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		Conditions: map[devworkspace.WorkspaceConditionType]string{},
 		Phase:      devworkspace.WorkspaceStatusStarting,
 	}
-	timing.SetTime(workspace, timing.WorkspaceStarted)
+	clusterWorkspace := workspace.DeepCopy()
+	timingInfo := map[string]string{}
+	timing.SetTime(timingInfo, timing.WorkspaceStarted)
 	defer func() (reconcile.Result, error) {
-		r.syncTimingToCluster(ctx, workspace, reqLogger)
-		return r.updateWorkspaceStatus(workspace, reqLogger, &reconcileStatus, reconcileResult, err)
+		r.syncTimingToCluster(ctx, clusterWorkspace, timingInfo, reqLogger)
+		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
-	msg, err := r.validateCreatorTimestamp(workspace)
+	msg, err := r.validateCreatorTimestamp(clusterWorkspace)
 	if err != nil {
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = msg
 		return reconcile.Result{}, err
 	}
 
-	_, ok := workspace.Annotations[config.WorkspaceStopReasonAnnotation]
-	if ok {
-		delete(workspace.Annotations, config.WorkspaceStopReasonAnnotation)
-		err = r.Update(context.TODO(), workspace)
+	if _, ok := clusterWorkspace.Annotations[config.WorkspaceStopReasonAnnotation]; ok {
+		delete(clusterWorkspace.Annotations, config.WorkspaceStopReasonAnnotation)
+		err = r.Update(context.TODO(), clusterWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	restrictedAccess := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	restrictedAccess := clusterWorkspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]
 	if restrictedAccess == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
 		reqLogger.Info("Workspace is configured to have restricted access but webhooks are not enabled.")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
@@ -171,7 +172,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			"to reconfigure Operator."
 		return reconcile.Result{}, nil
 	}
-	timing.SetTime(workspace, timing.ComponentsCreated)
+
+	timing.SetTime(timingInfo, timing.ComponentsCreated)
 	// TODO#185 : Temporarily do devfile flattening in main reconcile loop; this should be moved to a subcontroller.
 	// TODO#185 : Implement defaulting container component for Web Terminals for compatibility
 	flattenHelpers := flatten.ResolverTools{
@@ -211,7 +213,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, nil
 	}
 	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
-	timing.SetTime(workspace, timing.ComponentsReady)
+	timing.SetTime(timingInfo, timing.ComponentsReady)
 
 	// Only add che rest apis if Theia editor is present in the devfile
 	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
@@ -239,7 +241,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
-	timing.SetTime(workspace, timing.RoutingCreated)
+	timing.SetTime(timingInfo, timing.RoutingCreated)
 	routingStatus := provision.SyncRoutingToCluster(workspace, componentDescriptions, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
@@ -253,9 +255,9 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
 	reconcileStatus.Conditions[devworkspace.WorkspaceRoutingReady] = ""
-	timing.SetTime(workspace, timing.RoutingReady)
+	timing.SetTime(timingInfo, timing.RoutingReady)
 
-	statusOk, err := syncWorkspaceIdeURL(workspace, routingStatus.ExposedEndpoints, clusterAPI)
+	statusOk, err := syncWorkspaceIdeURL(clusterWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -299,7 +301,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	reconcileStatus.Conditions[devworkspace.WorkspaceServiceAccountReady] = ""
 
 	// Step six: Create deployment and wait for it to be ready
-	timing.SetTime(workspace, timing.DeploymentCreated)
+	timing.SetTime(timingInfo, timing.DeploymentCreated)
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, podAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
@@ -312,17 +314,17 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
 	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
-	timing.SetTime(workspace, timing.DeploymentReady)
+	timing.SetTime(timingInfo, timing.DeploymentReady)
 
-	serverReady, err := checkServerStatus(workspace)
+	serverReady, err := checkServerStatus(clusterWorkspace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if !serverReady {
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
 	}
-	timing.SetTime(workspace, timing.WorkspaceReady)
-	timing.SummarizeStartup(workspace)
+	timing.SetTime(timingInfo, timing.WorkspaceReady)
+	timing.SummarizeStartup(clusterWorkspace)
 	reconcileStatus.Phase = devworkspace.WorkspaceStatusRunning
 	return reconcile.Result{}, nil
 }
@@ -365,8 +367,13 @@ func (r *DevWorkspaceReconciler) stopWorkspace(workspace *devworkspace.DevWorksp
 }
 
 func (r *DevWorkspaceReconciler) syncTimingToCluster(
-	ctx context.Context, workspace *devworkspace.DevWorkspace, reqLogger logr.Logger) {
+	ctx context.Context, workspace *devworkspace.DevWorkspace, timingInfo map[string]string, reqLogger logr.Logger) {
 	if timing.IsEnabled() {
+		for timingEvent, timestamp := range timingInfo {
+			if _, set := workspace.Annotations[timingEvent]; !set {
+				workspace.Annotations[timingEvent] = timestamp
+			}
+		}
 		if err := r.Update(ctx, workspace); err != nil {
 			if k8sErrors.IsConflict(err) {
 				reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")

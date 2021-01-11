@@ -2,6 +2,8 @@ kind: DevWorkspaceTemplate
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
   name: vscode-typescript
+  labels:
+    "devworkspace.devfile.io/editor-compatibility": "che-theia"
 spec:
   components:
     - name: sidecar-typescript

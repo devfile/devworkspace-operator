@@ -1,0 +1,13 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: incompatible-plugins
+spec:
+  started: true
+  template:
+    components:
+      - name: terminal
+        plugin:
+          kubernetes:
+            name: machine-exec
+            namespace: devworkspace-plugins

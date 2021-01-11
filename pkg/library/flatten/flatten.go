@@ -18,6 +18,7 @@ import (
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/pkg/utils/overriding"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -46,9 +47,20 @@ func (t tempOverrides) GetToplevelLists() devworkspace.TopLevelLists {
 // TODO:
 // - Implement flattening for DevWorkspace parents
 // - Implement plugin references by ID and URI
-// - Implement plugin + editor compatibility checking
-// - Implement cycle checking for references
 func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
+	resolutionCtx := &resolutionContextTree{}
+	resolvedDW, err := recursiveResolve(workspace, tooling, resolutionCtx)
+	if err != nil {
+		return nil, err
+	}
+	err = checkPluginsCompatibility(resolutionCtx)
+	if err != nil {
+		return nil, err
+	}
+	return resolvedDW, nil
+}
+
+func recursiveResolve(workspace devworkspace.DevWorkspaceTemplateSpec, tooling ResolverTools, resolveCtx *resolutionContextTree) (*devworkspace.DevWorkspaceTemplateSpec, error) {
 	if DevWorkspaceIsFlattened(workspace) {
 		return workspace.DeepCopy(), nil
 	}
@@ -56,6 +68,7 @@ func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, toolin
 		// TODO: Add support for flattening DevWorkspace parents
 		return nil, fmt.Errorf("DevWorkspace parent is unsupported")
 	}
+
 	resolvedContent := &devworkspace.DevWorkspaceTemplateSpecContent{}
 	resolvedContent.Projects = workspace.Projects
 	resolvedContent.StarterProjects = workspace.StarterProjects
@@ -68,44 +81,53 @@ func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, toolin
 			// No action necessary
 			resolvedContent.Components = append(resolvedContent.Components, component)
 		} else {
-			pluginComponent, err := resolvePluginComponent(component.Name, component.Plugin, tooling)
+			pluginComponent, pluginMeta, err := resolvePluginComponent(component.Name, component.Plugin, tooling)
 			if err != nil {
 				return nil, err
 			}
-			resolvedPlugin, err := ResolveDevWorkspace(*pluginComponent, tooling)
+			newCtx := resolveCtx.addPlugin(component.Name, component.Plugin)
+			newCtx.pluginMetadata = pluginMeta
+			if err := newCtx.hasCycle(); err != nil {
+				return nil, err
+			}
+
+			resolvedPlugin, err := recursiveResolve(*pluginComponent, tooling, newCtx)
 			if err != nil {
 				return nil, err
 			}
 			pluginSpecContents = append(pluginSpecContents, &resolvedPlugin.DevWorkspaceTemplateSpecContent)
 		}
 	}
+
 	// TODO: Temp workaround for issue in devfile API: can't pass in nil for parentFlattenedContent
 	// see: https://github.com/devfile/api/issues/295
 	resolvedContent, err := overriding.MergeDevWorkspaceTemplateSpec(resolvedContent, &devworkspace.DevWorkspaceTemplateSpecContent{}, pluginSpecContents...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge DevWorkspace parents/plugins: %w", err)
 	}
+
 	return &devworkspace.DevWorkspaceTemplateSpec{
 		DevWorkspaceTemplateSpecContent: *resolvedContent,
 	}, nil
 }
 
-func resolvePluginComponent(name string, plugin *devworkspace.PluginComponent, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
-	var resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec
-	var err error
+func resolvePluginComponent(
+	name string,
+	plugin *devworkspace.PluginComponent,
+	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginMeta map[string]string, err error) {
 	switch {
 	// TODO: Add support for plugin ID and URI
 	case plugin.Kubernetes != nil:
-		resolvedPlugin, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
+		resolvedPlugin, pluginMeta, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
 	case plugin.Uri != "":
-		return nil, fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
+		err = fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
 	case plugin.Id != "":
-		return nil, fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
+		err = fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
 	default:
-		return nil, fmt.Errorf("plugin %s does not define any resources", name)
+		err = fmt.Errorf("plugin %s does not define any resources", name)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	if plugin.Components != nil || plugin.Commands != nil {
@@ -122,22 +144,28 @@ func resolvePluginComponent(name string, plugin *devworkspace.PluginComponent, t
 		})
 
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		resolvedPlugin.DevWorkspaceTemplateSpecContent = *overrideSpec
 	}
-	return resolvedPlugin, nil
+	return resolvedPlugin, pluginMeta, nil
 }
 
-func resolvePluginComponentByKubernetesReference(name string, plugin *devworkspace.PluginComponent, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
+func resolvePluginComponentByKubernetesReference(
+	name string,
+	plugin *devworkspace.PluginComponent,
+	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
 	var dwTemplate devworkspace.DevWorkspaceTemplate
 	namespacedName := types.NamespacedName{
 		Name:      plugin.Kubernetes.Name,
 		Namespace: plugin.Kubernetes.Namespace,
 	}
-	err := tooling.K8sClient.Get(tooling.Context, namespacedName, &dwTemplate)
+	err = tooling.K8sClient.Get(tooling.Context, namespacedName, &dwTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve referenced kubernetes name and namespace for plugin %s: %w", name, err)
+		if errors.IsNotFound(err) {
+			return nil, nil, fmt.Errorf("plugin for component %s not found", name)
+		}
+		return nil, nil, fmt.Errorf("failed to retrieve plugin referenced by kubernetes name and namespace '%s': %w", name, err)
 	}
-	return &dwTemplate.Spec, nil
+	return &dwTemplate.Spec, dwTemplate.Labels, nil
 }

@@ -32,7 +32,6 @@ type ResolverTools struct {
 // TODO:
 // - Implement flattening for DevWorkspace parents
 // - Implement plugin references by ID and URI
-// - Implement plugin overrides
 // - Implement plugin + editor compatibility checking
 // - Implement cycle checking for references
 func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
@@ -78,14 +77,12 @@ func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, toolin
 }
 
 func resolvePluginComponent(name string, plugin *devworkspace.PluginComponent, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
-	if plugin.Components != nil || plugin.Commands != nil {
-		// TODO: Add support for overriding plugin components and commands
-		return nil, fmt.Errorf("plugin overrides is unsupported")
-	}
+	var resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec
+	var err error
 	switch {
 	// TODO: Add support for plugin ID and URI
 	case plugin.Kubernetes != nil:
-		return resolvePluginComponentByKubernetesReference(name, plugin, tooling)
+		resolvedPlugin, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
 	case plugin.Uri != "":
 		return nil, fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
 	case plugin.Id != "":
@@ -93,6 +90,21 @@ func resolvePluginComponent(name string, plugin *devworkspace.PluginComponent, t
 	default:
 		return nil, fmt.Errorf("plugin %s does not define any resources", name)
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	if plugin.Components != nil || plugin.Commands != nil {
+		overrideSpec, err := overriding.OverrideDevWorkspaceTemplateSpec(&resolvedPlugin.DevWorkspaceTemplateSpecContent, devworkspace.PluginOverrides{
+			Components: plugin.Components,
+			Commands:   plugin.Commands,
+		})
+		if err != nil {
+			return nil, err
+		}
+		resolvedPlugin.DevWorkspaceTemplateSpecContent = *overrideSpec
+	}
+	return resolvedPlugin, nil
 }
 
 func resolvePluginComponentByKubernetesReference(name string, plugin *devworkspace.PluginComponent, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
@@ -105,6 +117,5 @@ func resolvePluginComponentByKubernetesReference(name string, plugin *devworkspa
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve referenced kubernetes name and namespace for plugin %s: %w", name, err)
 	}
-
 	return &dwTemplate.Spec, nil
 }

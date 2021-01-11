@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
+
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	shimlib "github.com/devfile/devworkspace-operator/pkg/library/shim"
 	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
@@ -169,11 +171,23 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			"to reconfigure Operator."
 		return reconcile.Result{}, nil
 	}
-
 	timing.SetTime(workspace, timing.ComponentsCreated)
-	// TODO#185 : Move away from using devfile 1.0 constructs; only work on flattened devfiles until
-	// TODO#185 : plugins is figured out.
+	// TODO#185 : Temporarily do devfile flattening in main reconcile loop; this should be moved to a subcontroller.
 	// TODO#185 : Implement defaulting container component for Web Terminals for compatibility
+	flattenHelpers := flatten.ResolverTools{
+		Context:   ctx,
+		K8sClient: r.Client,
+	}
+	flattenedWorkspace, err := flatten.ResolveDevWorkspace(workspace.Spec.Template, flattenHelpers)
+	if err != nil {
+		reqLogger.Info("DevWorkspace start failed")
+		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		// TODO: Handle error more elegantly
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
+		return reconcile.Result{}, nil
+	}
+	workspace.Spec.Template = *flattenedWorkspace
+
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(workspace.Spec.Template)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")

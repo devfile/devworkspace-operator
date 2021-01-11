@@ -29,17 +29,17 @@ func IsEnabled() bool {
 // SetTime applies a given event annotation to the devworkspace with the current
 // timestamp. No-op if timing is disabled or the annotation is already set, meaning
 // this function can be called without additional checks.
-func SetTime(workspace *devworkspace.DevWorkspace, event string) {
+func SetTime(timingInfo map[string]string, event string) {
 	if !IsEnabled() {
 		return
 	}
-	if _, set := workspace.Annotations[event]; set {
+	if timingInfo == nil {
+		timingInfo = map[string]string{}
+	}
+	if _, set := timingInfo[event]; set {
 		return
 	}
-	if workspace.Annotations == nil {
-		workspace.Annotations = map[string]string{}
-	}
-	workspace.Annotations[event] = strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	timingInfo[event] = strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
 }
 
 // SummarizeStartup applies aggregate annotations based off event annotations set by

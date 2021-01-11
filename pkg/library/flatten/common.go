@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package library
+package flatten
 
 import devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 

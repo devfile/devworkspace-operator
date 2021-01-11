@@ -1,0 +1,81 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: theia-nodejs
+spec:
+  started: true
+  template:
+    projects:
+      - name: project
+        git:
+          remotes:
+            origin: "https://github.com/che-samples/web-nodejs-sample.git"
+    components:
+      - name: che-theia
+        plugin:
+          kubernetes:
+            name: theia-next
+            namespace: devworkspace-plugins
+      - name: machine-exec
+        plugin:
+          kubernetes:
+            name: machine-exec
+            namespace: devworkspace-plugins
+      - name: typescript
+        plugin:
+          kubernetes:
+            name: vscode-typescript
+            namespace: devworkspace-plugins
+          components:
+            - name: sidecar-typescript
+              container:
+                memoryLimit: 512Mi
+      - name: nodejs
+        container:
+          image: quay.io/eclipse/che-nodejs10-ubi:nightly
+          memoryLimit: 512Mi
+          endpoints:
+            - name: nodejs
+              protocol: http
+              targetPort: 3000
+          mountSources: true
+    commands:
+      - id: download-dependencies
+        exec:
+          component: nodejs
+          commandLine: npm install
+          workingDir: ${PROJECTS_ROOT}/project/app
+      - id: run-the-app
+        exec:
+          component: nodejs
+          commandLine: nodemon app.js
+          workingDir: ${PROJECTS_ROOT}/project/app
+      - id: run-the-app-with-debugging-enabled
+        exec:
+          component: nodejs
+          commandLine: nodemon --inspect app.js
+          workingDir: ${PROJECTS_ROOT}/project/app
+      - id: stop-the-app
+        exec:
+          component: nodejs
+          commandLine: >-
+              node_server_pids=$(pgrep -fx '.*nodemon (--inspect )?app.js' | tr "\\n" " ") &&
+              echo "Stopping node server with PIDs: ${node_server_pids}" &&
+              kill -15 ${node_server_pids} &>/dev/null && echo 'Done.'
+      - id: attach-remote-debugger
+        vscodeLaunch:
+          inlined: |
+            {
+              "version": "0.2.0",
+              "configurations": [
+                {
+                  "type": "node",
+                  "request": "attach",
+                  "name": "Attach to Remote",
+                  "address": "localhost",
+                  "port": 9229,
+                  "localRoot": "${workspaceFolder}",
+                  "remoteRoot": "${workspaceFolder}"
+                }
+              ]
+            }

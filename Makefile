@@ -199,6 +199,11 @@ endif
 	mv config/base/config.properties.bak config/base/config.properties
 	mv config/base/manager_image_patch.yaml.bak config/base/manager_image_patch.yaml
 
+### install_plugin_templates: Deploy sample plugin templates to namespace devworkspace-plugins:
+install_plugin_templates: _print_vars
+	$(K8S_CLI) create namespace devworkspace-plugins || true
+	$(K8S_CLI) apply -f samples/plugins -n devworkspace-plugins
+
 ### restart: Restart devworkspace-controller deployment
 restart:
 	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-controller-manager

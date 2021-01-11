@@ -26,7 +26,7 @@ import (
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/library"
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
 )
 
@@ -41,7 +41,7 @@ import (
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
 func GetKubeContainersFromDevfile(workspace devworkspace.DevWorkspaceTemplateSpec) (*v1alpha1.PodAdditions, error) {
-	if !library.DevWorkspaceIsFlattened(workspace) {
+	if !flatten.DevWorkspaceIsFlattened(workspace) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}
 	podAdditions := &v1alpha1.PodAdditions{}

@@ -66,7 +66,9 @@ func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, toolin
 			pluginSpecContents = append(pluginSpecContents, &resolvedPlugin.DevWorkspaceTemplateSpecContent)
 		}
 	}
-	resolvedContent, err := overriding.MergeDevWorkspaceTemplateSpec(resolvedContent, nil, pluginSpecContents...)
+	// TODO: Temp workaround for issue in devfile API: can't pass in nil for parentFlattenedContent
+	// see: https://github.com/devfile/api/issues/295
+	resolvedContent, err := overriding.MergeDevWorkspaceTemplateSpec(resolvedContent, &devworkspace.DevWorkspaceTemplateSpecContent{}, pluginSpecContents...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge DevWorkspace parents/plugins: %w", err)
 	}

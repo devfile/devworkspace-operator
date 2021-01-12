@@ -1,0 +1,25 @@
+name: "Plugin references self"
+
+input:
+  workspace:
+    components:
+      - name: "plugin-a"
+        plugin:
+          kubernetes:
+            name: plugin-a
+  plugins:
+    plugin-a:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-a
+      spec:
+        components:
+          - name: plugin-a
+            plugin:
+              kubernetes:
+                name: plugin-a
+                namespace: devworkspace-plugins
+
+output:
+  errRegexp: "DevWorkspace has an cycle in references.*"

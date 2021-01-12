@@ -1,0 +1,41 @@
+name: "Plugins incompatible with editor"
+
+input:
+  workspace:
+    components:
+      - name: editor-plugin-1
+        plugin:
+          kubernetes:
+            name: editor-plugin-1
+      - name: editor-plugin-2
+        plugin:
+          kubernetes:
+            name: editor-plugin-2
+  plugins:
+    editor-plugin-1:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: editor-plugin-1
+        labels:
+          "devworkspace.devfile.io/editor-name": "test-editor-1"
+      spec:
+        components:
+          - name: editor-container
+            container:
+              image: "test-image"
+    editor-plugin-2:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-sidecar
+        labels:
+          "devworkspace.devfile.io/editor-name": "test-editor-2"
+      spec:
+        components:
+          - name: plugin-container
+            container:
+              image: "test-image"
+
+output:
+  errRegexp: 'devworkspace defines multiple editors.*'

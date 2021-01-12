@@ -1,0 +1,16 @@
+name: "Referenced plugin cannot be found"
+
+input:
+  workspace:
+    components:
+      - name: "bad-plugin"
+        plugin:
+          kubernetes:
+            name: test-plugin
+  errors:
+    test-plugin:
+      isNotFound: true
+      message: "Plugin not found"
+
+output:
+  errRegexp: "plugin for component bad-plugin not found.*"

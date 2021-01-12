@@ -1,0 +1,15 @@
+name: "Error retrieving plugin"
+
+input:
+  workspace:
+    components:
+      - name: "bad-plugin"
+        plugin:
+          kubernetes:
+            name: test-plugin
+  errors:
+    test-plugin:
+      message: "Internal k8s error"
+
+output:
+  errRegexp: ".*failed to retrieve.*bad-plugin.*Internal k8s error.*"

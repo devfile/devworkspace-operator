@@ -1,0 +1,23 @@
+name: "Attempting to override undefined plugin component"
+
+input:
+  workspace:
+    components:
+      - name: "bad-override"
+        plugin:
+          kubernetes:
+            name: override
+          components:
+            - name: non-existent
+              container:
+                memoryLimit: 512Mi
+  plugins:
+    override:
+      spec:
+        components:
+          - name: my-component
+            container:
+              image: test-image
+
+output:
+  errRegexp: "Some Components do not override any existing element: non-existent.*"

@@ -1,0 +1,26 @@
+name: "Plugins incompatible with editor"
+
+input:
+  workspace:
+    components:
+      - name: my-plugin
+        plugin:
+          kubernetes:
+            name: my-plugin
+  plugins:
+    my-plugin:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-sidecar
+        labels:
+          "devworkspace.devfile.io/editor-compatibility": "my-editor"
+      spec:
+        components:
+          - name: plugin-container
+            container:
+              image: "test-image"
+
+output:
+  errRegexp: 'invalid plugins defined in devworkspace: no editor defined
+    in workspace but Component\(s\) \[my-plugin\] depend on editor my-editor'

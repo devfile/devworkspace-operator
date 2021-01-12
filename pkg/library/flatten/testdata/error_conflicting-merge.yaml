@@ -1,0 +1,22 @@
+name: "Component conflicts with plugin component"
+
+input:
+  workspace:
+    components:
+      - name: "component-conflict"
+        plugin:
+          kubernetes:
+            name: test-plugin
+      - name: my-component
+        container:
+          image: test-image
+  plugins:
+    test-plugin:
+      spec:
+        components:
+          - name: my-component
+            container:
+              image: test-image
+
+output:
+  errRegexp: "Some Components are already defined in plugin '.*': my-component.*"

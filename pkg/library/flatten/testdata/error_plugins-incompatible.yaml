@@ -1,0 +1,42 @@
+name: "Plugins incompatible with editor"
+
+input:
+  workspace:
+    components:
+      - name: editor-plugin
+        plugin:
+          kubernetes:
+            name: editor-plugin
+      - name: plugin-for-different-editor
+        plugin:
+          kubernetes:
+            name: plugin-for-different-editor
+  plugins:
+    editor-plugin:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: editor-plugin
+        labels:
+          "devworkspace.devfile.io/editor-name": "test-editor"
+      spec:
+        components:
+          - name: editor-container
+            container:
+              image: "test-image"
+    plugin-for-different-editor:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-sidecar
+        labels:
+          "devworkspace.devfile.io/editor-compatibility": "another-editor"
+      spec:
+        components:
+          - name: plugin-container
+            container:
+              image: "test-image"
+
+output:
+  errRegexp: 'devworkspace uses editor test-editor \(defined in component editor-plugin\)
+    but plugins \[plugin-for-different-editor\] depend on editor another-editor'

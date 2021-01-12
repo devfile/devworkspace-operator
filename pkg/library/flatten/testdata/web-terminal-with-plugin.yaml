@@ -1,0 +1,82 @@
+name: "Web terminal default"
+
+input:
+  workspace:
+    components:
+      - name: dev
+        container:
+          memoryLimit: "256Mi"
+          image: quay.io/wto/web-terminal-tooling:latest
+          args: ["tail", "-f", "/dev/null"]
+          env:
+            - name: PS1
+              value: \[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]
+      - name: web-terminal
+        plugin:
+          kubernetes:
+            name: web-terminal
+            namespace: devworkspace-plugins
+  plugins:
+    web-terminal:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: web-terminal
+        labels:
+          "devworkspace.devfile.io/editor-name": "web-terminal"
+      spec:
+        components:
+          - name: web-terminal
+            container:
+              image: quay.io/eclipse/che-machine-exec:nightly
+              command: ["/go/bin/che-machine-exec",
+                        "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
+                        "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
+                        "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+                        "--use-bearer-token",
+                        "--use-tls"]
+              endpoints:
+                - name: web-terminal
+                  targetPort: 4444
+                  attributes:
+                    protocol: http
+                    type: ide
+                    discoverable: "false"
+                    secure: "true"
+                    cookiesAuthEnabled: "true"
+              env:
+                - name: USE_BEARER_TOKEN
+                  value: "true"
+
+output:
+  workspace:
+    components:
+      - name: dev
+        container:
+          image: quay.io/wto/web-terminal-tooling:latest
+          memoryLimit: 256Mi
+          args: ["tail", "-f", "/dev/null"]
+          env:
+            - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
+              name: PS1
+      - name: web-terminal
+        container:
+          image: quay.io/eclipse/che-machine-exec:nightly
+          command: ["/go/bin/che-machine-exec",
+                    "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
+                    "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
+                    "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+                    "--use-bearer-token",
+                    "--use-tls"]
+          endpoints:
+            - name: web-terminal
+              targetPort: 4444
+              attributes:
+                protocol: http
+                type: ide
+                discoverable: "false"
+                secure: "true"
+                cookiesAuthEnabled: "true"
+          env:
+            - name: USE_BEARER_TOKEN
+              value: "true"

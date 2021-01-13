@@ -26,6 +26,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspaceTemplateSpec) {
+	for idx, mainContainer := range podAdditions.Containers {
+		podAdditions.Containers[idx].Env = append(mainContainer.Env, corev1.EnvVar{
+			Name:  "CHE_MACHINE_NAME",
+			Value: mainContainer.Name,
+		})
+	}
+}
+
 func GetComponentDescriptionsFromPodAdditions(podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspaceTemplateSpec) ([]v1alpha1.ComponentDescription, error) {
 	var descriptions []v1alpha1.ComponentDescription
 

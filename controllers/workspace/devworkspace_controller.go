@@ -397,6 +397,10 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&devworkspace.DevWorkspace{}).
+		// List DevWorkspaceTemplates as owned to enable updating workspaces when templates
+		// are changed; this should be moved to whichever controller is responsible for flattening
+		// DevWorkspaces
+		Owns(&devworkspace.DevWorkspaceTemplate{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&batchv1.Job{}).
 		Owns(&controllerv1alpha1.Component{}).

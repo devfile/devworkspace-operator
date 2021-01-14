@@ -15,6 +15,7 @@ package provision
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -145,6 +146,14 @@ func getSpecRouting(
 	if val, ok := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]; ok {
 		annotations = map[string]string{}
 		annotations[config.WorkspaceRestrictedAccessAnnotation] = val
+	}
+
+	// copy the annotations for the specific routingClass from the workspace object to the routing
+	expectedAnnotationPrefix := workspace.Spec.RoutingClass + config.RoutingClassAnnotationInfix
+	for k, v := range workspace.GetAnnotations() {
+		if strings.Index(k, expectedAnnotationPrefix) == 0 {
+			annotations[k] = v
+		}
 	}
 
 	routing := &v1alpha1.WorkspaceRouting{

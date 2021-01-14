@@ -24,8 +24,9 @@ import (
 )
 
 type ResolverTools struct {
-	Context   context.Context
-	K8sClient client.Client
+	InstanceNamespace string
+	Context           context.Context
+	K8sClient         client.Client
 }
 
 // TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/issues/296
@@ -118,6 +119,10 @@ func resolvePluginComponent(
 	switch {
 	// TODO: Add support for plugin ID and URI
 	case plugin.Kubernetes != nil:
+		// Search in devworkspace's namespace if namespace ref is unset
+		if plugin.Kubernetes.Namespace == "" {
+			plugin.Kubernetes.Namespace = tooling.InstanceNamespace
+		}
 		resolvedPlugin, pluginMeta, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
 	case plugin.Uri != "":
 		err = fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
@@ -155,6 +160,7 @@ func resolvePluginComponentByKubernetesReference(
 	name string,
 	plugin *devworkspace.PluginComponent,
 	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
+
 	var dwTemplate devworkspace.DevWorkspaceTemplate
 	namespacedName := types.NamespacedName{
 		Name:      plugin.Kubernetes.Name,

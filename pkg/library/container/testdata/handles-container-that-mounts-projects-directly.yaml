@@ -1,0 +1,34 @@
+# This test is due to an inconsistency in devfile/api semantics; see
+# issue https://github.com/devfile/api/issues/290
+
+name: "Handles container with mountSources and explicit projects volume"
+
+input:
+  components:
+    - name: testing-container-1
+      container:
+        image: testing-image-1
+        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        sourceMapping: "/testdir1"
+        mountSources: true
+        volumeMounts:
+          - name: "projects"
+            path: "/not-source-mapping"
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "999Mi"
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/not-source-mapping"
+        env:
+          - name: "PROJECTS_ROOT"
+            value: "/not-source-mapping"
+          - name: "PROJECTS_SOURCE"
+            value: "/not-source-mapping" # Temp value until projects is figured out

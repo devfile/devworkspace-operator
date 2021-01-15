@@ -40,16 +40,23 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devwor
 	if !HasMountSources(devfileContainer) {
 		return
 	}
-	sourceMapping := devfileContainer.SourceMapping
-	if sourceMapping == "" {
-		// Sanity check -- this value should be defaulted to `/projects` but may not be
-		// if struct was not processed by k8s
-		sourceMapping = config.DefaultProjectsSourcesRoot
+	var sourceMapping string
+	if vm := getProjectsVolumeMount(k8sContainer); vm != nil {
+		// Container already mounts projects volume; need to set env vars according to mountPath
+		// TODO: see issue https://github.com/devfile/api/issues/290
+		sourceMapping = vm.MountPath
+	} else {
+		sourceMapping = devfileContainer.SourceMapping
+		if sourceMapping == "" {
+			// Sanity check -- this value should be defaulted to `/projects` but may not be
+			// if struct was not processed by k8s
+			sourceMapping = config.DefaultProjectsSourcesRoot
+		}
+		k8sContainer.VolumeMounts = append(k8sContainer.VolumeMounts, corev1.VolumeMount{
+			Name:      constants.ProjectsVolumeName,
+			MountPath: sourceMapping,
+		})
 	}
-	k8sContainer.VolumeMounts = append(k8sContainer.VolumeMounts, corev1.VolumeMount{
-		Name:      constants.ProjectsVolumeName,
-		MountPath: sourceMapping,
-	})
 	k8sContainer.Env = append(k8sContainer.Env, corev1.EnvVar{
 		Name:  constants.ProjectsRootEnvVar,
 		Value: sourceMapping,
@@ -57,4 +64,15 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devwor
 		Name:  constants.ProjectsSourceEnvVar,
 		Value: sourceMapping, // TODO: Unclear how this should be handled in case of multiple projects
 	})
+}
+
+// getProjectsVolumeMount returns the projects volumeMount in a container, if it is defined; if it does not exist,
+// returns nil.
+func getProjectsVolumeMount(k8sContainer *corev1.Container) *corev1.VolumeMount {
+	for _, vm := range k8sContainer.VolumeMounts {
+		if vm.Name == constants.ProjectsVolumeName {
+			return &vm
+		}
+	}
+	return nil
 }

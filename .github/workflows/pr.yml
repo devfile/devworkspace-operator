@@ -58,6 +58,19 @@ jobs:
           exit 1
         fi
     -
+      name: Check manifests
+      run: |
+        git reset HEAD --hard
+        pip install yq
+        # Note: fmt is necessary after generate since generated sources will
+        #       fail format check by default.
+        make generate fmt manifests
+        if [[ ! -z $(git status -s) ]]
+        then
+          echo "generated sources are not up to date"
+          exit 1
+        fi
+    -
       name: Run Go Tests
       run: |
         python -m pip install --upgrade pip yq

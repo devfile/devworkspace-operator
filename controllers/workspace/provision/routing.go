@@ -149,7 +149,7 @@ func getSpecRouting(
 	}
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
-	expectedAnnotationPrefix := workspace.Spec.RoutingClass + config.RoutingClassAnnotationInfix
+	expectedAnnotationPrefix := workspace.Spec.RoutingClass + config.RoutingAnnotationInfix
 	for k, v := range workspace.GetAnnotations() {
 		if strings.HasPrefix(k, expectedAnnotationPrefix) {
 			annotations[k] = v

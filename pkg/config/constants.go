@@ -71,9 +71,9 @@ const (
 	// PVCCleanupPodMemoryLimit is the memory limit used for PVC clean up pods
 	PVCCleanupPodMemoryLimit = "32Mi"
 
-	// RoutingClassAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the WorkspaceRouting objects.
-	// The full annotation name is supposed to be "<routingClass>.routingclass.controller.devfile.io/<anything>"
-	RoutingClassAnnotationInfix = ".routingclass.controller.devfile.io/"
+	// RoutingAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the WorkspaceRouting objects.
+	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
+	RoutingAnnotationInfix = ".routing.controller.devfile.io/"
 )
 
 // Constants for che-rest-apis

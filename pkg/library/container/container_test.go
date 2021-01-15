@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
@@ -68,6 +69,7 @@ func TestGetKubeContainersFromDevfile(t *testing.T) {
 		loadTestCaseOrPanic(t, "handles-mountSources.yaml"),
 		loadTestCaseOrPanic(t, "handles-resources.yaml"),
 		loadTestCaseOrPanic(t, "handles-endpoints-with-common-port.yaml"),
+		loadTestCaseOrPanic(t, "handles-container-that-mounts-projects-directly.yaml"),
 		loadTestCaseOrPanic(t, "ignores-non-container-components.yaml"),
 		loadTestCaseOrPanic(t, "converts-all-fields.yaml"),
 		loadTestCaseOrPanic(t, "error-has-parent.yaml"),
@@ -87,7 +89,8 @@ func TestGetKubeContainersFromDevfile(t *testing.T) {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Equal(t, tt.Output.PodAdditions, gotPodAdditions, "PodAdditions should match expected output")
+				assert.True(t, cmp.Equal(tt.Output.PodAdditions, gotPodAdditions),
+					"PodAdditions should match expected output: \n%s", cmp.Diff(tt.Output.PodAdditions, gotPodAdditions))
 			}
 		})
 	}

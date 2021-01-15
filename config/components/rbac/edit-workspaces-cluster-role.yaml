@@ -12,6 +12,7 @@ rules:
       - workspace.devfile.io
     resources:
       - devworkspaces
+      - devworkspacetemplates
     verbs:
       - create
       - delete

@@ -50,7 +50,7 @@ PLATFORM := kubernetes
 endif
 
 # minikube handling
-ifeq ($(shell $(K8S_CLI) config current-context),minikube)
+ifeq ($(shell $(K8S_CLI) config current-context 2>&1),minikube)
 export ROUTING_SUFFIX := $(shell minikube ip).nip.io
 endif
 
@@ -340,6 +340,18 @@ KUSTOMIZE=$(shell which kustomize)
 endif
 
 _operator_sdk:
+	@{ \
+		if ! command -v operator-sdk &> /dev/null; then \
+			echo 'operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but it is not installed' ;\
+			exit 1 ;\
+		else \
+			SDK_VER=$$(operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) && \
+			if [ "$${SDK_VER}" != $(OPERATOR_SDK_VERSION) ]; then \
+				echo "WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $${SDK_VER} found"
+				echo "WARN: Please use the recommended operator-sdk if you face any issue"
+			fi \
+		fi \
+	}
 ifneq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
 	@echo 'WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found.'
 	@echo 'WARN: Please use the recommended operator-sdk if you face any issue.'

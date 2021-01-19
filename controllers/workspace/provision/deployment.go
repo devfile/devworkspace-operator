@@ -223,7 +223,7 @@ func getSpecDeployment(
 		},
 	}
 
-	if len(podAdditions.Volumes) > 0 {
+	if needsPVCWorkaround(podAdditions) {
 		// Kubernetes creates directories in a PVC to support subpaths such that only the leaf directory has g+rwx permissions.
 		// This means that mounting the subpath e.g. <workspace-id>/plugins will result in the <workspace-id> directory being
 		// created with 755 permissions, requiring the root UID to remove it.
@@ -352,4 +352,14 @@ func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {
 	}
 
 	return workspaceVolumeMount
+}
+
+func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
+	commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
+	for _, vol := range podAdditions.Volumes {
+		if vol.Name == commonPVCName {
+			return true
+		}
+	}
+	return false
 }

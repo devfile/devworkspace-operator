@@ -54,10 +54,6 @@ func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, toolin
 	if err != nil {
 		return nil, err
 	}
-	err = checkPluginsCompatibility(resolutionCtx)
-	if err != nil {
-		return nil, err
-	}
 	return resolvedDW, nil
 }
 

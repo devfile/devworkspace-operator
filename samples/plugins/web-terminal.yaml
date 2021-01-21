@@ -2,8 +2,6 @@ kind: DevWorkspaceTemplate
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
   name: web-terminal
-  labels:
-    "devworkspace.devfile.io/editor-name": "web-terminal"
 spec:
   components:
     - name: web-terminal

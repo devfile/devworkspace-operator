@@ -41,7 +41,7 @@ type BasicSolver struct{}
 
 var _ RoutingSolver = (*BasicSolver)(nil)
 
-func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) RoutingObjects {
+func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	services = append(services, getDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
@@ -51,7 +51,7 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRoutin
 		Services:  services,
 		Ingresses: ingresses,
 		Routes:    routes,
-	}
+	}, nil
 }
 
 func (s *BasicSolver) GetExposedEndpoints(

@@ -114,7 +114,11 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[config.WorkspaceRestrictedAccessAnnotation]
-	routingObjects := solver.GetSpecObjects(instance, workspaceMeta)
+	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	services := routingObjects.Services
 	for idx := range services {
 		err := controllerutil.SetControllerReference(instance, &services[idx], r.Scheme)

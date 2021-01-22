@@ -15,6 +15,7 @@ package workspacerouting
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
@@ -116,6 +117,16 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	restrictedAccess, setRestrictedAccess := instance.Annotations[config.WorkspaceRestrictedAccessAnnotation]
 	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta)
 	if err != nil {
+		var notReady *solvers.RoutingNotReady
+		if errors.As(err, &notReady) {
+			duration := notReady.Retry
+			if duration.Milliseconds() == 0 {
+				duration = 1 * time.Second
+			}
+			reqLogger.Info("controller not ready for workspace routing. Retrying", "DelayMs", duration.Milliseconds())
+			return reconcile.Result{RequeueAfter: duration}, nil
+		}
+
 		return reconcile.Result{}, err
 	}
 

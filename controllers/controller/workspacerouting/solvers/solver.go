@@ -13,7 +13,6 @@
 package solvers
 
 import (
-	"errors"
 	"fmt"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -25,8 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var RoutingNotSupported = errors.New("routingclass not supported by this controller")
-
 type RoutingObjects struct {
 	Services     []v1.Service
 	Ingresses    []v1beta1.Ingress
@@ -37,6 +34,9 @@ type RoutingObjects struct {
 
 type RoutingSolver interface {
 	// GetSpecObjects constructs cluster routing objects which should be applied on the cluster
+	// This method should return RoutingNotReady error if the solver is not ready yet to process
+	// the workspace routing, RoutingInvalid error if there is a specific reason for the failure or
+	// any other error.
 	GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error)
 
 	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.

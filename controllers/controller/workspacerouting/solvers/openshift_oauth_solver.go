@@ -37,7 +37,7 @@ type proxyEndpoint struct {
 	publicEndpointHttpPort int64
 }
 
-func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) RoutingObjects {
+func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	proxy, noProxy := getProxiedEndpoints(spec)
 	defaultIngresses, defaultRoutes := getRoutingForSpec(noProxy, workspaceMeta)
@@ -85,7 +85,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.Worksp
 		Routes:       append(routes, defaultRoutes...),
 		PodAdditions: podAdditions,
 		OAuthClient:  oauthClient,
-	}
+	}, nil
 }
 
 func (s *OpenShiftOAuthSolver) GetExposedEndpoints(

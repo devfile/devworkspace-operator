@@ -15,6 +15,7 @@ package workspacerouting
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
@@ -96,9 +97,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return reconcile.Result{}, nil
 		}
 		reqLogger.Error(err, "Invalid routing class for workspace")
-		instance.Status.Phase = controllerv1alpha1.RoutingFailed
-		statusErr := r.Status().Update(ctx, instance)
-		return reconcile.Result{}, statusErr
+		return reconcile.Result{}, r.markRoutingFailed(instance)
 	}
 
 	// Add finalizer for this CR if not already present
@@ -114,7 +113,28 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[config.WorkspaceRestrictedAccessAnnotation]
-	routingObjects := solver.GetSpecObjects(instance, workspaceMeta)
+	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta)
+	if err != nil {
+		var notReady *solvers.RoutingNotReady
+		if errors.As(err, &notReady) {
+			duration := notReady.Retry
+			if duration.Milliseconds() == 0 {
+				duration = 1 * time.Second
+			}
+			reqLogger.Info("controller not ready for workspace routing. Retrying", "DelayMs", duration.Milliseconds())
+			return reconcile.Result{RequeueAfter: duration}, nil
+		}
+
+		var invalid *solvers.RoutingInvalid
+		if errors.As(err, &invalid) {
+			reqLogger.Error(invalid, "routing controller considers routing invalid")
+			return reconcile.Result{}, r.markRoutingFailed(instance)
+		}
+
+		// generic error, just fail the reconciliation
+		return reconcile.Result{}, err
+	}
+
 	services := routingObjects.Services
 	for idx := range services {
 		err := controllerutil.SetControllerReference(instance, &services[idx], r.Scheme)
@@ -172,9 +192,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	exposedEndpoints, endpointsAreReady, err := solver.GetExposedEndpoints(instance.Spec.Endpoints, clusterRoutingObj)
 	if err != nil {
 		reqLogger.Error(err, "Could not get exposed endpoints for workspace")
-		instance.Status.Phase = controllerv1alpha1.RoutingFailed
-		statusErr := r.Status().Update(ctx, instance)
-		return reconcile.Result{}, statusErr
+		return reconcile.Result{}, r.markRoutingFailed(instance)
 	}
 
 	if config.ControllerCfg.IsOpenShift() {
@@ -226,6 +244,11 @@ func (r *WorkspaceRoutingReconciler) finalize(instance *controllerv1alpha1.Works
 		}
 	}
 	return nil
+}
+
+func (r *WorkspaceRoutingReconciler) markRoutingFailed(instance *controllerv1alpha1.WorkspaceRouting) error {
+	instance.Status.Phase = controllerv1alpha1.RoutingFailed
+	return r.Status().Update(context.TODO(), instance)
 }
 
 func (r *WorkspaceRoutingReconciler) reconcileStatus(

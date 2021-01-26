@@ -24,7 +24,6 @@ export PULL_POLICY ?= Always
 export WEBHOOK_ENABLED ?= true
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
-REGISTRY_ENABLED ?= true
 DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
 
 #internal params
@@ -93,7 +92,6 @@ _print_vars:
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
-	@echo "    REGISTRY_ENABLED=$(REGISTRY_ENABLED)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
 
 _create_namespace:
@@ -162,7 +160,7 @@ _login_with_devworkspace_sa:
 	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### run: Run against the configured Kubernetes cluster in ~/.kube/config
-run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _eval_plugin_registry_url
+run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
@@ -170,7 +168,7 @@ run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspac
 		go run ./main.go
 
 ### debug: Run controller locally with debugging enabled, watching cluster defined in ~/.kube/config
-debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _eval_plugin_registry_url
+debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
 	source $(RELATED_IMAGES_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
@@ -182,7 +180,7 @@ install_crds: _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | $(K8S_CLI) apply -f -
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
-install: _print_vars _kustomize _init_devworkspace_crds _create_namespace _eval_plugin_registry_url
+install: _print_vars _kustomize _init_devworkspace_crds _create_namespace
 	mv config/cert-manager/kustomization.yaml config/cert-manager/kustomization.yaml.bak
 	mv config/service-ca/kustomization.yaml config/service-ca/kustomization.yaml.bak
 	mv config/base/config.properties config/base/config.properties.bak
@@ -232,15 +230,6 @@ endif
 	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	$(K8S_CLI) delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	$(K8S_CLI) delete namespace $(NAMESPACE) --ignore-not-found
-
-### deploy_registry: Deploy plugin registry
-deploy_registry: _print_vars _create_namespace
-	$(K8S_CLI) apply -f config/registry/local -n $(NAMESPACE)
-ifeq ($(PLATFORM),kubernetes)
-	envsubst < config/registry/local/k8s/ingress.yaml | $(K8S_CLI) apply -n $(NAMESPACE) -f -
-else
-	$(K8S_CLI) apply -f config/registry/local/os -n $(NAMESPACE)
-endif
 
 ### manifests: Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
@@ -325,14 +314,6 @@ endif
 install_cert_manager:
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
 
-# export plugin registry url for other rules to use
-_eval_plugin_registry_url: deploy_registry
-ifeq ($(PLATFORM),kubernetes)
-	$(eval export PLUGIN_REGISTRY_URL=http://che-plugin-registry.$(ROUTING_SUFFIX)/v3)
-else
-	$(eval export PLUGIN_REGISTRY_URL=http://$(shell $(K8S_CLI) get route -n $(NAMESPACE) che-plugin-registry -o=yaml | yq -r '.spec.host')/v3)
-endif
-
 _kustomize:
 ifeq (, $(shell which kustomize))
 	@{ \
@@ -379,5 +360,4 @@ help: Makefile
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
 	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'
-	@echo '    REGISTRY_ENABLED           - Whether the plugin registry should be deployed'
 	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/api to depend on. Defaults to master'

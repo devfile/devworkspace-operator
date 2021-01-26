@@ -69,7 +69,6 @@ The repository contains a Makefile; building and deploying can be configured via
 | `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |
 | `WEBHOOK_ENABLED` | Whether webhooks should be enabled in the deployment | `false` |
-| `REGISTRY_ENABLED` | Whether the plugin registry should be deployed | `true` |
 | `DEVWORKSPACE_API_VERSION` | Branch or tag of the github.com/devfile/api to depend on | `v1alpha1` | 
 
 Some of the rules supported by the makefile:

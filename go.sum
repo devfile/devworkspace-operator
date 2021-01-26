@@ -60,8 +60,6 @@ github.com/docker/spdystream v0.0.0-20160310174837-449fdfce4d96/go.mod h1:Qh8CwZ
 github.com/docopt/docopt-go v0.0.0-20180111231733-ee0de3bc6815/go.mod h1:WwZ+bS3ebgob9U8Nd0kOddGdZWjyMGR8Wziv+TBNwSE=
 github.com/dustin/go-humanize v0.0.0-20171111073723-bb3d318650d4/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
-github.com/eclipse/che-go-jsonrpc v0.0.0-20200317130110-931966b891fe h1:uqz8WTED2rcprip+Z7IVOmfg8Eq/6UgKum50GEY2O3c=
-github.com/eclipse/che-go-jsonrpc v0.0.0-20200317130110-931966b891fe/go.mod h1:6xlEQ1tM4Ago8A2jPjTrHy60Oy7Kv28DcefZPZMlwWE=
 github.com/eclipse/che-plugin-broker v3.4.0+incompatible h1:5jV67XReIZqkTTMzaEMblgIta5AJST4xmU5lXAvHEh4=
 github.com/eclipse/che-plugin-broker v3.4.0+incompatible/go.mod h1:V5mZYiAFCw8aQ3VCCs6a4FwO7qeVOLixY2baT6bMJI8=
 github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e/go.mod h1:/Zj4wYkgs4iZTTu3o/KG3Itv/qCCa8VVMlb3i9OVuzc=

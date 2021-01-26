@@ -25,7 +25,6 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/eclipse/che-plugin-broker/model"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -95,28 +94,6 @@ func GetPVCCleanupJobImage() string {
 		return ""
 	}
 	return val
-}
-
-// FillPluginMetaEnvVars replaces plugin meta .spec.Containers[].image and .spec.InitContainers[].image environment
-// variables of the form ${RELATED_IMAGE_*} with values from environment variables with the same name.
-//
-// Returns error if any referenced environment variable is undefined.
-func FillPluginMetaEnvVars(pluginMeta model.PluginMeta) (model.PluginMeta, error) {
-	for idx, container := range pluginMeta.Spec.Containers {
-		img, err := getImageForEnvVar(container.Image)
-		if err != nil {
-			return model.PluginMeta{}, err
-		}
-		pluginMeta.Spec.Containers[idx].Image = img
-	}
-	for idx, initContainer := range pluginMeta.Spec.InitContainers {
-		img, err := getImageForEnvVar(initContainer.Image)
-		if err != nil {
-			return model.PluginMeta{}, err
-		}
-		pluginMeta.Spec.InitContainers[idx].Image = img
-	}
-	return pluginMeta, nil
 }
 
 func isImageEnvVar(query string) bool {

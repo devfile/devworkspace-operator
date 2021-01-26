@@ -13,6 +13,7 @@
 package solvers
 
 import (
+	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -31,10 +32,16 @@ type WorkspaceMetadata struct {
 	RoutingSuffix string
 }
 
-func getDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
+// GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
+// endpoint from the list. Endpoints with the NoneEndpointExposure are ignored.
+func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
+			if endpoint.Exposure == devworkspace.NoneEndpointExposure {
+				continue
+			}
+
 			if endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DISCOVERABLE_ATTRIBUTE), nil) {
 				// Create service with name matching endpoint
 				// TODO: This could cause a reconcile conflict if multiple workspaces define the same discoverable endpoint
@@ -68,50 +75,69 @@ func getDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 	return services
 }
 
-func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
-	if len(endpoints) == 0 {
-		return nil
+// GetServiceForEndpoints returns a single service that exposes all endpoints of given exposure types, possibly also including the discoverable types.
+func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata, includeDiscoverable bool, exposureType ...devworkspace.EndpointExposure) corev1.Service {
+	service := corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.ServiceName(meta.WorkspaceId),
+			Namespace: meta.Namespace,
+			Labels: map[string]string{
+				config.WorkspaceIDLabel: meta.WorkspaceId,
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: meta.PodSelector,
+			Type:     corev1.ServiceTypeClusterIP,
+		},
 	}
-	var servicePorts []corev1.ServicePort
-	for _, machineEndpoints := range endpoints {
-		for _, endpoint := range machineEndpoints {
-			isExposed := func(port int) bool {
-				for _, port := range servicePorts {
-					if port.TargetPort.IntVal == int32(endpoint.TargetPort) {
-						//port is already exposed
-						return true
-					}
-				}
-				return false
+
+	// "set" of ports that are still left for exposure
+	ports := map[int]struct{}{}
+	for _, es := range endpoints {
+		for _, endpoint := range es {
+			ports[endpoint.TargetPort] = struct{}{}
+		}
+	}
+
+	// "set" of exposure types that are allowed
+	validExposures := map[v1alpha2.EndpointExposure]struct{}{}
+	for _, exp := range exposureType {
+		validExposures[exp] = struct{}{}
+	}
+
+	for _, es := range endpoints {
+		for _, endpoint := range es {
+			if _, ok := validExposures[endpoint.Exposure]; !ok {
+				continue
 			}
 
-			if !isExposed(endpoint.TargetPort) {
-				servicePort := corev1.ServicePort{
+			if !includeDiscoverable && endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DISCOVERABLE_ATTRIBUTE), nil) {
+				continue
+			}
+
+			if _, ok := ports[endpoint.TargetPort]; ok {
+				// make sure we don't mention the same port twice
+				delete(ports, endpoint.TargetPort)
+				service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
 					Name:       common.EndpointName(endpoint.Name),
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(endpoint.TargetPort),
 					TargetPort: intstr.FromInt(endpoint.TargetPort),
-				}
-				servicePorts = append(servicePorts, servicePort)
+				})
 			}
 		}
 	}
 
+	return service
+}
+
+func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
+	if len(endpoints) == 0 {
+		return nil
+	}
+
 	return []corev1.Service{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.ServiceName(meta.WorkspaceId),
-				Namespace: meta.Namespace,
-				Labels: map[string]string{
-					config.WorkspaceIDLabel: meta.WorkspaceId,
-				},
-			},
-			Spec: corev1.ServiceSpec{
-				Ports:    servicePorts,
-				Selector: meta.PodSelector,
-				Type:     corev1.ServiceTypeClusterIP,
-			},
-		},
+		GetServiceForEndpoints(endpoints, meta, true, v1alpha2.PublicEndpointExposure, v1alpha2.InternalEndpointExposure),
 	}
 }
 

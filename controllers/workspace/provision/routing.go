@@ -19,6 +19,7 @@ import (
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -144,15 +145,14 @@ func getSpecRouting(
 
 	var annotations map[string]string
 	if val, ok := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]; ok {
-		annotations = map[string]string{}
-		annotations[config.WorkspaceRestrictedAccessAnnotation] = val
+		annotations = maputils.Append(annotations, config.WorkspaceRestrictedAccessAnnotation, val)
 	}
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
 	expectedAnnotationPrefix := workspace.Spec.RoutingClass + config.RoutingAnnotationInfix
 	for k, v := range workspace.GetAnnotations() {
 		if strings.HasPrefix(k, expectedAnnotationPrefix) {
-			annotations[k] = v
+			annotations = maputils.Append(annotations, k, v)
 		}
 	}
 

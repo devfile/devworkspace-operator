@@ -13,11 +13,6 @@
 package config
 
 const (
-	// URL of external plugin registry; will be used when devworkspace uses plugin
-	// not included in internal registry or when devfile does not include explicit
-	// registry URL.
-	pluginRegistryURL = "controller.plugin_registry.url"
-
 	webhooksEnabled        = "controller.webhooks.enabled"
 	defaultWebhooksEnabled = "true"
 
@@ -34,9 +29,6 @@ const (
 	defaultWorkspacePVCName = "claim-devworkspace"
 
 	workspacePVCStorageClassName = "devworkspace.pvc.storage_class.name"
-
-	pluginArtifactsBrokerImage        = "controller.plugin_artifacts_broker.image"
-	defaultPluginArtifactsBrokerImage = "quay.io/eclipse/che-plugin-artifacts-broker:v3.1.0"
 
 	// routingClass defines the default routing class that should be used if user does not specify it explicitly
 	routingClass        = "devworkspace.default_routing_class"

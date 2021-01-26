@@ -27,9 +27,6 @@ const (
 
 	DefaultProjectsSourcesRoot = "/projects"
 
-	DefaultPluginsVolumeName = "plugins"
-	PluginsMountPath         = "/plugins"
-
 	AuthEnabled = "false"
 
 	ServiceAccount = "devworkspace"

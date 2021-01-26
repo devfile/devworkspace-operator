@@ -65,10 +65,6 @@ func CheRestAPIsConfigmapName(workspaceId string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, "che-rest-apis")
 }
 
-func PluginBrokerConfigmapName(workspaceId string) string {
-	return fmt.Sprintf("%s-plugin-broker", workspaceId)
-}
-
 func OAuthProxySecretName(workspaceId string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, "proxy-tls")
 }

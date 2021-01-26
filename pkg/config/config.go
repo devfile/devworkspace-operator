@@ -64,10 +64,6 @@ func (wc *ControllerConfig) GetDefaultRoutingClass() string {
 	return wc.GetPropertyOrDefault(routingClass, defaultRoutingClass)
 }
 
-func (wc *ControllerConfig) GetPluginRegistry() string {
-	return wc.GetPropertyOrDefault(pluginRegistryURL, "")
-}
-
 //GetExperimentalFeaturesEnabled returns true if experimental features should be enabled.
 //DO NOT TURN ON IT IN THE PRODUCTION.
 //Experimental features are not well tested and may be totally removed without announcement.
@@ -97,10 +93,6 @@ func (wc *ControllerConfig) SetIsOpenShift(isOpenShift bool) {
 
 func (wc *ControllerConfig) GetSidecarPullPolicy() string {
 	return wc.GetPropertyOrDefault(sidecarPullPolicy, defaultSidecarPullPolicy)
-}
-
-func (wc *ControllerConfig) GetPluginArtifactsBrokerImage() string {
-	return wc.GetPropertyOrDefault(pluginArtifactsBrokerImage, defaultPluginArtifactsBrokerImage)
 }
 
 func (wc *ControllerConfig) GetWebhooksEnabled() string {
@@ -217,11 +209,6 @@ func WatchControllerConfig(mgr manager.Manager) error {
 		return err
 	}
 
-	err = fillRegistryIfNecessary(nonCachedClient, configMap)
-	if err != nil {
-		return err
-	}
-
 	updateConfigMap(nonCachedClient, configMap.GetObjectMeta(), configMap)
 
 	// TODO: Workaround since we don't have a controller here; we should remove configmap and use
@@ -296,37 +283,6 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	}
 
 	err = nonCachedClient.Update(context.TODO(), configMap)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func fillRegistryIfNecessary(nonCachedClient client.Client, configMap *corev1.ConfigMap) error {
-	if _, exists := configMap.Data[pluginRegistryURL]; exists {
-		return nil
-	}
-	pluginRegistryName, found := os.LookupEnv("PLUGIN_REGISTRY_SERVICE_NAME")
-	if !found {
-		return nil
-	}
-
-	pluginRegistryHost, found := os.LookupEnv(pluginRegistryName + "_SERVICE_HOST")
-	if !found {
-		return nil
-	}
-
-	pluginRegistryPort, found := os.LookupEnv(pluginRegistryName + "_SERVICE_PORT")
-	if !found {
-		return nil
-	}
-
-	pluginRegistryUrl := "http://" + pluginRegistryHost + ":" + pluginRegistryPort + "/v3"
-
-	configMap.Data[pluginRegistryURL] = pluginRegistryUrl
-
-	err := nonCachedClient.Update(context.TODO(), configMap)
 	if err != nil {
 		return err
 	}

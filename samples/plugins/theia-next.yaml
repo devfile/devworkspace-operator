@@ -8,37 +8,16 @@ spec:
       volume: {}
     - name: remote-endpoint
       volume: {} # TODO: Fix this once ephemeral volumes are supported
-    - name: vsx-installer  # Mainly reads the container objects and searches for those
-                            # with che-theia.eclipse.org/vscode-extensions attributes to get VSX urls
-                            # Those found in the dedicated containers components are with a sidecar,
-                            # Those found in the che-theia container are without a sidecar.
-      attributes:
-        "app.kubernetes.io/part-of": che-theia.eclipse.org
-        "app.kubernetes.io/component": bootstrapper
-      container:
-        args:
-          - /bin/sh
-          - '-c'
-          - >
-            workspace=$(curl -fsS --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" https://kubernetes.default.svc/apis/workspace.devfile.io/v1alpha2/namespaces/${CHE_WORKSPACE_NAMESPACE}/devworkspaces/${CHE_WORKSPACE_NAME}) && for container in $(echo $workspace | sed -e 's;[[,]\({"attributes":{"app.kubernetes.io\);\n\1;g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do dest=$(echo "$container" | sed 's;.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*;\1;' - ) ; urls=$(echo "$container" | sed 's;.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*;\1;' - ) ; mkdir -p $dest; for url in $(echo $urls | sed 's/[",]/ /g' - ); do echo; echo downloading $urls to $dest; curl -L $url > $dest/$(basename $url); done; done
-        image: 'quay.io/samsahai/curl:latest'
-        volumeMounts:
-          - path: "/plugins"
-            name: plugins
+    - name: vsx-installer
+      plugin:
+        kubernetes:
+          name: vsx-installer
+          namespace: devworkspace-plugins
     - name: remote-runtime-injector
-      attributes:
-        "app.kubernetes.io/part-of": che-theia.eclipse.org
-        "app.kubernetes.io/component": bootstrapper
-      container:                          #### corresponds to `initContainer` definition in old meta.yaml.
-        image: "quay.io/eclipse/che-theia-endpoint-runtime-binary:7.20.0"
-        volumeMounts:
-          - path: "/remote-endpoint"
-            name: remote-endpoint
-        env:
-          - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
-            value: /remote-endpoint/plugin-remote-endpoint
-          - name: REMOTE_ENDPOINT_VOLUME_NAME
-            value: remote-endpoint
+      plugin:
+        kubernetes:
+          name: remote-runtime-injector
+          namespace: devworkspace-plugins
     - name: theia-ide
       attributes:
         "app.kubernetes.io/name": che-theia.eclipse.org
@@ -101,15 +80,3 @@ spec:
             exposure: public
             targetPort: 13133
             protocol: http
-  commands:
-    # Commands coming from plugin editor
-    - id: inject-theia-in-remote-sidecar
-      apply:
-        component: remote-runtime-injector
-    - id: copy-vsx
-      apply:
-        component: vsx-installer
-  events:
-    preStart:
-      - inject-theia-in-remote-sidecar
-      - copy-vsx

@@ -92,22 +92,22 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 
 	// "set" of ports that are still left for exposure
-	ports := map[int]struct{}{}
+	ports := map[int]bool{}
 	for _, es := range endpoints {
 		for _, endpoint := range es {
-			ports[endpoint.TargetPort] = struct{}{}
+			ports[endpoint.TargetPort] = true
 		}
 	}
 
 	// "set" of exposure types that are allowed
-	validExposures := map[v1alpha2.EndpointExposure]struct{}{}
+	validExposures := map[v1alpha2.EndpointExposure]bool{}
 	for _, exp := range exposureType {
-		validExposures[exp] = struct{}{}
+		validExposures[exp] = true
 	}
 
 	for _, es := range endpoints {
 		for _, endpoint := range es {
-			if _, ok := validExposures[endpoint.Exposure]; !ok {
+			if !validExposures[endpoint.Exposure] {
 				continue
 			}
 
@@ -115,9 +115,9 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 				continue
 			}
 
-			if _, ok := ports[endpoint.TargetPort]; ok {
+			if ports[endpoint.TargetPort] {
 				// make sure we don't mention the same port twice
-				delete(ports, endpoint.TargetPort)
+				ports[endpoint.TargetPort] = false
 				service.Spec.Ports = append(service.Spec.Ports, corev1.ServicePort{
 					Name:       common.EndpointName(endpoint.Name),
 					Protocol:   corev1.ProtocolTCP,

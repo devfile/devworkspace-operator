@@ -23,10 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const (
-	rsyncSSHKeyFilename = "rsync-via-ssh"
-)
-
 // GetSSHKeyPair returns a pair of SSH keys. The public key is formatted for inclusion in an
 // ssh authorized_keys file, and the private key is pem-formatted.
 func GetSSHKeyPair() (public, private []byte, err error) {

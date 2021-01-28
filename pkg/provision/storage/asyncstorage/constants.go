@@ -16,4 +16,5 @@ const (
 	sshServerPort             = 2222
 	asyncServerServiceName    = "async-storage"
 	asyncSidecarContainerName = "async-storage-sidecar"
+	asyncSecretVolumeName     = "async-storage-ssh"
 )

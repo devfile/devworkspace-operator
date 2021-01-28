@@ -88,7 +88,7 @@ func GetOrCreateSSHConfig(workspace *devworkspace.DevWorkspace, clusterAPI provi
 			if err != nil && !k8sErrors.IsConflict(err) {
 				return nil, nil, err
 			}
-			k8sErrors.IsAlreadyExists(err)
+			return nil, nil, NotReadyError
 		}
 	}
 	return clusterSecret, clusterConfigMap, nil

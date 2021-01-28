@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -26,7 +27,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type OpenShiftOAuthSolver struct{}
+type OpenShiftOAuthSolver struct {
+	client.Client
+}
 
 var _ RoutingSolver = (*OpenShiftOAuthSolver)(nil)
 
@@ -35,6 +38,21 @@ type proxyEndpoint struct {
 	upstreamEndpoint       devworkspace.Endpoint
 	publicEndpoint         devworkspace.Endpoint
 	publicEndpointHttpPort int64
+}
+
+func (s *OpenShiftOAuthSolver) FinalizerRequired(routing *controllerv1alpha1.WorkspaceRouting) bool {
+	return true
+}
+
+func (s *OpenShiftOAuthSolver) Finalize(routing *controllerv1alpha1.WorkspaceRouting) error {
+	// Run finalization logic for workspaceRoutingFinalizer. If the
+	// finalization logic fails, don't remove the finalizer so
+	// that we can retry during the next reconciliation.
+	if err := deleteOAuthClients(s, routing); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
@@ -79,12 +97,24 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.Worksp
 		RedirectURIs: publicURls,
 	}
 
+	restrictedAccess, setRestrictedAccess := routing.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	if oauthClient != nil && setRestrictedAccess {
+		oauthClient.Annotations = maputils.Append(oauthClient.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+	}
+
+	oauthClientInSync, err := syncOAuthClient(s, routing, oauthClient)
+	if !oauthClientInSync {
+		return RoutingObjects{}, &RoutingNotReady{}
+	}
+	if err != nil {
+		return RoutingObjects{}, err
+	}
+
 	return RoutingObjects{
 		Services:     services,
 		Ingresses:    defaultIngresses,
 		Routes:       append(routes, defaultRoutes...),
 		PodAdditions: podAdditions,
-		OAuthClient:  oauthClient,
 	}, nil
 }
 

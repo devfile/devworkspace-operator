@@ -33,6 +33,14 @@ type ClusterSolver struct {
 
 var _ RoutingSolver = (*ClusterSolver)(nil)
 
+func (s *ClusterSolver) FinalizerRequired(routing *controllerv1alpha1.WorkspaceRouting) bool {
+	return false
+}
+
+func (s *ClusterSolver) Finalize(routing *controllerv1alpha1.WorkspaceRouting) error {
+	return nil
+}
+
 func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)

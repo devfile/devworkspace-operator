@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspacerouting
+package solvers
 
 import (
 	"context"
@@ -31,19 +31,19 @@ var oauthClientDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(oauthv1.OAuthClient{}, "TypeMeta", "ObjectMeta"),
 }
 
-func (r *WorkspaceRoutingReconciler) syncOAuthClient(routing *controllerv1alpha1.WorkspaceRouting, oauthClientSpec *oauthv1.OAuthClient) (ok bool, err error) {
+func syncOAuthClient(client client.Client, routing *controllerv1alpha1.WorkspaceRouting, oauthClientSpec *oauthv1.OAuthClient) (ok bool, err error) {
 	if !config.ControllerCfg.IsOpenShift() {
 		return true, nil
 	}
 	oauthClientInSync := true
 
-	clusterOAuthClients, err := r.getClusterOAuthClients(routing)
+	clusterOAuthClients, err := getClusterOAuthClients(client, routing)
 	if err != nil {
 		return false, err
 	}
 	if oauthClientSpec == nil {
 		if len(clusterOAuthClients) > 0 {
-			return false, r.deleteOAuthClients(routing)
+			return false, deleteOAuthClients(client, routing)
 		} else {
 			return true, nil
 		}
@@ -60,7 +60,7 @@ func (r *WorkspaceRoutingReconciler) syncOAuthClient(routing *controllerv1alpha1
 	}
 
 	for _, oauthClient := range toDelete {
-		err := r.Delete(context.TODO(), &oauthClient)
+		err := client.Delete(context.TODO(), &oauthClient)
 		if err != nil {
 			return false, err
 		}
@@ -74,7 +74,7 @@ func (r *WorkspaceRoutingReconciler) syncOAuthClient(routing *controllerv1alpha1
 			clusterOAuthClient.Labels = oauthClientSpec.Labels
 			clusterOAuthClient.GrantMethod = oauthClientSpec.GrantMethod
 			clusterOAuthClient.RedirectURIs = oauthClientSpec.RedirectURIs
-			err := r.Update(context.TODO(), clusterOAuthClient)
+			err := client.Update(context.TODO(), clusterOAuthClient)
 			if err != nil && !apierrors.IsConflict(err) {
 				return false, err
 			}
@@ -82,7 +82,7 @@ func (r *WorkspaceRoutingReconciler) syncOAuthClient(routing *controllerv1alpha1
 			oauthClientInSync = false
 		}
 	} else {
-		err = r.Create(context.TODO(), oauthClientSpec)
+		err = client.Create(context.TODO(), oauthClientSpec)
 
 		if err != nil && apierrors.IsAlreadyExists(err) {
 			return false, nil
@@ -93,7 +93,7 @@ func (r *WorkspaceRoutingReconciler) syncOAuthClient(routing *controllerv1alpha1
 	return oauthClientInSync, nil
 }
 
-func (r *WorkspaceRoutingReconciler) getClusterOAuthClients(routing *controllerv1alpha1.WorkspaceRouting) ([]oauthv1.OAuthClient, error) {
+func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.WorkspaceRouting) ([]oauthv1.OAuthClient, error) {
 	found := &oauthv1.OAuthClientList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
@@ -102,7 +102,7 @@ func (r *WorkspaceRoutingReconciler) getClusterOAuthClients(routing *controllerv
 	listOptions := &client.ListOptions{
 		LabelSelector: labelSelector,
 	}
-	err = r.List(context.TODO(), found, listOptions)
+	err = cl.List(context.TODO(), found, listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (r *WorkspaceRoutingReconciler) getClusterOAuthClients(routing *controllerv
 	return found.Items, nil
 }
 
-func (r *WorkspaceRoutingReconciler) deleteOAuthClients(routing *controllerv1alpha1.WorkspaceRouting) error {
+func deleteOAuthClients(cl client.Client, routing *controllerv1alpha1.WorkspaceRouting) error {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
 		return err
@@ -120,5 +120,5 @@ func (r *WorkspaceRoutingReconciler) deleteOAuthClients(routing *controllerv1alp
 			LabelSelector: labelSelector,
 		},
 	}
-	return r.DeleteAllOf(context.TODO(), &oauthv1.OAuthClient{}, listOptions)
+	return cl.DeleteAllOf(context.TODO(), &oauthv1.OAuthClient{}, listOptions)
 }

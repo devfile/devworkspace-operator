@@ -1,4 +1,4 @@
-name: "Plugins incompatible with editor"
+name: "Multiple editors in one workspace"
 
 input:
   workspace:

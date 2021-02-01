@@ -1,4 +1,4 @@
-name: "Plugins incompatible with editor"
+name: "Plugin needs missing editor"
 
 input:
   workspace:

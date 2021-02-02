@@ -21,7 +21,6 @@ export NAMESPACE ?= devworkspace-controller
 export IMG ?= quay.io/devfile/devworkspace-controller:next
 export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
-export WEBHOOK_ENABLED ?= true
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
 DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
@@ -90,7 +89,6 @@ _print_vars:
 	@echo "    IMG=$(IMG)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
-	@echo "    WEBHOOK_ENABLED=$(WEBHOOK_ENABLED)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
 
@@ -359,5 +357,4 @@ help: Makefile
 	@echo '    KUBECONFIG                 - Kubeconfig which should be used for accessing to the cluster. Currently is: $(KUBECONFIG)'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
-	@echo '    WEBHOOK_ENABLED            - Whether webhooks should be enabled in the deployment'
 	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/api to depend on. Defaults to master'

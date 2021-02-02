@@ -51,6 +51,10 @@ endif
 
 # minikube handling
 ifeq ($(shell $(K8S_CLI) config current-context 2>&1),minikube)
+# check ingress addon is enabled
+ifeq ($(shell minikube addons list -o json | jq -r .ingress.Status), disabled)
+$(error ingress addon should be enabled on top of minikube)
+endif
 export ROUTING_SUFFIX := $(shell minikube ip).nip.io
 endif
 

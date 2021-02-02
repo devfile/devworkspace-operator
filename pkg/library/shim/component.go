@@ -26,12 +26,57 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspaceTemplateSpec) {
+func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspace) {
 	for idx, mainContainer := range podAdditions.Containers {
-		podAdditions.Containers[idx].Env = append(mainContainer.Env, corev1.EnvVar{
+		podAdditions.Containers[idx].Env = append(mainContainer.Env, defaultEnvVars(mainContainer.Name, workspace)...)
+	}
+
+	for idx, mainContainer := range podAdditions.InitContainers {
+		podAdditions.Containers[idx].Env = append(mainContainer.Env, defaultEnvVars(mainContainer.Name, workspace)...)
+	}
+}
+
+func defaultEnvVars(containerName string, workspace devworkspace.DevWorkspace) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
 			Name:  "CHE_MACHINE_NAME",
-			Value: mainContainer.Name,
-		})
+			Value: containerName,
+		},
+		{
+			Name: "CHE_MACHINE_TOKEN",
+		},
+		{
+			Name:  "CHE_PROJECTS_ROOT",
+			Value: config.DefaultProjectsSourcesRoot,
+		},
+		{
+			Name:  "CHE_API",
+			Value: config.DefaultApiEndpoint,
+		},
+		{
+			Name:  "CHE_API_INTERNAL",
+			Value: config.DefaultApiEndpoint,
+		},
+		{
+			Name:  "CHE_API_EXTERNAL",
+			Value: config.DefaultApiEndpoint,
+		},
+		{
+			Name:  "CHE_WORKSPACE_NAME",
+			Value: workspace.Name,
+		},
+		{
+			Name:  "CHE_WORKSPACE_ID",
+			Value: workspace.Status.WorkspaceId,
+		},
+		{
+			Name:  "CHE_AUTH_ENABLED",
+			Value: config.AuthEnabled,
+		},
+		{
+			Name:  "CHE_WORKSPACE_NAMESPACE",
+			Value: workspace.Namespace,
+		},
 	}
 }
 

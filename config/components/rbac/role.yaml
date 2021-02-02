@@ -104,26 +104,6 @@ rules:
 - apiGroups:
   - controller.devfile.io
   resources:
-  - components
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - controller.devfile.io
-  resources:
-  - components/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - controller.devfile.io
-  resources:
   - workspaceroutings
   verbs:
   - '*'
@@ -135,18 +115,6 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - ""
-  resources:
-  - configmap
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - extensions
   resources:

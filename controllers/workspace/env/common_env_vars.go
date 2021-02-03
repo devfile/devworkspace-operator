@@ -20,39 +20,16 @@ import (
 func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
-			Name: "CHE_MACHINE_TOKEN",
+			Name:  "DEVWORKSPACE_NAMESPACE",
+			Value: namespace,
 		},
 		{
-			Name:  "CHE_PROJECTS_ROOT",
-			Value: config.DefaultProjectsSourcesRoot,
-		},
-		{
-			Name:  "CHE_API",
-			Value: config.DefaultApiEndpoint,
-		},
-		{
-			Name:  "CHE_API_INTERNAL",
-			Value: config.DefaultApiEndpoint,
-		},
-		{
-			Name:  "CHE_API_EXTERNAL",
-			Value: config.DefaultApiEndpoint,
-		},
-		{
-			Name:  "CHE_WORKSPACE_NAME",
+			Name:  "DEVWORKSPACE_NAME",
 			Value: workspaceName,
 		},
 		{
-			Name:  "CHE_WORKSPACE_ID",
+			Name:  "DEVWORKSPACE_ID",
 			Value: workspaceId,
-		},
-		{
-			Name:  "CHE_AUTH_ENABLED",
-			Value: config.AuthEnabled,
-		},
-		{
-			Name:  "CHE_WORKSPACE_NAMESPACE",
-			Value: namespace,
 		},
 		{
 			Name:  "DEVWORKSPACE_CREATOR",

@@ -188,7 +188,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile volumes: %s", err)
 		return reconcile.Result{}, nil
 	}
-	shimlib.FillDefaultEnvVars(devfilePodAdditions, workspace.Spec.Template)
+	shimlib.FillDefaultEnvVars(devfilePodAdditions, *workspace)
 	componentDescriptions, err := shimlib.GetComponentDescriptionsFromPodAdditions(devfilePodAdditions, workspace.Spec.Template)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")

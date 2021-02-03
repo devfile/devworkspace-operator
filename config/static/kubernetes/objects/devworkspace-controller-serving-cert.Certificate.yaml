@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    app.kubernetes.io/name: devworkspace-controller
+    app.kubernetes.io/part-of: devworkspace-operator
+  name: devworkspace-controller-serving-cert
+  namespace: devworkspace-controller
+spec:
+  dnsNames:
+  - devworkspace-webhookserver.devworkspace-controller.svc
+  - devworkspace-webhookserver.devworkspace-controller.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: devworkspace-controller-selfsigned-issuer
+  secretName: devworkspace-operator-webhook-cert

@@ -57,7 +57,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.Worksp
 			"service.alpha.openshift.io/serving-cert-secret-name": common.OAuthProxySecretName(workspaceMeta.WorkspaceId),
 		}
 	}
-	discoverableServices := getDiscoverableServicesForEndpoints(proxyPorts, workspaceMeta)
+	discoverableServices := GetDiscoverableServicesForEndpoints(proxyPorts, workspaceMeta)
 	services := append(proxyServices, discoverableServices...)
 
 	routes, podAdditions := s.getProxyRoutes(proxy, workspaceMeta, portMappings)

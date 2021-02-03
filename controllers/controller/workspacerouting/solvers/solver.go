@@ -17,7 +17,6 @@ import (
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -29,14 +28,25 @@ type RoutingObjects struct {
 	Ingresses    []v1beta1.Ingress
 	Routes       []routeV1.Route
 	PodAdditions *controllerv1alpha1.PodAdditions
-	OAuthClient  *oauthv1.OAuthClient
 }
 
 type RoutingSolver interface {
+	// FinalizerRequired tells the caller if the solver requires a finalizer on the routing object.
+	FinalizerRequired(routing *controllerv1alpha1.WorkspaceRouting) bool
+
+	// Finalize implements the custom finalization logic required by the solver. The solver doesn't have to
+	// remove any finalizer from the finalizer list on the routing. Instead just implement the custom
+	// logic required for the finalization itself. If this method doesn't return any error, the finalizer
+	// is automatically removed from the routing.
+	Finalize(routing *controllerv1alpha1.WorkspaceRouting) error
+
 	// GetSpecObjects constructs cluster routing objects which should be applied on the cluster
 	// This method should return RoutingNotReady error if the solver is not ready yet to process
 	// the workspace routing, RoutingInvalid error if there is a specific reason for the failure or
 	// any other error.
+	// The implementors can also create any additional objects not captured by the RoutingObjects struct. If that's
+	// the case they are required to set the restricted access annotation on any objects created according to the
+	// restricted access specified by the routing.
 	GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error)
 
 	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.
@@ -82,7 +92,7 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.WorkspaceRoutin
 	}
 }
 
-func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha1.WorkspaceRoutingClass) (RoutingSolver, error) {
+func (_ *SolverGetter) GetSolver(client client.Client, routingClass controllerv1alpha1.WorkspaceRoutingClass) (RoutingSolver, error) {
 	if routingClass == "" {
 		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
 	}
@@ -93,7 +103,7 @@ func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha
 		if !config.ControllerCfg.IsOpenShift() {
 			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
 		}
-		return &OpenShiftOAuthSolver{}, nil
+		return &OpenShiftOAuthSolver{Client: client}, nil
 	case controllerv1alpha1.WorkspaceRoutingCluster:
 		return &ClusterSolver{}, nil
 	case controllerv1alpha1.WorkspaceRoutingClusterTLS, controllerv1alpha1.WorkspaceRoutingWebTerminal:

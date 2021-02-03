@@ -16,6 +16,8 @@ import (
 	"context"
 	"fmt"
 
+	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
+
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/pkg/utils/overriding"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -121,9 +123,9 @@ func resolvePluginComponent(
 		}
 		resolvedPlugin, pluginMeta, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
 	case plugin.Uri != "":
-		err = fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
+		err = fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference or id are supported", name)
 	case plugin.Id != "":
-		err = fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference are supported", name)
+		resolvedPlugin, pluginMeta, err = resolvePluginComponentById(name, plugin, tooling)
 	default:
 		err = fmt.Errorf("plugin %s does not define any resources", name)
 	}
@@ -170,4 +172,24 @@ func resolvePluginComponentByKubernetesReference(
 		return nil, nil, fmt.Errorf("failed to retrieve plugin referenced by kubernetes name and namespace '%s': %w", name, err)
 	}
 	return &dwTemplate.Spec, dwTemplate.Labels, nil
+}
+
+func resolvePluginComponentById(
+	name string,
+	plugin *devworkspace.PluginComponent,
+	_ ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
+
+	// Check internal registry for plugins that do not specify a registry
+	if plugin.RegistryUrl == "" {
+		if !registry.IsInInternalRegistry(plugin.Id) {
+			return nil, nil, fmt.Errorf("plugin for component %s does not specify a registry and is not present in internal registry", name)
+		}
+		pluginDWT, err := registry.ReadPluginFromInternalRegistry(plugin.Id)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to read plugin for component %s from internal registry: %w", name, err)
+		}
+		return &pluginDWT.Spec, pluginDWT.Labels, nil
+	}
+
+	return nil, nil, fmt.Errorf("non-internal plugins not supported")
 }

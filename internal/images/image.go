@@ -25,6 +25,7 @@ import (
 	"os"
 	"regexp"
 
+	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -40,7 +41,7 @@ const (
 	pvcCleanupJobImageEnvVar            = "RELATED_IMAGE_pvc_cleanup_job"
 )
 
-// GetWebTerminalToolingImage returns the image reference for the webhook server image. Returns
+// GetWebhookServerImage returns the image reference for the webhook server image. Returns
 // the empty string if environment variable RELATED_IMAGE_devworkspace_webhook_server is not defined
 func GetWebhookServerImage() string {
 	val, ok := os.LookupEnv(webhookServerImageEnvVar)
@@ -94,6 +95,24 @@ func GetPVCCleanupJobImage() string {
 		return ""
 	}
 	return val
+}
+
+// FillPluginEnvVars replaces plugin devworkspaceTemplate .spec.components[].container.image environment
+// variables of the form ${RELATED_IMAGE_*} with values from environment variables with the same name.
+//
+// Returns error if any referenced environment variable is undefined.
+func FillPluginEnvVars(pluginDWT *devworkspace.DevWorkspaceTemplate) (*devworkspace.DevWorkspaceTemplate, error) {
+	for idx, component := range pluginDWT.Spec.Components {
+		if component.Container == nil {
+			continue
+		}
+		img, err := getImageForEnvVar(component.Container.Image)
+		if err != nil {
+			return nil, err
+		}
+		pluginDWT.Spec.Components[idx].Container.Image = img
+	}
+	return pluginDWT, nil
 }
 
 func isImageEnvVar(query string) bool {

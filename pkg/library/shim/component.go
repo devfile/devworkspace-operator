@@ -32,7 +32,7 @@ func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworksp
 	}
 
 	for idx, mainContainer := range podAdditions.InitContainers {
-		podAdditions.Containers[idx].Env = append(mainContainer.Env, defaultEnvVars(mainContainer.Name, workspace)...)
+		podAdditions.InitContainers[idx].Env = append(mainContainer.Env, defaultEnvVars(mainContainer.Name, workspace)...)
 	}
 }
 

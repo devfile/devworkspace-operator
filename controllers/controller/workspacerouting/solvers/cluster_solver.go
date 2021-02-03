@@ -83,7 +83,7 @@ func (s *ClusterSolver) GetExposedEndpoints(
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
+			if endpoint.Exposure == devworkspace.NoneEndpointExposure {
 				continue
 			}
 			url, err := resolveServiceHostnameForEndpoint(endpoint, routingObj.Services)

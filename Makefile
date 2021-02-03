@@ -23,7 +23,7 @@ export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
-DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
+export DEVWORKSPACE_API_VERSION ?= aeda60d4361911da85103f224644bfa792498499
 
 #internal params
 DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
@@ -178,26 +178,20 @@ install_crds: _kustomize _init_devworkspace_crds
 	$(KUSTOMIZE) build config/crd | $(K8S_CLI) apply -f -
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
-install: _print_vars _kustomize _init_devworkspace_crds _create_namespace
-	mv config/cert-manager/kustomization.yaml config/cert-manager/kustomization.yaml.bak
-	mv config/service-ca/kustomization.yaml config/service-ca/kustomization.yaml.bak
-	mv config/base/config.properties config/base/config.properties.bak
-	mv config/base/manager_image_patch.yaml config/base/manager_image_patch.yaml.bak
-
-	envsubst < config/cert-manager/kustomization.yaml.bak > config/cert-manager/kustomization.yaml
-	envsubst < config/service-ca/kustomization.yaml.bak > config/service-ca/kustomization.yaml
-	envsubst < config/base/config.properties.bak > config/base/config.properties
-	envsubst < config/base/manager_image_patch.yaml.bak > config/base/manager_image_patch.yaml
+install: _print_vars _kustomize _init_devworkspace_crds _create_namespace generate_deployment
 ifeq ($(PLATFORM),kubernetes)
-	$(KUSTOMIZE) build config/cert-manager | $(K8S_CLI) apply -f - || true
+	$(K8S_CLI) apply -f config/current/kubernetes/combined.yaml || true
 else
-	$(KUSTOMIZE) build config/service-ca | $(K8S_CLI) apply -f - || true
+	$(K8S_CLI) apply -f config/current/openshift/combined.yaml || true
 endif
 
-	mv config/cert-manager/kustomization.yaml.bak config/cert-manager/kustomization.yaml
-	mv config/service-ca/kustomization.yaml.bak config/service-ca/kustomization.yaml
-	mv config/base/config.properties.bak config/base/config.properties
-	mv config/base/manager_image_patch.yaml.bak config/base/manager_image_patch.yaml
+### generate_deployment: Generate files used for deployment from kustomize templates, using environment variables
+generate_deployment:
+	config/generate-templates.sh
+
+### generate_default_deployment: Generate files used for deployment from kustomize templates with default values
+generate_default_deployment:
+	config/generate-templates.sh --use-defaults
 
 ### install_plugin_templates: Deploy sample plugin templates to namespace devworkspace-plugins:
 install_plugin_templates: _print_vars

@@ -35,11 +35,11 @@ spec:
           endpoints:
             - name: web-terminal
               targetPort: 4444
+              secure: true
+              protocol: http
+              exposure: internal
               attributes:
-                protocol: http
                 type: ide
-                discoverable: "false"
-                secure: "true"
                 cookiesAuthEnabled: "true"
           env:
             - name: USE_BEARER_TOKEN

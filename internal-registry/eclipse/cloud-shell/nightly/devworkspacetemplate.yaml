@@ -1,0 +1,26 @@
+kind: DevWorkspaceTemplate
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: cloud-shell
+spec:
+  components:
+    - name: web-terminal
+      container:
+        image: "${RELATED_IMAGE_plugin_eclipse_cloud_shell_nightly}"
+        mountSources: false
+        command: ["/go/bin/che-machine-exec",
+                  "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
+                  "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
+                  "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+                  "--use-bearer-token",
+                  "--static", "/cloud-shell"]
+        endpoints:
+          - name: cloud-shell
+            exposure: public
+            targetPort: 4444
+            protocol: http
+            secure: true
+            path: /static/
+            attributes:
+              type: ide
+              cookiesAuthEnabled: "true"

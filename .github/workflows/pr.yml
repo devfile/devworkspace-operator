@@ -71,6 +71,15 @@ jobs:
           exit 1
         fi
     -
+      name: Check deployment files
+      run: |
+        git reset HEAD --hard
+        make generate_default_deployment
+        if [[ ! -z $(git status -s) ]]; then
+          echo "Generated deployment files are out of date; run make generate_default_deployment"
+          exit 1
+        fi
+    -
       name: Run Go Tests
       run: |
         python -m pip install --upgrade pip yq

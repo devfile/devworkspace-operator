@@ -175,7 +175,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 	timing.SetTime(timingInfo, timing.ComponentsCreated)
 	// TODO#185 : Temporarily do devfile flattening in main reconcile loop; this should be moved to a subcontroller.
-	// TODO#185 : Implement defaulting container component for Web Terminals for compatibility
 	flattenHelpers := flatten.ResolverTools{
 		InstanceNamespace: workspace.Namespace,
 		Context:           ctx,

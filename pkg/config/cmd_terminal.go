@@ -30,8 +30,9 @@ const (
 )
 
 func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Component, error) {
-	defaultDockerimageYaml := wc.GetProperty(defaultTerminalDockerimageProperty)
-	if defaultDockerimageYaml == nil {
+	mountSources := false
+	defaultContainerYaml := wc.GetProperty(defaultTerminalDockerimageProperty)
+	if defaultContainerYaml == nil {
 		webTerminalImage := images.GetWebTerminalToolingImage()
 		if webTerminalImage == "" {
 			return nil, fmt.Errorf("cannot determine default image for web terminal: environment variable is unset")
@@ -40,9 +41,10 @@ func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Compo
 		defaultTerminalDockerimage.Name = "dev"
 		defaultTerminalDockerimage.Container = &devworkspace.ContainerComponent{
 			Container: devworkspace.Container{
-				Image:       webTerminalImage,
-				Args:        []string{"tail", "-f", "/dev/null"},
-				MemoryLimit: "256Mi",
+				Image:        webTerminalImage,
+				Args:         []string{"tail", "-f", "/dev/null"},
+				MemoryLimit:  "256Mi",
+				MountSources: &mountSources,
 				Env: []devworkspace.EnvVar{
 					{
 						Name:  "PS1",
@@ -57,11 +59,11 @@ func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Compo
 		return defaultTerminalDockerimage, nil
 	}
 
-	var dockerimage devworkspace.Component
-	if err := yaml.Unmarshal([]byte(*defaultDockerimageYaml), &dockerimage); err != nil {
+	var defaultContainer devworkspace.Component
+	if err := yaml.Unmarshal([]byte(*defaultContainerYaml), &defaultContainer); err != nil {
 		return nil, fmt.Errorf(
 			"%s is configured with invalid container component. Error: %s", defaultTerminalDockerimageProperty, err)
 	}
 
-	return &dockerimage, nil
+	return &defaultContainer, nil
 }

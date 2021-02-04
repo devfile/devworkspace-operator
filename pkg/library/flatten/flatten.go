@@ -16,6 +16,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
+
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
@@ -51,6 +53,11 @@ func (t tempOverrides) GetToplevelLists() devworkspace.TopLevelLists {
 // - Implement flattening for DevWorkspace parents
 // - Implement plugin references by ID and URI
 func ResolveDevWorkspace(workspace devworkspace.DevWorkspaceTemplateSpec, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
+	// Web terminals get default container components if they do not specify one
+	if err := web_terminal.AddDefaultContainerIfNeeded(&workspace); err != nil {
+		return nil, err
+	}
+
 	resolutionCtx := &resolutionContextTree{}
 	resolvedDW, err := recursiveResolve(workspace, tooling, resolutionCtx)
 	if err != nil {

@@ -32,12 +32,16 @@ const (
 
 var log = logf.Log.WithName("registry")
 
-func getPluginPath(pluginID string) string {
-	return filepath.Join(RegistryDirectory, pluginID, "devworkspacetemplate.yaml")
+// InternalRegistry is an abstraction over internal registry functions to allow for easier testing
+type InternalRegistry interface {
+	IsInInternalRegistry(pluginID string) bool
+	ReadPluginFromInternalRegistry(pluginID string) (*devworkspace.DevWorkspaceTemplate, error)
 }
 
+type InternalRegistryImpl struct{}
+
 // IsInInternalRegistry checks if pluginID is in the internal registry
-func IsInInternalRegistry(pluginID string) bool {
+func (_ *InternalRegistryImpl) IsInInternalRegistry(pluginID string) bool {
 	if _, err := os.Stat(getPluginPath(pluginID)); err != nil {
 		if os.IsNotExist(err) {
 			log.Info(fmt.Sprintf("Could not find %s in the internal registry", pluginID))
@@ -47,7 +51,7 @@ func IsInInternalRegistry(pluginID string) bool {
 	return true
 }
 
-func ReadPluginFromInternalRegistry(pluginID string) (*devworkspace.DevWorkspaceTemplate, error) {
+func (_ *InternalRegistryImpl) ReadPluginFromInternalRegistry(pluginID string) (*devworkspace.DevWorkspaceTemplate, error) {
 	yamlBytes, err := ioutil.ReadFile(getPluginPath(pluginID))
 	if err != nil {
 		return nil, err
@@ -61,4 +65,8 @@ func ReadPluginFromInternalRegistry(pluginID string) (*devworkspace.DevWorkspace
 		return nil, err
 	}
 	return resolvedPlugin, nil
+}
+
+func getPluginPath(pluginID string) string {
+	return filepath.Join(RegistryDirectory, pluginID, "devworkspacetemplate.yaml")
 }

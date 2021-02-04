@@ -21,6 +21,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +45,21 @@ var workspaceTemplateDiffOpts = cmp.Options{
 	}),
 	// TODO: Devworkspace overriding results in empty []string instead of nil
 	cmpopts.IgnoreFields(devworkspace.WorkspaceEvents{}, "PostStart", "PreStop", "PostStop"),
+}
+
+var testControllerCfg = &corev1.ConfigMap{
+	Data: map[string]string{
+		"devworkspace.default_dockerimage.redhat-developer.web-terminal": `
+name: default-web-terminal-tooling
+container:
+  name: default-web-terminal-tooling-container
+  image: test-image
+`,
+	},
+}
+
+func setupControllerCfg() {
+	config.SetupConfigForTesting(testControllerCfg)
 }
 
 type testCase struct {
@@ -93,9 +111,29 @@ func (client *fakeK8sClient) Get(_ context.Context, namespacedName client.Object
 	return fmt.Errorf("test does not define an entry for plugin %s", namespacedName.Name)
 }
 
-func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
-	testPath := filepath.Join("./testdata", testFilename)
-	bytes, err := ioutil.ReadFile(testPath)
+type fakeInternalRegistry struct {
+	Plugins map[string]devworkspace.DevWorkspaceTemplate
+	Errors  map[string]testPluginError
+}
+
+func (reg *fakeInternalRegistry) IsInInternalRegistry(pluginID string) bool {
+	_, pluginOk := reg.Plugins[pluginID]
+	_, errOk := reg.Errors[pluginID]
+	return pluginOk || errOk
+}
+
+func (reg *fakeInternalRegistry) ReadPluginFromInternalRegistry(pluginID string) (*devworkspace.DevWorkspaceTemplate, error) {
+	if plugin, ok := reg.Plugins[pluginID]; ok {
+		return &plugin, nil
+	}
+	if err, ok := reg.Errors[pluginID]; ok {
+		return nil, errors.New(err.Message)
+	}
+	return nil, fmt.Errorf("test does not define entry for plugin %s", pluginID)
+}
+
+func loadTestCaseOrPanic(t *testing.T, testFilepath string) testCase {
+	bytes, err := ioutil.ReadFile(testFilepath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,8 +145,8 @@ func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
 	return test
 }
 
-func loadAllTestsOrPanic(t *testing.T) []testCase {
-	files, err := ioutil.ReadDir("./testdata")
+func loadAllTestsOrPanic(t *testing.T, fromDir string) []testCase {
+	files, err := ioutil.ReadDir(fromDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,13 +155,13 @@ func loadAllTestsOrPanic(t *testing.T) []testCase {
 		if file.IsDir() {
 			continue
 		}
-		tests = append(tests, loadTestCaseOrPanic(t, file.Name()))
+		tests = append(tests, loadTestCaseOrPanic(t, filepath.Join(fromDir, file.Name())))
 	}
 	return tests
 }
 
-func TestResolveDevWorkspace(t *testing.T) {
-	tests := loadAllTestsOrPanic(t)
+func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
+	tests := loadAllTestsOrPanic(t, "testdata/k8s-ref")
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
@@ -135,6 +173,36 @@ func TestResolveDevWorkspace(t *testing.T) {
 			testResolverTools := ResolverTools{
 				Context:   context.Background(),
 				K8sClient: testClient,
+			}
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
+				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
+			} else {
+				if !assert.NoError(t, err, "Should not return error") {
+					return
+				}
+				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, workspaceTemplateDiffOpts),
+					"Workspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.Workspace, outputWorkspace, workspaceTemplateDiffOpts))
+			}
+		})
+	}
+}
+
+func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
+	tests := loadAllTestsOrPanic(t, "testdata/internal-registry")
+	setupControllerCfg()
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			// sanity check: input defines components
+			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			testRegistry := &fakeInternalRegistry{
+				Plugins: tt.Input.Plugins,
+				Errors:  tt.Input.Errors,
+			}
+			testResolverTools := ResolverTools{
+				Context:          context.Background(),
+				InternalRegistry: testRegistry,
 			}
 			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {

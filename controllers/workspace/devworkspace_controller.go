@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
+
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
@@ -179,6 +181,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		InstanceNamespace: workspace.Namespace,
 		Context:           ctx,
 		K8sClient:         r.Client,
+		InternalRegistry:  &registry.InternalRegistryImpl{},
 	}
 	flattenedWorkspace, err := flatten.ResolveDevWorkspace(workspace.Spec.Template, flattenHelpers)
 	if err != nil {

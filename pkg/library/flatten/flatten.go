@@ -31,6 +31,7 @@ type ResolverTools struct {
 	InstanceNamespace string
 	Context           context.Context
 	K8sClient         client.Client
+	InternalRegistry  registry.InternalRegistry
 }
 
 // TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/issues/296
@@ -184,14 +185,17 @@ func resolvePluginComponentByKubernetesReference(
 func resolvePluginComponentById(
 	name string,
 	plugin *devworkspace.PluginComponent,
-	_ ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
+	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
 
 	// Check internal registry for plugins that do not specify a registry
 	if plugin.RegistryUrl == "" {
-		if !registry.IsInInternalRegistry(plugin.Id) {
-			return nil, nil, fmt.Errorf("plugin for component %s does not specify a registry and is not present in internal registry", name)
+		if tools.InternalRegistry == nil {
+			return nil, nil, fmt.Errorf("plugin %s does not specify a registryUrl and no internal registry is configured", name)
 		}
-		pluginDWT, err := registry.ReadPluginFromInternalRegistry(plugin.Id)
+		if !tools.InternalRegistry.IsInInternalRegistry(plugin.Id) {
+			return nil, nil, fmt.Errorf("plugin for component %s does not specify a registry and is not present in the internal registry", name)
+		}
+		pluginDWT, err := tools.InternalRegistry.ReadPluginFromInternalRegistry(plugin.Id)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to read plugin for component %s from internal registry: %w", name, err)
 		}

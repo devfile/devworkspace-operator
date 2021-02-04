@@ -60,7 +60,6 @@ jobs:
     -
       name: Check manifests
       run: |
-        git reset HEAD --hard
         pip install yq
         # Note: fmt is necessary after generate since generated sources will
         #       fail format check by default.
@@ -73,7 +72,6 @@ jobs:
     -
       name: Check deployment files
       run: |
-        git reset HEAD --hard
         make generate_default_deployment
         if [[ ! -z $(git status -s) ]]; then
           echo "Generated deployment files are out of date; run make generate_default_deployment"

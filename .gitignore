@@ -1,7 +1,7 @@
 devworkspace-crds
-config/crd/bases/workspace.devfile.io_devworkspaces.yaml
-config/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml
-config/current
+deploy/templates/crd/bases/workspace.devfile.io_devworkspaces.yaml
+deploy/templates/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml
+deploy/current
 testbin
 .vscode
 __debug_bin

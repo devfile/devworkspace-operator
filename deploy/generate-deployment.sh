@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Copyright (c) 2012-2018 Red Hat, Inc.
+# Copyright (c) 2019-2021 Red Hat, Inc.
 # This program and the accompanying materials are made
 # available under the terms of the Eclipse Public License 2.0
 # which is available at https://www.eclipse.org/legal/epl-2.0/
@@ -9,7 +9,7 @@
 #
 # This script builds complete deployment files for the DevWorkspace Operator,
 # filling all environment variables as appropriate. The output, stored in
-# config/static, contains subfolders for OpenShift and Kubernetes. Within each
+# deploy/deployment, contains subfolders for OpenShift and Kubernetes. Within each
 # is a file, combined.yaml, which stores all the objects involved in deploying
 # the operator, and a subfolder, objects, which stores separate yaml files for
 # each object in combined.yaml, with the name <object-name>.<object-kind>.yaml
@@ -26,20 +26,17 @@ set -e
 
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
 
-DEVWORKSPACE_BRANCH=${DEVWORKSPACE_BRANCH:-master}
-
-# If '--use-defaults' is passed, output files to config/static; otherwise
-# output files to untracked directory config/current (used for development)
+# If '--use-defaults' is passed, output files to deploy/deployment; otherwise
+# output files to untracked directory deploy/current (used for development)
 USE_DEFAULT_ENV=false
 OUTPUT_DIR="${SCRIPT_DIR%/}/current"
 if [ "$1" == "--use-defaults" ]; then
   echo "Using defaults for environment variables"
   USE_DEFAULT_ENV=true
-  OUTPUT_DIR="${SCRIPT_DIR%/}/static"
+  OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
 fi
 
 if $USE_DEFAULT_ENV; then
-  export DEVWORKSPACE_BRANCH=master
   export NAMESPACE=devworkspace-controller
   export IMG=quay.io/devfile/devworkspace-controller:next
   export PULL_POLICY=Always
@@ -56,7 +53,7 @@ OBJECTS_DIR="objects"
 
 mkdir -p "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
 
-required_vars=(DEVWORKSPACE_BRANCH NAMESPACE IMG PULL_POLICY DEFAULT_ROUTING \
+required_vars=(NAMESPACE IMG PULL_POLICY DEFAULT_ROUTING \
   DEVWORKSPACE_API_VERSION)
 for var in "${required_vars[@]}"; do
   if [ -z "${!var}" ]; then
@@ -83,28 +80,28 @@ else
 fi
 
 # Create backups of templates with env vars
-mv config/cert-manager/kustomization.yaml config/cert-manager/kustomization.yaml.bak
-mv config/service-ca/kustomization.yaml config/service-ca/kustomization.yaml.bak
-mv config/base/config.properties config/base/config.properties.bak
-mv config/base/manager_image_patch.yaml config/base/manager_image_patch.yaml.bak
+mv ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak
+mv ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak
+mv ${SCRIPT_DIR}/templates/base/config.properties ${SCRIPT_DIR}/templates/base/config.properties.bak
+mv ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak
 
 # Fill env vars in templates
-envsubst < config/cert-manager/kustomization.yaml.bak > config/cert-manager/kustomization.yaml
-envsubst < config/service-ca/kustomization.yaml.bak > config/service-ca/kustomization.yaml
-envsubst < config/base/config.properties.bak > config/base/config.properties
-envsubst < config/base/manager_image_patch.yaml.bak > config/base/manager_image_patch.yaml
+envsubst < ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak > ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml
+envsubst < ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak > ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml
+envsubst < ${SCRIPT_DIR}/templates/base/config.properties.bak > ${SCRIPT_DIR}/templates/base/config.properties
+envsubst < ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak > ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml
 
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
-kustomize build config/cert-manager > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
+kustomize build ${SCRIPT_DIR}/templates/cert-manager > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "Generating config for OpenShift"
-kustomize build config/service-ca > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
+kustomize build ${SCRIPT_DIR}/templates/service-ca > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
 # Restore backups to not change templates
-mv config/cert-manager/kustomization.yaml.bak config/cert-manager/kustomization.yaml
-mv config/service-ca/kustomization.yaml.bak config/service-ca/kustomization.yaml
-mv config/base/config.properties.bak config/base/config.properties
-mv config/base/manager_image_patch.yaml.bak config/base/manager_image_patch.yaml
+mv ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml
+mv ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml
+mv ${SCRIPT_DIR}/templates/base/config.properties.bak ${SCRIPT_DIR}/templates/base/config.properties
+mv ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml
 
 # Split the giant files output by kustomize per-object
 for dir in "$KUBERNETES_DIR" "$OPENSHIFT_DIR"; do

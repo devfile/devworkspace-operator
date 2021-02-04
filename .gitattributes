@@ -1,0 +1,2 @@
+deploy/deployment/*             linguist-generated
+deploy/templates/crd/bases/*    linguist-generated

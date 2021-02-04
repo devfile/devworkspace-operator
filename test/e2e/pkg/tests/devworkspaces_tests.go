@@ -40,8 +40,7 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 	})
 
 	ginkgo.It("Add OpenShift web terminal to cluster and wait running status", func() {
-		// TODO#185 : Temporarily use pre-flattened devworkspace until flattening is re-implemented
-		commandResult, err := config.DevK8sClient.OcApplyWorkspace(config.WorkspaceNamespace, "samples/flattened_web-terminal.yaml")
+		commandResult, err := config.DevK8sClient.OcApplyWorkspace(config.WorkspaceNamespace, "samples/web-terminal.yaml")
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Failed to create OpenShift web terminal workspace: %s %s", err.Error(), commandResult))
 			return

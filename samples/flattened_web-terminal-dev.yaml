@@ -35,7 +35,7 @@ spec:
             - name: web-terminal
               targetPort: 4444
               secure: true
-              exposure: internal
+              exposure: public
               protocol: http
               attributes:
                 type: ide

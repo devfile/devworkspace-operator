@@ -165,7 +165,6 @@ input:
                   protocol: http
                   attributes:
                     type: ide
-                    cookiesAuthEnabled: "true"
                 - name: "webviews"
                   exposure: public
                   targetPort: 3100
@@ -173,7 +172,6 @@ input:
                   secure: true
                   attributes:
                     type: webview
-                    cookiesAuthEnabled: "true"
                     unique: "true"
                 - name: "theia-dev"
                   exposure: public
@@ -236,7 +234,6 @@ input:
                   secure: true
                   attributes:
                     type: terminal
-                    cookiesAuthEnabled: "true"
 
     vscode-typescript:
       kind: DevWorkspaceTemplate
@@ -317,7 +314,6 @@ output:
               protocol: http
               attributes:
                 type: ide
-                cookiesAuthEnabled: "true"
             - name: "webviews"
               exposure: public
               targetPort: 3100
@@ -325,7 +321,6 @@ output:
               secure: true
               attributes:
                 type: webview
-                cookiesAuthEnabled: "true"
                 unique: "true"
             - name: "theia-dev"
               exposure: public
@@ -417,7 +412,6 @@ output:
               secure: true
               attributes:
                 type: terminal
-                cookiesAuthEnabled: "true"
       - name: sidecar-typescript
         attributes:
           "app.kubernetes.io/part-of": che-theia.eclipse.org

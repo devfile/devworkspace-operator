@@ -23,4 +23,3 @@ spec:
             path: /static/
             attributes:
               type: ide
-              cookiesAuthEnabled: "true"

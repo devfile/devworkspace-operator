@@ -43,7 +43,6 @@ input:
                     type: ide
                     discoverable: "false"
                     secure: "true"
-                    cookiesAuthEnabled: "true"
               env:
                 - name: USE_BEARER_TOKEN
                   value: "true"
@@ -76,7 +75,6 @@ output:
                 type: ide
                 discoverable: "false"
                 secure: "true"
-                cookiesAuthEnabled: "true"
           env:
             - name: USE_BEARER_TOKEN
               value: "true"

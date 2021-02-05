@@ -32,7 +32,7 @@ input:
               command: ["/go/bin/che-machine-exec",
                         "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
                         "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
-                        "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+                        "--pod-selector", "controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)",
                         "--use-bearer-token",
                         "--use-tls"]
               endpoints:
@@ -65,7 +65,7 @@ output:
           command: ["/go/bin/che-machine-exec",
                     "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
                     "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
-                    "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+                    "--pod-selector", "controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)",
                     "--use-bearer-token",
                     "--use-tls"]
           endpoints:

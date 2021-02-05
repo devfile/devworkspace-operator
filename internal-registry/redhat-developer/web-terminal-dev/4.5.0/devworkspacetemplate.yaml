@@ -20,7 +20,6 @@ spec:
             protocol: http
             attributes:
               type: ide
-              cookiesAuthEnabled: "true"
         mountSources: false
         env:
           - name: USE_BEARER_TOKEN

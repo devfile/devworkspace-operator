@@ -22,7 +22,6 @@ spec:
             exposure: internal
             attributes:
               type: ide
-              cookiesAuthEnabled: "true"
         env:
           - name: USE_BEARER_TOKEN
             value: "true"

@@ -20,14 +20,12 @@ input:
             protocol: wss
             attributes:
               type: ide
-              cookiesAuthEnabled: "true"
           - name: "test-endpoint-2"
             exposure: public
             targetPort: 8080
             secure: true
             protocol: http
             attributes:
-              cookiesAuthEnabled: "true"
         volumeMounts:
           - name: "test-volume1"
             path: "/test-volume1-path"

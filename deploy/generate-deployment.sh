@@ -80,28 +80,28 @@ else
 fi
 
 # Create backups of templates with env vars
-mv ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak
-mv ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak
-mv ${SCRIPT_DIR}/templates/base/config.properties ${SCRIPT_DIR}/templates/base/config.properties.bak
-mv ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak
+mv "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml" "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak"
+mv "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml" "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak"
+mv "${SCRIPT_DIR}/templates/base/config.properties" "${SCRIPT_DIR}/templates/base/config.properties.bak"
+mv "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml" "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak"
 
 # Fill env vars in templates
-envsubst < ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak > ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml
-envsubst < ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak > ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml
-envsubst < ${SCRIPT_DIR}/templates/base/config.properties.bak > ${SCRIPT_DIR}/templates/base/config.properties
-envsubst < ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak > ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml
+envsubst < "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak" > "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml"
+envsubst < "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak" > "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml"
+envsubst < "${SCRIPT_DIR}/templates/base/config.properties.bak" > "${SCRIPT_DIR}/templates/base/config.properties"
+envsubst < "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" > "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml"
 
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
-kustomize build ${SCRIPT_DIR}/templates/cert-manager > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
+kustomize build "${SCRIPT_DIR}/templates/cert-manager" > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "Generating config for OpenShift"
-kustomize build ${SCRIPT_DIR}/templates/service-ca > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
+kustomize build "${SCRIPT_DIR}/templates/service-ca" > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
 # Restore backups to not change templates
-mv ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak ${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml
-mv ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak ${SCRIPT_DIR}/templates/service-ca/kustomization.yaml
-mv ${SCRIPT_DIR}/templates/base/config.properties.bak ${SCRIPT_DIR}/templates/base/config.properties
-mv ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak ${SCRIPT_DIR}/templates/base/manager_image_patch.yaml
+mv "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak" "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml"
+mv "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak" "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml"
+mv "${SCRIPT_DIR}/templates/base/config.properties.bak" "${SCRIPT_DIR}/templates/base/config.properties"
+mv "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml"
 
 # Split the giant files output by kustomize per-object
 for dir in "$KUBERNETES_DIR" "$OPENSHIFT_DIR"; do
@@ -113,8 +113,7 @@ for dir in "$KUBERNETES_DIR" "$OPENSHIFT_DIR"; do
   # temp02, etc. Then rename each temp file according to the .metadata.name and
   # .kind of the object
   csplit -s -f "temp" --suppress-matched "${dir}/combined.yaml" '/^---$/' '{*}'
-  readarray -d '' object_files < <(find "$dir" -name 'temp??' -print0)
-  for file in "${object_files[@]}"; do
+  for file in temp??; do
     name_kind=$(yq -r '"\(.metadata.name).\(.kind)"' "$file")
     mv "$file" "objects/${name_kind}.yaml"
   done

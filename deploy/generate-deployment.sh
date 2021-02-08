@@ -26,17 +26,49 @@ set -e
 
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
 
-# If '--use-defaults' is passed, output files to deploy/deployment; otherwise
-# output files to untracked directory deploy/current (used for development)
+function print_help() {
+  echo "Usage: generate-deployment.sh [ARGS]"
+  echo "Arguments:"
+  echo "  --use-defaults"
+  echo "      Output deployment files to deploy/deployment, using default"
+  echo "      environment variables rather than current shell variables."
+  echo "      Implies '--split yaml'"
+  echo "  --split-yaml"
+  echo "      Parse output file combined.yaml into a yaml file for each record"
+  echo "      in combined yaml. Files are output to the 'objects' subdirectory"
+  echo "      for each platform and are named <object-name>.<kind>.yaml"
+  echo "  -h, --help"
+  echo "      Print this help description"
+}
+
 USE_DEFAULT_ENV=false
 OUTPUT_DIR="${SCRIPT_DIR%/}/current"
-if [ "$1" == "--use-defaults" ]; then
-  echo "Using defaults for environment variables"
-  USE_DEFAULT_ENV=true
-  OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
-fi
+SPLIT_YAMLS=false
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+      --use-defaults)
+      USE_DEFAULT_ENV=true
+      SPLIT_YAMLS=true
+      OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
+      ;;
+      --split-yamls)
+      SPLIT_YAMLS=true
+      ;;
+      -h|--help)
+      print_help
+      exit 0
+      ;;
+      *)
+      echo "Unknown parameter passed: $1"
+      print_help
+      exit 1
+      ;;
+  esac
+  shift
+done
 
 if $USE_DEFAULT_ENV; then
+  echo "Using defaults for environment variables"
   export NAMESPACE=devworkspace-controller
   export IMG=quay.io/devfile/devworkspace-controller:next
   export PULL_POLICY=Always
@@ -94,14 +126,26 @@ envsubst < "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" > "${SCRI
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
 kustomize build "${SCRIPT_DIR}/templates/cert-manager" > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
+echo "File saved to ${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "Generating config for OpenShift"
 kustomize build "${SCRIPT_DIR}/templates/service-ca" > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
+echo "File saved to ${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
 # Restore backups to not change templates
 mv "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak" "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml"
 mv "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak" "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml"
 mv "${SCRIPT_DIR}/templates/base/config.properties.bak" "${SCRIPT_DIR}/templates/base/config.properties"
 mv "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml"
+
+if ! $SPLIT_YAMLS; then
+  echo "Skipping split combined.yaml step. To split the combined yaml, use the --split-yamls argument."
+  exit 0
+fi
+
+if ! command -v yq &>/dev/null; then
+  echo "Program yq is required for this step; please install it via 'pip install yq'"
+  exit 1
+fi
 
 # Split the giant files output by kustomize per-object
 for dir in "$KUBERNETES_DIR" "$OPENSHIFT_DIR"; do

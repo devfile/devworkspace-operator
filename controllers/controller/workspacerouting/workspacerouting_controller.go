@@ -290,6 +290,11 @@ func (r *WorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.SolverGetter == nil {
 		return NoSolversEnabled
 	}
+
+	if err := r.SolverGetter.SetupControllerManager(bld); err != nil {
+		return err
+	}
+
 	bld.WithEventFilter(getRoutingPredicatesForSolverFunc(r.SolverGetter))
 
 	return bld.Complete(r)

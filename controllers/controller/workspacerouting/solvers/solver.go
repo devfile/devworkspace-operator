@@ -20,6 +20,7 @@ import (
 	routeV1 "github.com/openshift/api/route/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -57,6 +58,10 @@ type RoutingSolver interface {
 }
 
 type RoutingSolverGetter interface {
+	// SetupControllerManager is called during the setup of the controller and can modify the controller manager with additional
+	// watches, etc., needed for the correct operation of the solver.
+	SetupControllerManager(mgr *builder.Builder) error
+
 	// HasSolver returns whether the provided routingClass is supported by this RoutingSolverGetter. Returns false if
 	// calling GetSolver with routingClass will return a RoutingNotSupported error. Can be used to check if a routingClass
 	// is supported without having to provide a runtime client. Note that GetSolver may still return another error, if e.g.
@@ -114,4 +119,8 @@ func (_ *SolverGetter) GetSolver(client client.Client, routingClass controllerv1
 	default:
 		return nil, RoutingNotSupported
 	}
+}
+
+func (*SolverGetter) SetupControllerManager(mgr *builder.Builder) error {
+	return nil
 }

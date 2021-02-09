@@ -174,7 +174,7 @@ debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworksp
 		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
-install: _print_vars _kustomize _init_devworkspace_crds _create_namespace generate_deployment
+install: _print_vars _init_devworkspace_crds _create_namespace generate_deployment
 ifeq ($(PLATFORM),kubernetes)
 	$(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml || true
 else
@@ -182,11 +182,11 @@ else
 endif
 
 ### generate_deployment: Generate files used for deployment from kustomize templates, using environment variables
-generate_deployment:
+generate_deployment: _kustomize
 	deploy/generate-deployment.sh
 
 ### generate_default_deployment: Generate files used for deployment from kustomize templates with default values
-generate_default_deployment:
+generate_default_deployment: _kustomize
 	deploy/generate-deployment.sh --use-defaults
 
 ### install_plugin_templates: Deploy sample plugin templates to namespace devworkspace-plugins:
@@ -203,17 +203,19 @@ restart_webhook:
 	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-webhook-server
 
 ### uninstall: Remove controller resources from the cluster
-uninstall: _kustomize
+uninstall: generate_deployment
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
 	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all --wait || true
 	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all || true
 	$(K8S_CLI) delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait || true
+
 ifeq ($(PLATFORM),kubernetes)
-	$(KUSTOMIZE) build deploy/templates/cert-manager | $(K8S_CLI) delete --ignore-not-found -f -
+	$(K8S_CLI) delete --ignore-not-found -f deploy/current/kubernetes/combined.yaml || true
 else
-	$(KUSTOMIZE) build deploy/templates/service-ca | $(K8S_CLI) delete --ignore-not-found -f -
+	$(K8S_CLI) delete --ignore-not-found -f deploy/current/openshift/combined.yaml || true
 endif
+
 	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	$(K8S_CLI) delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found

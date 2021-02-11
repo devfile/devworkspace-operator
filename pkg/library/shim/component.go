@@ -86,7 +86,7 @@ func GetComponentDescriptionsFromPodAdditions(podAdditions *v1alpha1.PodAddition
 	for _, mainContainer := range podAdditions.Containers {
 		component, err := GetComponentByName(mainContainer.Name, workspace)
 		if err != nil {
-			return nil, err
+			continue // Not all components in podAdditions come from the devfile
 		}
 		descriptions = append(descriptions, v1alpha1.ComponentDescription{
 			Name: component.Name,
@@ -100,7 +100,7 @@ func GetComponentDescriptionsFromPodAdditions(podAdditions *v1alpha1.PodAddition
 	for _, initContainer := range podAdditions.InitContainers {
 		component, err := GetComponentByName(initContainer.Name, workspace)
 		if err != nil {
-			return nil, err
+			continue // Not all components in podAdditions come from the devfile
 		}
 		descriptions = append(descriptions, v1alpha1.ComponentDescription{
 			Name: component.Name,

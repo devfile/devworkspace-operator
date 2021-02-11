@@ -60,10 +60,9 @@ var routingDiffOpts = cmp.Options{
 
 func SyncRoutingToCluster(
 	workspace *devworkspace.DevWorkspace,
-	components []v1alpha1.ComponentDescription,
 	clusterAPI ClusterAPI) RoutingProvisioningStatus {
 
-	specRouting, err := getSpecRouting(workspace, components, clusterAPI.Scheme)
+	specRouting, err := getSpecRouting(workspace, clusterAPI.Scheme)
 	if err != nil {
 		return RoutingProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{Err: err},
@@ -132,14 +131,16 @@ func SyncRoutingToCluster(
 
 func getSpecRouting(
 	workspace *devworkspace.DevWorkspace,
-	componentDescriptions []v1alpha1.ComponentDescription,
 	scheme *runtime.Scheme) (*v1alpha1.WorkspaceRouting, error) {
 
 	endpoints := map[string]v1alpha1.EndpointList{}
-	for _, desc := range componentDescriptions {
-		componentEndpoints := desc.ComponentMetadata.Endpoints
+	for _, component := range workspace.Spec.Template.Components {
+		if component.Container == nil {
+			continue
+		}
+		componentEndpoints := component.Container.Endpoints
 		if componentEndpoints != nil && len(componentEndpoints) > 0 {
-			endpoints[desc.Name] = append(endpoints[desc.Name], componentEndpoints...)
+			endpoints[component.Name] = append(endpoints[component.Name], componentEndpoints...)
 		}
 	}
 

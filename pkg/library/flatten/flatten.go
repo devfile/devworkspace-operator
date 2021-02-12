@@ -15,6 +15,7 @@ package flatten
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
 
@@ -32,6 +33,7 @@ type ResolverTools struct {
 	Context           context.Context
 	K8sClient         client.Client
 	InternalRegistry  registry.InternalRegistry
+	HttpClient        http.Client
 }
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents

@@ -27,3 +27,15 @@ spec:
             name: remote-endpoint
           - name: plugins
             path: /plugins
+  commands:
+    - id: install-vscode-typescript-vsx
+      exec:
+        component: theia-ide
+        commandLine: |-
+          mkdir -p /plugins/sidecars/vscode-typescript && \
+          if [ ! -f /plugins/sidecars/vscode-typescript/che-typescript-language-1.35.1.vsix ]; then \
+            wget https://download.jboss.org/jbosstools/vscode/3rdparty/ms-code.typescript/che-typescript-language-1.35.1.vsix \
+              -O /plugins/sidecars/vscode-typescript/che-typescript-language-1.35.1.vsix ;\
+          fi
+  events:
+    postStart: ["install-vscode-typescript-vsx"]

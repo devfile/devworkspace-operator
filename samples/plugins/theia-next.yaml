@@ -8,11 +8,6 @@ spec:
       volume: {}
     - name: remote-endpoint
       volume: {} # TODO: Fix this once ephemeral volumes are supported
-    - name: vsx-installer
-      plugin:
-        kubernetes:
-          name: vsx-installer
-          namespace: devworkspace-plugins
     - name: remote-runtime-injector
       plugin:
         kubernetes:

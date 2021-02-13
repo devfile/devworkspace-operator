@@ -1,0 +1,17 @@
+kind: DevWorkspaceTemplate
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: vscode-vim
+spec:
+  commands:
+    - id: install-vscode-vim-vsx
+      exec:
+        component: theia-ide
+        commandLine: |-
+          mkdir -p /plugins/sidecars/vscode-typescript && \
+          if [ ! -f /plugins/vim-1.16.0.vsix ]; then \
+            wget https://github.com/VSCodeVim/Vim/releases/download/v1.16.0/vim-1.16.0.vsix \
+              -O /plugins/vim-1.16.0.vsix ;\
+          fi
+  events:
+    postStart: ["install-vscode-vim-vsx"]

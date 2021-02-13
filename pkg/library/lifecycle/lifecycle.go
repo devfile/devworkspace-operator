@@ -15,6 +15,8 @@ package lifecycle
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
 )
 
@@ -71,6 +73,50 @@ func GetInitContainers(devfile v1alpha2.DevWorkspaceTemplateSpecContent) (initCo
 	return initContainers, mainComponents, nil
 }
 
+func ApplyPostStartCommands(devfile *v1alpha2.DevWorkspaceTemplateSpecContent, containers []corev1.Container) error {
+	postStartCommands, err := getCommandsForKeys(devfile.Events.PostStart, devfile.Commands)
+	if err != nil {
+		return fmt.Errorf("failed to process preStart commands: %w", err)
+	}
+	for _, cmd := range postStartCommands {
+		if cmd.Exec == nil {
+			return fmt.Errorf("problem processing postStart event %s: only exec-type commands are supported", cmd.Key())
+		}
+		container, err := getContainerByName(cmd.Exec.Component, containers)
+		if err != nil {
+			return fmt.Errorf("failed to find container for command %s", cmd.Key())
+		}
+		err = writePostStartLifecycle(container, cmd.Exec.CommandLine)
+		if err != nil {
+			return fmt.Errorf("error applying postStart lifecycle hook to container: %w", err)
+		}
+	}
+	return nil
+}
+
+func writePostStartLifecycle(container *corev1.Container, cmd string) error {
+	if container.Lifecycle == nil {
+		container.Lifecycle = &corev1.Lifecycle{}
+	}
+	if container.Lifecycle.PostStart == nil {
+		container.Lifecycle.PostStart = &corev1.Handler{
+			Exec: &corev1.ExecAction{
+				Command: []string{
+					"/bin/bash", "-c", cmd,
+				},
+			},
+		}
+	} else {
+		// There is already a command defined, we need to append to it
+		command := container.Lifecycle.PostStart.Exec.Command
+		if command[0] != "/bin/bash" && command[1] != "-c" {
+			return fmt.Errorf("unexpected postStart lifecycle found on container")
+		}
+		command[2] = fmt.Sprintf("%s &&\\\n%s", command[2], cmd)
+	}
+	return nil
+}
+
 func checkPreStartEventCommandsValidity(initCommands []v1alpha2.Command) error {
 	for _, cmd := range initCommands {
 		commandType, err := getCommandType(cmd)
@@ -87,4 +133,13 @@ func checkPreStartEventCommandsValidity(initCommands []v1alpha2.Command) error {
 		}
 	}
 	return nil
+}
+
+func getContainerByName(name string, containers []corev1.Container) (*corev1.Container, error) {
+	for idx, container := range containers {
+		if container.Name == name {
+			return &containers[idx], nil
+		}
+	}
+	return nil, fmt.Errorf("no container with name %s defined", name)
 }

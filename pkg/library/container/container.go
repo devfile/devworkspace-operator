@@ -72,5 +72,9 @@ func GetKubeContainersFromDevfile(workspace devworkspace.DevWorkspaceTemplateSpe
 		podAdditions.InitContainers = append(podAdditions.InitContainers, *k8sContainer)
 	}
 
+	err = lifecycle.ApplyPostStartCommands(&workspace.DevWorkspaceTemplateSpecContent, podAdditions.Containers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process postStart event: %w", err)
+	}
 	return podAdditions, nil
 }

@@ -21,7 +21,11 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func FetchDevWorkspaceTemplate(location string, httpClient *http.Client) (*dw.DevWorkspaceTemplateSpec, map[string]string, error) {
+type HTTPGetter interface {
+	Get(location string) (*http.Response, error)
+}
+
+func FetchDevWorkspaceTemplate(location string, httpClient HTTPGetter) (*dw.DevWorkspaceTemplateSpec, map[string]string, error) {
 	resp, err := httpClient.Get(location)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to fetch file from %s: %w", location, err)

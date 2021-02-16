@@ -16,6 +16,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
+	"path"
+
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
 
@@ -33,7 +37,7 @@ type ResolverTools struct {
 	Context           context.Context
 	K8sClient         client.Client
 	InternalRegistry  registry.InternalRegistry
-	HttpClient        http.Client
+	HttpClient        *http.Client
 }
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
@@ -117,7 +121,7 @@ func resolvePluginComponent(
 		}
 		resolvedPlugin, pluginMeta, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
 	case plugin.Uri != "":
-		err = fmt.Errorf("failed to resolve plugin %s: only plugins specified by kubernetes reference or id are supported", name)
+		resolvedPlugin, pluginMeta, err = resolvePluginComponentByURI(name, plugin, tooling)
 	case plugin.Id != "":
 		resolvedPlugin, pluginMeta, err = resolvePluginComponentById(name, plugin, tooling)
 	default:
@@ -181,5 +185,27 @@ func resolvePluginComponentById(
 		return &pluginDWT.Spec, pluginDWT.Labels, nil
 	}
 
-	return nil, nil, fmt.Errorf("non-internal plugins not supported")
+	pluginURL, err := url.Parse(plugin.RegistryUrl)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to parse registry URL for plugin %s: %w", name, err)
+	}
+	pluginURL.Path = path.Join(pluginURL.Path, "plugins", plugin.Id)
+
+	dwt, labels, err := network.FetchDevWorkspaceTemplate(pluginURL.String(), tools.HttpClient)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve plugin %s from registry %s: %w", name, plugin.RegistryUrl, err)
+	}
+	return dwt, labels, nil
+}
+
+func resolvePluginComponentByURI(
+	name string,
+	plugin *devworkspace.PluginComponent,
+	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
+
+	dwt, labels, err := network.FetchDevWorkspaceTemplate(plugin.Uri, tools.HttpClient)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to resolve plugin %s by URI: %w", name, err)
+	}
+	return dwt, labels, nil
 }

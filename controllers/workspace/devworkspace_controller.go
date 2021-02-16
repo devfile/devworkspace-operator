@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -182,6 +183,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		Context:           ctx,
 		K8sClient:         r.Client,
 		InternalRegistry:  &registry.InternalRegistryImpl{},
+		HttpClient:        http.DefaultClient,
 	}
 	flattenedWorkspace, err := flatten.ResolveDevWorkspace(workspace.Spec.Template, flattenHelpers)
 	if err != nil {

@@ -15,18 +15,14 @@ package flatten
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"path"
 
-	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
-
-	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
-
-	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
-
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
+	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,7 +33,7 @@ type ResolverTools struct {
 	Context           context.Context
 	K8sClient         client.Client
 	InternalRegistry  registry.InternalRegistry
-	HttpClient        *http.Client
+	HttpClient        network.HTTPGetter
 }
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents

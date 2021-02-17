@@ -18,7 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"sigs.k8s.io/yaml"
 

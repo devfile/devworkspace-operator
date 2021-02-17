@@ -17,14 +17,14 @@
 // - Devfile API spec is unclear on how mountSources should be handled -- mountPath is assumed to be /projects
 //   and volume name is assumed to be "projects"
 //   see issues:
-//     - https://github.com/devfile/api/issues/290
-//     - https://github.com/devfile/api/issues/291
+//     - https://github.com/devfile/api/v2/issues/290
+//     - https://github.com/devfile/api/v2/issues/291
 package container
 
 import (
 	"fmt"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"

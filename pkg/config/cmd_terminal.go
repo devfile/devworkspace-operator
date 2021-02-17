@@ -17,7 +17,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"sigs.k8s.io/yaml"
 )

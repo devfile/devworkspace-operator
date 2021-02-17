@@ -20,8 +20,8 @@ import (
 
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/api/pkg/utils/overriding"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,7 +34,7 @@ type ResolverTools struct {
 	InternalRegistry  registry.InternalRegistry
 }
 
-// TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/issues/296
+// TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/v2/issues/296
 type tempOverrides struct {
 	devworkspace.PluginOverrides
 }
@@ -107,7 +107,7 @@ func recursiveResolve(workspace devworkspace.DevWorkspaceTemplateSpec, tooling R
 	}
 
 	// TODO: Temp workaround for issue in devfile API: can't pass in nil for parentFlattenedContent
-	// see: https://github.com/devfile/api/issues/295
+	// see: https://github.com/devfile/api/v2/issues/295
 	resolvedContent, err := overriding.MergeDevWorkspaceTemplateSpec(resolvedContent, &devworkspace.DevWorkspaceTemplateSpecContent{}, pluginSpecContents...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge DevWorkspace parents/plugins: %w", err)
@@ -142,7 +142,7 @@ func resolvePluginComponent(
 	}
 
 	if plugin.Components != nil || plugin.Commands != nil {
-		// TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/issues/296
+		// TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/v2/issues/296
 		//overrideSpec, err := overriding.OverrideDevWorkspaceTemplateSpec(&resolvedPlugin.DevWorkspaceTemplateSpecContent, devworkspace.PluginOverrides{
 		//	Components: plugin.Components,
 		//	Commands:   plugin.Commands,

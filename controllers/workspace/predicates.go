@@ -13,7 +13,7 @@
 package controllers
 
 import (
-	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"

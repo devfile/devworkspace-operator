@@ -98,9 +98,6 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.WorkspaceRoutin
 }
 
 func (_ *SolverGetter) GetSolver(client client.Client, routingClass controllerv1alpha1.WorkspaceRoutingClass) (RoutingSolver, error) {
-	if routingClass == "" {
-		routingClass = controllerv1alpha1.WorkspaceRoutingClass(config.ControllerCfg.GetDefaultRoutingClass())
-	}
 	switch routingClass {
 	case controllerv1alpha1.WorkspaceRoutingBasic:
 		return &BasicSolver{}, nil

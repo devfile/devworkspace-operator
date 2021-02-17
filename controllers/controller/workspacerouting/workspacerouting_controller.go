@@ -80,6 +80,11 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	reqLogger = reqLogger.WithValues(config.WorkspaceIDLoggerKey, instance.Spec.WorkspaceId)
 	reqLogger.Info("Reconciling WorkspaceRouting")
 
+	if instance.Spec.RoutingClass == "" {
+		reqLogger.Info("workspace routing without an explicit routing class is invalid", "name", instance.Name, "namespace", instance.Namespace)
+		return reconcile.Result{}, r.markRoutingFailed(instance)
+	}
+
 	solver, err := r.SolverGetter.GetSolver(r.Client, instance.Spec.RoutingClass)
 	if err != nil {
 		if errors.Is(err, solvers.RoutingNotSupported) {

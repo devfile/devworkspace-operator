@@ -1,0 +1,12 @@
+name: "Error when parsing registryURL"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          id: my/test/plugin
+          registryUrl: ":/test-registry.io/subpath"
+
+output:
+  errRegexp: "failed to parse registry URL for plugin test-plugin"

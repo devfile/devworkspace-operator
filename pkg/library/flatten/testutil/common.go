@@ -13,7 +13,6 @@
 package testutil
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
@@ -21,6 +20,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
@@ -63,13 +63,19 @@ type TestInput struct {
 	Workspace dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
 	// Plugins is a map of plugin "name" to devworkspace template; namespace is ignored.
 	Plugins map[string]dw.DevWorkspaceTemplate `json:"plugins,omitempty"`
+	// DevfilePlugins is a map of plugin "name" to devfile
+	DevfilePlugins map[string]network.Devfile `json:"devfilePlugins,omitempty"`
 	// Errors is a map of plugin name to the error that should be returned when attempting to retrieve it.
 	Errors map[string]TestPluginError `json:"errors,omitempty"`
 }
 
 type TestPluginError struct {
-	IsNotFound bool   `json:"isNotFound"`
-	Message    string `json:"message"`
+	// IsNotFound marks this error as a kubernetes NotFoundError
+	IsNotFound bool `json:"isNotFound"`
+	// StatusCode defines the HTTP response code (if relevant)
+	StatusCode int `json:"statusCode"`
+	// Message is the error message returned
+	Message string `json:"message"`
 }
 
 type TestOutput struct {
@@ -86,7 +92,6 @@ func LoadTestCaseOrPanic(t *testing.T, testFilepath string) TestCase {
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
-	t.Log(fmt.Sprintf("Read file:\n%+v\n\n", test))
 	return test
 }
 

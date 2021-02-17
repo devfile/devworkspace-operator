@@ -1,0 +1,21 @@
+name: "DevWorkspace references plugin with invalid schemaVersion"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          uri: https://test-registry.io/old-devfiles
+  devfilePlugins:
+    "https://test-registry.io/old-devfiles":
+      schemaVersion: 1.0.0
+      metadata:
+        name: "plugin-a"
+      components:
+        - name: plugin-a
+          container:
+            name: test-container
+            image: test-image
+
+output:
+  errRegexp: "could not process devfile: supported schemaVersion is .*"

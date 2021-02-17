@@ -1,0 +1,14 @@
+name: "Plugin not found in at URI"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          uri: "https://test-registry.io/notfound"
+  errors:
+    "https://test-registry.io/notfound":
+      statusCode: 404
+
+output:
+  errRegexp: "could not fetch file from.*got status 404"

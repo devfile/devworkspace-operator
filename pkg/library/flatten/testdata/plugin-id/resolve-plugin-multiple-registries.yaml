@@ -1,0 +1,44 @@
+name: "DevWorkspace references plugins from multiple plugin registries"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          id: my/test/plugin
+          registryUrl: "https://test-registry.io/subpath"
+      - name: test-plugin-2
+        plugin:
+          id: my/test/plugin-2
+          registryUrl: "https://test-registry-2.io/subpath"
+  devfilePlugins:
+    "https://test-registry.io/subpath/plugins/my/test/plugin":
+      schemaVersion: 2.0.0
+      metadata:
+        name: "plugin-a"
+      components:
+        - name: plugin-a
+          container:
+            name: test-container
+            image: test-image
+    "https://test-registry-2.io/subpath/plugins/my/test/plugin-2":
+      schemaVersion: 2.0.0
+      metadata:
+        name: "plugin-b"
+      components:
+        - name: plugin-b
+          container:
+            name: test-container-b
+            image: test-image
+
+output:
+  workspace:
+    components:
+      - name: plugin-a
+        container:
+          name: test-container
+          image: test-image
+      - name: plugin-b
+        container:
+          name: test-container-b
+          image: test-image

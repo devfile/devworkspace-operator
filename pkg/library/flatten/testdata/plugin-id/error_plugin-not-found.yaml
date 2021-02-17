@@ -1,0 +1,15 @@
+name: "Plugin not found in registry"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          id: my/test/plugin
+          registryUrl: "https://test-registry.io/subpath"
+  errors:
+    "https://test-registry.io/subpath/plugins/my/test/plugin":
+      statusCode: 404
+
+output:
+  errRegexp: "could not fetch file from.*got status 404"

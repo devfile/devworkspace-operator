@@ -1,0 +1,14 @@
+name: "Error when fetching plugin"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          uri: https://test-registry.io/error
+  errors:
+    "https://test-registry.io/error":
+      message: "testing error"
+
+output:
+  errRegexp: "failed to fetch file from.*testing error"

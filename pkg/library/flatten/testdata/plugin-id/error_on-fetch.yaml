@@ -1,0 +1,15 @@
+name: "Error when fetching plugin"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          id: my/test/plugin
+          registryUrl: "https://test-registry.io/subpath"
+  errors:
+    "https://test-registry.io/subpath/plugins/my/test/plugin":
+      message: "testing error"
+
+output:
+  errRegexp: "failed to fetch file from.*testing error"

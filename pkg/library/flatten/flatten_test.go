@@ -80,3 +80,63 @@ func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
+	tests := testutil.LoadAllTestsOrPanic(t, "testdata/plugin-id")
+	testutil.SetupControllerCfg()
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			// sanity check: input defines components
+			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			testHttpGetter := &testutil.FakeHTTPGetter{
+				Plugins: tt.Input.DevfilePlugins,
+				Errors:  tt.Input.Errors,
+			}
+			testResolverTools := ResolverTools{
+				Context:    context.Background(),
+				HttpClient: testHttpGetter,
+			}
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
+				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
+			} else {
+				if !assert.NoError(t, err, "Should not return error") {
+					return
+				}
+				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"Workspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+			}
+		})
+	}
+}
+
+func TestResolveDevWorkspacePluginURI(t *testing.T) {
+	tests := testutil.LoadAllTestsOrPanic(t, "testdata/plugin-uri")
+	testutil.SetupControllerCfg()
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			// sanity check: input defines components
+			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			testHttpGetter := &testutil.FakeHTTPGetter{
+				Plugins: tt.Input.DevfilePlugins,
+				Errors:  tt.Input.Errors,
+			}
+			testResolverTools := ResolverTools{
+				Context:    context.Background(),
+				HttpClient: testHttpGetter,
+			}
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
+				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
+			} else {
+				if !assert.NoError(t, err, "Should not return error") {
+					return
+				}
+				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"Workspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+			}
+		})
+	}
+}

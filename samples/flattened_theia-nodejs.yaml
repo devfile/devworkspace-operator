@@ -231,7 +231,7 @@ spec:
           component: nodejs
           commandLine: nodemon app.js
           workingDir: ${PROJECTS_ROOT}/project/app
-      - id: run-the-app-(debugging-enabled)
+      - id: run-the-app-debugging-enabled
         exec:
           component: nodejs
           commandLine: nodemon --inspect app.js

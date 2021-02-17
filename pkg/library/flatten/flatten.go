@@ -34,20 +34,6 @@ type ResolverTools struct {
 	InternalRegistry  registry.InternalRegistry
 }
 
-// TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/v2/issues/296
-type tempOverrides struct {
-	devworkspace.PluginOverrides
-}
-
-func (t tempOverrides) GetToplevelLists() devworkspace.TopLevelLists {
-	base := t.PluginOverrides.GetToplevelLists()
-	base["Projects"] = []devworkspace.Keyed{}
-	base["StarterProjects"] = []devworkspace.Keyed{}
-	return base
-}
-
-// END WORKAROUND
-
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
 // are inlined as components.
 // TODO:
@@ -106,9 +92,7 @@ func recursiveResolve(workspace devworkspace.DevWorkspaceTemplateSpec, tooling R
 		}
 	}
 
-	// TODO: Temp workaround for issue in devfile API: can't pass in nil for parentFlattenedContent
-	// see: https://github.com/devfile/api/v2/issues/295
-	resolvedContent, err := overriding.MergeDevWorkspaceTemplateSpec(resolvedContent, &devworkspace.DevWorkspaceTemplateSpecContent{}, pluginSpecContents...)
+	resolvedContent, err := overriding.MergeDevWorkspaceTemplateSpec(resolvedContent, nil, pluginSpecContents...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to merge DevWorkspace parents/plugins: %w", err)
 	}
@@ -142,16 +126,9 @@ func resolvePluginComponent(
 	}
 
 	if plugin.Components != nil || plugin.Commands != nil {
-		// TODO: temp workaround for panic in devfile/api when using plugin overrides. See: https://github.com/devfile/api/v2/issues/296
-		//overrideSpec, err := overriding.OverrideDevWorkspaceTemplateSpec(&resolvedPlugin.DevWorkspaceTemplateSpecContent, devworkspace.PluginOverrides{
-		//	Components: plugin.Components,
-		//	Commands:   plugin.Commands,
-		//})
-		overrideSpec, err := overriding.OverrideDevWorkspaceTemplateSpec(&resolvedPlugin.DevWorkspaceTemplateSpecContent, tempOverrides{
-			PluginOverrides: devworkspace.PluginOverrides{
-				Components: plugin.Components,
-				Commands:   plugin.Commands,
-			},
+		overrideSpec, err := overriding.OverrideDevWorkspaceTemplateSpec(&resolvedPlugin.DevWorkspaceTemplateSpecContent, devworkspace.PluginOverrides{
+			Components: plugin.Components,
+			Commands:   plugin.Commands,
 		})
 
 		if err != nil {

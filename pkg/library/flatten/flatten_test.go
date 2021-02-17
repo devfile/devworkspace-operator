@@ -16,7 +16,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/devfile/devworkspace-operator/pkg/library/flatten/testutil"
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten/internal/testutil"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"

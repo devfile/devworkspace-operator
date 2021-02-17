@@ -13,7 +13,7 @@
 package container
 
 import (
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/library/constants"
 	corev1 "k8s.io/api/core/v1"
@@ -43,7 +43,7 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devwor
 	var sourceMapping string
 	if vm := getProjectsVolumeMount(k8sContainer); vm != nil {
 		// Container already mounts projects volume; need to set env vars according to mountPath
-		// TODO: see issue https://github.com/devfile/api/issues/290
+		// TODO: see issue https://github.com/devfile/api/v2/issues/290
 		sourceMapping = vm.MountPath
 	} else {
 		sourceMapping = devfileContainer.SourceMapping

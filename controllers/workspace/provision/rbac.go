@@ -13,7 +13,7 @@
 package provision
 
 import (
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"

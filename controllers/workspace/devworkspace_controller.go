@@ -45,7 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
 type currentStatus struct {

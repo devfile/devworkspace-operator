@@ -25,7 +25,7 @@ import (
 	"os"
 	"regexp"
 
-	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 

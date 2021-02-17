@@ -20,7 +20,7 @@ import (
 
 	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
 
-	"github.com/devfile/api/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/common"

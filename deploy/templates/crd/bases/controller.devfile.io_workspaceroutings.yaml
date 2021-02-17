@@ -67,6 +67,8 @@ spec:
                             - none
                           type: string
                         name:
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         path:
                           description: Path of the endpoint URL
@@ -90,13 +92,16 @@ spec:
                             \ application protocol. \n Default value is `http`"
                           enum:
                             - http
+                            - https
                             - ws
+                            - wss
                             - tcp
                             - udp
                           type: string
                         secure:
                           description: Describes whether the endpoint should be secured
-                            and protected by some authentication process
+                            and protected by some authentication process. This requires
+                            a protocol of `https` or `wss`.
                           type: boolean
                         targetPort:
                           type: integer

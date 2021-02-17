@@ -80,7 +80,9 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *devworkspace.D
 		return strings.Compare(string(workspace.Status.Conditions[i].Type), string(workspace.Status.Conditions[j].Type)) > 0
 	})
 	infoMessage := getInfoMessage(workspace, status.Conditions)
-	workspace.Status.Message = infoMessage
+	if workspace.Status.Message != infoMessage {
+		workspace.Status.Message = infoMessage
+	}
 
 	err := r.Status().Update(context.TODO(), workspace)
 	if err != nil {
@@ -142,18 +144,29 @@ func getIdeUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string 
 }
 
 func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devworkspace.WorkspaceConditionType]string) string {
-	var failedStartMsg string
-	for conditionType, conditionMessage := range conditions {
-		switch conditionType {
-		// Take error condition message as overriding failed start message
-		case devworkspace.WorkspaceError:
-			return conditionMessage
-		case devworkspace.WorkspaceFailedStart:
-			failedStartMsg = conditionMessage
-		}
+	// Check for errors and failure
+	if msg, ok := conditions[devworkspace.WorkspaceError]; ok {
+		return msg
 	}
-	if failedStartMsg != "" {
-		return failedStartMsg
+	if msg, ok := conditions[devworkspace.WorkspaceFailedStart]; ok {
+		return msg
 	}
-	return workspace.Status.IdeUrl
+	// Use ideUrl when workspace is running
+	if workspace.Status.Phase == devworkspace.WorkspaceStatusRunning {
+		return workspace.Status.IdeUrl
+	}
+	// Check for progress
+	if _, ok := conditions[devworkspace.WorkspaceReady]; ok {
+		return "Waiting on editor to start"
+	}
+	if _, ok := conditions[devworkspace.WorkspaceServiceAccountReady]; ok {
+		return "Waiting for deployment to be ready"
+	}
+	if _, ok := conditions[devworkspace.WorkspaceRoutingReady]; ok {
+		return "Waiting for workspace serviceaccount"
+	}
+	if _, ok := conditions[devworkspace.WorkspaceComponentsReady]; ok {
+		return "Waiting for workspace routing objects"
+	}
+	return "Processing DevWorkspace components"
 }

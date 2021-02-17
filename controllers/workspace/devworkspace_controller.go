@@ -215,7 +215,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile for Theia: %s", err)
 		return reconcile.Result{}, nil
 	}
-	reconcileStatus.Conditions[devworkspace.WorkspaceReady] = ""
+	reconcileStatus.Conditions[devworkspace.WorkspaceComponentsReady] = ""
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 
 	// Only add che rest apis if Theia editor is present in the devfile

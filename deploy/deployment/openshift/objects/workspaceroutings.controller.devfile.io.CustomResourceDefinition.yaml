@@ -52,6 +52,8 @@ spec:
                         - none
                         type: string
                       name:
+                        maxLength: 63
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         type: string
                       path:
                         description: Path of the endpoint URL
@@ -61,12 +63,14 @@ spec:
                         description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                         enum:
                         - http
+                        - https
                         - ws
+                        - wss
                         - tcp
                         - udp
                         type: string
                       secure:
-                        description: Describes whether the endpoint should be secured and protected by some authentication process
+                        description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                         type: boolean
                       targetPort:
                         type: integer

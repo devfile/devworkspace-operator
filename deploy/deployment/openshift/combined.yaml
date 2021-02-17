@@ -203,6 +203,8 @@ spec:
                       type: object
                     id:
                       description: Mandatory identifier that allows referencing this command in composite commands, from a parent, or in events.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     vscodeLaunch:
                       description: Command providing the definition of a VsCode launch action
@@ -307,6 +309,10 @@ spec:
                           items:
                             type: string
                           type: array
+                        cpuLimit:
+                          type: string
+                        cpuRequest:
+                          type: string
                         dedicatedPod:
                           description: "Specify if a container should run in its own separated pod, instead of running as part of the main development environment pod. \n Default value is `false`"
                           type: boolean
@@ -328,6 +334,8 @@ spec:
                                 - none
                                 type: string
                               name:
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: Path of the endpoint URL
@@ -337,12 +345,14 @@ spec:
                                 description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                                 enum:
                                 - http
+                                - https
                                 - ws
+                                - wss
                                 - tcp
                                 - udp
                                 type: string
                               secure:
-                                description: Describes whether the endpoint should be secured and protected by some authentication process
+                                description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                                 type: boolean
                               targetPort:
                                 type: integer
@@ -368,6 +378,8 @@ spec:
                           type: string
                         memoryLimit:
                           type: string
+                        memoryRequest:
+                          type: string
                         mountSources:
                           description: "Toggles whether or not the project source code should be mounted in the component. \n Defaults to true for all component types except plugins and components that set `dedicatedPod` to true."
                           type: boolean
@@ -382,6 +394,8 @@ spec:
                             properties:
                               name:
                                 description: The volume mount name is the name of an existing `Volume` component. If several containers mount the same volume name then they will reuse the same volume and will be able to access to the same files.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: The path in the component container where the volume should be mounted. If not path is mentioned, default path is the is `/<name>`.
@@ -429,6 +443,8 @@ spec:
                                 - none
                                 type: string
                               name:
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: Path of the endpoint URL
@@ -438,12 +454,14 @@ spec:
                                 description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                                 enum:
                                 - http
+                                - https
                                 - ws
+                                - wss
                                 - tcp
                                 - udp
                                 type: string
                               secure:
-                                description: Describes whether the endpoint should be secured and protected by some authentication process
+                                description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                                 type: boolean
                               targetPort:
                                 type: integer
@@ -467,6 +485,8 @@ spec:
                       type: object
                     name:
                       description: Mandatory name that allows referencing the component from other elements (such as commands) or from an external devfile that may reference this component through a parent or a plugin.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     openshift:
                       description: Allows importing into the workspace the OpenShift resources defined in a given manifest. For example this allows reusing the OpenShift definitions used to deploy some runtime components in production.
@@ -489,6 +509,8 @@ spec:
                                 - none
                                 type: string
                               name:
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: Path of the endpoint URL
@@ -498,12 +520,14 @@ spec:
                                 description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                                 enum:
                                 - http
+                                - https
                                 - ws
+                                - wss
                                 - tcp
                                 - udp
                                 type: string
                               secure:
-                                description: Describes whether the endpoint should be secured and protected by some authentication process
+                                description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                                 type: boolean
                               targetPort:
                                 type: integer
@@ -557,6 +581,12 @@ spec:
                                     description: Optional label that provides a label for this command to be used in Editor UI menus for example
                                     type: string
                                 type: object
+                              attributes:
+                                additionalProperties:
+                                  x-kubernetes-preserve-unknown-fields: true
+                                description: Map of implementation-dependant free-form YAML attributes.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
                               commandType:
                                 description: Type of workspace command
                                 enum:
@@ -644,6 +674,8 @@ spec:
                                 type: object
                               id:
                                 description: Mandatory identifier that allows referencing this command in composite commands, from a parent, or in events.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               vscodeLaunch:
                                 description: Command providing the definition of a VsCode launch action
@@ -715,6 +747,12 @@ spec:
                           description: Overrides of components encapsulated in a parent devfile or a plugin. Overriding is done according to K8S strategic merge patch standard rules.
                           items:
                             properties:
+                              attributes:
+                                additionalProperties:
+                                  x-kubernetes-preserve-unknown-fields: true
+                                description: Map of implementation-dependant free-form YAML attributes.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
                               componentType:
                                 description: Type of component
                                 enum:
@@ -736,6 +774,10 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  cpuLimit:
+                                    type: string
+                                  cpuRequest:
+                                    type: string
                                   dedicatedPod:
                                     description: "Specify if a container should run in its own separated pod, instead of running as part of the main development environment pod. \n Default value is `false`"
                                     type: boolean
@@ -756,6 +798,8 @@ spec:
                                           - none
                                           type: string
                                         name:
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: Path of the endpoint URL
@@ -764,12 +808,14 @@ spec:
                                           description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                                           enum:
                                           - http
+                                          - https
                                           - ws
+                                          - wss
                                           - tcp
                                           - udp
                                           type: string
                                         secure:
-                                          description: Describes whether the endpoint should be secured and protected by some authentication process
+                                          description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
                                           type: integer
@@ -793,6 +839,8 @@ spec:
                                     type: string
                                   memoryLimit:
                                     type: string
+                                  memoryRequest:
+                                    type: string
                                   mountSources:
                                     description: "Toggles whether or not the project source code should be mounted in the component. \n Defaults to true for all component types except plugins and components that set `dedicatedPod` to true."
                                     type: boolean
@@ -806,6 +854,8 @@ spec:
                                       properties:
                                         name:
                                           description: The volume mount name is the name of an existing `Volume` component. If several containers mount the same volume name then they will reuse the same volume and will be able to access to the same files.
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: The path in the component container where the volume should be mounted. If not path is mentioned, default path is the is `/<name>`.
@@ -835,6 +885,8 @@ spec:
                                           - none
                                           type: string
                                         name:
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: Path of the endpoint URL
@@ -843,12 +895,14 @@ spec:
                                           description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                                           enum:
                                           - http
+                                          - https
                                           - ws
+                                          - wss
                                           - tcp
                                           - udp
                                           type: string
                                         secure:
-                                          description: Describes whether the endpoint should be secured and protected by some authentication process
+                                          description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
                                           type: integer
@@ -871,6 +925,8 @@ spec:
                                 type: object
                               name:
                                 description: Mandatory name that allows referencing the component from other elements (such as commands) or from an external devfile that may reference this component through a parent or a plugin.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               openshift:
                                 description: Allows importing into the workspace the OpenShift resources defined in a given manifest. For example this allows reusing the OpenShift definitions used to deploy some runtime components in production.
@@ -892,6 +948,8 @@ spec:
                                           - none
                                           type: string
                                         name:
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: Path of the endpoint URL
@@ -900,12 +958,14 @@ spec:
                                           description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                                           enum:
                                           - http
+                                          - https
                                           - ws
+                                          - wss
                                           - tcp
                                           - udp
                                           type: string
                                         secure:
-                                          description: Describes whether the endpoint should be secured and protected by some authentication process
+                                          description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
                                           type: integer
@@ -929,6 +989,9 @@ spec:
                               volume:
                                 description: Allows specifying the definition of a volume shared by several other components
                                 properties:
+                                  ephemeral:
+                                    description: Ephemeral volumes are not stored persistently across restarts. Defaults to false
+                                    type: boolean
                                   size:
                                     description: Size of the volume
                                     type: string
@@ -966,6 +1029,9 @@ spec:
                     volume:
                       description: Allows specifying the definition of a volume shared by several other components
                       properties:
+                        ephemeral:
+                          description: Ephemeral volumes are not stored persistently across restarts. Defaults to false
+                          type: boolean
                         size:
                           description: Size of the volume
                           type: string
@@ -1077,6 +1143,8 @@ spec:
                                 - none
                                 type: string
                               name:
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: Path of the endpoint URL
@@ -1086,12 +1154,14 @@ spec:
                                 description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                                 enum:
                                 - http
+                                - https
                                 - ws
+                                - wss
                                 - tcp
                                 - udp
                                 type: string
                               secure:
-                                description: Describes whether the endpoint should be secured and protected by some authentication process
+                                description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                                 type: boolean
                               targetPort:
                                 type: integer
@@ -14030,6 +14100,8 @@ spec:
                         - none
                         type: string
                       name:
+                        maxLength: 63
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         type: string
                       path:
                         description: Path of the endpoint URL
@@ -14039,12 +14111,14 @@ spec:
                         description: "Describes the application and transport protocols of the traffic that will go through this endpoint. \n - `http`: Endpoint will have `http` traffic, typically on a TCP connection. It will be automaticaly promoted to `https` when the `secure` field is set to `true`. \n - `https`: Endpoint will have `https` traffic, typically on a TCP connection. \n - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection. It will be automaticaly promoted to `wss` when the `secure` field is set to `true`. \n - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection. \n - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol. \n - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol. \n Default value is `http`"
                         enum:
                         - http
+                        - https
                         - ws
+                        - wss
                         - tcp
                         - udp
                         type: string
                       secure:
-                        description: Describes whether the endpoint should be secured and protected by some authentication process
+                        description: Describes whether the endpoint should be secured and protected by some authentication process. This requires a protocol of `https` or `wss`.
                         type: boolean
                       targetPort:
                         type: integer

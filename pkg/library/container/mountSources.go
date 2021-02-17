@@ -43,7 +43,7 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devwor
 	var sourceMapping string
 	if vm := getProjectsVolumeMount(k8sContainer); vm != nil {
 		// Container already mounts projects volume; need to set env vars according to mountPath
-		// TODO: see issue https://github.com/devfile/api/v2/issues/290
+		// TODO: see issue https://github.com/devfile/api/issues/290
 		sourceMapping = vm.MountPath
 	} else {
 		sourceMapping = devfileContainer.SourceMapping

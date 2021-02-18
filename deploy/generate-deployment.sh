@@ -69,7 +69,7 @@ done
 
 if $USE_DEFAULT_ENV; then
   echo "Using defaults for environment variables"
-  export NAMESPACE=devworkspace-controller
+  export NAMESPACE=openshift-operators
   export IMG=quay.io/devfile/devworkspace-controller:next
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic

@@ -17,7 +17,7 @@ ifndef VERBOSE
 MAKEFLAGS += --silent
 endif
 
-export NAMESPACE ?= devworkspace-controller
+export NAMESPACE ?= openshift-operators
 export IMG ?= quay.io/devfile/devworkspace-controller:next
 export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always

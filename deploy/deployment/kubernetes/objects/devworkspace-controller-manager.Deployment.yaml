@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
   name: devworkspace-controller-manager
-  namespace: devworkspace-controller
+  namespace: openshift-operators
 spec:
   replicas: 1
   selector:

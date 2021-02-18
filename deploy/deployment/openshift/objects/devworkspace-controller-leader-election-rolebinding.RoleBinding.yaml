@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
   name: devworkspace-controller-leader-election-rolebinding
-  namespace: devworkspace-controller
+  namespace: openshift-operators
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -13,4 +13,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: devworkspace-controller-serviceaccount
-  namespace: devworkspace-controller
+  namespace: openshift-operators

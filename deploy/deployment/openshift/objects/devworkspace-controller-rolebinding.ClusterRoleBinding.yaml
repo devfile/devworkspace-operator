@@ -12,4 +12,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: devworkspace-controller-serviceaccount
-  namespace: devworkspace-controller
+  namespace: openshift-operators

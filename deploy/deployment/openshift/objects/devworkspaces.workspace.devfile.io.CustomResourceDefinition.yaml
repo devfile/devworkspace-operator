@@ -15,7 +15,7 @@ spec:
         caBundle: Cg==
         service:
           name: devworkspace-webhookserver
-          namespace: devworkspace-controller
+          namespace: openshift-operators
           path: /convert
       conversionReviewVersions:
       - v1

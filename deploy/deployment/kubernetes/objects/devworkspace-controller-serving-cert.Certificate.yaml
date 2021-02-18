@@ -5,11 +5,11 @@ metadata:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
   name: devworkspace-controller-serving-cert
-  namespace: devworkspace-controller
+  namespace: openshift-operators
 spec:
   dnsNames:
-  - devworkspace-webhookserver.devworkspace-controller.svc
-  - devworkspace-webhookserver.devworkspace-controller.svc.cluster.local
+  - devworkspace-webhookserver.openshift-operators.svc
+  - devworkspace-webhookserver.openshift-operators.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: devworkspace-controller-selfsigned-issuer

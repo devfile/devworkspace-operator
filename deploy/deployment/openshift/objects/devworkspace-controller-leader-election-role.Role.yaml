@@ -5,7 +5,7 @@ metadata:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
   name: devworkspace-controller-leader-election-role
-  namespace: devworkspace-controller
+  namespace: openshift-operators
 rules:
 - apiGroups:
   - ""

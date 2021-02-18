@@ -57,6 +57,9 @@ const (
 	// as opposed to a service created to support the workspace itself.
 	WorkspaceDiscoverableServiceAnnotation = "controller.devfile.io/discoverable-service"
 
+	// Stopped by Annotation holds the information as to why a workspace has stopped
+	StoppedByAnnotation = "controller.devfile.io/stopped-by"
+
 	// ControllerServiceAccountNameEnvVar stores the name of the serviceaccount used in the controller.
 	ControllerServiceAccountNameEnvVar = "CONTROLLER_SERVICE_ACCOUNT_NAME"
 )

@@ -151,10 +151,13 @@ func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devwork
 	if msg, ok := conditions[devworkspace.WorkspaceFailedStart]; ok {
 		return msg
 	}
-	// Use ideUrl when workspace is running
-	if workspace.Status.Phase == devworkspace.WorkspaceStatusRunning {
+	switch workspace.Status.Phase {
+	case devworkspace.WorkspaceStatusRunning:
 		return workspace.Status.IdeUrl
+	case devworkspace.WorkspaceStatusStopped, devworkspace.WorkspaceStatusStopping:
+		return string(workspace.Status.Phase)
 	}
+
 	// Check for progress
 	if _, ok := conditions[devworkspace.WorkspaceReady]; ok {
 		return "Waiting on editor to start"

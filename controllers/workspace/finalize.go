@@ -63,6 +63,12 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	if !hasFinalizer(workspace) {
 		return reconcile.Result{}, nil
 	}
+	workspace.Status.Message = "Cleaning up resources for deletion"
+	err := r.Client.Status().Update(ctx, workspace)
+	if err != nil && !k8sErrors.IsConflict(err) {
+		return reconcile.Result{}, err
+	}
+
 	// Need to make sure Deployment is cleaned up before starting job to avoid mounting issues for RWO PVCs
 	wait, err := provision.DeleteWorkspaceDeployment(ctx, workspace, r.Client)
 	if err != nil {

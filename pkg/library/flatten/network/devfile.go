@@ -14,14 +14,13 @@ package network
 
 import (
 	"fmt"
+	"regexp"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilev2 "github.com/devfile/api/v2/pkg/devfile"
 )
 
-const (
-	SupportedDevfileSchemaVersion = "2.0.0" // TODO what should this actually be at this point?
-)
+var SupportedSchemaVersionRegexp = regexp.MustCompile(`^2\..+`)
 
 type Devfile struct {
 	devfilev2.DevfileHeader
@@ -29,8 +28,8 @@ type Devfile struct {
 }
 
 func ConvertDevfileToDevWorkspaceTemplate(devfile *Devfile) (*dw.DevWorkspaceTemplate, error) {
-	if devfile.SchemaVersion != SupportedDevfileSchemaVersion {
-		return nil, fmt.Errorf("could not process devfile: supported schemaVersion is %s", SupportedDevfileSchemaVersion)
+	if !SupportedSchemaVersionRegexp.MatchString(devfile.SchemaVersion) {
+		return nil, fmt.Errorf("could not process devfile: unsupported schemaVersion '%s'", devfile.SchemaVersion)
 	}
 	dwt := &dw.DevWorkspaceTemplate{}
 	dwt.Spec = devfile.DevWorkspaceTemplateSpec

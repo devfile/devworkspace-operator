@@ -24,7 +24,6 @@ import (
 type resolutionContextTree struct {
 	componentName   string
 	importReference devworkspace.ImportReference
-	pluginMetadata  map[string]string
 	plugins         []*resolutionContextTree
 	parentNode      *resolutionContextTree
 }

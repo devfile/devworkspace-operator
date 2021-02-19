@@ -25,31 +25,31 @@ type HTTPGetter interface {
 	Get(location string) (*http.Response, error)
 }
 
-func FetchDevWorkspaceTemplate(location string, httpClient HTTPGetter) (*dw.DevWorkspaceTemplateSpec, map[string]string, error) {
+func FetchDevWorkspaceTemplate(location string, httpClient HTTPGetter) (*dw.DevWorkspaceTemplateSpec, error) {
 	resp, err := httpClient.Get(location)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch file from %s: %w", location, err)
+		return nil, fmt.Errorf("failed to fetch file from %s: %w", location, err)
 	}
 	defer resp.Body.Close() // ignoring error because what would we even do?
 	if resp.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("could not fetch file from %s: got status %d", location, resp.StatusCode)
+		return nil, fmt.Errorf("could not fetch file from %s: got status %d", location, resp.StatusCode)
 	}
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not read data from %s: %w", location, err)
+		return nil, fmt.Errorf("could not read data from %s: %w", location, err)
 	}
 
 	// Assume we're getting a devfile, not a DevWorkspaceTemplate (TODO: Detect type and handle both?)
 	devfile := &Devfile{}
 	err = yaml.Unmarshal(bytes, devfile)
 	if err != nil {
-		return nil, nil, fmt.Errorf("could not unmarshal devfile from response: %w", err)
+		return nil, fmt.Errorf("could not unmarshal devfile from response: %w", err)
 	}
 
 	dwt, err := ConvertDevfileToDevWorkspaceTemplate(devfile)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to convert devfile to DevWorkspaceTemplate: %s", err)
+		return nil, fmt.Errorf("failed to convert devfile to DevWorkspaceTemplate: %s", err)
 	}
 
-	return &dwt.Spec, dwt.Labels, nil
+	return &dwt.Spec, nil
 }

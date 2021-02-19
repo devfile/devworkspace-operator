@@ -76,12 +76,11 @@ func recursiveResolve(workspace devworkspace.DevWorkspaceTemplateSpec, tooling R
 			// No action necessary
 			resolvedContent.Components = append(resolvedContent.Components, component)
 		} else {
-			pluginComponent, pluginMeta, err := resolvePluginComponent(component.Name, component.Plugin, tooling)
+			pluginComponent, err := resolvePluginComponent(component.Name, component.Plugin, tooling)
 			if err != nil {
 				return nil, err
 			}
 			newCtx := resolveCtx.addPlugin(component.Name, component.Plugin)
-			newCtx.pluginMetadata = pluginMeta
 			if err := newCtx.hasCycle(); err != nil {
 				return nil, err
 			}
@@ -107,7 +106,7 @@ func recursiveResolve(workspace devworkspace.DevWorkspaceTemplateSpec, tooling R
 func resolvePluginComponent(
 	name string,
 	plugin *devworkspace.PluginComponent,
-	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginMeta map[string]string, err error) {
+	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 	switch {
 	// TODO: Add support for plugin ID and URI
 	case plugin.Kubernetes != nil:
@@ -115,16 +114,16 @@ func resolvePluginComponent(
 		if plugin.Kubernetes.Namespace == "" {
 			plugin.Kubernetes.Namespace = tooling.InstanceNamespace
 		}
-		resolvedPlugin, pluginMeta, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
+		resolvedPlugin, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
 	case plugin.Uri != "":
-		resolvedPlugin, pluginMeta, err = resolvePluginComponentByURI(name, plugin, tooling)
+		resolvedPlugin, err = resolvePluginComponentByURI(name, plugin, tooling)
 	case plugin.Id != "":
-		resolvedPlugin, pluginMeta, err = resolvePluginComponentById(name, plugin, tooling)
+		resolvedPlugin, err = resolvePluginComponentById(name, plugin, tooling)
 	default:
 		err = fmt.Errorf("plugin %s does not define any resources", name)
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if plugin.Components != nil || plugin.Commands != nil {
@@ -134,17 +133,17 @@ func resolvePluginComponent(
 		})
 
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		resolvedPlugin.DevWorkspaceTemplateSpecContent = *overrideSpec
 	}
-	return resolvedPlugin, pluginMeta, nil
+	return resolvedPlugin, nil
 }
 
 func resolvePluginComponentByKubernetesReference(
 	name string,
 	plugin *devworkspace.PluginComponent,
-	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
+	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 
 	var dwTemplate devworkspace.DevWorkspaceTemplate
 	namespacedName := types.NamespacedName{
@@ -154,54 +153,54 @@ func resolvePluginComponentByKubernetesReference(
 	err = tooling.K8sClient.Get(tooling.Context, namespacedName, &dwTemplate)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return nil, nil, fmt.Errorf("plugin for component %s not found", name)
+			return nil, fmt.Errorf("plugin for component %s not found", name)
 		}
-		return nil, nil, fmt.Errorf("failed to retrieve plugin referenced by kubernetes name and namespace '%s': %w", name, err)
+		return nil, fmt.Errorf("failed to retrieve plugin referenced by kubernetes name and namespace '%s': %w", name, err)
 	}
-	return &dwTemplate.Spec, dwTemplate.Labels, nil
+	return &dwTemplate.Spec, nil
 }
 
 func resolvePluginComponentById(
 	name string,
 	plugin *devworkspace.PluginComponent,
-	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
+	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 
 	// Check internal registry for plugins that do not specify a registry
 	if plugin.RegistryUrl == "" {
 		if tools.InternalRegistry == nil {
-			return nil, nil, fmt.Errorf("plugin %s does not specify a registryUrl and no internal registry is configured", name)
+			return nil, fmt.Errorf("plugin %s does not specify a registryUrl and no internal registry is configured", name)
 		}
 		if !tools.InternalRegistry.IsInInternalRegistry(plugin.Id) {
-			return nil, nil, fmt.Errorf("plugin for component %s does not specify a registry and is not present in the internal registry", name)
+			return nil, fmt.Errorf("plugin for component %s does not specify a registry and is not present in the internal registry", name)
 		}
 		pluginDWT, err := tools.InternalRegistry.ReadPluginFromInternalRegistry(plugin.Id)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to read plugin for component %s from internal registry: %w", name, err)
+			return nil, fmt.Errorf("failed to read plugin for component %s from internal registry: %w", name, err)
 		}
-		return &pluginDWT.Spec, pluginDWT.Labels, nil
+		return &pluginDWT.Spec, nil
 	}
 
 	pluginURL, err := url.Parse(plugin.RegistryUrl)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse registry URL for plugin %s: %w", name, err)
+		return nil, fmt.Errorf("failed to parse registry URL for plugin %s: %w", name, err)
 	}
 	pluginURL.Path = path.Join(pluginURL.Path, "plugins", plugin.Id)
 
-	dwt, labels, err := network.FetchDevWorkspaceTemplate(pluginURL.String(), tools.HttpClient)
+	dwt, err := network.FetchDevWorkspaceTemplate(pluginURL.String(), tools.HttpClient)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to resolve plugin %s from registry %s: %w", name, plugin.RegistryUrl, err)
+		return nil, fmt.Errorf("failed to resolve plugin %s from registry %s: %w", name, plugin.RegistryUrl, err)
 	}
-	return dwt, labels, nil
+	return dwt, nil
 }
 
 func resolvePluginComponentByURI(
 	name string,
 	plugin *devworkspace.PluginComponent,
-	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, pluginLabels map[string]string, err error) {
+	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 
-	dwt, labels, err := network.FetchDevWorkspaceTemplate(plugin.Uri, tools.HttpClient)
+	dwt, err := network.FetchDevWorkspaceTemplate(plugin.Uri, tools.HttpClient)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to resolve plugin %s by URI: %w", name, err)
+		return nil, fmt.Errorf("failed to resolve plugin %s by URI: %w", name, err)
 	}
-	return dwt, labels, nil
+	return dwt, nil
 }

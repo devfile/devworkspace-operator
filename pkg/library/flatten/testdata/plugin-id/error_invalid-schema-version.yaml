@@ -19,4 +19,4 @@ input:
             image: test-image
 
 output:
-  errRegexp: "could not process devfile: supported schemaVersion is .*"
+  errRegexp: "could not process devfile: unsupported schemaVersion '1.0.0'"

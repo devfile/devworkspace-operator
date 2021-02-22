@@ -372,6 +372,9 @@ func (r *DevWorkspaceReconciler) stopWorkspace(workspace *devworkspace.DevWorksp
 func (r *DevWorkspaceReconciler) syncTimingToCluster(
 	ctx context.Context, workspace *devworkspace.DevWorkspace, timingInfo map[string]string, reqLogger logr.Logger) {
 	if timing.IsEnabled() {
+		if workspace.Annotations == nil {
+			workspace.Annotations = map[string]string{}
+		}
 		for timingEvent, timestamp := range timingInfo {
 			if _, set := workspace.Annotations[timingEvent]; !set {
 				workspace.Annotations[timingEvent] = timestamp

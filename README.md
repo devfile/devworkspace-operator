@@ -17,7 +17,7 @@ You can add these Kubernetes annotations to specific DevWorkspace CR to customiz
 Using `restricted-access` is possible to define that DevWorkspace needs additional(to RBAC) authorization that guarantee that the only DevWorkspace CR creators has access to the containers terminals and secure server.
 May be needed when personal information(like access tokens, ssh keys) is stored in the containers.
 
-Since it's powered by webhooks, DevWorkspaces with such annotations will fails to start when webhooks are disabled on Operator level. 
+Since it's powered by webhooks, DevWorkspaces with such annotations will fails to start when webhooks are disabled on Operator level.
 
 Example:
 ```yaml
@@ -28,8 +28,8 @@ metadata:
 
 ## Running the controller in a cluster
 
-When deployed to Kubernetes, the controller requires [cert-manager](https://cert-manager.io) running in the cluster. 
-You can install it using `make install_cert_manager` if you don't run it already. 
+When deployed to Kubernetes, the controller requires [cert-manager](https://cert-manager.io) running in the cluster.
+You can install it using `make install_cert_manager` if you don't run it already.
 The minimum version of cert-manager is `v1.0.4`.
 
 The controller can be deployed to a cluster provided you are logged in with cluster-admin credentials:
@@ -68,7 +68,7 @@ The repository contains a Makefile; building and deploying can be configured via
 | `NAMESPACE` | Namespace to use for deploying controller | `devworkspace-controller` |
 | `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |
-| `DEVWORKSPACE_API_VERSION` | Branch or tag of the github.com/devfile/api to depend on | `v1alpha1` | 
+| `DEVWORKSPACE_API_VERSION` | Branch or tag of the github.com/devfile/api to depend on | `v1alpha1` |
 
 Some of the rules supported by the makefile:
 
@@ -113,7 +113,7 @@ make debug
 
 Controller behavior can be configured with data from the `devworkspace-controller` config map in the same namespace where controller lives.
 
-For all available configuration properties and their default values, see [pkg/config](https://github.com/devfile/devworkspace-operator/tree/master/pkg/config)
+For all available configuration properties and their default values, see [pkg/config](https://github.com/devfile/devworkspace-operator/tree/main/pkg/config)
 
 ### Remove controller from your K8s/OS Cluster
 To uninstall the controller and associated CRDs, use the Makefile uninstall rule:
@@ -126,4 +126,4 @@ This will delete all custom resource definitions created for the controller, as 
 
 #### GitHub actions
 
-- [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/master/.github/workflows/dockerimage-next.yml) action build master and push it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
+- [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/main/.github/workflows/dockerimage-next.yml) action builds main branch and pushes it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)

@@ -55,6 +55,12 @@ const (
 	// WorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
 	WorkspaceCreatorLabel = "controller.devfile.io/creator"
 
+	// WorkspaceStorageTypeLabel defines the strategy used for provisioning storage for the workspace.
+	// If empty, the common PVC strategy is used.
+	// Supported options:
+	// - "common": Create one PVC per namespace, and store data for all workspaces in that namespace in that PVC
+	WorkspaceStorageTypeLabel = "controller.devfile.io/storage-type"
+
 	// WorkspaceRestrictedAccessAnnotation marks the intention that workspace access is restricted to only the creator; setting this
 	// annotation will cause workspace start to fail if webhooks are disabled.
 	// Operator also propagates it to the workspace-related objects to perform authorization.
@@ -86,4 +92,9 @@ const (
 	// RoutingAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the DevWorkspaceRouting objects.
 	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
 	RoutingAnnotationInfix = ".routing.controller.devfile.io/"
+
+	// Constants describing storage classes supported by the controller
+	// CommonStorageClassType defines the 'common' storage policy -- one PVC is provisioned per namespace and all workspace storage
+	// is mounted in it on subpaths according to workspace ID.
+	CommonStorageClassType = "common"
 )

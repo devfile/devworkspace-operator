@@ -17,12 +17,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	corev1 "k8s.io/api/core/v1"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
 )
 
@@ -33,9 +34,9 @@ type testCase struct {
 }
 
 type testInput struct {
-	WorkspaceID  string                                `json:"workspaceId,omitempty"`
-	PodAdditions v1alpha1.PodAdditions                 `json:"podAdditions,omitempty"`
-	Workspace    devworkspace.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
+	WorkspaceID  string                       `json:"workspaceId,omitempty"`
+	PodAdditions v1alpha1.PodAdditions        `json:"podAdditions,omitempty"`
+	Workspace    *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
 }
 
 type testOutput struct {
@@ -83,12 +84,13 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 func TestRewriteContainerVolumeMounts(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata")
 	setupControllerCfg()
+	commonStorage := CommonStorageProvisioner{}
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
-			err := RewriteContainerVolumeMounts(tt.Input.WorkspaceID, &tt.Input.PodAdditions, tt.Input.Workspace)
+			err := commonStorage.rewriteContainerVolumeMounts(tt.Input.WorkspaceID, &tt.Input.PodAdditions, tt.Input.Workspace)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -107,16 +109,16 @@ func TestNeedsStorage(t *testing.T) {
 		Name         string
 		Explanation  string
 		NeedsStorage bool
-		Components   []devworkspace.Component
+		Components   []dw.Component
 	}{
 		{
 			Name:         "Has volume component",
 			Explanation:  "If the devfile has a volume component, it requires storage",
 			NeedsStorage: true,
-			Components: []devworkspace.Component{
+			Components: []dw.Component{
 				{
-					ComponentUnion: devworkspace.ComponentUnion{
-						Volume: &devworkspace.VolumeComponent{},
+					ComponentUnion: dw.ComponentUnion{
+						Volume: &dw.VolumeComponent{},
 					},
 				},
 			},
@@ -125,11 +127,11 @@ func TestNeedsStorage(t *testing.T) {
 			Name:         "Has ephemeral volume and does not need storage",
 			Explanation:  "Volumes with ephemeral: true do not require storage",
 			NeedsStorage: false,
-			Components: []devworkspace.Component{
+			Components: []dw.Component{
 				{
-					ComponentUnion: devworkspace.ComponentUnion{
-						Volume: &devworkspace.VolumeComponent{
-							Volume: devworkspace.Volume{
+					ComponentUnion: dw.ComponentUnion{
+						Volume: &dw.VolumeComponent{
+							Volume: dw.Volume{
 								Ephemeral: true,
 							},
 						},
@@ -141,11 +143,11 @@ func TestNeedsStorage(t *testing.T) {
 			Name:         "Container has mountSources",
 			Explanation:  "If a devfile container has mountSources set, it requires storage",
 			NeedsStorage: true,
-			Components: []devworkspace.Component{
+			Components: []dw.Component{
 				{
-					ComponentUnion: devworkspace.ComponentUnion{
-						Container: &devworkspace.ContainerComponent{
-							Container: devworkspace.Container{
+					ComponentUnion: dw.ComponentUnion{
+						Container: &dw.ContainerComponent{
+							Container: dw.Container{
 								MountSources: &boolTrue,
 							},
 						},
@@ -157,11 +159,11 @@ func TestNeedsStorage(t *testing.T) {
 			Name:         "Container has mountSources but projects is ephemeral",
 			Explanation:  "When a devfile has an explicit, ephemeral projects volume, containers with mountSources do not need storage",
 			NeedsStorage: false,
-			Components: []devworkspace.Component{
+			Components: []dw.Component{
 				{
-					ComponentUnion: devworkspace.ComponentUnion{
-						Container: &devworkspace.ContainerComponent{
-							Container: devworkspace.Container{
+					ComponentUnion: dw.ComponentUnion{
+						Container: &dw.ContainerComponent{
+							Container: dw.Container{
 								MountSources: &boolTrue,
 							},
 						},
@@ -169,9 +171,9 @@ func TestNeedsStorage(t *testing.T) {
 				},
 				{
 					Name: "projects",
-					ComponentUnion: devworkspace.ComponentUnion{
-						Volume: &devworkspace.VolumeComponent{
-							Volume: devworkspace.Volume{
+					ComponentUnion: dw.ComponentUnion{
+						Volume: &dw.VolumeComponent{
+							Volume: dw.Volume{
 								Ephemeral: true,
 							},
 						},
@@ -183,11 +185,11 @@ func TestNeedsStorage(t *testing.T) {
 			Name:         "Container has implicit mountSources",
 			Explanation:  "If a devfile container does not have mountSources set, the default is true",
 			NeedsStorage: true,
-			Components: []devworkspace.Component{
+			Components: []dw.Component{
 				{
-					ComponentUnion: devworkspace.ComponentUnion{
-						Container: &devworkspace.ContainerComponent{
-							Container: devworkspace.Container{},
+					ComponentUnion: dw.ComponentUnion{
+						Container: &dw.ContainerComponent{
+							Container: dw.Container{},
 						},
 					},
 				},
@@ -196,12 +198,12 @@ func TestNeedsStorage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			workspace := devworkspace.DevWorkspaceTemplateSpec{}
+			workspace := &dw.DevWorkspaceTemplateSpec{}
 			workspace.Components = tt.Components
 			if tt.NeedsStorage {
-				assert.True(t, NeedsStorage(workspace), tt.Explanation)
+				assert.True(t, needsStorage(workspace), tt.Explanation)
 			} else {
-				assert.False(t, NeedsStorage(workspace), tt.Explanation)
+				assert.False(t, needsStorage(workspace), tt.Explanation)
 			}
 		})
 	}

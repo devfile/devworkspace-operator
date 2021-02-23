@@ -43,7 +43,7 @@ var diffOpts = map[reflect.Type]cmp.Options{
 func SyncMutableObjects(objects []runtime.Object, client client.Client, reqLogger logr.Logger) (didChange bool, err error) {
 	didAnyChange := false
 	for _, object := range objects {
-		didChange, err := SyncObject(object, client, reqLogger, true)
+		_, didChange, err := SyncObject(object, client, reqLogger, true)
 		if err != nil {
 			return false, err
 		}
@@ -53,10 +53,10 @@ func SyncMutableObjects(objects []runtime.Object, client client.Client, reqLogge
 }
 
 // SyncObject synchronizes a runtime object and changes/updates existing ones
-func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logger, update bool) (didChange bool, apiErr error) {
+func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logger, update bool) (clusterObject runtime.Object, didChange bool, apiErr error) {
 	objMeta, isMeta := object.(metav1.Object)
 	if !isMeta {
-		return false, errors.NewBadRequest("Converted objects are not valid K8s objects")
+		return nil, false, errors.NewBadRequest("Converted objects are not valid K8s objects")
 	}
 
 	objType := reflect.TypeOf(object).Elem()
@@ -67,18 +67,18 @@ func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logg
 	err := client.Get(context.TODO(), types.NamespacedName{Name: objMeta.GetName(), Namespace: objMeta.GetNamespace()}, found)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			return false, err
+			return nil, false, err
 		}
 		reqLogger.Info("    => Creating "+objType.String(), "namespace", objMeta.GetNamespace(), "name", objMeta.GetName())
 		createErr := client.Create(context.TODO(), object)
 		if errors.IsAlreadyExists(createErr) {
 			fmt.Println("Suppressing alreadyExists in ", objType.String())
-			return true, nil
+			return nil, true, nil
 		}
-		return true, createErr
+		return nil, true, createErr
 	}
 	if !update {
-		return false, nil
+		return found, false, nil
 	}
 
 	diffOpt, ok := diffOpts[objType]
@@ -91,9 +91,9 @@ func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logg
 		updateErr := client.Update(context.TODO(), object)
 		if errors.IsConflict(updateErr) {
 			fmt.Println("Suppressing conflict in ", objType.String())
-			return true, nil
+			return found, true, nil
 		}
-		return true, updateErr
+		return object, true, updateErr
 	}
-	return false, nil
+	return found, false, nil
 }

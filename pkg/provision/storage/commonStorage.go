@@ -10,40 +10,63 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-// Package storage contains library functions for provisioning volumes and volumeMounts in containers according to the
-// volume components in a devfile. These functions also handle mounting project sources to containers that require it.
-//
-// TODO:
-// - Add functionality for generating PVCs with the appropriate size based on size requests in the devfile
-// - Devfile API spec is unclear on how mountSources should be handled -- mountPath is assumed to be /projects
-//   and volume name is assumed to be "projects"
-//   see issues:
-//     - https://github.com/devfile/api/issues/290
-//     - https://github.com/devfile/api/issues/291
 package storage
 
 import (
 	"fmt"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
-	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
-// RewriteContainerVolumeMounts rewrites the VolumeMounts in a set of PodAdditions according to the 'common' PVC strategy
+// The CommonStorageProvisioner provisions one PVC per namespace and configures all volumes in a workspace
+// to mount on subpaths within that PVC. Workspace storage is mounted prefixed with the workspace ID.
+type CommonStorageProvisioner struct{}
+
+var _ Provisioner = (*CommonStorageProvisioner)(nil)
+
+func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
+	return needsStorage(workspace)
+}
+
+func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
+	err := p.rewriteContainerVolumeMounts(workspace.Status.WorkspaceId, podAdditions, &workspace.Spec.Template)
+	if err != nil {
+		return err
+	}
+	_, err = syncCommonPVC(workspace.Namespace, clusterAPI)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
+	PVCexists, err := commonPVCExists(workspace, clusterAPI)
+	if err != nil {
+		return err
+	} else if !PVCexists {
+		// Nothing to do; return nil and continue
+		return nil
+	}
+	return runCommonPVCCleanupJob(workspace, clusterAPI)
+}
+
+// rewriteContainerVolumeMounts rewrites the VolumeMounts in a set of PodAdditions according to the 'common' PVC strategy
 // (i.e. all volume mounts are subpaths into a common PVC used by all workspaces in the namespace).
 //
 // Also adds appropriate k8s Volumes to PodAdditions to accomodate the rewritten VolumeMounts.
-func RewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspaceTemplateSpec) error {
-	devfileVolumes := map[string]devworkspace.VolumeComponent{}
-	var ephemeralVolumes []devworkspace.Component
+func (*CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspaceTemplateSpec) error {
+	devfileVolumes := map[string]dw.VolumeComponent{}
+	var ephemeralVolumes []dw.Component
 
 	for _, component := range workspace.Components {
 		if component.Volume != nil {
@@ -58,7 +81,7 @@ func RewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.Pod
 	}
 	if _, exists := devfileVolumes[devfileConstants.ProjectsVolumeName]; !exists {
 		// Add implicit projects volume to support mountSources
-		projectsVolume := devworkspace.VolumeComponent{}
+		projectsVolume := dw.VolumeComponent{}
 		projectsVolume.Size = constants.PVCStorageSize
 		devfileVolumes[devfileConstants.ProjectsVolumeName] = projectsVolume
 	}
@@ -80,7 +103,7 @@ func RewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.Pod
 		podAdditions.Volumes = append(podAdditions.Volumes, vol)
 	}
 
-	if NeedsStorage(workspace) {
+	if needsStorage(workspace) {
 		// TODO: Support more than the common PVC strategy here (storage provisioner interface?)
 		// TODO: What should we do when a volume isn't explicitly defined?
 		commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
@@ -117,27 +140,4 @@ func RewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.Pod
 	}
 
 	return nil
-}
-
-// NeedsStorage returns true if storage will need to be provisioned for the current workspace. Note that ephemeral volumes
-// do not need to provision storage
-func NeedsStorage(workspace devworkspace.DevWorkspaceTemplateSpec) bool {
-	projectsVolumeIsEphemeral := false
-	for _, component := range workspace.Components {
-		if component.Volume != nil {
-			// If any non-ephemeral volumes are defined, we need to mount storage
-			if !component.Volume.Ephemeral {
-				return true
-			}
-			if component.Name == devfileConstants.ProjectsVolumeName {
-				projectsVolumeIsEphemeral = component.Volume.Ephemeral
-			}
-		}
-	}
-	if projectsVolumeIsEphemeral {
-		// No non-ephemeral volumes, and projects volume mount is ephemeral, so all volumes are ephemeral
-		return false
-	}
-	// Implicit projects volume is non-ephemeral, so any container that mounts sources requires storage
-	return containerlib.AnyMountSources(workspace.Components)
 }

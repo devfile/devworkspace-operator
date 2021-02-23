@@ -13,6 +13,8 @@
 package provision
 
 import (
+	"context"
+
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,4 +33,5 @@ type ClusterAPI struct {
 	Client client.Client
 	Scheme *runtime.Scheme
 	Logger logr.Logger
+	Ctx    context.Context
 }

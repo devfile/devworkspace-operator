@@ -25,7 +25,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
+	storagelib "github.com/devfile/devworkspace-operator/pkg/provision/storage"
 
 	"github.com/go-logr/logr"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
@@ -42,9 +42,9 @@ import (
 )
 
 const (
-	pvcClaimMountPath   = "/tmp/devworkspaces/"
-	cleanupCommandFmt   = "rm -rf %s"
-	pvcCleanupFinalizer = "storage.controller.devfile.io"
+	pvcClaimMountPath       = "/tmp/devworkspaces/"
+	cleanupCommandFmt       = "rm -rf %s"
+	storageCleanupFinalizer = "storage.controller.devfile.io"
 )
 
 var (
@@ -57,7 +57,7 @@ var (
 )
 
 func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *devworkspace.DevWorkspace) (reconcile.Result, error) {
-	if !coputil.HasFinalizer(workspace, pvcCleanupFinalizer) {
+	if !coputil.HasFinalizer(workspace, storageCleanupFinalizer) {
 		return reconcile.Result{}, nil
 	}
 	workspace.Status.Message = "Cleaning up resources for deletion"
@@ -79,9 +79,9 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	if err != nil {
 		return reconcile.Result{}, err
 	} else if terminating {
-		//Namespace is terminating, it's redundant to clean PVC files since it's going to be removed
+		// Namespace is terminating, it's redundant to clean PVC files since it's going to be removed
 		log.Info("Namespace is terminating; clearing storage finalizer")
-		coputil.RemoveFinalizer(workspace, pvcCleanupFinalizer)
+		coputil.RemoveFinalizer(workspace, storageCleanupFinalizer)
 		return reconcile.Result{}, r.Update(ctx, workspace)
 	}
 
@@ -89,9 +89,9 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	if err != nil {
 		return reconcile.Result{}, err
 	} else if !pvcExists {
-		//PVC does not exist. nothing to clean up
+		// PVC does not exist. nothing to clean up
 		log.Info("PVC does not exit; clearing storage finalizer")
-		coputil.RemoveFinalizer(workspace, pvcCleanupFinalizer)
+		coputil.RemoveFinalizer(workspace, storageCleanupFinalizer)
 		// job will be clean up by k8s garbage collector
 		return reconcile.Result{}, r.Update(ctx, workspace)
 	}
@@ -127,7 +127,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		switch condition.Type {
 		case batchv1.JobComplete:
 			log.Info("PVC clean up job successful; clearing finalizer")
-			coputil.RemoveFinalizer(workspace, pvcCleanupFinalizer)
+			coputil.RemoveFinalizer(workspace, storageCleanupFinalizer)
 			return reconcile.Result{}, r.Update(ctx, workspace)
 		case batchv1.JobFailed:
 			log.Error(fmt.Errorf("PVC clean up job failed: message: %q", condition.Message),

@@ -28,8 +28,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 	shimlib "github.com/devfile/devworkspace-operator/pkg/library/shim"
-	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
+	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
 	"github.com/go-logr/logr"
@@ -179,7 +179,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
 	if isFinalizerNecessary(workspace) {
-		coputil.AddFinalizer(clusterWorkspace, pvcCleanupFinalizer)
+		coputil.AddFinalizer(clusterWorkspace, storageCleanupFinalizer)
 		if err := r.Update(ctx, clusterWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -192,7 +192,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
 		return reconcile.Result{}, nil
 	}
-	err = storagelib.RewriteContainerVolumeMounts(workspace.Status.WorkspaceId, devfilePodAdditions, workspace.Spec.Template)
+	err = storage.RewriteContainerVolumeMounts(workspace.Status.WorkspaceId, devfilePodAdditions, workspace.Spec.Template)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
@@ -204,7 +204,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	reconcileStatus.Conditions[devworkspace.WorkspaceComponentsReady] = ""
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 
-	if storagelib.NeedsStorage(workspace.Spec.Template) {
+	if storage.NeedsStorage(workspace.Spec.Template) {
 		pvcStatus := provision.SyncPVC(workspace, r.Client, reqLogger)
 		if pvcStatus.Err != nil || !pvcStatus.Continue {
 			return reconcile.Result{Requeue: true}, pvcStatus.Err

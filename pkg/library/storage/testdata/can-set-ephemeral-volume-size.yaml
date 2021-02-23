@@ -1,0 +1,37 @@
+name: "Can make projects volume ephemeral"
+
+input:
+  workspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects-mountpath"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          sourceMapping: "/plugins-mountpath"
+          mountSources: true
+      - name: projects
+        volume:
+          ephemeral: true
+          size: 512Mi
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: projects
+            mountPath: "/projects-mountpath"
+
+    volumes:
+      - name: projects
+        emptyDir:
+          sizeLimit: 512Mi

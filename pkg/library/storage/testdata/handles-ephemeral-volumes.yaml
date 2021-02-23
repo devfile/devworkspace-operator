@@ -1,0 +1,35 @@
+name: "Handles ephemeral volumes"
+
+input:
+  workspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: testvol
+            mountPath: "/projects-mountpath"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          mountSources: false
+
+      - name: testvol
+        volume:
+          ephemeral: true
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: testvol
+            mountPath: "/projects-mountpath"
+
+    volumes:
+      - name: testvol
+        emptyDir: {}

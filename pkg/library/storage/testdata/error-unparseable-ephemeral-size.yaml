@@ -1,0 +1,26 @@
+name: "Can make projects volume ephemeral"
+
+input:
+  workspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects-mountpath"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          sourceMapping: "/plugins-mountpath"
+          mountSources: true
+      - name: projects
+        volume:
+          ephemeral: true
+          size: 512XX
+
+output:
+  errRegexp: "failed to parse size for Volume projects.*"

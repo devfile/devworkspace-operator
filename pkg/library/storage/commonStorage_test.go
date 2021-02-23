@@ -13,7 +13,6 @@
 package storage
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -54,9 +53,8 @@ func setupControllerCfg() {
 	config.SetupConfigForTesting(testControllerCfg)
 }
 
-func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
-	testPath := filepath.Join("./testdata", testFilename)
-	bytes, err := ioutil.ReadFile(testPath)
+func loadTestCaseOrPanic(t *testing.T, testFilepath string) testCase {
+	bytes, err := ioutil.ReadFile(testFilepath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,19 +62,26 @@ func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
-	t.Log(fmt.Sprintf("Read file:\n%+v\n\n", test))
 	return test
 }
 
-func TestRewriteContainerVolumeMounts(t *testing.T) {
-	tests := []testCase{
-		loadTestCaseOrPanic(t, "does-nothing-for-no-storage-needed.yaml"),
-		loadTestCaseOrPanic(t, "projects-volume-overriding.yaml"),
-		loadTestCaseOrPanic(t, "rewrites-volumes-for-common-pvc-strategy.yaml"),
-		loadTestCaseOrPanic(t, "error-duplicate-volumes.yaml"),
-		loadTestCaseOrPanic(t, "error-undefined-volume.yaml"),
-		loadTestCaseOrPanic(t, "error-undefined-volume-init-container.yaml"),
+func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
+	files, err := ioutil.ReadDir(fromDir)
+	if err != nil {
+		t.Fatal(err)
 	}
+	var tests []testCase
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		tests = append(tests, loadTestCaseOrPanic(t, filepath.Join(fromDir, file.Name())))
+	}
+	return tests
+}
+
+func TestRewriteContainerVolumeMounts(t *testing.T) {
+	tests := loadAllTestCasesOrPanic(t, "testdata")
 	setupControllerCfg()
 
 	for _, tt := range tests {
@@ -97,34 +102,35 @@ func TestRewriteContainerVolumeMounts(t *testing.T) {
 }
 
 func TestNeedsStorage(t *testing.T) {
-	boolFalse := false
 	boolTrue := true
 	tests := []struct {
-		Name        string
-		Explanation string
-		Components  []devworkspace.ComponentUnion
+		Name         string
+		Explanation  string
+		NeedsStorage bool
+		Components   []devworkspace.Component
 	}{
 		{
-			Name:        "Has volume component",
-			Explanation: "If the devfile has a volume component, it requires storage",
-			Components: []devworkspace.ComponentUnion{
+			Name:         "Has volume component",
+			Explanation:  "If the devfile has a volume component, it requires storage",
+			NeedsStorage: true,
+			Components: []devworkspace.Component{
 				{
-					Volume: &devworkspace.VolumeComponent{},
+					ComponentUnion: devworkspace.ComponentUnion{
+						Volume: &devworkspace.VolumeComponent{},
+					},
 				},
 			},
 		},
 		{
-			Name:        "Has container component with volume mounts",
-			Explanation: "If a devfile container has volumeMounts, it requires storage",
-			Components: []devworkspace.ComponentUnion{
+			Name:         "Has ephemeral volume and does not need storage",
+			Explanation:  "Volumes with ephemeral: true do not require storage",
+			NeedsStorage: false,
+			Components: []devworkspace.Component{
 				{
-					Container: &devworkspace.ContainerComponent{
-						Container: devworkspace.Container{
-							MountSources: &boolFalse,
-							VolumeMounts: []devworkspace.VolumeMount{
-								{
-									Name: "test-volumeMount",
-								},
+					ComponentUnion: devworkspace.ComponentUnion{
+						Volume: &devworkspace.VolumeComponent{
+							Volume: devworkspace.Volume{
+								Ephemeral: true,
 							},
 						},
 					},
@@ -132,25 +138,57 @@ func TestNeedsStorage(t *testing.T) {
 			},
 		},
 		{
-			Name:        "Container has mountSources",
-			Explanation: "If a devfile container has mountSources set, it requires storage",
-			Components: []devworkspace.ComponentUnion{
+			Name:         "Container has mountSources",
+			Explanation:  "If a devfile container has mountSources set, it requires storage",
+			NeedsStorage: true,
+			Components: []devworkspace.Component{
 				{
-					Container: &devworkspace.ContainerComponent{
-						Container: devworkspace.Container{
-							MountSources: &boolTrue,
+					ComponentUnion: devworkspace.ComponentUnion{
+						Container: &devworkspace.ContainerComponent{
+							Container: devworkspace.Container{
+								MountSources: &boolTrue,
+							},
 						},
 					},
 				},
 			},
 		},
 		{
-			Name:        "Container has implicit mountSources",
-			Explanation: "If a devfile container does not have mountSources set, the default is true",
-			Components: []devworkspace.ComponentUnion{
+			Name:         "Container has mountSources but projects is ephemeral",
+			Explanation:  "When a devfile has an explicit, ephemeral projects volume, containers with mountSources do not need storage",
+			NeedsStorage: false,
+			Components: []devworkspace.Component{
 				{
-					Container: &devworkspace.ContainerComponent{
-						Container: devworkspace.Container{},
+					ComponentUnion: devworkspace.ComponentUnion{
+						Container: &devworkspace.ContainerComponent{
+							Container: devworkspace.Container{
+								MountSources: &boolTrue,
+							},
+						},
+					},
+				},
+				{
+					Name: "projects",
+					ComponentUnion: devworkspace.ComponentUnion{
+						Volume: &devworkspace.VolumeComponent{
+							Volume: devworkspace.Volume{
+								Ephemeral: true,
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Name:         "Container has implicit mountSources",
+			Explanation:  "If a devfile container does not have mountSources set, the default is true",
+			NeedsStorage: true,
+			Components: []devworkspace.Component{
+				{
+					ComponentUnion: devworkspace.ComponentUnion{
+						Container: &devworkspace.ContainerComponent{
+							Container: devworkspace.Container{},
+						},
 					},
 				},
 			},
@@ -159,13 +197,12 @@ func TestNeedsStorage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			workspace := devworkspace.DevWorkspaceTemplateSpec{}
-			for idx, comp := range tt.Components {
-				workspace.Components = append(workspace.Components, devworkspace.Component{
-					Name:           fmt.Sprintf("test-component-%d", idx),
-					ComponentUnion: comp,
-				})
+			workspace.Components = tt.Components
+			if tt.NeedsStorage {
+				assert.True(t, NeedsStorage(workspace), tt.Explanation)
+			} else {
+				assert.False(t, NeedsStorage(workspace), tt.Explanation)
 			}
-			assert.True(t, NeedsStorage(workspace), tt.Explanation)
 		})
 	}
 }

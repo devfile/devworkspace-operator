@@ -107,8 +107,8 @@ spec:
               name: plugins
 
       - name: remote-endpoint
-        volume: {}
-          # ephemeral: true                #### We should add it in the Devfile 2.0 spec ! Not critical to implement at start though
+        volume:
+          ephemeral: true
 
       - name: remote-runtime-injector
         attributes:

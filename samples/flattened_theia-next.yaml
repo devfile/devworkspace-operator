@@ -38,7 +38,8 @@ spec:
       - name: plugins
         volume: {}
       - name: remote-endpoint
-        volume: {} # TODO: Fix this once ephemeral volumes are supported
+        volume:
+          ephemeral: true
       - name: vsx-installer  # Mainly reads the container objects and searches for those
                               # with che-theia.eclipse.org/vscode-extensions attributes to get VSX urls
                               # Those found in the dedicated containers components are with a sidecar,

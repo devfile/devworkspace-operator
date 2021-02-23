@@ -87,6 +87,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		Client: r.Client,
 		Scheme: r.Scheme,
 		Logger: reqLogger,
+		Ctx:    ctx,
 	}
 
 	// Fetch the Workspace instance
@@ -192,24 +193,34 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
 		return reconcile.Result{}, nil
 	}
-	err = storage.RewriteContainerVolumeMounts(workspace.Status.WorkspaceId, devfilePodAdditions, workspace.Spec.Template)
+
+	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile volumes: %s", err)
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", err)
 		return reconcile.Result{}, nil
 	}
+	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspace, clusterAPI)
+	if err != nil {
+		switch storageErr := err.(type) {
+		case *storage.NotReadyError:
+			reqLogger.Info(storageErr.Message)
+			return reconcile.Result{Requeue: true, RequeueAfter: storageErr.RequeueAfter}, nil
+		case *storage.ProvisioningError:
+			reqLogger.Info(fmt.Sprintf("DevWorkspace start failed: %s", storageErr))
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", storageErr)
+			return reconcile.Result{}, nil
+		default:
+			return reconcile.Result{}, storageErr
+		}
+	}
+
 	shimlib.FillDefaultEnvVars(devfilePodAdditions, *workspace)
 
 	reconcileStatus.Conditions[devworkspace.WorkspaceComponentsReady] = ""
 	timing.SetTime(timingInfo, timing.ComponentsReady)
-
-	if storage.NeedsStorage(workspace.Spec.Template) {
-		pvcStatus := provision.SyncPVC(workspace, r.Client, reqLogger)
-		if pvcStatus.Err != nil || !pvcStatus.Continue {
-			return reconcile.Result{Requeue: true}, pvcStatus.Err
-		}
-	}
 
 	rbacStatus := provision.SyncRBAC(workspace, r.Client, reqLogger)
 	if rbacStatus.Err != nil || !rbacStatus.Continue {

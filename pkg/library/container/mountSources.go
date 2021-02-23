@@ -34,6 +34,17 @@ func HasMountSources(devfileContainer *devworkspace.ContainerComponent) bool {
 	return mountSources
 }
 
+// AnyMountSources checks HasMountSources for each container component in a devfile. If a component in the slice
+// is not a ContainerComponent, it is ignored.
+func AnyMountSources(devfileComponents []devworkspace.Component) bool {
+	for _, component := range devfileComponents {
+		if component.Container != nil && HasMountSources(component.Container) {
+			return true
+		}
+	}
+	return false
+}
+
 // handleMountSources adds a volumeMount to a container if the corresponding devfile container has
 // mountSources enabled.
 func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devworkspace.ContainerComponent) {

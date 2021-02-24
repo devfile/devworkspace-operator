@@ -156,6 +156,11 @@ func getSpecRouting(
 		}
 	}
 
+	routingClass := workspace.Spec.RoutingClass
+	if routingClass == "" {
+		routingClass = config.ControllerCfg.GetDefaultRoutingClass()
+	}
+
 	routing := &v1alpha1.WorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("routing-%s", workspace.Status.WorkspaceId),
@@ -167,7 +172,7 @@ func getSpecRouting(
 		},
 		Spec: v1alpha1.WorkspaceRoutingSpec{
 			WorkspaceId:   workspace.Status.WorkspaceId,
-			RoutingClass:  v1alpha1.WorkspaceRoutingClass(workspace.Spec.RoutingClass),
+			RoutingClass:  v1alpha1.WorkspaceRoutingClass(routingClass),
 			RoutingSuffix: config.ControllerCfg.GetRoutingSuffix(),
 			Endpoints:     endpoints,
 			PodSelector: map[string]string{

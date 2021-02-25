@@ -21,10 +21,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 func SyncWorkspaceSyncServiceToCluster(asyncDeploy *appsv1.Deployment, api provision.ClusterAPI) (*corev1.Service, error) {
 	specService := getWorkspaceSyncServiceSpec(asyncDeploy)
+	err := controllerutil.SetOwnerReference(asyncDeploy, specService, api.Scheme)
+	if err != nil {
+		return nil, err
+	}
 	clusterService, err := getWorkspaceSyncServiceCluster(asyncDeploy.Namespace, api)
 	if err != nil {
 		if !k8sErrors.IsNotFound(err) {

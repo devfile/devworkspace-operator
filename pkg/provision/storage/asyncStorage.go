@@ -17,14 +17,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/devfile/devworkspace-operator/pkg/library/constants"
-	corev1 "k8s.io/api/core/v1"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
+	"github.com/devfile/devworkspace-operator/pkg/library/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage/asyncstorage"
+
+	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // The AsyncStorageProvisioner provisions one PVC per namespace and creates an ssh deployment that syncs data into that PVC.
@@ -84,6 +85,19 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 			}
 		}
 		return err
+	}
+
+	// Set async deployment as owner of configmap that holds its authorized_keys
+	err = controllerutil.SetOwnerReference(deploy, configmap, clusterAPI.Scheme)
+	if err != nil {
+		return err
+	}
+	err = clusterAPI.Client.Update(clusterAPI.Ctx, configmap)
+	if err != nil {
+		if !k8sErrors.IsConflict(err) {
+			return err
+		}
+		return &NotReadyError{RequeueAfter: 0}
 	}
 
 	// Create service for async storage server

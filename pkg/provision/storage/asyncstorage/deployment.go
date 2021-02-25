@@ -25,7 +25,7 @@ import (
 
 func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI provision.ClusterAPI) (*appsv1.Deployment, error) {
 	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, storage)
-	clusterDeployment, err := getWorkspaceSyncDeploymentCluster(namespace, clusterAPI)
+	clusterDeployment, err := GetWorkspaceSyncDeploymentCluster(namespace, clusterAPI)
 	if err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return nil, err
@@ -139,7 +139,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 	return deployment
 }
 
-func getWorkspaceSyncDeploymentCluster(namespace string, clusterAPI provision.ClusterAPI) (*appsv1.Deployment, error) {
+func GetWorkspaceSyncDeploymentCluster(namespace string, clusterAPI provision.ClusterAPI) (*appsv1.Deployment, error) {
 	deploy := &appsv1.Deployment{}
 	namespacedName := types.NamespacedName{
 		Name:      "async-storage", // TODO

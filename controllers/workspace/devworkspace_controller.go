@@ -132,13 +132,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return r.stopWorkspace(workspace, reqLogger)
 	}
 
-	// Set finalizer on DevWorkspace if necessary
-	if ok, err := r.setFinalizer(ctx, workspace); err != nil {
-		return reconcile.Result{}, err
-	} else if !ok {
-		return reconcile.Result{Requeue: true}, nil
-	}
-
 	// Prepare handling workspace status and condition
 	reconcileStatus := currentStatus{
 		Conditions: map[devworkspace.WorkspaceConditionType]string{},
@@ -194,6 +187,15 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, nil
 	}
 	workspace.Spec.Template = *flattenedWorkspace
+	// Set finalizer on DevWorkspace if necessary
+	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
+	if isFinalizerNecessary(workspace) {
+		if ok, err := r.setFinalizer(ctx, clusterWorkspace); err != nil {
+			return reconcile.Result{}, err
+		} else if !ok {
+			return reconcile.Result{Requeue: true}, nil
+		}
+	}
 
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(workspace.Spec.Template)
 	if err != nil {

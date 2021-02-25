@@ -51,8 +51,10 @@ var (
 	PVCCleanupPodMemoryLimit = resource.MustParse("32Mi")
 )
 
+// setFinalizer sets a finalizer on the workspace and syncs the changes to the cluster. No-op if the workspace already
+// has the finalizer set.
 func (r *DevWorkspaceReconciler) setFinalizer(ctx context.Context, workspace *v1alpha2.DevWorkspace) (ok bool, err error) {
-	if !isFinalizerNecessary(workspace) || hasFinalizer(workspace) {
+	if hasFinalizer(workspace) {
 		return true, nil
 	}
 	workspace.SetFinalizers(append(workspace.Finalizers, pvcCleanupFinalizer))

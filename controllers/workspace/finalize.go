@@ -45,10 +45,12 @@ const (
 )
 
 var (
-	cleanupJobCompletions  = int32(1)
-	cleanupJobBackoffLimit = int32(3)
-	// PVCCleanupPodMemoryLimit is the memory limit used for PVC clean up pods
-	PVCCleanupPodMemoryLimit = resource.MustParse("32Mi")
+	cleanupJobCompletions      = int32(1)
+	cleanupJobBackoffLimit     = int32(3)
+	PVCCleanupPodMemoryLimit   = resource.MustParse("32Mi")
+	PVCCleanupPodMemoryRequest = PVCCleanupPodMemoryLimit
+	PVCCleanupPodCPULimit      = resource.MustParse("50m")
+	PVCCleanupPodCPURequest    = resource.MustParse("5m")
 )
 
 func (r *DevWorkspaceReconciler) setFinalizer(ctx context.Context, workspace *v1alpha2.DevWorkspace) (ok bool, err error) {
@@ -189,8 +191,13 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 								fmt.Sprintf(cleanupCommandFmt, path.Join(pvcClaimMountPath, workspaceId)),
 							},
 							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{
+									corev1.ResourceMemory: PVCCleanupPodMemoryRequest,
+									corev1.ResourceCPU:    PVCCleanupPodCPURequest,
+								},
 								Limits: corev1.ResourceList{
 									corev1.ResourceMemory: PVCCleanupPodMemoryLimit,
+									corev1.ResourceCPU:    PVCCleanupPodCPULimit,
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{

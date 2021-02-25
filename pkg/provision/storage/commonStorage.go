@@ -24,7 +24,6 @@ import (
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // The CommonStorageProvisioner provisions one PVC per namespace and configures all volumes in a workspace
@@ -38,7 +37,24 @@ func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplate
 }
 
 func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
-	err := p.rewriteContainerVolumeMounts(workspace.Status.WorkspaceId, podAdditions, &workspace.Spec.Template)
+	// Add ephemeral volumes
+	_, ephemeralVolumes, projectsVolume := getWorkspaceVolumes(workspace)
+	_, err := addEphemeralVolumesToPodAdditions(podAdditions, ephemeralVolumes)
+	if err != nil {
+		return &ProvisioningError{Message: "Failed to add ephemeral volumes to workspace", Err: err}
+	}
+	if projectsVolume != nil && projectsVolume.Volume.Ephemeral {
+		if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume}); err != nil {
+			return &ProvisioningError{Message: "Failed to add projects volume to workspace", Err: err}
+		}
+	}
+
+	// If persistent storage is not needed, we're done
+	if !p.NeedsStorage(&workspace.Spec.Template) {
+		return nil
+	}
+
+	err = p.rewriteContainerVolumeMounts(workspace.Status.WorkspaceId, podAdditions, &workspace.Spec.Template)
 	if err != nil {
 		return err
 	}
@@ -64,80 +80,59 @@ func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorksp
 // (i.e. all volume mounts are subpaths into a common PVC used by all workspaces in the namespace).
 //
 // Also adds appropriate k8s Volumes to PodAdditions to accomodate the rewritten VolumeMounts.
-func (*CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspaceTemplateSpec) error {
+func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspaceTemplateSpec) error {
 	devfileVolumes := map[string]dw.VolumeComponent{}
-	var ephemeralVolumes []dw.Component
 
+	// Construct map of volume name -> volume Component
 	for _, component := range workspace.Components {
 		if component.Volume != nil {
 			if _, exists := devfileVolumes[component.Name]; exists {
 				return fmt.Errorf("volume component '%s' is defined multiple times", component.Name)
 			}
 			devfileVolumes[component.Name] = *component.Volume
-			if component.Volume.Ephemeral {
-				ephemeralVolumes = append(ephemeralVolumes, component)
-			}
 		}
 	}
+
+	// Add implicit projects volume to support mountSources, if needed
 	if _, exists := devfileVolumes[devfileConstants.ProjectsVolumeName]; !exists {
-		// Add implicit projects volume to support mountSources
 		projectsVolume := dw.VolumeComponent{}
 		projectsVolume.Size = constants.PVCStorageSize
 		devfileVolumes[devfileConstants.ProjectsVolumeName] = projectsVolume
 	}
 
-	for _, component := range ephemeralVolumes {
-		vol := corev1.Volume{
-			Name: component.Name,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		}
-		if component.Volume.Size != "" {
-			sizeResource, err := resource.ParseQuantity(component.Volume.Size)
-			if err != nil {
-				return fmt.Errorf("failed to parse size for Volume %s: %w", component.Name, err)
-			}
-			vol.EmptyDir.SizeLimit = &sizeResource
-		}
-		podAdditions.Volumes = append(podAdditions.Volumes, vol)
-	}
-
-	if needsStorage(workspace) {
-		// TODO: Support more than the common PVC strategy here (storage provisioner interface?)
-		// TODO: What should we do when a volume isn't explicitly defined?
-		commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
-		rewriteVolumeMounts := func(containers []corev1.Container) error {
-			for cIdx, container := range containers {
-				for vmIdx, vm := range container.VolumeMounts {
-					volume, ok := devfileVolumes[vm.Name]
-					if !ok {
-						return fmt.Errorf("container '%s' references undefined volume '%s'", container.Name, vm.Name)
-					}
-					if !volume.Ephemeral {
-						containers[cIdx].VolumeMounts[vmIdx].SubPath = fmt.Sprintf("%s/%s", workspaceId, vm.Name)
-						containers[cIdx].VolumeMounts[vmIdx].Name = commonPVCName
-					}
+	// TODO: Support more than the common PVC strategy here (storage provisioner interface?)
+	// TODO: What should we do when a volume isn't explicitly defined?
+	commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
+	rewriteVolumeMounts := func(containers []corev1.Container) error {
+		for cIdx, container := range containers {
+			for vmIdx, vm := range container.VolumeMounts {
+				volume, ok := devfileVolumes[vm.Name]
+				if !ok {
+					return fmt.Errorf("container '%s' references undefined volume '%s'", container.Name, vm.Name)
+				}
+				if !volume.Ephemeral {
+					containers[cIdx].VolumeMounts[vmIdx].SubPath = fmt.Sprintf("%s/%s", workspaceId, vm.Name)
+					containers[cIdx].VolumeMounts[vmIdx].Name = commonPVCName
 				}
 			}
-			return nil
 		}
-		if err := rewriteVolumeMounts(podAdditions.Containers); err != nil {
-			return err
-		}
-		if err := rewriteVolumeMounts(podAdditions.InitContainers); err != nil {
-			return err
-		}
-
-		podAdditions.Volumes = append(podAdditions.Volumes, corev1.Volume{
-			Name: commonPVCName,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: commonPVCName,
-				},
-			},
-		})
+		return nil
 	}
+	if err := rewriteVolumeMounts(podAdditions.Containers); err != nil {
+		return err
+	}
+	if err := rewriteVolumeMounts(podAdditions.InitContainers); err != nil {
+		return err
+	}
+
+	podAdditions.Volumes = append(podAdditions.Volumes, corev1.Volume{
+		Name: commonPVCName,
+		VolumeSource: corev1.VolumeSource{
+			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+				ClaimName: commonPVCName,
+			},
+		},
+	})
 
 	return nil
 }

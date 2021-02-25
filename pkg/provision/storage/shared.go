@@ -14,9 +14,11 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -100,4 +102,74 @@ func syncCommonPVC(namespace string, clusterAPI provision.ClusterAPI) (*corev1.P
 		}
 	}
 	return currPVC, nil
+}
+
+// addEphemeralVolumesToPodAdditions adds emptyDir volumes to podAdditions for each volume in workspaceVolumes.
+// Returns a non-nil error if the size field of a volume is unparseable; otherwise, the list of k8s volumes that
+// were added are returned.
+func addEphemeralVolumesToPodAdditions(podAdditions *v1alpha1.PodAdditions, workspaceVolumes []dw.Component) (addedVolumes []corev1.Volume, err error) {
+	for _, component := range workspaceVolumes {
+		if component.Volume == nil {
+			continue
+		}
+		vol := corev1.Volume{
+			Name: component.Name,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		}
+		if component.Volume.Size != "" {
+			sizeResource, err := resource.ParseQuantity(component.Volume.Size)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse size for Volume %s: %w", component.Name, err)
+			}
+			vol.EmptyDir.SizeLimit = &sizeResource
+		}
+		podAdditions.Volumes = append(podAdditions.Volumes, vol)
+		addedVolumes = append(addedVolumes, vol)
+	}
+	return addedVolumes, nil
+}
+
+// getWorkspaceVolumes returns all volumes defined in the DevWorkspace, separated out into persistent volumes, ephemeral
+// volumes, and the projects volume, which must be handled specially. If the workspace does not define a projects volume,
+// the returned value is nil.
+func getWorkspaceVolumes(workspace *dw.DevWorkspace) (persistent, ephemeral []dw.Component, projects *dw.Component) {
+	for _, component := range workspace.Spec.Template.Components {
+		if component.Volume == nil {
+			continue
+		}
+		if component.Name == devfileConstants.ProjectsVolumeName {
+			projects = &component
+			continue
+		}
+		if component.Volume.Ephemeral {
+			ephemeral = append(ephemeral, component)
+		} else {
+			persistent = append(persistent, component)
+		}
+	}
+	return persistent, ephemeral, projects
+}
+
+// processProjectsVolume handles the special case of the projects volume, for which there are four possibilities:
+// 1. The projects volume is not needed for the workspace (no component has mountSources: true)
+// 2. The projects volume is needed but not defined in the devfile. This is the usual case, as the projects volume
+//    is implicitly defined by mountSources
+// 3. The projects volume is explicitly defined in the workspace, as a regular volume.
+// 4. The projects volume is explicitly defined in the workspace as an ephemeral volume.
+//
+// To handle these cases, this function returns the projects component, if it is defined explictly (covering cases 3 and 4)
+// and a boolean defining if the projects volume is generally necessary for the workspace (covering cases 1 and 2)
+func processProjectsVolume(workspace *dw.DevWorkspaceTemplateSpec) (projectsComponent *dw.Component, needed bool) {
+	// If any container has mountSources == true, we need projects
+	needed = containerlib.AnyMountSources(workspace.Components)
+	for _, component := range workspace.Components {
+		if component.Volume != nil && component.Name == devfileConstants.ProjectsVolumeName {
+			projectsComponent = &component
+			// Add projects volume if it's explicitly defined, even if it's not used anywhere
+			needed = true
+		}
+	}
+	return
 }

@@ -47,6 +47,8 @@ func GetProvisioner(workspace *devworkspace.DevWorkspace) (Provisioner, error) {
 	switch storageClass {
 	case constants.CommonStorageClassType:
 		return &CommonStorageProvisioner{}, nil
+	case constants.AsyncStorageClassType:
+		return &AsyncStorageProvisioner{}, nil
 	default:
 		return nil, UnsupportedStorageStrategy
 	}

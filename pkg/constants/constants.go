@@ -59,6 +59,8 @@ const (
 	// If empty, the common PVC strategy is used.
 	// Supported options:
 	// - "common": Create one PVC per namespace, and store data for all workspaces in that namespace in that PVC
+	// - "async" : Create one PVC per namespace, and create a remote server that syncs data from workspaces to the PVC.
+	//             All volumeMounts used for workspaces are emptyDir
 	WorkspaceStorageTypeLabel = "controller.devfile.io/storage-type"
 
 	// WorkspaceRestrictedAccessAnnotation marks the intention that workspace access is restricted to only the creator; setting this
@@ -97,4 +99,7 @@ const (
 	// CommonStorageClassType defines the 'common' storage policy -- one PVC is provisioned per namespace and all workspace storage
 	// is mounted in it on subpaths according to workspace ID.
 	CommonStorageClassType = "common"
+	// AsyncStorageClassType defines the 'asynchronous' storage policy. An rsync sidecar is added to workspaces that uses SSH to connect
+	// to a storage deployment that mounts a common PVC for the namespace.
+	AsyncStorageClassType = "async"
 )

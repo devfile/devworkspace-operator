@@ -218,6 +218,12 @@ func (r *ReconcileWorkspace) Reconcile(request reconcile.Request) (reconcileResu
 		return reconcile.Result{}, err
 	}
 
+	if _, ok := workspace.Annotations[config.StoppedByAnnotation]; ok {
+		delete(workspace.Annotations, config.StoppedByAnnotation)
+		err = r.client.Update(context.TODO(), workspace)
+		return reconcile.Result{Requeue: true}, err
+	}
+
 	immutable := workspace.Annotations[config.WorkspaceImmutableAnnotation]
 	if immutable == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
 		reqLogger.Info("Workspace is configured as immutable but webhooks are not enabled.")

@@ -66,13 +66,6 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 }
 
 func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
-	PVCexists, err := commonPVCExists(workspace, clusterAPI)
-	if err != nil {
-		return err
-	} else if !PVCexists {
-		// Nothing to do; return nil and continue
-		return nil
-	}
 	return runCommonPVCCleanupJob(workspace, clusterAPI)
 }
 

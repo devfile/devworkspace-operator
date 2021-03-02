@@ -32,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const PullSecretsReadyCondition devworkspace.WorkspaceConditionType = "PullSecretsReady"
+
 // clock is used to set status condition timestamps.
 // This variable makes it easier to test conditions.
 var clock kubeclock.Clock = &kubeclock.RealClock{}
@@ -164,6 +166,9 @@ func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devwork
 	}
 	if _, ok := conditions[devworkspace.WorkspaceServiceAccountReady]; ok {
 		return "Waiting for deployment to be ready"
+	}
+	if _, ok := conditions[PullSecretsReadyCondition]; ok {
+		return "Waiting for workspace pull secrets"
 	}
 	if _, ok := conditions[devworkspace.WorkspaceRoutingReady]; ok {
 		return "Waiting for workspace serviceaccount"

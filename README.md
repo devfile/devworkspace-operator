@@ -25,6 +25,14 @@ metadata:
   annotations:
     controller.devfile.io/restricted-access: true
 ```
+## Prerequisites
+- go
+- git
+- kustomize.io
+- sed
+- jq
+- yq (python-yq from https://github.com/kislyuk/yq#installation, other distributions may not work)
+- docker
 
 ## Running the controller in a cluster
 

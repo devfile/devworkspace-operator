@@ -6,7 +6,7 @@ spec:
   components:
     - name: web-terminal
       container:
-        image: "${RELATED_IMAGE_plugin_redhat_developer_web_terminal_nightly}"
+        image: "quay.io/eclipse/che-machine-exec:nightly"
         command: ["/go/bin/che-machine-exec",
                   "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
                   "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",

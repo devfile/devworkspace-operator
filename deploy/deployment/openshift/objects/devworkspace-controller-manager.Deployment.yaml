@@ -41,8 +41,6 @@ spec:
               fieldPath: spec.serviceAccountName
         - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
           value: quay.io/eclipse/che-machine-exec:nightly
-        - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_nightly
-          value: quay.io/eclipse/che-machine-exec:nightly
         - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_4_5_0
           value: quay.io/eclipse/che-machine-exec:nightly
         - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_dev_nightly

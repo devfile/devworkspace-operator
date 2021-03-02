@@ -263,6 +263,12 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.Conditions[devworkspace.WorkspaceServiceAccountReady] = ""
 
+	pullSecretStatus := provision.PullSecrets(clusterAPI)
+	if !pullSecretStatus.Continue {
+		return reconcile.Result{Requeue: pullSecretStatus.Requeue}, pullSecretStatus.Err
+	}
+	podAdditions = append(podAdditions, pullSecretStatus.PodAdditions)
+
 	// Step six: Create deployment and wait for it to be ready
 	timing.SetTime(timingInfo, timing.DeploymentCreated)
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)

@@ -61,10 +61,6 @@ func RouteName(workspaceId, endpointName string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, endpointName)
 }
 
-func CheRestAPIsConfigmapName(workspaceId string) string {
-	return fmt.Sprintf("%s-%s", workspaceId, "che-rest-apis")
-}
-
 func OAuthProxySecretName(workspaceId string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, "proxy-tls")
 }

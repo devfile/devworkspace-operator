@@ -99,6 +99,13 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 									MountPath: "/async-storage",
 								},
 								{
+									// TODO: mounting a configmap with SubPath prevents changes from being propagated into the
+									// container and not using a subpath replaces all files in the directory and mounts it as a
+									// read-only filesystem.
+									// As a workaround, we could mount the whole configmap to some other directory and copy
+									// the file on startup, but this would require changes in the che-workspace-data-sync-storage
+									// container
+									// See issue https://github.com/kubernetes/kubernetes/issues/50345 for more info
 									Name:      "async-storage-config",
 									MountPath: "/.ssh/authorized_keys",
 									ReadOnly:  true,

@@ -30,7 +30,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -97,7 +96,7 @@ func SyncDeploymentToCluster(
 		clusterDeployment.Spec = specDeployment.Spec
 		err := clusterAPI.Client.Update(context.TODO(), clusterDeployment)
 		if err != nil {
-			if apierrors.IsConflict(err) {
+			if k8sErrors.IsConflict(err) {
 				return DeploymentProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
 			}
 			return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
@@ -275,7 +274,7 @@ func getClusterDeployment(name string, namespace string, client runtimeClient.Cl
 	}
 	err := client.Get(context.TODO(), namespacedName, deployment)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
+		if k8sErrors.IsNotFound(err) {
 			return nil, nil
 		}
 		return nil, err

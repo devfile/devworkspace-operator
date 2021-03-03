@@ -18,13 +18,12 @@ import (
 	"path"
 	"time"
 
-	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
-
-	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
 
 	"github.com/go-logr/logr"
 	batchv1 "k8s.io/api/batch/v1"
@@ -47,15 +46,15 @@ const (
 var (
 	cleanupJobCompletions      = int32(1)
 	cleanupJobBackoffLimit     = int32(3)
-	PVCCleanupPodMemoryLimit   = resource.MustParse("32Mi")
+	PVCCleanupPodMemoryLimit   = resource.MustParse(config.PVCCleanupPodMemoryLimit)
 	PVCCleanupPodMemoryRequest = PVCCleanupPodMemoryLimit
-	PVCCleanupPodCPULimit      = resource.MustParse("50m")
-	PVCCleanupPodCPURequest    = resource.MustParse("5m")
+	PVCCleanupPodCPULimit      = resource.MustParse(config.PVCCleanupPodCPULimit)
+	PVCCleanupPodCPURequest    = resource.MustParse(config.PVCCleanupPodCPURequest)
 )
 
 // setFinalizer sets a finalizer on the workspace and syncs the changes to the cluster. No-op if the workspace already
 // has the finalizer set.
-func (r *DevWorkspaceReconciler) setFinalizer(ctx context.Context, workspace *v1alpha2.DevWorkspace) (ok bool, err error) {
+func (r *DevWorkspaceReconciler) setFinalizer(ctx context.Context, workspace *devworkspace.DevWorkspace) (ok bool, err error) {
 	if hasFinalizer(workspace) {
 		return true, nil
 	}
@@ -63,7 +62,7 @@ func (r *DevWorkspaceReconciler) setFinalizer(ctx context.Context, workspace *v1
 	return false, r.Update(ctx, workspace)
 }
 
-func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *v1alpha2.DevWorkspace) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *devworkspace.DevWorkspace) (reconcile.Result, error) {
 	if !hasFinalizer(workspace) {
 		return reconcile.Result{}, nil
 	}
@@ -139,7 +138,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			log.Error(fmt.Errorf("PVC clean up job failed: message: %q", condition.Message),
 				"Failed to clean PVC on workspace deletion")
 			failedStatus := &currentStatus{
-				Conditions: map[v1alpha2.WorkspaceConditionType]string{
+				Conditions: map[devworkspace.WorkspaceConditionType]string{
 					"Error": fmt.Sprintf("Failed to clean PVC on deletion. See logs for job %q for details", clusterJob.Name),
 				},
 				Phase: "Error",
@@ -151,7 +150,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	return reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 }
 
-func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorkspace) (*batchv1.Job, error) {
+func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *devworkspace.DevWorkspace) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.WorkspaceId
 	pvcName := config.ControllerCfg.GetWorkspacePVCName()
 	jobLabels := map[string]string{
@@ -222,7 +221,7 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *v1alpha2.DevWorksp
 	return job, nil
 }
 
-func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, workspace *v1alpha2.DevWorkspace) (*batchv1.Job, error) {
+func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, workspace *devworkspace.DevWorkspace) (*batchv1.Job, error) {
 	namespacedName := types.NamespacedName{
 		Name:      common.PVCCleanupJobName(workspace.Status.WorkspaceId),
 		Namespace: workspace.Namespace,
@@ -240,11 +239,11 @@ func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, works
 	return clusterJob, nil
 }
 
-func isFinalizerNecessary(workspace *v1alpha2.DevWorkspace) bool {
+func isFinalizerNecessary(workspace *devworkspace.DevWorkspace) bool {
 	return storagelib.NeedsStorage(workspace.Spec.Template)
 }
 
-func hasFinalizer(workspace *v1alpha2.DevWorkspace) bool {
+func hasFinalizer(workspace *devworkspace.DevWorkspace) bool {
 	for _, finalizer := range workspace.Finalizers {
 		if finalizer == pvcCleanupFinalizer {
 			return true
@@ -253,7 +252,7 @@ func hasFinalizer(workspace *v1alpha2.DevWorkspace) bool {
 	return false
 }
 
-func clearFinalizer(workspace *v1alpha2.DevWorkspace) {
+func clearFinalizer(workspace *devworkspace.DevWorkspace) {
 	var newFinalizers []string
 	for _, finalizer := range workspace.Finalizers {
 		if finalizer != pvcCleanupFinalizer {
@@ -277,7 +276,7 @@ func (r *DevWorkspaceReconciler) namespaceIsTerminating(ctx context.Context, nam
 	return n.Status.Phase == corev1.NamespaceTerminating, nil
 }
 
-func (r *DevWorkspaceReconciler) pvcExists(ctx context.Context, workspace *v1alpha2.DevWorkspace) (bool, error) {
+func (r *DevWorkspaceReconciler) pvcExists(ctx context.Context, workspace *devworkspace.DevWorkspace) (bool, error) {
 	namespacedName := types.NamespacedName{
 		Name:      config.ControllerCfg.GetWorkspacePVCName(),
 		Namespace: workspace.Namespace,

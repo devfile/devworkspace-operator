@@ -68,61 +68,13 @@ const (
 	// PVCCleanupPodMemoryLimit is the memory limit used for PVC clean up pods
 	PVCCleanupPodMemoryLimit = "32Mi"
 
+	// PVCCleanupPodCPULimit is the cpu limit used for PVC clean up pods
+	PVCCleanupPodCPULimit = "50m"
+
+	// PVCCleanupPodCPURequest is the cpu request used for PVC clean up pods
+	PVCCleanupPodCPURequest = "5m"
+
 	// RoutingAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the WorkspaceRouting objects.
 	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
 	RoutingAnnotationInfix = ".routing.controller.devfile.io/"
-)
-
-// Constants for che-rest-apis
-const (
-	// Attribute of Runtime Machine to mark source of the container.
-	RestApisContainerSourceAttribute = "source"
-	RestApisPluginMachineAttribute   = "plugin"
-
-	// Mark containers applied to workspace with help recipe definition.
-	RestApisRecipeSourceContainerAttribute = "recipe"
-
-	// Mark containers created workspace api like tooling for user development.
-	RestApisRecipeSourceToolAttribute = "tool"
-
-	// Command attribute which indicates the working directory where the given command must be run
-	CommandWorkingDirectoryAttribute = "workingDir"
-
-	// Command attribute which indicates in which machine command must be run. It is optional,
-	// IDE should asks user to choose machine if null.
-	CommandMachineNameAttribute = "machineName"
-
-	// Command attribute which indicates in which plugin command must be run. If specified
-	// plugin has multiple containers then first containers should be used. Attribute value has the
-	// following format: `{PLUGIN_PUBLISHER}/{PLUGIN_NAME}/{PLUGIN_VERSION}`. For example:
-	// eclipse/sample-plugin/0.0.1
-	CommandPluginAttribute = "plugin"
-
-	// An attribute of the command to store the original path to the file that contains the editor
-	// specific configuration.
-	CommandActionReferenceAttribute = "actionReference"
-
-	// The contents of editor-specific content
-	CommandActionReferenceContentAttribute = "actionReferenceContent"
-
-	// Workspace command attributes that indicates with which component it is associated. */
-	ComponentAliasCommandAttribute = "componentAlias"
-
-	// RestAPIsRuntimeVolumePathis the path where workspace information is mounted in che-rest-apis
-	RestAPIsRuntimeVolumePath = "/workspace/"
-
-	// RestAPIsRuntimeJSONFilename is the filename for the runtime json annotation
-	RestAPIsRuntimeJSONFilename = "runtime.json"
-
-	// RestAPIsDevfileYamlFilename is the filename for the devfile yaml
-	RestAPIsDevfileYamlFilename = "devfile.yaml"
-
-	// RestAPIsVolumeName is the name of the configmap volume that stores workspace metadata
-	RestAPIsVolumeName = "che-rest-apis-data"
-)
-
-// constants for workspace controller
-const (
-	// The IDE of theia editor in devfile
-	TheiaEditorID = "eclipse/che-theia"
 )

@@ -14,7 +14,6 @@ package config
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strings"
 
@@ -77,10 +76,6 @@ func (wc *ControllerConfig) GetRoutingSuffix() string {
 
 func (wc *ControllerConfig) GetPVCStorageClassName() *string {
 	return wc.GetProperty(workspacePVCStorageClassName)
-}
-
-func (wc *ControllerConfig) GetCheAPISidecarImage() string {
-	return wc.GetPropertyOrDefault(cheAPISidecarImage, defaultCheAPISidecarImage)
 }
 
 func (wc *ControllerConfig) IsOpenShift() bool {
@@ -170,7 +165,7 @@ func WatchControllerConfig(mgr manager.Manager) error {
 	}
 
 	if ConfigMapReference.Namespace == "" {
-		return errors.New(fmt.Sprintf("You should set the namespace of the controller config map through the '%s' environment variable", ConfigMapNamespaceEnvVar))
+		return fmt.Errorf("you should set the namespace of the controller config map through the '%s' environment variable", ConfigMapNamespaceEnvVar)
 	}
 
 	configMap := &corev1.ConfigMap{}
@@ -187,7 +182,7 @@ func WatchControllerConfig(mgr manager.Manager) error {
 			return err
 		}
 		if customConfig {
-			return errors.New(fmt.Sprintf("Cannot find the '%s' ConfigMap in namespace '%s'", ConfigMapReference.Name, ConfigMapReference.Namespace))
+			return fmt.Errorf("cannot find the '%s' ConfigMap in namespace '%s'", ConfigMapReference.Name, ConfigMapReference.Namespace)
 		}
 
 		buildDefaultConfigMap(configMap)

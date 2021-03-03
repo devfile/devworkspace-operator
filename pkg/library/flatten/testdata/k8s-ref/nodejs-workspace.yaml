@@ -105,14 +105,16 @@ input:
                   KUBE_API_ENDPOINT="https://kubernetes.default.svc/apis/workspace.devfile.io/v1alpha2/namespaces/${CHE_WORKSPACE_NAMESPACE}/devworkspaces/${CHE_WORKSPACE_NAME}" &&\
                   TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) &&\
                   WORKSPACE=$(curl -fsS --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" $KUBE_API_ENDPOINT) &&\
-                  for container in $(echo $WORKSPACE | sed -e 's;[[,]\({"attributes":{"app.kubernetes.io\);\n\1;g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
-                    dest=$(echo "$container" | sed 's;.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*;\1;' - ) ;\
-                    urls=$(echo "$container" | sed 's;.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*;\1;' - ) ;\
+                  IFS=$'\n' &&\
+                  for container in $(echo $WORKSPACE | sed -e 's|[[,]\({"attributes":{"app.kubernetes.io\)|\n\1|g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
+                    dest=$(echo "$container" | sed 's|.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*|\1|' - ) ;\
+                    urls=$(echo "$container" | sed 's|.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*|\1|' - ) ;\
                     mkdir -p $dest ;\
+                    unset IFS &&\
                     for url in $(echo $urls | sed 's/[",]/ /g' - ); do \
                       echo; echo downloading $urls to $dest; curl -L $url > $dest/$(basename $url) ;\
                     done \
-                  done
+                  done \
               image: 'quay.io/samsahai/curl:latest'
               volumeMounts:
                 - path: "/plugins"
@@ -359,14 +361,16 @@ output:
               KUBE_API_ENDPOINT="https://kubernetes.default.svc/apis/workspace.devfile.io/v1alpha2/namespaces/${CHE_WORKSPACE_NAMESPACE}/devworkspaces/${CHE_WORKSPACE_NAME}" &&\
               TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) &&\
               WORKSPACE=$(curl -fsS --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" $KUBE_API_ENDPOINT) &&\
-              for container in $(echo $WORKSPACE | sed -e 's;[[,]\({"attributes":{"app.kubernetes.io\);\n\1;g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
-                dest=$(echo "$container" | sed 's;.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*;\1;' - ) ;\
-                urls=$(echo "$container" | sed 's;.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*;\1;' - ) ;\
+              IFS=$'\n' &&\
+              for container in $(echo $WORKSPACE | sed -e 's|[[,]\({"attributes":{"app.kubernetes.io\)|\n\1|g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
+                dest=$(echo "$container" | sed 's|.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*|\1|' - ) ;\
+                urls=$(echo "$container" | sed 's|.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*|\1|' - ) ;\
                 mkdir -p $dest ;\
+                unset IFS &&\
                 for url in $(echo $urls | sed 's/[",]/ /g' - ); do \
                   echo; echo downloading $urls to $dest; curl -L $url > $dest/$(basename $url) ;\
                 done \
-              done
+              done \
           image: 'quay.io/samsahai/curl:latest'
           volumeMounts:
             - path: "/plugins"

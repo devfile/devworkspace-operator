@@ -11,13 +11,14 @@
 #
 
 set -e
-#!/bin/bash	
-QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"	
+REPO=git@github.com:devfile/devworkspace-operator
 MAIN_BRANCH="main"
+TMP=""
 
 while [[ "$#" -gt 0 ]]; do	
   case $1 in	
     '-v'|'--version') VERSION="$2"; shift 1;;		
+    '-tmp'|'--use-tmp-dir') TMP=$(mktemp -d); shift 0;;
   esac	
   shift 1	
 done	
@@ -37,20 +38,20 @@ bump_version () {
     git commit -asm "${COMMIT_MSG}"	
     git pull origin "${BUMP_BRANCH}"	
 
-    # set +e
-    # PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"	
-    # # shellcheck disable=SC2181	
-    # set -e
-    # if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then	
-    #   PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}	
-    #   # create pull request for the main branch branch, as branch is restricted	
-    #   git branch "${PR_BRANCH}"	
-    #   git checkout "${PR_BRANCH}"	
-    #   git pull origin "${PR_BRANCH}"	
-    #   git push origin "${PR_BRANCH}"	
-    #   lastCommitComment="$(git log -1 --pretty=%B)"	
-    #   hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"	
-    # fi 	
+    set +e
+    PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"	
+    # shellcheck disable=SC2181	
+    if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then	
+      PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}	
+      # create pull request for the main branch branch, as branch is restricted	
+      git branch "${PR_BRANCH}"	
+      git checkout "${PR_BRANCH}"	
+      git pull origin "${PR_BRANCH}"	
+      git push origin "${PR_BRANCH}"	
+      lastCommitComment="$(git log -1 --pretty=%B)"	
+      hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"	
+    fi 	
+    set -e
   fi	
   git checkout "${CURRENT_BRANCH}"	
 }	
@@ -77,39 +78,47 @@ else
   BASEBRANCH="${BRANCH}"	
 fi	
 
+# work in tmp dir
+if [[ $TMP ]] && [[ -d $TMP ]]; then
+  pushd "$TMP" > /dev/null || exit 1
+  # get sources from ${BASEBRANCH} branch
+  echo "Check out ${REPO} to ${TMP}/${REPO##*/}"
+  git clone "${REPO}" -q
+  cd "${REPO##*/}" || exit 1
+fi
+
+
 # get sources from ${BASEBRANCH} branch	
-git fetch origin "${BASEBRANCH}":"${BASEBRANCH}"	
+git fetch origin "${BASEBRANCH}":"${BASEBRANCH}" || true
 git checkout "${BASEBRANCH}"	
 
 # create new branch off ${BASEBRANCH} (or check out latest commits if branch already exists), then push to origin
 if [[ "${BASEBRANCH}" != "${BRANCH}" ]]; then
   git branch "${BRANCH}" || git checkout "${BRANCH}" && git pull origin "${BRANCH}"
-#   git push origin "${BRANCH}"
+  git push origin "${BRANCH}"
   git fetch origin "${BRANCH}:${BRANCH}" || true
   git checkout "${BRANCH}"
 else
   git fetch origin "${BRANCH}:${BRANCH}" || true
-  git checkout ${BRANCH}
+  git checkout "${BRANCH}"
 fi
 set -e
 
-
-set -e	
-
 # change VERSION file	
-echo "${VERSION}" > VERSION	
+echo "${VERSION}" > VERSION
 
-git pull origin "${BRANCH}"	
-# git push origin "${BRANCH}"	
-	
+QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
-#docker push "${QUAY_REPO}"
+docker push "${QUAY_REPO}"
+
+# replace image version in default environment
 sed -i "s/IMG=quay.io\/devfile\/devworkspace-controller:.*/IMG=quay.io\/devfile\/devworkspace-controller:${VERSION}/" ./deploy/generate-deployment.sh
 
-./deploy/generate-deployment.sh --use-defaults
+set -x
+bash -x ./deploy/generate-deployment.sh --use-defaults
 # tag the release	
 git tag "${VERSION}"	
-#   git push origin "${VERSION}"	
+git push origin "${VERSION}"	
 COMMIT_MSG="[release] Release ${VERSION}"	
 git commit -asm "${COMMIT_MSG}"	
 
@@ -119,11 +128,18 @@ git checkout "${BASEBRANCH}"
 # change VERSION file + commit change into ${BASEBRANCH} branch	
 if [[ "${BASEBRANCH}" != "${BRANCH}" ]]; then	
   # bump the y digit, if it is a major release	
-  [[ $BRANCH =~ ^([0-9]+)\.([0-9]+)\.x ]] && BASE=${BASH_REMATCH[1]}; NEXT=${BASH_REMATCH[2]}; (( NEXT=NEXT+1 )) # for BRANCH=7.10.x, get BASE=7, NEXT=11	
+  [[ $BRANCH =~ ^([0-9]+)\.([0-9]+)\.x ]] && BASE=${BASH_REMATCH[1]}; NEXT=${BASH_REMATCH[2]}; (( NEXT=NEXT+1 )) # for BRANCH=0.1.x, get BASE=0, NEXT=2	
   NEXT_VERSION_Y="${BASE}.${NEXT}.0-SNAPSHOT"	
   bump_version "${NEXT_VERSION_Y}" "${BASEBRANCH}"	
 fi	
 # bump the z digit	
-[[ $VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]] && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"; NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=7.7.1, get BASE=7.7, NEXT=2	
+[[ $VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]] && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"; NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3	
 NEXT_VERSION_Z="${BASE}.${NEXT}-SNAPSHOT"	
 bump_version "${NEXT_VERSION_Z}" "${BRANCH}"
+
+popd > /dev/null || exit
+
+# cleanup tmp dir
+if [[ $TMP ]] && [[ -d $TMP ]]; then
+  rm -fr "$TMP"
+fi

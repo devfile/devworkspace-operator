@@ -14,7 +14,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -30,7 +29,6 @@ import (
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/restapis"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
@@ -252,32 +250,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if !statusOk {
 		reqLogger.Info("Updating workspace status")
 		return reconcile.Result{Requeue: true}, nil
-	}
-
-	// Step three: setup che-rest-apis
-	if restapis.IsCheRestApisRequired(workspace.Spec.Template.Components) {
-		if !restapis.IsCheRestApisConfigured() {
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Che REST API sidecar is not configured but required for the Theia plugin"
-			return reconcile.Result{Requeue: false}, errors.New("che REST API sidecar is not configured but required for used Theia plugin")
-		}
-		componentDescriptions, err := shimlib.GetComponentDescriptionsFromPodAdditions(devfilePodAdditions, workspace.Spec.Template)
-		if err != nil {
-			reqLogger.Info("DevWorkspace start failed")
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile for Theia: %s", err)
-			return reconcile.Result{}, nil
-		}
-		cheRestApisComponent := restapis.GetCheRestApisComponent(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace)
-		// Some containers (e.g. Theia) need Che API Sidecar to be available just after start up, so the Che API Sidecar must come first
-		componentDescriptions = append([]controllerv1alpha1.ComponentDescription{cheRestApisComponent}, componentDescriptions...)
-		configMapStatus := restapis.SyncRestAPIsConfigMap(workspace, componentDescriptions, routingStatus.ExposedEndpoints, clusterAPI)
-		if !configMapStatus.Continue {
-			// FailStartup is not possible for generating the configmap
-			reqLogger.Info("Waiting on che-rest-apis configmap to be ready")
-			return reconcile.Result{Requeue: configMapStatus.Requeue}, configMapStatus.Err
-		}
-		allPodAdditions = append(allPodAdditions, cheRestApisComponent.PodAdditions)
 	}
 
 	// Step four: Collect all workspace deployment contributions

@@ -16,10 +16,6 @@ const (
 	webhooksEnabled        = "controller.webhooks.enabled"
 	defaultWebhooksEnabled = "true"
 
-	cheAPISidecarImage = "devworkspace.api_sidecar.image"
-	// by default that functionality is not available since it's not fully supported
-	defaultCheAPISidecarImage = ""
-
 	// image pull policy that is applied to every container within workspace
 	sidecarPullPolicy        = "devworkspace.sidecar.image_pull_policy"
 	defaultSidecarPullPolicy = "Always"

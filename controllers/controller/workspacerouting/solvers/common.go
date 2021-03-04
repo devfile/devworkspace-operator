@@ -13,11 +13,11 @@
 package solvers
 
 import (
-	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -87,7 +87,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 
 	// "set" of exposure types that are allowed
-	validExposures := map[v1alpha2.EndpointExposure]bool{}
+	validExposures := map[devworkspace.EndpointExposure]bool{}
 	for _, exp := range exposureType {
 		validExposures[exp] = true
 	}
@@ -142,7 +142,7 @@ func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointLis
 		return nil
 	}
 
-	service := GetServiceForEndpoints(endpoints, meta, true, v1alpha2.PublicEndpointExposure, v1alpha2.InternalEndpointExposure)
+	service := GetServiceForEndpoints(endpoints, meta, true, devworkspace.PublicEndpointExposure, devworkspace.InternalEndpointExposure)
 	if service == nil {
 		return nil
 	}

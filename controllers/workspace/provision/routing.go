@@ -139,7 +139,7 @@ func getSpecRouting(
 			continue
 		}
 		componentEndpoints := component.Container.Endpoints
-		if componentEndpoints != nil && len(componentEndpoints) > 0 {
+		if len(componentEndpoints) > 0 {
 			endpoints[component.Name] = append(endpoints[component.Name], componentEndpoints...)
 		}
 	}

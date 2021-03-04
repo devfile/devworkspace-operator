@@ -31,7 +31,7 @@ jobs:
           pip install yq
 
           cd /usr/bin
-          curl -s "https://github.com/kubernetes-sigs/kustomize/blob/kustomize/v4.0.4/hack/install_kustomize.sh 4.0.4"  | bash
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v4.0.4/hack/install_kustomize.sh"  | bash
           cd ${GITHUB_WORKSPACE}
       - name: Build image, generate deployments and push git tag
         run: |

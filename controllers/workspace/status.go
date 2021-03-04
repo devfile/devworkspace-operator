@@ -108,7 +108,8 @@ func syncWorkspaceIdeURL(workspace *devworkspace.DevWorkspace, exposedEndpoints 
 func checkServerStatus(workspace *devworkspace.DevWorkspace) (ok bool, err error) {
 	ideUrl := workspace.Status.IdeUrl
 	if ideUrl == "" {
-		return false, nil
+		// Support DevWorkspaces that do not specify an ideUrl
+		return true, nil
 	}
 	healthz, err := url.Parse(ideUrl)
 	if err != nil {
@@ -153,6 +154,9 @@ func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devwork
 	}
 	switch workspace.Status.Phase {
 	case devworkspace.WorkspaceStatusRunning:
+		if workspace.Status.IdeUrl == "" {
+			return "Workspace is running"
+		}
 		return workspace.Status.IdeUrl
 	case devworkspace.WorkspaceStatusStopped, devworkspace.WorkspaceStatusStopping:
 		return string(workspace.Status.Phase)

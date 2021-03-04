@@ -21,7 +21,7 @@
 set -e
 
 COMPONENTS_CRD_PATH="deploy/templates/crd/bases/controller.devfile.io_components.yaml"
-ROUTINGS_CRD_PATH="deploy/templates/crd/bases/controller.devfile.io_workspaceroutings.yaml"
+ROUTINGS_CRD_PATH="deploy/templates/crd/bases/controller.devfile.io_devworkspaceroutings.yaml"
 
 # CRD path from root to status field, in jq filter format
 STATUS_PATH='.spec.versions[].schema.openAPIV3Schema.properties["status"]'
@@ -32,7 +32,7 @@ PODADDITIONS_PATH='.properties["podAdditions"].properties[$CONTAINERS_FIELD].ite
 
 # Full jq path to container ports required field in components CRD.
 COMPONENTS_SPEC_PATH="${STATUS_PATH}"'.properties["componentDescriptions"].items'"${PODADDITIONS_PATH}"
-# Full jq path to container ports required field in workspaceroutings CRD.
+# Full jq path to container ports required field in devworkspaceroutings CRD.
 ROUTINGS_SPEC_PATH="${STATUS_PATH}${PODADDITIONS_PATH}"
 
 # Update components CRD using yq; no-op if already patched.
@@ -51,7 +51,7 @@ function update_components_crd() {
   fi
 }
 
-# Update workspaceroutings CRD using yq; no-op if already patched.
+# Update devworkspaceroutings CRD using yq; no-op if already patched.
 # Args:
 #  $1 - podAdditions field to update ("containers" or "initContainers")
 function update_routings_crd() {

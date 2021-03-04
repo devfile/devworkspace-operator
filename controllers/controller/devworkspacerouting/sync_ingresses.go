@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspacerouting
+package devworkspacerouting
 
 import (
 	"context"
@@ -33,7 +33,7 @@ var ingressDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(v1beta1.HTTPIngressPath{}, "PathType"),
 }
 
-func (r *WorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.WorkspaceRouting, specIngresses []v1beta1.Ingress) (ok bool, clusterIngresses []v1beta1.Ingress, err error) {
+func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.DevWorkspaceRouting, specIngresses []v1beta1.Ingress) (ok bool, clusterIngresses []v1beta1.Ingress, err error) {
 	ingressesInSync := true
 
 	clusterIngresses, err = r.getClusterIngresses(routing)
@@ -74,7 +74,7 @@ func (r *WorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.W
 	return ingressesInSync, clusterIngresses, nil
 }
 
-func (r *WorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv1alpha1.WorkspaceRouting) ([]v1beta1.Ingress, error) {
+func (r *DevWorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv1alpha1.DevWorkspaceRouting) ([]v1beta1.Ingress, error) {
 	found := &v1beta1.IngressList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {

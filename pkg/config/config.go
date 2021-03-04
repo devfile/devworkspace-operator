@@ -103,8 +103,8 @@ func (wc *ControllerConfig) GetPropertyOrDefault(name string, defaultValue strin
 }
 
 func (wc *ControllerConfig) Validate() error {
-	if !infrastructure.IsOpenShift() && wc.GetDefaultRoutingClass() == string(v1alpha1.WorkspaceRoutingOpenShiftOauth) {
-		return fmt.Errorf("controller appears to be running in non-OpenShift cluster, but default routing class is '%s'", v1alpha1.WorkspaceRoutingOpenShiftOauth)
+	if !infrastructure.IsOpenShift() && wc.GetDefaultRoutingClass() == string(v1alpha1.DevWorkspaceRoutingOpenShiftOauth) {
+		return fmt.Errorf("controller appears to be running in non-OpenShift cluster, but default routing class is '%s'", v1alpha1.DevWorkspaceRoutingOpenShiftOauth)
 	}
 	return nil
 }

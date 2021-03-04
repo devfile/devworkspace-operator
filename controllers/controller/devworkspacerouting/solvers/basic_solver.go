@@ -42,15 +42,15 @@ type BasicSolver struct{}
 
 var _ RoutingSolver = (*BasicSolver)(nil)
 
-func (s *BasicSolver) FinalizerRequired(*controllerv1alpha1.WorkspaceRouting) bool {
+func (s *BasicSolver) FinalizerRequired(*controllerv1alpha1.DevWorkspaceRouting) bool {
 	return false
 }
 
-func (s *BasicSolver) Finalize(*controllerv1alpha1.WorkspaceRouting) error {
+func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 	return nil
 }
 
-func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
+func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
 	spec := routing.Spec

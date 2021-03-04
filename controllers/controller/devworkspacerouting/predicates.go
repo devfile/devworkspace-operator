@@ -10,10 +10,10 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspacerouting
+package devworkspacerouting
 
 import (
-	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -23,11 +23,11 @@ import (
 func getRoutingPredicatesForSolverFunc(solverGetter solvers.RoutingSolverGetter) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(ev event.CreateEvent) bool {
-			obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
+			obj, ok := ev.Object.(*controllerv1alpha1.DevWorkspaceRouting)
 			if !ok {
-				// If object is not a WorkspaceRouting, it must be a service/ingress/route related to the workspace
+				// If object is not a DevWorkspaceRouting, it must be a service/ingress/route related to the workspace
 				// The safe choice here is to trigger a reconcile to ensure that all resources are in sync; it's the job
-				// of the controller to ignore WorkspaceRoutings for other routing classes.
+				// of the controller to ignore DevWorkspaceRoutings for other routing classes.
 				return true
 			}
 			if !solverGetter.HasSolver(obj.Spec.RoutingClass) {
@@ -41,11 +41,11 @@ func getRoutingPredicatesForSolverFunc(solverGetter solvers.RoutingSolverGetter)
 			return true
 		},
 		UpdateFunc: func(ev event.UpdateEvent) bool {
-			newObj, ok := ev.ObjectNew.(*controllerv1alpha1.WorkspaceRouting)
+			newObj, ok := ev.ObjectNew.(*controllerv1alpha1.DevWorkspaceRouting)
 			if !ok {
-				// If object is not a WorkspaceRouting, it must be a service/ingress/route related to the workspace
+				// If object is not a DevWorkspaceRouting, it must be a service/ingress/route related to the workspace
 				// The safe choice here is to trigger a reconcile to ensure that all resources are in sync; it's the job
-				// of the controller to ignore WorkspaceRoutings for other routing classes.
+				// of the controller to ignore DevWorkspaceRoutings for other routing classes.
 				return true
 			}
 			if !solverGetter.HasSolver(newObj.Spec.RoutingClass) {
@@ -56,7 +56,7 @@ func getRoutingPredicatesForSolverFunc(solverGetter solvers.RoutingSolverGetter)
 			return true
 		},
 		GenericFunc: func(ev event.GenericEvent) bool {
-			obj, ok := ev.Object.(*controllerv1alpha1.WorkspaceRouting)
+			obj, ok := ev.Object.(*controllerv1alpha1.DevWorkspaceRouting)
 			if !ok {
 				return true
 			}

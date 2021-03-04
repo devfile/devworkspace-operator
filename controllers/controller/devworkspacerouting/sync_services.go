@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspacerouting
+package devworkspacerouting
 
 import (
 	"context"
@@ -38,7 +38,7 @@ var serviceDiffOpts = cmp.Options{
 	}),
 }
 
-func (r *WorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1.WorkspaceRouting, specServices []corev1.Service) (ok bool, clusterServices []corev1.Service, err error) {
+func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1.DevWorkspaceRouting, specServices []corev1.Service) (ok bool, clusterServices []corev1.Service, err error) {
 	servicesInSync := true
 
 	clusterServices, err = r.getClusterServices(routing)
@@ -81,7 +81,7 @@ func (r *WorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1.Wo
 	return servicesInSync, clusterServices, nil
 }
 
-func (r *WorkspaceRoutingReconciler) getClusterServices(routing *controllerv1alpha1.WorkspaceRouting) ([]corev1.Service, error) {
+func (r *DevWorkspaceRoutingReconciler) getClusterServices(routing *controllerv1alpha1.DevWorkspaceRouting) ([]corev1.Service, error) {
 	found := &corev1.ServiceList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {

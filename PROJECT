@@ -8,7 +8,7 @@ resources:
   kind: Component
   version: v1alpha1
 - group: controller
-  kind: WorkspaceRouting
+  kind: DevWorkspaceRouting
   version: v1alpha1
 - group: workspace
   kind: DevWorkspace

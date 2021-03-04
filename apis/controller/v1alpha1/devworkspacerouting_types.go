@@ -18,13 +18,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// WorkspaceRoutingSpec defines the desired state of WorkspaceRouting
+// DevWorkspaceRoutingSpec defines the desired state of DevWorkspaceRouting
 // +k8s:openapi-gen=true
-type WorkspaceRoutingSpec struct {
+type DevWorkspaceRoutingSpec struct {
 	// WorkspaceId for the workspace being routed
 	WorkspaceId string `json:"workspaceId"`
 	// Class of the routing: this drives which Workspace Routing controller will manage this routing
-	RoutingClass WorkspaceRoutingClass `json:"routingClass,omitempty"`
+	RoutingClass DevWorkspaceRoutingClass `json:"routingClass,omitempty"`
 	// Routing suffix for cluster
 	RoutingSuffix string `json:"routingSuffix"`
 	// Machines to endpoints map
@@ -33,34 +33,34 @@ type WorkspaceRoutingSpec struct {
 	PodSelector map[string]string `json:"podSelector"`
 }
 
-type WorkspaceRoutingClass string
+type DevWorkspaceRoutingClass string
 
 const (
-	WorkspaceRoutingBasic          WorkspaceRoutingClass = "basic"
-	WorkspaceRoutingOpenShiftOauth WorkspaceRoutingClass = "openshift-oauth"
-	WorkspaceRoutingCluster        WorkspaceRoutingClass = "cluster"
-	WorkspaceRoutingClusterTLS     WorkspaceRoutingClass = "cluster-tls"
-	WorkspaceRoutingWebTerminal    WorkspaceRoutingClass = "web-terminal"
+	DevWorkspaceRoutingBasic          DevWorkspaceRoutingClass = "basic"
+	DevWorkspaceRoutingOpenShiftOauth DevWorkspaceRoutingClass = "openshift-oauth"
+	DevWorkspaceRoutingCluster        DevWorkspaceRoutingClass = "cluster"
+	DevWorkspaceRoutingClusterTLS     DevWorkspaceRoutingClass = "cluster-tls"
+	DevWorkspaceRoutingWebTerminal    DevWorkspaceRoutingClass = "web-terminal"
 )
 
-// WorkspaceRoutingStatus defines the observed state of WorkspaceRouting
+// DevWorkspaceRoutingStatus defines the observed state of DevWorkspaceRouting
 // +k8s:openapi-gen=true
-type WorkspaceRoutingStatus struct {
+type DevWorkspaceRoutingStatus struct {
 	// Additions to main workspace deployment
 	PodAdditions *PodAdditions `json:"podAdditions,omitempty"`
 	// Machine name to exposed endpoint map
 	ExposedEndpoints map[string]ExposedEndpointList `json:"exposedEndpoints,omitempty"`
 	// Routing reconcile phase
-	Phase WorkspaceRoutingPhase `json:"phase,omitempty"`
+	Phase DevWorkspaceRoutingPhase `json:"phase,omitempty"`
 }
 
-// Valid phases for workspacerouting
-type WorkspaceRoutingPhase string
+// Valid phases for devworkspacerouting
+type DevWorkspaceRoutingPhase string
 
 const (
-	RoutingReady     WorkspaceRoutingPhase = "Ready"
-	RoutingPreparing WorkspaceRoutingPhase = "Preparing"
-	RoutingFailed    WorkspaceRoutingPhase = "Failed"
+	RoutingReady     DevWorkspaceRoutingPhase = "Ready"
+	RoutingPreparing DevWorkspaceRoutingPhase = "Preparing"
+	RoutingFailed    DevWorkspaceRoutingPhase = "Failed"
 )
 
 type ExposedEndpoint struct {
@@ -79,27 +79,27 @@ type ExposedEndpointList []ExposedEndpoint
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// WorkspaceRouting is the Schema for the workspaceroutings API
+// DevWorkspaceRouting is the Schema for the devworkspaceroutings API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=workspaceroutings,scope=Namespaced
-type WorkspaceRouting struct {
+// +kubebuilder:resource:path=devworkspaceroutings,scope=Namespaced,shortName=dwr
+type DevWorkspaceRouting struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   WorkspaceRoutingSpec   `json:"spec,omitempty"`
-	Status WorkspaceRoutingStatus `json:"status,omitempty"`
+	Spec   DevWorkspaceRoutingSpec   `json:"spec,omitempty"`
+	Status DevWorkspaceRoutingStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// WorkspaceRoutingList contains a list of WorkspaceRouting
-type WorkspaceRoutingList struct {
+// DevWorkspaceRoutingList contains a list of DevWorkspaceRouting
+type DevWorkspaceRoutingList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []WorkspaceRouting `json:"items"`
+	Items           []DevWorkspaceRouting `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&WorkspaceRouting{}, &WorkspaceRoutingList{})
+	SchemeBuilder.Register(&DevWorkspaceRouting{}, &DevWorkspaceRoutingList{})
 }

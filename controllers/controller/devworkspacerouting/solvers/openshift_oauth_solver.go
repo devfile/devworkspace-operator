@@ -41,12 +41,12 @@ type proxyEndpoint struct {
 	publicEndpointHttpPort int64
 }
 
-func (s *OpenShiftOAuthSolver) FinalizerRequired(*controllerv1alpha1.WorkspaceRouting) bool {
+func (s *OpenShiftOAuthSolver) FinalizerRequired(*controllerv1alpha1.DevWorkspaceRouting) bool {
 	return true
 }
 
-func (s *OpenShiftOAuthSolver) Finalize(routing *controllerv1alpha1.WorkspaceRouting) error {
-	// Run finalization logic for workspaceRoutingFinalizer. If the
+func (s *OpenShiftOAuthSolver) Finalize(routing *controllerv1alpha1.DevWorkspaceRouting) error {
+	// Run finalization logic for devWorkspaceRoutingFinalizer. If the
 	// finalization logic fails, don't remove the finalizer so
 	// that we can retry during the next reconciliation.
 	if err := deleteOAuthClients(s, routing); err != nil {
@@ -56,7 +56,7 @@ func (s *OpenShiftOAuthSolver) Finalize(routing *controllerv1alpha1.WorkspaceRou
 	return nil
 }
 
-func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
+func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	proxy, noProxy := getProxiedEndpoints(spec)
 	defaultRoutes := getRoutesForSpec(noProxy, workspaceMeta)
@@ -153,7 +153,7 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 	return routes, podAdditions
 }
 
-func getProxiedEndpoints(spec controllerv1alpha1.WorkspaceRoutingSpec) (proxy, noProxy map[string]controllerv1alpha1.EndpointList) {
+func getProxiedEndpoints(spec controllerv1alpha1.DevWorkspaceRoutingSpec) (proxy, noProxy map[string]controllerv1alpha1.EndpointList) {
 	proxy = map[string]controllerv1alpha1.EndpointList{}
 	noProxy = map[string]controllerv1alpha1.EndpointList{}
 	for machineName, machineEndpoints := range spec.Endpoints {

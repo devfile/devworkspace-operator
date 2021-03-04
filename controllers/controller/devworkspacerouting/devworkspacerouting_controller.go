@@ -10,14 +10,14 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspacerouting
+package devworkspacerouting
 
 import (
 	"context"
 	"errors"
 	"time"
 
-	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
@@ -41,32 +41,32 @@ var (
 	NoSolversEnabled = errors.New("reconciler does not define SolverGetter")
 )
 
-const workspaceRoutingFinalizer = "workspacerouting.controller.devfile.io"
+const devWorkspaceRoutingFinalizer = "devworkspacerouting.controller.devfile.io"
 
-// WorkspaceRoutingReconciler reconciles a WorkspaceRouting object
-type WorkspaceRoutingReconciler struct {
+// DevWorkspaceRoutingReconciler reconciles a DevWorkspaceRouting object
+type DevWorkspaceRoutingReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
-	// SolverGetter will be used to get solvers for a particular workspaceRouting
+	// SolverGetter will be used to get solvers for a particular devWorkspaceRouting
 	SolverGetter solvers.RoutingSolverGetter
 }
 
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings,verbs=*
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=workspaceroutings/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceroutings,verbs=*
+// +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceroutings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=services,verbs=*
 // +kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=*
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=*
 // +kubebuidler:rbac:groups=route.openshift.io,resources=routes/status,verbs=get,list,watch
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes/custom-host,verbs=create
 
-func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 
-	// Fetch the WorkspaceRouting instance
-	instance := &controllerv1alpha1.WorkspaceRouting{}
+	// Fetch the DevWorkspaceRouting instance
+	instance := &controllerv1alpha1.DevWorkspaceRouting{}
 	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -79,7 +79,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, err
 	}
 	reqLogger = reqLogger.WithValues(constants.WorkspaceIDLoggerKey, instance.Spec.WorkspaceId)
-	reqLogger.Info("Reconciling WorkspaceRouting")
+	reqLogger.Info("Reconciling DevWorkspaceRouting")
 
 	if instance.Spec.RoutingClass == "" {
 		reqLogger.Info("workspace routing without an explicit routing class is invalid", "name", instance.Name, "namespace", instance.Namespace)
@@ -95,10 +95,10 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, r.markRoutingFailed(instance)
 	}
 
-	// Check if the WorkspaceRouting instance is marked to be deleted, which is
+	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if instance.GetDeletionTimestamp() != nil {
-		reqLogger.Info("Finalizing WorkspaceRouting")
+		reqLogger.Info("Finalizing DevWorkspaceRouting")
 		return reconcile.Result{}, r.finalize(solver, instance)
 	}
 
@@ -207,35 +207,35 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsAreReady)
 }
 
-// setFinalizer ensures a finalizer is set on a workspaceRouting instance; no-op if finalizer is already present.
-func (r *WorkspaceRoutingReconciler) setFinalizer(reqLogger logr.Logger, solver solvers.RoutingSolver, m *controllerv1alpha1.WorkspaceRouting) error {
-	if !solver.FinalizerRequired(m) || contains(m.GetFinalizers(), workspaceRoutingFinalizer) {
+// setFinalizer ensures a finalizer is set on a devWorkspaceRouting instance; no-op if finalizer is already present.
+func (r *DevWorkspaceRoutingReconciler) setFinalizer(reqLogger logr.Logger, solver solvers.RoutingSolver, m *controllerv1alpha1.DevWorkspaceRouting) error {
+	if !solver.FinalizerRequired(m) || contains(m.GetFinalizers(), devWorkspaceRoutingFinalizer) {
 		return nil
 	}
 
-	reqLogger.Info("Adding Finalizer for the WorkspaceRouting")
-	m.SetFinalizers(append(m.GetFinalizers(), workspaceRoutingFinalizer))
+	reqLogger.Info("Adding Finalizer for the DevWorkspaceRouting")
+	m.SetFinalizers(append(m.GetFinalizers(), devWorkspaceRoutingFinalizer))
 
 	// Update CR
 	err := r.Update(context.TODO(), m)
 	if err != nil {
-		reqLogger.Error(err, "Failed to update WorkspaceRouting with finalizer")
+		reqLogger.Error(err, "Failed to update DevWorkspaceRouting with finalizer")
 		return err
 	}
 	return nil
 }
 
-func (r *WorkspaceRoutingReconciler) finalize(solver solvers.RoutingSolver, instance *controllerv1alpha1.WorkspaceRouting) error {
-	if contains(instance.GetFinalizers(), workspaceRoutingFinalizer) {
+func (r *DevWorkspaceRoutingReconciler) finalize(solver solvers.RoutingSolver, instance *controllerv1alpha1.DevWorkspaceRouting) error {
+	if contains(instance.GetFinalizers(), devWorkspaceRoutingFinalizer) {
 		// let the solver finalize its stuff
 		err := solver.Finalize(instance)
 		if err != nil {
 			return err
 		}
 
-		// Remove workspaceRoutingFinalizer. Once all finalizers have been
+		// Remove devWorkspaceRoutingFinalizer. Once all finalizers have been
 		// removed, the object will be deleted.
-		instance.SetFinalizers(remove(instance.GetFinalizers(), workspaceRoutingFinalizer))
+		instance.SetFinalizers(remove(instance.GetFinalizers(), devWorkspaceRoutingFinalizer))
 		err = r.Update(context.TODO(), instance)
 		if err != nil {
 			return err
@@ -244,13 +244,13 @@ func (r *WorkspaceRoutingReconciler) finalize(solver solvers.RoutingSolver, inst
 	return nil
 }
 
-func (r *WorkspaceRoutingReconciler) markRoutingFailed(instance *controllerv1alpha1.WorkspaceRouting) error {
+func (r *DevWorkspaceRoutingReconciler) markRoutingFailed(instance *controllerv1alpha1.DevWorkspaceRouting) error {
 	instance.Status.Phase = controllerv1alpha1.RoutingFailed
 	return r.Status().Update(context.TODO(), instance)
 }
 
-func (r *WorkspaceRoutingReconciler) reconcileStatus(
-	instance *controllerv1alpha1.WorkspaceRouting,
+func (r *DevWorkspaceRoutingReconciler) reconcileStatus(
+	instance *controllerv1alpha1.DevWorkspaceRouting,
 	routingObjects solvers.RoutingObjects,
 	exposedEndpoints map[string]controllerv1alpha1.ExposedEndpointList,
 	endpointsReady bool) error {
@@ -288,9 +288,9 @@ func remove(list []string, s string) []string {
 	return list
 }
 
-func (r *WorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DevWorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	bld := ctrl.NewControllerManagedBy(mgr).
-		For(&controllerv1alpha1.WorkspaceRouting{}).
+		For(&controllerv1alpha1.DevWorkspaceRouting{}).
 		Owns(&corev1.Service{}).
 		Owns(&v1beta1.Ingress{})
 	if infrastructure.IsOpenShift() {

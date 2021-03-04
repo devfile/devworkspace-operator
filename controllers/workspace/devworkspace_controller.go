@@ -103,7 +103,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	reqLogger = reqLogger.WithValues(constants.WorkspaceIDLoggerKey, workspace.Status.WorkspaceId)
 	reqLogger.Info("Reconciling Workspace")
 
-	// Check if the WorkspaceRouting instance is marked to be deleted, which is
+	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if workspace.GetDeletionTimestamp() != nil {
 		reqLogger.Info("Finalizing DevWorkspace")
@@ -221,7 +221,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		if routingStatus.FailStartup {
 			reqLogger.Info("DevWorkspace start failed")
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			// TODO: Propagate failure reason from workspaceRouting
+			// TODO: Propagate failure reason from devWorkspaceRouting
 			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Failed to install network objects required for devworkspace"
 			return reconcile.Result{}, routingStatus.Err
 		}
@@ -373,7 +373,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&batchv1.Job{}).
 		Owns(&controllerv1alpha1.Component{}).
-		Owns(&controllerv1alpha1.WorkspaceRouting{}).
+		Owns(&controllerv1alpha1.DevWorkspaceRouting{}).
 		WithEventFilter(predicates).
 		Complete(r)
 }

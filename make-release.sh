@@ -87,6 +87,7 @@ if [[ $TMP ]] && [[ -d $TMP ]]; then
   cd "${REPO##*/}" || exit 1
 fi
 
+git remote show origin
 
 # get sources from ${BASEBRANCH} branch	
 git fetch origin "${BASEBRANCH}":"${BASEBRANCH}" || true

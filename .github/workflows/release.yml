@@ -14,7 +14,7 @@ jobs:
       - name: Clone source code
         uses: actions/checkout@v1
         with:
-          fetch-depth: 1
+          fetch-depth: 0
       - name: Login to quay.io
         uses: docker/login-action@v1
         with:

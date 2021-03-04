@@ -90,10 +90,6 @@ func (wc *ControllerConfig) GetSidecarPullPolicy() string {
 	return wc.GetPropertyOrDefault(sidecarPullPolicy, defaultSidecarPullPolicy)
 }
 
-func (wc *ControllerConfig) GetWebhooksEnabled() string {
-	return wc.GetPropertyOrDefault(webhooksEnabled, defaultWebhooksEnabled)
-}
-
 func (wc *ControllerConfig) GetTlsInsecureSkipVerify() string {
 	return wc.GetPropertyOrDefault(tlsInsecureSkipVerify, defaultTlsInsecureSkipVerify)
 }

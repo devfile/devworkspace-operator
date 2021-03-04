@@ -14,10 +14,11 @@ You can add these Kubernetes annotations to specific DevWorkspace CR to customiz
 
 #### Restricted Access
 
-Using `restricted-access` is possible to define that DevWorkspace needs additional(to RBAC) authorization that guarantee that the only DevWorkspace CR creators has access to the containers terminals and secure server.
-May be needed when personal information(like access tokens, ssh keys) is stored in the containers.
+The `controller.devfile.io/restricted-access` specifies that a DevWorkspace needs additional access control (in addition to RBAC). When a DevWorkspace is created with the `controller.devfile.io/restricted-access` annotation set to `true`, the webhook server will guarantee
+- Only the DevWorkspace Operator ServiceAccount or DevWorkspace creator can modify important fields in the devworksapce
+- Only the DevWorkspace creator can create `pods/exec` into workspace-related containers.
 
-Since it's powered by webhooks, DevWorkspaces with such annotations will fails to start when webhooks are disabled on Operator level.
+This annotation should be used when a DevWorkspace is expected to contain sensitive information that should be protect above the protection provided by standard RBAC rules (e.g. if the DevWorkspace will store the user's OpenShift token in-memory).
 
 Example:
 ```yaml
@@ -98,12 +99,10 @@ To see all rules supported by the makefile, run `make help`
 3. As soon as workspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
 
 ### Run controller locally
-It's possible to run an instance of the controller locally while communicating with a cluster. However, this requires webhooks to be disabled, as the webhooks need to be able to access the service created by an in-cluster deployment
-
 ```bash
 make install
 oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}"
-make debug
+make run
 ```
 
 When running locally, only a single namespace is watched; as a result, all workspaces have to be deployed to `${NAMESPACE}`

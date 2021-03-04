@@ -143,7 +143,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
-	msg, err := r.validateCreatorTimestamp(clusterWorkspace)
+	msg, err := r.validateCreatorLabel(clusterWorkspace)
 	if err != nil {
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = msg
@@ -154,17 +154,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		delete(clusterWorkspace.Annotations, config.WorkspaceStopReasonAnnotation)
 		err = r.Update(context.TODO(), clusterWorkspace)
 		return reconcile.Result{Requeue: true}, err
-	}
-
-	restrictedAccess := clusterWorkspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]
-	if restrictedAccess == "true" && config.ControllerCfg.GetWebhooksEnabled() != "true" {
-		reqLogger.Info("Workspace is configured to have restricted access but webhooks are not enabled.")
-		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Workspace has restricted-access annotation " +
-			"applied but operator does not have webhooks enabled. " +
-			"Remove restricted-access annotation or ask an administrator " +
-			"to reconfigure Operator."
-		return reconcile.Result{}, nil
 	}
 
 	timing.SetTime(timingInfo, timing.ComponentsCreated)

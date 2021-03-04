@@ -16,10 +16,10 @@ import (
 )
 
 var (
-	V1alpha1DevWorkspaceKind     = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha1"}
-	V1alpha2DevWorkspaceKind     = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha2"}
-	V1alpha1WorkspaceRoutingKind = metav1.GroupVersionKind{Kind: "WorkspaceRouting", Group: "controller.devfile.io", Version: "v1alpha1"}
-	V1alpha1ComponentKind        = metav1.GroupVersionKind{Kind: "Component", Group: "controller.devfile.io", Version: "v1alpha1"}
+	V1alpha1DevWorkspaceKind        = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha1"}
+	V1alpha2DevWorkspaceKind        = metav1.GroupVersionKind{Kind: "DevWorkspace", Group: "workspace.devfile.io", Version: "v1alpha2"}
+	V1alpha1DevWorkspaceRoutingKind = metav1.GroupVersionKind{Kind: "DevWorkspaceRouting", Group: "controller.devfile.io", Version: "v1alpha1"}
+	V1alpha1ComponentKind           = metav1.GroupVersionKind{Kind: "Component", Group: "controller.devfile.io", Version: "v1alpha1"}
 
 	AppsV1DeploymentKind = metav1.GroupVersionKind{Kind: "Deployment", Group: "apps", Version: "v1"}
 	V1PodKind            = metav1.GroupVersionKind{Kind: "Pod", Group: "", Version: "v1"}

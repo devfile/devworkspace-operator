@@ -25,9 +25,9 @@ const (
 	ComponentsCreated = "controller.devfile.io/timing.components.created"
 	// ComponentsReady denotes when components were ready for the workspace
 	ComponentsReady = "controller.devfile.io/timing.components.ready"
-	// RoutingCreated denotes when the workspacerouting was created for the workspace
+	// RoutingCreated denotes when the devworkspacerouting was created for the workspace
 	RoutingCreated = "controller.devfile.io/timing.routing.created"
-	// RoutingReady denotes when the workspacerouting was ready for the workspace
+	// RoutingReady denotes when the devworkspacerouting was ready for the workspace
 	RoutingReady = "controller.devfile.io/timing.routing.ready"
 	// DeploymentCreated denotes when the deployment was created for the workspace
 	DeploymentCreated = "controller.devfile.io/timing.deployment.created"

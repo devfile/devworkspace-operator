@@ -61,7 +61,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 				Rule: v1beta1.Rule{
 					APIGroups:   []string{"controller.devfile.io"},
 					APIVersions: []string{"v1alpha1"},
-					Resources:   []string{"workspaceroutings", "components"},
+					Resources:   []string{"devworkspaceroutings", "components"},
 				},
 			},
 		},

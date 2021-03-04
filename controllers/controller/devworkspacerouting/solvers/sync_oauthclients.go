@@ -32,7 +32,7 @@ var oauthClientDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(oauthv1.OAuthClient{}, "TypeMeta", "ObjectMeta"),
 }
 
-func syncOAuthClient(client client.Client, routing *controllerv1alpha1.WorkspaceRouting, oauthClientSpec *oauthv1.OAuthClient) (ok bool, err error) {
+func syncOAuthClient(client client.Client, routing *controllerv1alpha1.DevWorkspaceRouting, oauthClientSpec *oauthv1.OAuthClient) (ok bool, err error) {
 	oauthClientInSync := true
 
 	clusterOAuthClients, err := getClusterOAuthClients(client, routing)
@@ -91,7 +91,7 @@ func syncOAuthClient(client client.Client, routing *controllerv1alpha1.Workspace
 	return oauthClientInSync, nil
 }
 
-func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.WorkspaceRouting) ([]oauthv1.OAuthClient, error) {
+func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.DevWorkspaceRouting) ([]oauthv1.OAuthClient, error) {
 	found := &oauthv1.OAuthClientList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
@@ -108,7 +108,7 @@ func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.Worksp
 	return found.Items, nil
 }
 
-func deleteOAuthClients(cl client.Client, routing *controllerv1alpha1.WorkspaceRouting) error {
+func deleteOAuthClients(cl client.Client, routing *controllerv1alpha1.DevWorkspaceRouting) error {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
 		return err

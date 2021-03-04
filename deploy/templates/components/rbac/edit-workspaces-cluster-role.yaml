@@ -22,7 +22,7 @@ rules:
   - apiGroups:
       - controller.devfile.io
     resources:
-      - workspaceroutings
+      - devworkspaceroutings
       - components
     verbs:
       - create

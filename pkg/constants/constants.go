@@ -83,7 +83,7 @@ const (
 	// PVCCleanupPodCPURequest is the cpu request used for PVC clean up pods
 	PVCCleanupPodCPURequest = "5m"
 
-	// RoutingAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the WorkspaceRouting objects.
+	// RoutingAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the DevWorkspaceRouting objects.
 	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
 	RoutingAnnotationInfix = ".routing.controller.devfile.io/"
 )

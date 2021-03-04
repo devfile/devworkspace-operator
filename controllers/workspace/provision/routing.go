@@ -41,10 +41,10 @@ type RoutingProvisioningStatus struct {
 }
 
 var routingDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(v1alpha1.WorkspaceRouting{}, "TypeMeta", "Status"),
+	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{}, "TypeMeta", "Status"),
 	// To ensure updates to annotations and labels are noticed, we need to ignore all fields in ObjectMeta
 	// *except* labels and annotations.
-	cmpopts.IgnoreFields(v1alpha1.WorkspaceRouting{},
+	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{},
 		"ObjectMeta.Name",
 		"ObjectMeta.GenerateName",
 		"ObjectMeta.Namespace",
@@ -134,7 +134,7 @@ func SyncRoutingToCluster(
 
 func getSpecRouting(
 	workspace *devworkspace.DevWorkspace,
-	scheme *runtime.Scheme) (*v1alpha1.WorkspaceRouting, error) {
+	scheme *runtime.Scheme) (*v1alpha1.DevWorkspaceRouting, error) {
 
 	endpoints := map[string]v1alpha1.EndpointList{}
 	for _, component := range workspace.Spec.Template.Components {
@@ -165,7 +165,7 @@ func getSpecRouting(
 		routingClass = config.ControllerCfg.GetDefaultRoutingClass()
 	}
 
-	routing := &v1alpha1.WorkspaceRouting{
+	routing := &v1alpha1.DevWorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("routing-%s", workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
@@ -174,9 +174,9 @@ func getSpecRouting(
 			},
 			Annotations: annotations,
 		},
-		Spec: v1alpha1.WorkspaceRoutingSpec{
+		Spec: v1alpha1.DevWorkspaceRoutingSpec{
 			WorkspaceId:   workspace.Status.WorkspaceId,
-			RoutingClass:  v1alpha1.WorkspaceRoutingClass(routingClass),
+			RoutingClass:  v1alpha1.DevWorkspaceRoutingClass(routingClass),
 			RoutingSuffix: config.ControllerCfg.GetRoutingSuffix(),
 			Endpoints:     endpoints,
 			PodSelector: map[string]string{
@@ -192,8 +192,8 @@ func getSpecRouting(
 	return routing, nil
 }
 
-func getClusterRouting(name string, namespace string, client runtimeClient.Client) (*v1alpha1.WorkspaceRouting, error) {
-	routing := &v1alpha1.WorkspaceRouting{}
+func getClusterRouting(name string, namespace string, client runtimeClient.Client) (*v1alpha1.DevWorkspaceRouting, error) {
+	routing := &v1alpha1.DevWorkspaceRouting{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
 		Name:      name,

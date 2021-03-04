@@ -62,7 +62,7 @@ func generateRBAC(namespace string) []runtime.Object {
 					Verbs:     []string{"get", "watch", "list", "patch", "update"},
 				},
 				{
-					Resources: []string{"workspaceroutings"},
+					Resources: []string{"devworkspaceroutings"},
 					APIGroups: []string{"controller.devfile.io"},
 					Verbs:     []string{"get", "list", "watch"},
 				},

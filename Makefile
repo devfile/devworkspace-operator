@@ -208,7 +208,7 @@ uninstall: generate_deployment
 # leave workspaces in a hanging state if we add finalizers.
 	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all --wait || true
 	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all || true
-	$(K8S_CLI) delete workspaceroutings.controller.devfile.io --all-namespaces --all --wait || true
+	$(K8S_CLI) delete devworkspaceroutings.controller.devfile.io --all-namespaces --all --wait || true
 
 ifeq ($(PLATFORM),kubernetes)
 	$(K8S_CLI) delete --ignore-not-found -f deploy/current/kubernetes/combined.yaml || true

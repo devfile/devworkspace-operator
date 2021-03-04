@@ -104,13 +104,13 @@ rules:
 - apiGroups:
   - controller.devfile.io
   resources:
-  - workspaceroutings
+  - devworkspaceroutings
   verbs:
   - '*'
 - apiGroups:
   - controller.devfile.io
   resources:
-  - workspaceroutings/status
+  - devworkspaceroutings/status
   verbs:
   - get
   - patch

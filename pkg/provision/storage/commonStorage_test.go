@@ -20,12 +20,26 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/yaml"
 )
+
+var scheme = runtime.NewScheme()
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(v1alpha1.AddToScheme(scheme))
+	utilruntime.Must(dw.AddToScheme(scheme))
+}
 
 type testCase struct {
 	Name   string     `json:"name,omitempty"`
@@ -83,14 +97,28 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 
 func TestRewriteContainerVolumeMounts(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata")
+	// tests := []testCase{loadTestCaseOrPanic(t, "testdata/can-make-projects-ephemeral.yaml")}
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
+	commonPVC, err := getCommonPVCSpec("test-namespace")
+	commonPVC.Status.Phase = corev1.ClaimBound
+	if err != nil {
+		t.Fatalf("Failure during setup: %s", err)
+	}
+	clusterAPI := provision.ClusterAPI{
+		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
+		Logger: zap.New(),
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
-			err := commonStorage.rewriteContainerVolumeMounts(tt.Input.WorkspaceID, &tt.Input.PodAdditions, tt.Input.Workspace)
+			workspace := &dw.DevWorkspace{}
+			workspace.Spec.Template = *tt.Input.Workspace
+			workspace.Status.WorkspaceId = tt.Input.WorkspaceID
+			workspace.Namespace = "test-namespace"
+			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, clusterAPI)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

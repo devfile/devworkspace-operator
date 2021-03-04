@@ -243,17 +243,11 @@ func getSpecDeployment(
 		deployment.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
 		deployment.Spec.Template.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
 	} else {
-		if config.ControllerCfg.GetWebhooksEnabled() == "true" {
-			return nil, errors.New("workspace must have creator specified to be run. Recreate it to fix an issue")
-		}
+		return nil, errors.New("workspace must have creator specified to be run. Recreate it to fix an issue")
 	}
 
 	restrictedAccess, present := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]
 	if present {
-		if config.ControllerCfg.GetWebhooksEnabled() == "false" {
-			return nil, errors.New("workspace is configured to have restricted access but webhooks are not enabled")
-		}
-
 		deployment.Annotations = maputils.Append(deployment.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		deployment.Spec.Template.Annotations = maputils.Append(deployment.Spec.Template.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}

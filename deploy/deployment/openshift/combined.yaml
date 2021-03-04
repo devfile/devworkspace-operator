@@ -16848,7 +16848,6 @@ subjects:
 apiVersion: v1
 data:
   controller.plugin_artifacts_broker.image: quay.io/eclipse/che-plugin-artifacts-broker:v3.4.0
-  controller.webhooks.enabled: "true"
   devworkspace.default_routing_class: basic
   devworkspace.experimental_features_enabled: "true"
   devworkspace.routing.cluster_host_suffix: ""

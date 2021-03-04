@@ -13,9 +13,6 @@
 package config
 
 const (
-	webhooksEnabled        = "controller.webhooks.enabled"
-	defaultWebhooksEnabled = "true"
-
 	// image pull policy that is applied to every container within workspace
 	sidecarPullPolicy        = "devworkspace.sidecar.image_pull_policy"
 	defaultSidecarPullPolicy = "Always"

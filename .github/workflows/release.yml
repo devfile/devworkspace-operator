@@ -1,4 +1,4 @@
-name: Release Devworkspace Operator
+name: Release DevWorkspace Operator
 
 on:
   workflow_dispatch:

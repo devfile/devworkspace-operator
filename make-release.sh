@@ -68,7 +68,7 @@ fi
 
 # derive bugfix branch from version
 BRANCH=${VERSION#v}	
-BRANCH=${VERSION%.*}.x	
+BRANCH=${BRANCH%.*}.x	
 
 # if doing a .0 release, use main branch; if doing a .z release, use $BRANCH	
 if [[ ${VERSION} == *".0" ]]; then	

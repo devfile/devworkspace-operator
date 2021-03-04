@@ -16,7 +16,7 @@ You can add these Kubernetes annotations to specific DevWorkspace CR to customiz
 
 The `controller.devfile.io/restricted-access` specifies that a DevWorkspace needs additional access control (in addition to RBAC). When a DevWorkspace is created with the `controller.devfile.io/restricted-access` annotation set to `true`, the webhook server will guarantee
 - Only the DevWorkspace Operator ServiceAccount or DevWorkspace creator can modify important fields in the devworksapce
-- Only the DevWorkspace creator can create `pods/exec` into workspace-related containers.
+- Only the DevWorkspace creator can create `pods/exec` into devworkspace-related containers.
 
 This annotation should be used when a DevWorkspace is expected to contain sensitive information that should be protect above the protection provided by standard RBAC rules (e.g. if the DevWorkspace will store the user's OpenShift token in-memory).
 
@@ -49,7 +49,7 @@ export DWO_IMG=quay.io/devfile/devworkspace-controller:next
 make install
 ```
 
-By default, controller will expose workspace servers without any authentication; this is not advisable for public clusters, as any user could access the created workspace via URL.
+By default, controller will expose devworkspace servers without any authentication; this is not advisable for public clusters, as any user could access the created devworkspace via URL.
 
 In case of OpenShift, you're able to configure DevWorkspace CR to secure your servers with the following piece of configuration:
 
@@ -95,9 +95,9 @@ Some of the rules supported by the makefile:
 To see all rules supported by the makefile, run `make help`
 
 ### Test run controller
-1. Take a look samples workspace configuration in `./samples` folder.
-2. Apply any of them by executing `kubectl apply -f ./samples/workspace_java_mysql.yaml -n <namespace>`
-3. As soon as workspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
+1. Take a look samples devworkspace configuration in `./samples` folder.
+2. Apply any of them by executing `kubectl apply -f ./samples/flattened_theia-next.yaml -n <namespace>`
+3. As soon as devworkspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
 
 ### Run controller locally
 ```bash
@@ -106,7 +106,7 @@ oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replic
 make run
 ```
 
-When running locally, only a single namespace is watched; as a result, all workspaces have to be deployed to `${NAMESPACE}`
+When running locally, only a single namespace is watched; as a result, all devworkspaces have to be deployed to `${NAMESPACE}`
 
 ### Run controller locally and debug
 Debugging the controller depends on `delve` being installed (`go get -u github.com/go-delve/delve/cmd/dlv`). Note that at the time of writing, executing `go get` in this repo's directory will update go.mod; these changes should be dropped before committing.

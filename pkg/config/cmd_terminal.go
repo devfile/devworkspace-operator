@@ -17,7 +17,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"sigs.k8s.io/yaml"
 )
@@ -29,7 +29,7 @@ const (
 	defaultTerminalDockerimageProperty = "devworkspace.default_dockerimage.redhat-developer.web-terminal"
 )
 
-func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Component, error) {
+func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*dw.Component, error) {
 	mountSources := false
 	defaultContainerYaml := wc.GetProperty(defaultTerminalDockerimageProperty)
 	if defaultContainerYaml == nil {
@@ -37,15 +37,15 @@ func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Compo
 		if webTerminalImage == "" {
 			return nil, fmt.Errorf("cannot determine default image for web terminal: environment variable is unset")
 		}
-		defaultTerminalDockerimage := &devworkspace.Component{}
+		defaultTerminalDockerimage := &dw.Component{}
 		defaultTerminalDockerimage.Name = "dev"
-		defaultTerminalDockerimage.Container = &devworkspace.ContainerComponent{
-			Container: devworkspace.Container{
+		defaultTerminalDockerimage.Container = &dw.ContainerComponent{
+			Container: dw.Container{
 				Image:        webTerminalImage,
 				Args:         []string{"tail", "-f", "/dev/null"},
 				MemoryLimit:  "256Mi",
 				MountSources: &mountSources,
-				Env: []devworkspace.EnvVar{
+				Env: []dw.EnvVar{
 					{
 						Name:  "PS1",
 						Value: `\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]`,
@@ -59,7 +59,7 @@ func (wc *ControllerConfig) GetDefaultTerminalDockerimage() (*devworkspace.Compo
 		return defaultTerminalDockerimage, nil
 	}
 
-	var defaultContainer devworkspace.Component
+	var defaultContainer dw.Component
 	if err := yaml.Unmarshal([]byte(*defaultContainerYaml), &defaultContainer); err != nil {
 		return nil, fmt.Errorf(
 			"%s is configured with invalid container component. Error: %s", defaultTerminalDockerimageProperty, err)

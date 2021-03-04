@@ -1,7 +1,7 @@
 name: "Already flattened workspace"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: dev
         container:
@@ -19,7 +19,7 @@ input:
           command: ["/go/bin/che-machine-exec",
                     "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
                     "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
-                    "--pod-selector", "controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)",
+                    "--pod-selector", "controller.devfile.io/devworkspace_id=$(DEVWORKSPACE_ID)",
                     "--use-bearer-token",
                     "--use-tls"]
           endpoints:
@@ -35,7 +35,7 @@ input:
               value: "true"
 
 output:
-  workspace:
+  devworkspace:
     components:
       - name: dev
         container:
@@ -53,7 +53,7 @@ output:
           command: ["/go/bin/che-machine-exec",
                     "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
                     "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
-                    "--pod-selector", "controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)",
+                    "--pod-selector", "controller.devfile.io/devworkspace_id=$(DEVWORKSPACE_ID)",
                     "--use-bearer-token",
                     "--use-tls"]
           endpoints:

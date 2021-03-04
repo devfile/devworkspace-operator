@@ -49,7 +49,7 @@ type RoutingSolver interface {
 	// The implementors can also create any additional objects not captured by the RoutingObjects struct. If that's
 	// the case they are required to set the restricted access annotation on any objects created according to the
 	// restricted access specified by the routing.
-	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error)
+	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error)
 
 	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.
 	// Returns is a map from component ids (as defined in the devfile) to the list of endpoints for that component

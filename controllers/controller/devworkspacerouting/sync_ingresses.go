@@ -76,7 +76,7 @@ func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha
 
 func (r *DevWorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv1alpha1.DevWorkspaceRouting) ([]v1beta1.Ingress, error) {
 	found := &v1beta1.IngressList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, routing.Spec.DevWorkspaceId))
 	if err != nil {
 		return nil, err
 	}

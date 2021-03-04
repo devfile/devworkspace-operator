@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
@@ -62,7 +62,7 @@ var routingDiffOpts = cmp.Options{
 }
 
 func SyncRoutingToCluster(
-	workspace *devworkspace.DevWorkspace,
+	workspace *dw.DevWorkspace,
 	clusterAPI ClusterAPI) RoutingProvisioningStatus {
 
 	specRouting, err := getSpecRouting(workspace, clusterAPI.Scheme)
@@ -133,7 +133,7 @@ func SyncRoutingToCluster(
 }
 
 func getSpecRouting(
-	workspace *devworkspace.DevWorkspace,
+	workspace *dw.DevWorkspace,
 	scheme *runtime.Scheme) (*v1alpha1.DevWorkspaceRouting, error) {
 
 	endpoints := map[string]v1alpha1.EndpointList{}
@@ -148,8 +148,8 @@ func getSpecRouting(
 	}
 
 	var annotations map[string]string
-	if val, ok := workspace.Annotations[constants.WorkspaceRestrictedAccessAnnotation]; ok {
-		annotations = maputils.Append(annotations, constants.WorkspaceRestrictedAccessAnnotation, val)
+	if val, ok := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; ok {
+		annotations = maputils.Append(annotations, constants.DevWorkspaceRestrictedAccessAnnotation, val)
 	}
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
@@ -167,20 +167,20 @@ func getSpecRouting(
 
 	routing := &v1alpha1.DevWorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("routing-%s", workspace.Status.WorkspaceId),
+			Name:      fmt.Sprintf("routing-%s", workspace.Status.DevWorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				constants.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 			},
 			Annotations: annotations,
 		},
 		Spec: v1alpha1.DevWorkspaceRoutingSpec{
-			WorkspaceId:   workspace.Status.WorkspaceId,
-			RoutingClass:  v1alpha1.DevWorkspaceRoutingClass(routingClass),
-			RoutingSuffix: config.ControllerCfg.GetRoutingSuffix(),
-			Endpoints:     endpoints,
+			DevWorkspaceId: workspace.Status.DevWorkspaceId,
+			RoutingClass:   v1alpha1.DevWorkspaceRoutingClass(routingClass),
+			RoutingSuffix:  config.ControllerCfg.GetRoutingSuffix(),
+			Endpoints:      endpoints,
 			PodSelector: map[string]string{
-				constants.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 			},
 		},
 	}

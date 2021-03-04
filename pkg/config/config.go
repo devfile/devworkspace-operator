@@ -34,7 +34,7 @@ import (
 )
 
 var ControllerCfg ControllerConfig
-var log = logf.Log.WithName("controller_workspace_config")
+var log = logf.Log.WithName("controller_devworkspace_config")
 
 const (
 	ConfigMapNameEnvVar      = "CONTROLLER_CONFIG_MAP_NAME"
@@ -110,7 +110,7 @@ func (wc *ControllerConfig) Validate() error {
 }
 
 func (wc *ControllerConfig) GetWorkspaceIdleTimeout() string {
-	return wc.GetPropertyOrDefault(workspaceIdleTimeout, defaultWorkspaceIdleTimeout)
+	return wc.GetPropertyOrDefault(devworkspaceIdleTimeout, defaultDevWorkspaceIdleTimeout)
 }
 
 func (wc *ControllerConfig) GetWorkspaceControllerSA() (string, error) {

@@ -18,38 +18,38 @@ import (
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	devworkspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
-	devworkspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
+	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func (h *WebhookHandler) MutateWorkspaceV1alpha1OnCreate(_ context.Context, req admission.Request) admission.Response {
-	wksp := &devworkspacev1alpha1.DevWorkspace{}
+	wksp := &dwv1.DevWorkspace{}
 	err := h.Decoder.Decode(req, wksp)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	wksp.Labels = maputils.Append(wksp.Labels, constants.WorkspaceCreatorLabel, req.UserInfo.UID)
+	wksp.Labels = maputils.Append(wksp.Labels, constants.DevWorkspaceCreatorLabel, req.UserInfo.UID)
 
 	return h.returnPatched(req, wksp)
 }
 
 func (h *WebhookHandler) MutateWorkspaceV1alpha2OnCreate(_ context.Context, req admission.Request) admission.Response {
-	wksp := &devworkspacev1alpha2.DevWorkspace{}
+	wksp := &dwv2.DevWorkspace{}
 	err := h.Decoder.Decode(req, wksp)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	wksp.Labels = maputils.Append(wksp.Labels, constants.WorkspaceCreatorLabel, req.UserInfo.UID)
+	wksp.Labels = maputils.Append(wksp.Labels, constants.DevWorkspaceCreatorLabel, req.UserInfo.UID)
 
 	return h.returnPatched(req, wksp)
 }
 
 func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req admission.Request) admission.Response {
-	newWksp := &devworkspacev1alpha1.DevWorkspace{}
-	oldWksp := &devworkspacev1alpha1.DevWorkspace{}
+	newWksp := &dwv1.DevWorkspace{}
+	oldWksp := &dwv1.DevWorkspace{}
 	err := h.parse(req, oldWksp, newWksp)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -59,27 +59,27 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req 
 		return admission.Denied(msg)
 	}
 
-	oldCreator, found := oldWksp.Labels[constants.WorkspaceCreatorLabel]
+	oldCreator, found := oldWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if !found {
-		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate workspace to get it initialized", constants.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate devworkspace to get it initialized", constants.DevWorkspaceCreatorLabel))
 	}
 
-	newCreator, found := newWksp.Labels[constants.WorkspaceCreatorLabel]
+	newCreator, found := newWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if !found {
-		newWksp.Labels[constants.WorkspaceCreatorLabel] = oldCreator
+		newWksp.Labels[constants.DevWorkspaceCreatorLabel] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}
 
 	if newCreator != oldCreator {
-		return admission.Denied(fmt.Sprintf("label '%s' is assigned once workspace is created and is immutable", constants.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is assigned once devworkspace is created and is immutable", constants.DevWorkspaceCreatorLabel))
 	}
 
-	return admission.Allowed("new workspace has the same workspace as old one")
+	return admission.Allowed("new devworkspace has the same devworkspace creator as old one")
 }
 
 func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(_ context.Context, req admission.Request) admission.Response {
-	newWksp := &devworkspacev1alpha2.DevWorkspace{}
-	oldWksp := &devworkspacev1alpha2.DevWorkspace{}
+	newWksp := &dwv2.DevWorkspace{}
+	oldWksp := &dwv2.DevWorkspace{}
 	err := h.parse(req, oldWksp, newWksp)
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
@@ -89,20 +89,20 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(_ context.Context, req 
 		return admission.Denied(msg)
 	}
 
-	oldCreator, found := oldWksp.Labels[constants.WorkspaceCreatorLabel]
+	oldCreator, found := oldWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if !found {
-		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate workspace to get it initialized", constants.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate devworkspace to get it initialized", constants.DevWorkspaceCreatorLabel))
 	}
 
-	newCreator, found := newWksp.Labels[constants.WorkspaceCreatorLabel]
+	newCreator, found := newWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if !found {
-		newWksp.Labels[constants.WorkspaceCreatorLabel] = oldCreator
+		newWksp.Labels[constants.DevWorkspaceCreatorLabel] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}
 
 	if newCreator != oldCreator {
-		return admission.Denied(fmt.Sprintf("label '%s' is assigned once workspace is created and is immutable", constants.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is assigned once devworkspace is created and is immutable", constants.DevWorkspaceCreatorLabel))
 	}
 
-	return admission.Allowed("new workspace has the same workspace as old one")
+	return admission.Allowed("new workspace has the same devworkspace as old one")
 }

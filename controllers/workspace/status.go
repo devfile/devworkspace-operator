@@ -23,7 +23,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	corev1 "k8s.io/api/core/v1"
@@ -35,15 +35,15 @@ import (
 type currentStatus struct {
 	workspaceConditions
 	// Current workspace phase
-	phase devworkspace.WorkspacePhase
+	phase dw.DevWorkspacePhase
 }
 
 func initCurrentStatus() currentStatus {
 	return currentStatus{
 		workspaceConditions: workspaceConditions{
-			conditions: map[devworkspace.WorkspaceConditionType]devworkspace.WorkspaceCondition{},
+			conditions: map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition{},
 		},
-		phase: devworkspace.WorkspaceStatusStarting,
+		phase: dw.DevWorkspaceStatusStarting,
 	}
 }
 
@@ -61,7 +61,7 @@ var healthHttpClient = &http.Client{
 // updateWorkspaceStatus updates the current workspace's status field with conditions and phase from the passed in status.
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
-func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *devworkspace.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
 	workspace.Status.Phase = status.phase
 	currTransitionTime := metav1.Time{Time: clock.Now()}
 	for conditionType, condition := range status.conditions {
@@ -76,7 +76,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *devworkspace.D
 			}
 		}
 		if !conditionExists {
-			workspace.Status.Conditions = append(workspace.Status.Conditions, devworkspace.WorkspaceCondition{
+			workspace.Status.Conditions = append(workspace.Status.Conditions, dw.DevWorkspaceCondition{
 				Type:               conditionType,
 				Message:            condition.Message,
 				Status:             condition.Status,
@@ -109,7 +109,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *devworkspace.D
 	return reconcileResult, reconcileError
 }
 
-func syncWorkspaceIdeURL(workspace *devworkspace.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
+func syncWorkspaceIdeURL(workspace *dw.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
 	ideUrl := getIdeUrl(exposedEndpoints)
 
 	if workspace.Status.IdeUrl == ideUrl {
@@ -120,7 +120,7 @@ func syncWorkspaceIdeURL(workspace *devworkspace.DevWorkspace, exposedEndpoints 
 	return false, err
 }
 
-func checkServerStatus(workspace *devworkspace.DevWorkspace) (ok bool, err error) {
+func checkServerStatus(workspace *dw.DevWorkspace) (ok bool, err error) {
 	ideUrl := workspace.Status.IdeUrl
 	if ideUrl == "" {
 		// Support DevWorkspaces that do not specify an ideUrl
@@ -159,21 +159,21 @@ func getIdeUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string 
 	return ""
 }
 
-func getInfoMessage(workspace *devworkspace.DevWorkspace, status *currentStatus) string {
+func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 	// Check for errors and failure
-	if cond, ok := status.conditions[devworkspace.WorkspaceError]; ok {
+	if cond, ok := status.conditions[dw.DevWorkspaceError]; ok {
 		return cond.Message
 	}
-	if cond, ok := status.conditions[devworkspace.WorkspaceFailedStart]; ok {
+	if cond, ok := status.conditions[dw.DevWorkspaceFailedStart]; ok {
 		return cond.Message
 	}
 	switch workspace.Status.Phase {
-	case devworkspace.WorkspaceStatusRunning:
+	case dw.DevWorkspaceStatusRunning:
 		if workspace.Status.IdeUrl == "" {
 			return "Workspace is running"
 		}
 		return workspace.Status.IdeUrl
-	case devworkspace.WorkspaceStatusStopped, devworkspace.WorkspaceStatusStopping:
+	case dw.DevWorkspaceStatusStopped, dw.DevWorkspaceStatusStopping:
 		return string(workspace.Status.Phase)
 	}
 

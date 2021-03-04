@@ -23,8 +23,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 
-	workspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
-	workspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
+	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
@@ -59,8 +59,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(workspacev1alpha1.AddToScheme(scheme))
-	utilruntime.Must(workspacev1alpha2.AddToScheme(scheme))
+	utilruntime.Must(dwv1.AddToScheme(scheme))
+	utilruntime.Must(dwv2.AddToScheme(scheme))
 
 	if infrastructure.IsOpenShift() {
 		utilruntime.Must(routev1.Install(scheme))

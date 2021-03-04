@@ -42,9 +42,9 @@ function update_routings_crd() {
   already_patched=$(yq -r "$yq_check_script" "$ROUTINGS_CRD_PATH" --arg "CONTAINERS_FIELD" "$field")
   if [[ "$already_patched" == "null" ]]; then
     yq -Y -i "$yq_patch_script" "$ROUTINGS_CRD_PATH" --arg "CONTAINERS_FIELD" "$field"
-    echo "Updated CRD ${ROUTINGS_CRD_PATH}"
+    echo "Patched $1 in CRD ${ROUTINGS_CRD_PATH}"
   else
-    echo "Updating CRD ${ROUTINGS_CRD_PATH} not necessary"
+    echo "Patching $1 in CRD ${ROUTINGS_CRD_PATH} not necessary"
   fi
 }
 

@@ -18,13 +18,13 @@ package shim
 import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
-func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspace) {
+func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace dw.DevWorkspace) {
 	for idx, mainContainer := range podAdditions.Containers {
 		podAdditions.Containers[idx].Env = append(mainContainer.Env, defaultEnvVars(mainContainer.Name, workspace)...)
 	}
@@ -34,7 +34,7 @@ func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworksp
 	}
 }
 
-func defaultEnvVars(containerName string, workspace devworkspace.DevWorkspace) []corev1.EnvVar {
+func defaultEnvVars(containerName string, workspace dw.DevWorkspace) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "CHE_MACHINE_NAME",
@@ -65,7 +65,7 @@ func defaultEnvVars(containerName string, workspace devworkspace.DevWorkspace) [
 		},
 		{
 			Name:  "CHE_WORKSPACE_ID",
-			Value: workspace.Status.WorkspaceId,
+			Value: workspace.Status.DevWorkspaceId,
 		},
 		{
 			Name:  "CHE_AUTH_ENABLED",

@@ -311,8 +311,8 @@ spec:
                       - id
                       type: object
                     vscodeLaunch:
-                      description: Command providing the definition of a VsCode launch
-                        action
+                      description: "Command providing the definition of a VsCode launch
+                        action \n Deprecated; removed in v1alpha2"
                       oneOf:
                       - required:
                         - uri
@@ -365,7 +365,8 @@ spec:
                       - id
                       type: object
                     vscodeTask:
-                      description: Command providing the definition of a VsCode Task
+                      description: "Command providing the definition of a VsCode Task
+                        \n Deprecated; removed in v1alpha2"
                       oneOf:
                       - required:
                         - uri
@@ -1097,8 +1098,9 @@ spec:
                                 - id
                                 type: object
                               vscodeLaunch:
-                                description: Command providing the definition of a
-                                  VsCode launch action
+                                description: "Command providing the definition of
+                                  a VsCode launch action \n Deprecated; removed in
+                                  v1alpha2"
                                 oneOf:
                                 - required:
                                   - uri
@@ -1155,8 +1157,8 @@ spec:
                                 - id
                                 type: object
                               vscodeTask:
-                                description: Command providing the definition of a
-                                  VsCode Task
+                                description: "Command providing the definition of
+                                  a VsCode Task \n Deprecated; removed in v1alpha2"
                                 oneOf:
                                 - required:
                                   - uri
@@ -1982,8 +1984,8 @@ spec:
                           - id
                           type: object
                         vscodeLaunch:
-                          description: Command providing the definition of a VsCode
-                            launch action
+                          description: "Command providing the definition of a VsCode
+                            launch action \n Deprecated; removed in v1alpha2"
                           oneOf:
                           - required:
                             - uri
@@ -2037,8 +2039,8 @@ spec:
                           - id
                           type: object
                         vscodeTask:
-                          description: Command providing the definition of a VsCode
-                            Task
+                          description: "Command providing the definition of a VsCode
+                            Task \n Deprecated; removed in v1alpha2"
                           oneOf:
                           - required:
                             - uri
@@ -2789,8 +2791,9 @@ spec:
                                     - id
                                     type: object
                                   vscodeLaunch:
-                                    description: Command providing the definition
-                                      of a VsCode launch action
+                                    description: "Command providing the definition
+                                      of a VsCode launch action \n Deprecated; removed
+                                      in v1alpha2"
                                     oneOf:
                                     - required:
                                       - uri
@@ -2848,8 +2851,8 @@ spec:
                                     - id
                                     type: object
                                   vscodeTask:
-                                    description: Command providing the definition
-                                      of a VsCode Task
+                                    description: "Command providing the definition
+                                      of a VsCode Task \n Deprecated; removed in v1alpha2"
                                     oneOf:
                                     - required:
                                       - uri
@@ -3919,11 +3922,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: Structure of the workspace. This is also the specification
-              of a workspace template.
+            description: Structure of the devworkspace. This is also the specification
+              of a devworkspace template.
             properties:
               commands:
-                description: Predefined, ready-to-use, workspace-related commands
+                description: Predefined, ready-to-use, devworkspace-related commands
                 items:
                   oneOf:
                   - required:
@@ -3931,23 +3934,20 @@ spec:
                   - required:
                     - apply
                   - required:
-                    - vscodeTask
-                  - required:
-                    - vscodeLaunch
-                  - required:
                     - composite
                   - required:
                     - custom
                   properties:
                     apply:
                       description: "Command that consists in applying a given component
-                        definition, typically bound to a workspace event. \n For example,
-                        when an `apply` command is bound to a `preStart` event, and
-                        references a `container` component, it will start the container
-                        as a K8S initContainer in the workspace POD, unless the component
-                        has its `dedicatedPod` field set to `true`. \n When no `apply`
-                        command exist for a given component, it is assumed the component
-                        will be applied at workspace start by default."
+                        definition, typically bound to a devworkspace event. \n For
+                        example, when an `apply` command is bound to a `preStart`
+                        event, and references a `container` component, it will start
+                        the container as a K8S initContainer in the devworkspace POD,
+                        unless the component has its `dedicatedPod` field set to `true`.
+                        \n When no `apply` command exist for a given component, it
+                        is assumed the component will be applied at devworkspace start
+                        by default."
                       properties:
                         component:
                           description: Describes component that will be applied
@@ -3983,12 +3983,10 @@ spec:
                       type: object
                       x-kubernetes-preserve-unknown-fields: true
                     commandType:
-                      description: Type of workspace command
+                      description: Type of devworkspace command
                       enum:
                       - Exec
                       - Apply
-                      - VscodeTask
-                      - VscodeLaunch
                       - Composite
                       - Custom
                       type: string
@@ -4147,93 +4145,12 @@ spec:
                       maxLength: 63
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
-                    vscodeLaunch:
-                      description: Command providing the definition of a VsCode launch
-                        action
-                      oneOf:
-                      - required:
-                        - uri
-                      - required:
-                        - inlined
-                      properties:
-                        group:
-                          description: Defines the group this command is part of
-                          properties:
-                            isDefault:
-                              description: Identifies the default command for a given
-                                group kind
-                              type: boolean
-                            kind:
-                              description: Kind of group the command is part of
-                              enum:
-                              - build
-                              - run
-                              - test
-                              - debug
-                              type: string
-                          required:
-                          - kind
-                          type: object
-                        inlined:
-                          description: Inlined content of the VsCode configuration
-                          type: string
-                        locationType:
-                          description: Type of Vscode configuration command location
-                          enum:
-                          - Uri
-                          - Inlined
-                          type: string
-                        uri:
-                          description: Location as an absolute of relative URI the
-                            VsCode configuration will be fetched from
-                          type: string
-                      type: object
-                    vscodeTask:
-                      description: Command providing the definition of a VsCode Task
-                      oneOf:
-                      - required:
-                        - uri
-                      - required:
-                        - inlined
-                      properties:
-                        group:
-                          description: Defines the group this command is part of
-                          properties:
-                            isDefault:
-                              description: Identifies the default command for a given
-                                group kind
-                              type: boolean
-                            kind:
-                              description: Kind of group the command is part of
-                              enum:
-                              - build
-                              - run
-                              - test
-                              - debug
-                              type: string
-                          required:
-                          - kind
-                          type: object
-                        inlined:
-                          description: Inlined content of the VsCode configuration
-                          type: string
-                        locationType:
-                          description: Type of Vscode configuration command location
-                          enum:
-                          - Uri
-                          - Inlined
-                          type: string
-                        uri:
-                          description: Location as an absolute of relative URI the
-                            VsCode configuration will be fetched from
-                          type: string
-                      type: object
                   required:
                   - id
                   type: object
                 type: array
               components:
-                description: List of the workspace components, such as editor and
+                description: List of the devworkspace components, such as editor and
                   plugins, user-provided containers, or other types of components
                 items:
                   oneOf:
@@ -4266,7 +4183,7 @@ spec:
                       - Custom
                       type: string
                     container:
-                      description: Allows adding and configuring workspace-related
+                      description: Allows adding and configuring devworkspace-related
                         containers
                       properties:
                         args:
@@ -4312,13 +4229,13 @@ spec:
                                   the endpoint will be exposed on the public network,
                                   typically through a K8S ingress or an OpenShift
                                   route. \n - `internal` means that the endpoint will
-                                  be exposed internally outside of the main workspace
+                                  be exposed internally outside of the main devworkspace
                                   POD, typically by K8S services, to be consumed by
                                   other elements running on the same cloud internal
                                   network. \n - `none` means that the endpoint will
                                   not be exposed and will only be accessible inside
-                                  the main workspace POD, on a local address. \n Default
-                                  value is `public`"
+                                  the main devworkspace POD, on a local address. \n
+                                  Default value is `public`"
                                 enum:
                                 - public
                                 - internal
@@ -4454,7 +4371,7 @@ spec:
                       - embeddedResource
                       type: object
                     kubernetes:
-                      description: Allows importing into the workspace the Kubernetes
+                      description: Allows importing into the devworkspace the Kubernetes
                         resources defined in a given manifest. For example this allows
                         reusing the Kubernetes definitions used to deploy some runtime
                         components in production.
@@ -4481,13 +4398,13 @@ spec:
                                   the endpoint will be exposed on the public network,
                                   typically through a K8S ingress or an OpenShift
                                   route. \n - `internal` means that the endpoint will
-                                  be exposed internally outside of the main workspace
+                                  be exposed internally outside of the main devworkspace
                                   POD, typically by K8S services, to be consumed by
                                   other elements running on the same cloud internal
                                   network. \n - `none` means that the endpoint will
                                   not be exposed and will only be accessible inside
-                                  the main workspace POD, on a local address. \n Default
-                                  value is `public`"
+                                  the main devworkspace POD, on a local address. \n
+                                  Default value is `public`"
                                 enum:
                                 - public
                                 - internal
@@ -4561,7 +4478,7 @@ spec:
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     openshift:
-                      description: Allows importing into the workspace the OpenShift
+                      description: Allows importing into the devworkspace the OpenShift
                         resources defined in a given manifest. For example this allows
                         reusing the OpenShift definitions used to deploy some runtime
                         components in production.
@@ -4588,13 +4505,13 @@ spec:
                                   the endpoint will be exposed on the public network,
                                   typically through a K8S ingress or an OpenShift
                                   route. \n - `internal` means that the endpoint will
-                                  be exposed internally outside of the main workspace
+                                  be exposed internally outside of the main devworkspace
                                   POD, typically by K8S services, to be consumed by
                                   other elements running on the same cloud internal
                                   network. \n - `none` means that the endpoint will
                                   not be exposed and will only be accessible inside
-                                  the main workspace POD, on a local address. \n Default
-                                  value is `public`"
+                                  the main devworkspace POD, on a local address. \n
+                                  Default value is `public`"
                                 enum:
                                 - public
                                 - internal
@@ -4684,23 +4601,19 @@ spec:
                             - required:
                               - apply
                             - required:
-                              - vscodeTask
-                            - required:
-                              - vscodeLaunch
-                            - required:
                               - composite
                             properties:
                               apply:
                                 description: "Command that consists in applying a
                                   given component definition, typically bound to a
-                                  workspace event. \n For example, when an `apply`
+                                  devworkspace event. \n For example, when an `apply`
                                   command is bound to a `preStart` event, and references
                                   a `container` component, it will start the container
-                                  as a K8S initContainer in the workspace POD, unless
-                                  the component has its `dedicatedPod` field set to
-                                  `true`. \n When no `apply` command exist for a given
-                                  component, it is assumed the component will be applied
-                                  at workspace start by default."
+                                  as a K8S initContainer in the devworkspace POD,
+                                  unless the component has its `dedicatedPod` field
+                                  set to `true`. \n When no `apply` command exist
+                                  for a given component, it is assumed the component
+                                  will be applied at devworkspace start by default."
                                 properties:
                                   component:
                                     description: Describes component that will be
@@ -4736,12 +4649,10 @@ spec:
                                 type: object
                                 x-kubernetes-preserve-unknown-fields: true
                               commandType:
-                                description: Type of workspace command
+                                description: Type of devworkspace command
                                 enum:
                                 - Exec
                                 - Apply
-                                - VscodeTask
-                                - VscodeLaunch
                                 - Composite
                                 type: string
                               composite:
@@ -4862,92 +4773,6 @@ spec:
                                 maxLength: 63
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
-                              vscodeLaunch:
-                                description: Command providing the definition of a
-                                  VsCode launch action
-                                oneOf:
-                                - required:
-                                  - uri
-                                - required:
-                                  - inlined
-                                properties:
-                                  group:
-                                    description: Defines the group this command is
-                                      part of
-                                    properties:
-                                      isDefault:
-                                        description: Identifies the default command
-                                          for a given group kind
-                                        type: boolean
-                                      kind:
-                                        description: Kind of group the command is
-                                          part of
-                                        enum:
-                                        - build
-                                        - run
-                                        - test
-                                        - debug
-                                        type: string
-                                    type: object
-                                  inlined:
-                                    description: Inlined content of the VsCode configuration
-                                    type: string
-                                  locationType:
-                                    description: Type of Vscode configuration command
-                                      location
-                                    enum:
-                                    - Uri
-                                    - Inlined
-                                    type: string
-                                  uri:
-                                    description: Location as an absolute of relative
-                                      URI the VsCode configuration will be fetched
-                                      from
-                                    type: string
-                                type: object
-                              vscodeTask:
-                                description: Command providing the definition of a
-                                  VsCode Task
-                                oneOf:
-                                - required:
-                                  - uri
-                                - required:
-                                  - inlined
-                                properties:
-                                  group:
-                                    description: Defines the group this command is
-                                      part of
-                                    properties:
-                                      isDefault:
-                                        description: Identifies the default command
-                                          for a given group kind
-                                        type: boolean
-                                      kind:
-                                        description: Kind of group the command is
-                                          part of
-                                        enum:
-                                        - build
-                                        - run
-                                        - test
-                                        - debug
-                                        type: string
-                                    type: object
-                                  inlined:
-                                    description: Inlined content of the VsCode configuration
-                                    type: string
-                                  locationType:
-                                    description: Type of Vscode configuration command
-                                      location
-                                    enum:
-                                    - Uri
-                                    - Inlined
-                                    type: string
-                                  uri:
-                                    description: Location as an absolute of relative
-                                      URI the VsCode configuration will be fetched
-                                      from
-                                    type: string
-                                type: object
                             required:
                             - id
                             type: object
@@ -4981,7 +4806,7 @@ spec:
                                 - Volume
                                 type: string
                               container:
-                                description: Allows adding and configuring workspace-related
+                                description: Allows adding and configuring devworkspace-related
                                   containers
                                 properties:
                                   args:
@@ -5031,13 +4856,13 @@ spec:
                                             through a K8S ingress or an OpenShift
                                             route. \n - `internal` means that the
                                             endpoint will be exposed internally outside
-                                            of the main workspace POD, typically by
-                                            K8S services, to be consumed by other
+                                            of the main devworkspace POD, typically
+                                            by K8S services, to be consumed by other
                                             elements running on the same cloud internal
                                             network. \n - `none` means that the endpoint
                                             will not be exposed and will only be accessible
-                                            inside the main workspace POD, on a local
-                                            address. \n Default value is `public`"
+                                            inside the main devworkspace POD, on a
+                                            local address. \n Default value is `public`"
                                           enum:
                                           - public
                                           - internal
@@ -5156,8 +4981,8 @@ spec:
                                     type: array
                                 type: object
                               kubernetes:
-                                description: Allows importing into the workspace the
-                                  Kubernetes resources defined in a given manifest.
+                                description: Allows importing into the devworkspace
+                                  the Kubernetes resources defined in a given manifest.
                                   For example this allows reusing the Kubernetes definitions
                                   used to deploy some runtime components in production.
                                 oneOf:
@@ -5185,13 +5010,13 @@ spec:
                                             through a K8S ingress or an OpenShift
                                             route. \n - `internal` means that the
                                             endpoint will be exposed internally outside
-                                            of the main workspace POD, typically by
-                                            K8S services, to be consumed by other
+                                            of the main devworkspace POD, typically
+                                            by K8S services, to be consumed by other
                                             elements running on the same cloud internal
                                             network. \n - `none` means that the endpoint
                                             will not be exposed and will only be accessible
-                                            inside the main workspace POD, on a local
-                                            address. \n Default value is `public`"
+                                            inside the main devworkspace POD, on a
+                                            local address. \n Default value is `public`"
                                           enum:
                                           - public
                                           - internal
@@ -5269,8 +5094,8 @@ spec:
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               openshift:
-                                description: Allows importing into the workspace the
-                                  OpenShift resources defined in a given manifest.
+                                description: Allows importing into the devworkspace
+                                  the OpenShift resources defined in a given manifest.
                                   For example this allows reusing the OpenShift definitions
                                   used to deploy some runtime components in production.
                                 oneOf:
@@ -5298,13 +5123,13 @@ spec:
                                             through a K8S ingress or an OpenShift
                                             route. \n - `internal` means that the
                                             endpoint will be exposed internally outside
-                                            of the main workspace POD, typically by
-                                            K8S services, to be consumed by other
+                                            of the main devworkspace POD, typically
+                                            by K8S services, to be consumed by other
                                             elements running on the same cloud internal
                                             network. \n - `none` means that the endpoint
                                             will not be exposed and will only be accessible
-                                            inside the main workspace POD, on a local
-                                            address. \n Default value is `public`"
+                                            inside the main devworkspace POD, on a
+                                            local address. \n Default value is `public`"
                                           enum:
                                           - public
                                           - internal
@@ -5439,8 +5264,8 @@ spec:
                 properties:
                   postStart:
                     description: IDs of commands that should be executed after the
-                      workspace is completely started. In the case of Che-Theia, these
-                      commands should be executed after all plugins and extensions
+                      devworkspace is completely started. In the case of Che-Theia,
+                      these commands should be executed after all plugins and extensions
                       have started, including project cloning. This means that those
                       commands are not triggered until the user opens the IDE in his
                       browser.
@@ -5449,26 +5274,26 @@ spec:
                     type: array
                   postStop:
                     description: IDs of commands that should be executed after stopping
-                      the workspace.
+                      the devworkspace.
                     items:
                       type: string
                     type: array
                   preStart:
                     description: IDs of commands that should be executed before the
-                      workspace start. Kubernetes-wise, these commands would typically
-                      be executed in init containers of the workspace POD.
+                      devworkspace start. Kubernetes-wise, these commands would typically
+                      be executed in init containers of the devworkspace POD.
                     items:
                       type: string
                     type: array
                   preStop:
                     description: IDs of commands that should be executed before stopping
-                      the workspace.
+                      the devworkspace.
                     items:
                       type: string
                     type: array
                 type: object
               parent:
-                description: Parent workspace template
+                description: Parent devworkspace template
                 oneOf:
                 - required:
                   - uri
@@ -5488,22 +5313,18 @@ spec:
                       - required:
                         - apply
                       - required:
-                        - vscodeTask
-                      - required:
-                        - vscodeLaunch
-                      - required:
                         - composite
                       properties:
                         apply:
                           description: "Command that consists in applying a given
-                            component definition, typically bound to a workspace event.
-                            \n For example, when an `apply` command is bound to a
-                            `preStart` event, and references a `container` component,
+                            component definition, typically bound to a devworkspace
+                            event. \n For example, when an `apply` command is bound
+                            to a `preStart` event, and references a `container` component,
                             it will start the container as a K8S initContainer in
-                            the workspace POD, unless the component has its `dedicatedPod`
+                            the devworkspace POD, unless the component has its `dedicatedPod`
                             field set to `true`. \n When no `apply` command exist
                             for a given component, it is assumed the component will
-                            be applied at workspace start by default."
+                            be applied at devworkspace start by default."
                           properties:
                             component:
                               description: Describes component that will be applied
@@ -5536,12 +5357,10 @@ spec:
                           type: object
                           x-kubernetes-preserve-unknown-fields: true
                         commandType:
-                          description: Type of workspace command
+                          description: Type of devworkspace command
                           enum:
                           - Exec
                           - Apply
-                          - VscodeTask
-                          - VscodeLaunch
                           - Composite
                           type: string
                         composite:
@@ -5656,86 +5475,6 @@ spec:
                           maxLength: 63
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
-                        vscodeLaunch:
-                          description: Command providing the definition of a VsCode
-                            launch action
-                          oneOf:
-                          - required:
-                            - uri
-                          - required:
-                            - inlined
-                          properties:
-                            group:
-                              description: Defines the group this command is part
-                                of
-                              properties:
-                                isDefault:
-                                  description: Identifies the default command for
-                                    a given group kind
-                                  type: boolean
-                                kind:
-                                  description: Kind of group the command is part of
-                                  enum:
-                                  - build
-                                  - run
-                                  - test
-                                  - debug
-                                  type: string
-                              type: object
-                            inlined:
-                              description: Inlined content of the VsCode configuration
-                              type: string
-                            locationType:
-                              description: Type of Vscode configuration command location
-                              enum:
-                              - Uri
-                              - Inlined
-                              type: string
-                            uri:
-                              description: Location as an absolute of relative URI
-                                the VsCode configuration will be fetched from
-                              type: string
-                          type: object
-                        vscodeTask:
-                          description: Command providing the definition of a VsCode
-                            Task
-                          oneOf:
-                          - required:
-                            - uri
-                          - required:
-                            - inlined
-                          properties:
-                            group:
-                              description: Defines the group this command is part
-                                of
-                              properties:
-                                isDefault:
-                                  description: Identifies the default command for
-                                    a given group kind
-                                  type: boolean
-                                kind:
-                                  description: Kind of group the command is part of
-                                  enum:
-                                  - build
-                                  - run
-                                  - test
-                                  - debug
-                                  type: string
-                              type: object
-                            inlined:
-                              description: Inlined content of the VsCode configuration
-                              type: string
-                            locationType:
-                              description: Type of Vscode configuration command location
-                              enum:
-                              - Uri
-                              - Inlined
-                              type: string
-                            uri:
-                              description: Location as an absolute of relative URI
-                                the VsCode configuration will be fetched from
-                              type: string
-                          type: object
                       required:
                       - id
                       type: object
@@ -5772,7 +5511,7 @@ spec:
                           - Plugin
                           type: string
                         container:
-                          description: Allows adding and configuring workspace-related
+                          description: Allows adding and configuring devworkspace-related
                             containers
                           properties:
                             args:
@@ -5821,12 +5560,12 @@ spec:
                                       network, typically through a K8S ingress or
                                       an OpenShift route. \n - `internal` means that
                                       the endpoint will be exposed internally outside
-                                      of the main workspace POD, typically by K8S
+                                      of the main devworkspace POD, typically by K8S
                                       services, to be consumed by other elements running
                                       on the same cloud internal network. \n - `none`
                                       means that the endpoint will not be exposed
                                       and will only be accessible inside the main
-                                      workspace POD, on a local address. \n Default
+                                      devworkspace POD, on a local address. \n Default
                                       value is `public`"
                                     enum:
                                     - public
@@ -5939,10 +5678,10 @@ spec:
                               type: array
                           type: object
                         kubernetes:
-                          description: Allows importing into the workspace the Kubernetes
-                            resources defined in a given manifest. For example this
-                            allows reusing the Kubernetes definitions used to deploy
-                            some runtime components in production.
+                          description: Allows importing into the devworkspace the
+                            Kubernetes resources defined in a given manifest. For
+                            example this allows reusing the Kubernetes definitions
+                            used to deploy some runtime components in production.
                           oneOf:
                           - required:
                             - uri
@@ -5967,12 +5706,12 @@ spec:
                                       network, typically through a K8S ingress or
                                       an OpenShift route. \n - `internal` means that
                                       the endpoint will be exposed internally outside
-                                      of the main workspace POD, typically by K8S
+                                      of the main devworkspace POD, typically by K8S
                                       services, to be consumed by other elements running
                                       on the same cloud internal network. \n - `none`
                                       means that the endpoint will not be exposed
                                       and will only be accessible inside the main
-                                      workspace POD, on a local address. \n Default
+                                      devworkspace POD, on a local address. \n Default
                                       value is `public`"
                                     enum:
                                     - public
@@ -6047,10 +5786,10 @@ spec:
                           pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         openshift:
-                          description: Allows importing into the workspace the OpenShift
-                            resources defined in a given manifest. For example this
-                            allows reusing the OpenShift definitions used to deploy
-                            some runtime components in production.
+                          description: Allows importing into the devworkspace the
+                            OpenShift resources defined in a given manifest. For example
+                            this allows reusing the OpenShift definitions used to
+                            deploy some runtime components in production.
                           oneOf:
                           - required:
                             - uri
@@ -6075,12 +5814,12 @@ spec:
                                       network, typically through a K8S ingress or
                                       an OpenShift route. \n - `internal` means that
                                       the endpoint will be exposed internally outside
-                                      of the main workspace POD, typically by K8S
+                                      of the main devworkspace POD, typically by K8S
                                       services, to be consumed by other elements running
                                       on the same cloud internal network. \n - `none`
                                       means that the endpoint will not be exposed
                                       and will only be accessible inside the main
-                                      workspace POD, on a local address. \n Default
+                                      devworkspace POD, on a local address. \n Default
                                       value is `public`"
                                     enum:
                                     - public
@@ -6171,24 +5910,20 @@ spec:
                                 - required:
                                   - apply
                                 - required:
-                                  - vscodeTask
-                                - required:
-                                  - vscodeLaunch
-                                - required:
                                   - composite
                                 properties:
                                   apply:
                                     description: "Command that consists in applying
                                       a given component definition, typically bound
-                                      to a workspace event. \n For example, when an
-                                      `apply` command is bound to a `preStart` event,
-                                      and references a `container` component, it will
-                                      start the container as a K8S initContainer in
-                                      the workspace POD, unless the component has
-                                      its `dedicatedPod` field set to `true`. \n When
-                                      no `apply` command exist for a given component,
-                                      it is assumed the component will be applied
-                                      at workspace start by default."
+                                      to a devworkspace event. \n For example, when
+                                      an `apply` command is bound to a `preStart`
+                                      event, and references a `container` component,
+                                      it will start the container as a K8S initContainer
+                                      in the devworkspace POD, unless the component
+                                      has its `dedicatedPod` field set to `true`.
+                                      \n When no `apply` command exist for a given
+                                      component, it is assumed the component will
+                                      be applied at devworkspace start by default."
                                     properties:
                                       component:
                                         description: Describes component that will
@@ -6224,12 +5959,10 @@ spec:
                                     type: object
                                     x-kubernetes-preserve-unknown-fields: true
                                   commandType:
-                                    description: Type of workspace command
+                                    description: Type of devworkspace command
                                     enum:
                                     - Exec
                                     - Apply
-                                    - VscodeTask
-                                    - VscodeLaunch
                                     - Composite
                                     type: string
                                   composite:
@@ -6352,94 +6085,6 @@ spec:
                                     maxLength: 63
                                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
-                                  vscodeLaunch:
-                                    description: Command providing the definition
-                                      of a VsCode launch action
-                                    oneOf:
-                                    - required:
-                                      - uri
-                                    - required:
-                                      - inlined
-                                    properties:
-                                      group:
-                                        description: Defines the group this command
-                                          is part of
-                                        properties:
-                                          isDefault:
-                                            description: Identifies the default command
-                                              for a given group kind
-                                            type: boolean
-                                          kind:
-                                            description: Kind of group the command
-                                              is part of
-                                            enum:
-                                            - build
-                                            - run
-                                            - test
-                                            - debug
-                                            type: string
-                                        type: object
-                                      inlined:
-                                        description: Inlined content of the VsCode
-                                          configuration
-                                        type: string
-                                      locationType:
-                                        description: Type of Vscode configuration
-                                          command location
-                                        enum:
-                                        - Uri
-                                        - Inlined
-                                        type: string
-                                      uri:
-                                        description: Location as an absolute of relative
-                                          URI the VsCode configuration will be fetched
-                                          from
-                                        type: string
-                                    type: object
-                                  vscodeTask:
-                                    description: Command providing the definition
-                                      of a VsCode Task
-                                    oneOf:
-                                    - required:
-                                      - uri
-                                    - required:
-                                      - inlined
-                                    properties:
-                                      group:
-                                        description: Defines the group this command
-                                          is part of
-                                        properties:
-                                          isDefault:
-                                            description: Identifies the default command
-                                              for a given group kind
-                                            type: boolean
-                                          kind:
-                                            description: Kind of group the command
-                                              is part of
-                                            enum:
-                                            - build
-                                            - run
-                                            - test
-                                            - debug
-                                            type: string
-                                        type: object
-                                      inlined:
-                                        description: Inlined content of the VsCode
-                                          configuration
-                                        type: string
-                                      locationType:
-                                        description: Type of Vscode configuration
-                                          command location
-                                        enum:
-                                        - Uri
-                                        - Inlined
-                                        type: string
-                                      uri:
-                                        description: Location as an absolute of relative
-                                          URI the VsCode configuration will be fetched
-                                          from
-                                        type: string
-                                    type: object
                                 required:
                                 - id
                                 type: object
@@ -6473,7 +6118,7 @@ spec:
                                     - Volume
                                     type: string
                                   container:
-                                    description: Allows adding and configuring workspace-related
+                                    description: Allows adding and configuring devworkspace-related
                                       containers
                                     properties:
                                       args:
@@ -6525,13 +6170,13 @@ spec:
                                                 typically through a K8S ingress or
                                                 an OpenShift route. \n - `internal`
                                                 means that the endpoint will be exposed
-                                                internally outside of the main workspace
+                                                internally outside of the main devworkspace
                                                 POD, typically by K8S services, to
                                                 be consumed by other elements running
                                                 on the same cloud internal network.
                                                 \n - `none` means that the endpoint
                                                 will not be exposed and will only
-                                                be accessible inside the main workspace
+                                                be accessible inside the main devworkspace
                                                 POD, on a local address. \n Default
                                                 value is `public`"
                                               enum:
@@ -6655,7 +6300,7 @@ spec:
                                         type: array
                                     type: object
                                   kubernetes:
-                                    description: Allows importing into the workspace
+                                    description: Allows importing into the devworkspace
                                       the Kubernetes resources defined in a given
                                       manifest. For example this allows reusing the
                                       Kubernetes definitions used to deploy some runtime
@@ -6686,13 +6331,13 @@ spec:
                                                 typically through a K8S ingress or
                                                 an OpenShift route. \n - `internal`
                                                 means that the endpoint will be exposed
-                                                internally outside of the main workspace
+                                                internally outside of the main devworkspace
                                                 POD, typically by K8S services, to
                                                 be consumed by other elements running
                                                 on the same cloud internal network.
                                                 \n - `none` means that the endpoint
                                                 will not be exposed and will only
-                                                be accessible inside the main workspace
+                                                be accessible inside the main devworkspace
                                                 POD, on a local address. \n Default
                                                 value is `public`"
                                               enum:
@@ -6775,7 +6420,7 @@ spec:
                                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   openshift:
-                                    description: Allows importing into the workspace
+                                    description: Allows importing into the devworkspace
                                       the OpenShift resources defined in a given manifest.
                                       For example this allows reusing the OpenShift
                                       definitions used to deploy some runtime components
@@ -6806,13 +6451,13 @@ spec:
                                                 typically through a K8S ingress or
                                                 an OpenShift route. \n - `internal`
                                                 means that the endpoint will be exposed
-                                                internally outside of the main workspace
+                                                internally outside of the main devworkspace
                                                 POD, typically by K8S services, to
                                                 be consumed by other elements running
                                                 on the same cloud internal network.
                                                 \n - `none` means that the endpoint
                                                 will not be exposed and will only
-                                                be accessible inside the main workspace
+                                                be accessible inside the main devworkspace
                                                 POD, on a local address. \n Default
                                                 value is `public`"
                                               enum:
@@ -7020,7 +6665,8 @@ spec:
                               type: object
                           type: object
                         github:
-                          description: Project's GitHub source
+                          description: Project's GitHub source. Deprecated, use `Git`
+                            instead
                           properties:
                             checkoutFrom:
                               description: Defines from what the project should be
@@ -7127,7 +6773,8 @@ spec:
                               type: object
                           type: object
                         github:
-                          description: Project's GitHub source
+                          description: Project's GitHub source. Deprecated, use `Git`
+                            instead
                           properties:
                             checkoutFrom:
                               description: Defines from what the project should be
@@ -7186,7 +6833,7 @@ spec:
                     type: string
                 type: object
               projects:
-                description: Projects worked on in the workspace, containing names
+                description: Projects worked on in the devworkspace, containing names
                   and sources locations
                 items:
                   oneOf:
@@ -7251,7 +6898,8 @@ spec:
                       - remotes
                       type: object
                     github:
-                      description: Project's GitHub source
+                      description: Project's GitHub source. Deprecated, use `Git`
+                        instead
                       properties:
                         checkoutFrom:
                           description: Defines from what the project should be checked
@@ -7368,7 +7016,8 @@ spec:
                       - remotes
                       type: object
                     github:
-                      description: Project's GitHub source
+                      description: Project's GitHub source. Deprecated, use `Git`
+                        instead
                       properties:
                         checkoutFrom:
                           description: Defines from what the project should be checked

@@ -23,8 +23,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta WorkspaceMetadata) *controllerv1alpha1.PodAdditions {
-	tlsSecretVolume := buildSecretVolume(common.OAuthProxySecretName(meta.WorkspaceId))
+func getProxyPodAdditions(proxyEndpoints map[string]proxyEndpoint, meta DevWorkspaceMetadata) *controllerv1alpha1.PodAdditions {
+	tlsSecretVolume := buildSecretVolume(common.OAuthProxySecretName(meta.DevWorkspaceId))
 	var proxyContainers []corev1.Container
 	for _, proxyEndpoint := range proxyEndpoints {
 		proxyContainers = append(proxyContainers, getProxyContainerForEndpoint(proxyEndpoint, tlsSecretVolume, meta))
@@ -48,7 +48,7 @@ func buildSecretVolume(secretName string) corev1.Volume {
 	}
 }
 
-func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume corev1.Volume, meta WorkspaceMetadata) corev1.Container {
+func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume corev1.Volume, meta DevWorkspaceMetadata) corev1.Container {
 	upstreamPortString := strconv.FormatInt(int64(proxyEndpoint.upstreamEndpoint.TargetPort), 10)
 	containerPortString := strconv.FormatInt(int64(proxyEndpoint.publicEndpoint.TargetPort), 10)
 	proxyContainerName := fmt.Sprintf("oauth-proxy-%s-%s", upstreamPortString, containerPortString)
@@ -79,7 +79,7 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 			"--tls-cert=/etc/tls/private/tls.crt",
 			"--tls-key=/etc/tls/private/tls.key",
 			"--cookie-secret=0123456789abcdefabcd",
-			"--client-id=" + meta.WorkspaceId + "-oauth-client",
+			"--client-id=" + meta.DevWorkspaceId + "-oauth-client",
 			"--client-secret=1234567890",
 			"--pass-user-bearer-token=false",
 			"--pass-access-token=true",

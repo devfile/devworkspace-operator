@@ -1,7 +1,7 @@
 name: "Theia and NodeJS plugin workspace"
 
 input:
-  workspace:
+  devworkspace:
     projects:
       - name: web-nodejs-sample
         git:
@@ -227,7 +227,7 @@ input:
                 - '--url'
                 - '0.0.0.0:4444'
                 - '--pod-selector'
-                - controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)
+                - controller.devfile.io/devworkspace_id=$(DEVWORKSPACE_ID)
               endpoints:
                 - name: "che-mach-exec"
                   exposure: public
@@ -272,7 +272,7 @@ input:
 
 
 output:
-  workspace:
+  devworkspace:
     projects:
       - name: web-nodejs-sample
         git:
@@ -414,7 +414,7 @@ output:
             - '--url'
             - '0.0.0.0:4444'
             - '--pod-selector'
-            - controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)
+            - controller.devfile.io/devworkspace_id=$(DEVWORKSPACE_ID)
           endpoints:
             - name: "che-mach-exec"
               exposure: public

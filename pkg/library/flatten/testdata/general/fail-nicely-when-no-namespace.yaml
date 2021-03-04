@@ -1,7 +1,7 @@
 name: "Fails nicely when no Kubernetes namespace is provided and there's no default"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

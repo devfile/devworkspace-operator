@@ -1,7 +1,7 @@
 name: "DevWorkspace references plugin with invalid schemaVersion"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

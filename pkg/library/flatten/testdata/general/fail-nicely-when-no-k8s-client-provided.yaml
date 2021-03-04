@@ -1,7 +1,7 @@
 name: "Fails nicely when no Kubernetes client provided"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

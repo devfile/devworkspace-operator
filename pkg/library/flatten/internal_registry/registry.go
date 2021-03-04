@@ -18,7 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"sigs.k8s.io/yaml"
 
@@ -35,7 +35,7 @@ var log = logf.Log.WithName("registry")
 // InternalRegistry is an abstraction over internal registry functions to allow for easier testing
 type InternalRegistry interface {
 	IsInInternalRegistry(pluginID string) bool
-	ReadPluginFromInternalRegistry(pluginID string) (*devworkspace.DevWorkspaceTemplate, error)
+	ReadPluginFromInternalRegistry(pluginID string) (*dw.DevWorkspaceTemplate, error)
 }
 
 type InternalRegistryImpl struct{}
@@ -51,12 +51,12 @@ func (_ *InternalRegistryImpl) IsInInternalRegistry(pluginID string) bool {
 	return true
 }
 
-func (_ *InternalRegistryImpl) ReadPluginFromInternalRegistry(pluginID string) (*devworkspace.DevWorkspaceTemplate, error) {
+func (_ *InternalRegistryImpl) ReadPluginFromInternalRegistry(pluginID string) (*dw.DevWorkspaceTemplate, error) {
 	yamlBytes, err := ioutil.ReadFile(getPluginPath(pluginID))
 	if err != nil {
 		return nil, err
 	}
-	plugin := &devworkspace.DevWorkspaceTemplate{}
+	plugin := &dw.DevWorkspaceTemplate{}
 	if err := yaml.Unmarshal(yamlBytes, plugin); err != nil {
 		return nil, err
 	}

@@ -17,7 +17,7 @@ import (
 	"net/url"
 	"strings"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -32,7 +32,7 @@ func getExposedEndpoints(
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
+			if endpoint.Exposure != dw.PublicEndpointExposure {
 				continue
 			}
 			endpointUrl, err := resolveURLForEndpoint(endpoint, routingObj)
@@ -53,15 +53,15 @@ func getExposedEndpoints(
 }
 
 func resolveURLForEndpoint(
-	endpoint devworkspace.Endpoint,
+	endpoint dw.Endpoint,
 	routingObj RoutingObjects) (string, error) {
 	for _, route := range routingObj.Routes {
-		if route.Annotations[constants.WorkspaceEndpointNameAnnotation] == endpoint.Name {
+		if route.Annotations[constants.DevWorkspaceEndpointNameAnnotation] == endpoint.Name {
 			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.Path, route.Spec.TLS != nil), nil
 		}
 	}
 	for _, ingress := range routingObj.Ingresses {
-		if ingress.Annotations[constants.WorkspaceEndpointNameAnnotation] == endpoint.Name {
+		if ingress.Annotations[constants.DevWorkspaceEndpointNameAnnotation] == endpoint.Name {
 			if len(ingress.Spec.Rules) == 1 {
 				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, "", false), nil // no TLS supported for ingresses yet
 			} else {
@@ -72,10 +72,10 @@ func resolveURLForEndpoint(
 	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
 }
 
-func getURLForEndpoint(endpoint devworkspace.Endpoint, host, basePath string, secure bool) string {
+func getURLForEndpoint(endpoint dw.Endpoint, host, basePath string, secure bool) string {
 	protocol := endpoint.Protocol
 	if secure && endpoint.Secure {
-		protocol = devworkspace.EndpointProtocol(getSecureProtocol(string(protocol)))
+		protocol = dw.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
 	var p string
 	if endpoint.Path != "" {

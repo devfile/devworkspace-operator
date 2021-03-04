@@ -12,9 +12,9 @@
 
 package flatten
 
-import devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+import dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
-func DevWorkspaceIsFlattened(devworkspace *devworkspace.DevWorkspaceTemplateSpec) bool {
+func DevWorkspaceIsFlattened(devworkspace *dw.DevWorkspaceTemplateSpec) bool {
 	if devworkspace.Parent != nil {
 		return false
 	}

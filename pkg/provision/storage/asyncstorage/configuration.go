@@ -13,7 +13,7 @@
 package asyncstorage
 
 import (
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +33,7 @@ import (
 // In both cases, if the ConfigMap does not exist, it is created.
 //
 // Returns NotReadyError if changes were made to the cluster.
-func GetOrCreateSSHConfig(workspace *devworkspace.DevWorkspace, clusterAPI provision.ClusterAPI) (*corev1.Secret, *corev1.ConfigMap, error) {
+func GetOrCreateSSHConfig(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) (*corev1.Secret, *corev1.ConfigMap, error) {
 	var pubKey []byte
 	clusterSecret, err := getSSHSidecarSecretCluster(workspace, clusterAPI)
 	if err != nil {

@@ -18,7 +18,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -42,7 +42,7 @@ func (s *ClusterSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error 
 	return nil
 }
 
-func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
+func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	podAdditions := &controllerv1alpha1.PodAdditions{}
@@ -84,7 +84,7 @@ func (s *ClusterSolver) GetExposedEndpoints(
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure == devworkspace.NoneEndpointExposure {
+			if endpoint.Exposure == dw.NoneEndpointExposure {
 				continue
 			}
 			url, err := resolveServiceHostnameForEndpoint(endpoint, routingObj.Services)
@@ -103,9 +103,9 @@ func (s *ClusterSolver) GetExposedEndpoints(
 	return exposedEndpoints, true, nil
 }
 
-func resolveServiceHostnameForEndpoint(endpoint devworkspace.Endpoint, services []corev1.Service) (string, error) {
+func resolveServiceHostnameForEndpoint(endpoint dw.Endpoint, services []corev1.Service) (string, error) {
 	for _, service := range services {
-		if service.Annotations[constants.WorkspaceDiscoverableServiceAnnotation] == "true" {
+		if service.Annotations[constants.DevWorkspaceDiscoverableServiceAnnotation] == "true" {
 			continue
 		}
 		for _, servicePort := range service.Spec.Ports {

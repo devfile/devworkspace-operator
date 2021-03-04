@@ -21,7 +21,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/stretchr/testify/assert"
@@ -29,9 +29,9 @@ import (
 )
 
 type testCase struct {
-	Name   string                                 `json:"name,omitempty"`
-	Input  *devworkspace.DevWorkspaceTemplateSpec `json:"input,omitempty"`
-	Output testOutput                             `json:"output,omitempty"`
+	Name   string                       `json:"name,omitempty"`
+	Input  *dw.DevWorkspaceTemplateSpec `json:"input,omitempty"`
+	Output testOutput                   `json:"output,omitempty"`
 }
 
 type testOutput struct {

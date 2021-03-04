@@ -27,7 +27,7 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
-			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testClient := &testutil.FakeK8sClient{
 				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
 				Errors:                tt.Input.Errors,
@@ -37,16 +37,16 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 				DefaultNamespace: "test-ignored",
 				K8sClient:        testClient,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
-					"Workspace should match expected output:\n%s",
-					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
 	}
@@ -58,7 +58,7 @@ func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
-			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testRegistry := &testutil.FakeInternalRegistry{
 				Plugins: tt.Input.DevWorkspaceResources,
 				Errors:  tt.Input.Errors,
@@ -67,16 +67,16 @@ func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
 				Context:          context.Background(),
 				InternalRegistry: testRegistry,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
-					"Workspace should match expected output:\n%s",
-					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
 	}
@@ -88,7 +88,7 @@ func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
-			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testHttpGetter := &testutil.FakeHTTPGetter{
 				DevfileResources:      tt.Input.DevfileResources,
 				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
@@ -98,16 +98,16 @@ func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 				Context:    context.Background(),
 				HttpClient: testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
-					"Workspace should match expected output:\n%s",
-					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
 	}
@@ -119,7 +119,7 @@ func TestResolveDevWorkspacePluginURI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
-			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testHttpGetter := &testutil.FakeHTTPGetter{
 				DevfileResources:      tt.Input.DevfileResources,
 				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
@@ -129,16 +129,16 @@ func TestResolveDevWorkspacePluginURI(t *testing.T) {
 				Context:    context.Background(),
 				HttpClient: testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
-					"Workspace should match expected output:\n%s",
-					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
 	}
@@ -149,7 +149,7 @@ func TestResolveDevWorkspaceParents(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
-			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testHttpGetter := &testutil.FakeHTTPGetter{
 				DevfileResources:      tt.Input.DevfileResources,
 				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
@@ -165,16 +165,16 @@ func TestResolveDevWorkspaceParents(t *testing.T) {
 				K8sClient:        testK8sClient,
 				HttpClient:       testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
-					"Workspace should match expected output:\n%s",
-					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
 	}
@@ -188,7 +188,7 @@ func TestResolveDevWorkspaceMissingDefaults(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
-			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testHttpGetter := &testutil.FakeHTTPGetter{
 				DevfileResources:      tt.Input.DevfileResources,
 				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
@@ -203,16 +203,16 @@ func TestResolveDevWorkspaceMissingDefaults(t *testing.T) {
 				K8sClient:  testK8sClient,
 				HttpClient: testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
-					"Workspace should match expected output:\n%s",
-					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
 	}
@@ -223,7 +223,7 @@ func TestResolveDevWorkspaceAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
-			assert.True(t, len(tt.Input.Workspace.Components) > 0, "Test case defines workspace with no components")
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
 			testHttpGetter := &testutil.FakeHTTPGetter{
 				DevfileResources:      tt.Input.DevfileResources,
 				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
@@ -239,16 +239,16 @@ func TestResolveDevWorkspaceAnnotations(t *testing.T) {
 				HttpClient:       testHttpGetter,
 				DefaultNamespace: "default-namespace",
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
+			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
-				assert.Truef(t, cmp.Equal(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
-					"Workspace should match expected output:\n%s",
-					cmp.Diff(tt.Output.Workspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
 	}

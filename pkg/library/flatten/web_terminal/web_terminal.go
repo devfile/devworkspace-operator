@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
@@ -27,7 +27,7 @@ var webTerminalPublishers = []string{
 	"redhat-developer/web-terminal-dev/",
 }
 
-func IsWebTerminalDevWorkspace(workspace *devworkspace.DevWorkspaceTemplateSpec) bool {
+func IsWebTerminalDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	for _, component := range workspace.Components {
 		if component.Plugin != nil && pluginIsWebTerminal(component.Plugin) {
 			return true
@@ -36,7 +36,7 @@ func IsWebTerminalDevWorkspace(workspace *devworkspace.DevWorkspaceTemplateSpec)
 	return false
 }
 
-func AddDefaultContainerIfNeeded(workspace *devworkspace.DevWorkspaceTemplateSpec) error {
+func AddDefaultContainerIfNeeded(workspace *dw.DevWorkspaceTemplateSpec) error {
 	if !IsWebTerminalDevWorkspace(workspace) || hasContainerComponent(workspace) {
 		return nil
 	}
@@ -48,7 +48,7 @@ func AddDefaultContainerIfNeeded(workspace *devworkspace.DevWorkspaceTemplateSpe
 	return nil
 }
 
-func pluginIsWebTerminal(plugin *devworkspace.PluginComponent) bool {
+func pluginIsWebTerminal(plugin *dw.PluginComponent) bool {
 	// Check that ID matches web terminal publishers
 	for _, publisher := range webTerminalPublishers {
 		if strings.HasPrefix(plugin.Id, publisher) {
@@ -61,7 +61,7 @@ func pluginIsWebTerminal(plugin *devworkspace.PluginComponent) bool {
 	return false
 }
 
-func hasContainerComponent(workspace *devworkspace.DevWorkspaceTemplateSpec) bool {
+func hasContainerComponent(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	for _, component := range workspace.Components {
 		if component.Container != nil {
 			return true

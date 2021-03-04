@@ -15,8 +15,8 @@ import (
 	"context"
 	"fmt"
 
-	devworkspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
-	devworkspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
+	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
@@ -35,8 +35,8 @@ const serviceCAUsername = "system:serviceaccount:openshift-service-ca:service-ca
 var RestrictedAccessDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
 	cmpopts.IgnoreTypes(metav1.ObjectMeta{}),
-	cmpopts.IgnoreFields(devworkspacev1alpha1.DevWorkspaceSpec{}, "Started"),
-	cmpopts.IgnoreFields(devworkspacev1alpha2.DevWorkspaceSpec{}, "Started"),
+	cmpopts.IgnoreFields(dwv1.DevWorkspaceSpec{}, "Started"),
+	cmpopts.IgnoreFields(dwv2.DevWorkspaceSpec{}, "Started"),
 }
 
 func (h *WebhookHandler) HandleRestrictedAccessUpdate(_ context.Context, req admission.Request) admission.Response {
@@ -91,11 +91,11 @@ func (h *WebhookHandler) HandleRestrictedAccessCreate(_ context.Context, req adm
 	return admission.Denied("Only the workspace controller can create workspace objects.")
 }
 
-func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp *devworkspacev1alpha1.DevWorkspace, uid string) (allowed bool, msg string) {
-	if oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
+func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp *dwv1.DevWorkspace, uid string) (allowed bool, msg string) {
+	if oldWksp.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] != "true" {
 		return true, "workspace does not have restricted access configured"
 	}
-	creatorUID := oldWksp.Labels[constants.WorkspaceCreatorLabel]
+	creatorUID := oldWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if uid == creatorUID || uid == h.ControllerUID {
 		return true, "workspace with restricted-access is updated by owner or controller"
 	}
@@ -105,11 +105,11 @@ func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp
 	return checkRestrictedWorkspaceMetadata(&oldWksp.ObjectMeta, &newWksp.ObjectMeta)
 }
 
-func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
-	if oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
+func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *dwv2.DevWorkspace, uid string) (allowed bool, msg string) {
+	if oldWksp.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] != "true" {
 		return true, "workspace does not have restricted access configured"
 	}
-	creatorUID := oldWksp.Labels[constants.WorkspaceCreatorLabel]
+	creatorUID := oldWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if uid == creatorUID || uid == h.ControllerUID {
 		return true, "workspace with restricted-access is updated by owner or controller"
 	}
@@ -154,12 +154,12 @@ func (h *WebhookHandler) checkRestrictedAccessAnnotation(req admission.Request) 
 		return false, err
 	}
 	annotations := obj.GetAnnotations()
-	return annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true", nil
+	return annotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true", nil
 }
 
 func checkRestrictedWorkspaceMetadata(oldMeta, newMeta *metav1.ObjectMeta) (allowed bool, msg string) {
-	if oldMeta.Annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
-		newMeta.Annotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
+	if oldMeta.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true" &&
+		newMeta.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] != "true" {
 		return false, "cannot disable restricted-access once it is set"
 	}
 	return true, "permitted change to workspace"
@@ -179,13 +179,13 @@ func changePermitted(oldObj, newObj runtime.Object) (allowed bool, msg string) {
 		return false, "Internal error"
 	}
 	oldLabels, newLabels := oldMeta.GetLabels(), newMeta.GetLabels()
-	if oldLabels[constants.WorkspaceCreatorLabel] != newLabels[constants.WorkspaceCreatorLabel] {
-		return false, fmt.Sprintf("Label '%s' is set by the controller and cannot be updated", constants.WorkspaceCreatorLabel)
+	if oldLabels[constants.DevWorkspaceCreatorLabel] != newLabels[constants.DevWorkspaceCreatorLabel] {
+		return false, fmt.Sprintf("Label '%s' is set by the controller and cannot be updated", constants.DevWorkspaceCreatorLabel)
 	}
 	oldAnnotations, newAnnotations := oldMeta.GetAnnotations(), newMeta.GetAnnotations()
-	if oldAnnotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
-		newAnnotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
-		return false, fmt.Sprintf("Cannot change annotation '%s' after it is set to 'true'", constants.WorkspaceRestrictedAccessAnnotation)
+	if oldAnnotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true" &&
+		newAnnotations[constants.DevWorkspaceRestrictedAccessAnnotation] != "true" {
+		return false, fmt.Sprintf("Cannot change annotation '%s' after it is set to 'true'", constants.DevWorkspaceRestrictedAccessAnnotation)
 	}
 	return true, ""
 }

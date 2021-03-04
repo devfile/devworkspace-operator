@@ -47,7 +47,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		return nil
 	}
 
-	if err := p.rewriteContainerVolumeMounts(workspace.Status.WorkspaceId, podAdditions, &workspace.Spec.Template); err != nil {
+	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, podAdditions, &workspace.Spec.Template); err != nil {
 		return err
 	}
 	if _, err := syncCommonPVC(workspace.Namespace, clusterAPI); err != nil {

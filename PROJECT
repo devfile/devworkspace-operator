@@ -1,7 +1,7 @@
 domain: devfile.io
 layout: go.kubebuilder.io/v2
 multigroup: true
-projectName: devworkspace-operator-migration
+projectName: devworkspace-operator
 repo: github.com/devfile/devworkspace-operator
 resources:
 - group: controller

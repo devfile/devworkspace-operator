@@ -1,7 +1,7 @@
 name: "Defaulting web-terminal container component"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: web-terminal
         plugin:
@@ -21,7 +21,7 @@ input:
               image: test-image
 
 output:
-  workspace:
+  devworkspace:
     components:
       - name: web-terminal-plugin
         attributes:

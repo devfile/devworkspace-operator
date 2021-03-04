@@ -107,13 +107,13 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI provision.Clu
 }
 
 func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) (*batchv1.Job, error) {
-	workspaceId := workspace.Status.WorkspaceId
+	workspaceId := workspace.Status.DevWorkspaceId
 	pvcName := config.ControllerCfg.GetWorkspacePVCName()
 	jobLabels := map[string]string{
-		constants.WorkspaceIDLabel: workspaceId,
+		constants.DevWorkspaceIDLabel: workspaceId,
 	}
-	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.WorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
-		jobLabels[constants.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
+	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
+		jobLabels[constants.DevWorkspaceRestrictedAccessAnnotation] = restrictedAccess
 	}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -179,7 +179,7 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI provision
 
 func getClusterCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) (*batchv1.Job, error) {
 	namespacedName := types.NamespacedName{
-		Name:      common.PVCCleanupJobName(workspace.Status.WorkspaceId),
+		Name:      common.PVCCleanupJobName(workspace.Status.DevWorkspaceId),
 		Namespace: workspace.Namespace,
 	}
 	clusterJob := &batchv1.Job{}

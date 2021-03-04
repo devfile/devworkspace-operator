@@ -13,7 +13,7 @@
 package container
 
 import (
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -25,7 +25,7 @@ import (
 // TODO:
 // - Support dedicatedPod field
 // - Find way to track is container component comes from plugin
-func HasMountSources(devfileContainer *devworkspace.ContainerComponent) bool {
+func HasMountSources(devfileContainer *dw.ContainerComponent) bool {
 	var mountSources bool
 	if devfileContainer.MountSources == nil {
 		mountSources = true
@@ -37,7 +37,7 @@ func HasMountSources(devfileContainer *devworkspace.ContainerComponent) bool {
 
 // AnyMountSources checks HasMountSources for each container component in a devfile. If a component in the slice
 // is not a ContainerComponent, it is ignored.
-func AnyMountSources(devfileComponents []devworkspace.Component) bool {
+func AnyMountSources(devfileComponents []dw.Component) bool {
 	for _, component := range devfileComponents {
 		if component.Container != nil && HasMountSources(component.Container) {
 			return true
@@ -48,7 +48,7 @@ func AnyMountSources(devfileComponents []devworkspace.Component) bool {
 
 // handleMountSources adds a volumeMount to a container if the corresponding devfile container has
 // mountSources enabled.
-func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devworkspace.ContainerComponent) {
+func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.ContainerComponent) {
 	if !HasMountSources(devfileContainer) {
 		return
 	}

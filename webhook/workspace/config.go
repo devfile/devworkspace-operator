@@ -34,7 +34,7 @@ import (
 
 //Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
 func Configure(ctx context.Context) error {
-	log.Info("Configuring workspace webhooks")
+	log.Info("Configuring devworkspace webhooks")
 	c, err := createClient()
 	if err != nil {
 		return err
@@ -80,9 +80,9 @@ func Configure(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Updated workspace mutating webhook configuration")
+		log.Info("Updated devworkspace mutating webhook configuration")
 	} else {
-		log.Info("Created workspace mutating webhook configuration")
+		log.Info("Created devworkspace mutating webhook configuration")
 	}
 
 	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID, saName)})
@@ -103,9 +103,9 @@ func Configure(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Info("Updated workspace validating webhook configuration")
+		log.Info("Updated devworkspace validating webhook configuration")
 	} else {
-		log.Info("Created workspace validating webhook configuration")
+		log.Info("Created devworkspace validating webhook configuration")
 	}
 
 	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID, saName)})

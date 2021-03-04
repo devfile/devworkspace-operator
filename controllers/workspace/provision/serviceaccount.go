@@ -15,7 +15,7 @@ package provision
 import (
 	"context"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
@@ -32,12 +32,12 @@ type ServiceAcctProvisioningStatus struct {
 }
 
 func SyncServiceAccount(
-	workspace *devworkspace.DevWorkspace,
+	workspace *dw.DevWorkspace,
 	additionalAnnotations map[string]string,
 	clusterAPI ClusterAPI) ServiceAcctProvisioningStatus {
 	// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
 	autoMountServiceAccount := true
-	saName := common.ServiceAccountName(workspace.Status.WorkspaceId)
+	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
 
 	specSA := corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -72,7 +72,7 @@ func SyncServiceAccount(
 	}
 
 	if clusterSA == nil {
-		clusterAPI.Logger.Info("Creating workspace ServiceAccount")
+		clusterAPI.Logger.Info("Creating DevWorkspace ServiceAccount")
 		err := clusterAPI.Client.Create(context.TODO(), &specSA)
 		return ServiceAcctProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -84,7 +84,7 @@ func SyncServiceAccount(
 	}
 
 	if !cmp.Equal(specSA.Annotations, clusterSA.Annotations) {
-		clusterAPI.Logger.Info("Updating workspace ServiceAccount")
+		clusterAPI.Logger.Info("Updating DevWorkspace ServiceAccount")
 		patch := runtimeClient.MergeFrom(&specSA)
 		err := clusterAPI.Client.Patch(context.TODO(), clusterSA, patch)
 		if err != nil {

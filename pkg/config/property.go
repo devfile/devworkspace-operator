@@ -35,8 +35,8 @@ const (
 	experimentalFeaturesEnabled        = "devworkspace.experimental_features_enabled"
 	defaultExperimentalFeaturesEnabled = "false"
 
-	workspaceIdleTimeout        = "devworkspace.idle_timeout"
-	defaultWorkspaceIdleTimeout = "15m"
+	devworkspaceIdleTimeout        = "devworkspace.idle_timeout"
+	defaultDevWorkspaceIdleTimeout = "15m"
 
 	// Skip Verify for TLS connections
 	// It's insecure and should be used only for testing

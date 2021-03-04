@@ -40,6 +40,9 @@ spec:
           spec:
             description: DevWorkspaceRoutingSpec defines the desired state of DevWorkspaceRouting
             properties:
+              devworkspaceId:
+                description: Id for the DevWorkspace being routed
+                type: string
               endpoints:
                 additionalProperties:
                   items:
@@ -60,11 +63,11 @@ spec:
                           be exposed on the public network, typically through a K8S
                           ingress or an OpenShift route. \n - `internal` means that
                           the endpoint will be exposed internally outside of the main
-                          workspace POD, typically by K8S services, to be consumed
+                          devworkspace POD, typically by K8S services, to be consumed
                           by other elements running on the same cloud internal network.
                           \n - `none` means that the endpoint will not be exposed
-                          and will only be accessible inside the main workspace POD,
-                          on a local address. \n Default value is `public`"
+                          and will only be accessible inside the main devworkspace
+                          POD, on a local address. \n Default value is `public`"
                         enum:
                         - public
                         - internal
@@ -120,23 +123,20 @@ spec:
                 additionalProperties:
                   type: string
                 description: Selector that should be used by created services to point
-                  to the workspace Pod
+                  to the devworkspace Pod
                 type: object
               routingClass:
-                description: 'Class of the routing: this drives which Workspace Routing
+                description: 'Class of the routing: this drives which DevWorkspaceRouting
                   controller will manage this routing'
                 type: string
               routingSuffix:
                 description: Routing suffix for cluster
                 type: string
-              workspaceId:
-                description: WorkspaceId for the workspace being routed
-                type: string
             required:
+            - devworkspaceId
             - endpoints
             - podSelector
             - routingSuffix
-            - workspaceId
             type: object
           status:
             description: DevWorkspaceRoutingStatus defines the observed state of DevWorkspaceRouting
@@ -168,15 +168,15 @@ spec:
                 description: Routing reconcile phase
                 type: string
               podAdditions:
-                description: Additions to main workspace deployment
+                description: Additions to main devworkspace deployment
                 properties:
                   annotations:
                     additionalProperties:
                       type: string
-                    description: Annotations to be applied to workspace deployment
+                    description: Annotations to be applied to devworkspace deployment
                     type: object
                   containers:
-                    description: Containers to add to workspace deployment
+                    description: Containers to add to devworkspace deployment
                     items:
                       description: A single application container that you want to
                         run within a pod.
@@ -1259,7 +1259,7 @@ spec:
                       type: object
                     type: array
                   initContainers:
-                    description: Init containers to add to workspace deployment
+                    description: Init containers to add to devworkspace deployment
                     items:
                       description: A single application container that you want to
                         run within a pod.
@@ -2344,10 +2344,10 @@ spec:
                   labels:
                     additionalProperties:
                       type: string
-                    description: Labels to be applied to workspace deployment
+                    description: Labels to be applied to devworkspace deployment
                     type: object
                   pullSecrets:
-                    description: ImagePullSecrets to add to workspace deployment
+                    description: ImagePullSecrets to add to devworkspace deployment
                     items:
                       description: LocalObjectReference contains enough information
                         to let you locate the referenced object inside the same namespace.
@@ -2361,11 +2361,11 @@ spec:
                   serviceAccountAnnotations:
                     additionalProperties:
                       type: string
-                    description: Annotations for the workspace service account, it
-                      might be used for e.g. OpenShift oauth with SA as auth client
+                    description: Annotations for the devworkspace service account,
+                      it might be used for e.g. OpenShift oauth with SA as auth client
                     type: object
                   volumeMounts:
-                    description: VolumeMounts to add to all containers in a workspace
+                    description: VolumeMounts to add to all containers in a devworkspace
                       deployment
                     items:
                       description: VolumeMount describes a mounting of a Volume within
@@ -2406,7 +2406,7 @@ spec:
                       type: object
                     type: array
                   volumes:
-                    description: Volumes to add to workspace deployment
+                    description: Volumes to add to devworkspace deployment
                     items:
                       description: Volume represents a named volume in a pod that
                         may be accessed by any container in the pod.

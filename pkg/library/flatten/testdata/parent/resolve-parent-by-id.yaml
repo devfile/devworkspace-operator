@@ -1,7 +1,7 @@
 name: "Resolve parent by ID"
 
 input:
-  workspace:
+  devworkspace:
     parent:
       id: test/parent/id
       registryUrl: https://test-registry.io/
@@ -30,7 +30,7 @@ input:
                 value: original-value
 
 output:
-  workspace:
+  devworkspace:
     components:
       - name: parent-component
         attributes:

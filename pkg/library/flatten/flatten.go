@@ -18,7 +18,7 @@ import (
 	"net/url"
 	"path"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
@@ -39,7 +39,7 @@ type ResolverTools struct {
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
 // are inlined as components.
-func ResolveDevWorkspace(workspace *devworkspace.DevWorkspaceTemplateSpec, tooling ResolverTools) (*devworkspace.DevWorkspaceTemplateSpec, error) {
+func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools) (*dw.DevWorkspaceTemplateSpec, error) {
 	// Web terminals get default container components if they do not specify one
 	if err := web_terminal.AddDefaultContainerIfNeeded(workspace); err != nil {
 		return nil, err
@@ -53,12 +53,12 @@ func ResolveDevWorkspace(workspace *devworkspace.DevWorkspaceTemplateSpec, tooli
 	return resolvedDW, nil
 }
 
-func recursiveResolve(workspace *devworkspace.DevWorkspaceTemplateSpec, tooling ResolverTools, resolveCtx *resolutionContextTree) (*devworkspace.DevWorkspaceTemplateSpec, error) {
+func recursiveResolve(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools, resolveCtx *resolutionContextTree) (*dw.DevWorkspaceTemplateSpec, error) {
 	if DevWorkspaceIsFlattened(workspace) {
 		return workspace.DeepCopy(), nil
 	}
 
-	resolvedParent := &devworkspace.DevWorkspaceTemplateSpecContent{}
+	resolvedParent := &dw.DevWorkspaceTemplateSpecContent{}
 	if workspace.Parent != nil {
 		resolvedParentSpec, err := resolveParentComponent(workspace.Parent, tooling)
 		if err != nil {
@@ -71,13 +71,13 @@ func recursiveResolve(workspace *devworkspace.DevWorkspaceTemplateSpec, tooling 
 		annotate.AddSourceAttributesForTemplate("parent", resolvedParentSpec)
 		resolvedParent = &resolvedParentSpec.DevWorkspaceTemplateSpecContent
 	}
-	resolvedContent := &devworkspace.DevWorkspaceTemplateSpecContent{}
+	resolvedContent := &dw.DevWorkspaceTemplateSpecContent{}
 	resolvedContent.Projects = workspace.Projects
 	resolvedContent.StarterProjects = workspace.StarterProjects
 	resolvedContent.Commands = workspace.Commands
 	resolvedContent.Events = workspace.Events
 
-	var pluginSpecContents []*devworkspace.DevWorkspaceTemplateSpecContent
+	var pluginSpecContents []*dw.DevWorkspaceTemplateSpecContent
 	for _, component := range workspace.Components {
 		if component.Plugin == nil {
 			// No action necessary
@@ -107,13 +107,13 @@ func recursiveResolve(workspace *devworkspace.DevWorkspaceTemplateSpec, tooling 
 		return nil, fmt.Errorf("failed to merge DevWorkspace parents/plugins: %w", err)
 	}
 
-	return &devworkspace.DevWorkspaceTemplateSpec{
+	return &dw.DevWorkspaceTemplateSpec{
 		DevWorkspaceTemplateSpecContent: *resolvedContent,
 	}, nil
 }
 
 // resolveParentComponent resolves the parent DevWorkspaceTemplateSpec that a parent reference refers to.
-func resolveParentComponent(parent *devworkspace.Parent, tools ResolverTools) (resolvedParent *devworkspace.DevWorkspaceTemplateSpec, err error) {
+func resolveParentComponent(parent *dw.Parent, tools ResolverTools) (resolvedParent *dw.DevWorkspaceTemplateSpec, err error) {
 	switch {
 	case parent.Kubernetes != nil:
 		// Search in default namespace if namespace ref is unset
@@ -146,8 +146,8 @@ func resolveParentComponent(parent *devworkspace.Parent, tools ResolverTools) (r
 // used to construct meaningful error messages (e.g. issue resolving plugin 'name')
 func resolvePluginComponent(
 	name string,
-	plugin *devworkspace.PluginComponent,
-	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+	plugin *dw.PluginComponent,
+	tools ResolverTools) (resolvedPlugin *dw.DevWorkspaceTemplateSpec, err error) {
 	switch {
 	case plugin.Kubernetes != nil:
 		resolvedPlugin, err = resolveElementByKubernetesImport(name, plugin.Kubernetes, tools)
@@ -163,7 +163,7 @@ func resolvePluginComponent(
 	}
 
 	if plugin.Components != nil || plugin.Commands != nil {
-		overrideSpec, err := overriding.OverrideDevWorkspaceTemplateSpec(&resolvedPlugin.DevWorkspaceTemplateSpecContent, devworkspace.PluginOverrides{
+		overrideSpec, err := overriding.OverrideDevWorkspaceTemplateSpec(&resolvedPlugin.DevWorkspaceTemplateSpecContent, dw.PluginOverrides{
 			Components: plugin.Components,
 			Commands:   plugin.Commands,
 		})
@@ -180,8 +180,8 @@ func resolvePluginComponent(
 // The name parameter is used to construct meaningful error messages (e.g. issue resolving plugin 'name')
 func resolveElementByKubernetesImport(
 	name string,
-	kubeReference *devworkspace.KubernetesCustomResourceImportReference,
-	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+	kubeReference *dw.KubernetesCustomResourceImportReference,
+	tools ResolverTools) (resolvedPlugin *dw.DevWorkspaceTemplateSpec, err error) {
 
 	if tools.K8sClient == nil {
 		return nil, fmt.Errorf("cannot resolve resources by kubernetes reference: no kubernetes client provided")
@@ -196,7 +196,7 @@ func resolveElementByKubernetesImport(
 		namespace = tools.DefaultNamespace
 	}
 
-	var dwTemplate devworkspace.DevWorkspaceTemplate
+	var dwTemplate dw.DevWorkspaceTemplate
 	namespacedName := types.NamespacedName{
 		Name:      kubeReference.Name,
 		Namespace: namespace,
@@ -218,7 +218,7 @@ func resolveElementById(
 	name string,
 	id string,
 	registryUrl string,
-	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+	tools ResolverTools) (resolvedPlugin *dw.DevWorkspaceTemplateSpec, err error) {
 
 	// Check internal registry for plugins that do not specify a registry
 	if registryUrl == "" {
@@ -258,7 +258,7 @@ func resolveElementById(
 func resolveElementByURI(
 	name string,
 	uri string,
-	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+	tools ResolverTools) (resolvedPlugin *dw.DevWorkspaceTemplateSpec, err error) {
 
 	if tools.HttpClient == nil {
 		return nil, fmt.Errorf("cannot resolve resources by id: no HTTP client provided")

@@ -17,7 +17,7 @@ import (
 	"strconv"
 	"time"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
@@ -45,7 +45,7 @@ func SetTime(timingInfo map[string]string, event string) {
 // SummarizeStartup applies aggregate annotations based off event annotations set by
 // SetTime(). No-op if timing is disabled or if not all event annotations are present
 // on the devworkspace.
-func SummarizeStartup(workspace *devworkspace.DevWorkspace) {
+func SummarizeStartup(workspace *dw.DevWorkspace) {
 	if !IsEnabled() {
 		return
 	}
@@ -68,18 +68,18 @@ func SummarizeStartup(workspace *devworkspace.DevWorkspace) {
 // ClearAnnotations removes all timing-related annotations from a DevWorkspace.
 // It's necessary to call this before setting new times via SetTime(), as SetTime()
 // does not overwrite existing annotations.
-func ClearAnnotations(workspace *devworkspace.DevWorkspace) {
+func ClearAnnotations(workspace *dw.DevWorkspace) {
 	if !IsEnabled() {
 		return
 	}
-	delete(workspace.Annotations, WorkspaceStarted)
+	delete(workspace.Annotations, DevWorkspaceStarted)
 	delete(workspace.Annotations, ComponentsCreated)
 	delete(workspace.Annotations, ComponentsReady)
 	delete(workspace.Annotations, RoutingCreated)
 	delete(workspace.Annotations, RoutingReady)
 	delete(workspace.Annotations, DeploymentCreated)
 	delete(workspace.Annotations, DeploymentReady)
-	delete(workspace.Annotations, WorkspaceReady)
+	delete(workspace.Annotations, DevWorkspaceReady)
 	delete(workspace.Annotations, workspaceTotalTime)
 	delete(workspace.Annotations, workspaceComponentsTime)
 	delete(workspace.Annotations, workspaceRoutingsTime)

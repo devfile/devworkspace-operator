@@ -48,9 +48,9 @@ type testCase struct {
 }
 
 type testInput struct {
-	WorkspaceID  string                       `json:"workspaceId,omitempty"`
-	PodAdditions v1alpha1.PodAdditions        `json:"podAdditions,omitempty"`
-	Workspace    *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
+	DevWorkspaceID string                       `json:"devworkspaceId,omitempty"`
+	PodAdditions   v1alpha1.PodAdditions        `json:"podAdditions,omitempty"`
+	Workspace      *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
 }
 
 type testOutput struct {
@@ -116,7 +116,7 @@ func TestRewriteContainerVolumeMounts(t *testing.T) {
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
 			workspace := &dw.DevWorkspace{}
 			workspace.Spec.Template = *tt.Input.Workspace
-			workspace.Status.WorkspaceId = tt.Input.WorkspaceID
+			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"
 			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, clusterAPI)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {

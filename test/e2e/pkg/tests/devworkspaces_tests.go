@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	workspacesv1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -40,13 +40,13 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 	})
 
 	ginkgo.It("Add OpenShift web terminal to cluster and wait running status", func() {
-		commandResult, err := config.DevK8sClient.OcApplyWorkspace(config.WorkspaceNamespace, "samples/web-terminal.yaml")
+		commandResult, err := config.DevK8sClient.OcApplyWorkspace(config.DevWorkspaceNamespace, "samples/web-terminal.yaml")
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Failed to create OpenShift web terminal workspace: %s %s", err.Error(), commandResult))
 			return
 		}
 
-		deploy, err := config.DevK8sClient.WaitDevWsStatus("web-terminal", config.WorkspaceNamespace, workspacesv1alpha2.WorkspaceStatusRunning)
+		deploy, err := config.DevK8sClient.WaitDevWsStatus("web-terminal", config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
 		if !deploy {
 			ginkgo.Fail(fmt.Sprintf("OpenShift Web terminal workspace didn't start properly. Error: %s", err))
 		}
@@ -54,13 +54,13 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 
 	var podName string
 	ginkgo.It("Check that pod creator can execute a command in the container", func() {
-		podSelector := "controller.devfile.io/workspace_name=web-terminal"
+		podSelector := "controller.devfile.io/devworkspace_name=web-terminal"
 		var err error
-		podName, err = config.AdminK8sClient.GetPodNameBySelector(podSelector, config.WorkspaceNamespace)
+		podName, err = config.AdminK8sClient.GetPodNameBySelector(podSelector, config.DevWorkspaceNamespace)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Can get web terminal pod by selector. Error: %s", err))
 		}
-		resultOfExecCommand, err := config.DevK8sClient.ExecCommandInContainer(podName, config.WorkspaceNamespace, "echo hello dev")
+		resultOfExecCommand, err := config.DevK8sClient.ExecCommandInContainer(podName, config.DevWorkspaceNamespace, "echo hello dev")
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Cannot execute command in the devworkspace container. Error: `%s`. Exec output: `%s`", err, resultOfExecCommand))
 		}
@@ -68,11 +68,11 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 	})
 
 	ginkgo.It("Check that not pod owner cannot execute a command in the container", func() {
-		resultOfExecCommand, err := config.AdminK8sClient.ExecCommandInContainer(podName, config.WorkspaceNamespace, "echo hello dev")
+		resultOfExecCommand, err := config.AdminK8sClient.ExecCommandInContainer(podName, config.DevWorkspaceNamespace, "echo hello dev")
 		if err == nil {
 			ginkgo.Fail(fmt.Sprintf("Admin is not supposed to be able to exec into test terminal but exec is executed successfully and returned: %s", resultOfExecCommand))
 		}
-		if !strings.Contains(resultOfExecCommand, "denied the request: The only workspace creator has exec access") {
+		if !strings.Contains(resultOfExecCommand, "denied the request: The only devworkspace creator has exec access") {
 			ginkgo.Fail(fmt.Sprintf("Exec command is failed due different reason than expected restricted access. Error: `%s`. Exec output: `%s`", err, resultOfExecCommand))
 		}
 		// as expected exec is failed due restricted access

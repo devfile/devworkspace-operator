@@ -1,7 +1,7 @@
 name: "Plugins incompatible with editor"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: editor-plugin
         plugin:

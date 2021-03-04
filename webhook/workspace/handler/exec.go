@@ -35,20 +35,20 @@ func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admissio
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	_, ok := p.Labels[constants.WorkspaceIDLabel]
+	_, ok := p.Labels[constants.DevWorkspaceIDLabel]
 	if !ok {
-		return admission.Allowed("It's not workspace related pod")
+		return admission.Allowed("It's not devworkspace related pod")
 	}
 
-	creator, ok := p.Labels[constants.WorkspaceCreatorLabel]
+	creator, ok := p.Labels[constants.DevWorkspaceCreatorLabel]
 	if !ok {
-		return admission.Denied("The workspace info is missing in the workspace-related pod")
+		return admission.Denied("The workspace info is missing in the devworkspace-related pod")
 	}
 
-	if p.Annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
+	if p.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true" &&
 		creator != req.UserInfo.UID {
-		return admission.Denied("The only workspace creator has exec access")
+		return admission.Denied("The only devworkspace creator has exec access")
 	}
 
-	return admission.Allowed("The current user and workspace are matched")
+	return admission.Allowed("The current user and devworkspace are matched")
 }

@@ -114,7 +114,7 @@ func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.Con
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.MetadataConfigMapName(original.Status.WorkspaceId),
+			Name:      common.MetadataConfigMapName(original.Status.DevWorkspaceId),
 			Namespace: original.Namespace,
 			Labels:    constants.ControllerAppLabels(),
 		},

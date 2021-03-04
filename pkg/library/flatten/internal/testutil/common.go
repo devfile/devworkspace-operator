@@ -35,7 +35,7 @@ var WorkspaceTemplateDiffOpts = cmp.Options{
 		return strings.Compare(a, b) > 0
 	}),
 	// TODO: Devworkspace overriding results in empty []string instead of nil
-	cmpopts.IgnoreFields(dw.WorkspaceEvents{}, "PostStart", "PreStop", "PostStop"),
+	cmpopts.IgnoreFields(dw.DevWorkspaceEvents{}, "PostStart", "PreStop", "PostStop"),
 }
 
 var testControllerCfg = &corev1.ConfigMap{
@@ -60,7 +60,7 @@ type TestCase struct {
 }
 
 type TestInput struct {
-	Workspace *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
+	DevWorkspace *dw.DevWorkspaceTemplateSpec `json:"devworkspace,omitempty"`
 	// DevWorkspaceResources is a map of string keys to devworkspace templates
 	DevWorkspaceResources map[string]dw.DevWorkspaceTemplate `json:"devworkspaceResources,omitempty"`
 	// DevfileResources is a map of string keys to devfile resources
@@ -79,8 +79,8 @@ type TestPluginError struct {
 }
 
 type TestOutput struct {
-	Workspace *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
-	ErrRegexp *string                      `json:"errRegexp,omitempty"`
+	DevWorkspace *dw.DevWorkspaceTemplateSpec `json:"devworkspace,omitempty"`
+	ErrRegexp    *string                      `json:"errRegexp,omitempty"`
 }
 
 func LoadTestCaseOrPanic(t *testing.T, testFilepath string) TestCase {

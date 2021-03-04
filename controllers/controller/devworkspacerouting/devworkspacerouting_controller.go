@@ -78,11 +78,11 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	reqLogger = reqLogger.WithValues(constants.WorkspaceIDLoggerKey, instance.Spec.WorkspaceId)
+	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, instance.Spec.DevWorkspaceId)
 	reqLogger.Info("Reconciling DevWorkspaceRouting")
 
 	if instance.Spec.RoutingClass == "" {
-		reqLogger.Info("workspace routing without an explicit routing class is invalid", "name", instance.Name, "namespace", instance.Namespace)
+		reqLogger.Info("DevWorkspaceRouting without an explicit routing class is invalid", "name", instance.Name, "namespace", instance.Namespace)
 		return reconcile.Result{}, r.markRoutingFailed(instance)
 	}
 
@@ -91,7 +91,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		if errors.Is(err, solvers.RoutingNotSupported) {
 			return reconcile.Result{}, nil
 		}
-		reqLogger.Error(err, "Invalid routing class for workspace")
+		reqLogger.Error(err, "Invalid routing class for DevWorkspace")
 		return reconcile.Result{}, r.markRoutingFailed(instance)
 	}
 
@@ -111,14 +111,14 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		return reconcile.Result{}, err
 	}
 
-	workspaceMeta := solvers.WorkspaceMetadata{
-		WorkspaceId:   instance.Spec.WorkspaceId,
-		Namespace:     instance.Namespace,
-		PodSelector:   instance.Spec.PodSelector,
-		RoutingSuffix: instance.Spec.RoutingSuffix,
+	workspaceMeta := solvers.DevWorkspaceMetadata{
+		DevWorkspaceId: instance.Spec.DevWorkspaceId,
+		Namespace:      instance.Namespace,
+		PodSelector:    instance.Spec.PodSelector,
+		RoutingSuffix:  instance.Spec.RoutingSuffix,
 	}
 
-	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.WorkspaceRestrictedAccessAnnotation]
+	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]
 	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta)
 	if err != nil {
 		var notReady *solvers.RoutingNotReady
@@ -127,7 +127,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			if duration.Milliseconds() == 0 {
 				duration = 1 * time.Second
 			}
-			reqLogger.Info("controller not ready for workspace routing. Retrying", "DelayMs", duration.Milliseconds())
+			reqLogger.Info("controller not ready for devworkspace routing. Retrying", "DelayMs", duration.Milliseconds())
 			return reconcile.Result{RequeueAfter: duration}, nil
 		}
 
@@ -148,7 +148,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			return reconcile.Result{}, err
 		}
 		if setRestrictedAccess {
-			services[idx].Annotations = maputils.Append(services[idx].Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+			services[idx].Annotations = maputils.Append(services[idx].Annotations, constants.DevWorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 	ingresses := routingObjects.Ingresses
@@ -158,7 +158,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			return reconcile.Result{}, err
 		}
 		if setRestrictedAccess {
-			ingresses[idx].Annotations = maputils.Append(ingresses[idx].Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+			ingresses[idx].Annotations = maputils.Append(ingresses[idx].Annotations, constants.DevWorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 	routes := routingObjects.Routes
@@ -168,7 +168,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 			return reconcile.Result{}, err
 		}
 		if setRestrictedAccess {
-			routes[idx].Annotations = maputils.Append(routes[idx].Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+			routes[idx].Annotations = maputils.Append(routes[idx].Annotations, constants.DevWorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 

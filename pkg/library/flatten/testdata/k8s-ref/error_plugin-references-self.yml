@@ -1,7 +1,7 @@
 name: "Plugin references self"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: "plugin-a"
         plugin:

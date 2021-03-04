@@ -15,10 +15,10 @@ package lifecycle
 import (
 	"fmt"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
-func getCommandType(command devworkspace.Command) (devworkspace.CommandType, error) {
+func getCommandType(command dw.Command) (dw.CommandType, error) {
 	err := command.Normalize()
 	if err != nil {
 		return "", err
@@ -26,8 +26,8 @@ func getCommandType(command devworkspace.Command) (devworkspace.CommandType, err
 	return command.CommandType, nil
 }
 
-func getCommandsForKeys(key []string, commands []devworkspace.Command) ([]devworkspace.Command, error) {
-	var resolvedCommands []devworkspace.Command
+func getCommandsForKeys(key []string, commands []dw.Command) ([]dw.Command, error) {
+	var resolvedCommands []dw.Command
 
 	for _, id := range key {
 		resolvedCommand, err := getCommandByKey(id, commands)
@@ -40,7 +40,7 @@ func getCommandsForKeys(key []string, commands []devworkspace.Command) ([]devwor
 	return resolvedCommands, nil
 }
 
-func getCommandByKey(key string, commands []devworkspace.Command) (*devworkspace.Command, error) {
+func getCommandByKey(key string, commands []dw.Command) (*dw.Command, error) {
 	for _, command := range commands {
 		commandKey := command.Key()
 		if commandKey == key {
@@ -50,7 +50,7 @@ func getCommandByKey(key string, commands []devworkspace.Command) (*devworkspace
 	return nil, fmt.Errorf("no command with ID %s is defined", key)
 }
 
-func commandListToComponentKeys(commands []devworkspace.Command) (map[string]bool, error) {
+func commandListToComponentKeys(commands []dw.Command) (map[string]bool, error) {
 	componentKeys := map[string]bool{}
 	for _, command := range commands {
 		commandType, err := getCommandType(command)
@@ -58,12 +58,12 @@ func commandListToComponentKeys(commands []devworkspace.Command) (map[string]boo
 			return nil, err
 		}
 		switch commandType {
-		case devworkspace.ApplyCommandType:
+		case dw.ApplyCommandType:
 			componentKeys[command.Apply.Component] = true
-		case devworkspace.ExecCommandType:
+		case dw.ExecCommandType:
 			// TODO: This will require special handling (how do we handle prestart exec?)
 			componentKeys[command.Exec.Component] = true
-		case devworkspace.CompositeCommandType:
+		case dw.CompositeCommandType:
 			// TODO: Handle composite commands: what if an init command is composite and refers to other commands
 		default: // Ignore
 		}
@@ -71,8 +71,8 @@ func commandListToComponentKeys(commands []devworkspace.Command) (map[string]boo
 	return componentKeys, nil
 }
 
-func removeCommandsByKeys(keys []string, commands []devworkspace.Command) ([]devworkspace.Command, error) {
-	var filtered []devworkspace.Command
+func removeCommandsByKeys(keys []string, commands []dw.Command) ([]dw.Command, error) {
+	var filtered []dw.Command
 	for _, command := range commands {
 		key := command.Key()
 		if !listContains(key, keys) {

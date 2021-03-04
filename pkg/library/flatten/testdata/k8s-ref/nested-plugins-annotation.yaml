@@ -1,7 +1,7 @@
 name: "DevWorkspace annotates nested plugins with the first plugin"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: root-plugin
         plugin:
@@ -34,7 +34,7 @@ input:
               image: test-img
 
 output:
-  workspace:
+  devworkspace:
     components:
       - name: plugin-b-container
         attributes:

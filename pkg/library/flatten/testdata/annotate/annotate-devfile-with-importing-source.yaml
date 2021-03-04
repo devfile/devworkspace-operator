@@ -1,7 +1,7 @@
 name: "Annotates resources merged into devfile with source attribute"
 
 input:
-  workspace:
+  devworkspace:
     parent:
       kubernetes:
         name: test-parent-k8s
@@ -38,7 +38,7 @@ input:
       commands:
         - id: plugin-command
 output:
-  workspace:
+  devworkspace:
     projects:
       - name: parent-project
         attributes:

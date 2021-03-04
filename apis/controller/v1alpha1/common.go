@@ -14,44 +14,44 @@ package v1alpha1
 
 import v1 "k8s.io/api/core/v1"
 
-// Summary of additions that are to be merged into the main workspace deployment
+// Summary of additions that are to be merged into the main devworkspace deployment
 type PodAdditions struct {
-	// Annotations to be applied to workspace deployment
+	// Annotations to be applied to devworkspace deployment
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Annotations map[string]string `json:"annotations,omitempty"`
-	// Labels to be applied to workspace deployment
+	// Labels to be applied to devworkspace deployment
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Labels map[string]string `json:"labels,omitempty"`
-	// Containers to add to workspace deployment
+	// Containers to add to devworkspace deployment
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Containers []v1.Container `json:"containers,omitempty"`
-	// Init containers to add to workspace deployment
+	// Init containers to add to devworkspace deployment
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	InitContainers []v1.Container `json:"initContainers,omitempty"`
-	// Volumes to add to workspace deployment
+	// Volumes to add to devworkspace deployment
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	Volumes []v1.Volume `json:"volumes,omitempty"`
-	// VolumeMounts to add to all containers in a workspace deployment
+	// VolumeMounts to add to all containers in a devworkspace deployment
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	VolumeMounts []v1.VolumeMount `json:"volumeMounts,omitempty"`
-	// ImagePullSecrets to add to workspace deployment
+	// ImagePullSecrets to add to devworkspace deployment
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
 	PullSecrets []v1.LocalObjectReference `json:"pullSecrets,omitempty"`
-	// Annotations for the workspace service account, it might be used for e.g. OpenShift oauth with SA as auth client
+	// Annotations for the devworkspace service account, it might be used for e.g. OpenShift oauth with SA as auth client
 	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge

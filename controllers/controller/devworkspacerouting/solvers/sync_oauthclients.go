@@ -93,7 +93,7 @@ func syncOAuthClient(client client.Client, routing *controllerv1alpha1.DevWorksp
 
 func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.DevWorkspaceRouting) ([]oauthv1.OAuthClient, error) {
 	found := &oauthv1.OAuthClientList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, routing.Spec.DevWorkspaceId))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +109,7 @@ func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.DevWor
 }
 
 func deleteOAuthClients(cl client.Client, routing *controllerv1alpha1.DevWorkspaceRouting) error {
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, routing.Spec.DevWorkspaceId))
 	if err != nil {
 		return err
 	}

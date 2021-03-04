@@ -15,7 +15,7 @@ package controllers
 import (
 	"context"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
@@ -32,10 +32,10 @@ const (
 	storageCleanupFinalizer = "storage.controller.devfile.io"
 	// devworkspacePhaseTerminating represents a DevWorkspace that has been deleted but is waiting on a finalizer.
 	// TODO: Should be moved to devfile/api side.
-	devworkspacePhaseTerminating devworkspace.WorkspacePhase = "Terminating"
+	devworkspacePhaseTerminating dw.DevWorkspacePhase = "Terminating"
 )
 
-func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *devworkspace.DevWorkspace) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
 	if !coputil.HasFinalizer(workspace, storageCleanupFinalizer) {
 		return reconcile.Result{}, nil
 	}
@@ -70,7 +70,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		log.Error(err, "Failed to clean up DevWorkspace storage")
 		failedStatus := initCurrentStatus()
 		failedStatus.phase = "Error"
-		failedStatus.setConditionTrue(devworkspace.WorkspaceError, err.Error())
+		failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
 		return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
 	}
 	err = storageProvisioner.CleanupWorkspaceStorage(workspace, provision.ClusterAPI{
@@ -88,7 +88,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			log.Error(storageErr, "Failed to clean up DevWorkspace storage")
 			failedStatus := initCurrentStatus()
 			failedStatus.phase = "Error"
-			failedStatus.setConditionTrue(devworkspace.WorkspaceError, err.Error())
+			failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
 			return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
 		default:
 			return reconcile.Result{}, storageErr
@@ -99,7 +99,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 
-func isFinalizerNecessary(workspace *devworkspace.DevWorkspace, provisioner storage.Provisioner) bool {
+func isFinalizerNecessary(workspace *dw.DevWorkspace, provisioner storage.Provisioner) bool {
 	return provisioner.NeedsStorage(&workspace.Spec.Template)
 }
 

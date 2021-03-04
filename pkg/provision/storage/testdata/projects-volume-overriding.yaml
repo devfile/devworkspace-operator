@@ -1,7 +1,7 @@
 name: "User can specify a projects volume manually"
 
 input:
-  workspaceId: "test-workspaceid"
+  devworkspaceId: "test-workspaceid"
   podAdditions:
     containers:
       - name: testing-container-1

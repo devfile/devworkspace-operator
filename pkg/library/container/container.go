@@ -24,7 +24,7 @@ package container
 import (
 	"fmt"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
@@ -40,7 +40,7 @@ import (
 // rewritten as Volumes are added to PodAdditions, in order to support e.g. using one PVC to hold all volumes
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
-func GetKubeContainersFromDevfile(workspace *devworkspace.DevWorkspaceTemplateSpec) (*v1alpha1.PodAdditions, error) {
+func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec) (*v1alpha1.PodAdditions, error) {
 	if !flatten.DevWorkspaceIsFlattened(workspace) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}

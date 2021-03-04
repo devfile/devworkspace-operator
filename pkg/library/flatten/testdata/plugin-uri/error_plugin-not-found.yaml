@@ -1,7 +1,7 @@
 name: "Plugin not found in at URI"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

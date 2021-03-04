@@ -15,7 +15,7 @@ package asyncstorage
 import (
 	"fmt"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,10 +30,10 @@ func GetSSHSidecarSecretName(workspaceId string) string {
 	return fmt.Sprintf("%s-asyncsshkey", workspaceId)
 }
 
-func getSSHSidecarSecretSpec(workspace *devworkspace.DevWorkspace, privateKey []byte) *corev1.Secret {
+func getSSHSidecarSecretSpec(workspace *dw.DevWorkspace, privateKey []byte) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GetSSHSidecarSecretName(workspace.Status.WorkspaceId),
+			Name:      GetSSHSidecarSecretName(workspace.Status.DevWorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/name":    "async-storage", // TODO
@@ -49,10 +49,10 @@ func getSSHSidecarSecretSpec(workspace *devworkspace.DevWorkspace, privateKey []
 	return secret
 }
 
-func getSSHSidecarSecretCluster(workspace *devworkspace.DevWorkspace, clusterAPI provision.ClusterAPI) (*corev1.Secret, error) {
+func getSSHSidecarSecretCluster(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	namespacedName := types.NamespacedName{
-		Name:      GetSSHSidecarSecretName(workspace.Status.WorkspaceId),
+		Name:      GetSSHSidecarSecretName(workspace.Status.DevWorkspaceId),
 		Namespace: workspace.Namespace,
 	}
 	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, secret)

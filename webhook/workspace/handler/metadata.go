@@ -19,12 +19,12 @@ import (
 )
 
 func (h *WebhookHandler) mutateMetadataOnCreate(o *metav1.ObjectMeta) error {
-	if _, ok := o.Labels[constants.WorkspaceIDLabel]; !ok {
-		return fmt.Errorf("'%s' label is missing", constants.WorkspaceIDLabel)
+	if _, ok := o.Labels[constants.DevWorkspaceIDLabel]; !ok {
+		return fmt.Errorf("'%s' label is missing", constants.DevWorkspaceIDLabel)
 	}
 
-	if _, ok := o.Labels[constants.WorkspaceCreatorLabel]; !ok {
-		return fmt.Errorf("'%s' label is missing", constants.WorkspaceCreatorLabel)
+	if _, ok := o.Labels[constants.DevWorkspaceCreatorLabel]; !ok {
+		return fmt.Errorf("'%s' label is missing", constants.DevWorkspaceCreatorLabel)
 	}
 
 	return nil
@@ -58,37 +58,37 @@ func mutateLabelsOnUpdate(old map[string]string, new map[string]string) (bool, e
 }
 
 func mutateWorkspaceIdLabel(old map[string]string, new map[string]string) (bool, error) {
-	oldWorkpaceId, found := old[constants.WorkspaceIDLabel]
+	oldWorkpaceId, found := old[constants.DevWorkspaceIDLabel]
 	if !found {
-		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your workspace", constants.WorkspaceIDLabel)
+		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your DevWorkspace", constants.DevWorkspaceIDLabel)
 	}
 
-	newCreator, found := new[constants.WorkspaceIDLabel]
+	newCreator, found := new[constants.DevWorkspaceIDLabel]
 	if !found {
-		new[constants.WorkspaceIDLabel] = oldWorkpaceId
+		new[constants.DevWorkspaceIDLabel] = oldWorkpaceId
 		return true, nil
 	}
 
 	if newCreator != oldWorkpaceId {
-		return false, fmt.Errorf("'%s' label is assigned once workspace is created and is immutable", constants.WorkspaceIDLabel)
+		return false, fmt.Errorf("'%s' label is assigned once devworkspace is created and is immutable", constants.DevWorkspaceIDLabel)
 	}
 	return false, nil
 }
 
 func mutateCreatorLabel(old map[string]string, new map[string]string) (bool, error) {
-	oldCreator, found := old[constants.WorkspaceCreatorLabel]
+	oldCreator, found := old[constants.DevWorkspaceCreatorLabel]
 	if !found {
-		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your workspace", constants.WorkspaceCreatorLabel)
+		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your DevWorkspace", constants.DevWorkspaceCreatorLabel)
 	}
 
-	newCreator, found := new[constants.WorkspaceCreatorLabel]
+	newCreator, found := new[constants.DevWorkspaceCreatorLabel]
 	if !found {
-		new[constants.WorkspaceCreatorLabel] = oldCreator
+		new[constants.DevWorkspaceCreatorLabel] = oldCreator
 		return true, nil
 	}
 
 	if newCreator != oldCreator {
-		return false, fmt.Errorf("label '%s' is assigned once workspace is created and is immutable", constants.WorkspaceCreatorLabel)
+		return false, fmt.Errorf("label '%s' is assigned once devworkspace is created and is immutable", constants.DevWorkspaceCreatorLabel)
 	}
 
 	return false, nil

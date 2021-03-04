@@ -78,7 +78,7 @@ func (r *DevWorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.D
 
 func (r *DevWorkspaceRoutingReconciler) getClusterRoutes(routing *controllerv1alpha1.DevWorkspaceRouting) ([]routeV1.Route, error) {
 	found := &routeV1.RouteList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, routing.Spec.DevWorkspaceId))
 	if err != nil {
 		return nil, err
 	}

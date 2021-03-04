@@ -59,26 +59,26 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	} else {
 		config.OperatorNamespace = "devworkspace-controller"
 	}
-	config.WorkspaceNamespace = "test-terminal-namespace"
+	config.DevWorkspaceNamespace = "test-terminal-namespace"
 
 	//create the test workspace for the test user under kube admin
 
-	err = config.AdminK8sClient.CreateNamespace(config.WorkspaceNamespace)
+	err = config.AdminK8sClient.CreateNamespace(config.DevWorkspaceNamespace)
 	if err != nil {
-		ginkgo.Fail(fmt.Sprintf("Cannot create the namespace %q: Cause: %s", config.WorkspaceNamespace, err.Error()))
+		ginkgo.Fail(fmt.Sprintf("Cannot create the namespace %q: Cause: %s", config.DevWorkspaceNamespace, err.Error()))
 	}
 
-	err = config.AdminK8sClient.CreateSA(testServiceAccount, config.WorkspaceNamespace)
+	err = config.AdminK8sClient.CreateSA(testServiceAccount, config.DevWorkspaceNamespace)
 	if err != nil {
 		ginkgo.Fail("Cannot create test SA. Cause: " + err.Error())
 
 	}
-	err = config.AdminK8sClient.AssignRoleToSA(config.WorkspaceNamespace, testServiceAccount, "admin")
+	err = config.AdminK8sClient.AssignRoleToSA(config.DevWorkspaceNamespace, testServiceAccount, "admin")
 	if err != nil {
 		ginkgo.Fail("Cannot create test rolebinding for SA. Cause: " + err.Error())
 	}
 
-	token, err := config.AdminK8sClient.WaitSAToken(config.WorkspaceNamespace, testServiceAccount)
+	token, err := config.AdminK8sClient.WaitSAToken(config.DevWorkspaceNamespace, testServiceAccount)
 	if err != nil {
 		ginkgo.Fail("Cannot get test SA token. Cause: " + err.Error())
 	}
@@ -95,15 +95,15 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 	cleanUpAfterSuite := os.Getenv("CLEAN_UP_AFTER_SUITE")
 	//clean up by default or when user configured it explicitly
 	if cleanUpAfterSuite == "" || cleanUpAfterSuite == "true" {
-		log.Printf("Cleaning up test namespace %s", config.WorkspaceNamespace)
+		log.Printf("Cleaning up test namespace %s", config.DevWorkspaceNamespace)
 		log.Printf("If you need resources for investigation, set the following env var CLEAN_UP_AFTER_SUITE=false")
-		err := config.AdminK8sClient.DeleteNamespace(config.WorkspaceNamespace)
+		err := config.AdminK8sClient.DeleteNamespace(config.DevWorkspaceNamespace)
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Failed to remove test namespace '%s'. Cause: %s", config.WorkspaceNamespace, err.Error()))
+			ginkgo.Fail(fmt.Sprintf("Failed to remove test namespace '%s'. Cause: %s", config.DevWorkspaceNamespace, err.Error()))
 		}
-		err = config.AdminK8sClient.WaitNamespaceIsTerminated(config.WorkspaceNamespace)
+		err = config.AdminK8sClient.WaitNamespaceIsTerminated(config.DevWorkspaceNamespace)
 		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("Test namespace '%s' is not cleaned up after test. Cause: %s", config.WorkspaceNamespace, err.Error()))
+			ginkgo.Fail(fmt.Sprintf("Test namespace '%s' is not cleaned up after test. Cause: %s", config.DevWorkspaceNamespace, err.Error()))
 		}
 	} else {
 		log.Printf("Cleaning up test resources are disabled")
@@ -117,6 +117,6 @@ func TestWorkspaceController(t *testing.T) {
 	var r []ginkgo.Reporter
 	r = append(r, reporters.NewJUnitReporter(filepath.Join(testResultsDirectory, jUnitOutputFilename)))
 
-	log.Println("Running Workspace Controller e2e tests...")
+	log.Println("Running DevWorkspace Controller e2e tests...")
 	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Workspaces Controller Operator Tests", r)
 }

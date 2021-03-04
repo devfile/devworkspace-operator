@@ -1,7 +1,7 @@
 name: "Returns error on undefined volume in init container"
 
 input:
-  workspaceId: "test-workspaceid"
+  devworkspaceId: "test-workspaceid"
   podAdditions:
     initContainers:
       - name: testing-container-1

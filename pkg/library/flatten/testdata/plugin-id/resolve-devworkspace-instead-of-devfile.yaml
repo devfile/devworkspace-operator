@@ -1,7 +1,7 @@
 name: "DevWorkspace references DevWorkspaceTemplate plugin from registry"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:
@@ -22,7 +22,7 @@ input:
 
 
 output:
-  workspace:
+  devworkspace:
     components:
       - name: plugin-a
         attributes:

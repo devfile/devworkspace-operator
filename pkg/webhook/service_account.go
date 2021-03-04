@@ -17,6 +17,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,12 +41,16 @@ func CreateWebhookSA(client crclient.Client,
 		if err != nil {
 			return err
 		}
-		serviceAccount.ResourceVersion = existingCfg.ResourceVersion
-		err = client.Update(ctx, serviceAccount)
-		if err != nil {
-			return err
+		if needsUpdate(serviceAccount, existingCfg) {
+			serviceAccount.ResourceVersion = existingCfg.ResourceVersion
+			err = client.Update(ctx, serviceAccount)
+			if err != nil {
+				return err
+			}
+			log.Info("Updated webhook server service account")
+		} else {
+			log.Info("Webhook server service account up to date")
 		}
-		log.Info("Updated webhook server service account")
 	} else {
 		log.Info("Created webhook server service account")
 	}
@@ -79,4 +84,8 @@ func getClusterServiceAccount(client crclient.Client, ctx context.Context, names
 		return nil, err
 	}
 	return serviceAccount, nil
+}
+
+func needsUpdate(spec, cluster *corev1.ServiceAccount) bool {
+	return !equality.Semantic.DeepDerivative(spec.Labels, cluster.Labels)
 }

@@ -33,26 +33,24 @@ bump_version () {
 
   echo "Updating project version to ${NEXT_VERSION}"	
   echo "${VERSION}" > VERSION 
-  if [[ ${NOCOMMIT} -eq 0 ]]; then	
-    COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"	
-    git commit -asm "${COMMIT_MSG}"	
-    git pull origin "${BUMP_BRANCH}"	
+  COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"	
+  git commit -asm "${COMMIT_MSG}"	
+  git pull origin "${BUMP_BRANCH}"	
 
-    set +e
-    PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"	
-    # shellcheck disable=SC2181	
-    if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then	
-      PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}	
-      # create pull request for the main branch branch, as branch is restricted	
-      git branch "${PR_BRANCH}"	
-      git checkout "${PR_BRANCH}"	
-      git pull origin "${PR_BRANCH}"	
-      git push origin "${PR_BRANCH}"	
-      lastCommitComment="$(git log -1 --pretty=%B)"	
-      hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"	
-    fi 	
-    set -e
-  fi	
+  set +e
+  PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"	
+  # shellcheck disable=SC2181	
+  if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then	
+    PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}	
+    # create pull request for the main branch branch, as branch is restricted	
+    git branch "${PR_BRANCH}"	
+    git checkout "${PR_BRANCH}"	
+    git pull origin "${PR_BRANCH}"	
+    git push origin "${PR_BRANCH}"	
+    lastCommitComment="$(git log -1 --pretty=%B)"	
+    hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"	
+  fi 	
+  set -e	
   git checkout "${CURRENT_BRANCH}"	
 }	
 

@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/attributes"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -513,9 +514,9 @@ func (in *ExposedEndpoint) DeepCopyInto(out *ExposedEndpoint) {
 	*out = *in
 	if in.Attributes != nil {
 		in, out := &in.Attributes, &out.Attributes
-		*out = make(map[string]string, len(*in))
+		*out = make(attributes.Attributes, len(*in))
 		for key, val := range *in {
-			(*out)[key] = val
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 }

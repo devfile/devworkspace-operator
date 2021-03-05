@@ -14,6 +14,7 @@ package v1alpha1
 
 import (
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	devfileAttr "github.com/devfile/api/v2/pkg/attributes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -68,7 +69,8 @@ type ExposedEndpoint struct {
 	// Public URL of the exposed endpoint
 	Url string `json:"url"`
 	// Attributes of the exposed endpoint
-	Attributes map[string]string `json:"attributes"`
+	// +optional
+	Attributes devfileAttr.Attributes `json:"attributes,omitempty"`
 }
 
 type EndpointList []devworkspace.Endpoint

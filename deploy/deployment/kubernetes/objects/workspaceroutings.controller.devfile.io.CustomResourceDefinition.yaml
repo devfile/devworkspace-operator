@@ -110,9 +110,10 @@ spec:
                     properties:
                       attributes:
                         additionalProperties:
-                          type: string
+                          x-kubernetes-preserve-unknown-fields: true
                         description: Attributes of the exposed endpoint
                         type: object
+                        x-kubernetes-preserve-unknown-fields: true
                       name:
                         description: Name of the exposed endpoint
                         type: string
@@ -120,7 +121,6 @@ spec:
                         description: Public URL of the exposed endpoint
                         type: string
                     required:
-                    - attributes
                     - name
                     - url
                     type: object

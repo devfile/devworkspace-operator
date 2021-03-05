@@ -146,6 +146,36 @@ func getIdeUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string 
 	return ""
 }
 
+type PhaseStatus struct {
+	Condition devworkspace.WorkspaceConditionType
+	Message   string
+}
+
+// Defines the order in which DevWorkspace Controller processes phases on reconcile
+// The last unready condition should be shown
+var PhaseStatusesOrder = []PhaseStatus{
+	{
+		devworkspace.WorkspaceComponentsReady,
+		"Processing DevWorkspace components",
+	},
+	{
+		devworkspace.WorkspaceRoutingReady,
+		"Waiting for workspace routing objects",
+	},
+	{
+		devworkspace.WorkspaceServiceAccountReady,
+		"Waiting for workspace serviceaccount",
+	},
+	{
+		PullSecretsReadyCondition,
+		"Waiting for workspace pull secrets",
+	},
+	{
+		devworkspace.WorkspaceReady,
+		"Waiting for deployment to be ready",
+	},
+}
+
 func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devworkspace.WorkspaceConditionType]string) string {
 	// Check for errors and failure
 	if msg, ok := conditions[devworkspace.WorkspaceError]; ok {
@@ -164,21 +194,12 @@ func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devwork
 		return string(workspace.Status.Phase)
 	}
 
-	// Check for progress
-	if _, ok := conditions[devworkspace.WorkspaceReady]; ok {
-		return "Waiting on editor to start"
+	for _, phaseStatus := range PhaseStatusesOrder {
+		if _, present := conditions[phaseStatus.Condition]; !present {
+			return phaseStatus.Message
+		}
 	}
-	if _, ok := conditions[devworkspace.WorkspaceServiceAccountReady]; ok {
-		return "Waiting for deployment to be ready"
-	}
-	if _, ok := conditions[PullSecretsReadyCondition]; ok {
-		return "Waiting for workspace pull secrets"
-	}
-	if _, ok := conditions[devworkspace.WorkspaceRoutingReady]; ok {
-		return "Waiting for workspace serviceaccount"
-	}
-	if _, ok := conditions[devworkspace.WorkspaceComponentsReady]; ok {
-		return "Waiting for workspace routing objects"
-	}
-	return "Processing DevWorkspace components"
+
+	//All listed conditions are true, if workspace is not started yet, it's due editor server health check
+	return "Waiting on editor to start"
 }

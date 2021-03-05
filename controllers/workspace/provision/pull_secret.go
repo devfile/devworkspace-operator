@@ -33,8 +33,8 @@ func PullSecrets(clusterAPI ClusterAPI) PullSecretsProvisioningStatus {
 	if err != nil {
 		return PullSecretsProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
-				Err:     err,
-				Requeue: true,
+				Err:         err,
+				FailStartup: true,
 			},
 		}
 	}
@@ -44,8 +44,7 @@ func PullSecrets(clusterAPI ClusterAPI) PullSecretsProvisioningStatus {
 	if err != nil {
 		return PullSecretsProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
-				Err:     err,
-				Requeue: true,
+				Err: err,
 			},
 		}
 	}

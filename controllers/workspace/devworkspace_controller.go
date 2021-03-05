@@ -304,7 +304,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if !pullSecretStatus.Continue {
 		return reconcile.Result{Requeue: pullSecretStatus.Requeue}, pullSecretStatus.Err
 	}
-	podAdditions = append(podAdditions, pullSecretStatus.PodAdditions)
+	allPodAdditions = append(allPodAdditions, pullSecretStatus.PodAdditions)
 	reconcileStatus.Conditions[PullSecretsReadyCondition] = ""
 
 	// Step six: Create deployment and wait for it to be ready

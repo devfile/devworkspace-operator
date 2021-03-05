@@ -46,10 +46,10 @@ const (
 var (
 	cleanupJobCompletions      = int32(1)
 	cleanupJobBackoffLimit     = int32(3)
-	PVCCleanupPodMemoryLimit   = resource.MustParse(config.PVCCleanupPodMemoryLimit)
-	PVCCleanupPodMemoryRequest = PVCCleanupPodMemoryLimit
-	PVCCleanupPodCPULimit      = resource.MustParse(config.PVCCleanupPodCPULimit)
-	PVCCleanupPodCPURequest    = resource.MustParse(config.PVCCleanupPodCPURequest)
+	pvcCleanupPodMemoryLimit   = resource.MustParse(config.PVCCleanupPodMemoryLimit)
+	pvcCleanupPodMemoryRequest = resource.MustParse(config.PVCCleanupPodMemoryRequest)
+	pvcCleanupPodCPULimit      = resource.MustParse(config.PVCCleanupPodCPULimit)
+	pvcCleanupPodCPURequest    = resource.MustParse(config.PVCCleanupPodCPURequest)
 )
 
 // setFinalizer sets a finalizer on the workspace and syncs the changes to the cluster. No-op if the workspace already
@@ -193,12 +193,12 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *devworkspace.DevWo
 							},
 							Resources: corev1.ResourceRequirements{
 								Requests: corev1.ResourceList{
-									corev1.ResourceMemory: PVCCleanupPodMemoryRequest,
-									corev1.ResourceCPU:    PVCCleanupPodCPURequest,
+									corev1.ResourceMemory: pvcCleanupPodMemoryRequest,
+									corev1.ResourceCPU:    pvcCleanupPodCPURequest,
 								},
 								Limits: corev1.ResourceList{
-									corev1.ResourceMemory: PVCCleanupPodMemoryLimit,
-									corev1.ResourceCPU:    PVCCleanupPodCPULimit,
+									corev1.ResourceMemory: pvcCleanupPodMemoryLimit,
+									corev1.ResourceCPU:    pvcCleanupPodCPULimit,
 								},
 							},
 							VolumeMounts: []corev1.VolumeMount{

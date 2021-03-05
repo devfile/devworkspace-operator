@@ -66,7 +66,10 @@ const (
 	WorkspaceStopReasonAnnotation = "controller.devfile.io/stopped-by"
 
 	// PVCCleanupPodMemoryLimit is the memory limit used for PVC clean up pods
-	PVCCleanupPodMemoryLimit = "32Mi"
+	PVCCleanupPodMemoryLimit = "100Mi"
+
+	// PVCCleanupPodMemoryRequest is the memory request used for PVC clean up pods
+	PVCCleanupPodMemoryRequest = "32Mi"
 
 	// PVCCleanupPodCPULimit is the cpu limit used for PVC clean up pods
 	PVCCleanupPodCPULimit = "50m"

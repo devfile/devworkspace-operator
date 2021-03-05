@@ -49,7 +49,7 @@ const (
 	// PullSecretLabel marks the intention that secret should be used as pull secret for devworkspaces withing namespace
 	// Only secrets with 'true' value will be mount as pull secret
 	// Should be assigned to secrets with type docker config types (kubernetes.io/dockercfg and kubernetes.io/dockerconfigjson)
-	DevWorkspacePullSecretLabel = "controller.devfile.io/workspace_pull_secret"
+	DevWorkspacePullSecretLabel = "controller.devfile.io/devworkspace_pullsecret"
 
 	// WorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
 	WorkspaceCreatorLabel = "controller.devfile.io/creator"

@@ -138,17 +138,26 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	clusterWorkspace := workspace.DeepCopy()
 	timingInfo := map[string]string{}
 	timing.SetTime(timingInfo, timing.WorkspaceStarted)
+	// Defer function to make sure workspace status is up to date based on where we finish the reconcile.
+	// Within the function, reconcileResult and err are set to whatever is returned from Reconcile()
 	defer func() (reconcile.Result, error) {
 		r.syncTimingToCluster(ctx, clusterWorkspace, timingInfo, reqLogger)
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
+	webhooks, msg, err := r.validateWebhooksConfig()
+	if err != nil {
+		return r.killWorkspace(workspace, msg, &reconcileStatus)
+	}
 	if workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation] == "true" {
-		msg, err := r.validateRestrictedWorkspace(clusterWorkspace)
-		if err != nil {
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = msg
-			return reconcile.Result{}, err
+		if workspace.CreationTimestamp.Before(&webhooks.validating.CreationTimestamp) ||
+			workspace.CreationTimestamp.Before(&webhooks.mutating.CreationTimestamp) {
+			msg := "DevWorkspace was created before current webhooks were installed and must be recreated to successfully start"
+			return r.killWorkspace(workspace, msg, &reconcileStatus)
+		}
+		if _, present := workspace.Labels[config.WorkspaceCreatorLabel]; !present {
+			msg := "DevWorkspace was created without creator ID label. It must be recreated to resolve the issue"
+			return r.killWorkspace(workspace, msg, &reconcileStatus)
 		}
 	}
 
@@ -169,11 +178,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 	flattenedWorkspace, err := flatten.ResolveDevWorkspace(workspace.Spec.Template, flattenHelpers)
 	if err != nil {
-		reqLogger.Info("DevWorkspace start failed")
-		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		// TODO: Handle error more elegantly
-		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
-		return reconcile.Result{}, nil
+		return r.failWorkspace(fmt.Sprintf("Error processing devfile: %s", err), reqLogger, &reconcileStatus)
 	}
 	workspace.Spec.Template = *flattenedWorkspace
 	// Set finalizer on DevWorkspace if necessary
@@ -188,17 +193,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(workspace.Spec.Template)
 	if err != nil {
-		reqLogger.Info("DevWorkspace start failed")
-		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
-		return reconcile.Result{}, nil
+		return r.failWorkspace(fmt.Sprintf("Error processing devfile: %s", err), reqLogger, &reconcileStatus)
 	}
 	err = storagelib.RewriteContainerVolumeMounts(workspace.Status.WorkspaceId, devfilePodAdditions, workspace.Spec.Template)
 	if err != nil {
-		reqLogger.Info("DevWorkspace start failed")
-		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile volumes: %s", err)
-		return reconcile.Result{}, nil
+		return r.failWorkspace(fmt.Sprintf("Error processing devfile volumes: %s", err), reqLogger, &reconcileStatus)
 	}
 	shimlib.FillDefaultEnvVars(devfilePodAdditions, *workspace)
 	allPodAdditions := []controllerv1alpha1.PodAdditions{*devfilePodAdditions}
@@ -222,11 +221,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	routingStatus := provision.SyncRoutingToCluster(workspace, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
-			reqLogger.Info("DevWorkspace start failed")
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			// TODO: Propagate failure reason from workspaceRouting
-			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Failed to install network objects required for devworkspace"
-			return reconcile.Result{}, routingStatus.Err
+			return r.failWorkspace("Failed to install network objects required for devworkspace", reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on routing to be ready")
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
@@ -268,10 +263,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	deploymentStatus := provision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
-			reqLogger.Info("Workspace start failed")
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Devworkspace spec is invalid: %s", deploymentStatus.Err)
-			return reconcile.Result{}, deploymentStatus.Err
+			return r.failWorkspace(fmt.Sprintf("Devworkspace spec is invalid: %s", deploymentStatus.Err), reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on deployment to be ready")
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
@@ -356,6 +348,31 @@ func getWorkspaceId(instance *devworkspace.DevWorkspace) (string, error) {
 		return "", err
 	}
 	return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
+}
+
+// killWorkspace deletes a workspace's deployment and then sets its status to failed, using the message provided as the
+// condition message. Changes to the DevWorkspace object are not propagated to the cluster and must be synced via
+// updateWorkspaceStatus()
+func (r *DevWorkspaceReconciler) killWorkspace(workspace *devworkspace.DevWorkspace, msg string, status *currentStatus) (reconcile.Result, error) {
+	wait, err := provision.DeleteWorkspaceDeployment(context.Background(), workspace, r.Client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if wait {
+		return reconcile.Result{Requeue: true}, nil
+	}
+	status.Phase = devworkspace.WorkspaceStatusFailed
+	status.Conditions[devworkspace.WorkspaceFailedStart] = msg
+	return reconcile.Result{}, nil
+}
+
+// failWorkspace marks a workspace as failed by setting relevant fields in the status struct. These changes are not
+// propagated to the cluster, and must be synced via updateWorkspaceStatus()
+func (r *DevWorkspaceReconciler) failWorkspace(msg string, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
+	logger.Info("Workspace start failed")
+	status.Phase = devworkspace.WorkspaceStatusFailed
+	status.Conditions[devworkspace.WorkspaceFailedStart] = msg
+	return reconcile.Result{}, nil
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {

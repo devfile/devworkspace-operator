@@ -15,50 +15,42 @@ package controllers
 import (
 	"fmt"
 
+	"k8s.io/api/admissionregistration/v1beta1"
+
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
-// validateRestrictedWorkspace checks that a devworkspace was created after workspace-related mutating webhooks
-// and ensures a creator ID label is applied to the workspace.
-//
-// If error is not nil, a user-readable message is returned that can be propagated to the user to explain the issue.
-func (r *DevWorkspaceReconciler) validateRestrictedWorkspace(workspace *devworkspace.DevWorkspace) (msg string, err error) {
+type controllerWebhooks struct {
+	mutating   *v1beta1.MutatingWebhookConfiguration
+	validating *v1beta1.ValidatingWebhookConfiguration
+}
+
+// validateWebhooksConfig validates that expected webhooks are present on the cluster. If an error is encountered or webhooks
+// do not exist, a user-facing message and error are returned; otherwise, the webhook specs are returned, msg is empty, and err
+// is nil.
+func (r *DevWorkspaceReconciler) validateWebhooksConfig() (webhooks *controllerWebhooks, msg string, err error) {
 	mutatingWebhook, err := webhook.GetMutatingWebhook(r.Client)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return "Restricted access workspace require webhooks to be installed, but they are not found on the cluster. " +
+			return nil, "Operator requires webhooks to be installed, but they are not found on the cluster. " +
 					"Contact an administrator to fix Operator installation.",
 				fmt.Errorf("failed to read mutating webhook configuration: %w", err)
 		}
-		return "Failed to read webhooks on cluster.", fmt.Errorf("failed to read mutating webhook configuration: %w", err)
+		return nil, "Failed to read webhooks on cluster.", fmt.Errorf("failed to read mutating webhook configuration: %w", err)
 	}
-	if workspace.CreationTimestamp.Before(&mutatingWebhook.CreationTimestamp) {
-		return "DevWorkspace was created before current webhooks were installed and must be recreated to successfully start",
-			fmt.Errorf("devworkspace created before webhooks")
-	}
-
 	validatingWebhook, err := webhook.GetValidatingWebhook(r.Client)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return "Restricted access workspace require webhooks to be installed, but they are not found on the cluster. " +
+			return nil, "Operator requires webhooks to be installed, but they are not found on the cluster. " +
 					"Contact an administrator to fix Operator installation.",
 				fmt.Errorf("failed to read validating webhook configuration: %w", err)
 		}
-		return "Failed to read webhooks on cluster.", fmt.Errorf("failed to read validating webhook configuration: %w", err)
+		return nil, "Failed to read webhooks on cluster.", fmt.Errorf("failed to read validating webhook configuration: %w", err)
 	}
-	if workspace.CreationTimestamp.Before(&validatingWebhook.CreationTimestamp) {
-		return "DevWorkspace was created before current webhooks were installed and must be recreated to successfully start",
-			fmt.Errorf("devworkspace created before webhooks")
+	webhooks = &controllerWebhooks{
+		mutating:   mutatingWebhook,
+		validating: validatingWebhook,
 	}
-
-	if _, present := workspace.Labels[config.WorkspaceCreatorLabel]; !present {
-		return "DevWorkspace was created without creator ID label. It must be recreated to resolve the issue",
-			fmt.Errorf("devworkspace does not have creator label applied")
-	}
-
-	return "", nil
+	return webhooks, "", nil
 }

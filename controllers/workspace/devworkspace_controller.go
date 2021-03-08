@@ -144,7 +144,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}()
 
 	if workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation] == "true" {
-		msg, err := r.validateCreatorLabel(clusterWorkspace)
+		msg, err := r.validateRestrictedWorkspace(clusterWorkspace)
 		if err != nil {
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = msg

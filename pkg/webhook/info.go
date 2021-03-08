@@ -14,7 +14,6 @@ package webhook
 
 import (
 	"context"
-	"fmt"
 
 	webhookCfg "github.com/devfile/devworkspace-operator/webhook/workspace"
 	"k8s.io/api/admissionregistration/v1beta1"
@@ -25,14 +24,18 @@ import (
 
 var webhooksCreationTimestamp = metav1.Time{}
 
-func GetWebhooksCreationTimestamp(client client.Client) (metav1.Time, error) {
-	if webhooksCreationTimestamp.IsZero() {
-		webhook := &v1beta1.MutatingWebhookConfiguration{}
-		err := client.Get(context.TODO(), types.NamespacedName{Name: webhookCfg.MutateWebhookCfgName}, webhook)
-		if err != nil {
-			return metav1.Time{}, fmt.Errorf("failed to get webhook: %w", err)
-		}
-		webhooksCreationTimestamp = webhook.CreationTimestamp
-	}
-	return webhooksCreationTimestamp, nil
+// GetMutatingWebhook returns the mutating webhook used by the controller, or a kubernetes error if an
+// error is encountered while retrieving webhooks. The returned error can be checked via IsNotFound()
+func GetMutatingWebhook(client client.Client) (*v1beta1.MutatingWebhookConfiguration, error) {
+	webhook := &v1beta1.MutatingWebhookConfiguration{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: webhookCfg.MutateWebhookCfgName}, webhook)
+	return webhook, err
+}
+
+// GetValidatingWebhook returns the validating webhook used by the controller, or a kubernetes error if an
+// error is encountered while retrieving webhooks. The returned error can be checked via IsNotFound()
+func GetValidatingWebhook(client client.Client) (*v1beta1.ValidatingWebhookConfiguration, error) {
+	webhook := &v1beta1.ValidatingWebhookConfiguration{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: webhookCfg.ValidateWebhookCfgName}, webhook)
+	return webhook, err
 }

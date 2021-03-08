@@ -37,29 +37,34 @@ var nginxIngressAnnotations = func(endpointName string) map[string]string {
 // According to the current cluster there is different behavior:
 // Kubernetes: use Ingresses without TLS
 // OpenShift: use Routes with TLS enabled
-type BasicSolver struct{}
+type BasicSolver struct {
+	isOpenShift bool
+}
 
 var _ RoutingSolver = (*BasicSolver)(nil)
 
-func (s *BasicSolver) FinalizerRequired(routing *controllerv1alpha1.WorkspaceRouting) bool {
+func (s *BasicSolver) FinalizerRequired(*controllerv1alpha1.WorkspaceRouting) bool {
 	return false
 }
 
-func (s *BasicSolver) Finalize(routing *controllerv1alpha1.WorkspaceRouting) error {
+func (s *BasicSolver) Finalize(*controllerv1alpha1.WorkspaceRouting) error {
 	return nil
 }
 
 func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
+	routingObjects := RoutingObjects{}
+
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
-	ingresses, routes := getRoutingForSpec(spec.Endpoints, workspaceMeta)
+	routingObjects.Services = services
+	if s.isOpenShift {
+		routingObjects.Routes = getRoutesForSpec(spec.Endpoints, workspaceMeta)
+	} else {
+		routingObjects.Ingresses = getIngressesForSpec(spec.Endpoints, workspaceMeta)
+	}
 
-	return RoutingObjects{
-		Services:  services,
-		Ingresses: ingresses,
-		Routes:    routes,
-	}, nil
+	return routingObjects, nil
 }
 
 func (s *BasicSolver) GetExposedEndpoints(

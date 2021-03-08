@@ -16,7 +16,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	"github.com/google/go-cmp/cmp"
@@ -34,9 +33,6 @@ var oauthClientDiffOpts = cmp.Options{
 }
 
 func syncOAuthClient(client client.Client, routing *controllerv1alpha1.WorkspaceRouting, oauthClientSpec *oauthv1.OAuthClient) (ok bool, err error) {
-	if !config.ControllerCfg.IsOpenShift() {
-		return true, nil
-	}
 	oauthClientInSync := true
 
 	clusterOAuthClients, err := getClusterOAuthClients(client, routing)

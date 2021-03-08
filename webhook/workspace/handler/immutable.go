@@ -18,7 +18,9 @@ import (
 
 	devworkspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	devworkspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +37,7 @@ var RestrictedAccessDiffOptions = []cmp.Option{
 	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields", "Finalizers", "DeletionTimestamp"),
 	cmpopts.IgnoreFields(devworkspacev1alpha1.DevWorkspaceSpec{}, "Started"),
 	cmpopts.IgnoreFields(devworkspacev1alpha2.DevWorkspaceSpec{}, "Started"),
-	cmpopts.IgnoreMapEntries(func(key string, value string) bool { return key == config.WorkspaceStopReasonAnnotation }),
+	cmpopts.IgnoreMapEntries(func(key string, value string) bool { return key == constants.WorkspaceStopReasonAnnotation }),
 }
 
 func (h *WebhookHandler) HandleRestrictedAccessUpdate(_ context.Context, req admission.Request) admission.Response {
@@ -91,15 +93,15 @@ func (h *WebhookHandler) HandleRestrictedAccessCreate(_ context.Context, req adm
 }
 
 func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp *devworkspacev1alpha1.DevWorkspace, uid string) (allowed bool, msg string) {
-	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[config.WorkspaceCreatorLabel],
-		oldWksp.Annotations[config.WorkspaceRestrictedAccessAnnotation],
+	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[constants.WorkspaceCreatorLabel],
+		oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation],
 		uid,
 		func() bool { return cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) })
 }
 
 func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
-	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[config.WorkspaceCreatorLabel],
-		oldWksp.Annotations[config.WorkspaceRestrictedAccessAnnotation],
+	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[constants.WorkspaceCreatorLabel],
+		oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation],
 		uid,
 		func() bool { return cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) })
 }
@@ -159,7 +161,7 @@ func (h *WebhookHandler) checkRestrictedAccessAnnotation(req admission.Request) 
 		err = h.Decoder.DecodeRaw(req.Object, obj)
 	}
 	annotations := obj.GetAnnotations()
-	return annotations[config.WorkspaceRestrictedAccessAnnotation] == "true", nil
+	return annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true", nil
 }
 
 func changePermitted(oldObj, newObj runtime.Object) bool {

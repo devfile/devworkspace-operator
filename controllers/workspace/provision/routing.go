@@ -18,9 +18,12 @@ import (
 	"strings"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -145,12 +148,12 @@ func getSpecRouting(
 	}
 
 	var annotations map[string]string
-	if val, ok := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]; ok {
-		annotations = maputils.Append(annotations, config.WorkspaceRestrictedAccessAnnotation, val)
+	if val, ok := workspace.Annotations[constants.WorkspaceRestrictedAccessAnnotation]; ok {
+		annotations = maputils.Append(annotations, constants.WorkspaceRestrictedAccessAnnotation, val)
 	}
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
-	expectedAnnotationPrefix := workspace.Spec.RoutingClass + config.RoutingAnnotationInfix
+	expectedAnnotationPrefix := workspace.Spec.RoutingClass + constants.RoutingAnnotationInfix
 	for k, v := range workspace.GetAnnotations() {
 		if strings.HasPrefix(k, expectedAnnotationPrefix) {
 			annotations = maputils.Append(annotations, k, v)
@@ -167,7 +170,7 @@ func getSpecRouting(
 			Name:      fmt.Sprintf("routing-%s", workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+				constants.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
 			Annotations: annotations,
 		},
@@ -177,7 +180,7 @@ func getSpecRouting(
 			RoutingSuffix: config.ControllerCfg.GetRoutingSuffix(),
 			Endpoints:     endpoints,
 			PodSelector: map[string]string{
-				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+				constants.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
 		},
 	}

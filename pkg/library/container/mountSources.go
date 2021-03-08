@@ -14,9 +14,10 @@ package container
 
 import (
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/library/constants"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 )
 
 // HasMountSources evaluates whether project sources should be mounted in the given container component.
@@ -61,18 +62,18 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devwor
 		if sourceMapping == "" {
 			// Sanity check -- this value should be defaulted to `/projects` but may not be
 			// if struct was not processed by k8s
-			sourceMapping = config.DefaultProjectsSourcesRoot
+			sourceMapping = constants.DefaultProjectsSourcesRoot
 		}
 		k8sContainer.VolumeMounts = append(k8sContainer.VolumeMounts, corev1.VolumeMount{
-			Name:      constants.ProjectsVolumeName,
+			Name:      devfileConstants.ProjectsVolumeName,
 			MountPath: sourceMapping,
 		})
 	}
 	k8sContainer.Env = append(k8sContainer.Env, corev1.EnvVar{
-		Name:  constants.ProjectsRootEnvVar,
+		Name:  devfileConstants.ProjectsRootEnvVar,
 		Value: sourceMapping,
 	}, corev1.EnvVar{
-		Name:  constants.ProjectsSourceEnvVar,
+		Name:  devfileConstants.ProjectsSourceEnvVar,
 		Value: sourceMapping, // TODO: Unclear how this should be handled in case of multiple projects
 	})
 }
@@ -81,7 +82,7 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *devwor
 // returns nil.
 func getProjectsVolumeMount(k8sContainer *corev1.Container) *corev1.VolumeMount {
 	for _, vm := range k8sContainer.VolumeMounts {
-		if vm.Name == constants.ProjectsVolumeName {
+		if vm.Name == devfileConstants.ProjectsVolumeName {
 			return &vm
 		}
 	}

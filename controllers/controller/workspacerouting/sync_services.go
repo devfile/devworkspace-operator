@@ -17,7 +17,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
@@ -82,7 +83,7 @@ func (r *WorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1.Wo
 
 func (r *WorkspaceRoutingReconciler) getClusterServices(routing *controllerv1alpha1.WorkspaceRouting) ([]corev1.Service, error) {
 	found := &corev1.ServiceList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
 		return nil, err
 	}

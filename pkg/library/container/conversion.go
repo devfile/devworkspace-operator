@@ -16,7 +16,10 @@ import (
 	"fmt"
 
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -69,7 +72,7 @@ func devfileResourcesToContainerResources(devfileContainer *v1alpha2.ContainerCo
 	// TODO: Handle memory request and CPU when implemented in devfile API
 	memLimit := devfileContainer.MemoryLimit
 	if memLimit == "" {
-		memLimit = config.SidecarDefaultMemoryLimit
+		memLimit = constants.SidecarDefaultMemoryLimit
 	}
 	memLimitQuantity, err := resource.ParseQuantity(memLimit)
 	if err != nil {

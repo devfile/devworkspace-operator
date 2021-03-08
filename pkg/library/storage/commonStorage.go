@@ -25,15 +25,16 @@ package storage
 import (
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/api/resource"
-
-	"github.com/devfile/devworkspace-operator/pkg/library/constants"
-	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
-	corev1 "k8s.io/api/core/v1"
-
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
 // RewriteContainerVolumeMounts rewrites the VolumeMounts in a set of PodAdditions according to the 'common' PVC strategy
@@ -55,11 +56,11 @@ func RewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.Pod
 			}
 		}
 	}
-	if _, exists := devfileVolumes[constants.ProjectsVolumeName]; !exists {
+	if _, exists := devfileVolumes[devfileConstants.ProjectsVolumeName]; !exists {
 		// Add implicit projects volume to support mountSources
 		projectsVolume := devworkspace.VolumeComponent{}
-		projectsVolume.Size = config.PVCStorageSize
-		devfileVolumes[constants.ProjectsVolumeName] = projectsVolume
+		projectsVolume.Size = constants.PVCStorageSize
+		devfileVolumes[devfileConstants.ProjectsVolumeName] = projectsVolume
 	}
 
 	for _, component := range ephemeralVolumes {
@@ -128,7 +129,7 @@ func NeedsStorage(workspace devworkspace.DevWorkspaceTemplateSpec) bool {
 			if !component.Volume.Ephemeral {
 				return true
 			}
-			if component.Name == constants.ProjectsVolumeName {
+			if component.Name == devfileConstants.ProjectsVolumeName {
 				projectsVolumeIsEphemeral = component.Volume.Ephemeral
 			}
 		}

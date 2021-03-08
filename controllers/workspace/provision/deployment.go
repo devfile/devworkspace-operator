@@ -19,13 +19,11 @@ import (
 	"strings"
 
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/env"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,6 +34,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/env"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 type DeploymentProvisioningStatus struct {
@@ -168,7 +170,7 @@ func getSpecDeployment(
 		return nil, err
 	}
 
-	creator := workspace.Labels[config.WorkspaceCreatorLabel]
+	creator := workspace.Labels[constants.WorkspaceCreatorLabel]
 	commonEnv := env.CommonEnvironmentVariables(workspace.Name, workspace.Status.WorkspaceId, workspace.Namespace, creator)
 	for idx := range podAdditions.Containers {
 		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, commonEnv...)
@@ -184,15 +186,15 @@ func getSpecDeployment(
 			Name:      common.DeploymentName(workspace.Status.WorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspace.Status.WorkspaceId,
+				constants.WorkspaceIDLabel: workspace.Status.WorkspaceId,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
-					config.WorkspaceNameLabel: workspace.Name,
+					constants.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
+					constants.WorkspaceNameLabel: workspace.Name,
 				},
 			},
 			Strategy: appsv1.DeploymentStrategy{
@@ -203,8 +205,8 @@ func getSpecDeployment(
 					Name:      workspace.Status.WorkspaceId,
 					Namespace: workspace.Namespace,
 					Labels: map[string]string{
-						config.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
-						config.WorkspaceNameLabel: workspace.Name,
+						constants.WorkspaceIDLabel:   workspace.Status.WorkspaceId,
+						constants.WorkspaceNameLabel: workspace.Name,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -238,18 +240,18 @@ func getSpecDeployment(
 		}
 	}
 
-	workspaceCreator, present := workspace.Labels[config.WorkspaceCreatorLabel]
+	workspaceCreator, present := workspace.Labels[constants.WorkspaceCreatorLabel]
 	if present {
-		deployment.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
-		deployment.Spec.Template.Labels[config.WorkspaceCreatorLabel] = workspaceCreator
+		deployment.Labels[constants.WorkspaceCreatorLabel] = workspaceCreator
+		deployment.Spec.Template.Labels[constants.WorkspaceCreatorLabel] = workspaceCreator
 	} else {
 		return nil, errors.New("workspace must have creator specified to be run. Recreate it to fix an issue")
 	}
 
-	restrictedAccess, present := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	restrictedAccess, present := workspace.Annotations[constants.WorkspaceRestrictedAccessAnnotation]
 	if present {
-		deployment.Annotations = maputils.Append(deployment.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
-		deployment.Spec.Template.Annotations = maputils.Append(deployment.Spec.Template.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+		deployment.Annotations = maputils.Append(deployment.Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+		deployment.Spec.Template.Annotations = maputils.Append(deployment.Spec.Template.Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)

@@ -18,8 +18,9 @@ import (
 	"strings"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 func getExposedEndpoints(
@@ -55,12 +56,12 @@ func resolveURLForEndpoint(
 	endpoint devworkspace.Endpoint,
 	routingObj RoutingObjects) (string, error) {
 	for _, route := range routingObj.Routes {
-		if route.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
+		if route.Annotations[constants.WorkspaceEndpointNameAnnotation] == endpoint.Name {
 			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.Path, route.Spec.TLS != nil), nil
 		}
 	}
 	for _, ingress := range routingObj.Ingresses {
-		if ingress.Annotations[config.WorkspaceEndpointNameAnnotation] == endpoint.Name {
+		if ingress.Annotations[constants.WorkspaceEndpointNameAnnotation] == endpoint.Name {
 			if len(ingress.Spec.Rules) == 1 {
 				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, "", false), nil // no TLS supported for ingresses yet
 			} else {

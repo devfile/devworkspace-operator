@@ -14,7 +14,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,17 +35,17 @@ func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admissio
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
-	_, ok := p.Labels[config.WorkspaceIDLabel]
+	_, ok := p.Labels[constants.WorkspaceIDLabel]
 	if !ok {
 		return admission.Allowed("It's not workspace related pod")
 	}
 
-	creator, ok := p.Labels[config.WorkspaceCreatorLabel]
+	creator, ok := p.Labels[constants.WorkspaceCreatorLabel]
 	if !ok {
 		return admission.Denied("The workspace info is missing in the workspace-related pod")
 	}
 
-	if p.Annotations[config.WorkspaceRestrictedAccessAnnotation] == "true" &&
+	if p.Annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
 		creator != req.UserInfo.UID {
 		return admission.Denied("The only workspace creator has exec access")
 	}

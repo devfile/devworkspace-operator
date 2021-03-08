@@ -22,7 +22,7 @@ import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
@@ -100,7 +100,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	reqLogger = reqLogger.WithValues(config.WorkspaceIDLoggerKey, workspace.Status.WorkspaceId)
+	reqLogger = reqLogger.WithValues(constants.WorkspaceIDLoggerKey, workspace.Status.WorkspaceId)
 	reqLogger.Info("Reconciling Workspace")
 
 	// Check if the WorkspaceRouting instance is marked to be deleted, which is
@@ -141,7 +141,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
-	if workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation] == "true" {
+	if workspace.Annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" {
 		msg, err := r.validateCreatorLabel(clusterWorkspace)
 		if err != nil {
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
@@ -150,8 +150,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		}
 	}
 
-	if _, ok := clusterWorkspace.Annotations[config.WorkspaceStopReasonAnnotation]; ok {
-		delete(clusterWorkspace.Annotations, config.WorkspaceStopReasonAnnotation)
+	if _, ok := clusterWorkspace.Annotations[constants.WorkspaceStopReasonAnnotation]; ok {
+		delete(clusterWorkspace.Annotations, constants.WorkspaceStopReasonAnnotation)
 		err = r.Update(context.TODO(), clusterWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}

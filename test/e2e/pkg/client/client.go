@@ -15,7 +15,7 @@ package client
 import (
 	"fmt"
 
-	workspacev1v1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	devworkspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -37,7 +37,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(workspacev1v1alpha2.AddToScheme(scheme))
+	utilruntime.Must(devworkspacev1alpha2.AddToScheme(scheme))
 }
 
 type K8sClient struct {

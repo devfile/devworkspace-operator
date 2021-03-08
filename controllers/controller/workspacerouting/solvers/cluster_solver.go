@@ -16,11 +16,12 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
 const (
@@ -104,7 +105,7 @@ func (s *ClusterSolver) GetExposedEndpoints(
 
 func resolveServiceHostnameForEndpoint(endpoint devworkspace.Endpoint, services []corev1.Service) (string, error) {
 	for _, service := range services {
-		if service.Annotations[config.WorkspaceDiscoverableServiceAnnotation] == "true" {
+		if service.Annotations[constants.WorkspaceDiscoverableServiceAnnotation] == "true" {
 			continue
 		}
 		for _, servicePort := range service.Spec.Ports {

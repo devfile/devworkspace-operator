@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +29,7 @@ type PullSecretsProvisioningStatus struct {
 }
 
 func PullSecrets(clusterAPI ClusterAPI) PullSecretsProvisioningStatus {
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.DevWorkspacePullSecretLabel, "true"))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspacePullSecretLabel, "true"))
 	if err != nil {
 		return PullSecretsProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{

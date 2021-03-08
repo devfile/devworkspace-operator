@@ -20,7 +20,6 @@ import (
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -63,7 +62,7 @@ func getProxyContainerForEndpoint(proxyEndpoint proxyEndpoint, tlsProxyVolume co
 				Protocol:      corev1.ProtocolTCP,
 			},
 		},
-		ImagePullPolicy: corev1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
+		ImagePullPolicy: corev1.PullPolicy(corev1.PullAlways),
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      tlsProxyVolume.Name,

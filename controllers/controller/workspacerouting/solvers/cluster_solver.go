@@ -34,11 +34,11 @@ type ClusterSolver struct {
 
 var _ RoutingSolver = (*ClusterSolver)(nil)
 
-func (s *ClusterSolver) FinalizerRequired(routing *controllerv1alpha1.WorkspaceRouting) bool {
+func (s *ClusterSolver) FinalizerRequired(*controllerv1alpha1.WorkspaceRouting) bool {
 	return false
 }
 
-func (s *ClusterSolver) Finalize(routing *controllerv1alpha1.WorkspaceRouting) error {
+func (s *ClusterSolver) Finalize(*controllerv1alpha1.WorkspaceRouting) error {
 	return nil
 }
 

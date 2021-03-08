@@ -42,7 +42,7 @@ type proxyEndpoint struct {
 	publicEndpointHttpPort int64
 }
 
-func (s *OpenShiftOAuthSolver) FinalizerRequired(routing *controllerv1alpha1.WorkspaceRouting) bool {
+func (s *OpenShiftOAuthSolver) FinalizerRequired(*controllerv1alpha1.WorkspaceRouting) bool {
 	return true
 }
 
@@ -60,7 +60,7 @@ func (s *OpenShiftOAuthSolver) Finalize(routing *controllerv1alpha1.WorkspaceRou
 func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	proxy, noProxy := getProxiedEndpoints(spec)
-	defaultIngresses, defaultRoutes := getRoutingForSpec(noProxy, workspaceMeta)
+	defaultRoutes := getRoutesForSpec(noProxy, workspaceMeta)
 
 	portMappings := getProxyEndpointMappings(proxy)
 	var proxyPorts = map[string]controllerv1alpha1.EndpointList{}
@@ -100,7 +100,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.Worksp
 	}
 
 	restrictedAccess, setRestrictedAccess := routing.Annotations[constants.WorkspaceRestrictedAccessAnnotation]
-	if oauthClient != nil && setRestrictedAccess {
+	if setRestrictedAccess {
 		oauthClient.Annotations = maputils.Append(oauthClient.Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
@@ -114,7 +114,6 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.Worksp
 
 	return RoutingObjects{
 		Services:     services,
-		Ingresses:    defaultIngresses,
 		Routes:       append(routes, defaultRoutes...),
 		PodAdditions: podAdditions,
 	}, nil

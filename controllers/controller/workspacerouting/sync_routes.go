@@ -16,7 +16,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	"github.com/google/go-cmp/cmp"
@@ -36,10 +35,6 @@ var routeDiffOpts = cmp.Options{
 }
 
 func (r *WorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.WorkspaceRouting, specRoutes []routeV1.Route) (ok bool, clusterRoutes []routeV1.Route, err error) {
-	if !config.ControllerCfg.IsOpenShift() {
-		return true, nil, nil
-	}
-
 	routesInSync := true
 
 	clusterRoutes, err = r.getClusterRoutes(routing)

@@ -17,6 +17,8 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	routeV1 "github.com/openshift/api/route/v1"
@@ -81,7 +83,7 @@ func (r *WorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.Work
 
 func (r *WorkspaceRoutingReconciler) getClusterRoutes(routing *controllerv1alpha1.WorkspaceRouting) ([]routeV1.Route, error) {
 	found := &routeV1.RouteList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
 		return nil, err
 	}

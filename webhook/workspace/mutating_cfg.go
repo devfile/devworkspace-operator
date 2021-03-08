@@ -12,10 +12,12 @@
 package workspace
 
 import (
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/webhook/server"
 	"k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/webhook/server"
 )
 
 const (
@@ -72,7 +74,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 		ObjectSelector: &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
-					Key:      config.WorkspaceIDLabel,
+					Key:      constants.WorkspaceIDLabel,
 					Operator: labelExistsOp,
 				},
 			},

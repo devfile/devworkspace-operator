@@ -14,14 +14,15 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/cluster"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	"fmt"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -122,7 +123,7 @@ func (wc *ControllerConfig) GetWorkspaceIdleTimeout() string {
 }
 
 func (wc *ControllerConfig) GetWorkspaceControllerSA() (string, error) {
-	saName := os.Getenv(ControllerServiceAccountNameEnvVar)
+	saName := os.Getenv(constants.ControllerServiceAccountNameEnvVar)
 	if saName == "" {
 		return "", fmt.Errorf("could not get service account name")
 	}
@@ -236,7 +237,7 @@ func SetupConfigForTesting(cm *corev1.ConfigMap) {
 func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 	cm.Name = ConfigMapReference.Name
 	cm.Namespace = ConfigMapReference.Namespace
-	cm.Labels = ControllerAppLabels()
+	cm.Labels = constants.ControllerAppLabels()
 
 	cm.Data = map[string]string{}
 }

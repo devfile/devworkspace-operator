@@ -14,9 +14,11 @@ package solvers
 
 import (
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -57,10 +59,10 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 						Name:      common.EndpointName(endpoint.Name),
 						Namespace: meta.Namespace,
 						Labels: map[string]string{
-							config.WorkspaceIDLabel: meta.WorkspaceId,
+							constants.WorkspaceIDLabel: meta.WorkspaceId,
 						},
 						Annotations: map[string]string{
-							config.WorkspaceDiscoverableServiceAnnotation: "true",
+							constants.WorkspaceDiscoverableServiceAnnotation: "true",
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -126,7 +128,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 			Name:      common.ServiceName(meta.WorkspaceId),
 			Namespace: meta.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: meta.WorkspaceId,
+				constants.WorkspaceIDLabel: meta.WorkspaceId,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -178,7 +180,7 @@ func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata)
 			Name:      common.RouteName(meta.WorkspaceId, endpointName),
 			Namespace: meta.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: meta.WorkspaceId,
+				constants.WorkspaceIDLabel: meta.WorkspaceId,
 			},
 			Annotations: routeAnnotations(endpointName),
 		},
@@ -210,7 +212,7 @@ func getIngressForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadat
 			Name:      common.RouteName(meta.WorkspaceId, endpointName),
 			Namespace: meta.Namespace,
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: meta.WorkspaceId,
+				constants.WorkspaceIDLabel: meta.WorkspaceId,
 			},
 			Annotations: nginxIngressAnnotations(endpoint.Name),
 		},

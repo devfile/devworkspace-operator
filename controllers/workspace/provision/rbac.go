@@ -14,7 +14,9 @@ package provision
 
 import (
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +75,7 @@ func generateRBAC(namespace string) []runtime.Object {
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      config.ServiceAccount + "-workspace",
+				Name:      constants.ServiceAccount + "-workspace",
 				Namespace: namespace,
 			},
 			RoleRef: rbacv1.RoleRef{

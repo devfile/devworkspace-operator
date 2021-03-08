@@ -16,10 +16,10 @@ import (
 	"net/http"
 
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	devworkspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	devworkspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -30,7 +30,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnCreate(_ context.Context, req 
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	wksp.Labels = maputils.Append(wksp.Labels, config.WorkspaceCreatorLabel, req.UserInfo.UID)
+	wksp.Labels = maputils.Append(wksp.Labels, constants.WorkspaceCreatorLabel, req.UserInfo.UID)
 
 	return h.returnPatched(req, wksp)
 }
@@ -42,7 +42,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnCreate(_ context.Context, req 
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	wksp.Labels = maputils.Append(wksp.Labels, config.WorkspaceCreatorLabel, req.UserInfo.UID)
+	wksp.Labels = maputils.Append(wksp.Labels, constants.WorkspaceCreatorLabel, req.UserInfo.UID)
 
 	return h.returnPatched(req, wksp)
 }
@@ -59,19 +59,19 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req 
 		return admission.Denied(msg)
 	}
 
-	oldCreator, found := oldWksp.Labels[config.WorkspaceCreatorLabel]
+	oldCreator, found := oldWksp.Labels[constants.WorkspaceCreatorLabel]
 	if !found {
-		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate workspace to get it initialized", config.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate workspace to get it initialized", constants.WorkspaceCreatorLabel))
 	}
 
-	newCreator, found := newWksp.Labels[config.WorkspaceCreatorLabel]
+	newCreator, found := newWksp.Labels[constants.WorkspaceCreatorLabel]
 	if !found {
-		newWksp.Labels[config.WorkspaceCreatorLabel] = oldCreator
+		newWksp.Labels[constants.WorkspaceCreatorLabel] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}
 
 	if newCreator != oldCreator {
-		return admission.Denied(fmt.Sprintf("label '%s' is assigned once workspace is created and is immutable", config.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is assigned once workspace is created and is immutable", constants.WorkspaceCreatorLabel))
 	}
 
 	return admission.Allowed("new workspace has the same workspace as old one")
@@ -89,19 +89,19 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(_ context.Context, req 
 		return admission.Denied(msg)
 	}
 
-	oldCreator, found := oldWksp.Labels[config.WorkspaceCreatorLabel]
+	oldCreator, found := oldWksp.Labels[constants.WorkspaceCreatorLabel]
 	if !found {
-		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate workspace to get it initialized", config.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is missing. Please recreate workspace to get it initialized", constants.WorkspaceCreatorLabel))
 	}
 
-	newCreator, found := newWksp.Labels[config.WorkspaceCreatorLabel]
+	newCreator, found := newWksp.Labels[constants.WorkspaceCreatorLabel]
 	if !found {
-		newWksp.Labels[config.WorkspaceCreatorLabel] = oldCreator
+		newWksp.Labels[constants.WorkspaceCreatorLabel] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}
 
 	if newCreator != oldCreator {
-		return admission.Denied(fmt.Sprintf("label '%s' is assigned once workspace is created and is immutable", config.WorkspaceCreatorLabel))
+		return admission.Denied(fmt.Sprintf("label '%s' is assigned once workspace is created and is immutable", constants.WorkspaceCreatorLabel))
 	}
 
 	return admission.Allowed("new workspace has the same workspace as old one")

@@ -16,15 +16,17 @@ import (
 	"fmt"
 
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 )
 
 type OpenShiftOAuthSolver struct {
@@ -89,7 +91,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.Worksp
 		ObjectMeta: metav1.ObjectMeta{
 			Name: workspaceMeta.WorkspaceId + "-oauth-client",
 			Labels: map[string]string{
-				config.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
+				constants.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
 			},
 		},
 		GrantMethod:  oauthv1.GrantHandlerPrompt,
@@ -97,9 +99,9 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.Worksp
 		RedirectURIs: publicURls,
 	}
 
-	restrictedAccess, setRestrictedAccess := routing.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	restrictedAccess, setRestrictedAccess := routing.Annotations[constants.WorkspaceRestrictedAccessAnnotation]
 	if oauthClient != nil && setRestrictedAccess {
-		oauthClient.Annotations = maputils.Append(oauthClient.Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+		oauthClient.Annotations = maputils.Append(oauthClient.Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
 	oauthClientInSync, err := syncOAuthClient(s, routing, oauthClient)
@@ -145,7 +147,7 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 			route.Spec.Path = "/"
 
 			//override the original endpointName
-			route.Annotations = maputils.Append(route.Annotations, config.WorkspaceEndpointNameAnnotation, upstreamEndpoint.Name)
+			route.Annotations = maputils.Append(route.Annotations, constants.WorkspaceEndpointNameAnnotation, upstreamEndpoint.Name)
 			routes = append(routes, route)
 		}
 	}

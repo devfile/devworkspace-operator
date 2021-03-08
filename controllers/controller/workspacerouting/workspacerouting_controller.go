@@ -20,6 +20,8 @@ import (
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/go-logr/logr"
@@ -77,7 +79,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-	reqLogger = reqLogger.WithValues(config.WorkspaceIDLoggerKey, instance.Spec.WorkspaceId)
+	reqLogger = reqLogger.WithValues(constants.WorkspaceIDLoggerKey, instance.Spec.WorkspaceId)
 	reqLogger.Info("Reconciling WorkspaceRouting")
 
 	if instance.Spec.RoutingClass == "" {
@@ -117,7 +119,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		RoutingSuffix: instance.Spec.RoutingSuffix,
 	}
 
-	restrictedAccess, setRestrictedAccess := instance.Annotations[config.WorkspaceRestrictedAccessAnnotation]
+	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.WorkspaceRestrictedAccessAnnotation]
 	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta)
 	if err != nil {
 		var notReady *solvers.RoutingNotReady
@@ -147,7 +149,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return reconcile.Result{}, err
 		}
 		if setRestrictedAccess {
-			services[idx].Annotations = maputils.Append(services[idx].Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+			services[idx].Annotations = maputils.Append(services[idx].Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 	ingresses := routingObjects.Ingresses
@@ -157,7 +159,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return reconcile.Result{}, err
 		}
 		if setRestrictedAccess {
-			ingresses[idx].Annotations = maputils.Append(ingresses[idx].Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+			ingresses[idx].Annotations = maputils.Append(ingresses[idx].Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 	routes := routingObjects.Routes
@@ -167,7 +169,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 			return reconcile.Result{}, err
 		}
 		if setRestrictedAccess {
-			routes[idx].Annotations = maputils.Append(routes[idx].Annotations, config.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+			routes[idx].Annotations = maputils.Append(routes[idx].Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
 		}
 	}
 

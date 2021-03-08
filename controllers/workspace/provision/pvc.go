@@ -14,7 +14,10 @@ package provision
 
 import (
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -33,7 +36,7 @@ func SyncPVC(workspace *devworkspace.DevWorkspace, client client.Client, reqLogg
 }
 
 func generatePVC(workspace *devworkspace.DevWorkspace) (*corev1.PersistentVolumeClaim, error) {
-	pvcStorageQuantity, err := resource.ParseQuantity(config.PVCStorageSize)
+	pvcStorageQuantity, err := resource.ParseQuantity(constants.PVCStorageSize)
 	if err != nil {
 		return nil, err
 	}

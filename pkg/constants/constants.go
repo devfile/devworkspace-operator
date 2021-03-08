@@ -10,7 +10,8 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package config
+// package constants defines constant values used throughout the DevWorkspace Operator
+package constants
 
 // Labels which should be used for controller related objects
 var ControllerAppLabels = func() map[string]string {

@@ -19,10 +19,12 @@ import (
 	"time"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
 
 	"github.com/go-logr/logr"
@@ -48,10 +50,10 @@ const (
 var (
 	cleanupJobCompletions      = int32(1)
 	cleanupJobBackoffLimit     = int32(3)
-	pvcCleanupPodMemoryLimit   = resource.MustParse(config.PVCCleanupPodMemoryLimit)
-	pvcCleanupPodMemoryRequest = resource.MustParse(config.PVCCleanupPodMemoryRequest)
-	pvcCleanupPodCPULimit      = resource.MustParse(config.PVCCleanupPodCPULimit)
-	pvcCleanupPodCPURequest    = resource.MustParse(config.PVCCleanupPodCPURequest)
+	pvcCleanupPodMemoryLimit   = resource.MustParse(constants.PVCCleanupPodMemoryLimit)
+	pvcCleanupPodMemoryRequest = resource.MustParse(constants.PVCCleanupPodMemoryRequest)
+	pvcCleanupPodCPULimit      = resource.MustParse(constants.PVCCleanupPodCPULimit)
+	pvcCleanupPodCPURequest    = resource.MustParse(constants.PVCCleanupPodCPURequest)
 )
 
 func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *devworkspace.DevWorkspace) (reconcile.Result, error) {
@@ -147,10 +149,10 @@ func (r *DevWorkspaceReconciler) getSpecCleanupJob(workspace *devworkspace.DevWo
 	workspaceId := workspace.Status.WorkspaceId
 	pvcName := config.ControllerCfg.GetWorkspacePVCName()
 	jobLabels := map[string]string{
-		config.WorkspaceIDLabel: workspaceId,
+		constants.WorkspaceIDLabel: workspaceId,
 	}
-	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[config.WorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
-		jobLabels[config.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
+	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.WorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
+		jobLabels[constants.WorkspaceRestrictedAccessAnnotation] = restrictedAccess
 	}
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{

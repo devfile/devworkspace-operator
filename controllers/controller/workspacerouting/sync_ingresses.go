@@ -16,7 +16,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"k8s.io/api/extensions/v1beta1"
@@ -75,7 +76,7 @@ func (r *WorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.W
 
 func (r *WorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv1alpha1.WorkspaceRouting) ([]v1beta1.Ingress, error) {
 	found := &v1beta1.IngressList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
 		return nil, err
 	}

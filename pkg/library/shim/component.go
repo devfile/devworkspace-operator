@@ -16,11 +16,12 @@
 package shim
 
 import (
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
 func FillDefaultEnvVars(podAdditions *v1alpha1.PodAdditions, workspace devworkspace.DevWorkspace) {
@@ -44,19 +45,19 @@ func defaultEnvVars(containerName string, workspace devworkspace.DevWorkspace) [
 		},
 		{
 			Name:  "CHE_PROJECTS_ROOT",
-			Value: config.DefaultProjectsSourcesRoot,
+			Value: constants.DefaultProjectsSourcesRoot,
 		},
 		{
 			Name:  "CHE_API",
-			Value: config.DefaultApiEndpoint,
+			Value: constants.DefaultApiEndpoint,
 		},
 		{
 			Name:  "CHE_API_INTERNAL",
-			Value: config.DefaultApiEndpoint,
+			Value: constants.DefaultApiEndpoint,
 		},
 		{
 			Name:  "CHE_API_EXTERNAL",
-			Value: config.DefaultApiEndpoint,
+			Value: constants.DefaultApiEndpoint,
 		},
 		{
 			Name:  "CHE_WORKSPACE_NAME",
@@ -68,7 +69,7 @@ func defaultEnvVars(containerName string, workspace devworkspace.DevWorkspace) [
 		},
 		{
 			Name:  "CHE_AUTH_ENABLED",
-			Value: config.AuthEnabled,
+			Value: constants.AuthEnabled,
 		},
 		{
 			Name:  "CHE_WORKSPACE_NAMESPACE",

@@ -17,6 +17,8 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	oauthv1 "github.com/openshift/api/oauth/v1"
@@ -95,7 +97,7 @@ func syncOAuthClient(client client.Client, routing *controllerv1alpha1.Workspace
 
 func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.WorkspaceRouting) ([]oauthv1.OAuthClient, error) {
 	found := &oauthv1.OAuthClientList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +113,7 @@ func getClusterOAuthClients(cl client.Client, routing *controllerv1alpha1.Worksp
 }
 
 func deleteOAuthClients(cl client.Client, routing *controllerv1alpha1.WorkspaceRouting) error {
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", config.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
 	if err != nil {
 		return err
 	}

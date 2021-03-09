@@ -27,18 +27,25 @@ set -e
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
 
 function print_help() {
-  echo "Usage: generate-deployment.sh [ARGS]"
-  echo "Arguments:"
-  echo "  --use-defaults"
-  echo "      Output deployment files to deploy/deployment, using default"
-  echo "      environment variables rather than current shell variables."
-  echo "      Implies '--split yaml'"
-  echo "  --split-yaml"
-  echo "      Parse output file combined.yaml into a yaml file for each record"
-  echo "      in combined yaml. Files are output to the 'objects' subdirectory"
-  echo "      for each platform and are named <object-name>.<kind>.yaml"
-  echo "  -h, --help"
-  echo "      Print this help description"
+  cat << EOF
+Usage: generate-deployment.sh [ARGS]
+Arguments:
+  --use-defaults
+      Output deployment files to deploy/deployment, using default
+      environment variables rather than current shell variables.
+      Implies '--split yaml'
+  --default-image
+      Controller (and webhook) image to use for the default deployment.
+      Used only when '--use-defaults' is passed; otherwise, the value of
+      the IMG environment variable is used. If unspecified, the default
+      value of 'quay.io/devfile/devworkspace-controller:next' is used
+  --split-yaml
+      Parse output file combined.yaml into a yaml file for each record
+      in combined yaml. Files are output to the 'objects' subdirectory
+      for each platform and are named <object-name>.<kind>.yaml
+  -h, --help
+      Print this help description
+EOF
 }
 
 USE_DEFAULT_ENV=false
@@ -50,6 +57,10 @@ while [[ "$#" -gt 0 ]]; do
       USE_DEFAULT_ENV=true
       SPLIT_YAMLS=true
       OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
+      ;;
+      --default-image)
+      DEFAULT_IMAGE=$2
+      shift
       ;;
       --split-yamls)
       SPLIT_YAMLS=true
@@ -70,7 +81,7 @@ done
 if $USE_DEFAULT_ENV; then
   echo "Using defaults for environment variables"
   export NAMESPACE=devworkspace-controller
-  export IMG=quay.io/devfile/devworkspace-controller:next
+  export IMG=${DEFAULT_IMAGE:-"quay.io/devfile/devworkspace-controller:next"}
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic
   export DEVWORKSPACE_API_VERSION=aeda60d4361911da85103f224644bfa792498499

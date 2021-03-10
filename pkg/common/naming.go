@@ -76,3 +76,7 @@ func ServingCertVolumeName(serviceName string) string {
 func PVCCleanupJobName(workspaceId string) string {
 	return fmt.Sprintf("cleanup-%s", workspaceId)
 }
+
+func MetadataConfigMapName(workspaceId string) string {
+	return fmt.Sprintf("%s-metadata", workspaceId)
+}

@@ -28,6 +28,7 @@ import (
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 	shimlib "github.com/devfile/devworkspace-operator/pkg/library/shim"
 	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
+	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
 	"github.com/go-logr/logr"
@@ -198,7 +199,24 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, nil
 	}
 	shimlib.FillDefaultEnvVars(devfilePodAdditions, *workspace)
+	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, workspace, &clusterAPI)
+	if err != nil {
+		switch provisionErr := err.(type) {
+		case *metadata.NotReadyError:
+			reqLogger.Info(provisionErr.Message)
+			return reconcile.Result{Requeue: true, RequeueAfter: provisionErr.RequeueAfter}, nil
+		case *metadata.ProvisioningError:
+			reqLogger.Info(fmt.Sprintf("DevWorkspace start failed: %s", provisionErr))
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", provisionErr)
+			return reconcile.Result{}, nil
+		default:
+			return reconcile.Result{}, provisionErr
+		}
+	}
+
 	allPodAdditions := []controllerv1alpha1.PodAdditions{*devfilePodAdditions}
+
 	reconcileStatus.Conditions[devworkspace.WorkspaceComponentsReady] = ""
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 

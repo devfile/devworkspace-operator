@@ -10,40 +10,63 @@ spec:
       terminationGracePeriodSeconds: 10
       serviceAccountName: $(CONTROLLER_SERVICE_ACCOUNT)
       containers:
-      - image: quay.io/devfile/devworkspace-controller:next
-        name: devworkspace-controller
-        args:
-        - /usr/local/bin/devworkspace-controller
-        - --enable-leader-election
-        resources:
-          limits:
-            cpu: 200m
-            memory: 300Mi
-          requests:
-            cpu: 100m
-            memory: 20Mi
-        env:
-          - name: WATCH_NAMESPACE
-            value: ""
-          - name: POD_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: metadata.name
-          - name: OPERATOR_NAME
-            value: "devworkspace-operator"
-          - name: CONTROLLER_SERVICE_ACCOUNT_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.serviceAccountName
-          - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
-            value: "quay.io/eclipse/che-machine-exec:nightly"
-          - name: RELATED_IMAGE_web_terminal_tooling
-            value: "quay.io/wto/web-terminal-tooling:latest"
-          - name: RELATED_IMAGE_openshift_oauth_proxy
-            value: "openshift/oauth-proxy:latest"
-          - name: RELATED_IMAGE_devworkspace_webhook_server
-            value: "quay.io/devfile/devworkspace-controller:next"
-          - name: RELATED_IMAGE_default_tls_secrets_creation_job
-            value: "quay.io/eclipse/che-tls-secret-creator:alpine-3029769"
-          - name: RELATED_IMAGE_pvc_cleanup_job
-            value: "quay.io/libpod/busybox:1.30.1"
+        - name: devworkspace-controller
+          image: quay.io/devfile/devworkspace-controller:next
+          ports:
+            - name: liveness-port
+              containerPort: 6789
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /healthz
+              port: liveness-port
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: liveness-port
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          args:
+            - /usr/local/bin/devworkspace-controller
+            - --enable-leader-election
+          resources:
+            limits:
+              cpu: 200m
+              memory: 300Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "devworkspace-operator"
+            - name: CONTROLLER_SERVICE_ACCOUNT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.serviceAccountName
+            - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
+              value: "quay.io/eclipse/che-machine-exec:nightly"
+            - name: RELATED_IMAGE_web_terminal_tooling
+              value: "quay.io/wto/web-terminal-tooling:latest"
+            - name: RELATED_IMAGE_openshift_oauth_proxy
+              value: "openshift/oauth-proxy:latest"
+            - name: RELATED_IMAGE_devworkspace_webhook_server
+              value: "quay.io/devfile/devworkspace-controller:next"
+            - name: RELATED_IMAGE_default_tls_secrets_creation_job
+              value: "quay.io/eclipse/che-tls-secret-creator:alpine-3029769"
+            - name: RELATED_IMAGE_pvc_cleanup_job
+              value: "quay.io/libpod/busybox:1.30.1"

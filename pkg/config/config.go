@@ -19,8 +19,8 @@ import (
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/internal/cluster"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -47,8 +47,7 @@ var ConfigMapReference = client.ObjectKey{
 }
 
 type ControllerConfig struct {
-	configMap   *corev1.ConfigMap
-	isOpenShift bool
+	configMap *corev1.ConfigMap
 }
 
 func (wc *ControllerConfig) update(configMap *corev1.ConfigMap) {
@@ -79,14 +78,6 @@ func (wc *ControllerConfig) GetPVCStorageClassName() *string {
 	return wc.GetProperty(workspacePVCStorageClassName)
 }
 
-func (wc *ControllerConfig) IsOpenShift() bool {
-	return wc.isOpenShift
-}
-
-func (wc *ControllerConfig) SetIsOpenShift(isOpenShift bool) {
-	wc.isOpenShift = isOpenShift
-}
-
 func (wc *ControllerConfig) GetSidecarPullPolicy() string {
 	return wc.GetPropertyOrDefault(sidecarPullPolicy, defaultSidecarPullPolicy)
 }
@@ -112,7 +103,7 @@ func (wc *ControllerConfig) GetPropertyOrDefault(name string, defaultValue strin
 }
 
 func (wc *ControllerConfig) Validate() error {
-	if !wc.isOpenShift && wc.GetDefaultRoutingClass() == string(v1alpha1.WorkspaceRoutingOpenShiftOauth) {
+	if !infrastructure.IsOpenShift() && wc.GetDefaultRoutingClass() == string(v1alpha1.WorkspaceRoutingOpenShiftOauth) {
 		return fmt.Errorf("controller appears to be running in non-OpenShift cluster, but default routing class is '%s'", v1alpha1.WorkspaceRoutingOpenShiftOauth)
 	}
 	return nil
@@ -243,13 +234,10 @@ func buildDefaultConfigMap(cm *corev1.ConfigMap) {
 }
 
 func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMap *corev1.ConfigMap) error {
-	isOS, err := cluster.IsOpenShift()
-	if err != nil {
-		return err
-	}
-	if !isOS {
+	if !infrastructure.IsOpenShift() {
 		return nil
 	}
+
 	testRoute := &routeV1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: configMap.Namespace,
@@ -263,7 +251,7 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 		},
 	}
 
-	err = nonCachedClient.Create(context.TODO(), testRoute)
+	err := nonCachedClient.Create(context.TODO(), testRoute)
 	if err != nil {
 		return err
 	}

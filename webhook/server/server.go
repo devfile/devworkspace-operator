@@ -15,7 +15,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/devfile/devworkspace-operator/internal/cluster"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -54,7 +55,7 @@ var WebhookServerAppLabels = func() map[string]string {
 }
 
 func ConfigureWebhookServer(mgr manager.Manager) error {
-	enabled, err := cluster.IsWebhookConfigurationEnabled()
+	enabled, err := infrastructure.IsWebhookConfigurationEnabled()
 
 	if err != nil {
 		log.Info("ERROR: Could not evaluate if admission webhook configurations are available", "error", err)

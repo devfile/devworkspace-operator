@@ -16,6 +16,7 @@ import (
 	"context"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -66,7 +67,7 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 	terminationGracePeriod := int64(1)
 	trueBool := true
 	var user *int64
-	if !config.ControllerCfg.IsOpenShift() {
+	if !infrastructure.IsOpenShift() {
 		uID := int64(1234)
 		user = &uID
 	}

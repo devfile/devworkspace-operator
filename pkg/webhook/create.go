@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/devfile/devworkspace-operator/internal/cluster"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	webhook_k8s "github.com/devfile/devworkspace-operator/pkg/webhook/kubernetes"
 	webhook_openshift "github.com/devfile/devworkspace-operator/pkg/webhook/openshift"
 	"github.com/devfile/devworkspace-operator/webhook/server"
@@ -32,9 +32,9 @@ import (
 var log = logf.Log.WithName("webhook")
 
 func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
-	namespace, err := cluster.GetOperatorNamespace()
+	namespace, err := infrastructure.GetOperatorNamespace()
 	if err != nil {
-		namespace = os.Getenv(cluster.WatchNamespaceEnvVar)
+		namespace = os.Getenv(infrastructure.WatchNamespaceEnvVar)
 		config.ConfigMapReference.Namespace = namespace
 	}
 
@@ -56,7 +56,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	}
 
 	var secretName string
-	if config.ControllerCfg.IsOpenShift() {
+	if infrastructure.IsOpenShift() {
 		secretName = server.WebhookServerTLSSecretName
 		// Set up the certs for OpenShift
 		log.Info("Setting up the OpenShift webhook server secure service")

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
 type RoutingObjects struct {
@@ -73,7 +74,7 @@ type RoutingSolverGetter interface {
 	// the routingClass is not recognized, and any other error if the routingClass is invalid (e.g. an OpenShift-only
 	// routingClass on a vanilla Kubernetes platform). Note that an empty routingClass is handled by the DevWorkspace controller itself,
 	// and should not be handled by external controllers.
-	GetSolver(client client.Client, routingClass controllerv1alpha1.WorkspaceRoutingClass, isOpenShift bool) (solver RoutingSolver, err error)
+	GetSolver(client client.Client, routingClass controllerv1alpha1.WorkspaceRoutingClass) (solver RoutingSolver, err error)
 }
 
 type SolverGetter struct{}
@@ -97,10 +98,11 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.WorkspaceRoutin
 	}
 }
 
-func (_ *SolverGetter) GetSolver(client client.Client, routingClass controllerv1alpha1.WorkspaceRoutingClass, isOpenShift bool) (RoutingSolver, error) {
+func (_ *SolverGetter) GetSolver(client client.Client, routingClass controllerv1alpha1.WorkspaceRoutingClass) (RoutingSolver, error) {
+	isOpenShift := infrastructure.IsOpenShift()
 	switch routingClass {
 	case controllerv1alpha1.WorkspaceRoutingBasic:
-		return &BasicSolver{isOpenShift: isOpenShift}, nil
+		return &BasicSolver{}, nil
 	case controllerv1alpha1.WorkspaceRoutingOpenShiftOauth:
 		if !isOpenShift {
 			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)

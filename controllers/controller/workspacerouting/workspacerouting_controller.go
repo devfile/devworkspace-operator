@@ -18,13 +18,12 @@ import (
 	"time"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/workspacerouting/solvers"
-	"github.com/devfile/devworkspace-operator/internal/cluster"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-
-	"github.com/google/go-cmp/cmp"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/api/extensions/v1beta1"
@@ -47,9 +46,8 @@ const workspaceRoutingFinalizer = "workspacerouting.controller.devfile.io"
 // WorkspaceRoutingReconciler reconciles a WorkspaceRouting object
 type WorkspaceRoutingReconciler struct {
 	client.Client
-	Log         logr.Logger
-	Scheme      *runtime.Scheme
-	IsOpenShift bool
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 	// SolverGetter will be used to get solvers for a particular workspaceRouting
 	SolverGetter solvers.RoutingSolverGetter
 }
@@ -88,7 +86,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, r.markRoutingFailed(instance)
 	}
 
-	solver, err := r.SolverGetter.GetSolver(r.Client, instance.Spec.RoutingClass, r.IsOpenShift)
+	solver, err := r.SolverGetter.GetSolver(r.Client, instance.Spec.RoutingClass)
 	if err != nil {
 		if errors.Is(err, solvers.RoutingNotSupported) {
 			return reconcile.Result{}, nil
@@ -184,7 +182,7 @@ func (r *WorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, e
 		Services: clusterServices,
 	}
 
-	if r.IsOpenShift {
+	if infrastructure.IsOpenShift() {
 		routesInSync, clusterRoutes, err := r.syncRoutes(instance, routes)
 		if err != nil || !routesInSync {
 			reqLogger.Info("Routes not in sync")
@@ -295,13 +293,8 @@ func (r *WorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&controllerv1alpha1.WorkspaceRouting{}).
 		Owns(&corev1.Service{}).
 		Owns(&v1beta1.Ingress{})
-	if isOS, err := cluster.IsOpenShift(); err != nil {
-		return err
-	} else if isOS {
+	if infrastructure.IsOpenShift() {
 		bld.Owns(&routeV1.Route{})
-		r.IsOpenShift = true
-	} else {
-		r.IsOpenShift = false
 	}
 	if r.SolverGetter == nil {
 		return NoSolversEnabled

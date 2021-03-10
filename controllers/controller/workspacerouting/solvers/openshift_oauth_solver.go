@@ -15,18 +15,17 @@ package solvers
 import (
 	"fmt"
 
+	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routeV1 "github.com/openshift/api/route/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/common"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type OpenShiftOAuthSolver struct {

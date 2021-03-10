@@ -10,8 +10,8 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package cluster
+package infrastructure
 
 import logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-var log = logf.Log.WithName("internal-cluster")
+var log = logf.Log.WithName("infrastructure")

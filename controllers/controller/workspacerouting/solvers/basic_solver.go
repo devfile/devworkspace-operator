@@ -15,6 +15,7 @@ package solvers
 import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
 var routeAnnotations = func(endpointName string) map[string]string {
@@ -37,9 +38,7 @@ var nginxIngressAnnotations = func(endpointName string) map[string]string {
 // According to the current cluster there is different behavior:
 // Kubernetes: use Ingresses without TLS
 // OpenShift: use Routes with TLS enabled
-type BasicSolver struct {
-	isOpenShift bool
-}
+type BasicSolver struct{}
 
 var _ RoutingSolver = (*BasicSolver)(nil)
 
@@ -58,7 +57,7 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.WorkspaceRoutin
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
 	routingObjects.Services = services
-	if s.isOpenShift {
+	if infrastructure.IsOpenShift() {
 		routingObjects.Routes = getRoutesForSpec(spec.Endpoints, workspaceMeta)
 	} else {
 		routingObjects.Ingresses = getIngressesForSpec(spec.Endpoints, workspaceMeta)

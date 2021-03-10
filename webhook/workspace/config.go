@@ -16,12 +16,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/internal/cluster"
-	"github.com/devfile/devworkspace-operator/webhook/server"
 	clientConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/webhook/server"
+
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -38,7 +40,7 @@ func Configure(ctx context.Context) error {
 		return err
 	}
 
-	namespace, err := cluster.GetOperatorNamespace()
+	namespace, err := infrastructure.GetOperatorNamespace()
 	if err != nil {
 		return err
 	}
@@ -134,7 +136,7 @@ func controllerSAUID(ctx context.Context, c client.Client) (string, string, erro
 	if err != nil {
 		return "", "", err
 	}
-	namespace, err := cluster.GetOperatorNamespace()
+	namespace, err := infrastructure.GetOperatorNamespace()
 	if err != nil {
 		return "", "", err
 	}

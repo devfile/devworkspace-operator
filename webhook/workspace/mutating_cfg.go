@@ -15,8 +15,8 @@ import (
 	"k8s.io/api/admissionregistration/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 )
 
@@ -125,7 +125,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	}
 	// n.b. Routes do not get UserInfo.UID filled in webhooks for some reason
 	// ref: https://github.com/eclipse/che/issues/17114
-	if config.ControllerCfg.IsOpenShift() {
+	if infrastructure.IsOpenShift() {
 		workspaceObjMutateWebhook.Rules = append(workspaceObjMutateWebhook.Rules, v1beta1.RuleWithOperations{
 			Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
 			Rule: v1beta1.Rule{

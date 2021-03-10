@@ -20,6 +20,7 @@ import (
 
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 
@@ -140,7 +141,7 @@ func DeleteWorkspaceDeployment(ctx context.Context, workspace *devworkspace.DevW
 }
 
 func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
-	if !config.ControllerCfg.IsOpenShift() {
+	if !infrastructure.IsOpenShift() {
 		uID := int64(1234)
 		rootGID := int64(0)
 		nonRoot := true

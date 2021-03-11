@@ -31,44 +31,44 @@ bump_version () {
 
   git checkout "${BUMP_BRANCH}"
 
-  echo "Updating project version to ${NEXT_VERSION}"	
-  echo "${VERSION}" > VERSION 
-  COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"	
-  git commit -asm "${COMMIT_MSG}"	
-  git pull origin "${BUMP_BRANCH}"	
+  echo "Updating project version to ${NEXT_VERSION}"
+  echo "${VERSION}" > VERSION
+  COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
+  git commit -asm "${COMMIT_MSG}"
+  git pull origin "${BUMP_BRANCH}"
 
   set +e
-  PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"	
-  # shellcheck disable=SC2181	
-  if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then	
-    PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}	
-    # create pull request for the main branch branch, as branch is restricted	
-    git branch "${PR_BRANCH}"	
-    git checkout "${PR_BRANCH}"	
-    git pull origin "${PR_BRANCH}"	
-    git push origin "${PR_BRANCH}"	
-    lastCommitComment="$(git log -1 --pretty=%B)"	
-    hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"	
-  fi 	
-  set -e	
-  git checkout "${CURRENT_BRANCH}"	
-}	
+  PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"
+  # shellcheck disable=SC2181
+  if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then
+    PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}
+    # create pull request for the main branch branch, as branch is restricted
+    git branch "${PR_BRANCH}"
+    git checkout "${PR_BRANCH}"
+    git pull origin "${PR_BRANCH}"
+    git push origin "${PR_BRANCH}"
+    lastCommitComment="$(git log -1 --pretty=%B)"
+    hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"
+  fi
+  set -e
+  git checkout "${CURRENT_BRANCH}"
+}
 
-usage ()	
-{	
-  echo "Usage: $0 --version [VERSION TO RELEASE]"	
-  echo "Example: $0 --version v0.1.0"; echo	
-}	
+usage ()
+{
+  echo "Usage: $0 --version [VERSION TO RELEASE]"
+  echo "Example: $0 --version v0.1.0"; echo
+}
 
-if [[ ! ${VERSION} ]]; then	
-  usage	
-  exit 1	
-fi	
+if [[ ! ${VERSION} ]]; then
+  usage
+  exit 1
+fi
 
 
 # derive bugfix branch from version
-BRANCH=${VERSION#v}	
-BRANCH=${BRANCH%.*}.x	
+BRANCH=${VERSION#v}
+BRANCH=${BRANCH%.*}.x
 
 # if doing a .0 release, use main branch; if doing a .z release, use $BRANCH
 if [[ ${VERSION} == *".0" ]]; then

@@ -57,8 +57,7 @@ bump_version () {
 usage ()
 {
   echo "Usage: $0 --version [VERSION TO RELEASE]"
-  echo "Example: $0 --version v0.1.0"; echo
-}
+  echo "Example: $0 --version v0.1.0\n";
 
 if [[ ! ${VERSION} ]]; then
   usage

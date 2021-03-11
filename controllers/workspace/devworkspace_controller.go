@@ -19,22 +19,20 @@ import (
 	"strings"
 	"time"
 
-	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
-
-	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
-
-	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
-	shimlib "github.com/devfile/devworkspace-operator/pkg/library/shim"
-	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
-
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
+	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
+	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
+	shimlib "github.com/devfile/devworkspace-operator/pkg/library/shim"
+	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -179,10 +177,9 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
 	if isFinalizerNecessary(workspace) {
-		if ok, err := r.setFinalizer(ctx, clusterWorkspace); err != nil {
+		coputil.AddFinalizer(workspace, pvcCleanupFinalizer)
+		if err := r.Update(ctx, workspace); err != nil {
 			return reconcile.Result{}, err
-		} else if !ok {
-			return reconcile.Result{Requeue: true}, nil
 		}
 	}
 

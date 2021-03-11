@@ -26,6 +26,7 @@ import (
 	storagelib "github.com/devfile/devworkspace-operator/pkg/library/storage"
 
 	"github.com/go-logr/logr"
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -53,18 +54,8 @@ var (
 	pvcCleanupPodCPURequest    = resource.MustParse(config.PVCCleanupPodCPURequest)
 )
 
-// setFinalizer sets a finalizer on the workspace and syncs the changes to the cluster. No-op if the workspace already
-// has the finalizer set.
-func (r *DevWorkspaceReconciler) setFinalizer(ctx context.Context, workspace *devworkspace.DevWorkspace) (ok bool, err error) {
-	if hasFinalizer(workspace) {
-		return true, nil
-	}
-	workspace.SetFinalizers(append(workspace.Finalizers, pvcCleanupFinalizer))
-	return false, r.Update(ctx, workspace)
-}
-
 func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *devworkspace.DevWorkspace) (reconcile.Result, error) {
-	if !hasFinalizer(workspace) {
+	if !coputil.HasFinalizer(workspace, pvcCleanupFinalizer) {
 		return reconcile.Result{}, nil
 	}
 	workspace.Status.Message = "Cleaning up resources for deletion"
@@ -88,7 +79,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	} else if terminating {
 		//Namespace is terminating, it's redundant to clean PVC files since it's going to be removed
 		log.Info("Namespace is terminating; clearing storage finalizer")
-		clearFinalizer(workspace)
+		coputil.RemoveFinalizer(workspace, pvcCleanupFinalizer)
 		return reconcile.Result{}, r.Update(ctx, workspace)
 	}
 
@@ -98,7 +89,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	} else if !pvcExists {
 		//PVC does not exist. nothing to clean up
 		log.Info("PVC does not exit; clearing storage finalizer")
-		clearFinalizer(workspace)
+		coputil.RemoveFinalizer(workspace, pvcCleanupFinalizer)
 		// job will be clean up by k8s garbage collector
 		return reconcile.Result{}, r.Update(ctx, workspace)
 	}
@@ -134,7 +125,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		switch condition.Type {
 		case batchv1.JobComplete:
 			log.Info("PVC clean up job successful; clearing finalizer")
-			clearFinalizer(workspace)
+			coputil.RemoveFinalizer(workspace, pvcCleanupFinalizer)
 			return reconcile.Result{}, r.Update(ctx, workspace)
 		case batchv1.JobFailed:
 			log.Error(fmt.Errorf("PVC clean up job failed: message: %q", condition.Message),
@@ -243,25 +234,6 @@ func (r *DevWorkspaceReconciler) getClusterCleanupJob(ctx context.Context, works
 
 func isFinalizerNecessary(workspace *devworkspace.DevWorkspace) bool {
 	return storagelib.NeedsStorage(workspace.Spec.Template)
-}
-
-func hasFinalizer(workspace *devworkspace.DevWorkspace) bool {
-	for _, finalizer := range workspace.Finalizers {
-		if finalizer == pvcCleanupFinalizer {
-			return true
-		}
-	}
-	return false
-}
-
-func clearFinalizer(workspace *devworkspace.DevWorkspace) {
-	var newFinalizers []string
-	for _, finalizer := range workspace.Finalizers {
-		if finalizer != pvcCleanupFinalizer {
-			newFinalizers = append(newFinalizers, finalizer)
-		}
-	}
-	workspace.SetFinalizers(newFinalizers)
 }
 
 func (r *DevWorkspaceReconciler) namespaceIsTerminating(ctx context.Context, namespace string) (bool, error) {

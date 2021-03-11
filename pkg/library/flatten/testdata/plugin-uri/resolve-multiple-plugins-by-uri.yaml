@@ -33,10 +33,14 @@ output:
   workspace:
     components:
       - name: plugin-a
+        attributes:
+          controller.devfile.io/imported-by: "test-plugin"
         container:
           name: test-container
           image: test-image
       - name: plugin-b
+        attributes:
+          controller.devfile.io/imported-by: "test-plugin-2"
         container:
           name: test-container-b
           image: test-image

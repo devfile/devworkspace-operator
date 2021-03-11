@@ -1,0 +1,44 @@
+name: "DevWorkspace annotates nested plugins with the first plugin"
+
+input:
+  workspace:
+    components:
+      - name: root-plugin
+        plugin:
+          kubernetes:
+            name: test-plugin-a
+            namespace: test-ns
+  plugins:
+    test-plugin-a:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-a
+      spec:
+        components:
+          - name: plugin-b
+            plugin:
+              kubernetes:
+                name: test-plugin-b
+                namespace: test-ns
+    test-plugin-b:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-b
+      spec:
+        components:
+          - name: plugin-b-container
+            container:
+              name: test-container
+              image: test-img
+
+output:
+  workspace:
+    components:
+      - name: plugin-b-container
+        attributes:
+          controller.devfile.io/imported-by: "root-plugin"
+        container:
+          name: test-container
+          image: test-img

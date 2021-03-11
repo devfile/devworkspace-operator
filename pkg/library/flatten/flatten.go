@@ -20,6 +20,7 @@ import (
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
+	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
@@ -89,6 +90,8 @@ func recursiveResolve(workspace devworkspace.DevWorkspaceTemplateSpec, tooling R
 			if err != nil {
 				return nil, err
 			}
+
+			annotate.AddSourceAttributesForPlugin(component.Name, resolvedPlugin)
 			pluginSpecContents = append(pluginSpecContents, &resolvedPlugin.DevWorkspaceTemplateSpecContent)
 		}
 	}

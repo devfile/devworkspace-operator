@@ -19,64 +19,63 @@ while [[ "$#" -gt 0 ]]; do
   case $1 in	
     '-v'|'--version') VERSION="$2"; shift 1;;		
     '-tmp'|'--use-tmp-dir') TMP=$(mktemp -d); shift 0;;
-  esac	
-  shift 1	
-done	
+  esac
+  shift 1
+done
 
-bump_version () {	
-  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)	
+bump_version () {
+  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-  NEXT_VERSION=$1	
-  BUMP_BRANCH=$2	
+  NEXT_VERSION=$1
+  BUMP_BRANCH=$2
 
-  git checkout "${BUMP_BRANCH}"	
+  git checkout "${BUMP_BRANCH}"
 
-  echo "Updating project version to ${NEXT_VERSION}"	
-  echo "${VERSION}" > VERSION 
-  if [[ ${NOCOMMIT} -eq 0 ]]; then	
-    COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"	
-    git commit -asm "${COMMIT_MSG}"	
-    git pull origin "${BUMP_BRANCH}"	
+  echo "Updating project version to ${NEXT_VERSION}"
+  echo "${VERSION}" > VERSION
+  COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
+  git commit -asm "${COMMIT_MSG}"
+  git pull origin "${BUMP_BRANCH}"
 
-    set +e
-    PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"	
-    # shellcheck disable=SC2181	
-    if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then	
-      PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}	
-      # create pull request for the main branch branch, as branch is restricted	
-      git branch "${PR_BRANCH}"	
-      git checkout "${PR_BRANCH}"	
-      git pull origin "${PR_BRANCH}"	
-      git push origin "${PR_BRANCH}"	
-      lastCommitComment="$(git log -1 --pretty=%B)"	
-      hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"	
-    fi 	
-    set -e
-  fi	
-  git checkout "${CURRENT_BRANCH}"	
-}	
+  set +e
+  PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"
+  # shellcheck disable=SC2181
+  if [[ $? -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then
+    PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}
+    # create pull request for the main branch branch, as branch is restricted
+    git branch "${PR_BRANCH}"
+    git checkout "${PR_BRANCH}"
+    git pull origin "${PR_BRANCH}"
+    git push origin "${PR_BRANCH}"
+    lastCommitComment="$(git log -1 --pretty=%B)"
+    hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"
+  fi
+  set -e
+  git checkout "${CURRENT_BRANCH}"
+}
 
-usage ()	
-{	
-  echo "Usage: $0 --version [VERSION TO RELEASE]"	
-  echo "Example: $0 --version 0.1.0"; echo	
-}	
+usage ()
+{
+  echo "Usage: $0 --version [VERSION TO RELEASE]"
+  echo -e "Example: $0 --version v0.1.0\n";
+}
 
-if [[ ! ${VERSION} ]]; then	
-  usage	
-  exit 1	
-fi	
+if [[ ! ${VERSION} ]]; then
+  usage
+  exit 1
+fi
 
 
-# derive branch from version	
-BRANCH=${VERSION%.*}.x	
+# derive bugfix branch from version
+BRANCH=${VERSION#v}
+BRANCH=${BRANCH%.*}.x
 
-# if doing a .0 release, use main branch; if doing a .z release, use $BRANCH	
-if [[ ${VERSION} == *".0" ]]; then	
-  BASEBRANCH="${MAIN_BRANCH}"	
-else 	
-  BASEBRANCH="${BRANCH}"	
-fi	
+# if doing a .0 release, use main branch; if doing a .z release, use $BRANCH
+if [[ ${VERSION} == *".0" ]]; then
+  BASEBRANCH="${MAIN_BRANCH}"
+else
+  BASEBRANCH="${BRANCH}"
+fi
 
 # work in tmp dir
 if [[ $TMP ]] && [[ -d $TMP ]]; then

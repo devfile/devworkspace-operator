@@ -86,6 +86,7 @@ if [[ $TMP ]] && [[ -d $TMP ]]; then
   cd "${REPO##*/}" || exit 1
 fi
 
+git remote show origin
 
 # get sources from ${BASEBRANCH} branch	
 git fetch origin "${BASEBRANCH}":"${BASEBRANCH}" || true
@@ -93,7 +94,7 @@ git checkout "${BASEBRANCH}"
 
 # create new branch off ${BASEBRANCH} (or check out latest commits if branch already exists), then push to origin
 if [[ "${BASEBRANCH}" != "${BRANCH}" ]]; then
-  git branch "${BRANCH}" || git checkout "${BRANCH}" && git pull origin "${BRANCH}"
+  git branch "${BRANCH}" || git checkout "${BRANCH}"
   git push origin "${BRANCH}"
   git fetch origin "${BRANCH}:${BRANCH}" || true
   git checkout "${BRANCH}"

@@ -23,6 +23,7 @@ import (
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
@@ -199,23 +200,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, nil
 	}
 	shimlib.FillDefaultEnvVars(devfilePodAdditions, *workspace)
-	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, workspace, &clusterAPI)
-	if err != nil {
-		switch provisionErr := err.(type) {
-		case *metadata.NotReadyError:
-			reqLogger.Info(provisionErr.Message)
-			return reconcile.Result{Requeue: true, RequeueAfter: provisionErr.RequeueAfter}, nil
-		case *metadata.ProvisioningError:
-			reqLogger.Info(fmt.Sprintf("DevWorkspace start failed: %s", provisionErr))
-			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", provisionErr)
-			return reconcile.Result{}, nil
-		default:
-			return reconcile.Result{}, provisionErr
-		}
-	}
-
-	allPodAdditions := []controllerv1alpha1.PodAdditions{*devfilePodAdditions}
 
 	reconcileStatus.Conditions[devworkspace.WorkspaceComponentsReady] = ""
 	timing.SetTime(timingInfo, timing.ComponentsReady)
@@ -258,7 +242,27 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: true}, nil
 	}
 
+	annotate.AddURLAttributesToEndpoints(&workspace.Spec.Template, routingStatus.ExposedEndpoints)
+
+	// Step three: provision a configmap on the cluster to mount the flattened devfile in deployment containers
+	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, workspace, &clusterAPI)
+	if err != nil {
+		switch provisionErr := err.(type) {
+		case *metadata.NotReadyError:
+			reqLogger.Info(provisionErr.Message)
+			return reconcile.Result{Requeue: true, RequeueAfter: provisionErr.RequeueAfter}, nil
+		case *metadata.ProvisioningError:
+			reqLogger.Info(fmt.Sprintf("DevWorkspace start failed: %s", provisionErr))
+			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning metadata configmap: %s", provisionErr)
+			return reconcile.Result{}, nil
+		default:
+			return reconcile.Result{}, provisionErr
+		}
+	}
+
 	// Step four: Collect all workspace deployment contributions
+	allPodAdditions := []controllerv1alpha1.PodAdditions{*devfilePodAdditions}
 	routingPodAdditions := routingStatus.PodAdditions
 	if routingPodAdditions != nil {
 		allPodAdditions = append(allPodAdditions, *routingPodAdditions)

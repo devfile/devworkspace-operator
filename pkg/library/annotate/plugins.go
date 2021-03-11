@@ -17,10 +17,6 @@ import (
 	"github.com/devfile/api/v2/pkg/attributes"
 )
 
-const (
-	PluginSourceAttribute = "controller.devfile.io/imported-by"
-)
-
 // AddSourceAttributesForPlugin adds an attribute 'controller.devfile.io/imported-by=sourceID' to all elements of
 // a plugin that support attributes.
 func AddSourceAttributesForPlugin(sourceID string, plugin *dw.DevWorkspaceTemplateSpec) {

@@ -281,6 +281,9 @@ docker-build:
 
 ### docker-push: Push the controller image
 docker-push:
+ifeq ($(IMG),quay.io/devfile/devworkspace-controller:next)
+	@echo -n "Are you sure we want to push $(IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
+endif
 	docker push ${IMG}
 
 ### controller-gen: find or download controller-gen

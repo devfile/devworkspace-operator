@@ -43,7 +43,7 @@ object "templates/base" as base {
   - Create default configmap for
     controller
   - Patch image used for controller
-    and webhook server with ${IMG}
+    and webhook server with ${DWO_IMG}
   --Output--
   Basic controller with no webhooks;
   namespace and namePrefix unconfigured

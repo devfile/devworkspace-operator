@@ -35,7 +35,7 @@ export CI_COMPONENT="devworkspace-operator"
 # DEVWORKSPACE_OPERATOR env var exposed by Openshift CI in e2e test pod. More info about how images are builded in Openshift CI: https://github.com/openshift/ci-tools/blob/master/TEMPLATES.md#parameters-available-to-templates
 # Dependencies environment are defined here: https://github.com/openshift/release/blob/master/ci-operator/config/devfile/devworkspace-operator/devfile-devworkspace-operator-master__v5.yaml#L36-L38
 
-export IMG=${DEVWORKSPACE_OPERATOR}
+export DWO_IMG=${DEVWORKSPACE_OPERATOR}
 
 # Pod created by openshift ci don't have user. Using this envs should avoid errors with git user.
 export GIT_COMMITTER_NAME="CI BOT"

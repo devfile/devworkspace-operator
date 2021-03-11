@@ -44,7 +44,7 @@ The minimum version of cert-manager is `v1.0.4`.
 The controller can be deployed to a cluster provided you are logged in with cluster-admin credentials:
 
 ```bash
-export IMG=quay.io/devfile/devworkspace-controller:next
+export DWO_IMG=quay.io/devfile/devworkspace-controller:next
 make install
 ```
 
@@ -73,7 +73,7 @@ The repository contains a Makefile; building and deploying can be configured via
 
 |variable|purpose|default value|
 |---|---|---|
-| `IMG` | Image used for controller | `quay.io/devfile/devworkspace-controller:next` |
+| `DWO_IMG` | Image used for controller | `quay.io/devfile/devworkspace-controller:next` |
 | `NAMESPACE` | Namespace to use for deploying controller | `devworkspace-controller` |
 | `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |

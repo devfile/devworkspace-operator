@@ -9,8 +9,8 @@ spec:
     spec:
       containers:
       - name: devworkspace-controller
-        image: ${IMG}
+        image: ${DWO_IMG}
         imagePullPolicy: Always
         env:
           - name: RELATED_IMAGE_devworkspace_webhook_server
-            value: ${IMG}
+            value: ${DWO_IMG}

@@ -18,7 +18,7 @@ MAKEFLAGS += --silent
 endif
 
 export NAMESPACE ?= devworkspace-controller
-export IMG ?= quay.io/devfile/devworkspace-controller:next
+export DWO_IMG ?= quay.io/devfile/devworkspace-controller:next
 export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
@@ -61,7 +61,7 @@ endif
 VERSION ?= 0.0.1
 OPERATOR_SDK_VERSION = v1.1.0
 # Default bundle image tag
-BUNDLE_IMG ?= controller-bundle:$(VERSION)
+DWO_BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
 ifneq ($(origin CHANNELS), undefined)
 BUNDLE_CHANNELS := --channels=$(CHANNELS)
@@ -86,7 +86,7 @@ all: help
 _print_vars:
 	@echo "Current env vars:"
 	@echo "    NAMESPACE=$(NAMESPACE)"
-	@echo "    IMG=$(IMG)"
+	@echo "    DWO_IMG=$(DWO_IMG)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
@@ -97,7 +97,7 @@ _create_namespace:
 
 _gen_configuration_env:
 	mkdir -p $(INTERNAL_TMP_DIR)
-	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(IMG)" > $(RELATED_IMAGES_FILE)
+	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(DWO_IMG)" > $(RELATED_IMAGES_FILE)
 ifeq ($(PLATFORM),kubernetes)
 	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" >> $(RELATED_IMAGES_FILE)
 endif
@@ -277,14 +277,16 @@ docker: _print_vars docker-build docker-push
 
 ### docker-build: Build the controller image
 docker-build:
-	docker build . -t ${IMG} -f build/Dockerfile
+	docker build . -t ${DWO_IMG} -f build/Dockerfile
 
 ### docker-push: Push the controller image
 docker-push:
-ifeq ($(IMG),quay.io/devfile/devworkspace-controller:next)
-	@echo -n "Are you sure we want to push $(IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
+ifneq ($(INITIATOR),CI)
+ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
+	@echo -n "Are you sure we want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
 endif
-	docker push ${IMG}
+endif
+	docker push ${DWO_IMG}
 
 ### controller-gen: find or download controller-gen
 # download controller-gen if necessary
@@ -330,8 +332,8 @@ _operator_sdk:
 		else \
 			SDK_VER=$$(operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) && \
 			if [ "$${SDK_VER}" != $(OPERATOR_SDK_VERSION) ]; then \
-				echo "WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $${SDK_VER} found"
-				echo "WARN: Please use the recommended operator-sdk if you face any issue"
+				echo "WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $${SDK_VER} found" \
+				echo "WARN: Please use the recommended operator-sdk if you face any issue" \
 			fi \
 		fi \
 	}
@@ -347,7 +349,7 @@ help: Makefile
 	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-30s -%s\n", $$1, $$2 }'
 	@echo ''
 	@echo 'Supported environment variables:'
-	@echo '    IMG                        - Image used for controller'
+	@echo '    DWO_IMG                    - Image used for controller'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
 	@echo '    KUBECONFIG                 - Kubeconfig which should be used for accessing to the cluster. Currently is: $(KUBECONFIG)'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'

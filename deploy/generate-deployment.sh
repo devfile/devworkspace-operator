@@ -81,7 +81,7 @@ done
 if $USE_DEFAULT_ENV; then
   echo "Using defaults for environment variables"
   export NAMESPACE=devworkspace-controller
-  export IMG=${DEFAULT_IMAGE:-"quay.io/devfile/devworkspace-controller:next"}
+  export DWO_IMG=${DEFAULT_IMAGE:-"quay.io/devfile/devworkspace-controller:next"}
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic
   export DEVWORKSPACE_API_VERSION=aeda60d4361911da85103f224644bfa792498499
@@ -96,7 +96,7 @@ OBJECTS_DIR="objects"
 
 mkdir -p "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
 
-required_vars=(NAMESPACE IMG PULL_POLICY DEFAULT_ROUTING \
+required_vars=(NAMESPACE DWO_IMG PULL_POLICY DEFAULT_ROUTING \
   DEVWORKSPACE_API_VERSION)
 for var in "${required_vars[@]}"; do
   if [ -z "${!var}" ]; then

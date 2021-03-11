@@ -24,6 +24,8 @@ output:
   workspace:
     components:
       - name: web-terminal-plugin
+        attributes:
+          controller.devfile.io/imported-by: "web-terminal"
         container:
           name: test-container
           image: test-image

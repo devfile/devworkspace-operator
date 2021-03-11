@@ -291,7 +291,7 @@ output:
           # contains the vscode-pull-request-github vscode plugin.
           "che-theia.eclipse.org/vscode-extensions":
             - https://github.com/microsoft/vscode-pull-request-github/releases/download/v0.8.0/vscode-pull-request-github-0.8.0.vsix
-
+          controller.devfile.io/imported-by: "che-theia"
         container:
           image: "quay.io/eclipse/che-theia:next"
           env:
@@ -344,6 +344,8 @@ output:
               protocol: http
 
       - name: plugins
+        attributes:
+          controller.devfile.io/imported-by: "che-theia"
         volume: {}
 
       - name: vsx-installer  # Mainly reads the container objects and searches for those
@@ -353,6 +355,7 @@ output:
         attributes:
           "app.kubernetes.io/part-of": che-theia.eclipse.org
           "app.kubernetes.io/component": bootstrapper
+          controller.devfile.io/imported-by: "che-theia"
         container:
           args:
             - /bin/sh
@@ -377,6 +380,8 @@ output:
               name: plugins
 
       - name: remote-endpoint
+        attributes:
+          controller.devfile.io/imported-by: "che-theia"
         volume: {}
           # ephemeral: true                #### We should add it in the Devfile 2.0 spec ! Not critical to implement at start though
 
@@ -384,6 +389,7 @@ output:
         attributes:
           "app.kubernetes.io/part-of": che-theia.eclipse.org
           "app.kubernetes.io/component": bootstrapper
+          controller.devfile.io/imported-by: "che-theia"
         container:                          #### corresponds to `initContainer` definition in old meta.yaml.
           image: "quay.io/eclipse/che-theia-endpoint-runtime-binary:7.20.0"
           volumeMounts:
@@ -400,6 +406,7 @@ output:
           "app.kubernetes.io/name": che-terminal.eclipse.org
           "app.kubernetes.io/part-of": che.eclipse.org
           "app.kubernetes.io/component": terminal
+          controller.devfile.io/imported-by: "machine-exec"
         container:
           image: "quay.io/eclipse/che-machine-exec:7.20.0"
           command: ['/go/bin/che-machine-exec']
@@ -425,6 +432,8 @@ output:
           # contains the typescript vscode plugin.
           "che-theia.eclipse.org/vscode-extensions":
             - https://download.jboss.org/jbosstools/vscode/3rdparty/ms-code.typescript/che-typescript-language-1.35.1.vsix
+
+          controller.devfile.io/imported-by: "typescript"
 
         container:
           image: "quay.io/eclipse/che-sidecar-node:10-0cb5d78"
@@ -455,9 +464,13 @@ output:
 
       # Commands coming from plugin editor
       - id: inject-theia-in-remote-sidecar
+        attributes:
+          controller.devfile.io/imported-by: "che-theia"
         apply:
           component: remote-runtime-injector
       - id: copy-vsx
+        attributes:
+          controller.devfile.io/imported-by: "che-theia"
         apply:
           component: vsx-installer
 

@@ -59,6 +59,8 @@ output:
             - value: '\[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]'
               name: PS1
       - name: web-terminal
+        attributes:
+          controller.devfile.io/imported-by: "web-terminal"
         container:
           image: quay.io/eclipse/che-machine-exec:nightly
           command: ["/go/bin/che-machine-exec",

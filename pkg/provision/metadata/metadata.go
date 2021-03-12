@@ -32,18 +32,15 @@ import (
 )
 
 const (
-	// workspaceMetadataMountPath is where files containing workspace metadata are mounted
-	workspaceMetadataMountPath = "/devworkspace-metadata"
+	// originalYamlFilename is the filename mounted to workspace containers which contains the current DevWorkspace yaml
+	originalYamlFilename = "original.devworkspace.yaml"
 
-	// workspaceMetadataMountPathEnvVar is the name of an env var added to all containers to specify where workspace yamls are mounted.
-	workspaceMetadataMountPathEnvVar = "DEVWORKSPACE_METADATA"
-
-	// workspaceOriginalYamlFilename is the filename mounted to workspace containers which contains the current DevWorkspace yaml
-	workspaceOriginalYamlFilename = "original.devworkspace.yaml"
-
-	// workspaceFlattenedYamlFilename is the filename mounted to workspace containers which contains the flattened (i.e.
+	// flattenedYamlFilename is the filename mounted to workspace containers which contains the flattened (i.e.
 	// resolved plugins and parent) DevWorkspace yaml
-	workspaceFlattenedYamlFilename = "flattened.devworkspace.yaml"
+	flattenedYamlFilename = "flattened.devworkspace.yaml"
+
+	// metadataMountPath is where files containing workspace metadata are mounted
+	metadataMountPath = "/devworkspace-metadata"
 )
 
 // ProvisionWorkspaceMetadata creates a configmap on the cluster that stores metadata about the workspace and configures all
@@ -72,17 +69,11 @@ func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, f
 	podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, *vm)
 
 	for idx := range podAdditions.Containers {
-		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, corev1.EnvVar{
-			Name:  workspaceMetadataMountPathEnvVar,
-			Value: workspaceMetadataMountPath,
-		})
+		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, getWorkspaceMetaEnvVar()...)
 	}
 
 	for idx := range podAdditions.InitContainers {
-		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, corev1.EnvVar{
-			Name:  workspaceMetadataMountPathEnvVar,
-			Value: workspaceMetadataMountPath,
-		})
+		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, getWorkspaceMetaEnvVar()...)
 	}
 
 	return nil
@@ -128,8 +119,8 @@ func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.Con
 			Labels:    constants.ControllerAppLabels(),
 		},
 		Data: map[string]string{
-			workspaceOriginalYamlFilename:  string(originalYaml),
-			workspaceFlattenedYamlFilename: string(flattenedYaml),
+			originalYamlFilename:  string(originalYaml),
+			flattenedYamlFilename: string(flattenedYaml),
 		},
 	}
 
@@ -157,6 +148,6 @@ func getVolumeMountFromVolume(vol *corev1.Volume) *corev1.VolumeMount {
 	return &corev1.VolumeMount{
 		Name:      vol.Name,
 		ReadOnly:  true,
-		MountPath: workspaceMetadataMountPath,
+		MountPath: metadataMountPath,
 	}
 }

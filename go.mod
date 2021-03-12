@@ -15,7 +15,6 @@ require (
 	github.com/google/go-cmp v0.4.0
 	github.com/google/uuid v1.1.1
 	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87
-	gopkg.in/yaml.v2 v2.2.8
 )
 
 require (
@@ -27,6 +26,7 @@ require (
 	k8s.io/apimachinery v0.17.4
 	k8s.io/client-go v12.0.0+incompatible
 	sigs.k8s.io/controller-runtime v0.5.2
+	sigs.k8s.io/yaml v1.1.0
 )
 
 replace (

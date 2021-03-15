@@ -2,12 +2,10 @@ devworkspace-crds
 deploy/templates/crd/bases/workspace.devfile.io_devworkspaces.yaml
 deploy/templates/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml
 deploy/current
-testbin
 .vscode
 __debug_bin
 
 # Ignore cached kustomize for makefile
-.kustomize
 
 # Binaries for programs and plugins
 *.exe

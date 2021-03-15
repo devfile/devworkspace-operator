@@ -106,8 +106,10 @@ for var in "${required_vars[@]}"; do
   fi
 done
 
-KUSTOMIZE_BIN=".kustomize/kustomize"
-if [ ! -f ${KUSTOMIZE_BIN} ]; then
+if [ -z ${KUSTOMIZE} ]; then
+  echo "Required env var KUSTOMIZE not set. Set KUSTOMIZE to point to a kustomize v4.0.5 binary"
+fi
+if [ ! -f ${KUSTOMIZE} ]; then
   echo "Kustomize not found in .kustomize. Run this script using the makefile (make generate_default_deployment)"
   echo "or manually run the 'make _kustomize' rule to initialize kustomize binaries"
   exit 1
@@ -144,10 +146,10 @@ envsubst < "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" > "${SCRI
 
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
-${KUSTOMIZE_BIN} build "${SCRIPT_DIR}/templates/cert-manager" > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
+${KUSTOMIZE} build "${SCRIPT_DIR}/templates/cert-manager" > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "File saved to ${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "Generating config for OpenShift"
-${KUSTOMIZE_BIN} build "${SCRIPT_DIR}/templates/service-ca" > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
+${KUSTOMIZE} build "${SCRIPT_DIR}/templates/service-ca" > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 echo "File saved to ${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
 # Restore backups to not change templates

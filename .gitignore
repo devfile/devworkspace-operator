@@ -6,6 +6,9 @@ testbin
 .vscode
 __debug_bin
 
+# Ignore cached kustomize for makefile
+.kustomize
+
 # Binaries for programs and plugins
 *.exe
 *.exe~

@@ -106,7 +106,14 @@ for var in "${required_vars[@]}"; do
   fi
 done
 
-required_bin=(kustomize envsubst csplit yq)
+KUSTOMIZE_BIN=".kustomize/kustomize"
+if [ ! -f ${KUSTOMIZE_BIN} ]; then
+  echo "Kustomize not found in .kustomize. Run this script using the makefile (make generate_default_deployment)"
+  echo "or manually run the 'make _kustomize' rule to initialize kustomize binaries"
+  exit 1
+fi
+
+required_bin=(envsubst csplit yq)
 for bin in "${required_bin[@]}"; do
   if ! which "$bin" &>/dev/null; then
     echo "ERROR: Program $bin is required for this script"
@@ -137,10 +144,10 @@ envsubst < "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" > "${SCRI
 
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
-kustomize build "${SCRIPT_DIR}/templates/cert-manager" > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
+${KUSTOMIZE_BIN} build "${SCRIPT_DIR}/templates/cert-manager" > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "File saved to ${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "Generating config for OpenShift"
-kustomize build "${SCRIPT_DIR}/templates/service-ca" > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
+${KUSTOMIZE_BIN} build "${SCRIPT_DIR}/templates/service-ca" > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 echo "File saved to ${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
 # Restore backups to not change templates

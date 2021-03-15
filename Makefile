@@ -30,6 +30,8 @@ DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
 INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
+KUSTOMIZE_VER=4.0.5
+KUSTOMIZE=./.kustomize/kustomize
 
 ifeq (,$(shell which kubectl))
 ifeq (,$(shell which oc))
@@ -310,19 +312,16 @@ install_cert_manager:
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
 
 _kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	GOFLAGS="" go get sigs.k8s.io/kustomize/kustomize/v3@v3.5.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
+	mkdir -p .kustomize
+	if [ ! -f .kustomize/kustomize ]; then \
+		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
+			| bash -s $(KUSTOMIZE_VER) .kustomize ;\
+	elif [ $$(.kustomize/kustomize version | grep -o 'Version:[^ ]*') != "Version:kustomize/v$(KUSTOMIZE_VER)" ]; then \
+		echo "Wrong version of kustomize at .kustomize/kustomize. Redownloading." ;\
+		rm .kustomize/kustomize ;\
+		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
+			| bash -s $(KUSTOMIZE_VER) .kustomize ;\
+	fi
 
 _operator_sdk:
 	@{ \

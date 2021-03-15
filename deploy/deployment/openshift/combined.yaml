@@ -24409,7 +24409,30 @@ spec:
           value: quay.io/libpod/busybox:1.30.1
         image: quay.io/devfile/devworkspace-controller:next
         imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 5
+          httpGet:
+            path: /healthz
+            port: liveness-port
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
         name: devworkspace-controller
+        ports:
+        - containerPort: 6789
+          name: liveness-port
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /readyz
+            port: liveness-port
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
         resources:
           limits:
             cpu: 200m

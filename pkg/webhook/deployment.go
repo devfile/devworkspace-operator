@@ -15,20 +15,19 @@ package webhook
 import (
 	"context"
 
+	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/webhook/server"
-
-	"github.com/devfile/devworkspace-operator/internal/images"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 func CreateWebhookServerDeployment(
@@ -104,6 +103,34 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 							Image:           images.GetWebhookServerImage(),
 							Command:         []string{"/usr/local/bin/entrypoint", "/usr/local/bin/webhook-server"},
 							ImagePullPolicy: corev1.PullAlways,
+							LivenessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/healthz",
+										Port:   intstr.FromString("liveness-port"),
+										Scheme: "HTTP",
+									},
+								},
+								InitialDelaySeconds: 15,
+								TimeoutSeconds:      5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    5,
+							},
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/readyz",
+										Port:   intstr.FromString("liveness-port"),
+										Scheme: "HTTP",
+									},
+								},
+								InitialDelaySeconds: 10,
+								TimeoutSeconds:      5,
+								PeriodSeconds:       10,
+								SuccessThreshold:    1,
+								FailureThreshold:    3,
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      server.WebhookServerCertsVolumeName,
@@ -115,6 +142,11 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 								{
 									Name:          server.WebhookServerPortName,
 									ContainerPort: server.WebhookServerPort,
+								},
+								{
+									Name:          "liveness-port",
+									ContainerPort: 6789,
+									Protocol:      corev1.ProtocolTCP,
 								},
 							},
 							Env: []corev1.EnvVar{

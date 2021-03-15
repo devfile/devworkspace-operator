@@ -41,7 +41,8 @@ jobs:
         go mod tidy
         if [[ ! -z $(git status -s) ]]
         then
-          echo "Go mod state is not clean"
+          echo "Go mod state is not clean:"
+          git --no-pager diff
           exit 1
         fi
     -
@@ -54,7 +55,8 @@ jobs:
         make check_fmt
         if [[ $? != 0 ]]
         then
-          echo "not well formatted sources are found"
+          echo "not well formatted sources are found:"
+          git --no-pager diff
           exit 1
         fi
     -
@@ -66,7 +68,8 @@ jobs:
         make generate fmt manifests
         if [[ ! -z $(git status -s) ]]
         then
-          echo "generated sources are not up to date"
+          echo "generated sources are not up to date:"
+          git --no-pager diff
           exit 1
         fi
     -
@@ -74,7 +77,8 @@ jobs:
       run: |
         make generate_default_deployment
         if [[ ! -z $(git status -s) ]]; then
-          echo "Generated deployment files are out of date; run make generate_default_deployment"
+          echo "Generated deployment files are out of date; run make generate_default_deployment:"
+          git --no-pager diff
           exit 1
         fi
     -

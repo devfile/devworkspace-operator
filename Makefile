@@ -31,7 +31,8 @@ INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
 KUSTOMIZE_VER=4.0.5
-KUSTOMIZE=./.kustomize/kustomize
+export KUSTOMIZE_DIR=./bin/kustomize
+export KUSTOMIZE=./bin/kustomize/kustomize
 
 ifeq (,$(shell which kubectl))
 ifeq (,$(shell which oc))
@@ -125,7 +126,7 @@ update_devworkspace_crds:
 ###### End rules for dealing with devfile/api
 
 ### test: Run tests
-ENVTEST_ASSETS_DIR = $(shell pwd)/testbin
+ENVTEST_ASSETS_DIR = $(shell pwd)/bin/testbin
 test: generate fmt vet manifests
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
@@ -312,15 +313,15 @@ install_cert_manager:
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
 
 _kustomize:
-	mkdir -p .kustomize
-	if [ ! -f .kustomize/kustomize ]; then \
+	mkdir -p $(KUSTOMIZE_DIR)
+	if [ ! -f $(KUSTOMIZE) ]; then \
 		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
-			| bash -s $(KUSTOMIZE_VER) .kustomize ;\
-	elif [ $$(.kustomize/kustomize version | grep -o 'Version:[^ ]*') != "Version:kustomize/v$(KUSTOMIZE_VER)" ]; then \
-		echo "Wrong version of kustomize at .kustomize/kustomize. Redownloading." ;\
-		rm .kustomize/kustomize ;\
+			| bash -s $(KUSTOMIZE_VER) $(KUSTOMIZE_DIR) ;\
+	elif [ $$($(KUSTOMIZE) version | grep -o 'Version:[^ ]*') != "Version:kustomize/v$(KUSTOMIZE_VER)" ]; then \
+		echo "Wrong version of kustomize at $(KUSTOMIZE). Redownloading." ;\
+		rm $(KUSTOMIZE) ;\
 		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
-			| bash -s $(KUSTOMIZE_VER) .kustomize ;\
+			| bash -s $(KUSTOMIZE_VER) $(KUSTOMIZE_DIR) ;\
 	fi
 
 _operator_sdk:

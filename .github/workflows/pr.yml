@@ -77,7 +77,9 @@ jobs:
       run: |
         make generate_default_deployment
         if [[ ! -z $(git status -s) ]]; then
-          echo "Generated deployment files are out of date; run make generate_default_deployment:"
+          echo "Generated deployment files are out of date; run make generate_default_deployment."
+          echo " GitHub actions has $(which kustomize) @ $(kustomize version)"
+          echo "Diff: "
           git --no-pager diff
           exit 1
         fi

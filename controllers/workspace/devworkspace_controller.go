@@ -177,8 +177,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
 	if isFinalizerNecessary(workspace) {
-		coputil.AddFinalizer(workspace, pvcCleanupFinalizer)
-		if err := r.Update(ctx, workspace); err != nil {
+		coputil.AddFinalizer(clusterWorkspace, pvcCleanupFinalizer)
+		if err := r.Update(ctx, clusterWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
 	}

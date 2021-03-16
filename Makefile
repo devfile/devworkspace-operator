@@ -30,9 +30,6 @@ DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
 INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
-KUSTOMIZE_VER=4.0.5
-export KUSTOMIZE_DIR=./bin/kustomize
-export KUSTOMIZE=./bin/kustomize/kustomize
 
 ifeq (,$(shell which kubectl))
 ifeq (,$(shell which oc))
@@ -185,11 +182,11 @@ else
 endif
 
 ### generate_deployment: Generate files used for deployment from kustomize templates, using environment variables
-generate_deployment: _kustomize
+generate_deployment:
 	deploy/generate-deployment.sh
 
 ### generate_default_deployment: Generate files used for deployment from kustomize templates with default values
-generate_default_deployment: _kustomize
+generate_default_deployment:
 	deploy/generate-deployment.sh --use-defaults
 
 ### install_plugin_templates: Deploy sample plugin templates to namespace devworkspace-plugins:
@@ -311,18 +308,6 @@ endif
 ### install_cert_manager: install Cert Mananger v1.0.4 on the cluster
 install_cert_manager:
 	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
-
-_kustomize:
-	mkdir -p $(KUSTOMIZE_DIR)
-	if [ ! -f $(KUSTOMIZE) ]; then \
-		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
-			| bash -s $(KUSTOMIZE_VER) $(KUSTOMIZE_DIR) ;\
-	elif [ $$($(KUSTOMIZE) version | grep -o 'Version:[^ ]*') != "Version:kustomize/v$(KUSTOMIZE_VER)" ]; then \
-		echo "Wrong version of kustomize at $(KUSTOMIZE). Redownloading." ;\
-		rm $(KUSTOMIZE) ;\
-		curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
-			| bash -s $(KUSTOMIZE_VER) $(KUSTOMIZE_DIR) ;\
-	fi
 
 _operator_sdk:
 	@{ \

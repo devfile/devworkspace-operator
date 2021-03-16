@@ -94,6 +94,10 @@ OPENSHIFT_DIR="${OUTPUT_DIR}/openshift"
 COMBINED_FILENAME="combined.yaml"
 OBJECTS_DIR="objects"
 
+KUSTOMIZE_VER=4.0.5
+KUSTOMIZE_DIR="${SCRIPT_DIR}/../bin/kustomize"
+KUSTOMIZE=${KUSTOMIZE_DIR}/kustomize
+
 rm -rf $KUBERNETES_DIR $OPENSHIFT_DIR
 mkdir -p "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
 
@@ -105,15 +109,6 @@ for var in "${required_vars[@]}"; do
     exit 1
   fi
 done
-
-if [ -z ${KUSTOMIZE} ]; then
-  echo "Required env var KUSTOMIZE not set. Set KUSTOMIZE to point to a kustomize v4.0.5 binary"
-fi
-if [ ! -f ${KUSTOMIZE} ]; then
-  echo "Kustomize not found in .kustomize. Run this script using the makefile (make generate_default_deployment)"
-  echo "or manually run the 'make _kustomize' rule to initialize kustomize binaries"
-  exit 1
-fi
 
 required_bin=(envsubst csplit yq)
 for bin in "${required_bin[@]}"; do
@@ -130,6 +125,17 @@ else
   # Make sure devfile/api CRDs are present but do not force update
   echo "Checking for devfile/api CRDs"
   ./update_devworkspace_crds.sh --init --api-version "$DEVWORKSPACE_API_VERSION"
+fi
+
+mkdir -p "$KUSTOMIZE_DIR"
+if [ ! -f "$KUSTOMIZE" ]; then
+  curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
+    | bash -s "$KUSTOMIZE_VER" "$KUSTOMIZE_DIR"
+elif [ $("$KUSTOMIZE" version | grep -o 'Version:[^ ]*') != "Version:kustomize/v${KUSTOMIZE_VER}" ]; then
+  echo "Wrong version of kustomize at ${KUSTOMIZE}. Redownloading."
+  rm "$KUSTOMIZE"
+  curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
+    | bash -s "$KUSTOMIZE_VER" "$KUSTOMIZE_DIR"
 fi
 
 # Create backups of templates with env vars

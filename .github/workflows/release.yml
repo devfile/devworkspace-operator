@@ -25,13 +25,11 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.6
-      - name: Setup Kustomize & yq
+      - name: Setup yq
         run: |
           python -m pip install --upgrade pip
           pip install yq
 
-          cd /usr/bin
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/kustomize/v4.0.5/hack/install_kustomize.sh" | bash
           cd ${GITHUB_WORKSPACE}
       - name: Build image, generate deployments and push git tag
         run: |

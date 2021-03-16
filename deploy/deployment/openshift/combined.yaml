@@ -7074,6 +7074,11 @@ spec:
                                     description: Configuration overriding for a Volume
                                       component in a plugin
                                     properties:
+                                      ephemeral:
+                                        description: Ephemeral volumes are not stored
+                                          persistently across restarts. Defaults to
+                                          false
+                                        type: boolean
                                       name:
                                         description: Mandatory name that allows referencing
                                           the Volume component in Container volume
@@ -7124,6 +7129,10 @@ spec:
                           description: Allows specifying the definition of a volume
                             shared by several other components
                           properties:
+                            ephemeral:
+                              description: Ephemeral volumes are not stored persistently
+                                across restarts. Defaults to false
+                              type: boolean
                             name:
                               description: Mandatory name that allows referencing
                                 the Volume component in Container volume mounts or
@@ -8837,6 +8846,11 @@ spec:
                                         description: Configuration overriding for
                                           a Volume component in a plugin
                                         properties:
+                                          ephemeral:
+                                            description: Ephemeral volumes are not
+                                              stored persistently across restarts.
+                                              Defaults to false
+                                            type: boolean
                                           name:
                                             description: Mandatory name that allows
                                               referencing the Volume component in
@@ -8890,6 +8904,10 @@ spec:
                               description: Allows specifying the definition of a volume
                                 shared by several other components
                               properties:
+                                ephemeral:
+                                  description: Ephemeral volumes are not stored persistently
+                                    across restarts. Defaults to false
+                                  type: boolean
                                 name:
                                   description: Mandatory name that allows referencing
                                     the Volume component in Container volume mounts
@@ -9480,6 +9498,10 @@ spec:
               ideUrl:
                 description: URL at which the Worksace Editor can be joined
                 type: string
+              message:
+                description: Message is a short user-readable message giving additional
+                  information about an object's state
+                type: string
               phase:
                 type: string
               workspaceId:
@@ -9502,9 +9524,9 @@ spec:
       jsonPath: .status.phase
       name: Phase
       type: string
-    - description: Url endpoint for accessing workspace
-      jsonPath: .status.ideUrl
-      name: URL
+    - description: Additional information about the workspace
+      jsonPath: .status.message
+      name: Info
       type: string
     name: v1alpha2
     schema:
@@ -9767,6 +9789,8 @@ spec:
                           description: Mandatory identifier that allows referencing
                             this command in composite commands, from a parent, or
                             in events.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         vscodeLaunch:
                           description: Command providing the definition of a VsCode
@@ -9911,6 +9935,10 @@ spec:
                               items:
                                 type: string
                               type: array
+                            cpuLimit:
+                              type: string
+                            cpuRequest:
+                              type: string
                             dedicatedPod:
                               description: "Specify if a container should run in its
                                 own separated pod, instead of running as part of the
@@ -9949,6 +9977,8 @@ spec:
                                     - none
                                     type: string
                                   name:
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: Path of the endpoint URL
@@ -9975,14 +10005,17 @@ spec:
                                       value is `http`"
                                     enum:
                                     - http
+                                    - https
                                     - ws
+                                    - wss
                                     - tcp
                                     - udp
                                     type: string
                                   secure:
                                     description: Describes whether the endpoint should
                                       be secured and protected by some authentication
-                                      process
+                                      process. This requires a protocol of `https`
+                                      or `wss`.
                                     type: boolean
                                   targetPort:
                                     type: integer
@@ -10011,6 +10044,8 @@ spec:
                               type: string
                             memoryLimit:
                               type: string
+                            memoryRequest:
+                              type: string
                             mountSources:
                               description: "Toggles whether or not the project source
                                 code should be mounted in the component. \n Defaults
@@ -10037,6 +10072,8 @@ spec:
                                       containers mount the same volume name then they
                                       will reuse the same volume and will be able
                                       to access to the same files.
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: The path in the component container
@@ -10114,6 +10151,8 @@ spec:
                                     - none
                                     type: string
                                   name:
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: Path of the endpoint URL
@@ -10140,14 +10179,17 @@ spec:
                                       value is `http`"
                                     enum:
                                     - http
+                                    - https
                                     - ws
+                                    - wss
                                     - tcp
                                     - udp
                                     type: string
                                   secure:
                                     description: Describes whether the endpoint should
                                       be secured and protected by some authentication
-                                      process
+                                      process. This requires a protocol of `https`
+                                      or `wss`.
                                     type: boolean
                                   targetPort:
                                     type: integer
@@ -10174,6 +10216,8 @@ spec:
                             component from other elements (such as commands) or from
                             an external devfile that may reference this component
                             through a parent or a plugin.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         openshift:
                           description: Allows importing into the workspace the OpenShift
@@ -10218,6 +10262,8 @@ spec:
                                     - none
                                     type: string
                                   name:
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: Path of the endpoint URL
@@ -10244,14 +10290,17 @@ spec:
                                       value is `http`"
                                     enum:
                                     - http
+                                    - https
                                     - ws
+                                    - wss
                                     - tcp
                                     - udp
                                     type: string
                                   secure:
                                     description: Describes whether the endpoint should
                                       be secured and protected by some authentication
-                                      process
+                                      process. This requires a protocol of `https`
+                                      or `wss`.
                                     type: boolean
                                   targetPort:
                                     type: integer
@@ -10345,6 +10394,11 @@ spec:
                                           UI menus for example
                                         type: string
                                     type: object
+                                  attributes:
+                                    description: Map of implementation-dependant free-form
+                                      YAML attributes.
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
                                   commandType:
                                     description: Type of workspace command
                                     enum:
@@ -10471,6 +10525,8 @@ spec:
                                     description: Mandatory identifier that allows
                                       referencing this command in composite commands,
                                       from a parent, or in events.
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   vscodeLaunch:
                                     description: Command providing the definition
@@ -10579,6 +10635,11 @@ spec:
                                 - required:
                                   - volume
                                 properties:
+                                  attributes:
+                                    description: Map of implementation-dependant free-form
+                                      YAML attributes.
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
                                   componentType:
                                     description: Type of component
                                     enum:
@@ -10610,6 +10671,10 @@ spec:
                                         items:
                                           type: string
                                         type: array
+                                      cpuLimit:
+                                        type: string
+                                      cpuRequest:
+                                        type: string
                                       dedicatedPod:
                                         description: "Specify if a container should
                                           run in its own separated pod, instead of
@@ -10651,6 +10716,8 @@ spec:
                                               - none
                                               type: string
                                             name:
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: Path of the endpoint URL
@@ -10681,14 +10748,18 @@ spec:
                                                 is `http`"
                                               enum:
                                               - http
+                                              - https
                                               - ws
+                                              - wss
                                               - tcp
                                               - udp
                                               type: string
                                             secure:
                                               description: Describes whether the endpoint
                                                 should be secured and protected by
-                                                some authentication process
+                                                some authentication process. This
+                                                requires a protocol of `https` or
+                                                `wss`.
                                               type: boolean
                                             targetPort:
                                               type: integer
@@ -10714,6 +10785,8 @@ spec:
                                       image:
                                         type: string
                                       memoryLimit:
+                                        type: string
+                                      memoryRequest:
                                         type: string
                                       mountSources:
                                         description: "Toggles whether or not the project
@@ -10743,6 +10816,8 @@ spec:
                                                 volume name then they will reuse the
                                                 same volume and will be able to access
                                                 to the same files.
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: The path in the component
@@ -10802,6 +10877,8 @@ spec:
                                               - none
                                               type: string
                                             name:
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: Path of the endpoint URL
@@ -10832,14 +10909,18 @@ spec:
                                                 is `http`"
                                               enum:
                                               - http
+                                              - https
                                               - ws
+                                              - wss
                                               - tcp
                                               - udp
                                               type: string
                                             secure:
                                               description: Describes whether the endpoint
                                                 should be secured and protected by
-                                                some authentication process
+                                                some authentication process. This
+                                                requires a protocol of `https` or
+                                                `wss`.
                                               type: boolean
                                             targetPort:
                                               type: integer
@@ -10866,6 +10947,8 @@ spec:
                                       the component from other elements (such as commands)
                                       or from an external devfile that may reference
                                       this component through a parent or a plugin.
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   openshift:
                                     description: Allows importing into the workspace
@@ -10914,6 +10997,8 @@ spec:
                                               - none
                                               type: string
                                             name:
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: Path of the endpoint URL
@@ -10944,14 +11029,18 @@ spec:
                                                 is `http`"
                                               enum:
                                               - http
+                                              - https
                                               - ws
+                                              - wss
                                               - tcp
                                               - udp
                                               type: string
                                             secure:
                                               description: Describes whether the endpoint
                                                 should be secured and protected by
-                                                some authentication process
+                                                some authentication process. This
+                                                requires a protocol of `https` or
+                                                `wss`.
                                               type: boolean
                                             targetPort:
                                               type: integer
@@ -10977,6 +11066,11 @@ spec:
                                     description: Allows specifying the definition
                                       of a volume shared by several other components
                                     properties:
+                                      ephemeral:
+                                        description: Ephemeral volumes are not stored
+                                          persistently across restarts. Defaults to
+                                          false
+                                        type: boolean
                                       size:
                                         description: Size of the volume
                                         type: string
@@ -11017,6 +11111,10 @@ spec:
                           description: Allows specifying the definition of a volume
                             shared by several other components
                           properties:
+                            ephemeral:
+                              description: Ephemeral volumes are not stored persistently
+                                across restarts. Defaults to false
+                              type: boolean
                             size:
                               description: Size of the volume
                               type: string
@@ -11126,6 +11224,11 @@ spec:
                                     for example
                                   type: string
                               type: object
+                            attributes:
+                              description: Map of implementation-dependant free-form
+                                YAML attributes.
+                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             commandType:
                               description: Type of workspace command
                               enum:
@@ -11249,6 +11352,8 @@ spec:
                               description: Mandatory identifier that allows referencing
                                 this command in composite commands, from a parent,
                                 or in events.
+                              maxLength: 63
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             vscodeLaunch:
                               description: Command providing the definition of a VsCode
@@ -11355,6 +11460,11 @@ spec:
                           - required:
                             - plugin
                           properties:
+                            attributes:
+                              description: Map of implementation-dependant free-form
+                                YAML attributes.
+                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             componentType:
                               description: Type of component
                               enum:
@@ -11386,6 +11496,10 @@ spec:
                                   items:
                                     type: string
                                   type: array
+                                cpuLimit:
+                                  type: string
+                                cpuRequest:
+                                  type: string
                                 dedicatedPod:
                                   description: "Specify if a container should run
                                     in its own separated pod, instead of running as
@@ -11424,6 +11538,8 @@ spec:
                                         - none
                                         type: string
                                       name:
+                                        maxLength: 63
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                         type: string
                                       path:
                                         description: Path of the endpoint URL
@@ -11451,14 +11567,17 @@ spec:
                                           `http`"
                                         enum:
                                         - http
+                                        - https
                                         - ws
+                                        - wss
                                         - tcp
                                         - udp
                                         type: string
                                       secure:
                                         description: Describes whether the endpoint
                                           should be secured and protected by some
-                                          authentication process
+                                          authentication process. This requires a
+                                          protocol of `https` or `wss`.
                                         type: boolean
                                       targetPort:
                                         type: integer
@@ -11484,6 +11603,8 @@ spec:
                                 image:
                                   type: string
                                 memoryLimit:
+                                  type: string
+                                memoryRequest:
                                   type: string
                                 mountSources:
                                   description: "Toggles whether or not the project
@@ -11512,6 +11633,8 @@ spec:
                                           If several containers mount the same volume
                                           name then they will reuse the same volume
                                           and will be able to access to the same files.
+                                        maxLength: 63
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                         type: string
                                       path:
                                         description: The path in the component container
@@ -11567,6 +11690,8 @@ spec:
                                         - none
                                         type: string
                                       name:
+                                        maxLength: 63
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                         type: string
                                       path:
                                         description: Path of the endpoint URL
@@ -11594,14 +11719,17 @@ spec:
                                           `http`"
                                         enum:
                                         - http
+                                        - https
                                         - ws
+                                        - wss
                                         - tcp
                                         - udp
                                         type: string
                                       secure:
                                         description: Describes whether the endpoint
                                           should be secured and protected by some
-                                          authentication process
+                                          authentication process. This requires a
+                                          protocol of `https` or `wss`.
                                         type: boolean
                                       targetPort:
                                         type: integer
@@ -11627,6 +11755,8 @@ spec:
                                 the component from other elements (such as commands)
                                 or from an external devfile that may reference this
                                 component through a parent or a plugin.
+                              maxLength: 63
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             openshift:
                               description: Allows importing into the workspace the
@@ -11671,6 +11801,8 @@ spec:
                                         - none
                                         type: string
                                       name:
+                                        maxLength: 63
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                         type: string
                                       path:
                                         description: Path of the endpoint URL
@@ -11698,14 +11830,17 @@ spec:
                                           `http`"
                                         enum:
                                         - http
+                                        - https
                                         - ws
+                                        - wss
                                         - tcp
                                         - udp
                                         type: string
                                       secure:
                                         description: Describes whether the endpoint
                                           should be secured and protected by some
-                                          authentication process
+                                          authentication process. This requires a
+                                          protocol of `https` or `wss`.
                                         type: boolean
                                       targetPort:
                                         type: integer
@@ -11800,6 +11935,11 @@ spec:
                                               in Editor UI menus for example
                                             type: string
                                         type: object
+                                      attributes:
+                                        description: Map of implementation-dependant
+                                          free-form YAML attributes.
+                                        type: object
+                                        x-kubernetes-preserve-unknown-fields: true
                                       commandType:
                                         description: Type of workspace command
                                         enum:
@@ -11930,6 +12070,8 @@ spec:
                                         description: Mandatory identifier that allows
                                           referencing this command in composite commands,
                                           from a parent, or in events.
+                                        maxLength: 63
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                         type: string
                                       vscodeLaunch:
                                         description: Command providing the definition
@@ -12039,6 +12181,11 @@ spec:
                                     - required:
                                       - volume
                                     properties:
+                                      attributes:
+                                        description: Map of implementation-dependant
+                                          free-form YAML attributes.
+                                        type: object
+                                        x-kubernetes-preserve-unknown-fields: true
                                       componentType:
                                         description: Type of component
                                         enum:
@@ -12071,6 +12218,10 @@ spec:
                                             items:
                                               type: string
                                             type: array
+                                          cpuLimit:
+                                            type: string
+                                          cpuRequest:
+                                            type: string
                                           dedicatedPod:
                                             description: "Specify if a container should
                                               run in its own separated pod, instead
@@ -12114,6 +12265,8 @@ spec:
                                                   - none
                                                   type: string
                                                 name:
+                                                  maxLength: 63
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                                   type: string
                                                 path:
                                                   description: Path of the endpoint
@@ -12148,7 +12301,9 @@ spec:
                                                     `http`"
                                                   enum:
                                                   - http
+                                                  - https
                                                   - ws
+                                                  - wss
                                                   - tcp
                                                   - udp
                                                   type: string
@@ -12156,7 +12311,8 @@ spec:
                                                   description: Describes whether the
                                                     endpoint should be secured and
                                                     protected by some authentication
-                                                    process
+                                                    process. This requires a protocol
+                                                    of `https` or `wss`.
                                                   type: boolean
                                                 targetPort:
                                                   type: integer
@@ -12183,6 +12339,8 @@ spec:
                                           image:
                                             type: string
                                           memoryLimit:
+                                            type: string
+                                          memoryRequest:
                                             type: string
                                           mountSources:
                                             description: "Toggles whether or not the
@@ -12215,6 +12373,8 @@ spec:
                                                     they will reuse the same volume
                                                     and will be able to access to
                                                     the same files.
+                                                  maxLength: 63
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                                   type: string
                                                 path:
                                                   description: The path in the component
@@ -12275,6 +12435,8 @@ spec:
                                                   - none
                                                   type: string
                                                 name:
+                                                  maxLength: 63
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                                   type: string
                                                 path:
                                                   description: Path of the endpoint
@@ -12309,7 +12471,9 @@ spec:
                                                     `http`"
                                                   enum:
                                                   - http
+                                                  - https
                                                   - ws
+                                                  - wss
                                                   - tcp
                                                   - udp
                                                   type: string
@@ -12317,7 +12481,8 @@ spec:
                                                   description: Describes whether the
                                                     endpoint should be secured and
                                                     protected by some authentication
-                                                    process
+                                                    process. This requires a protocol
+                                                    of `https` or `wss`.
                                                   type: boolean
                                                 targetPort:
                                                   type: integer
@@ -12345,6 +12510,8 @@ spec:
                                           as commands) or from an external devfile
                                           that may reference this component through
                                           a parent or a plugin.
+                                        maxLength: 63
+                                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                         type: string
                                       openshift:
                                         description: Allows importing into the workspace
@@ -12394,6 +12561,8 @@ spec:
                                                   - none
                                                   type: string
                                                 name:
+                                                  maxLength: 63
+                                                  pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                                   type: string
                                                 path:
                                                   description: Path of the endpoint
@@ -12428,7 +12597,9 @@ spec:
                                                     `http`"
                                                   enum:
                                                   - http
+                                                  - https
                                                   - ws
+                                                  - wss
                                                   - tcp
                                                   - udp
                                                   type: string
@@ -12436,7 +12607,8 @@ spec:
                                                   description: Describes whether the
                                                     endpoint should be secured and
                                                     protected by some authentication
-                                                    process
+                                                    process. This requires a protocol
+                                                    of `https` or `wss`.
                                                   type: boolean
                                                 targetPort:
                                                   type: integer
@@ -12462,6 +12634,11 @@ spec:
                                         description: Allows specifying the definition
                                           of a volume shared by several other components
                                         properties:
+                                          ephemeral:
+                                            description: Ephemeral volumes are not
+                                              stored persistently across restarts.
+                                              Defaults to false
+                                            type: boolean
                                           size:
                                             description: Size of the volume
                                             type: string
@@ -12501,6 +12678,10 @@ spec:
                               description: Allows specifying the definition of a volume
                                 shared by several other components
                               properties:
+                                ephemeral:
+                                  description: Ephemeral volumes are not stored persistently
+                                    across restarts. Defaults to false
+                                  type: boolean
                                 size:
                                   description: Size of the volume
                                   type: string
@@ -12544,6 +12725,11 @@ spec:
                           - required:
                             - zip
                           properties:
+                            attributes:
+                              description: Map of implementation-dependant free-form
+                                YAML attributes.
+                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             clonePath:
                               description: Path relative to the root of the projects
                                 to which this project should be cloned into. This
@@ -12610,6 +12796,8 @@ spec:
                               type: object
                             name:
                               description: Project name
+                              maxLength: 63
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             sourceType:
                               description: Type of project source
@@ -12651,6 +12839,11 @@ spec:
                           - required:
                             - zip
                           properties:
+                            attributes:
+                              description: Map of implementation-dependant free-form
+                                YAML attributes.
+                              type: object
+                              x-kubernetes-preserve-unknown-fields: true
                             description:
                               description: Description of a starter project
                               type: string
@@ -12712,6 +12905,8 @@ spec:
                               type: object
                             name:
                               description: Project name
+                              maxLength: 63
+                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                               type: string
                             sourceType:
                               description: Type of project source
@@ -12840,6 +13035,8 @@ spec:
                           type: object
                         name:
                           description: Project name
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         sourceType:
                           description: Type of project source
@@ -12962,6 +13159,8 @@ spec:
                           type: object
                         name:
                           description: Project name
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         sourceType:
                           description: Type of project source
@@ -13029,6 +13228,10 @@ spec:
               ideUrl:
                 description: URL at which the Worksace Editor can be joined
                 type: string
+              message:
+                description: Message is a short user-readable message giving additional
+                  information about an object's state
+                type: string
               phase:
                 type: string
               workspaceId:
@@ -13075,6 +13278,8 @@ spec:
     kind: DevWorkspaceTemplate
     listKind: DevWorkspaceTemplateList
     plural: devworkspacetemplates
+    shortNames:
+    - dwt
     singular: devworkspacetemplate
   scope: Namespaced
   versions:
@@ -14646,6 +14851,10 @@ spec:
                                 description: Configuration overriding for a Volume
                                   component in a plugin
                                 properties:
+                                  ephemeral:
+                                    description: Ephemeral volumes are not stored
+                                      persistently across restarts. Defaults to false
+                                    type: boolean
                                   name:
                                     description: Mandatory name that allows referencing
                                       the Volume component in Container volume mounts
@@ -14696,6 +14905,10 @@ spec:
                       description: Allows specifying the definition of a volume shared
                         by several other components
                       properties:
+                        ephemeral:
+                          description: Ephemeral volumes are not stored persistently
+                            across restarts. Defaults to false
+                          type: boolean
                         name:
                           description: Mandatory name that allows referencing the
                             Volume component in Container volume mounts or inside
@@ -16350,6 +16563,11 @@ spec:
                                     description: Configuration overriding for a Volume
                                       component in a plugin
                                     properties:
+                                      ephemeral:
+                                        description: Ephemeral volumes are not stored
+                                          persistently across restarts. Defaults to
+                                          false
+                                        type: boolean
                                       name:
                                         description: Mandatory name that allows referencing
                                           the Volume component in Container volume
@@ -16400,6 +16618,10 @@ spec:
                           description: Allows specifying the definition of a volume
                             shared by several other components
                           properties:
+                            ephemeral:
+                              description: Ephemeral volumes are not stored persistently
+                                across restarts. Defaults to false
+                              type: boolean
                             name:
                               description: Mandatory name that allows referencing
                                 the Volume component in Container volume mounts or
@@ -17176,6 +17398,8 @@ spec:
                     id:
                       description: Mandatory identifier that allows referencing this
                         command in composite commands, from a parent, or in events.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     vscodeLaunch:
                       description: Command providing the definition of a VsCode launch
@@ -17316,6 +17540,10 @@ spec:
                           items:
                             type: string
                           type: array
+                        cpuLimit:
+                          type: string
+                        cpuRequest:
+                          type: string
                         dedicatedPod:
                           description: "Specify if a container should run in its own
                             separated pod, instead of running as part of the main
@@ -17351,6 +17579,8 @@ spec:
                                 - none
                                 type: string
                               name:
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: Path of the endpoint URL
@@ -17375,14 +17605,17 @@ spec:
                                   an application protocol. \n Default value is `http`"
                                 enum:
                                 - http
+                                - https
                                 - ws
+                                - wss
                                 - tcp
                                 - udp
                                 type: string
                               secure:
                                 description: Describes whether the endpoint should
                                   be secured and protected by some authentication
-                                  process
+                                  process. This requires a protocol of `https` or
+                                  `wss`.
                                 type: boolean
                               targetPort:
                                 type: integer
@@ -17410,6 +17643,8 @@ spec:
                           type: string
                         memoryLimit:
                           type: string
+                        memoryRequest:
+                          type: string
                         mountSources:
                           description: "Toggles whether or not the project source
                             code should be mounted in the component. \n Defaults to
@@ -17436,6 +17671,8 @@ spec:
                                   mount the same volume name then they will reuse
                                   the same volume and will be able to access to the
                                   same files.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: The path in the component container where
@@ -17511,6 +17748,8 @@ spec:
                                 - none
                                 type: string
                               name:
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: Path of the endpoint URL
@@ -17535,14 +17774,17 @@ spec:
                                   an application protocol. \n Default value is `http`"
                                 enum:
                                 - http
+                                - https
                                 - ws
+                                - wss
                                 - tcp
                                 - udp
                                 type: string
                               secure:
                                 description: Describes whether the endpoint should
                                   be secured and protected by some authentication
-                                  process
+                                  process. This requires a protocol of `https` or
+                                  `wss`.
                                 type: boolean
                               targetPort:
                                 type: integer
@@ -17569,6 +17811,8 @@ spec:
                         from other elements (such as commands) or from an external
                         devfile that may reference this component through a parent
                         or a plugin.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     openshift:
                       description: Allows importing into the workspace the OpenShift
@@ -17611,6 +17855,8 @@ spec:
                                 - none
                                 type: string
                               name:
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               path:
                                 description: Path of the endpoint URL
@@ -17635,14 +17881,17 @@ spec:
                                   an application protocol. \n Default value is `http`"
                                 enum:
                                 - http
+                                - https
                                 - ws
+                                - wss
                                 - tcp
                                 - udp
                                 type: string
                               secure:
                                 description: Describes whether the endpoint should
                                   be secured and protected by some authentication
-                                  process
+                                  process. This requires a protocol of `https` or
+                                  `wss`.
                                 type: boolean
                               targetPort:
                                 type: integer
@@ -17735,6 +17984,11 @@ spec:
                                       for example
                                     type: string
                                 type: object
+                              attributes:
+                                description: Map of implementation-dependant free-form
+                                  YAML attributes.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
                               commandType:
                                 description: Type of workspace command
                                 enum:
@@ -17859,6 +18113,8 @@ spec:
                                 description: Mandatory identifier that allows referencing
                                   this command in composite commands, from a parent,
                                   or in events.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               vscodeLaunch:
                                 description: Command providing the definition of a
@@ -17965,6 +18221,11 @@ spec:
                             - required:
                               - volume
                             properties:
+                              attributes:
+                                description: Map of implementation-dependant free-form
+                                  YAML attributes.
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
                               componentType:
                                 description: Type of component
                                 enum:
@@ -17995,6 +18256,10 @@ spec:
                                     items:
                                       type: string
                                     type: array
+                                  cpuLimit:
+                                    type: string
+                                  cpuRequest:
+                                    type: string
                                   dedicatedPod:
                                     description: "Specify if a container should run
                                       in its own separated pod, instead of running
@@ -18033,6 +18298,8 @@ spec:
                                           - none
                                           type: string
                                         name:
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: Path of the endpoint URL
@@ -18061,14 +18328,17 @@ spec:
                                             is `http`"
                                           enum:
                                           - http
+                                          - https
                                           - ws
+                                          - wss
                                           - tcp
                                           - udp
                                           type: string
                                         secure:
                                           description: Describes whether the endpoint
                                             should be secured and protected by some
-                                            authentication process
+                                            authentication process. This requires
+                                            a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
                                           type: integer
@@ -18094,6 +18364,8 @@ spec:
                                   image:
                                     type: string
                                   memoryLimit:
+                                    type: string
+                                  memoryRequest:
                                     type: string
                                   mountSources:
                                     description: "Toggles whether or not the project
@@ -18123,6 +18395,8 @@ spec:
                                             name then they will reuse the same volume
                                             and will be able to access to the same
                                             files.
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: The path in the component container
@@ -18178,6 +18452,8 @@ spec:
                                           - none
                                           type: string
                                         name:
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: Path of the endpoint URL
@@ -18206,14 +18482,17 @@ spec:
                                             is `http`"
                                           enum:
                                           - http
+                                          - https
                                           - ws
+                                          - wss
                                           - tcp
                                           - udp
                                           type: string
                                         secure:
                                           description: Describes whether the endpoint
                                             should be secured and protected by some
-                                            authentication process
+                                            authentication process. This requires
+                                            a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
                                           type: integer
@@ -18240,6 +18519,8 @@ spec:
                                   the component from other elements (such as commands)
                                   or from an external devfile that may reference this
                                   component through a parent or a plugin.
+                                maxLength: 63
+                                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                 type: string
                               openshift:
                                 description: Allows importing into the workspace the
@@ -18284,6 +18565,8 @@ spec:
                                           - none
                                           type: string
                                         name:
+                                          maxLength: 63
+                                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                           type: string
                                         path:
                                           description: Path of the endpoint URL
@@ -18312,14 +18595,17 @@ spec:
                                             is `http`"
                                           enum:
                                           - http
+                                          - https
                                           - ws
+                                          - wss
                                           - tcp
                                           - udp
                                           type: string
                                         secure:
                                           description: Describes whether the endpoint
                                             should be secured and protected by some
-                                            authentication process
+                                            authentication process. This requires
+                                            a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
                                           type: integer
@@ -18345,6 +18631,10 @@ spec:
                                 description: Allows specifying the definition of a
                                   volume shared by several other components
                                 properties:
+                                  ephemeral:
+                                    description: Ephemeral volumes are not stored
+                                      persistently across restarts. Defaults to false
+                                    type: boolean
                                   size:
                                     description: Size of the volume
                                     type: string
@@ -18385,6 +18675,10 @@ spec:
                       description: Allows specifying the definition of a volume shared
                         by several other components
                       properties:
+                        ephemeral:
+                          description: Ephemeral volumes are not stored persistently
+                            across restarts. Defaults to false
+                          type: boolean
                         size:
                           description: Size of the volume
                           type: string
@@ -18490,6 +18784,11 @@ spec:
                                 this command to be used in Editor UI menus for example
                               type: string
                           type: object
+                        attributes:
+                          description: Map of implementation-dependant free-form YAML
+                            attributes.
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         commandType:
                           description: Type of workspace command
                           enum:
@@ -18608,6 +18907,8 @@ spec:
                           description: Mandatory identifier that allows referencing
                             this command in composite commands, from a parent, or
                             in events.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         vscodeLaunch:
                           description: Command providing the definition of a VsCode
@@ -18710,6 +19011,11 @@ spec:
                       - required:
                         - plugin
                       properties:
+                        attributes:
+                          description: Map of implementation-dependant free-form YAML
+                            attributes.
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         componentType:
                           description: Type of component
                           enum:
@@ -18741,6 +19047,10 @@ spec:
                               items:
                                 type: string
                               type: array
+                            cpuLimit:
+                              type: string
+                            cpuRequest:
+                              type: string
                             dedicatedPod:
                               description: "Specify if a container should run in its
                                 own separated pod, instead of running as part of the
@@ -18778,6 +19088,8 @@ spec:
                                     - none
                                     type: string
                                   name:
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: Path of the endpoint URL
@@ -18803,14 +19115,17 @@ spec:
                                       value is `http`"
                                     enum:
                                     - http
+                                    - https
                                     - ws
+                                    - wss
                                     - tcp
                                     - udp
                                     type: string
                                   secure:
                                     description: Describes whether the endpoint should
                                       be secured and protected by some authentication
-                                      process
+                                      process. This requires a protocol of `https`
+                                      or `wss`.
                                     type: boolean
                                   targetPort:
                                     type: integer
@@ -18837,6 +19152,8 @@ spec:
                               type: string
                             memoryLimit:
                               type: string
+                            memoryRequest:
+                              type: string
                             mountSources:
                               description: "Toggles whether or not the project source
                                 code should be mounted in the component. \n Defaults
@@ -18862,6 +19179,8 @@ spec:
                                       containers mount the same volume name then they
                                       will reuse the same volume and will be able
                                       to access to the same files.
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: The path in the component container
@@ -18915,6 +19234,8 @@ spec:
                                     - none
                                     type: string
                                   name:
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: Path of the endpoint URL
@@ -18940,14 +19261,17 @@ spec:
                                       value is `http`"
                                     enum:
                                     - http
+                                    - https
                                     - ws
+                                    - wss
                                     - tcp
                                     - udp
                                     type: string
                                   secure:
                                     description: Describes whether the endpoint should
                                       be secured and protected by some authentication
-                                      process
+                                      process. This requires a protocol of `https`
+                                      or `wss`.
                                     type: boolean
                                   targetPort:
                                     type: integer
@@ -18973,6 +19297,8 @@ spec:
                             component from other elements (such as commands) or from
                             an external devfile that may reference this component
                             through a parent or a plugin.
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         openshift:
                           description: Allows importing into the workspace the OpenShift
@@ -19016,6 +19342,8 @@ spec:
                                     - none
                                     type: string
                                   name:
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   path:
                                     description: Path of the endpoint URL
@@ -19041,14 +19369,17 @@ spec:
                                       value is `http`"
                                     enum:
                                     - http
+                                    - https
                                     - ws
+                                    - wss
                                     - tcp
                                     - udp
                                     type: string
                                   secure:
                                     description: Describes whether the endpoint should
                                       be secured and protected by some authentication
-                                      process
+                                      process. This requires a protocol of `https`
+                                      or `wss`.
                                     type: boolean
                                   targetPort:
                                     type: integer
@@ -19141,6 +19472,11 @@ spec:
                                           UI menus for example
                                         type: string
                                     type: object
+                                  attributes:
+                                    description: Map of implementation-dependant free-form
+                                      YAML attributes.
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
                                   commandType:
                                     description: Type of workspace command
                                     enum:
@@ -19267,6 +19603,8 @@ spec:
                                     description: Mandatory identifier that allows
                                       referencing this command in composite commands,
                                       from a parent, or in events.
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   vscodeLaunch:
                                     description: Command providing the definition
@@ -19375,6 +19713,11 @@ spec:
                                 - required:
                                   - volume
                                 properties:
+                                  attributes:
+                                    description: Map of implementation-dependant free-form
+                                      YAML attributes.
+                                    type: object
+                                    x-kubernetes-preserve-unknown-fields: true
                                   componentType:
                                     description: Type of component
                                     enum:
@@ -19406,6 +19749,10 @@ spec:
                                         items:
                                           type: string
                                         type: array
+                                      cpuLimit:
+                                        type: string
+                                      cpuRequest:
+                                        type: string
                                       dedicatedPod:
                                         description: "Specify if a container should
                                           run in its own separated pod, instead of
@@ -19447,6 +19794,8 @@ spec:
                                               - none
                                               type: string
                                             name:
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: Path of the endpoint URL
@@ -19477,14 +19826,18 @@ spec:
                                                 is `http`"
                                               enum:
                                               - http
+                                              - https
                                               - ws
+                                              - wss
                                               - tcp
                                               - udp
                                               type: string
                                             secure:
                                               description: Describes whether the endpoint
                                                 should be secured and protected by
-                                                some authentication process
+                                                some authentication process. This
+                                                requires a protocol of `https` or
+                                                `wss`.
                                               type: boolean
                                             targetPort:
                                               type: integer
@@ -19510,6 +19863,8 @@ spec:
                                       image:
                                         type: string
                                       memoryLimit:
+                                        type: string
+                                      memoryRequest:
                                         type: string
                                       mountSources:
                                         description: "Toggles whether or not the project
@@ -19539,6 +19894,8 @@ spec:
                                                 volume name then they will reuse the
                                                 same volume and will be able to access
                                                 to the same files.
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: The path in the component
@@ -19598,6 +19955,8 @@ spec:
                                               - none
                                               type: string
                                             name:
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: Path of the endpoint URL
@@ -19628,14 +19987,18 @@ spec:
                                                 is `http`"
                                               enum:
                                               - http
+                                              - https
                                               - ws
+                                              - wss
                                               - tcp
                                               - udp
                                               type: string
                                             secure:
                                               description: Describes whether the endpoint
                                                 should be secured and protected by
-                                                some authentication process
+                                                some authentication process. This
+                                                requires a protocol of `https` or
+                                                `wss`.
                                               type: boolean
                                             targetPort:
                                               type: integer
@@ -19662,6 +20025,8 @@ spec:
                                       the component from other elements (such as commands)
                                       or from an external devfile that may reference
                                       this component through a parent or a plugin.
+                                    maxLength: 63
+                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                     type: string
                                   openshift:
                                     description: Allows importing into the workspace
@@ -19710,6 +20075,8 @@ spec:
                                               - none
                                               type: string
                                             name:
+                                              maxLength: 63
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                                               type: string
                                             path:
                                               description: Path of the endpoint URL
@@ -19740,14 +20107,18 @@ spec:
                                                 is `http`"
                                               enum:
                                               - http
+                                              - https
                                               - ws
+                                              - wss
                                               - tcp
                                               - udp
                                               type: string
                                             secure:
                                               description: Describes whether the endpoint
                                                 should be secured and protected by
-                                                some authentication process
+                                                some authentication process. This
+                                                requires a protocol of `https` or
+                                                `wss`.
                                               type: boolean
                                             targetPort:
                                               type: integer
@@ -19773,6 +20144,11 @@ spec:
                                     description: Allows specifying the definition
                                       of a volume shared by several other components
                                     properties:
+                                      ephemeral:
+                                        description: Ephemeral volumes are not stored
+                                          persistently across restarts. Defaults to
+                                          false
+                                        type: boolean
                                       size:
                                         description: Size of the volume
                                         type: string
@@ -19811,6 +20187,10 @@ spec:
                           description: Allows specifying the definition of a volume
                             shared by several other components
                           properties:
+                            ephemeral:
+                              description: Ephemeral volumes are not stored persistently
+                                across restarts. Defaults to false
+                              type: boolean
                             size:
                               description: Size of the volume
                               type: string
@@ -19853,6 +20233,11 @@ spec:
                       - required:
                         - zip
                       properties:
+                        attributes:
+                          description: Map of implementation-dependant free-form YAML
+                            attributes.
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         clonePath:
                           description: Path relative to the root of the projects to
                             which this project should be cloned into. This is a unix-style
@@ -19917,6 +20302,8 @@ spec:
                           type: object
                         name:
                           description: Project name
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         sourceType:
                           description: Type of project source
@@ -19958,6 +20345,11 @@ spec:
                       - required:
                         - zip
                       properties:
+                        attributes:
+                          description: Map of implementation-dependant free-form YAML
+                            attributes.
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
                         description:
                           description: Description of a starter project
                           type: string
@@ -20017,6 +20409,8 @@ spec:
                           type: object
                         name:
                           description: Project name
+                          maxLength: 63
+                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                         sourceType:
                           description: Type of project source
@@ -20138,6 +20532,8 @@ spec:
                       type: object
                     name:
                       description: Project name
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     sourceType:
                       description: Type of project source
@@ -20253,6 +20649,8 @@ spec:
                       type: object
                     name:
                       description: Project name
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                     sourceType:
                       description: Type of project source

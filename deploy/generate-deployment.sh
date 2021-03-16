@@ -84,7 +84,7 @@ if $USE_DEFAULT_ENV; then
   export DWO_IMG=${DEFAULT_IMAGE:-"quay.io/devfile/devworkspace-controller:next"}
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic
-  export DEVWORKSPACE_API_VERSION=aeda60d4361911da85103f224644bfa792498499
+  export DEVWORKSPACE_API_VERSION=283b0c54946e9fea9872c25e1e086c303688f0e8
   export ROUTING_SUFFIX=""
   export FORCE_DEVWORKSPACE_CRDS_UPDATE=true
 fi

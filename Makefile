@@ -174,11 +174,11 @@ debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworksp
 		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
-install: _print_vars _init_devworkspace_crds _create_namespace generate_deployment
+install: _check_cert_manager _print_vars _init_devworkspace_crds _create_namespace generate_deployment
 ifeq ($(PLATFORM),kubernetes)
-	$(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml || true
+	$(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml
 else
-	$(K8S_CLI) apply -f deploy/current/openshift/combined.yaml || true
+	$(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
 endif
 
 ### generate_deployment: Generate files used for deployment from kustomize templates, using environment variables
@@ -325,6 +325,14 @@ _operator_sdk:
 ifneq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
 	@echo 'WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found.'
 	@echo 'WARN: Please use the recommended operator-sdk if you face any issue.'
+endif
+
+_check_cert_manager:
+ifeq ($(PLATFORM),kubernetes)
+	if ! ${K8S_CLI} api-versions | grep -q '^cert-manager.io/v1$$' ; then \
+		echo "Cert-manager is required for deploying on Kubernetes. See 'make install_cert_manager'" ;\
+		exit 1 ;\
+	fi
 endif
 
 .PHONY: help

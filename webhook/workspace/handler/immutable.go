@@ -14,7 +14,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	devworkspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	devworkspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -31,13 +30,13 @@ import (
 
 const serviceCAUsername = "system:serviceaccount:openshift-service-ca:service-ca"
 
-// RestrictedAccessDiffOptions is comparing options that should be used to check if there is no other changes except changing started
+// RestrictedAccessDiffOptions is comparing options that should be used to check for changes to a devworkspace. Changing
+// the .spec.started field is permitted. Note: Does not check metadata; use checkRestrictedWorkspaceMetadata for this.
 var RestrictedAccessDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
-	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields", "Finalizers", "DeletionTimestamp"),
+	cmpopts.IgnoreTypes(metav1.ObjectMeta{}),
 	cmpopts.IgnoreFields(devworkspacev1alpha1.DevWorkspaceSpec{}, "Started"),
 	cmpopts.IgnoreFields(devworkspacev1alpha2.DevWorkspaceSpec{}, "Started"),
-	cmpopts.IgnoreMapEntries(func(key string, value string) bool { return key == constants.WorkspaceStopReasonAnnotation }),
 }
 
 func (h *WebhookHandler) HandleRestrictedAccessUpdate(_ context.Context, req admission.Request) admission.Response {
@@ -93,31 +92,31 @@ func (h *WebhookHandler) HandleRestrictedAccessCreate(_ context.Context, req adm
 }
 
 func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp *devworkspacev1alpha1.DevWorkspace, uid string) (allowed bool, msg string) {
-	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[constants.WorkspaceCreatorLabel],
-		oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation],
-		uid,
-		func() bool { return cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) })
-}
-
-func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
-	return h.checkRestrictedAccessWorkspace(oldWksp.Labels[constants.WorkspaceCreatorLabel],
-		oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation],
-		uid,
-		func() bool { return cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) })
-}
-
-func (h *WebhookHandler) checkRestrictedAccessWorkspace(creatorUID, restrictedAccess, uid string, isStartedStopped func() bool) (allowed bool, msg string) {
-	if restrictedAccess != "true" {
+	if oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
 		return true, "workspace does not have restricted access configured"
 	}
+	creatorUID := oldWksp.Labels[constants.WorkspaceCreatorLabel]
 	if uid == creatorUID || uid == h.ControllerUID {
 		return true, "workspace with restricted-access is updated by owner or controller"
 	}
-	if isStartedStopped() {
-		return true, "workspace with restricted-access workspace is started/stopped"
+	if !cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) {
+		return false, "workspace has restricted-access enabled and can only be modified by its creator."
 	}
-	log.Info(fmt.Sprintf("Denied request on workspace resource by user %s", uid))
-	return false, "workspace has restricted-access enabled and can only be modified by its creator."
+	return checkRestrictedWorkspaceMetadata(&oldWksp.ObjectMeta, &newWksp.ObjectMeta)
+}
+
+func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *devworkspacev1alpha2.DevWorkspace, uid string) (allowed bool, msg string) {
+	if oldWksp.Annotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
+		return true, "workspace does not have restricted access configured"
+	}
+	creatorUID := oldWksp.Labels[constants.WorkspaceCreatorLabel]
+	if uid == creatorUID || uid == h.ControllerUID {
+		return true, "workspace with restricted-access is updated by owner or controller"
+	}
+	if !cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) {
+		return false, "workspace has restricted-access enabled and can only be modified by its creator."
+	}
+	return checkRestrictedWorkspaceMetadata(&oldWksp.ObjectMeta, &newWksp.ObjectMeta)
 }
 
 func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid string) (allowed bool, msg string) {
@@ -164,6 +163,17 @@ func (h *WebhookHandler) checkRestrictedAccessAnnotation(req admission.Request) 
 	return annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true", nil
 }
 
+func checkRestrictedWorkspaceMetadata(oldMeta, newMeta *metav1.ObjectMeta) (allowed bool, msg string) {
+	if oldMeta.Labels[constants.WorkspaceCreatorLabel] != newMeta.Labels[constants.WorkspaceCreatorLabel] {
+		return false, "cannot update controller.devfile.io/creator label"
+	}
+	if oldMeta.Annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
+		newMeta.Annotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
+		return false, "cannot disable restricted-access once it is set"
+	}
+	return true, "permitted change to workspace"
+}
+
 func changePermitted(oldObj, newObj runtime.Object) bool {
 	oldCopy := oldObj.DeepCopyObject()
 	newCopy := newObj.DeepCopyObject()
@@ -177,7 +187,14 @@ func changePermitted(oldObj, newObj runtime.Object) bool {
 		log.Error(fmt.Errorf("Object %s is not a valid k8s object: does not have metadata", newObj.GetObjectKind()), "Failed to compare objects")
 		return false
 	}
-	newMeta.SetFinalizers(oldMeta.GetFinalizers())
-	newMeta.SetDeletionTimestamp(oldMeta.GetDeletionTimestamp())
-	return reflect.DeepEqual(oldMeta, newMeta)
+	oldLabels, newLabels := oldMeta.GetLabels(), newMeta.GetLabels()
+	oldAnnotations, newAnnotations := oldMeta.GetAnnotations(), newMeta.GetAnnotations()
+	if oldLabels[constants.WorkspaceCreatorLabel] != newLabels[constants.WorkspaceCreatorLabel] {
+		return false
+	}
+	if oldAnnotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
+		newAnnotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
+		return false
+	}
+	return true
 }

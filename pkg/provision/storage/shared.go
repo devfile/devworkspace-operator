@@ -104,6 +104,23 @@ func syncCommonPVC(namespace string, clusterAPI provision.ClusterAPI) (*corev1.P
 	return currPVC, nil
 }
 
+// addEphemeralVolumesFromWorkspace adds emptyDir volumes for all ephemeral volume components required for a devworkspace.
+// This includes any volume components marked with the ephemeral field, including projects.
+// Returns a ProvisioningError if any ephemeral volume cannot be parsed (e.g. cannot parse size for kubernetes)
+func addEphemeralVolumesFromWorkspace(workspace *dw.DevWorkspace, podAdditions *v1alpha1.PodAdditions) error {
+	_, ephemeralVolumes, projectsVolume := getWorkspaceVolumes(workspace)
+	_, err := addEphemeralVolumesToPodAdditions(podAdditions, ephemeralVolumes)
+	if err != nil {
+		return &ProvisioningError{Message: "Failed to add ephemeral volumes to workspace", Err: err}
+	}
+	if projectsVolume != nil && projectsVolume.Volume.Ephemeral {
+		if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume}); err != nil {
+			return &ProvisioningError{Message: "Failed to add projects volume to workspace", Err: err}
+		}
+	}
+	return nil
+}
+
 // addEphemeralVolumesToPodAdditions adds emptyDir volumes to podAdditions for each volume in workspaceVolumes.
 // Returns a non-nil error if the size field of a volume is unparseable; otherwise, the list of k8s volumes that
 // were added are returned.

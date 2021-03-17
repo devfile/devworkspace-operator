@@ -38,15 +38,8 @@ func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplate
 
 func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
 	// Add ephemeral volumes
-	_, ephemeralVolumes, projectsVolume := getWorkspaceVolumes(workspace)
-	_, err := addEphemeralVolumesToPodAdditions(podAdditions, ephemeralVolumes)
-	if err != nil {
-		return &ProvisioningError{Message: "Failed to add ephemeral volumes to workspace", Err: err}
-	}
-	if projectsVolume != nil && projectsVolume.Volume.Ephemeral {
-		if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume}); err != nil {
-			return &ProvisioningError{Message: "Failed to add projects volume to workspace", Err: err}
-		}
+	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
+		return err
 	}
 
 	// If persistent storage is not needed, we're done
@@ -54,12 +47,10 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		return nil
 	}
 
-	err = p.rewriteContainerVolumeMounts(workspace.Status.WorkspaceId, podAdditions, &workspace.Spec.Template)
-	if err != nil {
+	if err := p.rewriteContainerVolumeMounts(workspace.Status.WorkspaceId, podAdditions, &workspace.Spec.Template); err != nil {
 		return err
 	}
-	_, err = syncCommonPVC(workspace.Namespace, clusterAPI)
-	if err != nil {
+	if _, err := syncCommonPVC(workspace.Namespace, clusterAPI); err != nil {
 		return err
 	}
 	return nil

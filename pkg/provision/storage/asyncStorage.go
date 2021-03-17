@@ -56,15 +56,8 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	}
 
 	// Add ephemeral volumes
-	_, ephemeralVolumes, projectsVolume := getWorkspaceVolumes(workspace)
-	_, err = addEphemeralVolumesToPodAdditions(podAdditions, ephemeralVolumes)
-	if err != nil {
-		return &ProvisioningError{Message: "Failed to add ephemeral volumes to workspace", Err: err}
-	}
-	if projectsVolume != nil && projectsVolume.Volume.Ephemeral {
-		if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume}); err != nil {
-			return &ProvisioningError{Message: "Failed to add projects volume to workspace", Err: err}
-		}
+	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
+		return err
 	}
 
 	// If persistent storage is not needed, we're done

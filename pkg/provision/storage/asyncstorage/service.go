@@ -67,9 +67,9 @@ func getWorkspaceSyncServiceSpec(asyncDeploy *appsv1.Deployment) *corev1.Service
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "rsync-port",
-					Port:       2222,
+					Port:       rsyncPort,
 					Protocol:   corev1.ProtocolTCP,
-					TargetPort: intstr.FromInt(2222),
+					TargetPort: intstr.FromInt(rsyncPort),
 				},
 			},
 			Selector: asyncDeploy.Spec.Selector.MatchLabels,

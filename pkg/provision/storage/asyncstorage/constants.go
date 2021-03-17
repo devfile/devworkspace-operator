@@ -13,7 +13,8 @@
 package asyncstorage
 
 const (
-	sshServerPort             = 2222
+	rsyncPortStr              = "2222"
+	rsyncPort                 = 2222
 	asyncServerServiceName    = "async-storage"
 	asyncSidecarContainerName = "async-storage-sidecar"
 	asyncSecretVolumeName     = "async-storage-ssh"

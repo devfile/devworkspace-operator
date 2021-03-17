@@ -88,7 +88,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 							Image: "quay.io/eclipse/che-workspace-data-sync-storage:0.0.1",
 							Ports: []corev1.ContainerPort{
 								{
-									ContainerPort: sshServerPort,
+									ContainerPort: rsyncPort,
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},

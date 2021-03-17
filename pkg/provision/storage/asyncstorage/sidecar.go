@@ -51,7 +51,7 @@ func GetAsyncSidecar(sshVolumeName string, volumes []corev1.Volume) *corev1.Cont
 		Env: []corev1.EnvVar{
 			{
 				Name:  "RSYNC_PORT",
-				Value: "2222",
+				Value: rsyncPortStr,
 			},
 		},
 		Resources: corev1.ResourceRequirements{

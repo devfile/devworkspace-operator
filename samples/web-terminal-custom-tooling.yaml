@@ -24,3 +24,8 @@ spec:
           env:
             - name: PS1
               value: \[\e[34m\]>\[\e[m\]\[\e[33m\]>\[\e[m\]
+          volumeMounts:
+            - name: home-storage
+              path: "/home/user"
+      - volume:
+          name: home-storage

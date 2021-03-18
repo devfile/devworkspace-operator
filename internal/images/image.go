@@ -39,6 +39,8 @@ const (
 	webhookServerImageEnvVar            = "RELATED_IMAGE_devworkspace_webhook_server"
 	webhookKubernetesCertJobImageEnvVar = "RELATED_IMAGE_default_tls_secrets_creation_job"
 	pvcCleanupJobImageEnvVar            = "RELATED_IMAGE_pvc_cleanup_job"
+	asyncStorageServerImageEnvVar       = "RELATED_IMAGE_async_storage_server"
+	asyncStorageSidecarImageEnvVar      = "RELATED_IMAGE_async_storage_sidecar"
 )
 
 // GetWebhookServerImage returns the image reference for the webhook server image. Returns
@@ -92,6 +94,24 @@ func GetPVCCleanupJobImage() string {
 	val, ok := os.LookupEnv(pvcCleanupJobImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", pvcCleanupJobImageEnvVar), "Could not get PVC cleanup job image")
+		return ""
+	}
+	return val
+}
+
+func GetAsyncStorageServerImage() string {
+	val, ok := os.LookupEnv(asyncStorageServerImageEnvVar)
+	if !ok {
+		log.Error(fmt.Errorf("environment variable %s is not set", asyncStorageServerImageEnvVar), "Could not get async storage server image")
+		return ""
+	}
+	return val
+}
+
+func GetAsyncStorageSidecarImage() string {
+	val, ok := os.LookupEnv(asyncStorageSidecarImageEnvVar)
+	if !ok {
+		log.Error(fmt.Errorf("environment variable %s is not set", asyncStorageSidecarImageEnvVar), "Could not get async storage sidecar image")
 		return ""
 	}
 	return val

@@ -14,6 +14,8 @@ package asyncstorage
 
 import (
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
+	"github.com/devfile/devworkspace-operator/internal/images"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -79,7 +81,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 					Containers: []corev1.Container{
 						{
 							Name:  "async-storage-server",
-							Image: "quay.io/eclipse/che-workspace-data-sync-storage:0.0.1",
+							Image: images.GetAsyncStorageServerImage(),
 							Ports: []corev1.ContainerPort{
 								{
 									ContainerPort: rsyncPort,

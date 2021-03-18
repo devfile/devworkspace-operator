@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/devfile/devworkspace-operator/internal/images"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -42,7 +44,7 @@ func GetAsyncSidecar(sshVolumeName string, volumes []corev1.Volume) *corev1.Cont
 	// Note: currently, the async sidecar image only backs up /projects
 	container := &corev1.Container{
 		Name:  asyncSidecarContainerName,
-		Image: "quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1", // TODO
+		Image: images.GetAsyncStorageSidecarImage(),
 		Ports: []corev1.ContainerPort{
 			{
 				ContainerPort: 4445,

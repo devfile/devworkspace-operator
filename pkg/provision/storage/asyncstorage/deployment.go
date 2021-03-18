@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,23 +53,18 @@ func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1
 func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim) *appsv1.Deployment {
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
-	modeReadOnly := int32(416) // 0640 (octal) in base-10
+	modeReadOnly := int32(0640)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "async-storage", // TODO
+			Name:      asyncServerDeploymentName,
 			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":    "async-storage", // TODO
-				"app.kubernetes.io/part-of": "devworkspace-operator",
-			},
+			Labels:    asyncServerLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"controller.devfile.io/component": "async-storage", // TODO
-				},
+				MatchLabels: asyncServerLabels,
 			},
 			Strategy: appsv1.DeploymentStrategy{
 				Type: appsv1.RecreateDeploymentStrategyType,
@@ -77,9 +73,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "async-storage-server",
 					Namespace: namespace,
-					Labels: map[string]string{
-						"controller.devfile.io/component": "async-storage",
-					},
+					Labels:    asyncServerLabels,
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
@@ -92,7 +86,14 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 									Protocol:      corev1.ProtocolTCP,
 								},
 							},
-							// TODO: resources
+							Resources: corev1.ResourceRequirements{
+								Limits: map[corev1.ResourceName]resource.Quantity{
+									corev1.ResourceMemory: resource.MustParse(asyncServerMemoryLimit),
+								},
+								Requests: map[corev1.ResourceName]resource.Quantity{
+									corev1.ResourceMemory: resource.MustParse(asyncServerMemoryRequest),
+								},
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      "async-storage-data",
@@ -137,8 +138,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 					},
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
 					SecurityContext:               provision.GetDevWorkspaceSecurityContext(),
-					//ServiceAccountName:            saName, // TODO
-					AutomountServiceAccountToken: nil,
+					AutomountServiceAccountToken:  nil,
 				},
 			},
 		},

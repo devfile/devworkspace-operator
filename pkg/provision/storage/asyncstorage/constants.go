@@ -13,9 +13,19 @@
 package asyncstorage
 
 const (
-	rsyncPortStr              = "2222"
 	rsyncPort                 = 2222
 	asyncServerServiceName    = "async-storage"
-	asyncSidecarContainerName = "async-storage-sidecar"
+	asyncServerDeploymentName = "async-storage"
 	asyncSecretVolumeName     = "async-storage-ssh"
+	asyncSidecarContainerName = "async-storage-sidecar"
+
+	asyncSidecarMemoryRequest = "64Mi"
+	asyncSidecarMemoryLimit   = "512Mi"
+	asyncServerMemoryRequest  = "256Mi"
+	asyncServerMemoryLimit    = "512Mi"
 )
+
+var asyncServerLabels = map[string]string{
+	"app.kubernetes.io/name":    "async-storage",
+	"app.kubernetes.io/part-of": "devworkspace-operator",
+}

@@ -159,12 +159,12 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorks
 		}
 		// Another async workspace is currently running; we can't safely clean up
 		return &ProvisioningError{
-			Message: "Cannot cleanup storage",
+			Message: "Cannot clean up DevWorkspace until other async-storage workspaces are stopped",
 			Err:     fmt.Errorf("another workspace is using the async server"),
 		}
 	default:
 		return &ProvisioningError{
-			Message: "Cannot cleanup storage",
+			Message: "Cannot clean up DevWorkspace: multiple devworkspaces are using async server",
 			Err:     fmt.Errorf("multiple workspaces are using using the async server"),
 		}
 	}
@@ -229,7 +229,7 @@ func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1
 	return volumes, nil
 }
 
-// checkCanStartWorkspace returns whether the async storage provider can support starting a workspace.
+// getAsyncWorkspaceCount returns whether the async storage provider can support starting a workspace.
 // Due to how cleanup for the async storage PVC is implemented, only one workspace that uses the async storage
 // type can be running at a time.
 func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(api provision.ClusterAPI) (started, total int, err error) {

@@ -96,11 +96,12 @@ func syncCommonPVC(namespace string, clusterAPI provision.ClusterAPI) (*corev1.P
 	if !ok {
 		return nil, errors.New("tried to sync PVC to cluster but did not get a PVC back")
 	}
-	if currPVC.Status.Phase != corev1.ClaimBound {
-		return nil, &NotReadyError{
-			Message: "Common PVC is not bound to a volume",
-		}
-	}
+	// TODO: Does not work for WaitFirstConsumer storage type; needs to be improved.
+	// if currPVC.Status.Phase != corev1.ClaimBound {
+	// 	return nil, &NotReadyError{
+	// 		Message: "Common PVC is not bound to a volume",
+	// 	}
+	// }
 	return currPVC, nil
 }
 

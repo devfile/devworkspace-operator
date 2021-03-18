@@ -14,6 +14,7 @@ package asyncstorage
 
 import (
 	"fmt"
+	"strconv"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -51,16 +52,15 @@ func GetAsyncSidecar(sshVolumeName string, volumes []corev1.Volume) *corev1.Cont
 		Env: []corev1.EnvVar{
 			{
 				Name:  "RSYNC_PORT",
-				Value: rsyncPortStr,
+				Value: strconv.Itoa(rsyncPort),
 			},
 		},
 		Resources: corev1.ResourceRequirements{
-			// TODO
 			Limits: map[corev1.ResourceName]resource.Quantity{
-				corev1.ResourceMemory: resource.MustParse("512Mi"),
+				corev1.ResourceMemory: resource.MustParse(asyncSidecarMemoryLimit),
 			},
 			Requests: map[corev1.ResourceName]resource.Quantity{
-				corev1.ResourceMemory: resource.MustParse("64Mi"),
+				corev1.ResourceMemory: resource.MustParse(asyncSidecarMemoryRequest),
 			},
 		},
 		VolumeMounts: volumeMounts,

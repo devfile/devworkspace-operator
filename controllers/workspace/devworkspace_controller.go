@@ -405,7 +405,6 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&devworkspace.DevWorkspaceTemplate{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&batchv1.Job{}).
-		Owns(&controllerv1alpha1.Component{}).
 		Owns(&controllerv1alpha1.DevWorkspaceRouting{}).
 		WithEventFilter(predicates).
 		Complete(r)

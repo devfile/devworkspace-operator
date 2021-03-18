@@ -43,7 +43,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 				continue
 			}
 
-			if endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DISCOVERABLE_ATTRIBUTE), nil) {
+			if endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DiscoverableAttribute), nil) {
 				// Create service with name matching endpoint
 				// TODO: This could cause a reconcile conflict if multiple workspaces define the same discoverable endpoint
 				// Also endpoint names may not be valid as service names
@@ -101,7 +101,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 				continue
 			}
 
-			if !includeDiscoverable && endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DISCOVERABLE_ATTRIBUTE), nil) {
+			if !includeDiscoverable && endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DiscoverableAttribute), nil) {
 				continue
 			}
 

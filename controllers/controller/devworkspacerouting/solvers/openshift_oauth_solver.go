@@ -202,5 +202,5 @@ func endpointNeedsProxy(endpoint devworkspace.Endpoint) bool {
 		endpoint.Secure &&
 		// Terminal is temporarily excluded from secure servers
 		// because Theia is not aware how to authenticate against OpenShift OAuth
-		endpoint.Attributes.Get(string(controllerv1alpha1.TYPE_ENDPOINT_ATTRIBUTE), nil) != "terminal"
+		endpoint.Attributes.Get(string(controllerv1alpha1.TypeEndpointAttribute), nil) != "terminal"
 }

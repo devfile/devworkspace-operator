@@ -92,9 +92,10 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      server.WebhookServerDeploymentName,
-					Namespace: namespace,
-					Labels:    server.WebhookServerAppLabels(),
+					Name:        server.WebhookServerDeploymentName,
+					Namespace:   namespace,
+					Labels:      server.WebhookServerAppLabels(),
+					Annotations: server.WebhookServerAppAnnotations(),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{

@@ -14,7 +14,10 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"strconv"
+	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -51,6 +54,17 @@ var WebhookServerAppLabels = func() map[string]string {
 	return map[string]string{
 		"app.kubernetes.io/name":    WebhookServerAppName,
 		"app.kubernetes.io/part-of": "devworkspace-operator",
+	}
+}
+
+var WebhookServerAppAnnotations = func() map[string]string {
+	//Add restart timestamp which will update the webhook server
+	//deployment to force restart. This is done so that the
+	//serviceaccount uid is updated to use the latest and the
+	//web-terminal does not hang.
+	now := time.Now()
+	return map[string]string{
+		constants.WebhookRestartedAtAnnotation: strconv.FormatInt(now.UnixNano(), 10),
 	}
 }
 

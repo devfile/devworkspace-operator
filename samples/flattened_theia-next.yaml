@@ -11,29 +11,6 @@ spec:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
     components:
-    ### BEGIN Contributions from machine-exec plugin ###
-      - name: terminal
-        attributes:
-          "app.kubernetes.io/name": che-terminal.eclipse.org
-          "app.kubernetes.io/part-of": che.eclipse.org
-          "app.kubernetes.io/component": terminal
-        container:
-          image: "quay.io/eclipse/che-machine-exec:nightly"
-          command: ['/go/bin/che-machine-exec']
-          args:
-            - '--url'
-            - '0.0.0.0:4444'
-            - '--pod-selector'
-            - controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)
-          endpoints:
-            - name: "che-mach-exec"
-              exposure: public
-              targetPort: 4444
-              protocol: ws
-              secure: true
-              attributes:
-                type: terminal
-    ### END Contributions from machine-exec plugin ###
     ### BEGIN Contributions from Theia plugin ###
       - name: plugins
         volume: {}
@@ -92,6 +69,28 @@ spec:
               exposure: public
               targetPort: 13133
               protocol: http
+      - name: che-theia-terminal
+        attributes:
+          "app.kubernetes.io/name": che-theia.eclipse.org
+          "app.kubernetes.io/part-of": che.eclipse.org
+          "app.kubernetes.io/component": che-theia-terminal
+        container:
+          image: "quay.io/eclipse/che-machine-exec:nightly"
+          command: ['/go/bin/che-machine-exec']
+          args:
+            - '--url'
+            - '0.0.0.0:3333'
+            - '--pod-selector'
+            - controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)
+          endpoints:
+            - name: "che-theia-terminal"
+              exposure: public
+              targetPort: 3333
+              protocol: ws
+              secure: true
+              attributes:
+                type: collocated-terminal
+    ### END Contributions from che-theia plugin ###
     commands:
       - id: say-hello
         exec:

@@ -14,12 +14,10 @@ package webhook
 
 import (
 	"context"
-
+	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 
-	"github.com/devfile/devworkspace-operator/internal/images"
-
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -89,9 +87,10 @@ func getSpecDeployment(namespace string) (*appsv1.Deployment, error) {
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      server.WebhookServerDeploymentName,
-					Namespace: namespace,
-					Labels:    server.WebhookServerAppLabels(),
+					Name:        server.WebhookServerDeploymentName,
+					Namespace:   namespace,
+					Labels:      server.WebhookServerAppLabels(),
+					Annotations: server.WebhookServerAppAnnotations(),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{

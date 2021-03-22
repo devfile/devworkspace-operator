@@ -60,6 +60,9 @@ const (
 	// Stopped by Annotation holds the information as to why a workspace has stopped
 	StoppedByAnnotation = "controller.devfile.io/stopped-by"
 
+	// WebhookRestartAtAnnotation holds the the time (unixnano) of when the webhook server was forced to restart by controller
+	WebhookRestartedAtAnnotation = "controller.devfile.io/restarted-at"
+
 	// ControllerServiceAccountNameEnvVar stores the name of the serviceaccount used in the controller.
 	ControllerServiceAccountNameEnvVar = "CONTROLLER_SERVICE_ACCOUNT_NAME"
 )

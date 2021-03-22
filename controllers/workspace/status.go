@@ -32,7 +32,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const PullSecretsReadyCondition devworkspace.WorkspaceConditionType = "PullSecretsReady"
+type currentStatus struct {
+	workspaceConditions
+	// Current workspace phase
+	phase devworkspace.WorkspacePhase
+}
+
+func initCurrentStatus() currentStatus {
+	return currentStatus{
+		workspaceConditions: workspaceConditions{
+			conditions: map[devworkspace.WorkspaceConditionType]devworkspace.WorkspaceCondition{},
+		},
+		phase: devworkspace.WorkspaceStatusStarting,
+	}
+}
 
 // clock is used to set status condition timestamps.
 // This variable makes it easier to test conditions.
@@ -49,15 +62,15 @@ var healthHttpClient = &http.Client{
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
 func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *devworkspace.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
-	workspace.Status.Phase = status.Phase
+	workspace.Status.Phase = status.phase
 	currTransitionTime := metav1.Time{Time: clock.Now()}
-	for conditionType, conditionMsg := range status.Conditions {
+	for conditionType, condition := range status.conditions {
 		conditionExists := false
-		for idx, condition := range workspace.Status.Conditions {
-			if condition.Type == conditionType && condition.LastTransitionTime.Before(&currTransitionTime) {
+		for idx, existingCondition := range workspace.Status.Conditions {
+			if existingCondition.Type == conditionType && existingCondition.LastTransitionTime.Before(&currTransitionTime) {
 				workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
-				workspace.Status.Conditions[idx].Status = corev1.ConditionTrue
-				workspace.Status.Conditions[idx].Message = conditionMsg
+				workspace.Status.Conditions[idx].Status = condition.Status
+				workspace.Status.Conditions[idx].Message = condition.Message
 				conditionExists = true
 				break
 			}
@@ -65,14 +78,14 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *devworkspace.D
 		if !conditionExists {
 			workspace.Status.Conditions = append(workspace.Status.Conditions, devworkspace.WorkspaceCondition{
 				Type:               conditionType,
-				Message:            conditionMsg,
-				Status:             corev1.ConditionTrue,
+				Message:            condition.Message,
+				Status:             condition.Status,
 				LastTransitionTime: currTransitionTime,
 			})
 		}
 	}
-	for idx, condition := range workspace.Status.Conditions {
-		if condition.LastTransitionTime.Before(&currTransitionTime) {
+	for idx, existingCondition := range workspace.Status.Conditions {
+		if existingCondition.LastTransitionTime.Before(&currTransitionTime) {
 			workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
 			workspace.Status.Conditions[idx].Status = corev1.ConditionUnknown
 			workspace.Status.Conditions[idx].Message = ""
@@ -81,7 +94,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *devworkspace.D
 	sort.SliceStable(workspace.Status.Conditions, func(i, j int) bool {
 		return strings.Compare(string(workspace.Status.Conditions[i].Type), string(workspace.Status.Conditions[j].Type)) > 0
 	})
-	infoMessage := getInfoMessage(workspace, status.Conditions)
+	infoMessage := getInfoMessage(workspace, status)
 	if workspace.Status.Message != infoMessage {
 		workspace.Status.Message = infoMessage
 	}
@@ -146,43 +159,13 @@ func getIdeUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string 
 	return ""
 }
 
-type PhaseStatus struct {
-	Condition devworkspace.WorkspaceConditionType
-	Message   string
-}
-
-// Defines the order in which DevWorkspace Controller processes phases on reconcile
-// The last unready condition should be shown
-var PhaseStatusesOrder = []PhaseStatus{
-	{
-		devworkspace.WorkspaceComponentsReady,
-		"Processing DevWorkspace components",
-	},
-	{
-		devworkspace.WorkspaceRoutingReady,
-		"Waiting for workspace routing objects",
-	},
-	{
-		devworkspace.WorkspaceServiceAccountReady,
-		"Waiting for workspace serviceaccount",
-	},
-	{
-		PullSecretsReadyCondition,
-		"Waiting for workspace pull secrets",
-	},
-	{
-		devworkspace.WorkspaceReady,
-		"Waiting for deployment to be ready",
-	},
-}
-
-func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devworkspace.WorkspaceConditionType]string) string {
+func getInfoMessage(workspace *devworkspace.DevWorkspace, status *currentStatus) string {
 	// Check for errors and failure
-	if msg, ok := conditions[devworkspace.WorkspaceError]; ok {
-		return msg
+	if cond, ok := status.conditions[devworkspace.WorkspaceError]; ok {
+		return cond.Message
 	}
-	if msg, ok := conditions[devworkspace.WorkspaceFailedStart]; ok {
-		return msg
+	if cond, ok := status.conditions[devworkspace.WorkspaceFailedStart]; ok {
+		return cond.Message
 	}
 	switch workspace.Status.Phase {
 	case devworkspace.WorkspaceStatusRunning:
@@ -194,12 +177,11 @@ func getInfoMessage(workspace *devworkspace.DevWorkspace, conditions map[devwork
 		return string(workspace.Status.Phase)
 	}
 
-	for _, phaseStatus := range PhaseStatusesOrder {
-		if _, present := conditions[phaseStatus.Condition]; !present {
-			return phaseStatus.Message
-		}
+	latestCondition := status.getFirstFalse()
+	if latestCondition != nil {
+		return latestCondition.Message
 	}
 
-	//All listed conditions are true, if workspace is not started yet, it's due editor server health check
-	return "Waiting on editor to start"
+	// No condition is false but workspace is not running; unclear what value should be set.
+	return ""
 }

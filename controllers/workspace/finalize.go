@@ -68,13 +68,10 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
 		log.Error(err, "Failed to clean up DevWorkspace storage")
-		failedStatus := &currentStatus{
-			Conditions: map[devworkspace.WorkspaceConditionType]string{
-				"Error": err.Error(),
-			},
-			Phase: "Error",
-		}
-		return r.updateWorkspaceStatus(workspace, r.Log, failedStatus, reconcile.Result{}, nil)
+		failedStatus := initCurrentStatus()
+		failedStatus.phase = "Error"
+		failedStatus.setConditionTrue(devworkspace.WorkspaceError, err.Error())
+		return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
 	}
 	err = storageProvisioner.CleanupWorkspaceStorage(workspace, provision.ClusterAPI{
 		Ctx:    ctx,
@@ -89,13 +86,10 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			return reconcile.Result{RequeueAfter: storageErr.RequeueAfter}, nil
 		case *storage.ProvisioningError:
 			log.Error(storageErr, "Failed to clean up DevWorkspace storage")
-			failedStatus := &currentStatus{
-				Conditions: map[devworkspace.WorkspaceConditionType]string{
-					"Error": storageErr.Message,
-				},
-				Phase: "Error",
-			}
-			return r.updateWorkspaceStatus(workspace, r.Log, failedStatus, reconcile.Result{}, nil)
+			failedStatus := initCurrentStatus()
+			failedStatus.phase = "Error"
+			failedStatus.setConditionTrue(devworkspace.WorkspaceError, err.Error())
+			return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
 		default:
 			return reconcile.Result{}, storageErr
 		}

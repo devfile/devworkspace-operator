@@ -28,8 +28,8 @@ import (
 func SyncRBAC(workspace *devworkspace.DevWorkspace, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
 	rbac := generateRBAC(workspace.Namespace)
 
-	didChange, err := SyncMutableObjects(rbac, client, reqLogger)
-	return ProvisioningStatus{Continue: !didChange, Err: err}
+	requeue, err := SyncMutableObjects(rbac, client, reqLogger)
+	return ProvisioningStatus{Continue: !requeue, Err: err}
 }
 
 func generateRBAC(namespace string) []runtime.Object {

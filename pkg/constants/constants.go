@@ -79,6 +79,9 @@ const (
 	// this annotation will be cleared
 	WorkspaceStopReasonAnnotation = "controller.devfile.io/stopped-by"
 
+	// WebhookRestartedAtAnnotation holds the the time (unixnano) of when the webhook server was forced to restart by controller
+	WebhookRestartedAtAnnotation = "controller.devfile.io/restarted-at"
+
 	// PVCCleanupPodMemoryLimit is the memory limit used for PVC clean up pods
 	PVCCleanupPodMemoryLimit = "100Mi"
 

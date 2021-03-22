@@ -177,9 +177,17 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, nil
 	}
 	workspace.Spec.Template = *flattenedWorkspace
+
+	storageProvisioner, err := storage.GetProvisioner(workspace)
+	if err != nil {
+		reqLogger.Info("DevWorkspace start failed")
+		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
+		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", err)
+		return reconcile.Result{}, nil
+	}
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
-	if isFinalizerNecessary(workspace) {
+	if isFinalizerNecessary(workspace, storageProvisioner) {
 		coputil.AddFinalizer(clusterWorkspace, storageCleanupFinalizer)
 		if err := r.Update(ctx, clusterWorkspace); err != nil {
 			return reconcile.Result{}, err
@@ -194,13 +202,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{}, nil
 	}
 
-	storageProvisioner, err := storage.GetProvisioner(workspace)
-	if err != nil {
-		reqLogger.Info("DevWorkspace start failed")
-		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
-		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", err)
-		return reconcile.Result{}, nil
-	}
 	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspace, clusterAPI)
 	if err != nil {
 		switch storageErr := err.(type) {

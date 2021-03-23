@@ -8,7 +8,7 @@ spec:
   started: true
   template:
     projects:
-      - name: project
+      - name: web-nodejs-sample
         git:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"

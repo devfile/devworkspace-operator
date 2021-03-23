@@ -17,31 +17,31 @@ import (
 	"github.com/devfile/api/v2/pkg/attributes"
 )
 
-// AddSourceAttributesForPlugin adds an attribute 'controller.devfile.io/imported-by=sourceID' to all elements of
+// AddSourceAttributesForTemplate adds an attribute 'controller.devfile.io/imported-by=sourceID' to all elements of
 // a plugin that support attributes.
-func AddSourceAttributesForPlugin(sourceID string, plugin *dw.DevWorkspaceTemplateSpec) {
-	for idx, component := range plugin.Components {
+func AddSourceAttributesForTemplate(sourceID string, template *dw.DevWorkspaceTemplateSpec) {
+	for idx, component := range template.Components {
 		if component.Attributes == nil {
-			plugin.Components[idx].Attributes = attributes.Attributes{}
+			template.Components[idx].Attributes = attributes.Attributes{}
 		}
-		plugin.Components[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
+		template.Components[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
 	}
-	for idx, command := range plugin.Commands {
+	for idx, command := range template.Commands {
 		if command.Attributes == nil {
-			plugin.Commands[idx].Attributes = attributes.Attributes{}
+			template.Commands[idx].Attributes = attributes.Attributes{}
 		}
-		plugin.Commands[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
+		template.Commands[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
 	}
-	for idx, project := range plugin.Projects {
+	for idx, project := range template.Projects {
 		if project.Attributes == nil {
-			plugin.Projects[idx].Attributes = attributes.Attributes{}
+			template.Projects[idx].Attributes = attributes.Attributes{}
 		}
-		plugin.Projects[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
+		template.Projects[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
 	}
-	for idx, project := range plugin.StarterProjects {
+	for idx, project := range template.StarterProjects {
 		if project.Attributes == nil {
-			plugin.Projects[idx].Attributes = attributes.Attributes{}
+			template.StarterProjects[idx].Attributes = attributes.Attributes{}
 		}
-		plugin.Projects[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
+		template.StarterProjects[idx].Attributes.PutString(PluginSourceAttribute, sourceID)
 	}
 }

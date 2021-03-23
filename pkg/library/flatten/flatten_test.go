@@ -33,8 +33,9 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 				Errors:                tt.Input.Errors,
 			}
 			testResolverTools := ResolverTools{
-				Context:   context.Background(),
-				K8sClient: testClient,
+				Context:          context.Background(),
+				DefaultNamespace: "test-ignored",
+				K8sClient:        testClient,
 			}
 			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
@@ -159,9 +160,10 @@ func TestResolveDevWorkspaceParents(t *testing.T) {
 				Errors:                tt.Input.Errors,
 			}
 			testResolverTools := ResolverTools{
-				Context:    context.Background(),
-				K8sClient:  testK8sClient,
-				HttpClient: testHttpGetter,
+				Context:          context.Background(),
+				DefaultNamespace: "test-ignored",
+				K8sClient:        testK8sClient,
+				HttpClient:       testHttpGetter,
 			}
 			outputWorkspace, err := ResolveDevWorkspace(tt.Input.Workspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {

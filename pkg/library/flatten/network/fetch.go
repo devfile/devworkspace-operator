@@ -39,17 +39,35 @@ func FetchDevWorkspaceTemplate(location string, httpClient HTTPGetter) (*dw.DevW
 		return nil, fmt.Errorf("could not read data from %s: %w", location, err)
 	}
 
-	// Assume we're getting a devfile, not a DevWorkspaceTemplate (TODO: Detect type and handle both?)
 	devfile := &dw.Devfile{}
-	err = yaml.Unmarshal(bytes, devfile)
-	if err != nil {
+	if err := yaml.Unmarshal(bytes, devfile); err != nil {
 		return nil, fmt.Errorf("could not unmarshal devfile from response: %w", err)
 	}
-
-	dwt, err := ConvertDevfileToDevWorkspaceTemplate(devfile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert devfile to DevWorkspaceTemplate: %s", err)
+	if devfile.SchemaVersion != "" {
+		dwt, err := ConvertDevfileToDevWorkspaceTemplate(devfile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert devfile to DevWorkspaceTemplate: %s", err)
+		}
+		return &dwt.Spec, nil
 	}
 
-	return &dwt.Spec, nil
+	// Assume we didn't get a devfile, check if content is DevWorkspace
+	devworkspace := &dw.DevWorkspace{}
+	if err := yaml.Unmarshal(bytes, devworkspace); err != nil {
+		return nil, fmt.Errorf("could not unmarshal devworkspace from response: %w", err)
+	}
+	if devworkspace.Kind == "DevWorkspace" {
+		return &devworkspace.Spec.Template, nil
+	}
+
+	// Check if content is DevWorkspaceTemplate
+	dwt := &dw.DevWorkspaceTemplate{}
+	if err := yaml.Unmarshal(bytes, dwt); err != nil {
+		return nil, fmt.Errorf("could not unmarshal devworkspacetemplate from response: %w", err)
+	}
+	if dwt.Kind == "DevWorkspaceTemplate" {
+		return &dwt.Spec, nil
+	}
+
+	return nil, fmt.Errorf("could not find devfile or devworkspace object at '%s'", location)
 }

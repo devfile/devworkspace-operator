@@ -168,7 +168,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		InternalRegistry: &registry.InternalRegistryImpl{},
 		HttpClient:       http.DefaultClient,
 	}
-	flattenedWorkspace, err := flatten.ResolveDevWorkspace(workspace.Spec.Template, flattenHelpers)
+	flattenedWorkspace, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, flattenHelpers)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
@@ -186,7 +186,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		}
 	}
 
-	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(workspace.Spec.Template)
+	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspace.Spec.Template)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed

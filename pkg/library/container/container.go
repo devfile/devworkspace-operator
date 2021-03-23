@@ -40,7 +40,7 @@ import (
 // rewritten as Volumes are added to PodAdditions, in order to support e.g. using one PVC to hold all volumes
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
-func GetKubeContainersFromDevfile(workspace devworkspace.DevWorkspaceTemplateSpec) (*v1alpha1.PodAdditions, error) {
+func GetKubeContainersFromDevfile(workspace *devworkspace.DevWorkspaceTemplateSpec) (*v1alpha1.PodAdditions, error) {
 	if !flatten.DevWorkspaceIsFlattened(workspace) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}

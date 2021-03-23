@@ -60,7 +60,7 @@ type TestCase struct {
 }
 
 type TestInput struct {
-	Workspace dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
+	Workspace *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
 	// Plugins is a map of plugin "name" to devworkspace template; namespace is ignored.
 	Plugins map[string]dw.DevWorkspaceTemplate `json:"plugins,omitempty"`
 	// DevfilePlugins is a map of plugin "name" to devfile

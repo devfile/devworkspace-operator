@@ -112,18 +112,18 @@ func recursiveResolve(workspace *devworkspace.DevWorkspaceTemplateSpec, tooling 
 }
 
 // resolveParentComponent resolves the parent DevWorkspaceTemplateSpec that a parent reference refers to.
-func resolveParentComponent(parent *devworkspace.Parent, tooling ResolverTools) (resolvedParent *devworkspace.DevWorkspaceTemplateSpec, err error) {
+func resolveParentComponent(parent *devworkspace.Parent, tools ResolverTools) (resolvedParent *devworkspace.DevWorkspaceTemplateSpec, err error) {
 	switch {
 	case parent.Kubernetes != nil:
 		// Search in default namespace if namespace ref is unset
 		if parent.Kubernetes.Namespace == "" {
-			parent.Kubernetes.Namespace = tooling.DefaultNamespace
+			parent.Kubernetes.Namespace = tools.DefaultNamespace
 		}
-		resolvedParent, err = resolveElementByKubernetesImport("parent", parent.Kubernetes, tooling)
+		resolvedParent, err = resolveElementByKubernetesImport("parent", parent.Kubernetes, tools)
 	case parent.Uri != "":
-		resolvedParent, err = resolveElementByURI("parent", parent.Uri, tooling)
+		resolvedParent, err = resolveElementByURI("parent", parent.Uri, tools)
 	case parent.Id != "":
-		resolvedParent, err = resolveElementById("parent", parent.Id, parent.RegistryUrl, tooling)
+		resolvedParent, err = resolveElementById("parent", parent.Id, parent.RegistryUrl, tools)
 	default:
 		err = fmt.Errorf("devfile parent does not define any resources")
 	}
@@ -146,18 +146,14 @@ func resolveParentComponent(parent *devworkspace.Parent, tooling ResolverTools) 
 func resolvePluginComponent(
 	name string,
 	plugin *devworkspace.PluginComponent,
-	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 	switch {
 	case plugin.Kubernetes != nil:
-		// Search in default namespace if namespace ref is unset
-		if plugin.Kubernetes.Namespace == "" {
-			plugin.Kubernetes.Namespace = tooling.DefaultNamespace
-		}
-		resolvedPlugin, err = resolveElementByKubernetesImport(name, plugin.Kubernetes, tooling)
+		resolvedPlugin, err = resolveElementByKubernetesImport(name, plugin.Kubernetes, tools)
 	case plugin.Uri != "":
-		resolvedPlugin, err = resolveElementByURI(name, plugin.Uri, tooling)
+		resolvedPlugin, err = resolveElementByURI(name, plugin.Uri, tools)
 	case plugin.Id != "":
-		resolvedPlugin, err = resolveElementById(name, plugin.Id, plugin.RegistryUrl, tooling)
+		resolvedPlugin, err = resolveElementById(name, plugin.Id, plugin.RegistryUrl, tools)
 	default:
 		err = fmt.Errorf("plugin %s does not define any resources", name)
 	}
@@ -184,14 +180,27 @@ func resolvePluginComponent(
 func resolveElementByKubernetesImport(
 	name string,
 	kubeReference *devworkspace.KubernetesCustomResourceImportReference,
-	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+
+	if tools.K8sClient == nil {
+		return nil, fmt.Errorf("cannot resolve resources by kubernetes reference: no kubernetes client provided")
+	}
+
+	// Search in default namespace if namespace ref is unset
+	namespace := kubeReference.Namespace
+	if namespace == "" {
+		if tools.DefaultNamespace == "" {
+			return nil, fmt.Errorf("'%s' specifies a kubernetes reference without namespace and a default is not provided", name)
+		}
+		namespace = tools.DefaultNamespace
+	}
 
 	var dwTemplate devworkspace.DevWorkspaceTemplate
 	namespacedName := types.NamespacedName{
 		Name:      kubeReference.Name,
-		Namespace: kubeReference.Namespace,
+		Namespace: namespace,
 	}
-	err = tooling.K8sClient.Get(tooling.Context, namespacedName, &dwTemplate)
+	err = tools.K8sClient.Get(tools.Context, namespacedName, &dwTemplate)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			return nil, fmt.Errorf("plugin for component %s not found", name)
@@ -225,6 +234,11 @@ func resolveElementById(
 		return &pluginDWT.Spec, nil
 
 	}
+
+	if tools.HttpClient == nil {
+		return nil, fmt.Errorf("cannot resolve resources by id: no HTTP client provided")
+	}
+
 	pluginURL, err := url.Parse(registryUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse registry URL for component %s: %w", name, err)
@@ -244,6 +258,10 @@ func resolveElementByURI(
 	name string,
 	uri string,
 	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
+
+	if tools.HttpClient == nil {
+		return nil, fmt.Errorf("cannot resolve resources by id: no HTTP client provided")
+	}
 
 	dwt, err := network.FetchDevWorkspaceTemplate(uri, tools.HttpClient)
 	if err != nil {

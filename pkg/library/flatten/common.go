@@ -14,7 +14,7 @@ package flatten
 
 import devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
-func DevWorkspaceIsFlattened(devworkspace devworkspace.DevWorkspaceTemplateSpec) bool {
+func DevWorkspaceIsFlattened(devworkspace *devworkspace.DevWorkspaceTemplateSpec) bool {
 	if devworkspace.Parent != nil {
 		return false
 	}

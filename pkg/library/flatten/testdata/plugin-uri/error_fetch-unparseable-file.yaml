@@ -1,0 +1,22 @@
+name: "DevWorkspace reference URI containing non-devfile type content"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          uri: "https://my-plugin.io/test"
+  plugins:
+    "https://my-plugin.io/test":
+      metadata:
+        name: test-plugin
+      spec:
+        components:
+          - name: plugin-a
+            container:
+              name: test-container
+              image: test-image
+
+
+output:
+  errRegexp: "could not find devfile or devworkspace object at 'https://my-plugin.io/test'"

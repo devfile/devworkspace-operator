@@ -1,0 +1,23 @@
+name: "DevWorkspace registry contains non-devfile type content"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          id: my/test/plugin
+          registryUrl: "https://test-registry.io/subpath"
+  plugins:
+    "https://test-registry.io/subpath/my/test/plugin":
+      metadata:
+        name: test-plugin
+      spec:
+        components:
+          - name: plugin-a
+            container:
+              name: test-container
+              image: test-image
+
+
+output:
+  errRegexp: "could not find devfile or devworkspace object at 'https://test-registry.io/subpath/my/test/plugin'"

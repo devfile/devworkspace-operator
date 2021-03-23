@@ -1,0 +1,32 @@
+name: "DevWorkspace references DevWorkspaceTemplate plugin from registry"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          id: my/test/plugin
+          registryUrl: "https://test-registry.io/subpath"
+  plugins:
+    "https://test-registry.io/subpath/my/test/plugin":
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: test-plugin
+      spec:
+        components:
+          - name: plugin-a
+            container:
+              name: test-container
+              image: test-image
+
+
+output:
+  workspace:
+    components:
+      - name: plugin-a
+        attributes:
+          controller.devfile.io/imported-by: "test-plugin"
+        container:
+          name: test-container
+          image: test-image

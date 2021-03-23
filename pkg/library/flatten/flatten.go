@@ -30,11 +30,11 @@ import (
 )
 
 type ResolverTools struct {
-	InstanceNamespace string
-	Context           context.Context
-	K8sClient         client.Client
-	InternalRegistry  registry.InternalRegistry
-	HttpClient        network.HTTPGetter
+	DefaultNamespace string
+	Context          context.Context
+	K8sClient        client.Client
+	InternalRegistry registry.InternalRegistry
+	HttpClient       network.HTTPGetter
 }
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
@@ -106,22 +106,23 @@ func recursiveResolve(workspace devworkspace.DevWorkspaceTemplateSpec, tooling R
 	}, nil
 }
 
+// resolvePluginComponent resolves the DevWorkspaceTemplateSpec that a plugin component refers to. The name parameter is
+// used to construct meaningful error messages (e.g. issue resolving plugin 'name')
 func resolvePluginComponent(
 	name string,
 	plugin *devworkspace.PluginComponent,
 	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 	switch {
-	// TODO: Add support for plugin ID and URI
 	case plugin.Kubernetes != nil:
-		// Search in devworkspace's namespace if namespace ref is unset
+		// Search in default namespace if namespace ref is unset
 		if plugin.Kubernetes.Namespace == "" {
-			plugin.Kubernetes.Namespace = tooling.InstanceNamespace
+			plugin.Kubernetes.Namespace = tooling.DefaultNamespace
 		}
-		resolvedPlugin, err = resolvePluginComponentByKubernetesReference(name, plugin, tooling)
+		resolvedPlugin, err = resolveElementByKubernetesImport(name, plugin.Kubernetes, tooling)
 	case plugin.Uri != "":
-		resolvedPlugin, err = resolvePluginComponentByURI(name, plugin, tooling)
+		resolvedPlugin, err = resolveElementByURI(name, plugin.Uri, tooling)
 	case plugin.Id != "":
-		resolvedPlugin, err = resolvePluginComponentById(name, plugin, tooling)
+		resolvedPlugin, err = resolveElementById(name, plugin.Id, plugin.RegistryUrl, tooling)
 	default:
 		err = fmt.Errorf("plugin %s does not define any resources", name)
 	}
@@ -143,15 +144,17 @@ func resolvePluginComponent(
 	return resolvedPlugin, nil
 }
 
-func resolvePluginComponentByKubernetesReference(
+// resolveElementByKubernetesImport resolves a plugin specified by a Kubernetes reference.
+// The name parameter is used to construct meaningful error messages (e.g. issue resolving plugin 'name')
+func resolveElementByKubernetesImport(
 	name string,
-	plugin *devworkspace.PluginComponent,
+	kubeReference *devworkspace.KubernetesCustomResourceImportReference,
 	tooling ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 
 	var dwTemplate devworkspace.DevWorkspaceTemplate
 	namespacedName := types.NamespacedName{
-		Name:      plugin.Kubernetes.Name,
-		Namespace: plugin.Kubernetes.Namespace,
+		Name:      kubeReference.Name,
+		Namespace: kubeReference.Namespace,
 	}
 	err = tooling.K8sClient.Get(tooling.Context, namespacedName, &dwTemplate)
 	if err != nil {
@@ -163,47 +166,53 @@ func resolvePluginComponentByKubernetesReference(
 	return &dwTemplate.Spec, nil
 }
 
-func resolvePluginComponentById(
+// resolveElementById resolves a component specified by ID and registry URL. The name parameter is used to
+// construct meaningful error messages (e.g. issue resolving plugin 'name'). When registry URL is empty,
+// the DefaultRegistryURL from tools is used.
+func resolveElementById(
 	name string,
-	plugin *devworkspace.PluginComponent,
+	id string,
+	registryUrl string,
 	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 
 	// Check internal registry for plugins that do not specify a registry
-	if plugin.RegistryUrl == "" {
+	if registryUrl == "" {
 		if tools.InternalRegistry == nil {
 			return nil, fmt.Errorf("plugin %s does not specify a registryUrl and no internal registry is configured", name)
 		}
-		if !tools.InternalRegistry.IsInInternalRegistry(plugin.Id) {
+		if !tools.InternalRegistry.IsInInternalRegistry(id) {
 			return nil, fmt.Errorf("plugin for component %s does not specify a registry and is not present in the internal registry", name)
 		}
-		pluginDWT, err := tools.InternalRegistry.ReadPluginFromInternalRegistry(plugin.Id)
+		pluginDWT, err := tools.InternalRegistry.ReadPluginFromInternalRegistry(id)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read plugin for component %s from internal registry: %w", name, err)
 		}
 		return &pluginDWT.Spec, nil
-	}
 
-	pluginURL, err := url.Parse(plugin.RegistryUrl)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse registry URL for plugin %s: %w", name, err)
 	}
-	pluginURL.Path = path.Join(pluginURL.Path, "plugins", plugin.Id)
+	pluginURL, err := url.Parse(registryUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse registry URL for component %s: %w", name, err)
+	}
+	pluginURL.Path = path.Join(pluginURL.Path, id)
 
 	dwt, err := network.FetchDevWorkspaceTemplate(pluginURL.String(), tools.HttpClient)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve plugin %s from registry %s: %w", name, plugin.RegistryUrl, err)
+		return nil, fmt.Errorf("failed to resolve component %s from registry %s: %w", name, registryUrl, err)
 	}
 	return dwt, nil
 }
 
-func resolvePluginComponentByURI(
+// resolveElementByURI resolves a plugin defined by URI. The name parameter is used to construct meaningful
+// error messages (e.g. issue resolving plugin 'name')
+func resolveElementByURI(
 	name string,
-	plugin *devworkspace.PluginComponent,
+	uri string,
 	tools ResolverTools) (resolvedPlugin *devworkspace.DevWorkspaceTemplateSpec, err error) {
 
-	dwt, err := network.FetchDevWorkspaceTemplate(plugin.Uri, tools.HttpClient)
+	dwt, err := network.FetchDevWorkspaceTemplate(uri, tools.HttpClient)
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve plugin %s by URI: %w", name, err)
+		return nil, fmt.Errorf("failed to resolve component %s by URI: %w", name, err)
 	}
 	return dwt, nil
 }

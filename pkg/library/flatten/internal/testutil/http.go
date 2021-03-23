@@ -19,13 +19,14 @@ import (
 	"io"
 	"net/http"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
 )
 
 type FakeHTTPGetter struct {
-	Plugins map[string]network.Devfile
+	Plugins map[string]dw.Devfile
 	Errors  map[string]TestPluginError
 }
 

@@ -19,12 +19,12 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 var WorkspaceTemplateDiffOpts = cmp.Options{
@@ -64,7 +64,7 @@ type TestInput struct {
 	// Plugins is a map of plugin "name" to devworkspace template; namespace is ignored.
 	Plugins map[string]dw.DevWorkspaceTemplate `json:"plugins,omitempty"`
 	// DevfilePlugins is a map of plugin "name" to devfile
-	DevfilePlugins map[string]network.Devfile `json:"devfilePlugins,omitempty"`
+	DevfilePlugins map[string]dw.Devfile `json:"devfilePlugins,omitempty"`
 	// Errors is a map of plugin name to the error that should be returned when attempting to retrieve it.
 	Errors map[string]TestPluginError `json:"errors,omitempty"`
 }

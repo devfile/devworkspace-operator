@@ -9,4 +9,4 @@ input:
           registryUrl: ":/test-registry.io/subpath"
 
 output:
-  errRegexp: "failed to parse registry URL for plugin test-plugin"
+  errRegexp: "failed to parse registry URL for component test-plugin"

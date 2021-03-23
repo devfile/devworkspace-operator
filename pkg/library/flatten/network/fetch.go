@@ -40,7 +40,7 @@ func FetchDevWorkspaceTemplate(location string, httpClient HTTPGetter) (*dw.DevW
 	}
 
 	// Assume we're getting a devfile, not a DevWorkspaceTemplate (TODO: Detect type and handle both?)
-	devfile := &Devfile{}
+	devfile := &dw.Devfile{}
 	err = yaml.Unmarshal(bytes, devfile)
 	if err != nil {
 		return nil, fmt.Errorf("could not unmarshal devfile from response: %w", err)

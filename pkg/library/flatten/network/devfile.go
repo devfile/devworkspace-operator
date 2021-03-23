@@ -17,17 +17,11 @@ import (
 	"regexp"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	devfilev2 "github.com/devfile/api/v2/pkg/devfile"
 )
 
 var SupportedSchemaVersionRegexp = regexp.MustCompile(`^2\..+`)
 
-type Devfile struct {
-	devfilev2.DevfileHeader
-	dw.DevWorkspaceTemplateSpec
-}
-
-func ConvertDevfileToDevWorkspaceTemplate(devfile *Devfile) (*dw.DevWorkspaceTemplate, error) {
+func ConvertDevfileToDevWorkspaceTemplate(devfile *dw.Devfile) (*dw.DevWorkspaceTemplate, error) {
 	if !SupportedSchemaVersionRegexp.MatchString(devfile.SchemaVersion) {
 		return nil, fmt.Errorf("could not process devfile: unsupported schemaVersion '%s'", devfile.SchemaVersion)
 	}

@@ -6,7 +6,7 @@ input:
       - name: test-plugin
         plugin:
           uri: "https://my-plugin.io/test"
-  plugins:
+  devworkspaceResources:
     "https://my-plugin.io/test":
       kind: DevWorkspaceTemplate
       apiVersion: workspace.devfile.io/v1alpha2

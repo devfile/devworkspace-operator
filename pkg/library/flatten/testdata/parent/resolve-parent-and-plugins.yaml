@@ -1,0 +1,68 @@
+name: "Resolve parent and plugins"
+
+input:
+  workspace:
+    parent:
+      kubernetes:
+        name: test-parent-k8s
+      components:
+        - name: parent-component
+          container:
+            env:
+              - name: test-env
+                value: test-value
+    components:
+      - name: regular-component
+        container:
+          image: regular-test-image
+          name: regular-container
+      - name: test-plugin
+        plugin:
+          uri: https://test-plugin.io/test-plugin
+  devworkspaceResources:
+    test-parent-k8s:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: parent-devworkspacetemplate
+      spec:
+        components:
+          - name: parent-component
+            container:
+              image: test-img
+              env:
+                - name: test-env
+                  value: original-value
+  devfileResources:
+    "https://test-plugin.io/test-plugin":
+      schemaVersion: 2.1.0
+      metadata:
+        name: test-plugin
+      components:
+        - name: plugin-component
+          container:
+            image: plugin-img
+            env:
+              - name: plugin-env
+                value: original-value
+output:
+  workspace:
+    components:
+      - name: parent-component
+        container:
+          image: test-img
+          env:
+            - name: test-env
+              value: test-value
+      - name: regular-component
+        container:
+          image: regular-test-image
+          name: regular-container
+      - name: plugin-component
+        attributes:
+          controller.devfile.io/imported-by: test-plugin
+        container:
+          image: plugin-img
+          env:
+            - name: plugin-env
+              value: original-value

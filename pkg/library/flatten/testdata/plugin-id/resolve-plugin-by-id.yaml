@@ -7,7 +7,7 @@ input:
         plugin:
           id: my/test/plugin
           registryUrl: "https://test-registry.io/subpath"
-  devfilePlugins:
+  devfileResources:
     "https://test-registry.io/subpath/my/test/plugin":
       schemaVersion: 2.0.0
       metadata:

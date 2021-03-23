@@ -10,7 +10,7 @@ input:
       - name: my-component
         container:
           image: test-image
-  plugins:
+  devworkspaceResources:
     test-plugin:
       spec:
         components:

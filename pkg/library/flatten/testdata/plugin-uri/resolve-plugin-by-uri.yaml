@@ -6,7 +6,7 @@ input:
       - name: test-plugin
         plugin:
           uri: "https://my-plugin.io/test"
-  devfilePlugins:
+  devfileResources:
     "https://my-plugin.io/test":
       schemaVersion: 2.0.0
       metadata:

@@ -11,7 +11,7 @@ input:
             - name: non-existent
               container:
                 memoryLimit: 512Mi
-  plugins:
+  devworkspaceResources:
     override:
       spec:
         components:

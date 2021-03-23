@@ -1,0 +1,11 @@
+name: "Fails nicely when no HTTP client provided and uri is used"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          uri: https://test-repo.io/my-plugino
+
+output:
+  errRegexp: "cannot resolve resources by URI: no HTTP client provided"

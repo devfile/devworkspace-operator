@@ -68,6 +68,7 @@ func recursiveResolve(workspace *devworkspace.DevWorkspaceTemplateSpec, tooling 
 			// TODO: implemenent this
 			return nil, fmt.Errorf("parents containing plugins or parents are not supported")
 		}
+		annotate.AddSourceAttributesForTemplate("parent", resolvedParentSpec)
 		resolvedParent = &resolvedParentSpec.DevWorkspaceTemplateSpecContent
 	}
 	resolvedContent := &devworkspace.DevWorkspaceTemplateSpecContent{}
@@ -96,7 +97,7 @@ func recursiveResolve(workspace *devworkspace.DevWorkspaceTemplateSpec, tooling 
 				return nil, err
 			}
 
-			annotate.AddSourceAttributesForPlugin(component.Name, resolvedPlugin)
+			annotate.AddSourceAttributesForTemplate(component.Name, resolvedPlugin)
 			pluginSpecContents = append(pluginSpecContents, &resolvedPlugin.DevWorkspaceTemplateSpecContent)
 		}
 	}

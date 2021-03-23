@@ -6,7 +6,7 @@ input:
       - name: test-plugin
         plugin:
           uri: https://test-registry.io/old-devfiles
-  devfilePlugins:
+  devfileResources:
     "https://test-registry.io/old-devfiles":
       schemaVersion: 1.0.0
       metadata:

@@ -1,0 +1,46 @@
+name: "Resolve parent by Kubernetes reference"
+
+input:
+  workspace:
+    parent:
+      kubernetes:
+        name: test-parent-k8s
+      components:
+        - name: parent-component
+          container:
+            env:
+              - name: test-env
+                value: test-value
+    components:
+      - name: regular-component
+        container:
+          image: regular-test-image
+          name: regular-container
+  devworkspaceResources:
+    test-parent-k8s:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: parent-devworkspacetemplate
+      spec:
+        components:
+          - name: parent-component
+            container:
+              image: test-img
+              env:
+                - name: test-env
+                  value: original-value
+
+output:
+  workspace:
+    components:
+      - name: parent-component
+        container:
+          image: test-img
+          env:
+            - name: test-env
+              value: test-value
+      - name: regular-component
+        container:
+          image: regular-test-image
+          name: regular-container

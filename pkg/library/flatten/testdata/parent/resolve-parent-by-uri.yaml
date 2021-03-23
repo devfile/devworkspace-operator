@@ -1,0 +1,43 @@
+name: "Resolve parent by URI"
+
+input:
+  workspace:
+    parent:
+      uri: https://test.io/path/to/parent
+      components:
+        - name: parent-component
+          container:
+            env:
+              - name: test-env
+                value: test-value
+    components:
+      - name: regular-component
+        container:
+          image: regular-test-image
+          name: regular-container
+  devfileResources:
+    "https://test.io/path/to/parent":
+      schemaVersion: 2.1.0
+      metadata:
+        name: parent-devfile
+      components:
+        - name: parent-component
+          container:
+            image: test-img
+            env:
+              - name: test-env
+                value: original-value
+
+output:
+  workspace:
+    components:
+      - name: parent-component
+        container:
+          image: test-img
+          env:
+            - name: test-env
+              value: test-value
+      - name: regular-component
+        container:
+          image: regular-test-image
+          name: regular-container

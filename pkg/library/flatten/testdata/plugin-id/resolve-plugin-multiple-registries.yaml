@@ -11,7 +11,7 @@ input:
         plugin:
           id: my/test/plugin-2
           registryUrl: "https://test-registry-2.io/subpath"
-  devfilePlugins:
+  devfileResources:
     "https://test-registry.io/subpath/my/test/plugin":
       schemaVersion: 2.0.0
       metadata:

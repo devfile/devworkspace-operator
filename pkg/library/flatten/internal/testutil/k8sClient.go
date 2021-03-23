@@ -25,9 +25,9 @@ import (
 )
 
 type FakeK8sClient struct {
-	client.Client // To satisfy interface; override all used methods
-	Plugins       map[string]v1alpha2.DevWorkspaceTemplate
-	Errors        map[string]TestPluginError
+	client.Client         // To satisfy interface; override all used methods
+	DevWorkspaceResources map[string]v1alpha2.DevWorkspaceTemplate
+	Errors                map[string]TestPluginError
 }
 
 func (client *FakeK8sClient) Get(_ context.Context, namespacedName client.ObjectKey, obj runtime.Object) error {
@@ -35,7 +35,7 @@ func (client *FakeK8sClient) Get(_ context.Context, namespacedName client.Object
 	if !ok {
 		return fmt.Errorf("called Get() in fake client with non-DevWorkspaceTemplate")
 	}
-	if plugin, ok := client.Plugins[namespacedName.Name]; ok {
+	if plugin, ok := client.DevWorkspaceResources[namespacedName.Name]; ok {
 		*template = plugin
 		return nil
 	}

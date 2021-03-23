@@ -9,7 +9,7 @@ input:
       - name: test-plugin-2
         plugin:
           uri: "https://my-plugin-alt.io/test"
-  devfilePlugins:
+  devfileResources:
     "https://my-plugin.io/test":
       schemaVersion: 2.0.0
       metadata:

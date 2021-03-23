@@ -76,7 +76,7 @@ input:
                 }
               ]
             }
-  plugins:
+  devworkspaceResources:
     theia-next:
       kind: DevWorkspaceTemplate
       apiVersion: workspace.devfile.io/v1alpha2

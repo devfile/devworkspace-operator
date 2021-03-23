@@ -8,7 +8,7 @@ input:
           kubernetes:
             name: test-plugin-a
             namespace: test-ns
-  plugins:
+  devworkspaceResources:
     test-plugin-a:
       kind: DevWorkspaceTemplate
       apiVersion: workspace.devfile.io/v1alpha2

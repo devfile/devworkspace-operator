@@ -61,10 +61,10 @@ type TestCase struct {
 
 type TestInput struct {
 	Workspace *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
-	// Plugins is a map of plugin "name" to devworkspace template; namespace is ignored.
-	Plugins map[string]dw.DevWorkspaceTemplate `json:"plugins,omitempty"`
-	// DevfilePlugins is a map of plugin "name" to devfile
-	DevfilePlugins map[string]dw.Devfile `json:"devfilePlugins,omitempty"`
+	// DevWorkspaceResources is a map of string keys to devworkspace templates
+	DevWorkspaceResources map[string]dw.DevWorkspaceTemplate `json:"devworkspaceResources,omitempty"`
+	// DevfileResources is a map of string keys to devfile resources
+	DevfileResources map[string]dw.Devfile `json:"devfileResources,omitempty"`
 	// Errors is a map of plugin name to the error that should be returned when attempting to retrieve it.
 	Errors map[string]TestPluginError `json:"errors,omitempty"`
 }

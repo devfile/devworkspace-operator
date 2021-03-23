@@ -1,0 +1,12 @@
+name: "Fails nicely when no Kubernetes namespace is provided and there's no default"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          kubernetes:
+            name: test-plugin-a
+
+output:
+  errRegexp: "specifies a kubernetes reference without namespace and a default is not provided"

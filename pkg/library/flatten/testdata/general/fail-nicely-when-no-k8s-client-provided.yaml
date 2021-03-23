@@ -1,0 +1,13 @@
+name: "Fails nicely when no Kubernetes client provided"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          kubernetes:
+            name: test-plugin-a
+            namespace: test-ns
+
+output:
+  errRegexp: "cannot resolve resources by kubernetes reference: no kubernetes client provided"

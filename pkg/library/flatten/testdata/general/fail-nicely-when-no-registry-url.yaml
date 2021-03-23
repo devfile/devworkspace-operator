@@ -1,0 +1,11 @@
+name: "Fails nicely when no registry URL is provided and there's no default"
+
+input:
+  workspace:
+    components:
+      - name: test-plugin
+        plugin:
+          id: test/plugin
+
+output:
+  errRegexp: "plugin test-plugin does not specify a registryUrl and no internal registry is configured"

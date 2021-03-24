@@ -1,21 +1,11 @@
-name: "Resolve parent and plugins"
+name: "Annotates resources merged into devfile with source attribute"
 
 input:
   workspace:
     parent:
       kubernetes:
         name: test-parent-k8s
-      components:
-        - name: parent-component
-          container:
-            env:
-              - name: test-env
-                value: test-value
     components:
-      - name: regular-component
-        container:
-          image: regular-test-image
-          name: regular-container
       - name: test-plugin
         plugin:
           uri: https://test-plugin.io/test-plugin
@@ -26,13 +16,16 @@ input:
       metadata:
         name: parent-devworkspacetemplate
       spec:
+        projects:
+          - name: parent-project
+        starterProjects:
+          - name: parent-starter-project
         components:
           - name: parent-component
             container:
               image: test-img
-              env:
-                - name: test-env
-                  value: original-value
+        commands:
+          - id: parent-command
   devfileResources:
     "https://test-plugin.io/test-plugin":
       schemaVersion: 2.1.0
@@ -42,29 +35,33 @@ input:
         - name: plugin-component
           container:
             image: plugin-img
-            env:
-              - name: plugin-env
-                value: original-value
+      commands:
+        - id: plugin-command
 output:
   workspace:
+    projects:
+      - name: parent-project
+        attributes:
+          controller.devfile.io/imported-by: parent
+    starterProjects:
+      - name: parent-starter-project
+        attributes:
+          controller.devfile.io/imported-by: parent
     components:
       - name: parent-component
         attributes:
           controller.devfile.io/imported-by: parent
         container:
           image: test-img
-          env:
-            - name: test-env
-              value: test-value
-      - name: regular-component
-        container:
-          image: regular-test-image
-          name: regular-container
       - name: plugin-component
         attributes:
           controller.devfile.io/imported-by: test-plugin
         container:
           image: plugin-img
-          env:
-            - name: plugin-env
-              value: original-value
+    commands:
+      - id: parent-command
+        attributes:
+          controller.devfile.io/imported-by: parent
+      - id: plugin-command
+        attributes:
+          controller.devfile.io/imported-by: test-plugin

@@ -23,9 +23,6 @@ var ControllerAppLabels = func() map[string]string {
 
 // Internal constants
 const (
-	// default URL for accessing Che Rest API Emulator from Workspace containers
-	DefaultApiEndpoint = "http://localhost:9999/api/"
-
 	DefaultProjectsSourcesRoot = "/projects"
 
 	AuthEnabled = "false"

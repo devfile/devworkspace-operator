@@ -27,7 +27,6 @@ import (
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
-	shimlib "github.com/devfile/devworkspace-operator/pkg/library/shim"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
@@ -196,7 +195,6 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 	reconcileStatus.setConditionTrue(StorageReady, "")
 
-	shimlib.FillDefaultEnvVars(devfilePodAdditions, *workspace)
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 
 	rbacStatus := provision.SyncRBAC(workspace, r.Client, reqLogger)

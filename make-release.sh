@@ -130,7 +130,7 @@ if [[ "${BASEBRANCH}" != "${BRANCH}" ]]; then
   bump_version "${NEXT_VERSION_Y}" "${BASEBRANCH}"
 fi
 # bump the z digit
-[[ $VERSION =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]] && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"; NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3
+[[ ${VERSION#v} =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]] && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"; NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3
 NEXT_VERSION_Z="${BASE}.${NEXT}-SNAPSHOT"
 bump_version "${NEXT_VERSION_Z}" "${BRANCH}"
 

@@ -33,6 +33,7 @@ bump_version () {
 
   echo "Updating project version to ${NEXT_VERSION}"
   echo "${VERSION}" > VERSION
+  git add VERSION
   COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
   git commit -asm "${COMMIT_MSG}"
   git pull origin "${BUMP_BRANCH}"

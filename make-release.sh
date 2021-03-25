@@ -107,6 +107,7 @@ set -e
 
 # change VERSION file
 echo "${VERSION}" > VERSION
+git add VERSION
 
 QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .

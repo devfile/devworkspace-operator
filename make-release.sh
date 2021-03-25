@@ -35,7 +35,7 @@ bump_version () {
   echo "${VERSION}" > VERSION
   git add VERSION
   COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
-  git commit -asm "${COMMIT_MSG}"
+  git commit -asm "${COMMIT_MSG}" || true
   git pull origin "${BUMP_BRANCH}"
 
   set +e
@@ -119,7 +119,7 @@ bash -x ./deploy/generate-deployment.sh --use-defaults --default-image quay.io/d
 git tag "${VERSION}"
 git push origin "${VERSION}"
 COMMIT_MSG="[release] Release ${VERSION}"
-git commit -asm "${COMMIT_MSG}"
+git commit -asm "${COMMIT_MSG}" || true
 
 # now update ${BASEBRANCH} to the new snapshot version
 git checkout "${BASEBRANCH}"

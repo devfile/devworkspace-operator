@@ -112,7 +112,7 @@ docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
 docker push "${QUAY_REPO}"
 
 set -x
-bash -x ./deploy/generate-deployment.sh --use-defaults --default-image="quay.io/devfile/devworkspace-controller:${VERSION}"
+bash -x ./deploy/generate-deployment.sh --use-defaults --default-image quay.io/devfile/devworkspace-controller:${VERSION}"
 # tag the release
 git tag "${VERSION}"
 git push origin "${VERSION}"

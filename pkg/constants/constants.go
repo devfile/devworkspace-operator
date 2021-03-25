@@ -50,6 +50,12 @@ const (
 	// PVCCleanupPodCPURequest is the cpu request used for PVC clean up pods
 	PVCCleanupPodCPURequest = "5m"
 
+	// Resource limits/requests for project cloner init container
+	ProjectCloneMemoryLimit   = "300Mi"
+	ProjectCloneMemoryRequest = "64Mi"
+	ProjectCloneCPULimit      = "50m"
+	ProjectCloneCPURequest    = "5m"
+
 	// Constants describing storage classes supported by the controller
 	// CommonStorageClassType defines the 'common' storage policy -- one PVC is provisioned per namespace and all devworkspace storage
 	// is mounted in it on subpaths according to devworkspace ID.

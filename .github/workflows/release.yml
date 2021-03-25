@@ -59,17 +59,17 @@ jobs:
 
           export GITHUB_TOKEN=${{ secrets.CHE_INCUBATOR_BOT_GITHUB_TOKEN }}
           ./make-release.sh --version ${{ github.event.inputs.version}}
-    - name: Create failure MM message
-      if: ${{ failure() }}
-      run: |
-        echo "{\"text\":\":building_construction: Devworkspace Operator ${{ github.event.inputs.version }} release has failed: https://github.com/devfile/devworkspace-operator/actions/workflows/release.yml\"}" > mattermost.json
-    - name: Create success MM message
-      run: |
-        echo "{\"text\":\":building_construction: Devworkspace Operator ${{ github.event.inputs.version }} has been released: https://quay.io/devfile/devworkspace-operator:${{ github.event.inputs.version }}\"}" > mattermost.json
-    - name: Send MM message
-      if: ${{ success() }} || ${{ failure() }}
-      uses: mattermost/action-mattermost-notify@master
-      env:
-        MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
-        MATTERMOST_CHANNEL: eclipse-che-releases
-        MATTERMOST_USERNAME: che-bot
+      - name: Create failure MM message
+        if: ${{ failure() }}
+        run: |
+          echo "{\"text\":\":building_construction: Devworkspace Operator ${{ github.event.inputs.version }} release has failed: https://github.com/devfile/devworkspace-operator/actions/workflows/release.yml\"}" > mattermost.json
+      - name: Create success MM message
+        run: |
+          echo "{\"text\":\":building_construction: Devworkspace Operator ${{ github.event.inputs.version }} has been released: https://quay.io/devfile/devworkspace-operator:${{ github.event.inputs.version }}\"}" > mattermost.json
+      - name: Send MM message
+        if: ${{ success() }} || ${{ failure() }}
+        uses: mattermost/action-mattermost-notify@master
+        env:
+          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+          MATTERMOST_CHANNEL: eclipse-che-releases
+          MATTERMOST_USERNAME: che-bot

@@ -29,9 +29,9 @@ import (
 )
 
 type testCase struct {
-	Name   string                                `json:"name,omitempty"`
-	Input  devworkspace.DevWorkspaceTemplateSpec `json:"input,omitempty"`
-	Output testOutput                            `json:"output,omitempty"`
+	Name   string                                 `json:"name,omitempty"`
+	Input  *devworkspace.DevWorkspaceTemplateSpec `json:"input,omitempty"`
+	Output testOutput                             `json:"output,omitempty"`
 }
 
 type testOutput struct {

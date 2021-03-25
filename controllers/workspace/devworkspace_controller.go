@@ -28,6 +28,7 @@ import (
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
+	"github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
@@ -193,6 +194,9 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			return reconcile.Result{}, err
 		}
 	}
+
+	// Add init container to clone projects
+	projects.AddProjectClonerComponent(&workspace.Spec.Template)
 
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspace.Spec.Template)
 	if err != nil {

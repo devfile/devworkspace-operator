@@ -39,6 +39,7 @@ const (
 	pvcCleanupJobImageEnvVar       = "RELATED_IMAGE_pvc_cleanup_job"
 	asyncStorageServerImageEnvVar  = "RELATED_IMAGE_async_storage_server"
 	asyncStorageSidecarImageEnvVar = "RELATED_IMAGE_async_storage_sidecar"
+	projectCloneImageEnvVar        = "RELATED_IMAGE_project_clone"
 )
 
 // GetWebhookServerImage returns the image reference for the webhook server image. Returns
@@ -87,6 +88,15 @@ func GetAsyncStorageSidecarImage() string {
 	val, ok := os.LookupEnv(asyncStorageSidecarImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", asyncStorageSidecarImageEnvVar), "Could not get async storage sidecar image")
+		return ""
+	}
+	return val
+}
+
+func GetProjectClonerImage() string {
+	val, ok := os.LookupEnv(projectCloneImageEnvVar)
+	if !ok {
+		log.Info(fmt.Sprintf("Could not get initial project clone image: environment variable %s is not set", projectCloneImageEnvVar))
 		return ""
 	}
 	return val

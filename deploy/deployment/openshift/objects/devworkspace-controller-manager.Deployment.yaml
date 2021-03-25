@@ -51,6 +51,8 @@ spec:
           value: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
         - name: RELATED_IMAGE_async_storage_sidecar
           value: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
+        - name: RELATED_IMAGE_project_clone
+          value: quay.io/amisevsk/project-clone:dev
         image: quay.io/devfile/devworkspace-controller:next
         imagePullPolicy: Always
         livenessProbe:

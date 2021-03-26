@@ -11,8 +11,3 @@
 //
 
 package annotate
-
-const (
-	PluginSourceAttribute = "controller.devfile.io/imported-by"
-	EndpointURLAttribute  = "controller.devfile.io/endpoint-url"
-)

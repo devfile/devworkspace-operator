@@ -60,7 +60,7 @@ bump_version () {
 usage ()
 {
   echo "Usage: $0 --version [VERSION TO RELEASE]"
-  echo -e "Example: $0 --version v0.1.0\n";
+  echo "Example: $0 --version v0.1.0"; echo
 }
 
 if [[ ! ${VERSION} ]]; then
@@ -141,9 +141,8 @@ fi
 NEXT_VERSION_Z="${BASE}.${NEXT}-SNAPSHOT"
 bump_version "${NEXT_VERSION_Z}" "${BRANCH}"
 
-popd > /dev/null || exit
-
 # cleanup tmp dir
 if [[ $TMP ]] && [[ -d $TMP ]]; then
+  popd > /dev/null || exit
   rm -fr "$TMP"
 fi

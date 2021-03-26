@@ -17,6 +17,7 @@ import (
 	"github.com/devfile/api/v2/pkg/attributes"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 func AddURLAttributesToEndpoints(workspace *dw.DevWorkspaceTemplateSpec, exposedEndpoints map[string]v1alpha1.ExposedEndpointList) {
@@ -31,7 +32,7 @@ func AddURLAttributesToEndpoints(workspace *dw.DevWorkspaceTemplateSpec, exposed
 				if containerEndpoint.Attributes == nil {
 					containerEndpoint.Attributes = attributes.Attributes{}
 				}
-				containerEndpoint.Attributes.PutString(EndpointURLAttribute, exposedEndpoint.Url)
+				containerEndpoint.Attributes.PutString(constants.EndpointURLAttribute, exposedEndpoint.Url)
 			}
 		}
 	}

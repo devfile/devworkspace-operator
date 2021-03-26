@@ -115,7 +115,7 @@ docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
 docker push "${QUAY_REPO}"
 
 set -x
-bash -x ./deploy/generate-deployment.sh --use-defaults --default-image quay.io/devfile/devworkspace-controller:${VERSION}
+bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
 
 # tag the release if the VERSION file has changed
 if [[ ! -z $(git status -s) ]]; then # dirty

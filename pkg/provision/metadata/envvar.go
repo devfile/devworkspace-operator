@@ -19,28 +19,28 @@ import (
 )
 
 const (
-	// metadataMountPathEnvVar is the name of an env var added to all containers to specify where workspace yamls are mounted.
-	metadataMountPathEnvVar = "DEVWORKSPACE_METADATA"
+	// MetadataMountPathEnvVar is the name of an env var added to all containers to specify where workspace yamls are mounted.
+	MetadataMountPathEnvVar = "DEVWORKSPACE_METADATA"
 
-	// flattenedDevfileMountPathEnvVar is an environment variable holding the path to the flattened devworkspace template spec
-	flattenedDevfileMountPathEnvVar = "DEVWORKSPACE_FLATTENED_DEVFILE"
+	// FlattenedDevfileMountPathEnvVar is an environment variable holding the path to the flattened devworkspace template spec
+	FlattenedDevfileMountPathEnvVar = "DEVWORKSPACE_FLATTENED_DEVFILE"
 
-	// originalDevfileMountPathEnvVar is an environment variable holding the path to the original devworkspace template spec
-	originalDevfileMountPathEnvVar = "DEVWORKSPACE_ORIGINAL_DEVFILE"
+	// OriginalDevfileMountPathEnvVar is an environment variable holding the path to the original devworkspace template spec
+	OriginalDevfileMountPathEnvVar = "DEVWORKSPACE_ORIGINAL_DEVFILE"
 )
 
 func getWorkspaceMetaEnvVar() []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
-			Name:  metadataMountPathEnvVar,
+			Name:  MetadataMountPathEnvVar,
 			Value: metadataMountPath,
 		},
 		{
-			Name:  flattenedDevfileMountPathEnvVar,
+			Name:  FlattenedDevfileMountPathEnvVar,
 			Value: path.Join(metadataMountPath, flattenedYamlFilename),
 		},
 		{
-			Name:  originalDevfileMountPathEnvVar,
+			Name:  OriginalDevfileMountPathEnvVar,
 			Value: path.Join(metadataMountPath, originalYamlFilename),
 		},
 	}

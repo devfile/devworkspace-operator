@@ -4,10 +4,10 @@ go 1.13
 
 require (
 	github.com/devfile/api/v2 v2.0.0-20210402145809-1f335562c475
+	github.com/go-git/go-git/v5 v5.2.0
 	github.com/go-logr/logr v0.1.0
 	github.com/google/go-cmp v0.5.0
 	github.com/google/uuid v1.1.1
-	github.com/kr/pretty v0.2.0 // indirect
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87

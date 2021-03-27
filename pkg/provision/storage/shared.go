@@ -83,11 +83,11 @@ func syncCommonPVC(namespace string, clusterAPI provision.ClusterAPI) (*corev1.P
 	if err != nil {
 		return nil, err
 	}
-	currObject, didChange, err := provision.SyncObject(pvc, clusterAPI.Client, clusterAPI.Logger, false)
+	currObject, requeue, err := provision.SyncObject(pvc, clusterAPI.Client, clusterAPI.Logger, false)
 	if err != nil {
 		return nil, err
 	}
-	if didChange {
+	if requeue {
 		return nil, &NotReadyError{
 			Message: "Updated common PVC on cluster",
 		}

@@ -101,13 +101,8 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 
-func isFinalizerNecessary(workspace *devworkspace.DevWorkspace) bool {
-	storageProvisioner, err := storage.GetProvisioner(workspace)
-	if err != nil {
-		// Return false here since storage isn't needed for invalid workspaces
-		return false
-	}
-	return storageProvisioner.NeedsStorage(&workspace.Spec.Template)
+func isFinalizerNecessary(workspace *devworkspace.DevWorkspace, provisioner storage.Provisioner) bool {
+	return provisioner.NeedsStorage(&workspace.Spec.Template)
 }
 
 func (r *DevWorkspaceReconciler) namespaceIsTerminating(ctx context.Context, namespace string) (bool, error) {

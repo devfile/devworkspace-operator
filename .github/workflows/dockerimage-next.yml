@@ -10,7 +10,7 @@ name: Next Dockerimage
 
 on:
   push:
-    branches: [ master ]
+    branches: [ v1alphax ]
 
 jobs:
 
@@ -27,5 +27,5 @@ jobs:
         registry: quay.io
         repository: devfile/devworkspace-controller
         dockerfile: ./build/Dockerfile
-        tags: next
+        tags: v1alphax
         tag_with_sha: true

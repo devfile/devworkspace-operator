@@ -1,0 +1,36 @@
+apiVersion: v2
+publisher: redhat-developer
+name: web-terminal
+version: latest
+type: Che Editor
+displayName: Web Terminal
+title: Web Terminal
+description: Web Terminal provides the ability to start a terminal inside the OpenShift Console.
+icon: null
+repository: https://github.com/eclipse/che-machine-exec/
+firstPublicationDate: "2020-05-13"
+category: Other
+spec:
+  endpoints:
+   -  name: web-terminal
+      public: true
+      targetPort: 4444
+      attributes:
+        protocol: http
+        type: ide
+        discoverable: false
+        secure: true
+        cookiesAuthEnabled: true
+  containers:
+   - name: web-terminal
+     image: "${RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0}"
+     command: ["/go/bin/che-machine-exec",
+               "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",
+               "--idle-timeout", "$(DEVWORKSPACE_IDLE_TIMEOUT)",
+               "--pod-selector", "controller.devfile.io/workspace_id=$(CHE_WORKSPACE_ID)",
+               "--use-tls"]
+     ports:
+       - exposedPort: 4444
+     env:
+       - name: USE_BEARER_TOKEN
+         value: true

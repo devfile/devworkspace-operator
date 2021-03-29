@@ -4,7 +4,7 @@ SHELL := bash
 
 OPERATOR_SDK_VERSION = v0.17.0
 NAMESPACE ?= devworkspace-controller
-IMG ?= quay.io/devfile/devworkspace-controller:next
+IMG ?= quay.io/devfile/devworkspace-controller:v1alphax
 TOOL ?= oc
 ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 PULL_POLICY ?= Always

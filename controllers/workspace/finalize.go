@@ -63,7 +63,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
-		log.Info("Failed to clean up DevWorkspace storage for %s: %s", workspace.Name, err)
+		log.Error(err, "Failed to clean up DevWorkspace storage")
 		failedStatus := &currentStatus{
 			Conditions: map[devworkspace.WorkspaceConditionType]string{
 				"Error": err.Error(),
@@ -84,7 +84,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			log.Info(storageErr.Message)
 			return reconcile.Result{RequeueAfter: storageErr.RequeueAfter}, nil
 		case *storage.ProvisioningError:
-			log.Info("Failed to clean up DevWorkspace storage for %s: %s", workspace.Name, storageErr)
+			log.Error(storageErr, "Failed to clean up DevWorkspace storage")
 			failedStatus := &currentStatus{
 				Conditions: map[devworkspace.WorkspaceConditionType]string{
 					"Error": storageErr.Message,

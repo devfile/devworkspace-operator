@@ -123,20 +123,14 @@ func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid s
 	if uid == h.ControllerUID {
 		return true, ""
 	}
-	if changePermitted(oldObj, newObj) {
-		return true, ""
-	}
-	return false, "object is owned by workspace and cannot be updated."
+	return changePermitted(oldObj, newObj)
 }
 
 func (h *WebhookHandler) handleImmutableRoute(oldObj, newObj runtime.Object, username string) (allowed bool, msg string) {
 	if username == h.ControllerSAName {
 		return true, ""
 	}
-	if changePermitted(oldObj, newObj) {
-		return true, ""
-	}
-	return false, "object is owned by workspace and cannot be updated."
+	return changePermitted(oldObj, newObj)
 }
 
 func (h *WebhookHandler) handleImmutableService(oldObj, newObj runtime.Object, uid, username string) (allowed bool, msg string) {
@@ -145,10 +139,7 @@ func (h *WebhookHandler) handleImmutableService(oldObj, newObj runtime.Object, u
 	if uid == h.ControllerUID || username == serviceCAUsername {
 		return true, ""
 	}
-	if changePermitted(oldObj, newObj) {
-		return true, ""
-	}
-	return false, "object is owned by workspace and cannot be updated."
+	return changePermitted(oldObj, newObj)
 }
 
 func (h *WebhookHandler) checkRestrictedAccessAnnotation(req admission.Request) (restrictedAccess bool, err error) {
@@ -159,14 +150,14 @@ func (h *WebhookHandler) checkRestrictedAccessAnnotation(req admission.Request) 
 	} else {
 		err = h.Decoder.DecodeRaw(req.Object, obj)
 	}
+	if err != nil {
+		return false, err
+	}
 	annotations := obj.GetAnnotations()
 	return annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true", nil
 }
 
 func checkRestrictedWorkspaceMetadata(oldMeta, newMeta *metav1.ObjectMeta) (allowed bool, msg string) {
-	if oldMeta.Labels[constants.WorkspaceCreatorLabel] != newMeta.Labels[constants.WorkspaceCreatorLabel] {
-		return false, "cannot update controller.devfile.io/creator label"
-	}
 	if oldMeta.Annotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
 		newMeta.Annotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
 		return false, "cannot disable restricted-access once it is set"
@@ -174,27 +165,27 @@ func checkRestrictedWorkspaceMetadata(oldMeta, newMeta *metav1.ObjectMeta) (allo
 	return true, "permitted change to workspace"
 }
 
-func changePermitted(oldObj, newObj runtime.Object) bool {
+func changePermitted(oldObj, newObj runtime.Object) (allowed bool, msg string) {
 	oldCopy := oldObj.DeepCopyObject()
 	newCopy := newObj.DeepCopyObject()
 	oldMeta, ok := oldCopy.(metav1.Object)
 	if !ok {
-		log.Error(fmt.Errorf("Object %s is not a valid k8s object: does not have metadata", oldObj.GetObjectKind()), "Failed to compare objects")
-		return false
+		log.Error(fmt.Errorf("object %s is not a valid k8s object: does not have metadata", oldObj.GetObjectKind()), "Failed to compare objects")
+		return false, "Internal error"
 	}
 	newMeta, ok := newCopy.(metav1.Object)
 	if !ok {
-		log.Error(fmt.Errorf("Object %s is not a valid k8s object: does not have metadata", newObj.GetObjectKind()), "Failed to compare objects")
-		return false
+		log.Error(fmt.Errorf("object %s is not a valid k8s object: does not have metadata", newObj.GetObjectKind()), "Failed to compare objects")
+		return false, "Internal error"
 	}
 	oldLabels, newLabels := oldMeta.GetLabels(), newMeta.GetLabels()
-	oldAnnotations, newAnnotations := oldMeta.GetAnnotations(), newMeta.GetAnnotations()
 	if oldLabels[constants.WorkspaceCreatorLabel] != newLabels[constants.WorkspaceCreatorLabel] {
-		return false
+		return false, fmt.Sprintf("Label '%s' is set by the controller and cannot be updated", constants.WorkspaceCreatorLabel)
 	}
+	oldAnnotations, newAnnotations := oldMeta.GetAnnotations(), newMeta.GetAnnotations()
 	if oldAnnotations[constants.WorkspaceRestrictedAccessAnnotation] == "true" &&
 		newAnnotations[constants.WorkspaceRestrictedAccessAnnotation] != "true" {
-		return false
+		return false, fmt.Sprintf("Cannot change annotation '%s' after it is set to 'true'", constants.WorkspaceRestrictedAccessAnnotation)
 	}
-	return true
+	return true, ""
 }

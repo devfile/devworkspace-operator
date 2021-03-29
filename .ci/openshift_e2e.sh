@@ -28,7 +28,7 @@ function Catch_Finish() {
 
 # ENV used by PROW ci
 export CI="openshift"
-export ARTIFACTS_DIR="/tmp/artifacts"
+export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/artifacts-che"}
 export NAMESPACE="eclipse-che"
 export DEVWORKSPACE_CONTROLLER_NAMESPACE="devworkspace-controller"
 export OPERATOR_REPO=$(dirname $(dirname $(readlink -f "$0")));
@@ -54,7 +54,7 @@ function getDevWorkspaceOperatorLogs() {
     oc get events -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}| tee get_events.log
 
   mkdir -p ${ARTIFACTS_DIR}
-  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR}
+  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR} --batch
 }
 
 deployChe() {
@@ -133,6 +133,7 @@ installChectl() {
   # chmod +x install_chectl.sh
   # ./install_chectl.sh --channel=next
 
+  # TODO fix to get latest chectl version
   wget https://github.com/che-incubator/chectl/releases/download/20210324120946/chectl-linux-x64.tar.gz
   tar -xzf chectl-linux-x64.tar.gz
   mv chectl /tmp

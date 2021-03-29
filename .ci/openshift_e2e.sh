@@ -54,7 +54,7 @@ function getDevWorkspaceOperatorLogs() {
     oc get events -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}| tee get_events.log
 
   mkdir -p ${ARTIFACTS_DIR}
-  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR} --batch
+  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR}
 }
 
 deployChe() {
@@ -134,7 +134,7 @@ installChectl() {
   # ./install_chectl.sh --channel=next
 
   # TODO fix to get latest chectl version
-  wget https://github.com/che-incubator/chectl/releases/download/20210324120946/chectl-linux-x64.tar.gz
+  wget https://github.com/che-incubator/chectl/releases/download/20210329134519/chectl-linux-x64.tar.gz
   tar -xzf chectl-linux-x64.tar.gz
   mv chectl /tmp
   /tmp/chectl/bin/chectl --version

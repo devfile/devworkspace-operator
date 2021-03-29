@@ -171,6 +171,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	flattenedWorkspace, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, flattenHelpers)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
+		// Clean up cluster deployment
+		err := provision.ScaleDeploymentToZero(workspace, r.Client)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		// TODO: Handle error more elegantly
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
@@ -181,6 +186,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
+		// Clean up cluster deployment
+		err := provision.ScaleDeploymentToZero(workspace, r.Client)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", err)
 		return reconcile.Result{}, nil
@@ -197,6 +207,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspace.Spec.Template)
 	if err != nil {
 		reqLogger.Info("DevWorkspace start failed")
+		// Clean up cluster deployment
+		err := provision.ScaleDeploymentToZero(workspace, r.Client)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 		reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 		reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error processing devfile: %s", err)
 		return reconcile.Result{}, nil
@@ -210,6 +225,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			return reconcile.Result{Requeue: true, RequeueAfter: storageErr.RequeueAfter}, nil
 		case *storage.ProvisioningError:
 			reqLogger.Info(fmt.Sprintf("DevWorkspace start failed: %s", storageErr))
+			// Clean up cluster deployment
+			err := provision.ScaleDeploymentToZero(workspace, r.Client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning storage: %s", storageErr)
 			return reconcile.Result{}, nil
@@ -234,6 +254,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
 			reqLogger.Info("DevWorkspace start failed")
+			// Clean up cluster deployment
+			err := provision.ScaleDeploymentToZero(workspace, r.Client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			// TODO: Propagate failure reason from devWorkspaceRouting
 			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = "Failed to install network objects required for devworkspace"
@@ -265,6 +290,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			return reconcile.Result{Requeue: true, RequeueAfter: provisionErr.RequeueAfter}, nil
 		case *metadata.ProvisioningError:
 			reqLogger.Info(fmt.Sprintf("DevWorkspace start failed: %s", provisionErr))
+			// Clean up cluster deployment
+			err := provision.ScaleDeploymentToZero(workspace, r.Client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Error provisioning metadata configmap: %s", provisionErr)
 			return reconcile.Result{}, nil
@@ -307,6 +337,12 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			reqLogger.Info("Workspace start failed")
+			// Clean up cluster deployment
+			err := provision.ScaleDeploymentToZero(workspace, r.Client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
 			reconcileStatus.Phase = devworkspace.WorkspaceStatusFailed
 			reconcileStatus.Conditions[devworkspace.WorkspaceFailedStart] = fmt.Sprintf("Devworkspace spec is invalid: %s", deploymentStatus.Err)
 			return reconcile.Result{}, deploymentStatus.Err

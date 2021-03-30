@@ -1,0 +1,31 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: plain
+spec:
+  started: true
+  routingClass: 'basic'
+  template:
+    projects:
+      - name: web-nodejs-sample
+        git:
+          remotes:
+            origin: "https://github.com/che-samples/web-nodejs-sample.git"
+      - name: devworkspace-operator
+        git:
+          checkoutFrom:
+            remote: amisevsk
+            revision: clone-projects-on-start
+          remotes:
+            origin: "https://github.com/devfile/devworkspace-operator.git"
+            amisevsk: "https://github.com/amisevsk/devworkspace-operator.git"
+    components:
+      - name: web-terminal
+        container:
+          image: quay.io/wto/web-terminal-tooling:latest
+          memoryLimit: 512Mi
+          mountSources: true
+          command:
+           - "tail"
+           - "-f"
+           - "/dev/null"

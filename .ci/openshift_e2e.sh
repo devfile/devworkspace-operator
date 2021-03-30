@@ -54,7 +54,21 @@ function getDevWorkspaceOperatorLogs() {
     oc get events -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}| tee get_events.log
 
   mkdir -p ${ARTIFACTS_DIR}
-  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR}
+  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR} --telemetry=off
+}
+
+installChectl() {
+  curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
+  chmod +x ./kubectl 
+  mv ./kubectl /tmp 
+
+  wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.7.0-rc.1/openshift-client-linux.tar.gz --no-check-certificate -O - | tar -xz
+  mv oc /tmp
+
+  wget $(curl https://che-incubator.github.io/chectl/download-link/next-linux-x64)
+  tar -xzf chectl-linux-x64.tar.gz
+  mv chectl /tmp
+  /tmp/chectl/bin/chectl --version
 }
 
 deployChe() {
@@ -77,8 +91,8 @@ EOL
 
 # Create admin user inside of openshift cluster and login
 function provisionOpenShiftOAuthUser() {
-  oc create secret generic htpass-secret --from-file=htpasswd="${OPERATOR_REPO}"/.github/users.htpasswd -n openshift-config
-  oc apply -f "${OPERATOR_REPO}"/.github/htpasswdProvider.yaml
+  oc create secret generic htpass-secret --from-file=htpasswd="${OPERATOR_REPO}"/.github/resources/users.htpasswd -n openshift-config
+  oc apply -f "${OPERATOR_REPO}"/.github/resources/htpasswdProvider.yaml
   oc adm policy add-cluster-role-to-user cluster-admin user
 
   echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
@@ -121,24 +135,7 @@ startHappyPathTest() {
   exit 1
 }
 
-installChectl() {
-  curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
-  chmod +x ./kubectl 
-  mv ./kubectl /tmp 
 
-  wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.7.0-rc.1/openshift-client-linux.tar.gz --no-check-certificate -O - | tar -xz
-  mv oc /tmp
-
-  # curl -sL https://www.eclipse.org/che/chectl/ > install_chectl.sh
-  # chmod +x install_chectl.sh
-  # ./install_chectl.sh --channel=next
-
-  # TODO fix to get latest chectl version
-  wget https://github.com/che-incubator/chectl/releases/download/20210329134519/chectl-linux-x64.tar.gz
-  tar -xzf chectl-linux-x64.tar.gz
-  mv chectl /tmp
-  /tmp/chectl/bin/chectl --version
-}
 
 runTest() {
   deployChe

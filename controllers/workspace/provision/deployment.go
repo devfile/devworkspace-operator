@@ -18,11 +18,13 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/env"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-
-	"github.com/devfile/devworkspace-operator/pkg/common"
 
 	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/google/go-cmp/cmp"
@@ -35,10 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/env"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 type DeploymentProvisioningStatus struct {
@@ -138,6 +136,23 @@ func DeleteWorkspaceDeployment(ctx context.Context, workspace *devworkspace.DevW
 		return false, err
 	}
 	return true, nil
+}
+
+// ScaleDeploymentToZero scales the cluster deployment to zero
+func ScaleDeploymentToZero(workspace *devworkspace.DevWorkspace, client runtimeClient.Client) error {
+	patch := []byte(`{"spec":{"replicas": 0}}`)
+	err := client.Patch(context.Background(), &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: workspace.Namespace,
+			Name:      common.DeploymentName(workspace.Status.WorkspaceId),
+		},
+	}, runtimeClient.RawPatch(types.StrategicMergePatchType, patch))
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {

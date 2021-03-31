@@ -18687,8 +18687,6 @@ spec:
           value: quay.io/eclipse/che-machine-exec:nightly
         - name: RELATED_IMAGE_web_terminal_tooling
           value: quay.io/wto/web-terminal-tooling:latest
-        - name: RELATED_IMAGE_default_tls_secrets_creation_job
-          value: quay.io/eclipse/che-tls-secret-creator:alpine-3029769
         - name: RELATED_IMAGE_pvc_cleanup_job
           value: quay.io/libpod/busybox:1.30.1
         - name: RELATED_IMAGE_async_storage_server

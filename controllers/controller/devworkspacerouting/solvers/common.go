@@ -93,7 +93,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 		validExposures[exp] = true
 	}
 
-	exposedPorts := []corev1.ServicePort{}
+	var exposedPorts []corev1.ServicePort
 
 	for _, es := range endpoints {
 		for _, endpoint := range es {

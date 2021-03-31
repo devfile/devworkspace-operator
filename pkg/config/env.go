@@ -20,23 +20,14 @@ import (
 type ControllerEnv struct{}
 
 const (
-	webhooksSecretNameEnvVar      = "WEBHOOK_SECRET_NAME"
-	webhooksCertificateNameEnvVar = "WEBHOOK_CERTIFICATE_NAME"
-	developmentModeEnvVar         = "DEVELOPMENT_MODE"
+	webhooksSecretNameEnvVar = "WEBHOOK_SECRET_NAME"
+	developmentModeEnvVar    = "DEVELOPMENT_MODE"
 )
 
 func GetWebhooksSecretName() (string, error) {
 	env := os.Getenv(webhooksSecretNameEnvVar)
 	if env == "" {
 		return "", fmt.Errorf("environment variable %s is unset", webhooksSecretNameEnvVar)
-	}
-	return env, nil
-}
-
-func GetWebhooksCertName() (string, error) {
-	env := os.Getenv(webhooksCertificateNameEnvVar)
-	if env == "" {
-		return "", fmt.Errorf("environment variable %s is unset", webhooksCertificateNameEnvVar)
 	}
 	return env, nil
 }

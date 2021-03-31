@@ -24,7 +24,7 @@ import (
 var log = logf.Log.WithName("webhook-k8s")
 
 // SetupSecureService handles TLS secrets required for deployment on Kubernetes.
-func SetupSecureService(client crclient.Client, ctx context.Context, secretName, namespace string) error {
+func SetupSecureService(client crclient.Client, ctx context.Context, namespace string) error {
 	err := service.CreateOrUpdateSecureService(client, ctx, namespace, map[string]string{})
 	if err != nil {
 		log.Info("Failed creating the secure service")

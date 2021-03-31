@@ -97,7 +97,7 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.DevWorkspaceRou
 	}
 }
 
-func (_ *SolverGetter) GetSolver(client client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
+func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
 	isOpenShift := infrastructure.IsOpenShift()
 	switch routingClass {
 	case controllerv1alpha1.DevWorkspaceRoutingBasic:

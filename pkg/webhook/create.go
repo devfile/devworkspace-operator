@@ -72,7 +72,7 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		}
 		log.Info("Setting up the Kubernetes webhook server secure service")
 		log.Info(fmt.Sprintf("Using certificate stored in secret '%s' to serve webhooks", secretName))
-		err = webhook_k8s.SetupSecureService(client, ctx, secretName, namespace)
+		err = webhook_k8s.SetupSecureService(client, ctx, namespace)
 		if err != nil {
 			return err
 		}

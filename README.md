@@ -49,14 +49,7 @@ export DWO_IMG=quay.io/devfile/devworkspace-controller:next
 make install
 ```
 
-By default, controller will expose devworkspace servers without any authentication; this is not advisable for public clusters, as any user could access the created devworkspace via URL.
-
-In case of OpenShift, you're able to configure DevWorkspace CR to secure your servers with the following piece of configuration:
-
-```yaml
-spec:
-  routingClass: openshift-oauth
-```
+By default, the controller will expose workspace servers without any authentication; this is not advisable for public clusters, as any user could access the created workspace via URL.
 
 See below for all environment variables used in the makefile.
 

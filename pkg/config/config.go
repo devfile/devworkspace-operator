@@ -18,7 +18,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
@@ -103,9 +102,6 @@ func (wc *ControllerConfig) GetPropertyOrDefault(name string, defaultValue strin
 }
 
 func (wc *ControllerConfig) Validate() error {
-	if !infrastructure.IsOpenShift() && wc.GetDefaultRoutingClass() == string(v1alpha1.DevWorkspaceRoutingOpenShiftOauth) {
-		return fmt.Errorf("controller appears to be running in non-OpenShift cluster, but default routing class is '%s'", v1alpha1.DevWorkspaceRoutingOpenShiftOauth)
-	}
 	return nil
 }
 

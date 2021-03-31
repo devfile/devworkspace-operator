@@ -35,7 +35,6 @@ var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 
 const (
 	webTerminalToolingImageEnvVar       = "RELATED_IMAGE_web_terminal_tooling"
-	openshiftOAuthProxyImageEnvVar      = "RELATED_IMAGE_openshift_oauth_proxy"
 	webhookServerImageEnvVar            = "RELATED_IMAGE_devworkspace_webhook_server"
 	webhookKubernetesCertJobImageEnvVar = "RELATED_IMAGE_default_tls_secrets_creation_job"
 	pvcCleanupJobImageEnvVar            = "RELATED_IMAGE_pvc_cleanup_job"
@@ -60,18 +59,6 @@ func GetWebTerminalToolingImage() string {
 	val, ok := os.LookupEnv(webTerminalToolingImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", webTerminalToolingImageEnvVar), "Could not get web terminal tooling image")
-		return ""
-	}
-	return val
-}
-
-// GetOpenShiftOAuthProxyImage returns the image reference for the openshift OAuth proxy image, used
-// for openshift-oauth workspace routingClass. Returns empty string if env var RELATED_IMAGE_openshift_oauth_proxy
-// is not defined.
-func GetOpenShiftOAuthProxyImage() string {
-	val, ok := os.LookupEnv(openshiftOAuthProxyImageEnvVar)
-	if !ok {
-		log.Error(fmt.Errorf("environment variable %s is not set", openshiftOAuthProxyImageEnvVar), "Could not get OpenShift OAuth proxy image")
 		return ""
 	}
 	return val

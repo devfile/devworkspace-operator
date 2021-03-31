@@ -20,6 +20,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
+	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage/asyncstorage"
@@ -41,6 +42,12 @@ func (*AsyncStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateS
 }
 
 func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
+	if err := checkConfigured(); err != nil {
+		return &ProvisioningError{
+			Message: fmt.Sprintf("%s. Contact an administrator to resolve this issue.", err.Error()),
+		}
+	}
+
 	numWorkspaces, _, err := p.getAsyncWorkspaceCount(clusterAPI)
 	if err != nil {
 		return err
@@ -50,7 +57,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	// is created.
 	if numWorkspaces > 1 && workspace.Status.Phase != dw.WorkspaceStatusRunning {
 		return &ProvisioningError{
-			Message: fmt.Sprintf("Cannot provision storage for workspace %s", workspace.Name),
+			Message: fmt.Sprintf("cannot provision storage for workspace %s", workspace.Name),
 			Err:     fmt.Errorf("at most one workspace using async storage can be running in a namespace"),
 		}
 	}
@@ -70,7 +77,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
 			return &NotReadyError{
-				Message:      fmt.Sprintf("setting up configuration for async storage"),
+				Message:      "setting up configuration for async storage",
 				RequeueAfter: 1 * time.Second,
 			}
 		}
@@ -248,4 +255,14 @@ func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(api provision.ClusterAPI)
 
 	}
 	return started, total, nil
+}
+
+func checkConfigured() error {
+	if images.GetAsyncStorageServerImage() == "" {
+		return fmt.Errorf("asynchronous storage server image is not configured")
+	}
+	if images.GetAsyncStorageSidecarImage() == "" {
+		return fmt.Errorf("asynchronous storage sidecar image is not configured")
+	}
+	return nil
 }

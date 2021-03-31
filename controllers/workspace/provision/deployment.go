@@ -148,7 +148,7 @@ func ScaleDeploymentToZero(workspace *devworkspace.DevWorkspace, client runtimeC
 		},
 	}, runtimeClient.RawPatch(types.StrategicMergePatchType, patch))
 
-	if err != nil {
+	if err != nil && !k8sErrors.IsNotFound(err) {
 		return err
 	}
 

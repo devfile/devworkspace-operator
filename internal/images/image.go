@@ -34,12 +34,11 @@ var log = logf.Log.WithName("container-images")
 var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 
 const (
-	webTerminalToolingImageEnvVar       = "RELATED_IMAGE_web_terminal_tooling"
-	webhookServerImageEnvVar            = "RELATED_IMAGE_devworkspace_webhook_server"
-	webhookKubernetesCertJobImageEnvVar = "RELATED_IMAGE_default_tls_secrets_creation_job"
-	pvcCleanupJobImageEnvVar            = "RELATED_IMAGE_pvc_cleanup_job"
-	asyncStorageServerImageEnvVar       = "RELATED_IMAGE_async_storage_server"
-	asyncStorageSidecarImageEnvVar      = "RELATED_IMAGE_async_storage_sidecar"
+	webTerminalToolingImageEnvVar  = "RELATED_IMAGE_web_terminal_tooling"
+	webhookServerImageEnvVar       = "RELATED_IMAGE_devworkspace_webhook_server"
+	pvcCleanupJobImageEnvVar       = "RELATED_IMAGE_pvc_cleanup_job"
+	asyncStorageServerImageEnvVar  = "RELATED_IMAGE_async_storage_server"
+	asyncStorageSidecarImageEnvVar = "RELATED_IMAGE_async_storage_sidecar"
 )
 
 // GetWebhookServerImage returns the image reference for the webhook server image. Returns
@@ -59,17 +58,6 @@ func GetWebTerminalToolingImage() string {
 	val, ok := os.LookupEnv(webTerminalToolingImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", webTerminalToolingImageEnvVar), "Could not get web terminal tooling image")
-		return ""
-	}
-	return val
-}
-
-// GetWebhookCertJobImage returns the image reference for the webhook cert job image. Returns
-// the empty string if environment variable RELATED_IMAGE_default_tls_secrets_creation_job is not defined
-func GetWebhookCertJobImage() string {
-	val, ok := os.LookupEnv(webhookKubernetesCertJobImageEnvVar)
-	if !ok {
-		log.Error(fmt.Errorf("environment variable %s is not set", webhookKubernetesCertJobImageEnvVar), "Could not get webhook cert job image")
 		return ""
 	}
 	return val

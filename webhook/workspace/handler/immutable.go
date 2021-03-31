@@ -14,7 +14,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	devworkspace "github.com/devfile/api/pkg/apis/workspaces/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -31,11 +30,8 @@ const serviceCAUsername = "system:serviceaccount:openshift-service-ca:service-ca
 // ImmutableWorkspaceDiffOptions is comparing options that should be used to check if there is no other changes except changing started
 var ImmutableWorkspaceDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
-	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "ManagedFields", "Finalizers", "DeletionTimestamp"),
+	cmpopts.IgnoreTypes(metav1.ObjectMeta{}),
 	cmpopts.IgnoreFields(devworkspace.DevWorkspaceSpec{}, "Started"),
-	cmpopts.IgnoreMapEntries(func(k string, v string) bool {
-		return k == config.StoppedByAnnotation
-	}),
 }
 
 func (h *WebhookHandler) HandleImmutableMutate(_ context.Context, req admission.Request) admission.Response {
@@ -75,35 +71,31 @@ func (h *WebhookHandler) HandleImmutableCreate(_ context.Context, req admission.
 }
 
 func (h *WebhookHandler) handleImmutableWorkspace(oldWksp, newWksp *devworkspace.DevWorkspace, uid string) (allowed bool, msg string) {
+	if oldWksp.Annotations[config.WorkspaceImmutableAnnotation] != "true" {
+		return true, "workspace does not have restricted access configured"
+	}
 	creatorUID := oldWksp.Labels[config.WorkspaceCreatorLabel]
 	if uid == creatorUID || uid == h.ControllerUID {
-		return true, "immutable workspace is updated by owner or controller"
+		return true, "workspace with restricted-access is updated by owner or controller"
 	}
-	if cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) {
-		return true, "immutable workspace is started/stopped"
+	if !cmp.Equal(oldWksp, newWksp, ImmutableWorkspaceDiffOptions[:]...) {
+		return false, "workspace has restricted-access enabled and can only be modified by its creator."
 	}
-	log.Info(fmt.Sprintf("Denied request on workspace resource by user %s", uid))
-	return false, fmt.Sprintf("workspace '%s' is immutable and can only be modified by its creator.", oldWksp.Name)
+	return checkRestrictedWorkspaceMetadata(&oldWksp.ObjectMeta, &newWksp.ObjectMeta)
 }
 
 func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid string) (allowed bool, msg string) {
 	if uid == h.ControllerUID {
 		return true, ""
 	}
-	if changePermitted(oldObj, newObj) {
-		return true, ""
-	}
-	return false, "object is owned by workspace and cannot be updated."
+	return changePermitted(oldObj, newObj)
 }
 
 func (h *WebhookHandler) handleImmutableRoute(oldObj, newObj runtime.Object, username string) (allowed bool, msg string) {
 	if username == h.ControllerSAName {
 		return true, ""
 	}
-	if changePermitted(oldObj, newObj) {
-		return true, ""
-	}
-	return false, "object is owned by workspace and cannot be updated."
+	return changePermitted(oldObj, newObj)
 }
 
 func (h *WebhookHandler) handleImmutableService(oldObj, newObj runtime.Object, uid, username string) (allowed bool, msg string) {
@@ -112,26 +104,38 @@ func (h *WebhookHandler) handleImmutableService(oldObj, newObj runtime.Object, u
 	if uid == h.ControllerUID || username == serviceCAUsername {
 		return true, ""
 	}
-	if changePermitted(oldObj, newObj) {
-		return true, ""
-	}
-	return false, "object is owned by workspace and cannot be updated."
+	return changePermitted(oldObj, newObj)
 }
 
-func changePermitted(oldObj, newObj runtime.Object) bool {
+func checkRestrictedWorkspaceMetadata(oldMeta, newMeta *metav1.ObjectMeta) (allowed bool, msg string) {
+	if oldMeta.Annotations[config.WorkspaceImmutableAnnotation] == "true" &&
+		newMeta.Annotations[config.WorkspaceImmutableAnnotation] != "true" {
+		return false, "cannot disable restricted-access once it is set"
+	}
+	return true, "permitted change to workspace"
+}
+
+func changePermitted(oldObj, newObj runtime.Object) (allowed bool, msg string) {
 	oldCopy := oldObj.DeepCopyObject()
 	newCopy := newObj.DeepCopyObject()
 	oldMeta, ok := oldCopy.(metav1.Object)
 	if !ok {
-		log.Error(fmt.Errorf("Object %s is not a valid k8s object: does not have metadata", oldObj.GetObjectKind()), "Failed to compare objects")
-		return false
+		log.Error(fmt.Errorf("object %s is not a valid k8s object: does not have metadata", oldObj.GetObjectKind()), "Failed to compare objects")
+		return false, "Internal error"
 	}
 	newMeta, ok := newCopy.(metav1.Object)
 	if !ok {
-		log.Error(fmt.Errorf("Object %s is not a valid k8s object: does not have metadata", newObj.GetObjectKind()), "Failed to compare objects")
-		return false
+		log.Error(fmt.Errorf("object %s is not a valid k8s object: does not have metadata", newObj.GetObjectKind()), "Failed to compare objects")
+		return false, "Internal error"
 	}
-	newMeta.SetFinalizers(oldMeta.GetFinalizers())
-	newMeta.SetDeletionTimestamp(oldMeta.GetDeletionTimestamp())
-	return reflect.DeepEqual(oldMeta, newMeta)
+	oldLabels, newLabels := oldMeta.GetLabels(), newMeta.GetLabels()
+	if oldLabels[config.WorkspaceCreatorLabel] != newLabels[config.WorkspaceCreatorLabel] {
+		return false, fmt.Sprintf("Label '%s' is set by the controller and cannot be updated", config.WorkspaceCreatorLabel)
+	}
+	oldAnnotations, newAnnotations := oldMeta.GetAnnotations(), newMeta.GetAnnotations()
+	if oldAnnotations[config.WorkspaceImmutableAnnotation] == "true" &&
+		newAnnotations[config.WorkspaceImmutableAnnotation] != "true" {
+		return false, fmt.Sprintf("Cannot change annotation '%s' after it is set to 'true'", config.WorkspaceImmutableAnnotation)
+	}
+	return true, ""
 }

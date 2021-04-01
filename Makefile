@@ -224,8 +224,10 @@ endif
 ### manifests: Generate manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=role webhook paths="./..." \
+			crd:crdVersions=v1beta1 \
 			output:crd:artifacts:config=deploy/templates/crd/bases \
 			output:rbac:artifacts:config=deploy/templates/components/rbac
+	rm -rf ./config
 	patch/patch_crds.sh
 
 ### fmt: Run go fmt against code

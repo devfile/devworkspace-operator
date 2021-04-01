@@ -56,8 +56,9 @@ else
 	echo "DevWorkspace API is specified from branch ${DEVWORKSPACE_API_VERSION}"
 	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 fi
-cp crds/workspace.devfile.io_devworkspaces.yaml \
-   crds/workspace.devfile.io_devworkspacetemplates.yaml \
-   $SCRIPT_DIR/deploy/templates/crd/bases/
+cp crds/workspace.devfile.io_devworkspaces.v1beta1.yaml \
+  $SCRIPT_DIR/deploy/templates/crd/bases/workspace.devfile.io_devworkspaces.yaml
+cp crds/workspace.devfile.io_devworkspacetemplates.v1beta1.yaml \
+  $SCRIPT_DIR/deploy/templates/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml
 
 cd $SCRIPT_DIR

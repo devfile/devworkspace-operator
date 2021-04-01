@@ -32,7 +32,7 @@ bump_version () {
   git checkout "${BUMP_BRANCH}"
 
   echo "Updating project version to ${NEXT_VERSION}"
-  echo "${VERSION}" > VERSION
+  echo "${NEXT_VERSION}" > VERSION
   git add VERSION
   COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
   git commit -asm "${COMMIT_MSG}"

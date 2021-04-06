@@ -44,6 +44,8 @@ output:
           limits:
             memory: "999Mi"
         env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-1"
           - name: "TEST_ENVVAR"
             value: "TEST_VALUE"
           - name: "PROJECTS_ROOT"

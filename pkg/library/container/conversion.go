@@ -16,6 +16,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dwEnv "github.com/devfile/devworkspace-operator/controllers/workspace/env"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -42,7 +43,7 @@ func convertContainerToK8s(devfileComponent dw.Component) (*v1.Container, error)
 		Args:            devfileContainer.Args,
 		Resources:       *containerResources,
 		Ports:           devfileEndpointsToContainerPorts(devfileContainer.Endpoints),
-		Env:             devfileEnvToContainerEnv(devfileContainer.Env),
+		Env:             devfileEnvToContainerEnv(devfileComponent.Name, devfileContainer.Env),
 		VolumeMounts:    devfileVolumeMountsToContainerVolumeMounts(devfileContainer.VolumeMounts),
 		ImagePullPolicy: v1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
 	}
@@ -101,8 +102,14 @@ func devfileVolumeMountsToContainerVolumeMounts(devfileVolumeMounts []dw.VolumeM
 	return volumeMounts
 }
 
-func devfileEnvToContainerEnv(devfileEnvVars []dw.EnvVar) []v1.EnvVar {
-	var env []v1.EnvVar
+func devfileEnvToContainerEnv(componentName string, devfileEnvVars []dw.EnvVar) []v1.EnvVar {
+	var env = []v1.EnvVar{
+		{
+			Name:  dwEnv.DevWorkspaceComponentName,
+			Value: componentName,
+		},
+	}
+
 	for _, devfileEnv := range devfileEnvVars {
 		env = append(env, v1.EnvVar{
 			Name:  devfileEnv.Name,

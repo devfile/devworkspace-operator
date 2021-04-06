@@ -33,6 +33,8 @@ output:
           - name: "projects"
             mountPath: "/testdir1"
         env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-1"
           - name: "PROJECTS_ROOT"
             value: "/testdir1"
           - name: "PROJECTS_SOURCE"
@@ -47,6 +49,8 @@ output:
           - name: "projects"
             mountPath: "/projects"
         env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-2"
           - name: "PROJECTS_ROOT"
             value: "/projects"
           - name: "PROJECTS_SOURCE"
@@ -55,6 +59,9 @@ output:
       - name: testing-container-3
         image: testing-image-3
         imagePullPolicy: Always
+        env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-3"
         resources:
           limits:
             memory: "999Mi"

@@ -19,12 +19,18 @@ output:
       - name: testing-container-1
         image: testing-image-1
         imagePullPolicy: Always
+        env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-1"
         resources:
           limits:
             memory: "999Mi"
       - name: testing-container-2
         image: testing-image-2
         imagePullPolicy: Always
+        env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-2"
         resources:
           limits:
             memory: "128M"

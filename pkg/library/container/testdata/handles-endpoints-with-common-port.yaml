@@ -24,6 +24,9 @@ output:
         resources:
           limits:
             memory: "999Mi"
+        env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-1"
         ports:
           - name: "3100-http"
             containerPort: 3100

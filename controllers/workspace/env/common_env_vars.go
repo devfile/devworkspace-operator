@@ -20,23 +20,23 @@ import (
 func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
-			Name:  "DEVWORKSPACE_NAMESPACE",
+			Name:  DevWorkspaceNamespace,
 			Value: namespace,
 		},
 		{
-			Name:  "DEVWORKSPACE_NAME",
+			Name:  DevWorkspaceName,
 			Value: workspaceName,
 		},
 		{
-			Name:  "DEVWORKSPACE_ID",
+			Name:  DevWorkspaceId,
 			Value: workspaceId,
 		},
 		{
-			Name:  "DEVWORKSPACE_CREATOR",
+			Name:  DevWorkspaceCreator,
 			Value: creator,
 		},
 		{
-			Name:  "DEVWORKSPACE_IDLE_TIMEOUT",
+			Name:  DevWorkspaceIdleTimeout,
 			Value: config.ControllerCfg.GetWorkspaceIdleTimeout(),
 		},
 	}

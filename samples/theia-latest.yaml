@@ -1,9 +1,7 @@
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
-  name: theia
-  labels:
-    controller.devfile.io/storage-type: async
+  name: theia-latest
 spec:
   started: true
   template:
@@ -15,14 +13,7 @@ spec:
     components:
       - name: theia
         plugin:
-          kubernetes:
-            name: theia-next
-            namespace: devworkspace-plugins
-      - name: terminal
-        plugin:
-          kubernetes:
-            name: machine-exec
-            namespace: devworkspace-plugins
+          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/latest/devfile.yaml
     commands:
       - id: say-hello
         exec:

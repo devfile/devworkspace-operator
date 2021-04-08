@@ -33,7 +33,7 @@ bump_version () {
 
   echo "Updating project version to ${NEXT_VERSION}"
   # change version/version.go file
-  sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(-next")#\1'"${NEXT_VERSION}"'\3#g'
+  sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(")#\1'"${NEXT_VERSION}"'\3#g'
   if [[ ! -z $(git status -s) ]]; then # dirty
     git add version/version.go
     COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
@@ -109,7 +109,7 @@ fi
 set -e
 
 # change version/version.go file
-sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(-next")#\1'"${VERSION}"'\3#g'
+sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(")#\1'"${VERSION}"'\3#g'
 
 QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .

@@ -214,15 +214,15 @@ func getSpecDeployment(
 			Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
+				constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
+				constants.DevWorkspaceNameLabel: workspace.Name,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
-					constants.DevWorkspaceNameLabel: workspace.Name,
+					constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 				},
 			},
 			Strategy: appsv1.DeploymentStrategy{

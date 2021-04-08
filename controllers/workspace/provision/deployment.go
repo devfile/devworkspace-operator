@@ -92,6 +92,18 @@ func SyncDeploymentToCluster(
 		}
 	}
 
+	if !cmp.Equal(specDeployment.Spec.Selector, clusterDeployment.Spec.Selector) {
+		clusterAPI.Logger.Info("Deployment selector is different. Recreating deployment...")
+		clusterDeployment.Spec = specDeployment.Spec
+		err := clusterAPI.Client.Delete(context.TODO(), clusterDeployment)
+		if err != nil {
+			return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
+		}
+		return DeploymentProvisioningStatus{
+			ProvisioningStatus: ProvisioningStatus{Requeue: true},
+		}
+	}
+
 	if !cmp.Equal(specDeployment, clusterDeployment, deploymentDiffOpts) {
 		clusterAPI.Logger.Info("Updating deployment...")
 		clusterDeployment.Spec = specDeployment.Spec

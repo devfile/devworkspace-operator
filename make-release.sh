@@ -32,9 +32,10 @@ bump_version () {
   git checkout "${BUMP_BRANCH}"
 
   echo "Updating project version to ${NEXT_VERSION}"
-  echo "${VERSION}" > VERSION
+  # change version/version.go file
+  sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(")#\1'"${NEXT_VERSION}"'\3#g'
   if [[ ! -z $(git status -s) ]]; then # dirty
-    git add VERSION
+    git add version/version.go
     COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
     git commit -asm "${COMMIT_MSG}"
   fi
@@ -107,8 +108,8 @@ else
 fi
 set -e
 
-# change VERSION file
-echo "${VERSION}" > VERSION
+# change version/version.go file
+sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(")#\1'"${VERSION}"'\3#g'
 
 QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
@@ -117,10 +118,10 @@ docker push "${QUAY_REPO}"
 set -x
 bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
 
-# tag the release if the VERSION file has changed
+# tag the release if the version/version.go file has changed
 if [[ ! -z $(git status -s) ]]; then # dirty
   COMMIT_MSG="[release] Release ${VERSION}"
-  git add VERSION
+  git add version/version.go
   git commit -asm "${COMMIT_MSG}"
   git tag "${VERSION}"
   git push origin "${VERSION}"

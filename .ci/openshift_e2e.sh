@@ -87,7 +87,7 @@ EOL
 
   cat /tmp/che-cr-patch.yaml
 
-  chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator
+  /tmp/chectl/bin/chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator
 }
 
 # Create admin user inside of openshift cluster and login

@@ -34,9 +34,11 @@ bump_version () {
   echo "Updating project version to ${NEXT_VERSION}"
   # change version/version.go file
   sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(-next")#\1'"${NEXT_VERSION}"'\3#g'
-  git add version/version.go
-  COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
-  git commit -asm "${COMMIT_MSG}"
+  if [[ ! -z $(git status -s) ]]; then # dirty
+    git add version/version.go
+    COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
+    git commit -asm "${COMMIT_MSG}"
+  fi
   git pull origin "${BUMP_BRANCH}"
 
   set +e
@@ -108,7 +110,6 @@ set -e
 
 # change version/version.go file
 sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(-next")#\1'"${VERSION}"'\3#g'
-git add version/version.go
 
 QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
@@ -117,11 +118,14 @@ docker push "${QUAY_REPO}"
 set -x
 bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
 
-# tag the release
-git tag "${VERSION}"
-git push origin "${VERSION}"
-COMMIT_MSG="[release] Release ${VERSION}"
-git commit -asm "${COMMIT_MSG}"
+# tag the release if the version/version.go file has changed
+if [[ ! -z $(git status -s) ]]; then # dirty
+  COMMIT_MSG="[release] Release ${VERSION}"
+  git add version/version.go
+  git commit -asm "${COMMIT_MSG}"
+  git tag "${VERSION}"
+  git push origin "${VERSION}"
+fi
 
 # now update ${BASEBRANCH} to the new snapshot version
 git checkout "${BASEBRANCH}"

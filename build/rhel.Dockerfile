@@ -1,43 +1,62 @@
-# Build the manager binary
-FROM registry.redhat.io/rhel8/go-toolset:1.13.4-27 as builder
+# Copyright (c) 2021 Red Hat, Inc.
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+# Contributors:
+#   Red Hat, Inc. - initial API and implementation
+#
 
-ENV GOPATH=/go/
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/devtools/go-toolset-rhel7
+FROM registry.access.redhat.com/devtools/go-toolset-rhel7:1.13.15-4  as builder
+ENV PATH=/opt/rh/go-toolset-1.13/root/usr/bin:${PATH} \
+    GOPATH=/go/
 USER root
 
-WORKDIR /workspace
+RUN go env GOPROXY
+WORKDIR /devworkspace-operator
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
+# NOTE: downstream this needs to be a tarball, not a live download
 RUN go mod download
 
 # Copy the go source
 COPY . .
 
-# compile workspace controller binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+# compile workspace controller binaries, then webhook binaries
+RUN export ARCH="$(uname -m)" && if [[ ${ARCH} == "x86_64" ]]; then export ARCH="amd64"; elif [[ ${ARCH} == "aarch64" ]]; then export ARCH="arm64"; fi && \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -a -o _output/bin/devworkspace-controller \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
-  cmd/manager/main.go
-
-# Compile webhook binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+  main.go && \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -o _output/bin/webhook-server \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
   webhook/main.go
 
-# Use distroless as minimal base image to package the manager binary
-# Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM registry.access.redhat.com/ubi8-minimal:8.2-349
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
+FROM registry.access.redhat.com/ubi8-minimal:8.3-291
 WORKDIR /
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
 COPY --from=builder /devworkspace-operator/_output/bin/webhook-server /usr/local/bin/webhook-server
 COPY --from=builder /devworkspace-operator/internal-registry internal-registry
 
-USER nonroot:nonroot
+ENV USER_UID=1001 \
+    USER_NAME=devworkspace-controller
+
+COPY build/bin /usr/local/bin
+RUN  /usr/local/bin/user_setup
+
+USER ${USER_UID}
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 CMD /usr/local/bin/devworkspace-controller
+
+# append Brew metadata here

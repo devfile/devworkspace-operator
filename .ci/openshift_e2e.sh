@@ -76,6 +76,7 @@ deployChe() {
 spec:
   devWorkspace:
     enable: true
+    controllerImage: '${DEVWORKSPACE_OPERATOR}'
   server:
     customCheProperties:
       CHE_FACTORY_DEFAULT__PLUGINS: ""
@@ -86,7 +87,7 @@ EOL
 
   cat /tmp/che-cr-patch.yaml
 
-  /tmp/chectl/bin/chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator --dev-workspace-controller-image=${DEVWORKSPACE_OPERATOR}
+  chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator
 }
 
 # Create admin user inside of openshift cluster and login

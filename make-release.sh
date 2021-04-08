@@ -30,14 +30,6 @@ bump_version () {
   BUMP_BRANCH=$2
 
   git checkout "${BUMP_BRANCH}"
-
-  echo "Updating project version to ${NEXT_VERSION}"
-  echo "${VERSION}" > VERSION
-  if [[ ! -z $(git status -s) ]]; then # dirty
-    git add VERSION
-    COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
-    git commit -asm "${COMMIT_MSG}"
-  fi
   git pull origin "${BUMP_BRANCH}"
 
   set +e
@@ -107,9 +99,6 @@ else
 fi
 set -e
 
-# change VERSION file
-echo "${VERSION}" > VERSION
-
 QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
 docker push "${QUAY_REPO}"
@@ -117,14 +106,8 @@ docker push "${QUAY_REPO}"
 set -x
 bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
 
-# tag the release if the VERSION file has changed
-if [[ ! -z $(git status -s) ]]; then # dirty
-  COMMIT_MSG="[release] Release ${VERSION}"
-  git add VERSION
-  git commit -asm "${COMMIT_MSG}"
-  git tag "${VERSION}"
-  git push origin "${VERSION}"
-fi
+git tag "${VERSION}" || true # don't fail if tag already exists
+git push origin "${VERSION}" || true # don't fail if tag already exists
 
 # now update ${BASEBRANCH} to the new snapshot version
 git checkout "${BASEBRANCH}"

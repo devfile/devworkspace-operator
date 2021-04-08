@@ -32,10 +32,13 @@ bump_version () {
   git checkout "${BUMP_BRANCH}"
 
   echo "Updating project version to ${NEXT_VERSION}"
-  echo "${NEXT_VERSION}" > VERSION
-  git add VERSION
-  COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
-  git commit -asm "${COMMIT_MSG}"
+  # change version/version.go file
+  sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(")#\1'"${NEXT_VERSION}"'\3#g'
+  if [[ ! -z $(git status -s) ]]; then # dirty
+    git add version/version.go
+    COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
+    git commit -asm "${COMMIT_MSG}"
+  fi
   git pull origin "${BUMP_BRANCH}"
 
   set +e
@@ -58,7 +61,7 @@ bump_version () {
 usage ()
 {
   echo "Usage: $0 --version [VERSION TO RELEASE]"
-  echo -e "Example: $0 --version v0.1.0\n";
+  echo "Example: $0 --version v0.1.0"; echo
 }
 
 if [[ ! ${VERSION} ]]; then
@@ -105,21 +108,24 @@ else
 fi
 set -e
 
-# change VERSION file
-echo "${VERSION}" > VERSION
-git add VERSION
+# change version/version.go file
+sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(")#\1'"${VERSION}"'\3#g'
 
 QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
 docker push "${QUAY_REPO}"
 
 set -x
-bash -x ./deploy/generate-deployment.sh --use-defaults --default-image quay.io/devfile/devworkspace-controller:${VERSION}
-# tag the release
-git tag "${VERSION}"
-git push origin "${VERSION}"
-COMMIT_MSG="[release] Release ${VERSION}"
-git commit -asm "${COMMIT_MSG}"
+bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
+
+# tag the release if the version/version.go file has changed
+if [[ ! -z $(git status -s) ]]; then # dirty
+  COMMIT_MSG="[release] Release ${VERSION}"
+  git add version/version.go
+  git commit -asm "${COMMIT_MSG}"
+  git tag "${VERSION}"
+  git push origin "${VERSION}"
+fi
 
 # now update ${BASEBRANCH} to the new snapshot version
 git checkout "${BASEBRANCH}"

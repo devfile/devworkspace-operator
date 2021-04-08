@@ -30,6 +30,13 @@ bump_version () {
   BUMP_BRANCH=$2
 
   git checkout "${BUMP_BRANCH}"
+
+  echo "Updating project version to ${NEXT_VERSION}"
+  # change version/version.go file
+  sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(-next")#\1'"${NEXT_VERSION}"'\3#g'
+  git add version/version.go
+  COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
+  git commit -asm "${COMMIT_MSG}"
   git pull origin "${BUMP_BRANCH}"
 
   set +e
@@ -99,6 +106,10 @@ else
 fi
 set -e
 
+# change version/version.go file
+sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(-next")#\1'"${VERSION}"'\3#g'
+git add version/version.go
+
 QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
 docker push "${QUAY_REPO}"
@@ -106,8 +117,11 @@ docker push "${QUAY_REPO}"
 set -x
 bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
 
-git tag "${VERSION}" || true # don't fail if tag already exists
-git push origin "${VERSION}" || true # don't fail if tag already exists
+# tag the release
+git tag "${VERSION}"
+git push origin "${VERSION}"
+COMMIT_MSG="[release] Release ${VERSION}"
+git commit -asm "${COMMIT_MSG}"
 
 # now update ${BASEBRANCH} to the new snapshot version
 git checkout "${BASEBRANCH}"

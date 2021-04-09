@@ -22,7 +22,7 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-# NOTE: downstream this needs to be a tarball, not a live download
+# In downstream this needs to be a cached vendor/ folder, so might as well do same upstream
 RUN go mod tidy; go mod vendor
 
 # Copy the go source

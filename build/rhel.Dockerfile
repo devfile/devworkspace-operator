@@ -27,18 +27,15 @@ RUN go mod download
 # Copy the go source
 COPY . .
 
-# regenerate vendor folder - need this offline for downstream
-RUN go mod vendor
-
 # compile workspace controller binaries, then webhook binaries
 RUN export ARCH="$(uname -m)" && if [[ ${ARCH} == "x86_64" ]]; then export ARCH="amd64"; elif [[ ${ARCH} == "aarch64" ]]; then export ARCH="arm64"; fi && \
-  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build -mod=vendor \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -a -o _output/bin/devworkspace-controller \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
   main.go
 RUN export ARCH="$(uname -m)" && if [[ ${ARCH} == "x86_64" ]]; then export ARCH="amd64"; elif [[ ${ARCH} == "aarch64" ]]; then export ARCH="arm64"; fi && \
-  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build -mod=vendor \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -o _output/bin/webhook-server \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \

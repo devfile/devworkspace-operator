@@ -1,7 +1,7 @@
 name: "Error retrieving plugin"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: "bad-plugin"
         plugin:

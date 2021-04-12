@@ -1,7 +1,7 @@
 name: "Resolve parent and plugins"
 
 input:
-  workspace:
+  devworkspace:
     parent:
       kubernetes:
         name: test-parent-k8s
@@ -46,7 +46,7 @@ input:
               - name: plugin-env
                 value: original-value
 output:
-  workspace:
+  devworkspace:
     components:
       - name: parent-component
         attributes:

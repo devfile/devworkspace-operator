@@ -15,13 +15,13 @@ package lifecycle
 import (
 	"fmt"
 
-	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
 // GetInitContainers partitions the components in a devfile's flattened spec into initContainer and non-initContainer lists
 // based off devfile lifecycle bindings and commands. Note that a component can appear in both lists, if e.g. it referred to
 // in a preStart command and in a regular command.
-func GetInitContainers(devfile v1alpha2.DevWorkspaceTemplateSpecContent) (initContainers, mainComponents []v1alpha2.Component, err error) {
+func GetInitContainers(devfile dw.DevWorkspaceTemplateSpecContent) (initContainers, mainComponents []dw.Component, err error) {
 	components := devfile.Components
 	commands := devfile.Commands
 	events := devfile.Events
@@ -71,14 +71,14 @@ func GetInitContainers(devfile v1alpha2.DevWorkspaceTemplateSpecContent) (initCo
 	return initContainers, mainComponents, nil
 }
 
-func checkPreStartEventCommandsValidity(initCommands []v1alpha2.Command) error {
+func checkPreStartEventCommandsValidity(initCommands []dw.Command) error {
 	for _, cmd := range initCommands {
 		commandType, err := getCommandType(cmd)
 		if err != nil {
 			return err
 		}
 		switch commandType {
-		case v1alpha2.ApplyCommandType:
+		case dw.ApplyCommandType:
 			continue
 		default:
 			// How a prestart exec command should be implemented is undefined currently, so we reject it.

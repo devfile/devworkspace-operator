@@ -16,19 +16,19 @@ import (
 	"fmt"
 	"reflect"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
 // resolutionContextTree is a recursive structure representing information about the devworkspace that is
 // lost when flattening
 type resolutionContextTree struct {
 	componentName   string
-	importReference devworkspace.ImportReference
+	importReference dw.ImportReference
 	plugins         []*resolutionContextTree
 	parentNode      *resolutionContextTree
 }
 
-func (t *resolutionContextTree) addPlugin(name string, plugin *devworkspace.PluginComponent) *resolutionContextTree {
+func (t *resolutionContextTree) addPlugin(name string, plugin *dw.PluginComponent) *resolutionContextTree {
 	newNode := &resolutionContextTree{
 		componentName:   name,
 		importReference: plugin.ImportReference,
@@ -39,7 +39,7 @@ func (t *resolutionContextTree) addPlugin(name string, plugin *devworkspace.Plug
 }
 
 func (t *resolutionContextTree) hasCycle() error {
-	var seenRefs []devworkspace.ImportReference
+	var seenRefs []dw.ImportReference
 	currNode := t
 	for currNode.parentNode != nil {
 		for _, seenRef := range seenRefs {

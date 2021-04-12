@@ -15,7 +15,7 @@ package controllers
 import (
 	"fmt"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
@@ -26,8 +26,8 @@ import (
 // default.
 //
 // If error is not nil, a user-readable message is returned that can be propagated to the user to explain the issue.
-func (r *DevWorkspaceReconciler) validateCreatorLabel(workspace *devworkspace.DevWorkspace) (msg string, err error) {
-	if _, present := workspace.Labels[constants.WorkspaceCreatorLabel]; !present {
+func (r *DevWorkspaceReconciler) validateCreatorLabel(workspace *dw.DevWorkspace) (msg string, err error) {
+	if _, present := workspace.Labels[constants.DevWorkspaceCreatorLabel]; !present {
 		return "DevWorkspace was created without creator ID label. It must be recreated to resolve the issue",
 			fmt.Errorf("devworkspace does not have creator label applied")
 	}

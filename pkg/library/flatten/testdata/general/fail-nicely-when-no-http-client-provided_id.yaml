@@ -1,7 +1,7 @@
 name: "Fails nicely when no HTTP client provided and id is used"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

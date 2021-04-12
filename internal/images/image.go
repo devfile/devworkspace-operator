@@ -25,7 +25,7 @@ import (
 	"os"
 	"regexp"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -121,7 +121,7 @@ func GetAsyncStorageSidecarImage() string {
 // variables of the form ${RELATED_IMAGE_*} with values from environment variables with the same name.
 //
 // Returns error if any referenced environment variable is undefined.
-func FillPluginEnvVars(pluginDWT *devworkspace.DevWorkspaceTemplate) (*devworkspace.DevWorkspaceTemplate, error) {
+func FillPluginEnvVars(pluginDWT *dw.DevWorkspaceTemplate) (*dw.DevWorkspaceTemplate, error) {
 	for idx, component := range pluginDWT.Spec.Components {
 		if component.Container == nil {
 			continue

@@ -83,7 +83,7 @@ func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1
 
 func (r *DevWorkspaceRoutingReconciler) getClusterServices(routing *controllerv1alpha1.DevWorkspaceRouting) ([]corev1.Service, error) {
 	found := &corev1.ServiceList{}
-	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.WorkspaceIDLabel, routing.Spec.WorkspaceId))
+	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, routing.Spec.DevWorkspaceId))
 	if err != nil {
 		return nil, err
 	}

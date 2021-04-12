@@ -17,7 +17,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,12 +26,12 @@ import (
 
 type FakeK8sClient struct {
 	client.Client         // To satisfy interface; override all used methods
-	DevWorkspaceResources map[string]v1alpha2.DevWorkspaceTemplate
+	DevWorkspaceResources map[string]dw.DevWorkspaceTemplate
 	Errors                map[string]TestPluginError
 }
 
 func (client *FakeK8sClient) Get(_ context.Context, namespacedName client.ObjectKey, obj runtime.Object) error {
-	template, ok := obj.(*v1alpha2.DevWorkspaceTemplate)
+	template, ok := obj.(*dw.DevWorkspaceTemplate)
 	if !ok {
 		return fmt.Errorf("called Get() in fake client with non-DevWorkspaceTemplate")
 	}

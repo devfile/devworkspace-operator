@@ -13,7 +13,7 @@
 package solvers
 
 import (
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -26,20 +26,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-type WorkspaceMetadata struct {
-	WorkspaceId   string
-	Namespace     string
-	PodSelector   map[string]string
-	RoutingSuffix string
+type DevWorkspaceMetadata struct {
+	DevWorkspaceId string
+	Namespace      string
+	PodSelector    map[string]string
+	RoutingSuffix  string
 }
 
 // GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
 // endpoint from the list. Endpoints with the NoneEndpointExposure are ignored.
-func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
+func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []corev1.Service {
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure == devworkspace.NoneEndpointExposure {
+			if endpoint.Exposure == dw.NoneEndpointExposure {
 				continue
 			}
 
@@ -58,10 +58,10 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 						Name:      common.EndpointName(endpoint.Name),
 						Namespace: meta.Namespace,
 						Labels: map[string]string{
-							constants.WorkspaceIDLabel: meta.WorkspaceId,
+							constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 						},
 						Annotations: map[string]string{
-							constants.WorkspaceDiscoverableServiceAnnotation: "true",
+							constants.DevWorkspaceDiscoverableServiceAnnotation: "true",
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -78,7 +78,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 
 // GetServiceForEndpoints returns a single service that exposes all endpoints of given exposure types, possibly also including the discoverable types.
 // `nil` is returned if the service would expose no ports satisfying the provided criteria.
-func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata, includeDiscoverable bool, exposureType ...devworkspace.EndpointExposure) *corev1.Service {
+func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, includeDiscoverable bool, exposureType ...dw.EndpointExposure) *corev1.Service {
 	// "set" of ports that are still left for exposure
 	ports := map[int]bool{}
 	for _, es := range endpoints {
@@ -88,7 +88,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 
 	// "set" of exposure types that are allowed
-	validExposures := map[devworkspace.EndpointExposure]bool{}
+	validExposures := map[dw.EndpointExposure]bool{}
 	for _, exp := range exposureType {
 		validExposures[exp] = true
 	}
@@ -124,10 +124,10 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.ServiceName(meta.WorkspaceId),
+			Name:      common.ServiceName(meta.DevWorkspaceId),
 			Namespace: meta.Namespace,
 			Labels: map[string]string{
-				constants.WorkspaceIDLabel: meta.WorkspaceId,
+				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
 		},
 		Spec: corev1.ServiceSpec{
@@ -138,12 +138,12 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 }
 
-func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []corev1.Service {
+func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []corev1.Service {
 	if len(endpoints) == 0 {
 		return nil
 	}
 
-	service := GetServiceForEndpoints(endpoints, meta, true, devworkspace.PublicEndpointExposure, devworkspace.InternalEndpointExposure)
+	service := GetServiceForEndpoints(endpoints, meta, true, dw.PublicEndpointExposure, dw.InternalEndpointExposure)
 	if service == nil {
 		return nil
 	}
@@ -153,11 +153,11 @@ func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointLis
 	}
 }
 
-func getRoutesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []routeV1.Route {
+func getRoutesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []routeV1.Route {
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
+			if endpoint.Exposure != dw.PublicEndpointExposure {
 				continue
 			}
 			routes = append(routes, getRouteForEndpoint(endpoint, meta))
@@ -166,11 +166,11 @@ func getRoutesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta
 	return routes
 }
 
-func getIngressesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta WorkspaceMetadata) []v1beta1.Ingress {
+func getIngressesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []v1beta1.Ingress {
 	var ingresses []v1beta1.Ingress
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure != devworkspace.PublicEndpointExposure {
+			if endpoint.Exposure != dw.PublicEndpointExposure {
 				continue
 			}
 			ingresses = append(ingresses, getIngressForEndpoint(endpoint, meta))
@@ -179,20 +179,20 @@ func getIngressesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, m
 	return ingresses
 }
 
-func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata) routeV1.Route {
+func getRouteForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV1.Route {
 	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
 	return routeV1.Route{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.RouteName(meta.WorkspaceId, endpointName),
+			Name:      common.RouteName(meta.DevWorkspaceId, endpointName),
 			Namespace: meta.Namespace,
 			Labels: map[string]string{
-				constants.WorkspaceIDLabel: meta.WorkspaceId,
+				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
 			Annotations: routeAnnotations(endpointName),
 		},
 		Spec: routeV1.RouteSpec{
-			Host: common.WorkspaceHostname(meta.WorkspaceId, meta.RoutingSuffix),
+			Host: common.WorkspaceHostname(meta.DevWorkspaceId, meta.RoutingSuffix),
 			Path: common.EndpointPath(endpointName),
 			TLS: &routeV1.TLSConfig{
 				InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
@@ -200,7 +200,7 @@ func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata)
 			},
 			To: routeV1.RouteTargetReference{
 				Kind: "Service",
-				Name: common.ServiceName(meta.WorkspaceId),
+				Name: common.ServiceName(meta.DevWorkspaceId),
 			},
 			Port: &routeV1.RoutePort{
 				TargetPort: targetEndpoint,
@@ -209,17 +209,17 @@ func getRouteForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata)
 	}
 }
 
-func getIngressForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadata) v1beta1.Ingress {
+func getIngressForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) v1beta1.Ingress {
 	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
-	hostname := common.EndpointHostname(meta.WorkspaceId, endpointName, endpoint.TargetPort, meta.RoutingSuffix)
+	hostname := common.EndpointHostname(meta.DevWorkspaceId, endpointName, endpoint.TargetPort, meta.RoutingSuffix)
 	ingressPathType := v1beta1.PathTypeImplementationSpecific
 	return v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.RouteName(meta.WorkspaceId, endpointName),
+			Name:      common.RouteName(meta.DevWorkspaceId, endpointName),
 			Namespace: meta.Namespace,
 			Labels: map[string]string{
-				constants.WorkspaceIDLabel: meta.WorkspaceId,
+				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
 			Annotations: nginxIngressAnnotations(endpoint.Name),
 		},
@@ -232,7 +232,7 @@ func getIngressForEndpoint(endpoint devworkspace.Endpoint, meta WorkspaceMetadat
 							Paths: []v1beta1.HTTPIngressPath{
 								{
 									Backend: v1beta1.IngressBackend{
-										ServiceName: common.ServiceName(meta.WorkspaceId),
+										ServiceName: common.ServiceName(meta.DevWorkspaceId),
 										ServicePort: targetEndpoint,
 									},
 									PathType: &ingressPathType,

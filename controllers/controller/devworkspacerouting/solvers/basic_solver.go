@@ -21,7 +21,7 @@ import (
 var routeAnnotations = func(endpointName string) map[string]string {
 	return map[string]string{
 		"haproxy.router.openshift.io/rewrite-target": "/",
-		constants.WorkspaceEndpointNameAnnotation:    endpointName,
+		constants.DevWorkspaceEndpointNameAnnotation: endpointName,
 	}
 }
 
@@ -30,7 +30,7 @@ var nginxIngressAnnotations = func(endpointName string) map[string]string {
 		"kubernetes.io/ingress.class":                "nginx",
 		"nginx.ingress.kubernetes.io/rewrite-target": "/",
 		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-		constants.WorkspaceEndpointNameAnnotation:    endpointName,
+		constants.DevWorkspaceEndpointNameAnnotation: endpointName,
 	}
 }
 
@@ -50,7 +50,7 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 	return nil
 }
 
-func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
+func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
 	spec := routing.Spec

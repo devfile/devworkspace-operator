@@ -13,7 +13,7 @@
 package controllers
 
 import (
-	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/api/equality"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -26,14 +26,14 @@ var predicates = predicate.Funcs{
 	CreateFunc: func(_ event.CreateEvent) bool { return true },
 	DeleteFunc: func(_ event.DeleteEvent) bool { return true },
 	UpdateFunc: func(ev event.UpdateEvent) bool {
-		newObj, ok := ev.ObjectNew.(*v1alpha2.DevWorkspace)
+		newObj, ok := ev.ObjectNew.(*dw.DevWorkspace)
 		if !ok {
 			return true
 		}
-		if newObj.Status.Phase != v1alpha2.WorkspaceStatusFailed {
+		if newObj.Status.Phase != dw.DevWorkspaceStatusFailed {
 			return true
 		}
-		oldObj, ok := ev.ObjectOld.(*v1alpha2.DevWorkspace)
+		oldObj, ok := ev.ObjectOld.(*dw.DevWorkspace)
 		if !ok {
 			// Should never happen
 			return true

@@ -1,7 +1,7 @@
 name: "Attempting to override undefined plugin component"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: "bad-override"
         plugin:

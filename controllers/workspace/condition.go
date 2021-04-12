@@ -18,36 +18,36 @@ import (
 )
 
 const (
-	PullSecretsReady     dw.WorkspaceConditionType = "PullSecretsReady"
-	DevWorkspaceResolved dw.WorkspaceConditionType = "DevWorkspaceResolved"
-	StorageReady         dw.WorkspaceConditionType = "StorageReady"
-	DeploymentReady      dw.WorkspaceConditionType = "DeploymentReady"
+	PullSecretsReady     dw.DevWorkspaceConditionType = "PullSecretsReady"
+	DevWorkspaceResolved dw.DevWorkspaceConditionType = "DevWorkspaceResolved"
+	StorageReady         dw.DevWorkspaceConditionType = "StorageReady"
+	DeploymentReady      dw.DevWorkspaceConditionType = "DeploymentReady"
 )
 
-var conditionOrder = []dw.WorkspaceConditionType{
+var conditionOrder = []dw.DevWorkspaceConditionType{
 	DevWorkspaceResolved,
 	StorageReady,
-	dw.WorkspaceRoutingReady,
-	dw.WorkspaceServiceAccountReady,
+	dw.DevWorkspaceRoutingReady,
+	dw.DevWorkspaceServiceAccountReady,
 	PullSecretsReady,
 	DeploymentReady,
-	dw.WorkspaceReady,
+	dw.DevWorkspaceReady,
 }
 
 // workspaceConditions is a description of last-observed workspace conditions.
 type workspaceConditions struct {
-	conditions map[dw.WorkspaceConditionType]dw.WorkspaceCondition
+	conditions map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition
 }
 
-func (c *workspaceConditions) setConditionTrue(conditionType dw.WorkspaceConditionType, msg string) {
-	c.conditions[conditionType] = dw.WorkspaceCondition{
+func (c *workspaceConditions) setConditionTrue(conditionType dw.DevWorkspaceConditionType, msg string) {
+	c.conditions[conditionType] = dw.DevWorkspaceCondition{
 		Status:  corev1.ConditionTrue,
 		Message: msg,
 	}
 }
 
-func (c *workspaceConditions) setConditionFalse(conditionType dw.WorkspaceConditionType, msg string) {
-	c.conditions[conditionType] = dw.WorkspaceCondition{
+func (c *workspaceConditions) setConditionFalse(conditionType dw.DevWorkspaceConditionType, msg string) {
+	c.conditions[conditionType] = dw.DevWorkspaceCondition{
 		Status:  corev1.ConditionFalse,
 		Message: msg,
 	}
@@ -55,7 +55,7 @@ func (c *workspaceConditions) setConditionFalse(conditionType dw.WorkspaceCondit
 
 // getFirstFalse checks current conditions in a set order (defined by conditionOrder) and returns the first
 // condition with a 'false' status. Returns nil if there is no currently observed false condition
-func (c *workspaceConditions) getFirstFalse() *dw.WorkspaceCondition {
+func (c *workspaceConditions) getFirstFalse() *dw.DevWorkspaceCondition {
 	for _, cond := range conditionOrder {
 		if condition, present := c.conditions[cond]; present && condition.Status == corev1.ConditionFalse {
 			return &condition

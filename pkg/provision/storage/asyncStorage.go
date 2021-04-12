@@ -55,7 +55,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	// If there is more than one started workspace using async storage, then we fail starting additional ones
 	// Note we need to check phase so as to not accidentally fail an already-running workspace when a second one
 	// is created.
-	if numWorkspaces > 1 && workspace.Status.Phase != dw.WorkspaceStatusRunning {
+	if numWorkspaces > 1 && workspace.Status.Phase != dw.DevWorkspaceStatusRunning {
 		return &ProvisioningError{
 			Message: fmt.Sprintf("cannot provision storage for workspace %s", workspace.Name),
 			Err:     fmt.Errorf("at most one workspace using async storage can be running in a namespace"),
@@ -246,7 +246,7 @@ func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(api provision.ClusterAPI)
 		return 0, 0, err
 	}
 	for _, workspace := range workspaces.Items {
-		if workspace.Labels[constants.WorkspaceStorageTypeLabel] == constants.AsyncStorageClassType {
+		if workspace.Labels[constants.DevWorkspaceStorageTypeLabel] == constants.AsyncStorageClassType {
 			total++
 			if workspace.Spec.Started {
 				started++

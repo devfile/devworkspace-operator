@@ -1,7 +1,7 @@
 name: "DevWorkspace reference URI containing non-devfile type content"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

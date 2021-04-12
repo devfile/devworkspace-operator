@@ -1,7 +1,7 @@
 name: "plugin can't be read from internal registry"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

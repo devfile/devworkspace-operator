@@ -1,7 +1,7 @@
 name: "Component conflicts with plugin component"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: "component-conflict"
         plugin:

@@ -13,7 +13,7 @@
 package storage
 
 import (
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -25,22 +25,22 @@ type Provisioner interface {
 	// out-of-pod required objects to the cluster.
 	// Returns NotReadyError to signify that storage is not ready, ProvisioningError when a fatal issue is encountered,
 	// and other error if there is an unexpected problem.
-	ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *devworkspace.DevWorkspace, clusterAPI provision.ClusterAPI) error
+	ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error
 	// NeedsStorage returns whether the current workspace needs a PVC to be provisioned, given this storage strategy.
-	NeedsStorage(workspace *devworkspace.DevWorkspaceTemplateSpec) bool
+	NeedsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool
 	// CleanupWorkspaceStorage removes any objects provisioned by in the ProvisionStorage step that aren't automatically removed when a
 	// DevWorkspace is deleted (e.g. delete subfolders in a common PVC assigned to the workspace)
 	// Returns nil on success (DevWorkspace can be deleted), NotReadyError if additional reconciles are necessary, ProvisioningError when
 	// a fatal issue is encountered, and any other error if an unexpected problem arises.
-	CleanupWorkspaceStorage(workspace *devworkspace.DevWorkspace, clusterAPI provision.ClusterAPI) error
+	CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error
 }
 
 // GetProvisioner returns the storage provisioner that should be used for the current workspace
-func GetProvisioner(workspace *devworkspace.DevWorkspace) (Provisioner, error) {
+func GetProvisioner(workspace *dw.DevWorkspace) (Provisioner, error) {
 	// TODO: Figure out what to do if a workspace changes the storage type after its been created
 	// e.g. common -> async so as to not leave files on PVCs after removal. Maybe block changes to
 	// this label via webhook?
-	storageClass := workspace.Labels[constants.WorkspaceStorageTypeLabel]
+	storageClass := workspace.Labels[constants.DevWorkspaceStorageTypeLabel]
 	if storageClass == "" {
 		return &CommonStorageProvisioner{}, nil
 	}

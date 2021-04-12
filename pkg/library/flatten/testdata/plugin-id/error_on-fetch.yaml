@@ -1,7 +1,7 @@
 name: "Error when fetching plugin"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

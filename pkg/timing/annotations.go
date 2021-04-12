@@ -15,12 +15,12 @@ package timing
 import (
 	"strconv"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
 const (
-	// WorkspaceStarted denotes when a workspace was first started
-	WorkspaceStarted = "controller.devfile.io/timing.started"
+	// DevWorkspaceStarted denotes when a workspace was first started
+	DevWorkspaceStarted = "controller.devfile.io/timing.started"
 	// ComponentsCreated denotes when components were created for the workspace
 	ComponentsCreated = "controller.devfile.io/timing.components.created"
 	// ComponentsReady denotes when components were ready for the workspace
@@ -33,8 +33,8 @@ const (
 	DeploymentCreated = "controller.devfile.io/timing.deployment.created"
 	// DeploymentReady denotes when the deployment was ready for the workspace
 	DeploymentReady = "controller.devfile.io/timing.deployment.ready"
-	// WorkspaceReady denotes when all health checks were completed and the workspace was ready
-	WorkspaceReady = "controller.devfile.io/timing.ready"
+	// DevWorkspaceReady denotes when all health checks were completed and the workspace was ready
+	DevWorkspaceReady = "controller.devfile.io/timing.ready"
 )
 
 const (
@@ -56,10 +56,10 @@ type workspaceTimes struct {
 	serversReady      int64
 }
 
-func getTimestamps(workspace *devworkspace.DevWorkspace) (*workspaceTimes, error) {
+func getTimestamps(workspace *dw.DevWorkspace) (*workspaceTimes, error) {
 	times := &workspaceTimes{}
 	// Will return an error if the annotation is unset
-	t, err := strconv.ParseInt(workspace.Annotations[WorkspaceStarted], 10, 0)
+	t, err := strconv.ParseInt(workspace.Annotations[DevWorkspaceStarted], 10, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func getTimestamps(workspace *devworkspace.DevWorkspace) (*workspaceTimes, error
 		return nil, err
 	}
 	times.deploymentReady = t
-	t, err = strconv.ParseInt(workspace.Annotations[WorkspaceReady], 10, 0)
+	t, err = strconv.ParseInt(workspace.Annotations[DevWorkspaceReady], 10, 0)
 	if err != nil {
 		return nil, err
 	}

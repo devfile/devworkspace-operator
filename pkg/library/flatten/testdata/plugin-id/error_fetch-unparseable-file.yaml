@@ -1,7 +1,7 @@
 name: "DevWorkspace registry contains non-devfile type content"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

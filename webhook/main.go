@@ -17,8 +17,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	workspacev1alpha1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
-	workspacev1alpha2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
+	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/webhook/server"
@@ -50,8 +50,8 @@ func init() {
 	}
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(workspacev1alpha1.AddToScheme(scheme))
-	utilruntime.Must(workspacev1alpha2.AddToScheme(scheme))
+	utilruntime.Must(dwv1.AddToScheme(scheme))
+	utilruntime.Must(dwv2.AddToScheme(scheme))
 }
 
 func main() {
@@ -88,10 +88,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := ctrl.NewWebhookManagedBy(mgr).For(&workspacev1alpha1.DevWorkspace{}).Complete(); err != nil {
+	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv1.DevWorkspace{}).Complete(); err != nil {
 		log.Error(err, "failed creating conversion webhook")
 	}
-	if err := ctrl.NewWebhookManagedBy(mgr).For(&workspacev1alpha2.DevWorkspace{}).Complete(); err != nil {
+	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv2.DevWorkspace{}).Complete(); err != nil {
 		log.Error(err, "failed creating conversion webhook")
 	}
 

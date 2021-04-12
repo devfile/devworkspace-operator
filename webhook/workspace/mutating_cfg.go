@@ -74,7 +74,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 		ObjectSelector: &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
-					Key:      constants.WorkspaceIDLabel,
+					Key:      constants.DevWorkspaceIDLabel,
 					Operator: labelExistsOp,
 				},
 			},

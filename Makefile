@@ -23,7 +23,7 @@ export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
-export DEVWORKSPACE_API_VERSION ?= 283b0c54946e9fea9872c25e1e086c303688f0e8
+export DEVWORKSPACE_API_VERSION ?= 1f335562c475972132851c68227dd36558317bb3
 
 #internal params
 DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount

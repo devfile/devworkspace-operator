@@ -1,7 +1,7 @@
 name: "Referenced plugin cannot be found"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: "bad-plugin"
         plugin:

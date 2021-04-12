@@ -16,7 +16,7 @@ spec:
           - '--url'
           - '0.0.0.0:4444'
           - '--pod-selector'
-          - controller.devfile.io/workspace_id=$(DEVWORKSPACE_ID)
+          - controller.devfile.io/devworkspace_id=$(DEVWORKSPACE_ID)
         endpoints:
           - name: "che-mach-exec"
             exposure: public

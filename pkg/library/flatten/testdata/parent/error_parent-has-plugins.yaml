@@ -1,7 +1,7 @@
 name: "Fails when parent is not flattened (has plugin)"
 
 input:
-  workspace:
+  devworkspace:
     parent:
       kubernetes:
         name: test-parent-k8s

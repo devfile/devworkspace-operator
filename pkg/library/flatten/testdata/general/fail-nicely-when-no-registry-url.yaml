@@ -1,7 +1,7 @@
 name: "Fails nicely when no registry URL is provided and there's no default"
 
 input:
-  workspace:
+  devworkspace:
     components:
       - name: test-plugin
         plugin:

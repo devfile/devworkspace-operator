@@ -15,7 +15,7 @@ package solvers
 import (
 	"fmt"
 
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
@@ -36,8 +36,8 @@ var _ RoutingSolver = (*OpenShiftOAuthSolver)(nil)
 
 type proxyEndpoint struct {
 	machineName            string
-	upstreamEndpoint       devworkspace.Endpoint
-	publicEndpoint         devworkspace.Endpoint
+	upstreamEndpoint       dw.Endpoint
+	publicEndpoint         dw.Endpoint
 	publicEndpointHttpPort int64
 }
 
@@ -56,7 +56,7 @@ func (s *OpenShiftOAuthSolver) Finalize(routing *controllerv1alpha1.DevWorkspace
 	return nil
 }
 
-func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta WorkspaceMetadata) (RoutingObjects, error) {
+func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	proxy, noProxy := getProxiedEndpoints(spec)
 	defaultRoutes := getRoutesForSpec(noProxy, workspaceMeta)
@@ -73,7 +73,7 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.DevWor
 	proxyServices := getServicesForEndpoints(proxyPorts, workspaceMeta)
 	for idx := range proxyServices {
 		proxyServices[idx].Annotations = map[string]string{
-			"service.alpha.openshift.io/serving-cert-secret-name": common.OAuthProxySecretName(workspaceMeta.WorkspaceId),
+			"service.alpha.openshift.io/serving-cert-secret-name": common.OAuthProxySecretName(workspaceMeta.DevWorkspaceId),
 		}
 	}
 	discoverableServices := GetDiscoverableServicesForEndpoints(proxyPorts, workspaceMeta)
@@ -88,9 +88,9 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.DevWor
 
 	oauthClient := &oauthv1.OAuthClient{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: workspaceMeta.WorkspaceId + "-oauth-client",
+			Name: workspaceMeta.DevWorkspaceId + "-oauth-client",
 			Labels: map[string]string{
-				constants.WorkspaceIDLabel: workspaceMeta.WorkspaceId,
+				constants.DevWorkspaceIDLabel: workspaceMeta.DevWorkspaceId,
 			},
 		},
 		GrantMethod:  oauthv1.GrantHandlerPrompt,
@@ -98,9 +98,9 @@ func (s *OpenShiftOAuthSolver) GetSpecObjects(routing *controllerv1alpha1.DevWor
 		RedirectURIs: publicURls,
 	}
 
-	restrictedAccess, setRestrictedAccess := routing.Annotations[constants.WorkspaceRestrictedAccessAnnotation]
+	restrictedAccess, setRestrictedAccess := routing.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]
 	if setRestrictedAccess {
-		oauthClient.Annotations = maputils.Append(oauthClient.Annotations, constants.WorkspaceRestrictedAccessAnnotation, restrictedAccess)
+		oauthClient.Annotations = maputils.Append(oauthClient.Annotations, constants.DevWorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
 	oauthClientInSync, err := syncOAuthClient(s, routing, oauthClient)
@@ -126,7 +126,7 @@ func (s *OpenShiftOAuthSolver) GetExposedEndpoints(
 
 func (s *OpenShiftOAuthSolver) getProxyRoutes(
 	endpoints map[string]controllerv1alpha1.EndpointList,
-	workspaceMeta WorkspaceMetadata,
+	workspaceMeta DevWorkspaceMetadata,
 	portMappings map[string]proxyEndpoint) ([]routeV1.Route, *controllerv1alpha1.PodAdditions) {
 
 	var routes []routeV1.Route
@@ -141,11 +141,11 @@ func (s *OpenShiftOAuthSolver) getProxyRoutes(
 				InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
 			}
 			// Reverting single host feature since OpenShift OAuth uses absolute references
-			route.Spec.Host = common.EndpointHostname(workspaceMeta.WorkspaceId, endpoint.Name, endpoint.TargetPort, workspaceMeta.RoutingSuffix)
+			route.Spec.Host = common.EndpointHostname(workspaceMeta.DevWorkspaceId, endpoint.Name, endpoint.TargetPort, workspaceMeta.RoutingSuffix)
 			route.Spec.Path = "/"
 
 			//override the original endpointName
-			route.Annotations = maputils.Append(route.Annotations, constants.WorkspaceEndpointNameAnnotation, upstreamEndpoint.Name)
+			route.Annotations = maputils.Append(route.Annotations, constants.DevWorkspaceEndpointNameAnnotation, upstreamEndpoint.Name)
 			routes = append(routes, route)
 		}
 	}
@@ -179,7 +179,7 @@ func getProxyEndpointMappings(
 			proxyEndpoints[endpoint.Name] = proxyEndpoint{
 				machineName:      machineName,
 				upstreamEndpoint: endpoint,
-				publicEndpoint: devworkspace.Endpoint{
+				publicEndpoint: dw.Endpoint{
 					Attributes: endpoint.Attributes,
 					Name:       fmt.Sprintf("%s-proxy", endpoint.Name),
 					TargetPort: proxyHttpsPort,
@@ -196,8 +196,8 @@ func getProxyEndpointMappings(
 	return proxyEndpoints
 }
 
-func endpointNeedsProxy(endpoint devworkspace.Endpoint) bool {
-	endpointIsPublic := endpoint.Exposure == "" || endpoint.Exposure == devworkspace.PublicEndpointExposure
+func endpointNeedsProxy(endpoint dw.Endpoint) bool {
+	endpointIsPublic := endpoint.Exposure == "" || endpoint.Exposure == dw.PublicEndpointExposure
 	return endpointIsPublic &&
 		endpoint.Secure &&
 		// Terminal is temporarily excluded from secure servers

@@ -13,7 +13,7 @@
 package v1alpha1
 
 import (
-	devworkspace "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfileAttr "github.com/devfile/api/v2/pkg/attributes"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -21,15 +21,15 @@ import (
 // DevWorkspaceRoutingSpec defines the desired state of DevWorkspaceRouting
 // +k8s:openapi-gen=true
 type DevWorkspaceRoutingSpec struct {
-	// WorkspaceId for the workspace being routed
-	WorkspaceId string `json:"workspaceId"`
-	// Class of the routing: this drives which Workspace Routing controller will manage this routing
+	// Id for the DevWorkspace being routed
+	DevWorkspaceId string `json:"devworkspaceId"`
+	// Class of the routing: this drives which DevWorkspaceRouting controller will manage this routing
 	RoutingClass DevWorkspaceRoutingClass `json:"routingClass,omitempty"`
 	// Routing suffix for cluster
 	RoutingSuffix string `json:"routingSuffix"`
 	// Machines to endpoints map
 	Endpoints map[string]EndpointList `json:"endpoints"`
-	// Selector that should be used by created services to point to the workspace Pod
+	// Selector that should be used by created services to point to the devworkspace Pod
 	PodSelector map[string]string `json:"podSelector"`
 }
 
@@ -46,7 +46,7 @@ const (
 // DevWorkspaceRoutingStatus defines the observed state of DevWorkspaceRouting
 // +k8s:openapi-gen=true
 type DevWorkspaceRoutingStatus struct {
-	// Additions to main workspace deployment
+	// Additions to main devworkspace deployment
 	PodAdditions *PodAdditions `json:"podAdditions,omitempty"`
 	// Machine name to exposed endpoint map
 	ExposedEndpoints map[string]ExposedEndpointList `json:"exposedEndpoints,omitempty"`
@@ -73,7 +73,7 @@ type ExposedEndpoint struct {
 	Attributes devfileAttr.Attributes `json:"attributes,omitempty"`
 }
 
-type EndpointList []devworkspace.Endpoint
+type EndpointList []dw.Endpoint
 
 type ExposedEndpointList []ExposedEndpoint
 

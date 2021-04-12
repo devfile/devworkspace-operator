@@ -22,21 +22,20 @@ COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-# In downstream this needs to be a cached vendor/ folder, so do same upstream
-RUN go mod tidy; go mod vendor
+RUN go mod download
 
 # Copy the go source
 COPY . .
 
 # compile workspace controller binaries, then webhook binaries
 RUN export ARCH="$(uname -m)" && if [[ ${ARCH} == "x86_64" ]]; then export ARCH="amd64"; elif [[ ${ARCH} == "aarch64" ]]; then export ARCH="arm64"; fi && \
-  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build -mod=vendor -x \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -a -o _output/bin/devworkspace-controller \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
   main.go
 RUN export ARCH="$(uname -m)" && if [[ ${ARCH} == "x86_64" ]]; then export ARCH="amd64"; elif [[ ${ARCH} == "aarch64" ]]; then export ARCH="arm64"; fi && \
-  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build -mod=vendor -x \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -o _output/bin/webhook-server \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \

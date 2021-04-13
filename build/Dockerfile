@@ -1,4 +1,14 @@
-# Build the manager binary
+# Copyright (c) 2021 Red Hat, Inc.
+# This program and the accompanying materials are made
+# available under the terms of the Eclipse Public License 2.0
+# which is available at https://www.eclipse.org/legal/epl-2.0/
+#
+# SPDX-License-Identifier: EPL-2.0
+#
+# Contributors:
+#   Red Hat, Inc. - initial API and implementation
+#
+
 FROM quay.io/libpod/golang:1.13 as builder
 
 RUN go env GOPROXY
@@ -13,21 +23,22 @@ RUN go mod download
 # Copy the go source
 COPY . .
 
-# compile workspace controller binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+# compile workspace controller binaries, then webhook binaries
+RUN export ARCH="amd64" && \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -a -o _output/bin/devworkspace-controller \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
   main.go
-
-# Compile webhook binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+RUN export ARCH="amd64" && \
+  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
   -o _output/bin/webhook-server \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
   webhook/main.go
 
-FROM registry.access.redhat.com/ubi8-minimal:8.2-349
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
+FROM registry.access.redhat.com/ubi8-minimal:8.3-298
 WORKDIR /
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
 COPY --from=builder /devworkspace-operator/_output/bin/webhook-server /usr/local/bin/webhook-server

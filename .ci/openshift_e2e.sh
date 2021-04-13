@@ -18,12 +18,38 @@ set -u
 # print each command before executing it
 set -x
 
-trap 'Catch_Finish $?' EXIT SIGINT
+function bumpPodsInfo() {
+    NS=$1
+    TARGET_DIR="${ARTIFACT_DIR}/${NS}-info"
+    mkdir -p $TARGET_DIR
 
+    for POD in $(oc get pods -o name -n ${NS}); do
+        for CONTAINER in $(oc get -n ${NS} ${POD} -o jsonpath="{.spec.containers[*].name}"); do
+            echo ""
+            echo "======== Getting logs from container $POD/$CONTAINER in $NS"
+            echo ""
+            # container name includes `pod/` prefix. remove it
+            LOGS_FILE=$TARGET_DIR/$(echo ${POD}-${CONTAINER}.log | sed 's|pod/||g')
+            oc logs ${POD} -c ${CONTAINER} -n ${NS} > $LOGS_FILE || true
+        done
+    done
+    echo "======== Bumping events -n ${NS} ========"
+    oc get events -n ${NS} -o=yaml > $TARGET_DIR/events.log || true
+}
+
+trap 'bumpLogs $?' EXIT SIGINT
+
+export BUMP_LOGS="true"
 # Catch the finish of the job and write logs in artifacts.
-function Catch_Finish() {
+function bumpLogs() {
     # grab devworkspace-controller namespace events after running e2e
-    getDevWorkspaceOperatorLogs
+    if [ $BUMP_LOGS == "true" ]; then
+        bumpPodsInfo $NAMESPACE
+        bumpPodsInfo test-terminal-namespace
+        oc get devworkspaces -n test-terminal-namespace -o=yaml > $ARTIFACTS_DIR/devworkspaces.yaml
+        # export logs once, on failure or after tests are finished
+        export BUMP_LOGS="false"
+    fi
 }
 
 # ENV used by PROW ci
@@ -41,21 +67,6 @@ export DWO_IMG=${DEVWORKSPACE_OPERATOR}
 export GIT_COMMITTER_NAME="CI BOT"
 export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
 
-function getDevWorkspaceOperatorLogs() {
-    mkdir -p ${ARTIFACTS_DIR}/devworkspace-operator
-    cd ${ARTIFACTS_DIR}/devworkspace-operator
-    for POD in $(oc get pods -o name -n ${NAMESPACE}); do
-       for CONTAINER in $(oc get -n ${NAMESPACE} ${POD} -o jsonpath="{.spec.containers[*].name}"); do
-            echo ""
-            echo "<=========================Getting logs from container $CONTAINER in $POD==================================>"
-            echo ""
-            oc logs ${POD} -c ${CONTAINER} -n ${NAMESPACE} | tee $(echo ${POD}-${CONTAINER}.log | sed 's|pod/||g')
-        done
-    done
-    echo "======== oc get events ========"
-    oc get events -n ${NAMESPACE}| tee get_events.log
-}
-
 # For some reason go on PROW force usage vendor folder
 # This workaround is here until we don't figure out cause
 go mod tidy
@@ -66,4 +77,5 @@ make install
 # and we might need to grab data from there
 export CLEAN_UP_AFTER_SUITE="false"
 make test_e2e
+bumpLogs
 make uninstall

@@ -46,7 +46,7 @@ function bumpLogs() {
     if [ $BUMP_LOGS == "true" ]; then
         bumpPodsInfo $NAMESPACE
         bumpPodsInfo test-terminal-namespace
-        oc get devworkspaces -n test-terminal-namespace -o=yaml > $ARTIFACTS_DIR/devworkspaces.yaml
+        oc get devworkspaces -n test-terminal-namespace -o=yaml > $ARTIFACT_DIR/devworkspaces.yaml
         # export logs once, on failure or after tests are finished
         export BUMP_LOGS="false"
     fi
@@ -54,7 +54,9 @@ function bumpLogs() {
 
 # ENV used by PROW ci
 export CI="openshift"
-export ARTIFACTS_DIR="/tmp/artifacts"
+# Use ARTIFACT_DIR from https://docs.ci.openshift.org/docs/architecture/step-registry/#available-environment-variables
+# or assign default for local testing
+export ARTIFACT_DIR="${ARTIFACT_DIR:-/tmp/artifacts}"
 export NAMESPACE="devworkspace-controller"
 # Component is defined in Openshift CI job configuration. See: https://github.com/openshift/release/blob/master/ci-operator/config/devfile/devworkspace-operator/devfile-devworkspace-operator-master__v4.yaml#L8
 export CI_COMPONENT="devworkspace-operator"

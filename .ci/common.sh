@@ -57,6 +57,7 @@ function provisionOpenShiftOAuthUser() {
 installOcClient() {
   wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.7.0-rc.1/openshift-client-linux.tar.gz --no-check-certificate -O - | tar -xz
   mv oc /tmp
+  PATH=$PATH:/tmp
 }
 
 installChectl() {

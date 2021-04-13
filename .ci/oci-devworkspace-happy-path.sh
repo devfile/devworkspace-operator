@@ -24,14 +24,13 @@ trap 'Catch_Finish $?' EXIT SIGINT
 function Catch_Finish() {
     # grab devworkspace-controller namespace events after running e2e
     getDevWorkspaceOperatorLogs
+    collectCheLogWithChectl
 }
 
-# ENV used by PROW ci
-export CI="openshift"
-export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/artifacts-che"}
-export NAMESPACE="eclipse-che"
-export DEVWORKSPACE_CONTROLLER_NAMESPACE="devworkspace-controller"
 export OPERATOR_REPO=$(dirname $(dirname $(readlink -f "$0")));
+source "${OPERATOR_REPO}"/.ci/common.sh
+
+export NAMESPACE="eclipse-che"
 export HAPPY_PATH_POD_NAME=happy-path-che
 export HAPPY_PATH_DEVFILE='https://gist.githubusercontent.com/l0rd/71a04dd0d8c8e921b16ba2690f7d5a47/raw/d520086e148c359b18c229328824dfefcf85e5ef/spring-petclinic-devfile-v2.0.0.yaml'
 
@@ -39,72 +38,16 @@ export HAPPY_PATH_DEVFILE='https://gist.githubusercontent.com/l0rd/71a04dd0d8c8e
 export GIT_COMMITTER_NAME="CI BOT"
 export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
 
-function getDevWorkspaceOperatorLogs() {
-    mkdir -p ${ARTIFACTS_DIR}/devworkspace-operator
-    cd ${ARTIFACTS_DIR}/devworkspace-operator
-    for POD in $(oc get pods -o name -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}); do
-       for CONTAINER in $(oc get -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE} ${POD} -o jsonpath="{.spec.containers[*].name}"); do
-            echo ""
-            echo "<=========================Getting logs from container $CONTAINER in $POD==================================>"
-            echo ""
-            oc logs ${POD} -c ${CONTAINER} -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE} | tee $(echo ${POD}-${CONTAINER}.log | sed 's|pod/||g')
-        done
-    done
-    echo "======== oc get events ========"
-    oc get events -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}| tee get_events.log
-
-  mkdir -p ${ARTIFACTS_DIR}
-  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR} --telemetry=off
-}
-
-installChectl() {
-  curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
-  chmod +x ./kubectl 
-  mv ./kubectl /tmp 
-
-  wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.7.0-rc.1/openshift-client-linux.tar.gz --no-check-certificate -O - | tar -xz
-  mv oc /tmp
-
-  wget $(curl https://che-incubator.github.io/chectl/download-link/next-linux-x64)
-  tar -xzf chectl-linux-x64.tar.gz
-  mv chectl /tmp
-  /tmp/chectl/bin/chectl --version
-}
-
 deployChe() {
   cat > /tmp/che-cr-patch.yaml <<EOL
 spec:
   devWorkspace:
     enable: true
     controllerImage: '${DEVWORKSPACE_OPERATOR}'
-  server:
-    customCheProperties:
-      CHE_FACTORY_DEFAULT__PLUGINS: ""
-      CHE_WORKSPACE_DEVFILE_DEFAULT__EDITOR_PLUGINS: ""
-  auth:
-    updateAdminPassword: false
 EOL
 
   cat /tmp/che-cr-patch.yaml
-
   /tmp/chectl/bin/chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator
-}
-
-# Create admin user inside of openshift cluster and login
-function provisionOpenShiftOAuthUser() {
-  oc create secret generic htpass-secret --from-file=htpasswd="${OPERATOR_REPO}"/.github/resources/users.htpasswd -n openshift-config
-  oc apply -f "${OPERATOR_REPO}"/.github/resources/htpasswdProvider.yaml
-  oc adm policy add-cluster-role-to-user cluster-admin user
-
-  echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
-  CURRENT_TIME=$(date +%s)
-  ENDTIME=$(($CURRENT_TIME + 300))
-  while [ $(date +%s) -lt $ENDTIME ]; do
-      if oc login -u user -p user --insecure-skip-tls-verify=false; then
-          break
-      fi
-      sleep 10
-  done
 }
 
 startHappyPathTest() {
@@ -136,8 +79,6 @@ startHappyPathTest() {
   exit 1
 }
 
-
-
 runTest() {
   deployChe
 
@@ -165,6 +106,7 @@ runTest() {
   fi
 }
 
+installOcClient
 installChectl
 provisionOpenShiftOAuthUser
 runTest

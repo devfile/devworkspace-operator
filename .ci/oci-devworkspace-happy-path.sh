@@ -46,7 +46,11 @@ spec:
     controllerImage: '${DEVWORKSPACE_OPERATOR}'
 EOL
 
+  echo "INFO: Using the following Che Cluster CR"
   cat /tmp/che-cr-patch.yaml
+
+  echo "----------------------------------"
+
   /tmp/chectl/bin/chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator
 }
 

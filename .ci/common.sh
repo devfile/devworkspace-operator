@@ -11,36 +11,35 @@
 set -e
 set -x
 
-# ENV used by PROW ci
-export CI="openshift"
-export ARTIFACT_DIR="${ARTIFACT_DIR:-/tmp/artifacts}"
-export OPERATOR_REPO=$(dirname $(dirname $(readlink -f "$0")));
-export DEVWORKSPACE_CONTROLLER_NAMESPACE="devworkspace-controller"
+# Evaluate default and prepare artifacts directory
+export ARTIFACT_DIR=${ARTIFACT_DIR:-"/tmp/dwo-e2e-artifacts"}
+mkdir -p "${ARTIFACT_DIR}"
 
-collectCheLogWithChectl() {
-  mkdir -p ${ARTIFACT_DIR}
-  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACT_DIR} --telemetry=off
-}
+function bumpPodsInfo() {
+    NS=$1
+    TARGET_DIR="${ARTIFACT_DIR}/${NS}-info"
+    mkdir -p "$TARGET_DIR"
 
-getDevWorkspaceOperatorLogs() {
-    mkdir -p ${ARTIFACT_DIR}/devworkspace-operator
-    cd ${ARTIFACT_DIR}/devworkspace-operator
-    for POD in $(oc get pods -o name -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}); do
-       for CONTAINER in $(oc get -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE} ${POD} -o jsonpath="{.spec.containers[*].name}"); do
+    for POD in $(oc get pods -o name -n ${NS}); do
+        for CONTAINER in $(oc get -n ${NS} ${POD} -o jsonpath="{.spec.containers[*].name}"); do
             echo ""
-            echo "<=========================Getting logs from container $CONTAINER in $POD==================================>"
+            echo "======== Getting logs from container $POD/$CONTAINER in $NS"
             echo ""
-            oc logs ${POD} -c ${CONTAINER} -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE} | tee $(echo ${POD}-${CONTAINER}.log | sed 's|pod/||g')
+            # container name includes `pod/` prefix. remove it
+            LOGS_FILE=$TARGET_DIR/$(echo ${POD}-${CONTAINER}.log | sed 's|pod/||g')
+            oc logs ${POD} -c ${CONTAINER} -n ${NS} > $LOGS_FILE || true
         done
     done
-    echo "======== oc get events ========"
-    oc get events -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}| tee get_events.log
+    echo "======== Bumping events -n ${NS} ========"
+    oc get events -n $NS -o=yaml > $TARGET_DIR/events.log || true
 }
 
-# Create admin user inside of openshift cluster and login
+
+# Create cluster-admin user inside of openshift cluster and login
 function provisionOpenShiftOAuthUser() {
-  oc create secret generic htpass-secret --from-file=htpasswd="${OPERATOR_REPO}"/.github/resources/users.htpasswd -n openshift-config
-  oc apply -f "${OPERATOR_REPO}"/.github/resources/htpasswdProvider.yaml
+  SCRIPT_DIR=$(dirname $(readlink -f "$0"))
+  oc create secret generic htpass-secret --from-file=htpasswd="$SCRIPT_DIR/resources/users.htpasswd" -n openshift-config
+  oc apply -f "$SCRIPT_DIR/resources/htpasswdProvider.yaml"
   oc adm policy add-cluster-role-to-user cluster-admin user
 
   echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
@@ -52,12 +51,6 @@ function provisionOpenShiftOAuthUser() {
       fi
       sleep 10
   done
-}
-
-installOcClient() {
-  wget -q https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.7.0-rc.1/openshift-client-linux.tar.gz --no-check-certificate -O - | tar -xz
-  mv oc /tmp
-  PATH=$PATH:/tmp
 }
 
 installChectl() {

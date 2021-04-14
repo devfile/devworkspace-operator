@@ -209,8 +209,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	routingStatus := provision.SyncRoutingToCluster(workspace, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
-			// TODO: Propagate failure reason from devWorkspaceRouting
-			return r.failWorkspace(workspace, "Failed to install network objects required for devworkspace", reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, routingStatus.Message, reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on routing to be ready")
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceRoutingReady, "Preparing networking")

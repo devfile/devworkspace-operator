@@ -212,7 +212,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			return r.failWorkspace(workspace, routingStatus.Message, reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on routing to be ready")
-		reconcileStatus.setConditionFalse(dw.DevWorkspaceRoutingReady, "Preparing networking")
+		message := "Preparing networking"
+		if routingStatus.Message != "" {
+			message = routingStatus.Message
+		}
+		reconcileStatus.setConditionFalse(dw.DevWorkspaceRoutingReady, message)
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "")

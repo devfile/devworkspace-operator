@@ -16,7 +16,20 @@ spec:
     singular: devworkspacerouting
   scope: Namespaced
   versions:
-    - name: v1alpha1
+    - additionalPrinterColumns:
+        - description: The owner DevWorkspace's unique id
+          jsonPath: .spec.devworkspaceId
+          name: DevWorkspace ID
+          type: string
+        - description: The current phase
+          jsonPath: .status.phase
+          name: Phase
+          type: string
+        - description: Additional info about DevWorkspaceRouting state
+          jsonPath: .status.message
+          name: Info
+          type: string
+      name: v1alpha1
       schema:
         openAPIV3Schema:
           description: DevWorkspaceRouting is the Schema for the devworkspaceroutings
@@ -164,6 +177,10 @@ spec:
                     type: array
                   description: Machine name to exposed endpoint map
                   type: object
+                message:
+                  description: Message is a user-readable message explaining the current
+                    phase (e.g. reason for failure)
+                  type: string
                 phase:
                   description: Routing reconcile phase
                   type: string

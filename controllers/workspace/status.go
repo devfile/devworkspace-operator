@@ -182,6 +182,11 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 		return latestCondition.Message
 	}
 
-	// No condition is false but workspace is not running; unclear what value should be set.
+	latestTrueCondition := status.getLastTrue()
+	if latestTrueCondition != nil {
+		return latestTrueCondition.Message
+	}
+
+	// No conditions are set but workspace is not running; unclear what value should be set.
 	return ""
 }

@@ -63,3 +63,13 @@ func (c *workspaceConditions) getFirstFalse() *dw.DevWorkspaceCondition {
 	}
 	return nil
 }
+
+func (c *workspaceConditions) getLastTrue() *dw.DevWorkspaceCondition {
+	var latestCondition *dw.DevWorkspaceCondition
+	for _, cond := range conditionOrder {
+		if condition, present := c.conditions[cond]; present && condition.Status == corev1.ConditionTrue {
+			latestCondition = &condition
+		}
+	}
+	return latestCondition
+}

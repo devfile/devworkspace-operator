@@ -112,6 +112,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			return reconcile.Result{}, err
 		}
 		workspace.Status.DevWorkspaceId = workspaceId
+		workspace.Status.Phase = dw.DevWorkspaceStatusStarting
+		workspace.Status.Message = "Initializing DevWorkspace"
 		err = r.Status().Update(ctx, workspace)
 		return reconcile.Result{Requeue: true}, err
 	}
@@ -160,7 +162,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), reqLogger, &reconcileStatus)
 	}
 	workspace.Spec.Template = *flattenedWorkspace
-	reconcileStatus.setConditionTrue(DevWorkspaceResolved, "")
+	reconcileStatus.setConditionTrue(DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")
 
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
@@ -194,7 +196,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			return reconcile.Result{}, storageErr
 		}
 	}
-	reconcileStatus.setConditionTrue(StorageReady, "")
+	reconcileStatus.setConditionTrue(StorageReady, "Storage ready")
 
 	shimlib.FillDefaultEnvVars(devfilePodAdditions, *workspace)
 	timing.SetTime(timingInfo, timing.ComponentsReady)
@@ -216,7 +218,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceRoutingReady, "Preparing networking")
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
-	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "")
+	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "Networking ready")
 	timing.SetTime(timingInfo, timing.RoutingReady)
 
 	statusOk, err := syncWorkspaceIdeURL(clusterWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
@@ -260,11 +262,11 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if !serviceAcctStatus.Continue {
 		// FailStartup is not possible for generating the serviceaccount
 		reqLogger.Info("Waiting for workspace ServiceAccount")
-		reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for devworkspace ServiceAccount")
+		reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
 		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
-	reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "")
+	reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 
 	pullSecretStatus := provision.PullSecrets(clusterAPI)
 	if !pullSecretStatus.Continue {
@@ -272,7 +274,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		return reconcile.Result{Requeue: pullSecretStatus.Requeue}, pullSecretStatus.Err
 	}
 	allPodAdditions = append(allPodAdditions, pullSecretStatus.PodAdditions)
-	reconcileStatus.setConditionTrue(PullSecretsReady, "")
+	reconcileStatus.setConditionTrue(PullSecretsReady, "DevWorkspace secrets ready")
 
 	// Step six: Create deployment and wait for it to be ready
 	timing.SetTime(timingInfo, timing.DeploymentCreated)
@@ -285,7 +287,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		reconcileStatus.setConditionFalse(DeploymentReady, "Waiting for workspace deployment")
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
-	reconcileStatus.setConditionTrue(DeploymentReady, "")
+	reconcileStatus.setConditionTrue(DeploymentReady, "DevWorkspace deployment ready")
 	timing.SetTime(timingInfo, timing.DeploymentReady)
 
 	serverReady, err := checkServerStatus(clusterWorkspace)

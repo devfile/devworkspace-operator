@@ -13,18 +13,18 @@ set -x
 
 # ENV used by PROW ci
 export CI="openshift"
-export ARTIFACTS_DIR=${ARTIFACT_DIR:-"/tmp/artifacts-che"}
+export ARTIFACT_DIR="${ARTIFACT_DIR:-/tmp/artifacts}"
 export OPERATOR_REPO=$(dirname $(dirname $(readlink -f "$0")));
 export DEVWORKSPACE_CONTROLLER_NAMESPACE="devworkspace-controller"
 
 collectCheLogWithChectl() {
-  mkdir -p ${ARTIFACTS_DIR}
-  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR} --telemetry=off
+  mkdir -p ${ARTIFACT_DIR}
+  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACT_DIR} --telemetry=off
 }
 
 getDevWorkspaceOperatorLogs() {
-    mkdir -p ${ARTIFACTS_DIR}/devworkspace-operator
-    cd ${ARTIFACTS_DIR}/devworkspace-operator
+    mkdir -p ${ARTIFACT_DIR}/devworkspace-operator
+    cd ${ARTIFACT_DIR}/devworkspace-operator
     for POD in $(oc get pods -o name -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE}); do
        for CONTAINER in $(oc get -n ${DEVWORKSPACE_CONTROLLER_NAMESPACE} ${POD} -o jsonpath="{.spec.containers[*].name}"); do
             echo ""

@@ -99,8 +99,8 @@ runTest() {
   oc rsync -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME}:/tmp/e2e/report/ /tmp/e2e -c download-reports
   oc exec -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME} -c download-reports -- touch /tmp/done
 
-  mkdir -p ${ARTIFACTS_DIR}
-  cp -r /tmp/e2e ${ARTIFACTS_DIR}
+  mkdir -p ${ARTIFACT_DIR}
+  cp -r /tmp/e2e ${ARTIFACT_DIR}
 
   EXIT_CODE=$(oc logs -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test | grep EXIT_CODE)
 

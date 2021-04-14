@@ -127,7 +127,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 				duration = 1 * time.Second
 			}
 			reqLogger.Info("controller not ready for devworkspace routing. Retrying", "DelayMs", duration.Milliseconds())
-			return reconcile.Result{RequeueAfter: duration}, nil
+			return reconcile.Result{RequeueAfter: duration}, r.reconcileStatus(instance, nil, nil, false, "Waiting for DevWorkspaceRouting controller to be ready")
 		}
 
 		var invalid *solvers.RoutingInvalid
@@ -172,9 +172,12 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	}
 
 	servicesInSync, clusterServices, err := r.syncServices(instance, services)
-	if err != nil || !servicesInSync {
+	if err != nil {
+		reqLogger.Error(err, "Error syncing services")
+		return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing services")
+	} else if !servicesInSync {
 		reqLogger.Info("Services not in sync")
-		return reconcile.Result{Requeue: true}, err
+		return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing services")
 	}
 
 	clusterRoutingObj := solvers.RoutingObjects{
@@ -183,16 +186,22 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 
 	if infrastructure.IsOpenShift() {
 		routesInSync, clusterRoutes, err := r.syncRoutes(instance, routes)
-		if err != nil || !routesInSync {
+		if err != nil {
+			reqLogger.Error(err, "Error syncing routes")
+			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing routes")
+		} else if !routesInSync {
 			reqLogger.Info("Routes not in sync")
-			return reconcile.Result{Requeue: true}, err
+			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing routes")
 		}
 		clusterRoutingObj.Routes = clusterRoutes
 	} else {
 		ingressesInSync, clusterIngresses, err := r.syncIngresses(instance, ingresses)
-		if err != nil || !ingressesInSync {
+		if err != nil {
+			reqLogger.Error(err, "Error syncing ingresses")
+			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing ingresses")
+		} else if !ingressesInSync {
 			reqLogger.Info("Ingresses not in sync")
-			return reconcile.Result{Requeue: true}, err
+			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing ingresses")
 		}
 		clusterRoutingObj.Ingresses = clusterIngresses
 	}
@@ -203,7 +212,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Could not get exposed endpoints for DevWorkspace: %s", err))
 	}
 
-	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsAreReady)
+	return reconcile.Result{}, r.reconcileStatus(instance, &routingObjects, exposedEndpoints, endpointsAreReady, "")
 }
 
 // setFinalizer ensures a finalizer is set on a devWorkspaceRouting instance; no-op if finalizer is already present.
@@ -251,12 +260,14 @@ func (r *DevWorkspaceRoutingReconciler) markRoutingFailed(instance *controllerv1
 
 func (r *DevWorkspaceRoutingReconciler) reconcileStatus(
 	instance *controllerv1alpha1.DevWorkspaceRouting,
-	routingObjects solvers.RoutingObjects,
+	routingObjects *solvers.RoutingObjects,
 	exposedEndpoints map[string]controllerv1alpha1.ExposedEndpointList,
-	endpointsReady bool) error {
+	endpointsReady bool,
+	message string) error {
 
 	if !endpointsReady {
 		instance.Status.Phase = controllerv1alpha1.RoutingPreparing
+		instance.Status.Message = message
 		return r.Status().Update(context.TODO(), instance)
 	}
 	if instance.Status.Phase == controllerv1alpha1.RoutingReady &&
@@ -265,6 +276,7 @@ func (r *DevWorkspaceRoutingReconciler) reconcileStatus(
 		return nil
 	}
 	instance.Status.Phase = controllerv1alpha1.RoutingReady
+	instance.Status.Message = "DevWorkspaceRouting prepared"
 	instance.Status.PodAdditions = routingObjects.PodAdditions
 	instance.Status.ExposedEndpoints = exposedEndpoints
 	return r.Status().Update(context.TODO(), instance)

@@ -98,10 +98,7 @@ func SyncRoutingToCluster(
 		clusterRouting.Annotations = specRouting.Annotations
 		clusterRouting.Spec = specRouting.Spec
 		err := clusterAPI.Client.Update(context.TODO(), clusterRouting)
-		if err != nil {
-			if errors.IsConflict(err) {
-				return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
-			}
+		if err != nil && !errors.IsConflict(err) {
 			return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
 		}
 		return RoutingProvisioningStatus{
@@ -119,6 +116,7 @@ func SyncRoutingToCluster(
 			ProvisioningStatus: ProvisioningStatus{
 				Continue: false,
 				Requeue:  false,
+				Message:  clusterRouting.Status.Message,
 			},
 		}
 	}

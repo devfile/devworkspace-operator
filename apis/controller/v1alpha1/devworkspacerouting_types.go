@@ -51,6 +51,8 @@ type DevWorkspaceRoutingStatus struct {
 	ExposedEndpoints map[string]ExposedEndpointList `json:"exposedEndpoints,omitempty"`
 	// Routing reconcile phase
 	Phase DevWorkspaceRoutingPhase `json:"phase,omitempty"`
+	// Message is a user-readable message explaining the current phase (e.g. reason for failure)
+	Message string `json:"message,omitempty"`
 }
 
 // Valid phases for devworkspacerouting
@@ -82,6 +84,9 @@ type ExposedEndpointList []ExposedEndpoint
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=devworkspaceroutings,scope=Namespaced,shortName=dwr
+// +kubebuilder:printcolumn:name="DevWorkspace ID",type="string",JSONPath=".spec.devworkspaceId",description="The owner DevWorkspace's unique id"
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="The current phase"
+// +kubebuilder:printcolumn:name="Info",type="string",JSONPath=".status.message",description="Additional info about DevWorkspaceRouting state"
 type DevWorkspaceRouting struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

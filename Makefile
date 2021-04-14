@@ -283,7 +283,7 @@ docker-build:
 docker-push:
 ifneq ($(INITIATOR),CI)
 ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
-	@echo -n "Are you sure we want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
+	@echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
 endif
 endif
 	docker push ${DWO_IMG}

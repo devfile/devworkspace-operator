@@ -19,7 +19,7 @@ export DEVWORKSPACE_CONTROLLER_NAMESPACE="devworkspace-controller"
 
 collectCheLogWithChectl() {
   mkdir -p ${ARTIFACTS_DIR}
-  chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR} --telemetry=off
+  /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACTS_DIR} --telemetry=off
 }
 
 getDevWorkspaceOperatorLogs() {

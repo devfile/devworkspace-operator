@@ -111,7 +111,7 @@ func SyncRoutingToCluster(
 
 	if clusterRouting.Status.Phase == v1alpha1.RoutingFailed {
 		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{FailStartup: true},
+			ProvisioningStatus: ProvisioningStatus{FailStartup: true, Message: clusterRouting.Status.Message},
 		}
 	}
 	if clusterRouting.Status.Phase != v1alpha1.RoutingReady {

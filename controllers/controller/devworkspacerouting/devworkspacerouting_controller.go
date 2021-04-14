@@ -15,6 +15,7 @@ package devworkspacerouting
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
@@ -82,8 +83,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 	reqLogger.Info("Reconciling DevWorkspaceRouting")
 
 	if instance.Spec.RoutingClass == "" {
-		reqLogger.Info("DevWorkspaceRouting without an explicit routing class is invalid", "name", instance.Name, "namespace", instance.Namespace)
-		return reconcile.Result{}, r.markRoutingFailed(instance)
+		return reconcile.Result{}, r.markRoutingFailed(instance, "DevWorkspaceRouting requires field routingClass to be set")
 	}
 
 	solver, err := r.SolverGetter.GetSolver(r.Client, instance.Spec.RoutingClass)
@@ -91,8 +91,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		if errors.Is(err, solvers.RoutingNotSupported) {
 			return reconcile.Result{}, nil
 		}
-		reqLogger.Error(err, "Invalid routing class for DevWorkspace")
-		return reconcile.Result{}, r.markRoutingFailed(instance)
+		return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Invalid routingClass for DevWorkspace: %s", err))
 	}
 
 	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
@@ -134,7 +133,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		var invalid *solvers.RoutingInvalid
 		if errors.As(err, &invalid) {
 			reqLogger.Error(invalid, "routing controller considers routing invalid")
-			return reconcile.Result{}, r.markRoutingFailed(instance)
+			return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Unable to provision networking for DevWorkspace: %s", invalid))
 		}
 
 		// generic error, just fail the reconciliation
@@ -200,8 +199,8 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 
 	exposedEndpoints, endpointsAreReady, err := solver.GetExposedEndpoints(instance.Spec.Endpoints, clusterRoutingObj)
 	if err != nil {
-		reqLogger.Error(err, "Could not get exposed endpoints for workspace")
-		return reconcile.Result{}, r.markRoutingFailed(instance)
+		reqLogger.Error(err, "Could not get exposed endpoints for devworkspace")
+		return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Could not get exposed endpoints for DevWorkspace: %s", err))
 	}
 
 	return reconcile.Result{}, r.reconcileStatus(instance, routingObjects, exposedEndpoints, endpointsAreReady)
@@ -244,7 +243,8 @@ func (r *DevWorkspaceRoutingReconciler) finalize(solver solvers.RoutingSolver, i
 	return nil
 }
 
-func (r *DevWorkspaceRoutingReconciler) markRoutingFailed(instance *controllerv1alpha1.DevWorkspaceRouting) error {
+func (r *DevWorkspaceRoutingReconciler) markRoutingFailed(instance *controllerv1alpha1.DevWorkspaceRouting, message string) error {
+	instance.Status.Message = message
 	instance.Status.Phase = controllerv1alpha1.RoutingFailed
 	return r.Status().Update(context.TODO(), instance)
 }

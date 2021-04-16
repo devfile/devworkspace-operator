@@ -29,7 +29,11 @@ func AddProjectClonerComponent(workspace *dw.DevWorkspaceTemplateSpec) {
 	if len(workspace.Projects) == 0 {
 		return
 	}
-	container := getProjectClonerContainer()
+	cloneImage := images.GetProjectClonerImage()
+	if cloneImage == "" {
+		return
+	}
+	container := getProjectClonerContainer(cloneImage)
 	command := getProjectClonerCommand()
 	workspace.Components = append(workspace.Components, *container)
 	workspace.Commands = append(workspace.Commands, *command)
@@ -39,14 +43,14 @@ func AddProjectClonerComponent(workspace *dw.DevWorkspaceTemplateSpec) {
 	workspace.Events.PreStart = append(workspace.Events.PreStart, projectClonerCommandID)
 }
 
-func getProjectClonerContainer() *dw.Component {
+func getProjectClonerContainer(projectCloneImage string) *dw.Component {
 	boolTrue := true
 	return &dw.Component{
 		Name: projectClonerContainerName,
 		ComponentUnion: dw.ComponentUnion{
 			Container: &dw.ContainerComponent{
 				Container: dw.Container{
-					Image:         images.GetProjectClonerImage(),
+					Image:         projectCloneImage,
 					MemoryLimit:   constants.ProjectCloneMemoryLimit,
 					MemoryRequest: constants.ProjectCloneMemoryRequest,
 					CpuLimit:      constants.ProjectCloneCPULimit,

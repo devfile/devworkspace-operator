@@ -142,14 +142,10 @@ spec:
                 description: 'Class of the routing: this drives which DevWorkspaceRouting
                   controller will manage this routing'
                 type: string
-              routingSuffix:
-                description: Routing suffix for cluster
-                type: string
             required:
             - devworkspaceId
             - endpoints
             - podSelector
-            - routingSuffix
             type: object
           status:
             description: DevWorkspaceRoutingStatus defines the observed state of DevWorkspaceRouting

@@ -175,7 +175,6 @@ func getSpecRouting(
 		Spec: v1alpha1.DevWorkspaceRoutingSpec{
 			DevWorkspaceId: workspace.Status.DevWorkspaceId,
 			RoutingClass:   v1alpha1.DevWorkspaceRoutingClass(routingClass),
-			RoutingSuffix:  config.ControllerCfg.GetRoutingSuffix(),
 			Endpoints:      endpoints,
 			PodSelector: map[string]string{
 				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,

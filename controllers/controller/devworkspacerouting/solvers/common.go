@@ -30,7 +30,6 @@ type DevWorkspaceMetadata struct {
 	DevWorkspaceId string
 	Namespace      string
 	PodSelector    map[string]string
-	RoutingSuffix  string
 }
 
 // GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
@@ -192,7 +191,7 @@ func getRouteForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV
 			Annotations: routeAnnotations(endpointName),
 		},
 		Spec: routeV1.RouteSpec{
-			Host: common.WorkspaceHostname(meta.DevWorkspaceId, meta.RoutingSuffix),
+			Host: common.WorkspaceHostname(meta.DevWorkspaceId),
 			Path: common.EndpointPath(endpointName),
 			TLS: &routeV1.TLSConfig{
 				InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
@@ -212,7 +211,7 @@ func getRouteForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV
 func getIngressForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) v1beta1.Ingress {
 	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
-	hostname := common.EndpointHostname(meta.DevWorkspaceId, endpointName, endpoint.TargetPort, meta.RoutingSuffix)
+	hostname := common.EndpointHostname(meta.DevWorkspaceId, endpointName, endpoint.TargetPort)
 	ingressPathType := v1beta1.PathTypeImplementationSpecific
 	return v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{

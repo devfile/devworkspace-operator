@@ -25,8 +25,6 @@ type DevWorkspaceRoutingSpec struct {
 	DevWorkspaceId string `json:"devworkspaceId"`
 	// Class of the routing: this drives which DevWorkspaceRouting controller will manage this routing
 	RoutingClass DevWorkspaceRoutingClass `json:"routingClass,omitempty"`
-	// Routing suffix for cluster
-	RoutingSuffix string `json:"routingSuffix"`
 	// Machines to endpoints map
 	Endpoints map[string]EndpointList `json:"endpoints"`
 	// Selector that should be used by created services to point to the devworkspace Pod

@@ -116,7 +116,6 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result
 		DevWorkspaceId: instance.Spec.DevWorkspaceId,
 		Namespace:      instance.Namespace,
 		PodSelector:    instance.Spec.PodSelector,
-		RoutingSuffix:  instance.Spec.RoutingSuffix,
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]

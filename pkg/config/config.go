@@ -69,10 +69,6 @@ func (wc *ControllerConfig) GetExperimentalFeaturesEnabled() bool {
 	return wc.GetPropertyOrDefault(experimentalFeaturesEnabled, defaultExperimentalFeaturesEnabled) == "true"
 }
 
-func (wc *ControllerConfig) GetRoutingSuffix() string {
-	return wc.GetPropertyOrDefault(routingSuffix, defaultRoutingSuffix)
-}
-
 func (wc *ControllerConfig) GetPVCStorageClassName() *string {
 	return wc.GetProperty(workspacePVCStorageClassName)
 }

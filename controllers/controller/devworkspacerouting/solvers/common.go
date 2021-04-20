@@ -152,33 +152,33 @@ func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointLis
 	}
 }
 
-func getRoutesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []routeV1.Route {
+func getRoutesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []routeV1.Route {
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure != dw.PublicEndpointExposure {
 				continue
 			}
-			routes = append(routes, getRouteForEndpoint(endpoint, meta))
+			routes = append(routes, getRouteForEndpoint(routingSuffix, endpoint, meta))
 		}
 	}
 	return routes
 }
 
-func getIngressesForSpec(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []v1beta1.Ingress {
+func getIngressesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []v1beta1.Ingress {
 	var ingresses []v1beta1.Ingress
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure != dw.PublicEndpointExposure {
 				continue
 			}
-			ingresses = append(ingresses, getIngressForEndpoint(endpoint, meta))
+			ingresses = append(ingresses, getIngressForEndpoint(routingSuffix, endpoint, meta))
 		}
 	}
 	return ingresses
 }
 
-func getRouteForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV1.Route {
+func getRouteForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV1.Route {
 	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
 	return routeV1.Route{
@@ -191,7 +191,7 @@ func getRouteForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV
 			Annotations: routeAnnotations(endpointName),
 		},
 		Spec: routeV1.RouteSpec{
-			Host: common.WorkspaceHostname(meta.DevWorkspaceId),
+			Host: common.WorkspaceHostname(routingSuffix, meta.DevWorkspaceId),
 			Path: common.EndpointPath(endpointName),
 			TLS: &routeV1.TLSConfig{
 				InsecureEdgeTerminationPolicy: routeV1.InsecureEdgeTerminationPolicyRedirect,
@@ -208,10 +208,10 @@ func getRouteForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV
 	}
 }
 
-func getIngressForEndpoint(endpoint dw.Endpoint, meta DevWorkspaceMetadata) v1beta1.Ingress {
+func getIngressForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWorkspaceMetadata) v1beta1.Ingress {
 	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
-	hostname := common.EndpointHostname(meta.DevWorkspaceId, endpointName, endpoint.TargetPort)
+	hostname := common.EndpointHostname(routingSuffix, meta.DevWorkspaceId, endpointName, endpoint.TargetPort)
 	ingressPathType := v1beta1.PathTypeImplementationSpecific
 	return v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{

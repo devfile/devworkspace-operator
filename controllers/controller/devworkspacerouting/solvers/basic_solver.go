@@ -13,7 +13,10 @@
 package solvers
 
 import (
+	"errors"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
@@ -53,14 +56,19 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
+	routingSuffix := config.ControllerCfg.GetProperty(config.RoutingSuffix)
+	if routingSuffix == nil {
+		return routingObjects, errors.New(config.RoutingSuffix + " must be set for basic routing")
+	}
+
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
 	routingObjects.Services = services
 	if infrastructure.IsOpenShift() {
-		routingObjects.Routes = getRoutesForSpec(spec.Endpoints, workspaceMeta)
+		routingObjects.Routes = getRoutesForSpec(*routingSuffix, spec.Endpoints, workspaceMeta)
 	} else {
-		routingObjects.Ingresses = getIngressesForSpec(spec.Endpoints, workspaceMeta)
+		routingObjects.Ingresses = getIngressesForSpec(*routingSuffix, spec.Endpoints, workspaceMeta)
 	}
 
 	return routingObjects, nil

@@ -35,22 +35,22 @@ func ServiceAccountName(workspaceId string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, "sa")
 }
 
-func EndpointHostname(workspaceId, endpointName string, endpointPort int) string {
+func EndpointHostname(routingSuffix, workspaceId, endpointName string, endpointPort int) string {
 	hostname := fmt.Sprintf("%s-%s-%d", workspaceId, endpointName, endpointPort)
 	if len(hostname) > 63 {
 		hostname = strings.TrimSuffix(hostname[:63], "-")
 	}
-	return fmt.Sprintf("%s", hostname)
+	return fmt.Sprintf("%s.%s", hostname, routingSuffix)
 }
 
 // WorkspaceHostname evaluates a single hostname for a workspace, and should be used for routing
 // when endpoints are distinguished by path rules
-func WorkspaceHostname(workspaceId string) string {
+func WorkspaceHostname(routingSuffix, workspaceId string) string {
 	hostname := workspaceId
 	if len(hostname) > 63 {
 		hostname = strings.TrimSuffix(hostname[:63], "-")
 	}
-	return fmt.Sprintf("%s", hostname)
+	return fmt.Sprintf("%s.%s", hostname, routingSuffix)
 }
 
 func EndpointPath(endpointName string) string {

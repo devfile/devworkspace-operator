@@ -20,6 +20,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
@@ -32,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -301,7 +303,13 @@ func remove(list []string, s string) []string {
 }
 
 func (r *DevWorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	maxConcurrentReconciles, err := config.GetMaxConcurrentReconciles()
+	if err != nil {
+		return err
+	}
+
 	bld := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		For(&controllerv1alpha1.DevWorkspaceRouting{}).
 		Owns(&corev1.Service{}).
 		Owns(&v1beta1.Ingress{})

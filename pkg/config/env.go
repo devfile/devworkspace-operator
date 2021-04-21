@@ -15,6 +15,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 )
 
 type ControllerEnv struct{}
@@ -22,6 +23,7 @@ type ControllerEnv struct{}
 const (
 	webhooksSecretNameEnvVar = "WEBHOOK_SECRET_NAME"
 	developmentModeEnvVar    = "DEVELOPMENT_MODE"
+	maxConcurrentReconciles  = "MAX_CONCURRENT_RECONCILES"
 )
 
 func GetWebhooksSecretName() (string, error) {
@@ -34,4 +36,16 @@ func GetWebhooksSecretName() (string, error) {
 
 func GetDevModeEnabled() bool {
 	return os.Getenv(developmentModeEnvVar) == "true"
+}
+
+func GetMaxConcurrentReconciles() (int, error) {
+	env := os.Getenv(maxConcurrentReconciles)
+	if env == "" {
+		return 0, fmt.Errorf("environment variable %s is unset", maxConcurrentReconciles)
+	}
+	val, err := strconv.Atoi(env)
+	if err != nil {
+		return 0, fmt.Errorf("could not parse environment variable %s: %s", maxConcurrentReconciles, err)
+	}
+	return val, nil
 }

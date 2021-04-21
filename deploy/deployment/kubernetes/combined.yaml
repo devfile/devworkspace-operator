@@ -18700,6 +18700,8 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.serviceAccountName
+        - name: MAX_CONCURRENT_RECONCILES
+          value: "1"
         - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
           value: quay.io/eclipse/che-machine-exec:nightly
         - name: RELATED_IMAGE_web_terminal_tooling

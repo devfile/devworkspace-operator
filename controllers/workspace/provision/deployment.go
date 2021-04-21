@@ -27,6 +27,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,8 +36,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+)
+
+const (
+	ContainerCrashLoopBackOffReason = "CrashLoopBackOff"
+	ContainerImagePullErr           = "ImagePullBackOff"
+	ContainerCreateErr              = "CreateContainerError"
 )
 
 type DeploymentProvisioningStatus struct {
@@ -61,7 +69,6 @@ func SyncDeploymentToCluster(
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
 	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
-
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
 	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, clusterAPI.Scheme)
@@ -73,7 +80,6 @@ func SyncDeploymentToCluster(
 			},
 		}
 	}
-
 	clusterDeployment, err := getClusterDeployment(specDeployment.Name, workspace.Namespace, clusterAPI.Client)
 	if err != nil {
 		return DeploymentProvisioningStatus{
@@ -128,7 +134,21 @@ func SyncDeploymentToCluster(
 		}
 	}
 
-	return DeploymentProvisioningStatus{}
+	failureMsg, checkErr := checkFailedPods(workspace, clusterAPI)
+	if checkErr != nil {
+		return DeploymentProvisioningStatus{
+			ProvisioningStatus: ProvisioningStatus{
+				Err: checkErr,
+			},
+		}
+	}
+
+	return DeploymentProvisioningStatus{
+		ProvisioningStatus: ProvisioningStatus{
+			FailStartup: failureMsg != "",
+			Message:     failureMsg,
+		},
+	}
 }
 
 // DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace
@@ -304,6 +324,38 @@ func getClusterDeployment(name string, namespace string, client runtimeClient.Cl
 		return nil, err
 	}
 	return deployment, nil
+}
+
+func getPods(workspace *dw.DevWorkspace, client runtimeClient.Client) (*corev1.PodList, error) {
+	pods := &corev1.PodList{}
+	if err := client.List(context.TODO(), pods, k8sclient.InNamespace(workspace.Namespace), k8sclient.MatchingLabels{
+		constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
+	}); err != nil {
+		return nil, err
+	}
+	return pods, nil
+}
+
+// checkFailedPods check if related pods has unrecoverable states: CrashLoopBackOffReason, ImagePullErr
+// Returns optional message with detected unrecoverable state details
+//         error is any happens during check
+func checkFailedPods(workspace *dw.DevWorkspace,
+	clusterAPI ClusterAPI) (stateMsg string, checkFailure error) {
+	podList, err := getPods(workspace, clusterAPI.Client)
+	if err != nil {
+		return "", err
+	}
+
+	for _, pod := range podList.Items {
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.State.Waiting != nil {
+				if containerStatus.State.Waiting.Reason == ContainerCrashLoopBackOffReason || containerStatus.State.Waiting.Reason == ContainerImagePullErr || containerStatus.State.Waiting.Reason == ContainerCreateErr {
+					return fmt.Sprintf("Container %s has state %s", containerStatus.Name, containerStatus.State.Waiting.Reason), err
+				}
+			}
+		}
+	}
+	return "", nil
 }
 
 func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions, error) {

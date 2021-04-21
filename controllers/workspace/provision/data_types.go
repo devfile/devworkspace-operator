@@ -29,6 +29,20 @@ type ProvisioningStatus struct {
 	Message     string
 }
 
+// Info returns the the user-friendly info about provisioning status
+// It includes message or error or both if present
+func (s *ProvisioningStatus) Info() string {
+	var message = s.Message
+	if s.Err != nil {
+		if message != "" {
+			message = message + ": " + s.Err.Error()
+		} else {
+			message = s.Err.Error()
+		}
+	}
+	return message
+}
+
 type ClusterAPI struct {
 	Client client.Client
 	Scheme *runtime.Scheme

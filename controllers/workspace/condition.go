@@ -40,17 +40,42 @@ type workspaceConditions struct {
 }
 
 func (c *workspaceConditions) setConditionTrue(conditionType dw.DevWorkspaceConditionType, msg string) {
+	if c.conditions == nil {
+		c.conditions = map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition{}
+	}
+
 	c.conditions[conditionType] = dw.DevWorkspaceCondition{
 		Status:  corev1.ConditionTrue,
 		Message: msg,
 	}
 }
 
+func (c *workspaceConditions) setCondition(conditionType dw.DevWorkspaceConditionType, dwCondition dw.DevWorkspaceCondition) {
+	if c.conditions == nil {
+		c.conditions = map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition{}
+	}
+
+	c.conditions[conditionType] = dwCondition
+}
+
 func (c *workspaceConditions) setConditionFalse(conditionType dw.DevWorkspaceConditionType, msg string) {
+	if c.conditions == nil {
+		c.conditions = map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition{}
+	}
+
 	c.conditions[conditionType] = dw.DevWorkspaceCondition{
 		Status:  corev1.ConditionFalse,
 		Message: msg,
 	}
+}
+
+func getConditionByType(conditions []dw.DevWorkspaceCondition, t dw.DevWorkspaceConditionType) *dw.DevWorkspaceCondition {
+	for _, condition := range conditions {
+		if condition.Type == t {
+			return &condition
+		}
+	}
+	return nil
 }
 
 // getFirstFalse checks current conditions in a set order (defined by conditionOrder) and returns the first

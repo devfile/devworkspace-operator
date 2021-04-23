@@ -54,37 +54,9 @@ var healthHttpClient = &http.Client{
 // updating the status.
 func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
 	workspace.Status.Phase = status.phase
-	currTransitionTime := metav1.Time{Time: clock.Now()}
-	for conditionType, condition := range status.conditions {
-		conditionExists := false
-		for idx, existingCondition := range workspace.Status.Conditions {
-			if existingCondition.Type == conditionType && existingCondition.LastTransitionTime.Before(&currTransitionTime) {
-				workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
-				workspace.Status.Conditions[idx].Status = condition.Status
-				workspace.Status.Conditions[idx].Message = condition.Message
-				conditionExists = true
-				break
-			}
-		}
-		if !conditionExists {
-			workspace.Status.Conditions = append(workspace.Status.Conditions, dw.DevWorkspaceCondition{
-				Type:               conditionType,
-				Message:            condition.Message,
-				Status:             condition.Status,
-				LastTransitionTime: currTransitionTime,
-			})
-		}
-	}
-	for idx, existingCondition := range workspace.Status.Conditions {
-		if existingCondition.LastTransitionTime.Before(&currTransitionTime) {
-			workspace.Status.Conditions[idx].LastTransitionTime = currTransitionTime
-			workspace.Status.Conditions[idx].Status = corev1.ConditionUnknown
-			workspace.Status.Conditions[idx].Message = ""
-		}
-	}
-	sort.SliceStable(workspace.Status.Conditions, func(i, j int) bool {
-		return strings.Compare(string(workspace.Status.Conditions[i].Type), string(workspace.Status.Conditions[j].Type)) > 0
-	})
+
+	syncConditions(&workspace.Status, status)
+
 	infoMessage := getInfoMessage(workspace, status)
 	if workspace.Status.Message != infoMessage {
 		workspace.Status.Message = infoMessage
@@ -98,6 +70,51 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 		}
 	}
 	return reconcileResult, reconcileError
+}
+
+func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *currentStatus) {
+	currTransitionTime := metav1.Time{Time: clock.Now()}
+
+	// Set of conditions already set on the workspace
+	existingConditions := map[dw.DevWorkspaceConditionType]bool{}
+	for idx, workspaceCondition := range workspaceStatus.Conditions {
+		existingConditions[workspaceCondition.Type] = true
+
+		currCondition, ok := currentStatus.conditions[workspaceCondition.Type]
+		if !ok {
+			// Didn't observe this condition this time; set status to unknown
+			workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
+			workspaceStatus.Conditions[idx].Status = corev1.ConditionUnknown
+			workspaceStatus.Conditions[idx].Message = ""
+			continue
+		}
+
+		// Update condition if needed
+		if workspaceCondition.Status != currCondition.Status || workspaceCondition.Message != currCondition.Message {
+			workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
+			workspaceStatus.Conditions[idx].Status = currCondition.Status
+			workspaceStatus.Conditions[idx].Message = currCondition.Message
+		}
+	}
+
+	// Check for conditions we need to add
+	for condType, cond := range currentStatus.conditions {
+		if existingConditions[condType] {
+			// Condition is already present and was updated (if necessary) above
+			continue
+		}
+		workspaceStatus.Conditions = append(workspaceStatus.Conditions, dw.DevWorkspaceCondition{
+			LastTransitionTime: currTransitionTime,
+			Type:               condType,
+			Status:             cond.Status,
+			Message:            cond.Message,
+		})
+	}
+
+	// Sort conditions to avoid unnecessary updates
+	sort.SliceStable(workspaceStatus.Conditions, func(i, j int) bool {
+		return strings.Compare(string(workspaceStatus.Conditions[i].Type), string(workspaceStatus.Conditions[j].Type)) > 0
+	})
 }
 
 func syncWorkspaceIdeURL(workspace *dw.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {

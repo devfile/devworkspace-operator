@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"strings"
 
 	"github.com/go-logr/logr"
 
@@ -122,7 +121,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 
 	// Sort conditions to avoid unnecessary updates
 	sort.SliceStable(workspaceStatus.Conditions, func(i, j int) bool {
-		return strings.Compare(string(workspaceStatus.Conditions[i].Type), string(workspaceStatus.Conditions[j].Type)) > 0
+		return getConditionIndexInOrder(workspaceStatus.Conditions[i].Type) < getConditionIndexInOrder(workspaceStatus.Conditions[j].Type)
 	})
 }
 

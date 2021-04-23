@@ -73,3 +73,12 @@ func (c *workspaceConditions) getLastTrue() *dw.DevWorkspaceCondition {
 	}
 	return latestCondition
 }
+
+func getConditionIndexInOrder(condType dw.DevWorkspaceConditionType) int {
+	for i, cond := range conditionOrder {
+		if cond == condType {
+			return i
+		}
+	}
+	return -1
+}

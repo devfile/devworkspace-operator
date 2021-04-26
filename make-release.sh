@@ -115,6 +115,10 @@ QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
 docker push "${QUAY_REPO}"
 
+PROJECT_CLONE_QUAY_REPO="quay.io/devfile/project-clone:${VERSION}"
+docker build -t "${PROJECT_CLONE_QUAY_REPO}" -f ./project-clone/Dockerfile .
+docker push "${PROJECT_CLONE_QUAY_REPO}"
+
 set -x
 bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
 

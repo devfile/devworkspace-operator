@@ -99,3 +99,6 @@ jobs:
     -
       name: Check if dockerimage build is working
       run: docker build -f ./build/Dockerfile .
+    -
+      name: Check if project-clone dockerimage build is working
+      run: docker build -f ./project-clone/Dockerfile .

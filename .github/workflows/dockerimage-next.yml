@@ -29,3 +29,13 @@ jobs:
         dockerfile: ./build/Dockerfile
         tags: next
         tag_with_sha: true
+    - name: Docker Build & Push (Project Clone)
+      uses: docker/build-push-action@v1.1.0
+      with:
+        username: ${{ secrets.QUAY_USERNAME }}
+        password: ${{ secrets.QUAY_PASSWORD }}
+        registry: quay.io
+        repository: devfile/project-clone
+        dockerfile: ./project-clone/Dockerfile
+        tags: next
+        tag_with_sha: true

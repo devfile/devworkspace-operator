@@ -41,11 +41,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-const (
-	ContainerCrashLoopBackOffReason = "CrashLoopBackOff"
-	ContainerImagePullErr           = "ImagePullBackOff"
-	ContainerCreateErr              = "CreateContainerError"
-)
+var ContainerFailureStateReasons = []string{
+	"CrashLoopBackOff",
+	"ImagePullBackOff",
+	"CreateContainerError",
+	"RunContainerError",
+}
 
 type DeploymentProvisioningStatus struct {
 	ProvisioningStatus
@@ -348,10 +349,13 @@ func checkFailedPods(workspace *dw.DevWorkspace,
 
 	for _, pod := range podList.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.State.Waiting != nil {
-				if containerStatus.State.Waiting.Reason == ContainerCrashLoopBackOffReason || containerStatus.State.Waiting.Reason == ContainerImagePullErr || containerStatus.State.Waiting.Reason == ContainerCreateErr {
-					return fmt.Sprintf("Container %s has state %s", containerStatus.Name, containerStatus.State.Waiting.Reason), err
-				}
+			if !checkContainerStatusForFailure(&containerStatus) {
+				return fmt.Sprintf("Container %s has state %s", containerStatus.Name, containerStatus.State.Waiting.Reason), nil
+			}
+		}
+		for _, initContainerStatus := range pod.Status.InitContainerStatuses {
+			if !checkContainerStatusForFailure(&initContainerStatus) {
+				return fmt.Sprintf("Init Container %s has state %s", initContainerStatus.Name, initContainerStatus.State.Waiting.Reason), nil
 			}
 		}
 	}
@@ -437,4 +441,15 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
 		}
 	}
 	return false
+}
+
+func checkContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok bool) {
+	if containerStatus.State.Waiting != nil {
+		for _, failureReason := range ContainerFailureStateReasons {
+			if containerStatus.State.Waiting.Reason == failureReason {
+				return false
+			}
+		}
+	}
+	return true
 }

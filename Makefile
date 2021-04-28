@@ -19,6 +19,7 @@ endif
 
 export NAMESPACE ?= devworkspace-controller
 export DWO_IMG ?= quay.io/devfile/devworkspace-controller:next
+export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:next
 export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
@@ -87,6 +88,7 @@ _print_vars:
 	@echo "Current env vars:"
 	@echo "    NAMESPACE=$(NAMESPACE)"
 	@echo "    DWO_IMG=$(DWO_IMG)"
+	@echo "    PROJECT_CLONE_IMG=$(PROJECT_CLONE_IMG)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
@@ -344,6 +346,7 @@ help: Makefile
 	@echo ''
 	@echo 'Supported environment variables:'
 	@echo '    DWO_IMG                    - Image used for controller'
+	@echo '    PROJECT_CLONE_IMG          - Image used for project-clone init container'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
 	@echo '    KUBECONFIG                 - Kubeconfig which should be used for accessing to the cluster. Currently is: $(KUBECONFIG)'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'

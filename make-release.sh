@@ -120,7 +120,10 @@ docker build -t "${PROJECT_CLONE_QUAY_REPO}" -f ./project-clone/Dockerfile .
 docker push "${PROJECT_CLONE_QUAY_REPO}"
 
 set -x
-bash -x ./deploy/generate-deployment.sh --use-defaults --default-image ${QUAY_REPO}
+bash -x ./deploy/generate-deployment.sh \
+  --use-defaults \
+  --default-image ${QUAY_REPO} \
+  --project-clone-image ${PROJECT_CLONE_QUAY_REPO}
 
 # tag the release if the version/version.go file has changed
 if [[ ! -z $(git status -s) ]]; then # dirty

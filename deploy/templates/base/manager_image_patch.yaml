@@ -14,3 +14,5 @@ spec:
         env:
           - name: RELATED_IMAGE_devworkspace_webhook_server
             value: ${DWO_IMG}
+          - name: RELATED_IMAGE_project_clone
+            value: ${PROJECT_CLONE_IMG}

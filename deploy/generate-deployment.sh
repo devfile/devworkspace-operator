@@ -24,6 +24,9 @@
 
 set -e
 
+# List of environment variables that will be replaced by envsubst
+SUBST_VARS='$NAMESPACE $DWO_IMG $RBAC_PROXY_IMAGE $PROJECT_CLONE_IMG $ROUTING_SUFFIX $DEFAULT_ROUTING $PULL_POLICY'
+
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
 
 function print_help() {
@@ -95,7 +98,7 @@ if $USE_DEFAULT_ENV; then
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic
   export DEVWORKSPACE_API_VERSION=cd9c30e6aa05b15445bb05386692f470323c826f
-  export ROUTING_SUFFIX=""
+  export ROUTING_SUFFIX='""'
   export FORCE_DEVWORKSPACE_CRDS_UPDATE=true
 fi
 
@@ -148,31 +151,18 @@ elif [ "$($KUSTOMIZE version | grep -o 'Version:[^ ]*')" != "Version:kustomize/v
     | bash -s "$KUSTOMIZE_VER" "$KUSTOMIZE_DIR"
 fi
 
-# Create backups of templates with env vars
-mv "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml" "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak"
-mv "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml" "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak"
-mv "${SCRIPT_DIR}/templates/base/config.properties" "${SCRIPT_DIR}/templates/base/config.properties.bak"
-mv "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml" "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak"
-
-# Fill env vars in templates
-envsubst < "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak" > "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml"
-envsubst < "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak" > "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml"
-envsubst < "${SCRIPT_DIR}/templates/base/config.properties.bak" > "${SCRIPT_DIR}/templates/base/config.properties"
-envsubst < "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" > "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml"
-
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
-${KUSTOMIZE} build "${SCRIPT_DIR}/templates/cert-manager" > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
+${KUSTOMIZE} build "${SCRIPT_DIR}/templates/cert-manager" \
+  | envsubst "$SUBST_VARS" \
+  > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 echo "File saved to ${KUBERNETES_DIR}/${COMBINED_FILENAME}"
-echo "Generating config for OpenShift"
-${KUSTOMIZE} build "${SCRIPT_DIR}/templates/service-ca" > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
-echo "File saved to ${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
-# Restore backups to not change templates
-mv "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml.bak" "${SCRIPT_DIR}/templates/cert-manager/kustomization.yaml"
-mv "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml.bak" "${SCRIPT_DIR}/templates/service-ca/kustomization.yaml"
-mv "${SCRIPT_DIR}/templates/base/config.properties.bak" "${SCRIPT_DIR}/templates/base/config.properties"
-mv "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml.bak" "${SCRIPT_DIR}/templates/base/manager_image_patch.yaml"
+echo "Generating config for OpenShift"
+${KUSTOMIZE} build "${SCRIPT_DIR}/templates/service-ca" \
+  | envsubst "$SUBST_VARS" \
+  > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
+echo "File saved to ${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
 if ! $SPLIT_YAMLS; then
   echo "Skipping split combined.yaml step. To split the combined yaml, use the --split-yamls argument."

@@ -29,7 +29,7 @@ export DEVWORKSPACE_API_VERSION ?= 1f335562c475972132851c68227dd36558317bb3
 DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
 INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
-RELATED_IMAGES_FILE=$(INTERNAL_TMP_DIR)/environment
+CONTROLLER_ENV_FILE=$(INTERNAL_TMP_DIR)/environment
 
 ifeq (,$(shell which kubectl))
 ifeq (,$(shell which oc))
@@ -97,15 +97,16 @@ _create_namespace:
 
 _gen_configuration_env:
 	mkdir -p $(INTERNAL_TMP_DIR)
-	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(DWO_IMG)" > $(RELATED_IMAGES_FILE)
+	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(DWO_IMG)" > $(CONTROLLER_ENV_FILE)
 ifeq ($(PLATFORM),kubernetes)
-	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" >> $(RELATED_IMAGES_FILE)
+	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" >> $(CONTROLLER_ENV_FILE)
 endif
 	cat ./deploy/templates/components/manager/manager.yaml \
 		| yq -r \
 			'.spec.template.spec.containers[]?.env[] | select(.name | startswith("RELATED_IMAGE")) | "export \(.name)=\"$${\(.name):-\(.value)}\""' \
-		>> $(RELATED_IMAGES_FILE)
-	cat $(RELATED_IMAGES_FILE)
+		>> $(CONTROLLER_ENV_FILE)
+	echo "export MAX_CONCURRENT_RECONCILES=1" >> $(CONTROLLER_ENV_FILE)
+	cat $(CONTROLLER_ENV_FILE)
 
 ##### Rules for dealing with devfile/api
 ### update_devworkspace_api: update version of devworkspace crds in go.mod
@@ -159,7 +160,7 @@ _login_with_devworkspace_sa:
 
 ### run: Run against the configured Kubernetes cluster in ~/.kube/config
 run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
-	source $(RELATED_IMAGES_FILE)
+	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
 		WATCH_NAMESPACE=$(NAMESPACE) \
@@ -167,7 +168,7 @@ run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspac
 
 ### debug: Run controller locally with debugging enabled, watching cluster defined in ~/.kube/config
 debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
-	source $(RELATED_IMAGES_FILE)
+	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
 		WATCH_NAMESPACE=$(NAMESPACE) \

@@ -14,5 +14,9 @@ spec:
         env:
           - name: RELATED_IMAGE_devworkspace_webhook_server
             value: ${DWO_IMG}
+          - name: RELATED_IMAGE_kube_rbac_proxy
+            value: ${RBAC_PROXY_IMAGE}
           - name: RELATED_IMAGE_project_clone
             value: ${PROJECT_CLONE_IMG}
+      - name: kube-rbac-proxy
+        image: ${RBAC_PROXY_IMAGE}

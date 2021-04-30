@@ -76,6 +76,8 @@ func recursiveResolve(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTo
 	resolvedContent.StarterProjects = workspace.StarterProjects
 	resolvedContent.Commands = workspace.Commands
 	resolvedContent.Events = workspace.Events
+	resolvedContent.Attributes = workspace.Attributes
+	resolvedContent.Variables = workspace.Variables
 
 	var pluginSpecContents []*dw.DevWorkspaceTemplateSpecContent
 	for _, component := range workspace.Components {

@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 type ControllerEnv struct{}
@@ -24,6 +26,11 @@ const (
 	webhooksSecretNameEnvVar = "WEBHOOK_SECRET_NAME"
 	developmentModeEnvVar    = "DEVELOPMENT_MODE"
 	maxConcurrentReconciles  = "MAX_CONCURRENT_RECONCILES"
+
+	WebhooksMemLimitEnvVar   = "WEBHOOKS_SERVER_MEMORY_LIMIT"
+	WebhooksMemRequestEnvVar = "WEBHOOKS_SERVER_MEMORY_REQUEST"
+	WebhooksCPULimitEnvVar   = "WEBHOOKS_SERVER_CPU_LIMIT"
+	WebhooksCPURequestEnvVar = "WEBHOOKS_SERVER_CPU_REQUEST"
 )
 
 func GetWebhooksSecretName() (string, error) {
@@ -48,4 +55,16 @@ func GetMaxConcurrentReconciles() (int, error) {
 		return 0, fmt.Errorf("could not parse environment variable %s: %s", maxConcurrentReconciles, err)
 	}
 	return val, nil
+}
+
+func GetResourceQuantityFromEnvVar(env string) (*resource.Quantity, error) {
+	val := os.Getenv(env)
+	if val == "" {
+		return nil, fmt.Errorf("environment variable %s is unset", env)
+	}
+	quantity, err := resource.ParseQuantity(val)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse environment variable %s: %s", env, err)
+	}
+	return &quantity, nil
 }

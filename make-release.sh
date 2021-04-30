@@ -111,19 +111,19 @@ set -e
 # change version/version.go file
 sed -i version/version.go -r -e 's#(Version = ")([0-9.]+)(")#\1'"${VERSION}"'\3#g'
 
-QUAY_REPO="quay.io/devfile/devworkspace-controller:${VERSION}"
-docker build -t "${QUAY_REPO}" -f ./build/Dockerfile .
-docker push "${QUAY_REPO}"
+DWO_QUAY_IMG="quay.io/devfile/devworkspace-controller:${VERSION}"
+docker build -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile .
+docker push "${DWO_QUAY_IMG}"
 
-PROJECT_CLONE_QUAY_REPO="quay.io/devfile/project-clone:${VERSION}"
-docker build -t "${PROJECT_CLONE_QUAY_REPO}" -f ./project-clone/Dockerfile .
-docker push "${PROJECT_CLONE_QUAY_REPO}"
+PROJECT_CLONE_QUAY_IMG="quay.io/devfile/project-clone:${VERSION}"
+docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
+docker push "${PROJECT_CLONE_QUAY_IMG}"
 
 set -x
 bash -x ./deploy/generate-deployment.sh \
   --use-defaults \
-  --default-image ${QUAY_REPO} \
-  --project-clone-image ${PROJECT_CLONE_QUAY_REPO}
+  --default-image ${DWO_QUAY_IMG} \
+  --project-clone-image ${PROJECT_CLONE_QUAY_IMG}
 
 # tag the release if the version/version.go file has changed
 if [[ ! -z $(git status -s) ]]; then # dirty

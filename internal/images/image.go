@@ -36,6 +36,7 @@ var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 const (
 	webTerminalToolingImageEnvVar  = "RELATED_IMAGE_web_terminal_tooling"
 	webhookServerImageEnvVar       = "RELATED_IMAGE_devworkspace_webhook_server"
+	kubeRBACProxyImageEnvVar       = "RELATED_IMAGE_kube_rbac_proxy"
 	pvcCleanupJobImageEnvVar       = "RELATED_IMAGE_pvc_cleanup_job"
 	asyncStorageServerImageEnvVar  = "RELATED_IMAGE_async_storage_server"
 	asyncStorageSidecarImageEnvVar = "RELATED_IMAGE_async_storage_sidecar"
@@ -48,6 +49,17 @@ func GetWebhookServerImage() string {
 	val, ok := os.LookupEnv(webhookServerImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", webhookServerImageEnvVar), "Could not get webhook server image")
+		return ""
+	}
+	return val
+}
+
+// GetKubeRBACProxyImage returns the image reference for the kube RBAC proxy. Returns
+// the empty string if environment variable RELATED_IMAGE_kube_rbac_proxy is not defined
+func GetKubeRBACProxyImage() string {
+	val, ok := os.LookupEnv(kubeRBACProxyImageEnvVar)
+	if !ok {
+		log.Error(fmt.Errorf("environment variable %s is not set", kubeRBACProxyImageEnvVar), "Could not get webhook server image")
 		return ""
 	}
 	return val

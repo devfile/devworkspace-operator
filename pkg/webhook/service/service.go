@@ -36,9 +36,16 @@ func CreateOrUpdateSecureService(client crclient.Client, ctx context.Context, na
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
+					Name:       server.WebhookServerPortName,
 					Port:       port,
 					Protocol:   "TCP",
 					TargetPort: intstr.FromString(server.WebhookServerPortName),
+				},
+				{
+					Name:       server.WebhookMetricsPortName,
+					Port:       9443,
+					Protocol:   "TCP",
+					TargetPort: intstr.FromString(server.WebhookMetricsPortName),
 				},
 			},
 			Selector: server.WebhookServerAppLabels(),

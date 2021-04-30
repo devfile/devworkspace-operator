@@ -14,14 +14,29 @@ package constants
 
 // Constants that are used in labels and annotation on DevWorkspace-related resources.
 const (
-	// DevWorkspaceIDLabel is label key to store workspace identifier
+	// DevWorkspaceIDLabel is the label key to store workspace identifier
 	DevWorkspaceIDLabel = "controller.devfile.io/devworkspace_id"
 
 	// DevWorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
 	DevWorkspaceCreatorLabel = "controller.devfile.io/creator"
 
-	// DevWorkspaceNameLabel is label key to store workspace name
+	// DevWorkspaceNameLabel is the label key to store workspace name
 	DevWorkspaceNameLabel = "controller.devfile.io/devworkspace_name"
+
+	// DevWorkspaceMountLabel is the label key to store if a configmap or secret should be mounted to the devworkspace
+	DevWorkspaceMountLabel = "controller.devfile.io/mount-to-devworkspace"
+
+	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
+	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name> and secrets will
+	// be mounted at /etc/secret/<secret-name>
+	DevWorkspaceMountPathAnnotation = "controller.devfile.io/mount-path"
+
+	// DevWorkspaceMountAsAnnotation is the annotation key to configure the way how configmaps or secrets should be mounted.
+	// Supported options:
+	// - "env" - mount as environment variables
+	// - "file" - mount as a file
+	// If mountAs is not provided, the default behaviour will be to mount as a file.
+	DevWorkspaceMountAsAnnotation = "controller.devfile.io/mount-as"
 
 	// DevWorkspaceRestrictedAccessAnnotation marks the intention that devworkspace access is restricted to only the creator; setting this
 	// annotation will cause devworkspace start to fail if webhooks are disabled.

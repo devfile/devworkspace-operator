@@ -14,6 +14,7 @@ package webhook
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -69,6 +70,11 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 	if !infrastructure.IsOpenShift() {
 		uID := int64(1234)
 		user = &uID
+	}
+
+	resources, err := getWebhooksServerResources()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create webhooks server deployment: %s", err)
 	}
 
 	controllerSA, err := config.ControllerCfg.GetWorkspaceControllerSA()
@@ -132,6 +138,7 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 								SuccessThreshold:    1,
 								FailureThreshold:    3,
 							},
+							Resources: *resources,
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      server.WebhookServerCertsVolumeName,
@@ -193,6 +200,35 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 	}
 
 	return deployment, nil
+}
+
+func getWebhooksServerResources() (*corev1.ResourceRequirements, error) {
+	memLimit, err := config.GetResourceQuantityFromEnvVar(config.WebhooksMemLimitEnvVar)
+	if err != nil {
+		return nil, err
+	}
+	memRequest, err := config.GetResourceQuantityFromEnvVar(config.WebhooksMemRequestEnvVar)
+	if err != nil {
+		return nil, err
+	}
+	cpuLimit, err := config.GetResourceQuantityFromEnvVar(config.WebhooksCPULimitEnvVar)
+	if err != nil {
+		return nil, err
+	}
+	cpuRequest, err := config.GetResourceQuantityFromEnvVar(config.WebhooksCPURequestEnvVar)
+	if err != nil {
+		return nil, err
+	}
+	return &corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: *memLimit,
+			corev1.ResourceCPU:    *cpuLimit,
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceMemory: *memRequest,
+			corev1.ResourceCPU:    *cpuRequest,
+		},
+	}, nil
 }
 
 func getClusterDeployment(ctx context.Context, namespace string, client crclient.Client) (*appsv1.Deployment, error) {

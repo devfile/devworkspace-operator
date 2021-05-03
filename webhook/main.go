@@ -13,18 +13,21 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/version"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -37,7 +40,7 @@ import (
 )
 
 var (
-	scheme = runtime.NewScheme()
+	scheme = k8sruntime.NewScheme()
 	log    = logf.Log.WithName("cmd")
 )
 
@@ -56,6 +59,13 @@ func init() {
 
 func main() {
 	logf.SetLogger(zap.New(zap.UseDevMode(config.GetDevModeEnabled())))
+
+	// Print versions
+	log.Info(fmt.Sprintf("Operator Version: %s", version.Version))
+	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
+	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
+	log.Info(fmt.Sprintf("Commit: %s", version.Commit))
+	log.Info(fmt.Sprintf("BuildTime: %s", version.BuildTime))
 
 	// Get a config to talk to the apiserver
 	cfg, err := clientconfig.GetConfig()

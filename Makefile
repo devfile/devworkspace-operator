@@ -12,6 +12,7 @@
 SHELL := bash
 .SHELLFLAGS = -ec
 .ONESHELL:
+.DEFAULT_GOAL := help
 
 ifndef VERBOSE
 MAKEFLAGS += --silent
@@ -32,34 +33,11 @@ INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 CONTROLLER_ENV_FILE=$(INTERNAL_TMP_DIR)/environment
 
-ifeq (,$(shell which kubectl))
-ifeq (,$(shell which oc))
-$(error oc or kubectl is required to proceed)
-else
-K8S_CLI := oc
-endif
-else
-K8S_CLI := kubectl
-endif
-
-ifeq ($(shell $(K8S_CLI) api-resources --api-group='route.openshift.io'  2>&1 | grep -o routes),routes)
-PLATFORM := openshift
-else
-PLATFORM := kubernetes
-endif
-
-# minikube handling
-ifeq ($(shell $(K8S_CLI) config current-context 2>&1),minikube)
-# check ingress addon is enabled
-ifeq ($(shell minikube addons list -o json | jq -r .ingress.Status), disabled)
-$(error ingress addon should be enabled on top of minikube)
-endif
-export ROUTING_SUFFIX := $(shell minikube ip).nip.io
+ifneq (,$(shell which kubectl 2>/dev/null)$(shell which oc 2>/dev/null))
+include deploy.mk
 endif
 
 # Bootstrapped by Operator-SDK v1.1.0
-# Current Operator version
-VERSION ?= 0.0.1
 OPERATOR_SDK_VERSION = v1.1.0
 # Default bundle image tag
 DWO_BUNDLE_IMG ?= controller-bundle:$(VERSION)
@@ -94,24 +72,8 @@ _print_vars:
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
 
-_create_namespace:
-	$(K8S_CLI) create namespace $(NAMESPACE) || true
-
-_gen_configuration_env:
-	mkdir -p $(INTERNAL_TMP_DIR)
-	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(DWO_IMG)" > $(CONTROLLER_ENV_FILE)
-ifeq ($(PLATFORM),kubernetes)
-	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" >> $(CONTROLLER_ENV_FILE)
-endif
-	cat ./deploy/templates/components/manager/manager.yaml \
-		| yq -r \
-			'.spec.template.spec.containers[]?.env[] | select(.name | startswith("RELATED_IMAGE")) | "export \(.name)=\"$${\(.name):-\(.value)}\""' \
-		>> $(CONTROLLER_ENV_FILE)
-	echo "export MAX_CONCURRENT_RECONCILES=1" >> $(CONTROLLER_ENV_FILE)
-	cat $(CONTROLLER_ENV_FILE)
-
 ##### Rules for dealing with devfile/api
-### update_devworkspace_api: update version of devworkspace crds in go.mod
+### update_devworkspace_api: Updates the version of devworkspace crds in go.mod
 update_devworkspace_api:
 	go mod edit --require github.com/devfile/api/v2@$(DEVWORKSPACE_API_VERSION)
 	go mod download
@@ -120,24 +82,24 @@ update_devworkspace_api:
 _init_devworkspace_crds:
 	./update_devworkspace_crds.sh --init --api-version $(DEVWORKSPACE_API_VERSION)
 
-### update_devworkspace_crds: pull latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
+### update_devworkspace_crds: Pulls the latest devworkspace CRDs to ./devworkspace-crds. Note: pulls master branch
 update_devworkspace_crds:
 	./update_devworkspace_crds.sh --api-version $(DEVWORKSPACE_API_VERSION)
 ###### End rules for dealing with devfile/api
 
-### test: Run tests
+### test: Runs tests
 ENVTEST_ASSETS_DIR = $(shell pwd)/bin/testbin
 test: generate fmt vet manifests
 	mkdir -p $(ENVTEST_ASSETS_DIR)
 	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
 	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out
 
-### test_e2e: runs e2e test on the cluster set in context. DevWorkspace Operator must be already deployed
+### test_e2e: Runs e2e test on the cluster set in context. DevWorkspace Operator must be already deployed
 test_e2e:
 	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
 	./bin/devworkspace-controller-e2e -ginkgo.failFast
 
-### test_e2e_debug: runs e2e test in debug mode, so it's possible to connect to execution via remote debugger
+### test_e2e_debug: Runs e2e test in debug mode, so it's possible to connect to execution via remote debugger
 test_e2e_debug:
 	dlv test --listen=:2345 --headless=true --api-version=2 ./test/e2e/cmd/workspaces_test.go -- --ginkgo.failFast
 
@@ -184,54 +146,22 @@ else
 	$(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
 endif
 
-### generate_deployment: Generate files used for deployment from kustomize templates, using environment variables
+### generate_deployment: Generates the files used for deployment from kustomize templates, using environment variables
 generate_deployment:
 	deploy/generate-deployment.sh
 
-### generate_default_deployment: Generate files used for deployment from kustomize templates with default values
+### generate_default_deployment: Generates the files used for deployment from kustomize templates with default values
 generate_default_deployment:
 	deploy/generate-deployment.sh --use-defaults
 
-### install_plugin_templates: Deploy sample plugin templates to namespace devworkspace-plugins:
-install_plugin_templates: _print_vars
-	$(K8S_CLI) create namespace devworkspace-plugins || true
-	$(K8S_CLI) apply -f samples/plugins -n devworkspace-plugins
-
-### restart: Restart devworkspace-controller deployment
-restart:
-	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-controller-manager
-
-### restart_webhook: Restart devworkspace-controller webhook deployment
-restart_webhook:
-	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-webhook-server
-
-### uninstall: Remove controller resources from the cluster
-uninstall: generate_deployment
-# It's safer to delete all workspaces before deleting the controller; otherwise we could
-# leave workspaces in a hanging state if we add finalizers.
-	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all --wait || true
-	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all || true
-	$(K8S_CLI) delete devworkspaceroutings.controller.devfile.io --all-namespaces --all --wait || true
-
-ifeq ($(PLATFORM),kubernetes)
-	$(K8S_CLI) delete --ignore-not-found -f deploy/current/kubernetes/combined.yaml || true
-else
-	$(K8S_CLI) delete --ignore-not-found -f deploy/current/openshift/combined.yaml || true
-endif
-
-	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
-	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
-	$(K8S_CLI) delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
-	$(K8S_CLI) delete namespace $(NAMESPACE) --ignore-not-found
-
-### manifests: Generate manifests e.g. CRD, RBAC etc.
+### manifests: Generates the manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=role webhook paths="./..." \
 			output:crd:artifacts:config=deploy/templates/crd/bases \
 			output:rbac:artifacts:config=deploy/templates/components/rbac
 	patch/patch_crds.sh
 
-### fmt: Run go fmt against code
+### fmt: Runs go fmt against code
 fmt:
 ifneq ($(shell command -v goimports 2> /dev/null),)
 	find . -name '*.go' -exec goimports -w {} \;
@@ -241,7 +171,7 @@ else
 	go fmt -x ./...
 endif
 
-### fmt_license: ensure license header is set on all files
+### fmt_license: Ensures the license header is set on all files
 fmt_license:
 ifneq ($(shell command -v addlicense 2> /dev/null),)
 	@echo 'addlicense -v -f license_header.txt **/*.go'
@@ -250,7 +180,7 @@ else
 	$(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
 endif
 
-### check_fmt: check formatting on files in repo
+### check_fmt: Checks the formatting on files in repo
 check_fmt:
 ifeq ($(shell command -v goimports 2> /dev/null),)
 	$(error "goimports must be installed for this rule" && exit 1)
@@ -267,22 +197,22 @@ endif
 		fi \
 	}
 
-### vet: Run go vet against code
+### vet: Runs go vet against code
 vet:
 	go vet ./...
 
-### generate: Generate code
+### generate: Generates code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-### docker: Build and push controller image
+### docker: Builds and pushes controller image
 docker: _print_vars docker-build docker-push
 
-### docker-build: Build the controller image
+### docker-build: Builds the controller image
 docker-build:
 	docker build . -t ${DWO_IMG} -f build/Dockerfile
 
-### docker-push: Push the controller image
+### docker-push: Pushes the controller image
 docker-push:
 ifneq ($(INITIATOR),CI)
 ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
@@ -291,10 +221,10 @@ endif
 endif
 	docker push ${DWO_IMG}
 
-### controller-gen: find or download controller-gen
+### controller-gen: Finds or downloads controller-gen
 # download controller-gen if necessary
 controller-gen:
-ifeq (, $(shell which controller-gen))
+ifeq (, $(shell which controller-gen 2>/dev/null))
 	@{ \
 	set -e ;\
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
@@ -308,41 +238,54 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
-### install_cert_manager: install Cert Mananger v1.0.4 on the cluster
-install_cert_manager:
-	kubectl apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
 
-_operator_sdk:
-	@{ \
-		if ! command -v operator-sdk &> /dev/null; then \
-			echo 'operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but it is not installed' ;\
-			exit 1 ;\
-		else \
-			SDK_VER=$$(operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) && \
-			if [ "$${SDK_VER}" != $(OPERATOR_SDK_VERSION) ]; then \
-				echo "WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $${SDK_VER} found" \
-				echo "WARN: Please use the recommended operator-sdk if you face any issue" \
-			fi \
-		fi \
-	}
-ifneq ($(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2),$(OPERATOR_SDK_VERSION))
-	@echo 'WARN: operator-sdk $(OPERATOR_SDK_VERSION) is expected to be used for this target but $(shell operator-sdk version | cut -d , -f 1 | cut -d : -f 2 | cut -d \" -f 2) found.'
-	@echo 'WARN: Please use the recommended operator-sdk if you face any issue.'
-endif
+### compile-devworkspace-controller: Compiles the devworkspace-controller binary
+.PHONY: compile-devworkspace-controller
+compile-devworkspace-controller:
+	$(eval GO_PACKAGE_PATH ?= $(shell head -n1 go.mod | cut -d " " -f 2))
+	$(eval BUILD_TIME = $(shell date -u '+%Y-%m-%dT%H:%M:%SZ'))
+	$(eval REF = $(shell cat .git/HEAD | sed 's|ref: ||'))
+	$(eval GIT_COMMIT_ID := $(shell cat .git/${REF}))
+	export ARCH="$(shell uname -m)";  \
+	if [[ "$(ARCH)" == "x86_64" ]]; then  \
+		export ARCH="amd64";  \
+	elif [[ "$(ARCH)" == "aarch64" ]]; then  \
+		export ARCH="arm64";  \
+	fi;  \
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
+	-a -o _output/bin/devworkspace-controller \
+	-gcflags all=-trimpath=/ \
+	-asmflags all=-trimpath=/ \
+	-ldflags "-X $(GO_PACKAGE_PATH)/version.Commit=$(GIT_COMMIT_ID) \
+	-X $(GO_PACKAGE_PATH)/version.BuildTime=$(BUILD_TIME)" \
+	main.go
 
-_check_cert_manager:
-ifeq ($(PLATFORM),kubernetes)
-	if ! ${K8S_CLI} api-versions | grep -q '^cert-manager.io/v1$$' ; then \
-		echo "Cert-manager is required for deploying on Kubernetes. See 'make install_cert_manager'" ;\
-		exit 1 ;\
-	fi
-endif
+### compile-webhook-server: Compiles the webhook-server
+.PHONY: compile-webhook-server
+compile-webhook-server:
+	$(eval GO_PACKAGE_PATH ?= $(shell head -n1 go.mod | cut -d " " -f 2))
+	$(eval BUILD_TIME = $(shell date -u '+%Y-%m-%dT%H:%M:%SZ'))
+	$(eval REF = $(shell cat .git/HEAD | sed 's|ref: ||'))
+	$(eval GIT_COMMIT_ID := $(shell cat .git/${REF}))
+	export ARCH="$(shell uname -m)";  \
+	if [[ "$(ARCH)" == "x86_64" ]]; then  \
+		export ARCH="amd64";  \
+	elif [[ "$(ARCH)" == "aarch64" ]]; then  \
+		export ARCH="arm64";  \
+	fi;  \
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
+	-o _output/bin/webhook-server \
+	-gcflags all=-trimpath=/ \
+	-asmflags all=-trimpath=/ \
+	-ldflags "-X $(GO_PACKAGE_PATH)/version.Commit=$(GIT_COMMIT_ID) \
+	-X $(GO_PACKAGE_PATH)/version.BuildTime=$(BUILD_TIME)" \
+	webhook/main.go
 
 .PHONY: help
-### help: print this message
+### help: Prints this message
 help: Makefile
 	@echo 'Available rules:'
-	@sed -n 's/^### /    /p' $< | awk 'BEGIN { FS=":" } { printf "%-30s -%s\n", $$1, $$2 }'
+	@sed -n 's/^### /    /p' $(MAKEFILE_LIST) | awk 'BEGIN { FS=":" } { printf "%-30s -%s\n", $$1, $$2 }'
 	@echo ''
 	@echo 'Supported environment variables:'
 	@echo '    DWO_IMG                    - Image used for controller'

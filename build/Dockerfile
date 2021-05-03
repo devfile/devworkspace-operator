@@ -10,7 +10,6 @@
 #
 
 FROM quay.io/libpod/golang:1.13 as builder
-
 RUN go env GOPROXY
 WORKDIR /devworkspace-operator
 # Copy the Go Modules manifests
@@ -24,18 +23,8 @@ RUN go mod download
 COPY . .
 
 # compile workspace controller binaries, then webhook binaries
-RUN export ARCH="amd64" && \
-  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
-  -a -o _output/bin/devworkspace-controller \
-  -gcflags all=-trimpath=/ \
-  -asmflags all=-trimpath=/ \
-  main.go
-RUN export ARCH="amd64" && \
-  CGO_ENABLED=0 GOOS=linux GOARCH=${ARCH} GO111MODULE=on go build \
-  -o _output/bin/webhook-server \
-  -gcflags all=-trimpath=/ \
-  -asmflags all=-trimpath=/ \
-  webhook/main.go
+RUN make compile-devworkspace-controller
+RUN make compile-webhook-server
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
 FROM registry.access.redhat.com/ubi8-minimal:8.3-298

@@ -1,2 +1,4 @@
 .git
+!.git/HEAD
+!.git/refs/
 testbin

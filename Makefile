@@ -107,45 +107,6 @@ test_e2e_debug:
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
-# it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
-_bump_kubeconfig:
-	mkdir -p $(INTERNAL_TMP_DIR)
-ifndef KUBECONFIG
-	$(eval CONFIG_FILE = ${HOME}/.kube/config)
-else
-	$(eval CONFIG_FILE = ${KUBECONFIG})
-endif
-	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
-
-_login_with_devworkspace_sa:
-	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' | base64 --decode ))
-	echo "Logging as controller's SA in $(NAMESPACE)"
-	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
-
-### run: Run against the configured Kubernetes cluster in ~/.kube/config
-run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
-	source $(CONTROLLER_ENV_FILE)
-	export KUBECONFIG=$(BUMPED_KUBECONFIG)
-	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
-		WATCH_NAMESPACE=$(NAMESPACE) \
-		go run ./main.go
-
-### debug: Run controller locally with debugging enabled, watching cluster defined in ~/.kube/config
-debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
-	source $(CONTROLLER_ENV_FILE)
-	export KUBECONFIG=$(BUMPED_KUBECONFIG)
-	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
-		WATCH_NAMESPACE=$(NAMESPACE) \
-		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
-
-### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
-install: _check_cert_manager _print_vars _init_devworkspace_crds _create_namespace generate_deployment
-ifeq ($(PLATFORM),kubernetes)
-	$(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml
-else
-	$(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
-endif
-
 ### generate_deployment: Generates the files used for deployment from kustomize templates, using environment variables
 generate_deployment:
 	deploy/generate-deployment.sh

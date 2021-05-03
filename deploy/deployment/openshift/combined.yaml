@@ -18468,23 +18468,6 @@ metadata:
 apiVersion: v1
 kind: Service
 metadata:
-  labels:
-    app.kubernetes.io/name: devworkspace-controller
-    app.kubernetes.io/part-of: devworkspace-operator
-  name: devworkspace-controller-manager-metrics-service
-  namespace: devworkspace-controller
-spec:
-  ports:
-  - name: https
-    port: 8443
-    targetPort: https
-  selector:
-    app.kubernetes.io/name: devworkspace-controller
-    app.kubernetes.io/part-of: devworkspace-operator
----
-apiVersion: v1
-kind: Service
-metadata:
   annotations:
     service.beta.openshift.io/serving-cert-secret-name: devworkspace-webhooks-tls
   labels:
@@ -18498,6 +18481,9 @@ spec:
     port: 443
     protocol: TCP
     targetPort: conversion
+  - name: metrics
+    port: 8443
+    targetPort: metrics
   selector:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
@@ -18526,11 +18512,14 @@ spec:
       - args:
         - /usr/local/bin/devworkspace-controller
         - --enable-leader-election
+        - --metrics-addr=127.0.0.1:8080
         env:
         - name: WEBHOOK_SECRET_NAME
           value: devworkspace-webhookserver-tls
         - name: RELATED_IMAGE_devworkspace_webhook_server
           value: quay.io/devfile/devworkspace-controller:next
+        - name: RELATED_IMAGE_kube_rbac_proxy
+          value: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8
         - name: RELATED_IMAGE_project_clone
           value: quay.io/devfile/project-clone:next
         - name: WATCH_NAMESPACE
@@ -18605,6 +18594,16 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-tls-certs
           readOnly: true
+      - args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=10
+        image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8
+        name: kube-rbac-proxy
+        ports:
+        - containerPort: 8443
+          name: metrics
       serviceAccountName: devworkspace-controller-serviceaccount
       terminationGracePeriodSeconds: 10
       volumes:

@@ -32,7 +32,8 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
 if [[ ($INIT_ONLY -eq 1) &&
       (-f "$SCRIPT_DIR/deploy/templates/crd/bases/workspace.devfile.io_devworkspaces.yaml") &&
-      (-f "$SCRIPT_DIR/deploy/templates/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml")]]; then
+      (-f "$SCRIPT_DIR/deploy/templates/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml") &&
+      ("${DEVWORKSPACE_API_VERSION}" == $(cat "$SCRIPT_DIR/deploy/templates/crd/bases/devfile_version" 2>/dev/null))]]; then
   echo "CRDs from devfile/api are already initialized"
   exit 0
 fi
@@ -60,5 +61,7 @@ fi
 cp crds/workspace.devfile.io_devworkspaces.yaml \
    crds/workspace.devfile.io_devworkspacetemplates.yaml \
    $SCRIPT_DIR/deploy/templates/crd/bases/
+
+echo "${DEVWORKSPACE_API_VERSION}" > $SCRIPT_DIR/deploy/templates/crd/bases/devfile_version
 
 cd $SCRIPT_DIR

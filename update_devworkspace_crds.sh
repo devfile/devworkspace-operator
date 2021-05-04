@@ -23,14 +23,14 @@ while [[ "$#" -gt 0 ]]; do
   shift 1
 done
 
-if [ -z $DEVWORKSPACE_API_VERSION ]; then
+if [ -z "$DEVWORKSPACE_API_VERSION" ]; then
   echo "Argument --api-version is required"
   exit 1
 fi
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
 
-if [[ ($INIT_ONLY -eq 1) &&
+if [[ ("$INIT_ONLY" -eq 1) &&
       (-f "$SCRIPT_DIR/deploy/templates/crd/bases/workspace.devfile.io_devworkspaces.yaml") &&
       (-f "$SCRIPT_DIR/deploy/templates/crd/bases/workspace.devfile.io_devworkspacetemplates.yaml") &&
       ("${DEVWORKSPACE_API_VERSION}" == $(cat "$SCRIPT_DIR/deploy/templates/crd/bases/devfile_version" 2>/dev/null))]]; then
@@ -41,7 +41,7 @@ fi
 TMP_DIR=$(mktemp -d)
 echo "Downloading devfile/api CRDs to $TMP_DIR"
 
-cd $TMP_DIR
+cd "$TMP_DIR"
 git init
 git remote add origin https://github.com/devfile/api.git
 git config core.sparsecheckout true
@@ -51,7 +51,7 @@ git fetch --quiet -p origin
 if git show-ref --verify refs/tags/"${DEVWORKSPACE_API_VERSION}" --quiet; then
 	echo "DevWorkspace API is specified from tag ${DEVWORKSPACE_API_VERSION}"
 	git checkout --quiet tags/"${DEVWORKSPACE_API_VERSION}"
-elif [[ -z $(git ls-remote --heads origin ${DEVWORKSPACE_API_VERSION}) ]]; then
+elif [[ -z $(git ls-remote --heads origin "${DEVWORKSPACE_API_VERSION}") ]]; then
 	echo "DevWorkspace API is specified from revision ${DEVWORKSPACE_API_VERSION}"
 	git checkout --quiet "${DEVWORKSPACE_API_VERSION}"
 else
@@ -60,8 +60,8 @@ else
 fi
 cp crds/workspace.devfile.io_devworkspaces.yaml \
    crds/workspace.devfile.io_devworkspacetemplates.yaml \
-   $SCRIPT_DIR/deploy/templates/crd/bases/
+   "$SCRIPT_DIR/deploy/templates/crd/bases/"
 
-echo "${DEVWORKSPACE_API_VERSION}" > $SCRIPT_DIR/deploy/templates/crd/bases/devfile_version
+echo "${DEVWORKSPACE_API_VERSION}" > "$SCRIPT_DIR/deploy/templates/crd/bases/devfile_version"
 
-cd $SCRIPT_DIR
+cd "$SCRIPT_DIR"

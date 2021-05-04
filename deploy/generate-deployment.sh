@@ -108,7 +108,7 @@ KUSTOMIZE_VER=4.0.5
 KUSTOMIZE_DIR="${SCRIPT_DIR}/../bin/kustomize"
 KUSTOMIZE=${KUSTOMIZE_DIR}/kustomize
 
-rm -rf $KUBERNETES_DIR $OPENSHIFT_DIR
+rm -rf "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
 mkdir -p "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
 
 required_vars=(NAMESPACE DWO_IMG PULL_POLICY DEFAULT_ROUTING \
@@ -141,7 +141,7 @@ mkdir -p "$KUSTOMIZE_DIR"
 if [ ! -f "$KUSTOMIZE" ]; then
   curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \
     | bash -s "$KUSTOMIZE_VER" "$KUSTOMIZE_DIR"
-elif [ $("$KUSTOMIZE" version | grep -o 'Version:[^ ]*') != "Version:kustomize/v${KUSTOMIZE_VER}" ]; then
+elif [ "$($KUSTOMIZE version | grep -o 'Version:[^ ]*')" != "Version:kustomize/v${KUSTOMIZE_VER}" ]; then
   echo "Wrong version of kustomize at ${KUSTOMIZE}. Redownloading."
   rm "$KUSTOMIZE"
   curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" \

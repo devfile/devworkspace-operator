@@ -43,6 +43,14 @@ spec:
               fieldPath: spec.serviceAccountName
         - name: MAX_CONCURRENT_RECONCILES
           value: "1"
+        - name: WEBHOOKS_SERVER_MEMORY_LIMIT
+          value: 300Mi
+        - name: WEBHOOKS_SERVER_MEMORY_REQUEST
+          value: 20Mi
+        - name: WEBHOOKS_SERVER_CPU_LIMIT
+          value: 200m
+        - name: WEBHOOKS_SERVER_CPU_REQUEST
+          value: 100m
         - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
           value: quay.io/eclipse/che-machine-exec:nightly
         - name: RELATED_IMAGE_web_terminal_tooling

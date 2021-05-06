@@ -205,8 +205,7 @@ endif
 compile-devworkspace-controller:
 	$(eval GO_PACKAGE_PATH ?= $(shell head -n1 go.mod | cut -d " " -f 2))
 	$(eval BUILD_TIME = $(shell date -u '+%Y-%m-%dT%H:%M:%SZ'))
-	$(eval REF = $(shell cat .git/HEAD | sed 's|ref: ||'))
-	$(eval GIT_COMMIT_ID := $(shell cat .git/${REF}))
+	$(eval GIT_COMMIT_ID := $(shell git rev-parse --short=4 HEAD))
 	export ARCH="$(shell uname -m)";  \
 	if [[ "$(ARCH)" == "x86_64" ]]; then  \
 		export ARCH="amd64";  \
@@ -226,8 +225,7 @@ compile-devworkspace-controller:
 compile-webhook-server:
 	$(eval GO_PACKAGE_PATH ?= $(shell head -n1 go.mod | cut -d " " -f 2))
 	$(eval BUILD_TIME = $(shell date -u '+%Y-%m-%dT%H:%M:%SZ'))
-	$(eval REF = $(shell cat .git/HEAD | sed 's|ref: ||'))
-	$(eval GIT_COMMIT_ID := $(shell cat .git/${REF}))
+	$(eval GIT_COMMIT_ID := $(shell git rev-parse --short=4 HEAD))
 	export ARCH="$(shell uname -m)";  \
 	if [[ "$(ARCH)" == "x86_64" ]]; then  \
 		export ARCH="amd64";  \

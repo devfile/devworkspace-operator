@@ -33,8 +33,10 @@ INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 CONTROLLER_ENV_FILE=$(INTERNAL_TMP_DIR)/environment
 
+include build/make/version.mk
+
 ifneq (,$(shell which kubectl 2>/dev/null)$(shell which oc 2>/dev/null))
-include deploy.mk
+include build/make/deploy.mk
 endif
 
 # Bootstrapped by Operator-SDK v1.1.0
@@ -71,6 +73,11 @@ _print_vars:
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
+	@echo "Build environment:"
+	@echo "    Build Time:       $(BUILD_TIME)"
+	@echo "    Go Package Path:  $(GO_PACKAGE_PATH)"
+	@echo "    Architecture:     $(ARCH)"
+	@echo "    Git Commit SHA-1: $(GIT_COMMIT_ID)"
 
 ##### Rules for dealing with devfile/api
 ### update_devworkspace_api: Updates the version of devworkspace crds in go.mod
@@ -199,20 +206,9 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
-
 ### compile-devworkspace-controller: Compiles the devworkspace-controller binary
 .PHONY: compile-devworkspace-controller
 compile-devworkspace-controller:
-	$(eval GO_PACKAGE_PATH ?= $(shell head -n1 go.mod | cut -d " " -f 2))
-	$(eval BUILD_TIME = $(shell date -u '+%Y-%m-%dT%H:%M:%SZ'))
-	$(eval REF = $(shell cat .git/HEAD | sed 's|ref: ||'))
-	$(eval GIT_COMMIT_ID := $(shell cat .git/${REF}))
-	export ARCH="$(shell uname -m)";  \
-	if [[ "$(ARCH)" == "x86_64" ]]; then  \
-		export ARCH="amd64";  \
-	elif [[ "$(ARCH)" == "aarch64" ]]; then  \
-		export ARCH="arm64";  \
-	fi;  \
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
 	-a -o _output/bin/devworkspace-controller \
 	-gcflags all=-trimpath=/ \
@@ -224,16 +220,6 @@ compile-devworkspace-controller:
 ### compile-webhook-server: Compiles the webhook-server
 .PHONY: compile-webhook-server
 compile-webhook-server:
-	$(eval GO_PACKAGE_PATH ?= $(shell head -n1 go.mod | cut -d " " -f 2))
-	$(eval BUILD_TIME = $(shell date -u '+%Y-%m-%dT%H:%M:%SZ'))
-	$(eval REF = $(shell cat .git/HEAD | sed 's|ref: ||'))
-	$(eval GIT_COMMIT_ID := $(shell cat .git/${REF}))
-	export ARCH="$(shell uname -m)";  \
-	if [[ "$(ARCH)" == "x86_64" ]]; then  \
-		export ARCH="amd64";  \
-	elif [[ "$(ARCH)" == "aarch64" ]]; then  \
-		export ARCH="arm64";  \
-	fi;  \
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
 	-o _output/bin/webhook-server \
 	-gcflags all=-trimpath=/ \

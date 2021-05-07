@@ -92,7 +92,7 @@ endif
 _login_with_devworkspace_sa:
 	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' | base64 --decode ))
 	echo "Logging as controller's SA in $(NAMESPACE)"
-	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
+	${K8S_CLI} login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### install_cert_manager: Installs Cert Mananger v1.0.4 on the cluster
 install_cert_manager:

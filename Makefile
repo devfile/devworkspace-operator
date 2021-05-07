@@ -33,10 +33,10 @@ INTERNAL_TMP_DIR=/tmp/devworkspace-controller
 BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 CONTROLLER_ENV_FILE=$(INTERNAL_TMP_DIR)/environment
 
-include version.mk
+include build/make/version.mk
 
 ifneq (,$(shell which kubectl 2>/dev/null)$(shell which oc 2>/dev/null))
-include deploy.mk
+include build/make/deploy.mk
 endif
 
 # Bootstrapped by Operator-SDK v1.1.0

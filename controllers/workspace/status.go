@@ -116,24 +116,24 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 	})
 }
 
-func syncWorkspaceIdeURL(workspace *dw.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
-	ideUrl := getIdeUrl(exposedEndpoints)
+func syncWorkspaceMainURL(workspace *dw.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
+	mainUrl := getMainUrl(exposedEndpoints)
 
-	if workspace.Status.IdeUrl == ideUrl {
+	if workspace.Status.MainUrl == mainUrl {
 		return true, nil
 	}
-	workspace.Status.IdeUrl = ideUrl
+	workspace.Status.MainUrl = mainUrl
 	err = clusterAPI.Client.Status().Update(context.TODO(), workspace)
 	return false, err
 }
 
 func checkServerStatus(workspace *dw.DevWorkspace) (ok bool, err error) {
-	ideUrl := workspace.Status.IdeUrl
-	if ideUrl == "" {
-		// Support DevWorkspaces that do not specify an ideUrl
+	mainUrl := workspace.Status.MainUrl
+	if mainUrl == "" {
+		// Support DevWorkspaces that do not specify an mainUrl
 		return true, nil
 	}
-	healthz, err := url.Parse(ideUrl)
+	healthz, err := url.Parse(mainUrl)
 	if err != nil {
 		return false, err
 	}
@@ -155,7 +155,7 @@ func checkServerStatus(workspace *dw.DevWorkspace) (ok bool, err error) {
 	return ok, nil
 }
 
-func getIdeUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string {
+func getMainUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string {
 	for _, endpoints := range exposedEndpoints {
 		for _, endpoint := range endpoints {
 			if endpoint.Attributes.GetString(string(v1alpha1.TypeEndpointAttribute), nil) == "ide" {
@@ -176,10 +176,10 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 	}
 	switch workspace.Status.Phase {
 	case dw.DevWorkspaceStatusRunning:
-		if workspace.Status.IdeUrl == "" {
+		if workspace.Status.MainUrl == "" {
 			return "Workspace is running"
 		}
-		return workspace.Status.IdeUrl
+		return workspace.Status.MainUrl
 	case dw.DevWorkspaceStatusStopped, dw.DevWorkspaceStatusStopping:
 		return string(workspace.Status.Phase)
 	}

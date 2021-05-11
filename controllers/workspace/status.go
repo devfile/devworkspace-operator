@@ -31,6 +31,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+const (
+	// devworkspacePhaseTerminating represents a DevWorkspace that has been deleted but is waiting on a finalizer.
+	// TODO: Should be moved to devfile/api side.
+	devworkspacePhaseTerminating dw.DevWorkspacePhase = "Terminating"
+
+	// devworkspacePhaseFailing represents a DevWorkspace that has encountered an unrecoverable error and is in
+	// the process of stopping.
+	devworkspacePhaseFailing dw.DevWorkspacePhase = "Failing"
+)
+
 type currentStatus struct {
 	workspaceConditions
 	// Current workspace phase

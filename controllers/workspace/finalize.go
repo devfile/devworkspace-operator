@@ -30,9 +30,6 @@ import (
 
 const (
 	storageCleanupFinalizer = "storage.controller.devfile.io"
-	// devworkspacePhaseTerminating represents a DevWorkspace that has been deleted but is waiting on a finalizer.
-	// TODO: Should be moved to devfile/api side.
-	devworkspacePhaseTerminating dw.DevWorkspacePhase = "Terminating"
 )
 
 func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {

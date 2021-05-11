@@ -124,7 +124,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	}
 
 	// Stop failed workspaces
-	if workspace.Status.Phase == dw.DevWorkspaceStatusFailed && workspace.Spec.Started {
+	if workspace.Status.Phase == devworkspacePhaseFailing && workspace.Spec.Started {
 		patch := []byte(`{"spec":{"started": false}}`)
 		err := r.Client.Patch(context.Background(), workspace, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {
@@ -329,8 +329,8 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 func (r *DevWorkspaceReconciler) stopWorkspace(workspace *dw.DevWorkspace, logger logr.Logger) (reconcile.Result, error) {
 	status := currentStatus{phase: dw.DevWorkspaceStatusStopping}
-	if workspace.Status.Phase == dw.DevWorkspaceStatusFailed {
-		status.phase = dw.DevWorkspaceStatusFailed
+	if workspace.Status.Phase == devworkspacePhaseFailing || workspace.Status.Phase == dw.DevWorkspaceStatusFailed {
+		status.phase = workspace.Status.Phase
 		failedCondition := getConditionByType(workspace.Status.Conditions, dw.DevWorkspaceFailedStart)
 		if failedCondition != nil {
 			status.setCondition(dw.DevWorkspaceFailedStart, *failedCondition)
@@ -343,7 +343,10 @@ func (r *DevWorkspaceReconciler) stopWorkspace(workspace *dw.DevWorkspace, logge
 	}
 
 	if stopped {
-		if status.phase != dw.DevWorkspaceStatusFailed {
+		switch status.phase {
+		case devworkspacePhaseFailing, dw.DevWorkspaceStatusFailed:
+			status.phase = dw.DevWorkspaceStatusFailed
+		default:
 			status.phase = dw.DevWorkspaceStatusStopped
 		}
 	}
@@ -385,7 +388,7 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 // in the main reconcile loop. If needed, changes can be flushed to the cluster immediately via `updateWorkspaceStatus()`
 func (r *DevWorkspaceReconciler) failWorkspace(workspace *dw.DevWorkspace, msg string, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
 	logger.Info("DevWorkspace failed to start: " + msg)
-	status.phase = dw.DevWorkspaceStatusFailed
+	status.phase = devworkspacePhaseFailing
 	status.setConditionTrue(dw.DevWorkspaceFailedStart, msg)
 	if workspace.Spec.Started {
 		return reconcile.Result{Requeue: true}, nil

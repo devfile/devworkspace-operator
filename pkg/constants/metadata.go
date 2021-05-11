@@ -47,6 +47,10 @@ const (
 	// this annotation will be cleared
 	DevWorkspaceStopReasonAnnotation = "controller.devfile.io/stopped-by"
 
+	// DevWorkspaceDebugStartAnnotation enables debugging workspace startup if set to "true". If a workspace with this annotation
+	// fails to start (i.e. enters the "Failed" phase), its deployment will not be scaled down in order to allow viewing logs, etc.
+	DevWorkspaceDebugStartAnnotation = "controller.devfile.io/debug-start"
+
 	// WebhookRestartedAtAnnotation holds the the time (unixnano) of when the webhook server was forced to restart by controller
 	WebhookRestartedAtAnnotation = "controller.devfile.io/restarted-at"
 

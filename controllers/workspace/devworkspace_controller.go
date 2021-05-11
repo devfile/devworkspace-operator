@@ -243,7 +243,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "Networking ready")
 	timing.SetTime(timingInfo, timing.RoutingReady)
 
-	statusOk, err := syncWorkspaceIdeURL(clusterWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
+	statusOk, err := syncWorkspaceMainURL(clusterWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

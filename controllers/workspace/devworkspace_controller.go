@@ -125,6 +125,12 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 	// Stop failed workspaces
 	if workspace.Status.Phase == devworkspacePhaseFailing && workspace.Spec.Started {
+		// If debug annotation is present, leave the deployment in place to let users
+		// view logs.
+		if workspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true" {
+			return reconcile.Result{}, nil
+		}
+
 		patch := []byte(`{"spec":{"started": false}}`)
 		err := r.Client.Patch(context.Background(), workspace, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {

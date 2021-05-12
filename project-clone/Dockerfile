@@ -10,6 +10,7 @@
 #
 
 # Build the manager binary
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/devtools/go-toolset-rhel7
 FROM registry.access.redhat.com/devtools/go-toolset-rhel7:1.13.15-4  as builder
 ENV PATH=/opt/rh/go-toolset-1.13/root/usr/bin:${PATH} \
     GOPATH=/go/
@@ -35,7 +36,8 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM registry.access.redhat.com/ubi8-minimal:8.3-298
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
+FROM registry.access.redhat.com/ubi8-minimal:8.3-298.1618432845
 RUN microdnf -y update && microdnf clean all && rm -rf /var/cache/yum && echo "Installed Packages" && rpm -qa | sort -V && echo "End Of Installed Packages"
 WORKDIR /
 COPY --from=builder /project-clone/_output/bin/project-clone /usr/local/bin/project-clone

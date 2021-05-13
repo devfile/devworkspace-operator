@@ -2,11 +2,11 @@ kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
   name: theia
-  labels:
-    controller.devfile.io/storage-type: async
 spec:
   started: true
   template:
+    attributes:
+      controller.devfile.io/storage-type: async
     projects:
       - name: web-nodejs-sample
         git:

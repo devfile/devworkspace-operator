@@ -54,13 +54,13 @@ const (
 	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
 	RoutingAnnotationInfix = ".routing.controller.devfile.io/"
 
-	// DevWorkspaceStorageTypeLabel defines the strategy used for provisioning storage for the workspace.
+	// DevWorkspaceStorageTypeAtrr defines the strategy used for provisioning storage for the workspace.
 	// If empty, the common PVC strategy is used.
 	// Supported options:
 	// - "common": Create one PVC per namespace, and store data for all workspaces in that namespace in that PVC
 	// - "async" : Create one PVC per namespace, and create a remote server that syncs data from workspaces to the PVC.
 	//             All volumeMounts used for devworkspaces are emptyDir
-	DevWorkspaceStorageTypeLabel = "controller.devfile.io/storage-type"
+	DevWorkspaceStorageTypeAtrr = "controller.devfile.io/storage-type"
 
 	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
 	DevWorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"

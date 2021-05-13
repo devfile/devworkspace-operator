@@ -246,7 +246,8 @@ func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(api provision.ClusterAPI)
 		return 0, 0, err
 	}
 	for _, workspace := range workspaces.Items {
-		if workspace.Labels[constants.DevWorkspaceStorageTypeLabel] == constants.AsyncStorageClassType {
+		storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAtrr, nil)
+		if storageClass == constants.AsyncStorageClassType {
 			total++
 			if workspace.Spec.Started {
 				started++

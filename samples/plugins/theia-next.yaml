@@ -9,11 +9,6 @@ spec:
     - name: remote-endpoint
       volume:
         ephemeral: true
-    - name: vsx-installer
-      plugin:
-        kubernetes:
-          name: vsx-installer
-          namespace: devworkspace-plugins
     - name: remote-runtime-injector
       plugin:
         kubernetes:

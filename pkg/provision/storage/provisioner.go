@@ -40,7 +40,7 @@ func GetProvisioner(workspace *dw.DevWorkspace) (Provisioner, error) {
 	// TODO: Figure out what to do if a workspace changes the storage type after its been created
 	// e.g. common -> async so as to not leave files on PVCs after removal. Maybe block changes to
 	// this label via webhook?
-	storageClass := workspace.Labels[constants.DevWorkspaceStorageTypeLabel]
+	storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAtrr, nil)
 	if storageClass == "" {
 		return &CommonStorageProvisioner{}, nil
 	}

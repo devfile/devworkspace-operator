@@ -9,7 +9,7 @@
 #   Red Hat, Inc. - initial API and implementation
 #
 
-FROM quay.io/libpod/golang:1.13 as builder
+FROM quay.io/bitnami/golang:1.14 as builder
 RUN go env GOPROXY
 WORKDIR /devworkspace-operator
 # Copy the Go Modules manifests

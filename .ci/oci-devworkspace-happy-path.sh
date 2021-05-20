@@ -25,6 +25,7 @@ source "${SCRIPT_DIR}"/common.sh
 function Catch_Finish() {
     # grab devworkspace-controller namespace events after running e2e
     bumpPodsInfo "devworkspace-controller"
+    bumpPodsInfo "devworkspace-che"
     bumpPodsInfo "admin-che"
     oc get devworkspaces -n "admin-che" -o=yaml > $ARTIFACT_DIR/devworkspaces.yaml
     /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACT_DIR} --telemetry=off
@@ -53,7 +54,15 @@ EOL
 
   echo "----------------------------------"
 
-  /tmp/chectl/bin/chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator
+  /tmp/chectl/bin/chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator --templates=/tmp/templates/
+}
+
+initLatestTemplates() {
+  curl -L https://api.github.com/repos/eclipse-che/che-operator/zipball/main  > /tmp/che-operator.zip &&
+  unzip /tmp/che-operator.zip -d /tmp && \
+  mkdir -p /tmp/templates/che-operator && \
+  mv /tmp/eclipse-che-che-operator-*/deploy /tmp/che-operator
+  cp -rf /tmp/che-operator/* /tmp/templates/che-operator
 }
 
 startHappyPathTest() {
@@ -114,5 +123,6 @@ runTest() {
 }
 
 installChectl
+initLatestTemplates
 provisionOpenShiftOAuthUser
 runTest

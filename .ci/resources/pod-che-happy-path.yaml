@@ -6,6 +6,9 @@ metadata:
 spec:
   volumes:
     - name: test-run-results
+    - name: dshm
+      emptyDir:
+        medium: Memory
   containers:
     # container containing the tests
     - name: happy-path-test
@@ -38,9 +41,15 @@ spec:
           value: "htpasswd"
         - name: DELETE_WORKSPACE_ON_FAILED_TEST
           value: "true"
+        - name: TS_SELENIUM_START_WORKSPACE_TIMEOUT
+          value: '540000'
+        - name: TS_IDE_LOAD_TIMEOUT
+          value: '40000'
       volumeMounts:
         - name: test-run-results
           mountPath: /tmp/e2e/report/
+        - mountPath: /dev/shm
+          name: dshm
       resources:
         requests:
           memory: "3Gi"

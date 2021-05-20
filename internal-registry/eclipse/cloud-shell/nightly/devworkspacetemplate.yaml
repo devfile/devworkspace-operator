@@ -22,4 +22,4 @@ spec:
             secure: true
             path: /static/
             attributes:
-              type: ide
+              type: main

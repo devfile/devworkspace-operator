@@ -19,7 +19,7 @@ input:
             secure: true
             protocol: wss
             attributes:
-              type: ide
+              type: main
           - name: "test-endpoint-2"
             exposure: public
             targetPort: 8080

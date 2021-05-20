@@ -16,8 +16,8 @@ type EndpointAttribute string
 
 const (
 	// TypeEndpointAttribute is an attribute used for devfile endpoints that specifies the endpoint type.
-	// values used are `terminal` for terminal plugins, and `ide` for the main IDE url. Other values
-	// can be used for special cases (e.g. ide-dev for Theia)
+	// Values respected by devworkspace operator:
+	// - `main` - indicates that endpoint should be exposed as mainUrl in the workspace status.
 	TypeEndpointAttribute EndpointAttribute = "type"
 
 	// DiscoverableAttribute defines an endpoint as "discoverable", meaning that a service should be

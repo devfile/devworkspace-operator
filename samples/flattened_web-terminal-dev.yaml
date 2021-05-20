@@ -38,7 +38,7 @@ spec:
               exposure: public
               protocol: http
               attributes:
-                type: ide
+                type: main
           env:
             - name: USE_BEARER_TOKEN
               value: "true"

@@ -39,7 +39,7 @@ spec:
               protocol: http
               exposure: internal
               attributes:
-                type: ide
+                type: main
           env:
             - name: USE_BEARER_TOKEN
               value: "true"

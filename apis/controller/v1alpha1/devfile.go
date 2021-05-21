@@ -13,12 +13,16 @@
 package v1alpha1
 
 type EndpointAttribute string
+type EndpointType string
 
 const (
 	// TypeEndpointAttribute is an attribute used for devfile endpoints that specifies the endpoint type.
-	// Values respected by devworkspace operator:
-	// - `main` - indicates that endpoint should be exposed as mainUrl in the workspace status.
+	// See EndpointType for respected values
 	TypeEndpointAttribute EndpointAttribute = "type"
+
+	// The value for `type` endpoint attribute that indicates that it should be exposed as mainUrl
+	// in the workspace status
+	MainEndpointType EndpointType = "main"
 
 	// DiscoverableAttribute defines an endpoint as "discoverable", meaning that a service should be
 	// created using the endpoint name (i.e. instead of generating a service name for all endpoints,

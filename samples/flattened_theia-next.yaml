@@ -42,7 +42,7 @@ spec:
               secure: true
               protocol: http
               attributes:
-                type: ide
+                type: main
             - name: "webviews"
               exposure: public
               targetPort: 3100

@@ -158,7 +158,7 @@ func checkServerStatus(workspace *dw.DevWorkspace) (ok bool, err error) {
 func getMainUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string {
 	for _, endpoints := range exposedEndpoints {
 		for _, endpoint := range endpoints {
-			if endpoint.Attributes.GetString(string(v1alpha1.TypeEndpointAttribute), nil) == "ide" {
+			if endpoint.Attributes.GetString(string(v1alpha1.TypeEndpointAttribute), nil) == string(v1alpha1.MainEndpointType) {
 				return endpoint.Url
 			}
 		}

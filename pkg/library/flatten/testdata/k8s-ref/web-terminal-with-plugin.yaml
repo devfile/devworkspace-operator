@@ -40,7 +40,7 @@ input:
                   targetPort: 4444
                   attributes:
                     protocol: http
-                    type: ide
+                    type: main
                     discoverable: "false"
                     secure: "true"
               env:
@@ -74,7 +74,7 @@ output:
               targetPort: 4444
               attributes:
                 protocol: http
-                type: ide
+                type: main
                 discoverable: "false"
                 secure: "true"
           env:

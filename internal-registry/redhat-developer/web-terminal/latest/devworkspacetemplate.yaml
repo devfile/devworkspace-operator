@@ -20,7 +20,7 @@ spec:
             exposure: internal
             protocol: http
             attributes:
-              type: ide
+              type: main
         mountSources: false
         env:
           - name: USE_BEARER_TOKEN

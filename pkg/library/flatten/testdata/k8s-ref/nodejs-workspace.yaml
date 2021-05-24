@@ -166,7 +166,7 @@ input:
                   secure: true
                   protocol: http
                   attributes:
-                    type: ide
+                    type: main
                 - name: "webviews"
                   exposure: public
                   targetPort: 3100
@@ -315,7 +315,7 @@ output:
               secure: true
               protocol: http
               attributes:
-                type: ide
+                type: main
             - name: "webviews"
               exposure: public
               targetPort: 3100

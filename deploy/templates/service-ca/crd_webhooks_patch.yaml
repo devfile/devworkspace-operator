@@ -16,6 +16,7 @@ spec:
           # Note: service name is hard-coded in pkg/webhook/server/server.go
           name: devworkspace-webhookserver
           path: /convert
+          port: 443
         # caBundle will be filled by Service CA operator
         caBundle: Cg==
 ---
@@ -37,5 +38,6 @@ spec:
           # Note: service name is hard-coded in pkg/webhook/server/server.go
           name: devworkspace-webhookserver
           path: /convert
+          port: 443
         # caBundle will be filled by Service CA operator
         caBundle: Cg==

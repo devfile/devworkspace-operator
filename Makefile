@@ -20,12 +20,17 @@ endif
 
 export NAMESPACE ?= devworkspace-controller
 export DWO_IMG ?= quay.io/devfile/devworkspace-controller:next
+export DWO_BUNDLE_IMG ?= quay.io/devfile/devworkspace-operator-bundle:next
+export DWO_INDEX_IMG ?= quay.io/devfile/devworkspace-operator-index:next
 export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:next
 export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
 export DEVWORKSPACE_API_VERSION ?= cd9c30e6aa05b15445bb05386692f470323c826f
+
+# Enable using Podman instead of Docker
+export DOCKER ?= docker
 
 #internal params
 DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
@@ -34,23 +39,14 @@ BUMPED_KUBECONFIG=$(INTERNAL_TMP_DIR)/kubeconfig
 CONTROLLER_ENV_FILE=$(INTERNAL_TMP_DIR)/environment
 
 include build/make/version.mk
+include build/make/olm.mk
 
 ifneq (,$(shell which kubectl 2>/dev/null)$(shell which oc 2>/dev/null))
 include build/make/deploy.mk
 endif
 
-# Bootstrapped by Operator-SDK v1.1.0
-OPERATOR_SDK_VERSION = v1.1.0
-# Default bundle image tag
-DWO_BUNDLE_IMG ?= controller-bundle:$(VERSION)
-# Options for 'bundle-build'
-ifneq ($(origin CHANNELS), undefined)
-BUNDLE_CHANNELS := --channels=$(CHANNELS)
-endif
-ifneq ($(origin DEFAULT_CHANNEL), undefined)
-BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
-endif
-BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+OPERATOR_SDK_VERSION = v1.7.2
+OPM_VERSION = v1.17.1
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true"
@@ -68,6 +64,8 @@ _print_vars:
 	@echo "Current env vars:"
 	@echo "    NAMESPACE=$(NAMESPACE)"
 	@echo "    DWO_IMG=$(DWO_IMG)"
+	@echo "    DWO_BUNDLE_IMG=$(DWO_BUNDLE_IMG)"
+	@echo "    DWO_INDEX_IMG=$(DWO_INDEX_IMG)"
 	@echo "    PROJECT_CLONE_IMG=$(PROJECT_CLONE_IMG)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
@@ -178,7 +176,7 @@ docker: _print_vars docker-build docker-push
 
 ### docker-build: Builds the controller image
 docker-build:
-	docker build . -t ${DWO_IMG} -f build/Dockerfile
+	$(DOCKER) build . -t ${DWO_IMG} -f build/Dockerfile
 
 ### docker-push: Pushes the controller image
 docker-push:
@@ -187,7 +185,7 @@ ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
 	@echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
 endif
 endif
-	docker push ${DWO_IMG}
+	$(DOCKER) push ${DWO_IMG}
 
 ### controller-gen: Finds or downloads controller-gen
 # download controller-gen if necessary

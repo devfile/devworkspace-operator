@@ -1,0 +1,68 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+    operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
+  name: devworkspace-operator.v0.1.0
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - kind: DevWorkspaceRouting
+      name: devworkspaceroutings.controller.devfile.io
+      version: v1alpha1
+    - kind: DevWorkspace
+      name: devworkspaces.workspace.devfile.io
+      version: v1alpha1
+    - kind: DevWorkspace
+      name: devworkspaces.workspace.devfile.io
+      version: v1alpha2
+    - kind: DevWorkspaceTemplate
+      name: devworkspacetemplates.workspace.devfile.io
+      version: v1alpha1
+    - kind: DevWorkspaceTemplate
+      name: devworkspacetemplates.workspace.devfile.io
+      version: v1alpha2
+  description: DevWorkspace Operator description. #TODO
+  displayName: DevWorkspace Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions: null
+      deployments: null
+      permissions: null
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - Devworkspace Operator
+  - DevWorkspaces
+  - Devfile
+  links:
+  - name: Devworkspace Operator
+    url: https://github.com/devfile/devworkspace-operator
+  maintainers:
+  - email: amisevsk@redhat.com
+    name: Angel Misevski
+  - email: sleshche@redhat.com
+    name: Serhii Leshchenko
+  - email: jpinkney@redhat.com
+    name: Josh Pinkney
+  maturity: alpha
+  provider:
+    name: Devfile
+    url: https://devfile.io
+  version: 0.1.0

@@ -4,15 +4,27 @@ multigroup: true
 projectName: devworkspace-operator
 repo: github.com/devfile/devworkspace-operator
 resources:
-- group: controller
-  kind: Component
-  version: v1alpha1
-- group: controller
+-
+  controller: true
+  domain: devfile.io
+  group: controller
   kind: DevWorkspaceRouting
+  path: github.com/devfile/devworkspace-operator/apis/controller/v1alpha1
   version: v1alpha1
-- group: workspace
+-
+  controller: true
+  domain: devfile.io
+  group: workspace
   kind: DevWorkspace
-  version: v1alpha1
-version: 3-alpha
+  path: github.com/devfile/devworkspace-operator/apis/workspace/v1alpha1
+  version: v1alpha2
+-
+  controller: false
+  domain: devfile.io
+  group: workspace
+  kind: DevWorkspaceTemplate
+  path: github.com/devfile/devworkspace-operator/apis/workspace/v1alpha1
+  version: v1alpha2
+version: "3"
 plugins:
   go.sdk.operatorframework.io/v2-alpha: {}

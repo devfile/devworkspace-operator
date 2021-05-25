@@ -17,6 +17,7 @@ spec:
           name: devworkspace-webhookserver
           namespace: devworkspace-controller
           path: /convert
+          port: 443
       conversionReviewVersions:
       - v1
   group: workspace.devfile.io

@@ -51,17 +51,28 @@ Arguments:
       Parse output file combined.yaml into a yaml file for each record
       in combined yaml. Files are output to the 'objects' subdirectory
       for each platform and are named <object-name>.<kind>.yaml
+  --generate-olm
+      Generate deployment files to be consumed by operator-sdk in creating
+      a bundle. If this option is set, --use-defaults is set as well (i.e.
+      output directory is always deploy/deployment)
   -h, --help
       Print this help description
 EOF
 }
 
 USE_DEFAULT_ENV=false
+GEN_OLM=false
 OUTPUT_DIR="${SCRIPT_DIR%/}/current"
 SPLIT_YAMLS=false
 while [[ "$#" -gt 0 ]]; do
   case $1 in
       --use-defaults)
+      USE_DEFAULT_ENV=true
+      SPLIT_YAMLS=true
+      OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
+      ;;
+      --generate-olm)
+      GEN_OLM=true
       USE_DEFAULT_ENV=true
       SPLIT_YAMLS=true
       OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
@@ -77,6 +88,7 @@ while [[ "$#" -gt 0 ]]; do
       --split-yamls)
       SPLIT_YAMLS=true
       ;;
+
       -h|--help)
       print_help
       exit 0
@@ -104,6 +116,7 @@ fi
 
 KUBERNETES_DIR="${OUTPUT_DIR}/kubernetes"
 OPENSHIFT_DIR="${OUTPUT_DIR}/openshift"
+OLM_DIR="${OUTPUT_DIR}/olm"
 COMBINED_FILENAME="combined.yaml"
 OBJECTS_DIR="objects"
 
@@ -112,7 +125,7 @@ KUSTOMIZE_DIR="${SCRIPT_DIR}/../bin/kustomize"
 KUSTOMIZE=${KUSTOMIZE_DIR}/kustomize
 
 rm -rf "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
-mkdir -p "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
+mkdir -p "$KUBERNETES_DIR" "$OPENSHIFT_DIR" "$OLM_DIR"
 
 required_vars=(NAMESPACE DWO_IMG PULL_POLICY DEFAULT_ROUTING \
   DEVWORKSPACE_API_VERSION)
@@ -164,6 +177,15 @@ ${KUSTOMIZE} build "${SCRIPT_DIR}/templates/service-ca" \
   > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 echo "File saved to ${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
+if $GEN_OLM; then
+  echo "Generating base deployment files for OLM"
+  export NAMESPACE=openshift-operators
+  ${KUSTOMIZE} build "${SCRIPT_DIR}/templates/olm" \
+    | envsubst "$SUBST_VARS" \
+    > "${OLM_DIR}/${COMBINED_FILENAME}"
+  echo "File saved to ${OLM_DIR}/${COMBINED_FILENAME}"
+fi
+
 if ! $SPLIT_YAMLS; then
   echo "Skipping split combined.yaml step. To split the combined yaml, use the --split-yamls argument."
   exit 0
@@ -175,6 +197,8 @@ if ! command -v yq &>/dev/null; then
 fi
 
 # Split the giant files output by kustomize per-object
+# Do not split the OLM files as the `operator-sdk generate bundle` will generate
+# duplicate files when using $OLM_DIR as a --deploy-dir
 for dir in "$KUBERNETES_DIR" "$OPENSHIFT_DIR"; do
   echo "Parsing objects from ${dir}/${COMBINED_FILENAME}"
   mkdir -p "$dir/$OBJECTS_DIR"

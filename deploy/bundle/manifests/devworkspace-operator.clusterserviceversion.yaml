@@ -1,0 +1,374 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+    operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
+    operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
+    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  labels:
+    app.kubernetes.io/name: devworkspace-controller
+    app.kubernetes.io/part-of: devworkspace-operator
+  name: devworkspace-operator.v0.1.0
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - kind: DevWorkspaceRouting
+      name: devworkspaceroutings.controller.devfile.io
+      version: v1alpha1
+    - kind: DevWorkspace
+      name: devworkspaces.workspace.devfile.io
+      version: v1alpha1
+    - kind: DevWorkspace
+      name: devworkspaces.workspace.devfile.io
+      version: v1alpha2
+    - kind: DevWorkspaceTemplate
+      name: devworkspacetemplates.workspace.devfile.io
+      version: v1alpha1
+    - kind: DevWorkspaceTemplate
+      name: devworkspacetemplates.workspace.devfile.io
+      version: v1alpha2
+  description: DevWorkspace Operator description.
+  displayName: DevWorkspace Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - authentication.k8s.io
+          resources:
+          - tokenreviews
+          verbs:
+          - create
+        - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - subjectaccessreviews
+          verbs:
+          - create
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - persistentvolumeclaims
+          - pods
+          - secrets
+          - serviceaccounts
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - pods/exec
+          verbs:
+          - create
+        - apiGroups:
+          - ""
+          resources:
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - admissionregistration.k8s.io
+          resources:
+          - mutatingwebhookconfigurations
+          - validatingwebhookconfigurations
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resourceNames:
+          - devworkspace-controller
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - apps
+          - extensions
+          resources:
+          - deployments
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - apps
+          - extensions
+          resources:
+          - deployments
+          - replicasets
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          - extensions
+          resources:
+          - replicasets
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - batch
+          resources:
+          - jobs
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - controller.devfile.io
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        - apiGroups:
+          - controller.devfile.io
+          resources:
+          - devworkspaceroutings
+          verbs:
+          - '*'
+        - apiGroups:
+          - controller.devfile.io
+          resources:
+          - devworkspaceroutings/status
+          verbs:
+          - get
+          - patch
+          - update
+        - apiGroups:
+          - extensions
+          resources:
+          - ingresses
+          verbs:
+          - '*'
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - create
+          - get
+        - apiGroups:
+          - oauth.openshift.io
+          resources:
+          - oauthclients
+          verbs:
+          - create
+          - delete
+          - deletecollection
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          - clusterroles
+          - rolebindings
+          - roles
+          verbs:
+          - create
+          - get
+          - list
+          - update
+          - watch
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes
+          verbs:
+          - '*'
+        - apiGroups:
+          - route.openshift.io
+          resources:
+          - routes/custom-host
+          verbs:
+          - create
+        - apiGroups:
+          - workspace.devfile.io
+          resources:
+          - '*'
+          verbs:
+          - '*'
+        serviceAccountName: devworkspace-controller-serviceaccount
+      deployments:
+      - name: devworkspace-controller-manager
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app.kubernetes.io/name: devworkspace-controller
+              app.kubernetes.io/part-of: devworkspace-operator
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                app.kubernetes.io/name: devworkspace-controller
+                app.kubernetes.io/part-of: devworkspace-operator
+            spec:
+              containers:
+              - args:
+                - /usr/local/bin/devworkspace-controller
+                - --enable-leader-election
+                env:
+                - name: DEVELOPMENT_MODE
+                  value: "true"
+                - name: RELATED_IMAGE_devworkspace_webhook_server
+                  value: quay.io/devfile/devworkspace-controller:next
+                - name: RELATED_IMAGE_project_clone
+                  value: quay.io/devfile/project-clone:next
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: devworkspace-operator
+                - name: CONTROLLER_SERVICE_ACCOUNT_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: spec.serviceAccountName
+                - name: MAX_CONCURRENT_RECONCILES
+                  value: "1"
+                - name: WEBHOOKS_SERVER_MEMORY_LIMIT
+                  value: 300Mi
+                - name: WEBHOOKS_SERVER_MEMORY_REQUEST
+                  value: 20Mi
+                - name: WEBHOOKS_SERVER_CPU_LIMIT
+                  value: 200m
+                - name: WEBHOOKS_SERVER_CPU_REQUEST
+                  value: 100m
+                - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
+                  value: quay.io/eclipse/che-machine-exec:nightly
+                - name: RELATED_IMAGE_web_terminal_tooling
+                  value: quay.io/wto/web-terminal-tooling:latest
+                - name: RELATED_IMAGE_pvc_cleanup_job
+                  value: quay.io/libpod/busybox:1.30.1
+                - name: RELATED_IMAGE_async_storage_server
+                  value: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
+                - name: RELATED_IMAGE_async_storage_sidecar
+                  value: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
+                image: quay.io/devfile/devworkspace-controller:next
+                imagePullPolicy: Always
+                livenessProbe:
+                  failureThreshold: 5
+                  httpGet:
+                    path: /healthz
+                    port: liveness-port
+                    scheme: HTTP
+                  initialDelaySeconds: 15
+                  periodSeconds: 10
+                  successThreshold: 1
+                  timeoutSeconds: 5
+                name: devworkspace-controller
+                ports:
+                - containerPort: 6789
+                  name: liveness-port
+                readinessProbe:
+                  failureThreshold: 3
+                  httpGet:
+                    path: /readyz
+                    port: liveness-port
+                    scheme: HTTP
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  successThreshold: 1
+                  timeoutSeconds: 5
+                resources:
+                  limits:
+                    cpu: 200m
+                    memory: 300Mi
+                  requests:
+                    cpu: 100m
+                    memory: 20Mi
+              serviceAccountName: devworkspace-controller-serviceaccount
+              terminationGracePeriodSeconds: 10
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          verbs:
+          - get
+          - list
+          - watch
+          - create
+          - update
+          - patch
+          - delete
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps/status
+          verbs:
+          - get
+          - update
+          - patch
+        - apiGroups:
+          - ""
+          resources:
+          - events
+          verbs:
+          - create
+          - patch
+        serviceAccountName: devworkspace-controller-serviceaccount
+    strategy: deployment
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - Devworkspace Operator
+  - DevWorkspaces
+  - Devfile
+  links:
+  - name: Devworkspace Operator
+    url: https://github.com/devfile/devworkspace-operator
+  maintainers:
+  - email: amisevsk@redhat.com
+    name: Angel Misevski
+  - email: sleshche@redhat.com
+    name: Serhii Leshchenko
+  - email: jpinkney@redhat.com
+    name: Josh Pinkney
+  maturity: alpha
+  provider:
+    name: Devfile
+    url: https://devfile.io
+  version: 0.1.0

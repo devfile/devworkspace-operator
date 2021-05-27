@@ -5,19 +5,28 @@ input:
     - name: testing-container-1
       container:
         image: testing-image-1
-        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        memoryRequest: "-1"  # isolate test to not include this field
+        memoryLimit: "-1"  # isolate test to not include this field
+        cpuRequest: "-1"  # isolate test to not include this field
+        cpuLimit: "-1"  # isolate test to not include this field
         sourceMapping: "/testdir1"
         # no mountSources defined -> should mount sources
     - name: testing-container-2
       container:
         image: testing-image-2
-        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        memoryRequest: "-1"  # isolate test to not include this field
+        memoryLimit: "-1"  # isolate test to not include this field
+        cpuRequest: "-1"  # isolate test to not include this field
+        cpuLimit: "-1"  # isolate test to not include this field
         # No sourceMapping -> defaults to "/projects"
         mountSources: true # mountSources: true -> should mount sources
     - name: testing-container-3
       container:
         image: testing-image-3
-        memoryLimit: 999Mi  # isolate test to not include memoryLimit
+        memoryRequest: "-1"  # isolate test to not include this field
+        memoryLimit: "-1"  # isolate test to not include this field
+        cpuRequest: "-1"  # isolate test to not include this field
+        cpuLimit: "-1"  # isolate test to not include this field
         sourceMapping: "/projects"
         mountSources: false # mountSources: false -> should not mount sources
 output:
@@ -27,8 +36,12 @@ output:
         image: testing-image-1
         imagePullPolicy: Always
         resources:
+          requests:
+            memory: "-1"
+            cpu: "-1"
           limits:
-            memory: "999Mi"
+            memory: "-1"
+            cpu: "-1"
         volumeMounts:
           - name: "projects"
             mountPath: "/testdir1"
@@ -43,8 +56,12 @@ output:
         image: testing-image-2
         imagePullPolicy: Always
         resources:
+          requests:
+            memory: "-1"
+            cpu: "-1"
           limits:
-            memory: "999Mi"
+            memory: "-1"
+            cpu: "-1"
         volumeMounts:
           - name: "projects"
             mountPath: "/projects"
@@ -63,5 +80,9 @@ output:
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-3"
         resources:
+          requests:
+            memory: "-1"
+            cpu: "-1"
           limits:
-            memory: "999Mi"
+            memory: "-1"
+            cpu: "-1"

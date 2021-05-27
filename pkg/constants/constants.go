@@ -25,12 +25,15 @@ var ControllerAppLabels = func() map[string]string {
 const (
 	DefaultProjectsSourcesRoot = "/projects"
 
-	AuthEnabled = "false"
-
 	ServiceAccount = "devworkspace"
 
-	SidecarDefaultMemoryLimit = "128M"
-	PVCStorageSize            = "1Gi"
+	SidecarDefaultMemoryLimit   = "128M"
+	SidecarDefaultMemoryRequest = "64M"
+
+	SidecarDefaultCpuLimit   = "-1"
+	SidecarDefaultCpuRequest = "-1"
+
+	PVCStorageSize = "1Gi"
 
 	// DevWorkspaceIDLoggerKey is the key used to log workspace ID in the reconcile
 	DevWorkspaceIDLoggerKey = "devworkspace_id"

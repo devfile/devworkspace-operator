@@ -1,16 +1,19 @@
-name: "Processes memoryLimit correctly"
+name: "Processes resources settings correctly"
 
 input:
   components:
     - name: testing-container-1
       container:
         image: testing-image-1
+        memoryRequest: 512Mi
         memoryLimit: 999Mi
+        cpuRequest: "0.01"
+        cpuLimit: 10m
         mountSources: false
     - name: testing-container-2
       container:
         image: testing-image-2
-        # Omitted memory limit - should use default
+        # Omitted resources - should use default
         mountSources: false
 
 output:
@@ -23,8 +26,12 @@ output:
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-1"
         resources:
+          requests:
+            memory: "512Mi"
+            cpu: "0.01"
           limits:
             memory: "999Mi"
+            cpu: "10m"
       - name: testing-container-2
         image: testing-image-2
         imagePullPolicy: Always
@@ -32,5 +39,9 @@ output:
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-2"
         resources:
+          requests:
+            memory: "64M"
+            cpu: "-1"
           limits:
             memory: "128M"
+            cpu: "-1"

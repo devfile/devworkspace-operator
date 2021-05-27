@@ -6,7 +6,10 @@ input:
       container:
         image: testing-image-1
         mountSources: false # isolate test to not include volumes
-        memoryLimit: "999Mi"  # isolate test to not include memoryLimit
+        memoryRequest: "-1"  # isolate test to not include this field
+        memoryLimit: "-1"  # isolate test to not include this field
+        cpuRequest: "-1"  # isolate test to not include this field
+        cpuLimit: "-1"  # isolate test to not include this field
     - name: test-volume
       volume: {}
 output:
@@ -19,5 +22,9 @@ output:
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-1"
         resources:
+          requests:
+            memory: "-1"
+            cpu: "-1"
           limits:
-            memory: "999Mi"
+            memory: "-1"
+            cpu: "-1"

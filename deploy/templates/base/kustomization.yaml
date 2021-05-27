@@ -13,7 +13,6 @@ configMapGenerator:
 
 patchesStrategicMerge:
 - manager_image_patch.yaml
-- manager_dev_mode_patch.yaml
 
 vars:
 - name: OPERATOR_NAMESPACE

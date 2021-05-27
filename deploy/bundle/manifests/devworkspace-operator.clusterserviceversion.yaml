@@ -238,8 +238,6 @@ spec:
                 - /usr/local/bin/devworkspace-controller
                 - --enable-leader-election
                 env:
-                - name: DEVELOPMENT_MODE
-                  value: "true"
                 - name: RELATED_IMAGE_devworkspace_webhook_server
                   value: quay.io/devfile/devworkspace-controller:next
                 - name: RELATED_IMAGE_project_clone

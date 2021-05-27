@@ -1,2 +1,3 @@
 deploy/deployment/**            linguist-generated
+deploy/bundle/manifests/*       linguist-generated
 deploy/templates/crd/bases/*    linguist-generated

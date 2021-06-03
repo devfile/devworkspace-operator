@@ -30,8 +30,8 @@ const (
 	SidecarDefaultMemoryLimit   = "128M"
 	SidecarDefaultMemoryRequest = "64M"
 
-	SidecarDefaultCpuLimit   = "-1"
-	SidecarDefaultCpuRequest = "-1"
+	SidecarDefaultCpuLimit   = "" // do not provide any value
+	SidecarDefaultCpuRequest = "" // do not provide any value
 
 	PVCStorageSize = "1Gi"
 

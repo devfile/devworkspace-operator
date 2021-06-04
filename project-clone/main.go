@@ -53,7 +53,7 @@ func main() {
 				log.Printf("Failed to set up remotes for project %s: %s", project.Name, err)
 				os.Exit(1)
 			}
-			if err := internal.CheckoutReference(repo, project.Git.CheckoutFrom); err != nil {
+			if err := internal.CheckoutReference(repo, &project); err != nil {
 				log.Printf("Failed to checkout revision for project %s: %s", project.Name, err)
 				os.Exit(1)
 			}

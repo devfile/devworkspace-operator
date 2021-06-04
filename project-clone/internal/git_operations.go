@@ -35,9 +35,19 @@ func CloneProject(project *dw.Project) (*git.Repository, error) {
 	}
 
 	var defaultRemoteName, defaultRemoteURL string
-
 	if project.Git.CheckoutFrom != nil {
-		defaultRemoteName = project.Git.CheckoutFrom.Remote
+		defaultRemoteName := project.Git.CheckoutFrom.Remote
+		if defaultRemoteName == "" {
+			// omitting remote attribute is possible if there is a single remote
+			if len(project.Git.Remotes) == 1 {
+				for remoteName := range project.Git.Remotes {
+					defaultRemoteName = remoteName
+				}
+			} else {
+				// need to specify
+				return nil, fmt.Errorf("project checkoutFrom remote can't be omitted with multiple remotes")
+			}
+		}
 		remoteURL, ok := project.Git.Remotes[defaultRemoteName]
 		if !ok {
 			return nil, fmt.Errorf("project checkoutFrom refers to non-existing remote %s", defaultRemoteName)
@@ -88,11 +98,21 @@ func SetupRemotes(repo *git.Repository, project *dw.Project) error {
 }
 
 // CheckoutReference sets the current HEAD in repo to point at the revision and remote referenced by checkoutFrom
-func CheckoutReference(repo *git.Repository, checkoutFrom *dw.CheckoutFrom) error {
+func CheckoutReference(repo *git.Repository, project *dw.Project) error {
+	checkoutFrom := project.Git.CheckoutFrom
 	if checkoutFrom == nil {
 		return nil
 	}
-	remote, err := repo.Remote(checkoutFrom.Remote)
+	var defaultRemoteName string
+	// multiple remotes error case is handled before at CloneProject step
+	if checkoutFrom.Remote == "" && len(project.Git.Remotes) == 1 {
+		for remoteName := range project.Git.Remotes {
+			defaultRemoteName = remoteName
+		}
+	} else {
+		defaultRemoteName = checkoutFrom.Remote
+	}
+	remote, err := repo.Remote(defaultRemoteName)
 	if err != nil {
 		return fmt.Errorf("could not find remote %s: %s", checkoutFrom.Remote, err)
 	}

@@ -47,6 +47,12 @@ endif
 		--container-tool $(DOCKER)
 	$(DOCKER) push $(DWO_INDEX_IMG)
 
+export_manifests: _print_vars _check_opm_version
+	rm -rf ./generated/exported-manifests
+	# Export the bundles with the name web-terminal inside of $(DWO_INDEX_IMG)
+	# This command basic exports the index back into the old format
+	opm index export -c $(DOCKER) -f ./generated/exported-manifests -i $(DWO_INDEX_IMG)
+
 ### register_catalogsource: create the catalogsource to make the operator be available on the marketplace
 register_catalogsource: _check_skopeo_installed
 	INDEX_DIGEST=$$(skopeo inspect docker://$(DWO_INDEX_IMG) | jq -r '.Digest')

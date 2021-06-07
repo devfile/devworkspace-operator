@@ -20,8 +20,8 @@ generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_f
 		--metadata && \
 	mv bundle.Dockerfile build/
 
-### generate_olm_bundle_image: build and push DevWorkspace Operator bundle image
-generate_olm_bundle_image: _print_vars _check_operator_sdk_version
+### build_bundle_image: build and push DevWorkspace Operator bundle image
+build_bundle_image: _print_vars _check_operator_sdk_version
 ifneq ($(INITIATOR),CI)
 ifeq ($(DWO_BUNDLE_IMG),quay.io/devfile/devworkspace-operator-bundle:next)
 	@echo -n "Are you sure you want to push $(DWO_BUNDLE_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
@@ -30,8 +30,8 @@ endif
 	$(DOCKER) build . -t $(DWO_BUNDLE_IMG) -f build/bundle.Dockerfile
 	$(DOCKER) push $(DWO_BUNDLE_IMG)
 
-### generate_olm_index_image: build and push DevWorkspace Operator index image
-generate_olm_index_image: _print_vars _check_skopeo_installed _check_opm_version
+### build_index_image: build and push DevWorkspace Operator index image
+build_index_image: _print_vars _check_skopeo_installed _check_opm_version
 ifneq ($(INITIATOR),CI)
 ifeq ($(DWO_INDEX_IMG),quay.io/devfile/devworkspace-operator-index:next)
 	@echo -n "Are you sure you want to push $(DWO_INDEX_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]

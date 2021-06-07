@@ -14,7 +14,7 @@ on:
 
 jobs:
 
-  build:
+  build-next-imgs:
     runs-on: ubuntu-20.04
     steps:
     - name: Checkout devworkspace-operator source code
@@ -39,3 +39,67 @@ jobs:
         dockerfile: ./project-clone/Dockerfile
         tags: next
         tag_with_sha: true
+
+  build-next-olm-imgs:
+    runs-on: ubuntu-latest
+    env:
+      DWO_BUNDLE_IMG: quay.io/devfile/devworkspace-operator-bundle:next
+      DWO_INDEX_IMG: quay.io/devfile/devworkspace-operator-index:next
+      OPM_VERSION: v1.17.1
+      OPERATOR_SDK_VERSION: v1.7.2
+    steps:
+
+      - name: Cache Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
+        uses: actions/cache@v2
+        id: cache-operator-sdk
+        with:
+          path: ~/cache
+          key: operator-sdk-${{ env.OPERATOR_SDK_VERSION }}
+
+      - name: Download Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
+        if: steps.cache-operator-sdk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/cache
+          wget https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 -O ~/cache/operator-sdk-${OPERATOR_SDK_VERSION} > /dev/null
+          chmod +x ~/cache/operator-sdk-${OPERATOR_SDK_VERSION}
+      - name: Install Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
+        run: |
+          mkdir -p ~/bin
+          cp ~/cache/operator-sdk-${OPERATOR_SDK_VERSION} ~/bin/operator-sdk
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Cache OPM ${{ env.OPM_VERSION }}
+        uses: actions/cache@v2
+        id: cache-opm
+        with:
+          path: ~/cache
+          key: opm-${{ env.OPM_VERSION }}
+
+      - name: Download OPM ${{ env.OPM_VERSION }}
+        if: steps.cache-opm.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/cache
+          wget https://github.com/operator-framework/operator-registry/releases/download/${OPM_VERSION}/linux-amd64-opm -O ~/cache/opm${OPM_VERSION} > /dev/null
+          #${OPM_VERSION} is used in binary name to prevent caching after upgrading
+          chmod +x ~/cache/opm${OPM_VERSION}
+      - name: Install OPM ${{ env.OPM_VERSION }}
+        run: |
+          mkdir -p ~/bin
+          cp ~/cache/opm${OPM_VERSION} ~/bin/opm
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Checkout devworkspace-operator source code
+        uses: actions/checkout@v2
+
+      - name: "Docker Quay.io Login with DWO Robot"
+        env:
+          DOCKER_USERNAME: ${{ secrets.QUAY_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+        run: |
+          echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin quay.io
+
+      - name: "Build Bundle & Index images"
+        run: make build_bundle_image build_index_image
+
+      - name: "Docker Logout"
+        run: docker logout

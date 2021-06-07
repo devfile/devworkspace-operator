@@ -27,7 +27,7 @@ spec:
     - kind: DevWorkspaceTemplate
       name: devworkspacetemplates.workspace.devfile.io
       version: v1alpha2
-  description: DevWorkspace Operator description. #TODO
+  description: DevWorkspace Operator serves DevWorkspaces CustomResources, which are based on Devfile v2 and helps to easily create repetitive environment for development.
   displayName: DevWorkspace Operator
   icon:
   - base64data: ""

@@ -17,6 +17,7 @@ generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_f
 		--deploy-dir deploy/deployment/olm \
 		--output-dir deploy/bundle \
 		--manifests \
+		--channels fast \
 		--metadata && \
 	mv bundle.Dockerfile build/
 

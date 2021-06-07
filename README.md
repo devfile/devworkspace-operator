@@ -38,6 +38,8 @@ Note: kustomize `v4.0.5` is required for most tasks. It is downloaded automatica
 
 ## Running the controller in a cluster
 
+### With yaml resources
+
 When deployed to Kubernetes, the controller requires [cert-manager](https://cert-manager.io) running in the cluster.
 You can install it using `make install_cert_manager` if you don't run it already.
 The minimum version of cert-manager is `v1.0.4`.
@@ -60,6 +62,16 @@ See below for all environment variables used in the makefile.
 >   "dns": ["192.168.0.1"]
 > }
 > ```
+
+### With OLM
+
+DevWorkspace Operator has bundle and index images which allow to install it with OLM.
+You need to register custom catalog source to make it available on your cluster with help:
+```
+DWO_INDEX_IMG=quay.io/devfile/devworkspace-operator-index:next
+make register_catalogsource
+```
+After OLM processed created catalog source, DWO should appear on Operators page of OpenShift Console.
 
 ## Development
 

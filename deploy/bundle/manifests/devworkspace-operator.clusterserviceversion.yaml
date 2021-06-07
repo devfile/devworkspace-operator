@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
-  name: devworkspace-operator.v0.1.0
+  name: devworkspace-operator.v0.6.0
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -369,4 +369,4 @@ spec:
   provider:
     name: Devfile
     url: https://devfile.io
-  version: 0.1.0
+  version: 0.6.0

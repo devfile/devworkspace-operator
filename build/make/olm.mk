@@ -64,12 +64,9 @@ register_catalogsource: _check_skopeo_installed
 	sed -e "s|quay.io/devfile/devworkspace-operator-index:next|$${INDEX_IMG_DIGEST}|g" ./catalog-source.yaml \
 		| oc apply -f -
 
-	oc apply -f ./imageContentSourcePolicy.yaml
-
 ### unregister_catalogsource: unregister the catalogsource and delete the imageContentSourcePolicy
 unregister_catalogsource:
 	oc delete catalogsource custom-devworkspace-operator-catalog -n openshift-marketplace --ignore-not-found
-	oc delete imagecontentsourcepolicy devworkspace-operator-brew-registry-mirror --ignore-not-found
 
 _generate_olm_deployment_files:
 	deploy/generate-deployment.sh --generate-olm

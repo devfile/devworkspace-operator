@@ -9,10 +9,10 @@
 #   Red Hat, Inc. - initial API and implementation
 #
 
-# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/devtools/go-toolset-rhel7
-FROM registry.access.redhat.com/devtools/go-toolset-rhel7:1.14.12-4.1615820747  as builder
-ENV PATH=/opt/rh/go-toolset-1.14/root/usr/bin:${PATH} \
-    GOPATH=/go/
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
+FROM registry.access.redhat.com/ubi8-minimal:8.4 as builder
+RUN microdnf install -y make golang shadow-utils && \
+    go version
 USER root
 
 RUN go env GOPROXY

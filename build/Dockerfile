@@ -9,8 +9,11 @@
 #   Red Hat, Inc. - initial API and implementation
 #
 
-FROM quay.io/bitnami/golang:1.14 as builder
-RUN go env GOPROXY
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
+FROM registry.access.redhat.com/ubi8-minimal:8.4 as builder
+RUN microdnf install -y make golang shadow-utils && \
+    go version && \
+    go env GOPROXY
 WORKDIR /devworkspace-operator
 # Copy the Go Modules manifests
 COPY go.mod go.mod

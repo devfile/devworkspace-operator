@@ -54,9 +54,9 @@ const (
 	PVCCleanupPodCPURequest = "5m"
 
 	// Resource limits/requests for project cloner init container
-	ProjectCloneMemoryLimit   = "300Mi"
-	ProjectCloneMemoryRequest = "64Mi"
-	ProjectCloneCPULimit      = "500m"
+	ProjectCloneMemoryLimit   = "1Gi"
+	ProjectCloneMemoryRequest = "128Mi"
+	ProjectCloneCPULimit      = "1000m"
 	ProjectCloneCPURequest    = "100m"
 
 	// Constants describing storage classes supported by the controller

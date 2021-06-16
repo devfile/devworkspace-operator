@@ -36,7 +36,7 @@ func CloneProject(project *dw.Project) (*git.Repository, error) {
 
 	var defaultRemoteName, defaultRemoteURL string
 	if project.Git.CheckoutFrom != nil {
-		defaultRemoteName := project.Git.CheckoutFrom.Remote
+		defaultRemoteName = project.Git.CheckoutFrom.Remote
 		if defaultRemoteName == "" {
 			// omitting remote attribute is possible if there is a single remote
 			if len(project.Git.Remotes) == 1 {

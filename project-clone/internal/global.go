@@ -23,6 +23,7 @@ var (
 	ProjectsRoot string
 )
 
+// Read and store ProjectsRoot env var for reuse throughout project-clone.
 func init() {
 	ProjectsRoot = os.Getenv(constants.ProjectsRootEnvVar)
 	if ProjectsRoot == "" {

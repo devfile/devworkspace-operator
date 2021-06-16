@@ -26,8 +26,7 @@ import (
 	"github.com/devfile/devworkspace-operator/project-clone/internal/shell"
 )
 
-// CloneProject clones the project specified to $PROJECTS_ROOT. Note: projects.Github is ignored as it will likely
-// be removed soon.
+// CloneProject clones the project specified to $PROJECTS_ROOT.
 func CloneProject(project *dw.Project) error {
 	clonePath := internal.GetClonePath(project)
 	log.Printf("Cloning project %s to %s", project.Name, clonePath)

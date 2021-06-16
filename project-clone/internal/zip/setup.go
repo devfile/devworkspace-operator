@@ -31,7 +31,11 @@ const (
 	tmpDir = "/tmp/"
 )
 
+// SetupZipProject downloads and extracts a zip-type project to the corresponding clonePath.
 func SetupZipProject(project v1alpha2.Project) error {
+	if project.Zip == nil {
+		return fmt.Errorf("project has no 'zip' source")
+	}
 	url := project.Zip.Location
 	clonePath := internal.GetClonePath(&project)
 	projectPath := path.Join(internal.ProjectsRoot, clonePath)
@@ -58,6 +62,10 @@ func SetupZipProject(project v1alpha2.Project) error {
 	return nil
 }
 
+// downloadZip downloads file from `url` to `destPath`
+//
+// Adapted from the Che plugin broker:
+// https://github.com/eclipse/che-plugin-broker/blob/27e7c6953c92633cbe7e8ce746a16ca10d240ea2/utils/ioutil.go#L67
 func downloadZip(url, destPath string) error {
 	client := http.DefaultClient
 	resp, err := client.Get(url)
@@ -67,7 +75,7 @@ func downloadZip(url, destPath string) error {
 	defer closeSafe(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("request at %s returned status code %s", url, resp.StatusCode)
+		return fmt.Errorf("request at %s returned status code %d", url, resp.StatusCode)
 	}
 
 	out, err := os.Create(destPath)
@@ -148,6 +156,10 @@ func unzip(archivePath string, destPath string) error {
 	return nil
 }
 
+// closeSafe is a wrapper on io.Closer.Close() that just prints an error if encountered.
+//
+// Adapted from the Che plugin broker:
+// https://github.com/eclipse/che-plugin-broker/blob/27e7c6953c92633cbe7e8ce746a16ca10d240ea2/utils/ioutil.go#L326
 func closeSafe(c io.Closer) {
 	err := c.Close()
 	if err != nil {

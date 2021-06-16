@@ -21,6 +21,13 @@ import (
 	"github.com/go-git/go-git/v5"
 )
 
+// CheckProjectState Checks that a project's configuration is reflected in an on-disk git repository.
+// - Returns needClone == true if the project has not yet been cloned
+// - Returns needRemotes == true if the remotes configured in the project are not available in the on-disk repo
+//
+// Remotes in provided project are checked against what is configured in the git repo, but only in one direction.
+// The git repo can have additional remotes -- they will be ignored here. If both the project and git repo have remote
+// A configured, but the corresponding remote URL is differnet, needRemotes will be true.
 func CheckProjectState(project *dw.Project) (needClone, needRemotes bool, err error) {
 	repo, err := OpenRepo(project)
 	if err != nil {
@@ -65,6 +72,8 @@ func OpenRepo(project *dw.Project) (*git.Repository, error) {
 	return repo, nil
 }
 
+// DirExists returns true if the path at dir exists and is a directory. Returns an error if the path
+// exists in the filesystem but does not refer to a directory.
 func DirExists(dir string) (bool, error) {
 	fileInfo, err := os.Stat(dir)
 	if err != nil {

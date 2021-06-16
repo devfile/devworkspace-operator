@@ -24,6 +24,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 )
 
+// GetClonePath gets the correct clonePath for a project, given the semantics in devfile/api
 func GetClonePath(project *dw.Project) string {
 	if project.ClonePath != "" {
 		return project.ClonePath
@@ -31,6 +32,8 @@ func GetClonePath(project *dw.Project) string {
 	return project.Name
 }
 
+// ReadFlattenedDevWorkspace reads the flattened DevWorkspaceTemplateSpec from disk. The location of the flattened
+// yaml is determined from the DevWorkspace Operator-provisioned environment variable.
 func ReadFlattenedDevWorkspace() (*dw.DevWorkspaceTemplateSpec, error) {
 	flattenedDevWorkspacePath := os.Getenv(metadata.FlattenedDevfileMountPathEnvVar)
 	if flattenedDevWorkspacePath == "" {

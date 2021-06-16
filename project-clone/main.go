@@ -18,9 +18,9 @@ import (
 
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/git"
+	"github.com/devfile/devworkspace-operator/project-clone/internal/zip"
 )
 
-// TODO: Handle projects specifying a zip file instead of git
 // TODO: Handle sparse checkout
 // TODO: Add support for auth
 func main() {
@@ -30,10 +30,13 @@ func main() {
 		os.Exit(1)
 	}
 	for _, project := range workspace.Projects {
+		log.Printf("Processing project %s", project.Name)
 		var err error
 		switch {
 		case project.Git != nil:
 			err = git.SetupGitProject(project)
+		case project.Zip != nil:
+			err = zip.SetupZipProject(project)
 		default:
 			log.Printf("Unsupported project type")
 			os.Exit(1)

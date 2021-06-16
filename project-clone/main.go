@@ -38,7 +38,7 @@ func main() {
 		case project.Zip != nil:
 			err = zip.SetupZipProject(project)
 		default:
-			log.Printf("Unsupported project type")
+			log.Printf("Project does not specify Git or Zip source")
 			os.Exit(1)
 		}
 		if err != nil {

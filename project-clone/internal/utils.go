@@ -14,6 +14,7 @@ package internal
 
 import (
 	"fmt"
+	"os"
 	"path"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -62,4 +63,19 @@ func OpenRepo(project *dw.Project) (*git.Repository, error) {
 		return nil, nil
 	}
 	return repo, nil
+}
+
+func DirExists(dir string) (bool, error) {
+	fileInfo, err := os.Stat(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+	}
+	if fileInfo.IsDir() {
+		return true, nil
+	}
+	return false, fmt.Errorf("path %s already exists and is not a directory", dir)
 }

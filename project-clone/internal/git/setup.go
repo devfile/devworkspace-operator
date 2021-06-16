@@ -28,9 +28,17 @@ func SetupGitProject(project v1alpha2.Project) error {
 		os.Exit(1)
 	}
 	if needClone {
-		repo, err := CloneProject(&project)
+		err := CloneProject(&project)
 		if err != nil {
 			log.Printf("failed to clone project %s: %s", project.Name, err)
+			os.Exit(1)
+		}
+		repo, err := internal.OpenRepo(&project)
+		if err != nil {
+			log.Printf("Failed to open existing project %s: %s", project.Name, err)
+			os.Exit(1)
+		} else if repo == nil {
+			log.Printf("Unexpected error while setting up remotes for project %s: git repository not present", project.Name)
 			os.Exit(1)
 		}
 		if err := SetupRemotes(repo, &project); err != nil {

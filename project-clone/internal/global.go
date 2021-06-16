@@ -20,12 +20,12 @@ import (
 )
 
 var (
-	projectsRoot string
+	ProjectsRoot string
 )
 
 func init() {
-	projectsRoot = os.Getenv(constants.ProjectsRootEnvVar)
-	if projectsRoot == "" {
+	ProjectsRoot = os.Getenv(constants.ProjectsRootEnvVar)
+	if ProjectsRoot == "" {
 		log.Printf("Required environment variable %s is unset", constants.ProjectsRootEnvVar)
 		os.Exit(1)
 	}

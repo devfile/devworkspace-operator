@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package internal
+package git
 
 import (
 	"fmt"
@@ -22,12 +22,14 @@ import (
 	"github.com/go-git/go-git/v5"
 	gitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
+
+	"github.com/devfile/devworkspace-operator/project-clone/internal"
 )
 
 // CloneProject clones the project specified to $PROJECTS_ROOT. Note: projects.Github is ignored as it will likely
 // be removed soon.
 func CloneProject(project *dw.Project) (*git.Repository, error) {
-	clonePath := GetClonePath(project)
+	clonePath := internal.GetClonePath(project)
 	log.Printf("Cloning project %s to %s", project.Name, clonePath)
 
 	if len(project.Git.Remotes) == 0 {
@@ -62,7 +64,7 @@ func CloneProject(project *dw.Project) (*git.Repository, error) {
 		}
 	}
 
-	repo, err := git.PlainClone(path.Join(projectsRoot, clonePath), false, &git.CloneOptions{
+	repo, err := git.PlainClone(path.Join(internal.ProjectsRoot, clonePath), false, &git.CloneOptions{
 		URL:        defaultRemoteURL,
 		RemoteName: defaultRemoteName,
 		Progress:   os.Stdout,

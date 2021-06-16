@@ -13,15 +13,10 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"sigs.k8s.io/yaml"
-
-	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
+	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/git"
 )
 
@@ -29,69 +24,22 @@ import (
 // TODO: Handle sparse checkout
 // TODO: Add support for auth
 func main() {
-	workspace, err := readFlattenedDevWorkspace()
+	workspace, err := internal.ReadFlattenedDevWorkspace()
 	if err != nil {
 		log.Printf("Failed to read current DevWorkspace: %s", err)
 		os.Exit(1)
 	}
 	for _, project := range workspace.Projects {
-		if project.Git == nil {
-			continue
-		}
-		needClone, needRemotes, err := git.CheckProjectState(&project)
-		if err != nil {
-			log.Printf("Failed to process project %s: %s", project.Name, err)
+		var err error
+		switch {
+		case project.Git != nil:
+			err = git.SetupGitProject(project)
+		default:
+			log.Printf("Unsupported project type")
 			os.Exit(1)
 		}
-		if needClone {
-			repo, err := git.CloneProject(&project)
-			if err != nil {
-				log.Printf("failed to clone project %s: %s", project.Name, err)
-				os.Exit(1)
-			}
-			if err := git.SetupRemotes(repo, &project); err != nil {
-				log.Printf("Failed to set up remotes for project %s: %s", project.Name, err)
-				os.Exit(1)
-			}
-			if err := git.CheckoutReference(repo, &project); err != nil {
-				log.Printf("Failed to checkout revision for project %s: %s", project.Name, err)
-				os.Exit(1)
-			}
-		} else if needRemotes {
-			repo, err := git.OpenRepo(&project)
-			if err != nil {
-				log.Printf("Failed to open existing project %s: %s", project.Name, err)
-				os.Exit(1)
-			} else if repo == nil {
-				log.Printf("Unexpected error while setting up remotes for project %s: git repository not present", project.Name)
-				os.Exit(1)
-			}
-			if err := git.SetupRemotes(repo, &project); err != nil {
-				log.Printf("Failed to set up remotes for project %s: %s", project.Name, err)
-				os.Exit(1)
-			}
-		} else {
-			log.Printf("Project '%s' is already cloned and has all remotes configured", project.Name)
+		if err != nil {
+			log.Printf("Encountered error while setting up project %s: %s", project.Name, err)
 		}
 	}
-}
-
-func readFlattenedDevWorkspace() (*dw.DevWorkspaceTemplateSpec, error) {
-	flattenedDevWorkspacePath := os.Getenv(metadata.FlattenedDevfileMountPathEnvVar)
-	if flattenedDevWorkspacePath == "" {
-		return nil, fmt.Errorf("required environment variable %s is unset", metadata.FlattenedDevfileMountPathEnvVar)
-	}
-
-	fileBytes, err := ioutil.ReadFile(flattenedDevWorkspacePath)
-	if err != nil {
-		return nil, fmt.Errorf("error reading current DevWorkspace YAML: %s", err)
-	}
-
-	dwts := &dw.DevWorkspaceTemplateSpec{}
-	if err := yaml.Unmarshal(fileBytes, dwts); err != nil {
-		return nil, fmt.Errorf("error unmarshalling DevWorkspace YAML: %s", err)
-	}
-
-	log.Printf("Read DevWorkspace at %s", flattenedDevWorkspacePath)
-	return dwts, nil
 }

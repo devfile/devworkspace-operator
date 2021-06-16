@@ -12,11 +12,41 @@
 
 package internal
 
-import dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"sigs.k8s.io/yaml"
+
+	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
+)
 
 func GetClonePath(project *dw.Project) string {
 	if project.ClonePath != "" {
 		return project.ClonePath
 	}
 	return project.Name
+}
+
+func ReadFlattenedDevWorkspace() (*dw.DevWorkspaceTemplateSpec, error) {
+	flattenedDevWorkspacePath := os.Getenv(metadata.FlattenedDevfileMountPathEnvVar)
+	if flattenedDevWorkspacePath == "" {
+		return nil, fmt.Errorf("required environment variable %s is unset", metadata.FlattenedDevfileMountPathEnvVar)
+	}
+
+	fileBytes, err := ioutil.ReadFile(flattenedDevWorkspacePath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading current DevWorkspace YAML: %s", err)
+	}
+
+	dwts := &dw.DevWorkspaceTemplateSpec{}
+	if err := yaml.Unmarshal(fileBytes, dwts); err != nil {
+		return nil, fmt.Errorf("error unmarshalling DevWorkspace YAML: %s", err)
+	}
+
+	log.Printf("Read DevWorkspace at %s", flattenedDevWorkspacePath)
+	return dwts, nil
 }

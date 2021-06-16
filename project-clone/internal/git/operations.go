@@ -15,7 +15,6 @@ package git
 import (
 	"fmt"
 	"log"
-	"os"
 	"path"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -24,16 +23,17 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
+	"github.com/devfile/devworkspace-operator/project-clone/internal/shell"
 )
 
 // CloneProject clones the project specified to $PROJECTS_ROOT. Note: projects.Github is ignored as it will likely
 // be removed soon.
-func CloneProject(project *dw.Project) (*git.Repository, error) {
+func CloneProject(project *dw.Project) error {
 	clonePath := internal.GetClonePath(project)
 	log.Printf("Cloning project %s to %s", project.Name, clonePath)
 
 	if len(project.Git.Remotes) == 0 {
-		return nil, fmt.Errorf("project does not define remotes")
+		return fmt.Errorf("project does not define remotes")
 	}
 
 	var defaultRemoteName, defaultRemoteURL string
@@ -47,34 +47,31 @@ func CloneProject(project *dw.Project) (*git.Repository, error) {
 				}
 			} else {
 				// need to specify
-				return nil, fmt.Errorf("project checkoutFrom remote can't be omitted with multiple remotes")
+				return fmt.Errorf("project checkoutFrom remote can't be omitted with multiple remotes")
 			}
 		}
 		remoteURL, ok := project.Git.Remotes[defaultRemoteName]
 		if !ok {
-			return nil, fmt.Errorf("project checkoutFrom refers to non-existing remote %s", defaultRemoteName)
+			return fmt.Errorf("project checkoutFrom refers to non-existing remote %s", defaultRemoteName)
 		}
 		defaultRemoteURL = remoteURL
 	} else {
 		if len(project.Git.Remotes) > 1 {
-			return nil, fmt.Errorf("project checkoutFrom field is required when a project defines multiple remotes")
+			return fmt.Errorf("project checkoutFrom field is required when a project defines multiple remotes")
 		}
 		for remoteName, remoteUrl := range project.Git.Remotes {
 			defaultRemoteName, defaultRemoteURL = remoteName, remoteUrl
 		}
 	}
 
-	repo, err := git.PlainClone(path.Join(internal.ProjectsRoot, clonePath), false, &git.CloneOptions{
-		URL:        defaultRemoteURL,
-		RemoteName: defaultRemoteName,
-		Progress:   os.Stdout,
-	})
+	// Delegate to standard git binary because git.PlainClone takes a lot of memory for large repos
+	err := shell.GitCloneProject(defaultRemoteURL, defaultRemoteName, path.Join(internal.ProjectsRoot, clonePath))
 	if err != nil {
-		return nil, fmt.Errorf("failed to git clone from %s: %s", defaultRemoteURL, err)
+		return fmt.Errorf("failed to git clone from %s: %s", defaultRemoteURL, err)
 	}
 
 	log.Printf("Cloned project %s to %s", project.Name, clonePath)
-	return repo, nil
+	return nil
 }
 
 // SetupRemotes sets up a git remote in repo for each remote in project.Git.Remotes

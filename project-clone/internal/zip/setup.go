@@ -34,6 +34,13 @@ const (
 func SetupZipProject(project v1alpha2.Project) error {
 	url := project.Zip.Location
 	clonePath := internal.GetClonePath(&project)
+	projectPath := path.Join(internal.ProjectsRoot, clonePath)
+	if exists, err := internal.DirExists(projectPath); exists {
+		// Assume project is already set up
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("failed to check path %s: %s", projectPath, err)
+	}
 
 	zipFilePath := path.Join(tmpDir, fmt.Sprintf("%s.zip", clonePath))
 	log.Printf("Downloading project archive from %s", url)
@@ -41,8 +48,6 @@ func SetupZipProject(project v1alpha2.Project) error {
 	if err != nil {
 		return fmt.Errorf("failed to download archive: %s", err)
 	}
-
-	projectPath := path.Join(internal.ProjectsRoot, clonePath)
 
 	log.Printf("Extracting project archive to %s", zipFilePath)
 	err = unzip(zipFilePath, projectPath)

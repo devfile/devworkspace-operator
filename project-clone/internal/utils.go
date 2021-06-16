@@ -54,7 +54,7 @@ func CheckProjectState(project *dw.Project) (needClone, needRemotes bool, err er
 // currently exist, returns nil. Returns an error if an unexpected error occurs opening the git repo.
 func OpenRepo(project *dw.Project) (*git.Repository, error) {
 	clonePath := GetClonePath(project)
-	repo, err := git.PlainOpen(path.Join(projectsRoot, clonePath))
+	repo, err := git.PlainOpen(path.Join(ProjectsRoot, clonePath))
 	if err != nil {
 		if err != git.ErrRepositoryNotExists {
 			return nil, fmt.Errorf("encountered error reading git repo at %s: %s", clonePath, err)

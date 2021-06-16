@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
-	"github.com/devfile/devworkspace-operator/project-clone/internal"
+	"github.com/devfile/devworkspace-operator/project-clone/internal/git"
 )
 
 // TODO: Handle projects specifying a zip file instead of git
@@ -38,27 +38,27 @@ func main() {
 		if project.Git == nil {
 			continue
 		}
-		needClone, needRemotes, err := internal.CheckProjectState(&project)
+		needClone, needRemotes, err := git.CheckProjectState(&project)
 		if err != nil {
 			log.Printf("Failed to process project %s: %s", project.Name, err)
 			os.Exit(1)
 		}
 		if needClone {
-			repo, err := internal.CloneProject(&project)
+			repo, err := git.CloneProject(&project)
 			if err != nil {
 				log.Printf("failed to clone project %s: %s", project.Name, err)
 				os.Exit(1)
 			}
-			if err := internal.SetupRemotes(repo, &project); err != nil {
+			if err := git.SetupRemotes(repo, &project); err != nil {
 				log.Printf("Failed to set up remotes for project %s: %s", project.Name, err)
 				os.Exit(1)
 			}
-			if err := internal.CheckoutReference(repo, &project); err != nil {
+			if err := git.CheckoutReference(repo, &project); err != nil {
 				log.Printf("Failed to checkout revision for project %s: %s", project.Name, err)
 				os.Exit(1)
 			}
 		} else if needRemotes {
-			repo, err := internal.OpenRepo(&project)
+			repo, err := git.OpenRepo(&project)
 			if err != nil {
 				log.Printf("Failed to open existing project %s: %s", project.Name, err)
 				os.Exit(1)
@@ -66,7 +66,7 @@ func main() {
 				log.Printf("Unexpected error while setting up remotes for project %s: git repository not present", project.Name)
 				os.Exit(1)
 			}
-			if err := internal.SetupRemotes(repo, &project); err != nil {
+			if err := git.SetupRemotes(repo, &project); err != nil {
 				log.Printf("Failed to set up remotes for project %s: %s", project.Name, err)
 				os.Exit(1)
 			}

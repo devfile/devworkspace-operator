@@ -7,7 +7,8 @@
 ### Is it tested? How?
 <!-- Please provide instructions here how reviewer can test your changes if applicable -->
 
-<!-- 
-Before PR merging it's required to run e2e tests, to trigger them comment 
-/test v7-devworkspaces-operator-e2e, v7-devworkspace-happy-path
--->
+### PR Checklist
+
+- [ ] E2E tests pass (when PR is ready, comment `/test v7-devworkspaces-operator-e2e, v7-devworkspace-happy-path` to trigger)
+    - [ ] `v7-devworkspaces-operator-e2e`: DevWorkspace e2e test
+    - [ ] `v7-devworkspace-happy-path`: DevWorkspace e2e test

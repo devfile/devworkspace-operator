@@ -1,0 +1,12 @@
+name: "Checks that CPU limit is greater than request"
+
+input:
+  components:
+    - name: testing-container
+      container:
+        image: testing-image
+        cpuLimit: 500m
+        cpuRequest: 620m
+
+output:
+  errRegexp: "container resources are invalid: CPU limit \\(500m\\) is less than request \\(620m\\)"

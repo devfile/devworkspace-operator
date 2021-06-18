@@ -1,0 +1,24 @@
+name: "Gives useful error when memory limit is less than default request"
+
+input:
+  components:
+    - name: testing-container
+      container:
+        image: testing-image
+        memoryLimit: 1Mi
+        mountSources: false
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container
+        image: testing-image
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "1Mi"
+          limits:
+            memory: "1Mi"
+        env:
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container"

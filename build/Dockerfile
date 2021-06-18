@@ -12,14 +12,14 @@
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8/go-toolset
 FROM registry.access.redhat.com/ubi8/go-toolset:1.15.7-11 as builder
 ENV GOPATH=/go/
+USER root
 WORKDIR /devworkspace-operator
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go version && \
-    go env GOPROXY && \
+RUN go env GOPROXY && \
     go mod download
 
 # Copy the go source
@@ -47,3 +47,5 @@ USER ${USER_UID}
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 CMD /usr/local/bin/devworkspace-controller
+
+# append Brew metadata here

@@ -97,7 +97,8 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 		if devfileContainer.MemoryRequest != "" {
 			return nil, fmt.Errorf("container resources are invalid: memory limit (%s) is less than request (%s)", memLimit, devfileContainer.MemoryRequest)
 		} else {
-			return nil, fmt.Errorf("container memory limit (%s) is below default memory request (%s) and no value is supplied", memLimit, memReq)
+			// No value was supplied; the issue is that the default value is greater than supplied limit. To resolve this, reuse limit as request
+			requests[v1.ResourceMemory] = memLimitQuantity
 		}
 	}
 

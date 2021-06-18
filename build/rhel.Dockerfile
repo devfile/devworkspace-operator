@@ -9,20 +9,18 @@
 #   Red Hat, Inc. - initial API and implementation
 #
 
-# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
-FROM registry.access.redhat.com/ubi8-minimal:8.4-200.1622548483 as builder
-RUN microdnf install -y make golang shadow-utils && \
-    go version
+# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8/go-toolset
+FROM registry.access.redhat.com/ubi8/go-toolset:1.15.7-11 as builder
+ENV GOPATH=/go/
 USER root
-
-RUN go env GOPROXY
 WORKDIR /devworkspace-operator
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go mod download
+RUN go env GOPROXY && \
+    go mod download
 
 # Copy the go source
 COPY . .

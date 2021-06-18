@@ -49,8 +49,22 @@ func setupControllerCfg() {
 	config.SetupConfigForTesting(testControllerCfg)
 }
 
-func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
-	testPath := filepath.Join("./testdata", testFilename)
+func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
+	files, err := ioutil.ReadDir(fromDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var tests []testCase
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+		tests = append(tests, loadTestCaseOrPanic(t, filepath.Join(fromDir, file.Name())))
+	}
+	return tests
+}
+
+func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
 	bytes, err := ioutil.ReadFile(testPath)
 	if err != nil {
 		t.Fatal(err)
@@ -64,18 +78,7 @@ func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
 }
 
 func TestGetKubeContainersFromDevfile(t *testing.T) {
-	tests := []testCase{
-		loadTestCaseOrPanic(t, "detects-init-containers.yaml"),
-		loadTestCaseOrPanic(t, "handles-mountSources.yaml"),
-		loadTestCaseOrPanic(t, "handles-resources.yaml"),
-		loadTestCaseOrPanic(t, "handles-endpoints-with-common-port.yaml"),
-		loadTestCaseOrPanic(t, "handles-container-that-mounts-projects-directly.yaml"),
-		loadTestCaseOrPanic(t, "ignores-non-container-components.yaml"),
-		loadTestCaseOrPanic(t, "converts-all-fields.yaml"),
-		loadTestCaseOrPanic(t, "error-has-parent.yaml"),
-		loadTestCaseOrPanic(t, "error-has-plugins.yaml"),
-		loadTestCaseOrPanic(t, "error-invalid-resources.yaml"),
-	}
+	tests := loadAllTestCasesOrPanic(t, "./testdata")
 	setupControllerCfg()
 
 	for _, tt := range tests {

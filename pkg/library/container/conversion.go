@@ -33,7 +33,7 @@ func convertContainerToK8s(devfileComponent dw.Component) (*v1.Container, error)
 
 	containerResources, err := devfileResourcesToContainerResources(devfileContainer)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get resources for container %s: %s", devfileComponent.Name, err)
 	}
 
 	container := &v1.Container{
@@ -93,6 +93,14 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 	}
 	requests[v1.ResourceMemory] = memReqQuantity
 
+	if memLimitQuantity.Cmp(memReqQuantity) < 0 {
+		if devfileContainer.MemoryRequest != "" {
+			return nil, fmt.Errorf("container resources are invalid: memory limit (%s) is less than request (%s)", memLimit, devfileContainer.MemoryRequest)
+		} else {
+			return nil, fmt.Errorf("container memory limit (%s) is below default memory request (%s) and no value is supplied", memLimit, memReq)
+		}
+	}
+
 	cpuLimit := devfileContainer.CpuLimit
 	if cpuLimit == "" {
 		cpuLimit = constants.SidecarDefaultCpuLimit
@@ -115,6 +123,14 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 			return nil, fmt.Errorf("failed to parse cpu request %q: %w", cpuReq, err)
 		}
 		requests[v1.ResourceCPU] = cpuReqQuantity
+	}
+
+	if parsedCPULimit, ok := limits[v1.ResourceCPU]; ok {
+		if parsedCPUReq, ok := requests[v1.ResourceCPU]; ok {
+			if parsedCPULimit.Cmp(parsedCPUReq) < 0 {
+				return nil, fmt.Errorf("container resources are invalid: CPU limit (%s) is less than request (%s)", cpuLimit, cpuReq)
+			}
+		}
 	}
 
 	return &v1.ResourceRequirements{

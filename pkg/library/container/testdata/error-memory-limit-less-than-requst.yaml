@@ -1,0 +1,12 @@
+name: "Checks that memory limit is greater than request"
+
+input:
+  components:
+    - name: testing-container
+      container:
+        image: testing-image
+        memoryLimit: 256Mi
+        memoryRequest: 1Gi
+
+output:
+  errRegexp: "container resources are invalid: memory limit \\(256Mi\\) is less than request \\(1Gi\\)"

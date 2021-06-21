@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"strings"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
@@ -29,12 +30,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	// DWTSupportedNamespacesAnnotation defines additional namespaces from which a DevWorkspace can import a DevWorkspaceTemplate.
+	// By default, importing templates from the same namespace as the DevWorkspace is allowed.
+	// Options are:
+	// - '*': allow importing by all DevWorkspaces on the cluster
+	// - 'namespaceA,namespaceB,namespaceC': Allow importing by DevWorkspaces in list of specific namespaces
+	// If the annotation does not exist or is empty, only DevWorkspaces in the same namespace as the template can reference it.
+	DWTSupportedNamespacesAnnotation = "controller.devfile.io/allow-import-from"
+)
+
 type ResolverTools struct {
-	DefaultNamespace string
-	Context          context.Context
-	K8sClient        client.Client
-	InternalRegistry registry.InternalRegistry
-	HttpClient       network.HTTPGetter
+	WorkspaceNamespace string
+	Context            context.Context
+	K8sClient          client.Client
+	InternalRegistry   registry.InternalRegistry
+	HttpClient         network.HTTPGetter
 }
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
@@ -120,7 +131,7 @@ func resolveParentComponent(parent *dw.Parent, tools ResolverTools) (resolvedPar
 	case parent.Kubernetes != nil:
 		// Search in default namespace if namespace ref is unset
 		if parent.Kubernetes.Namespace == "" {
-			parent.Kubernetes.Namespace = tools.DefaultNamespace
+			parent.Kubernetes.Namespace = tools.WorkspaceNamespace
 		}
 		resolvedParent, err = resolveElementByKubernetesImport("parent", parent.Kubernetes, tools)
 	case parent.Uri != "":
@@ -192,10 +203,10 @@ func resolveElementByKubernetesImport(
 	// Search in default namespace if namespace ref is unset
 	namespace := kubeReference.Namespace
 	if namespace == "" {
-		if tools.DefaultNamespace == "" {
+		if tools.WorkspaceNamespace == "" {
 			return nil, fmt.Errorf("'%s' specifies a kubernetes reference without namespace and a default is not provided", name)
 		}
-		namespace = tools.DefaultNamespace
+		namespace = tools.WorkspaceNamespace
 	}
 
 	var dwTemplate dw.DevWorkspaceTemplate
@@ -210,6 +221,11 @@ func resolveElementByKubernetesImport(
 		}
 		return nil, fmt.Errorf("failed to retrieve plugin referenced by kubernetes name and namespace '%s': %w", name, err)
 	}
+
+	if !canImportDWT(tools.WorkspaceNamespace, &dwTemplate) {
+		return nil, fmt.Errorf("could not find DevWorkspaceTemplate")
+	}
+
 	return &dwTemplate.Spec, nil
 }
 
@@ -271,4 +287,31 @@ func resolveElementByURI(
 		return nil, fmt.Errorf("failed to resolve component %s by URI: %w", name, err)
 	}
 	return dwt, nil
+}
+
+// canImportDW returns true if a DevWorkspace in dwNamespace is allowed to reference the provided DevWorkspaceTemplate
+// DevWorkspaces can by default only read DevWorkspaceTemplates in their own namespace, unless the DevWorkspaceTemplate
+// has the controller.devfile.io/allow-import-from annotation.
+func canImportDWT(dwNamespace string, dwt *dw.DevWorkspaceTemplate) bool {
+	if dwNamespace == dwt.Namespace {
+		return true
+	}
+	if dwt.Annotations == nil {
+		return false
+	}
+	namespacesAnnotation := dwt.Annotations[DWTSupportedNamespacesAnnotation]
+	switch namespacesAnnotation {
+	case "":
+		return false
+	case "*":
+		return true
+	default:
+		namespaces := strings.Split(namespacesAnnotation, ",")
+		for _, ns := range namespaces {
+			if ns == dwNamespace {
+				return true
+			}
+		}
+	}
+	return false
 }

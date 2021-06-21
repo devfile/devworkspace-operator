@@ -1,0 +1,34 @@
+name: "Can read DevWorkspaceTemplate when DWT is allowed for all namespaces"
+
+input:
+  devworkspace:
+    components:
+      - name: "plugin-a"
+        plugin:
+          kubernetes:
+            name: plugin-a
+  devworkspaceResources:
+    plugin-a:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-a
+        namespace: not-test-namespace
+        annotations:
+          controller.devfile.io/allow-import-from: "*"
+      spec:
+        components:
+          - name: plugin-a-container
+            container:
+              name: test-container
+              image: test-img
+
+output:
+  devworkspace:
+    components:
+      - name: plugin-a-container
+        attributes:
+          controller.devfile.io/imported-by: "plugin-a"
+        container:
+          name: test-container
+          image: test-img

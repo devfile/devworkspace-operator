@@ -16,6 +16,8 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: parent-devworkspacetemplate
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
       spec:
         parent:
           id: another-parent

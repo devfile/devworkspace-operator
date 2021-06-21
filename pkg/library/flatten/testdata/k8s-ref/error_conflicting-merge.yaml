@@ -12,6 +12,10 @@ input:
           image: test-image
   devworkspaceResources:
     test-plugin:
+      metadata:
+        name: test-plugin
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
       spec:
         components:
           - name: my-component

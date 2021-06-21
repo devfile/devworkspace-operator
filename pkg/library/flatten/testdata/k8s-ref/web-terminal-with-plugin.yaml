@@ -22,6 +22,8 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: web-terminal
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
         labels:
           "devworkspace.devfile.io/editor-name": "web-terminal"
       spec:

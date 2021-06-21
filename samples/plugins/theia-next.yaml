@@ -2,6 +2,8 @@ kind: DevWorkspaceTemplate
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
   name: theia-next
+  annotations:
+    controller.devfile.io/allow-import-from: '*'
 spec:
   components:
     - name: plugins

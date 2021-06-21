@@ -82,8 +82,8 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: theia-next
-        labels:
-          "devworkspace.devfile.io/editor-name": "che-theia"
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
       spec:
         components:
           - name: plugins
@@ -211,6 +211,8 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: machine-exec
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
         labels:
           "devworkspace.devfile.io/editor-compatibility": "che-theia"
       spec:
@@ -242,6 +244,8 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: vscode-typescript
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
         labels:
           "devworkspace.devfile.io/editor-compatibility": "che-theia"
       spec:

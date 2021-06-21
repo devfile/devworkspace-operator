@@ -13,6 +13,8 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: plugin-a
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
       spec:
         components:
           - name: plugin-b
@@ -25,6 +27,8 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: plugin-b
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
       spec:
         components:
           - name: plugin-a

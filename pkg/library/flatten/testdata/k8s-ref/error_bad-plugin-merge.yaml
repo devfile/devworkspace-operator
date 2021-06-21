@@ -13,6 +13,10 @@ input:
                 memoryLimit: 512Mi
   devworkspaceResources:
     override:
+      metadata:
+        name: override
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
       spec:
         components:
           - name: my-component

@@ -1,4 +1,4 @@
-name: "Plugin references self"
+name: "Try to read a DWT from another namespace with empty annotation"
 
 input:
   devworkspace:
@@ -13,15 +13,15 @@ input:
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
         name: plugin-a
+        namespace: not-test-namespace
         annotations:
-          "controller.devfile.io/allow-import-from": "*"
+          controller.devfile.io/allow-import-from: ""
       spec:
         components:
-          - name: plugin-a
-            plugin:
-              kubernetes:
-                name: plugin-a
-                namespace: devworkspace-plugins
+          - name: plugin-a-container
+            container:
+              name: test-container
+              image: test-img
 
 output:
-  errRegexp: "DevWorkspace has an cycle in references.*"
+  errRegexp: "could not find DevWorkspaceTemplate"

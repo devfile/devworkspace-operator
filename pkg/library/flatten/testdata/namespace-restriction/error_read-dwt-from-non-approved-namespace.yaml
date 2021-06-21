@@ -1,0 +1,27 @@
+name: "Try to read a DWT from another namespace and no annotation exists"
+
+input:
+  devworkspace:
+    components:
+      - name: "plugin-a"
+        plugin:
+          kubernetes:
+            name: plugin-a
+  devworkspaceResources:
+    plugin-a:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-a
+        namespace: not-test-namespace
+        annotations:
+          controller.devfile.io/allow-import-from: "namespace1,namespace2"
+      spec:
+        components:
+          - name: plugin-a-container
+            container:
+              name: test-container
+              image: test-img
+
+output:
+  errRegexp: "could not find DevWorkspaceTemplate"

@@ -43,6 +43,7 @@ func main() {
 		}
 		if err != nil {
 			log.Printf("Encountered error while setting up project %s: %s", project.Name, err)
+			os.Exit(1)
 		}
 	}
 }

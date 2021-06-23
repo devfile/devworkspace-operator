@@ -112,12 +112,12 @@ func CheckoutReference(repo *git.Repository, project *dw.Project) error {
 	}
 	remote, err := repo.Remote(defaultRemoteName)
 	if err != nil {
-		return fmt.Errorf("could not find remote %s: %s", checkoutFrom.Remote, err)
+		return fmt.Errorf("could not find remote %s: %s", defaultRemoteName, err)
 	}
 
 	refs, err := remote.List(&git.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to read remote %s: %s", checkoutFrom.Remote, err)
+		return fmt.Errorf("failed to read remote %s: %s", defaultRemoteName, err)
 	}
 
 	for _, ref := range refs {
@@ -125,13 +125,13 @@ func CheckoutReference(repo *git.Repository, project *dw.Project) error {
 			continue
 		}
 		if ref.Name().IsBranch() {
-			return checkoutRemoteBranch(repo, checkoutFrom.Remote, ref)
+			return checkoutRemoteBranch(repo, defaultRemoteName, ref)
 		} else if ref.Name().IsTag() {
-			return checkoutTag(repo, checkoutFrom.Remote, ref)
+			return checkoutTag(repo, defaultRemoteName, ref)
 		}
 	}
 
-	log.Printf("No tag or branch named %s found on remote %s; attempting to resolve commit", checkoutFrom.Revision, checkoutFrom.Remote)
+	log.Printf("No tag or branch named %s found on remote %s; attempting to resolve commit", checkoutFrom.Revision, defaultRemoteName)
 	hash, err := repo.ResolveRevision(plumbing.Revision(checkoutFrom.Revision))
 	if err != nil {
 		return fmt.Errorf("failed to resolve commit %s: %s", checkoutFrom.Revision, err)

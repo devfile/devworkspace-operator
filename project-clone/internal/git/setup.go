@@ -13,8 +13,8 @@
 package git
 
 import (
+	"fmt"
 	"log"
-	"os"
 
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
@@ -24,43 +24,34 @@ import (
 func SetupGitProject(project v1alpha2.Project) error {
 	needClone, needRemotes, err := internal.CheckProjectState(&project)
 	if err != nil {
-		log.Printf("Failed to process project %s: %s", project.Name, err)
-		os.Exit(1)
+		return fmt.Errorf("failed to check state of repo on disk: %s", err)
 	}
 	if needClone {
 		err := CloneProject(&project)
 		if err != nil {
-			log.Printf("failed to clone project %s: %s", project.Name, err)
-			os.Exit(1)
+			return fmt.Errorf("failed to clone project: %s", err)
 		}
 		repo, err := internal.OpenRepo(&project)
 		if err != nil {
-			log.Printf("Failed to open existing project %s: %s", project.Name, err)
-			os.Exit(1)
+			return fmt.Errorf("failed to open existing project in filesystem: %s", err)
 		} else if repo == nil {
-			log.Printf("Unexpected error while setting up remotes for project %s: git repository not present", project.Name)
-			os.Exit(1)
+			return fmt.Errorf("unexpected error while setting up remotes for project: git repository not present")
 		}
 		if err := SetupRemotes(repo, &project); err != nil {
-			log.Printf("Failed to set up remotes for project %s: %s", project.Name, err)
-			os.Exit(1)
+			return fmt.Errorf("failed to set up remotes for project: %s", err)
 		}
 		if err := CheckoutReference(repo, &project); err != nil {
-			log.Printf("Failed to checkout revision for project %s: %s", project.Name, err)
-			os.Exit(1)
+			return fmt.Errorf("failed to checkout revision: %s", err)
 		}
 	} else if needRemotes {
 		repo, err := internal.OpenRepo(&project)
 		if err != nil {
-			log.Printf("Failed to open existing project %s: %s", project.Name, err)
-			os.Exit(1)
+			return fmt.Errorf("failed to open existing project in filesystem: %s", err)
 		} else if repo == nil {
-			log.Printf("Unexpected error while setting up remotes for project %s: git repository not present", project.Name)
-			os.Exit(1)
+			return fmt.Errorf("unexpected error while setting up remotes for project: git repository not present")
 		}
 		if err := SetupRemotes(repo, &project); err != nil {
-			log.Printf("Failed to set up remotes for project %s: %s", project.Name, err)
-			os.Exit(1)
+			return fmt.Errorf("failed to set up remotes for project: %s", err)
 		}
 	} else {
 		log.Printf("Project '%s' is already cloned and has all remotes configured", project.Name)

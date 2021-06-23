@@ -42,7 +42,7 @@ func ReadFlattenedDevWorkspace() (*dw.DevWorkspaceTemplateSpec, error) {
 
 	fileBytes, err := ioutil.ReadFile(flattenedDevWorkspacePath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading current DevWorkspace YAML: %s", err)
+		return nil, fmt.Errorf("error reading YAML file: %s", err)
 	}
 
 	dwts := &dw.DevWorkspaceTemplateSpec{}

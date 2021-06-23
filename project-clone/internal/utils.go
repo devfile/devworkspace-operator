@@ -27,7 +27,7 @@ import (
 //
 // Remotes in provided project are checked against what is configured in the git repo, but only in one direction.
 // The git repo can have additional remotes -- they will be ignored here. If both the project and git repo have remote
-// A configured, but the corresponding remote URL is differnet, needRemotes will be true.
+// A configured, but the corresponding remote URL is different, needRemotes will be true.
 func CheckProjectState(project *dw.Project) (needClone, needRemotes bool, err error) {
 	repo, err := OpenRepo(project)
 	if err != nil {

@@ -16,6 +16,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -53,10 +54,15 @@ func SetupZipProject(project v1alpha2.Project) error {
 		return fmt.Errorf("failed to download archive: %s", err)
 	}
 
-	log.Printf("Extracting project archive to %s", zipFilePath)
+	log.Printf("Extracting project archive to %s", projectPath)
 	err = unzip(zipFilePath, projectPath)
 	if err != nil {
 		return fmt.Errorf("failed to extract project zip archive: %s", err)
+	}
+
+	err = dropTopLevelFolder(projectPath)
+	if err != nil {
+		return fmt.Errorf("failed to process extracted project archive: %s", err)
 	}
 
 	return nil
@@ -151,6 +157,49 @@ func unzip(archivePath string, destPath string) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// dropTopLevelFolder handles the case where a zip archive contains a single folder by moving all files in a
+// single subdirectory into their parent directory. E.g., it converts
+//     /projects/my-project/my-project-main/[files]
+// to
+//     /projects/my-project/[files]
+// and removes directory /projects/my-project/my-project-master/
+// If the specified path contains additional files or directories, no changes are made.
+func dropTopLevelFolder(projectPath string) error {
+	// Use ioutil ReadDir() since os.ReadDir is unavailable in Go 1.15
+	files, err := ioutil.ReadDir(projectPath)
+	if err != nil {
+		return err
+	}
+	if len(files) != 1 {
+		// Do nothing if specified path doesn't contain only a single directory
+		return nil
+	}
+	topLevelFolder := files[0]
+	if !topLevelFolder.IsDir() {
+		return nil
+	}
+	topLevelPath := path.Join(projectPath, topLevelFolder.Name())
+	log.Printf("Moving files from %s to %s", topLevelPath, projectPath)
+	topLevelContents, err := ioutil.ReadDir(topLevelPath)
+	if err != nil {
+		return err
+	}
+	for _, file := range topLevelContents {
+		oldPath := path.Join(topLevelPath, file.Name())
+		newPath := path.Join(projectPath, file.Name())
+		err := os.Rename(oldPath, newPath)
+		if err != nil {
+			return err
+		}
+	}
+	err = os.Remove(topLevelPath)
+	if err != nil {
+		return err
 	}
 
 	return nil

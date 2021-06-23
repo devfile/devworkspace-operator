@@ -17,7 +17,7 @@ import (
 	"os/exec"
 )
 
-// GitCloneProject constructs a commandline string for cloning a git project, and deletgates execution
+// GitCloneProject constructs a command-line string for cloning a git project, and delegates execution
 // to the os/exec package.
 func GitCloneProject(repoUrl, defaultRemoteName, destPath string) error {
 	args := []string{

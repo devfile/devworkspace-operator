@@ -1,4 +1,4 @@
-name: "Gives useful error when memory limit is less than default request"
+name: "Reduces default memory request when limit is lower than the default"
 
 input:
   components:
@@ -6,6 +6,7 @@ input:
       container:
         image: testing-image
         memoryLimit: 1Mi
+        # memoryRequest: 64Mi default (something greater than 1Mi)
         mountSources: false
 
 output:

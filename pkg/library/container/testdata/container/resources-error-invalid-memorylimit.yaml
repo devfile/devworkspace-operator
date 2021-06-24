@@ -1,4 +1,4 @@
-name: "Checks for flattened devfile (parent)"
+name: "Checks for invalid memory limit"
 
 input:
   components:

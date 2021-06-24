@@ -98,13 +98,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv1.DevWorkspace{}).Complete(); err != nil {
-		log.Error(err, "failed creating conversion webhook")
-	}
-	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv2.DevWorkspace{}).Complete(); err != nil {
-		log.Error(err, "failed creating conversion webhook")
-	}
-
 	var shutdownChan = make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, syscall.SIGTERM)
 

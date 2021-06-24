@@ -57,9 +57,10 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 	var tests []testCase
 	for _, file := range files {
 		if file.IsDir() {
-			continue
+			tests = append(tests, loadAllTestCasesOrPanic(t, filepath.Join(fromDir, file.Name()))...)
+		} else {
+			tests = append(tests, loadTestCaseOrPanic(t, filepath.Join(fromDir, file.Name())))
 		}
-		tests = append(tests, loadTestCaseOrPanic(t, filepath.Join(fromDir, file.Name())))
 	}
 	return tests
 }

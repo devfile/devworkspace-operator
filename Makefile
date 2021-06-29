@@ -45,7 +45,7 @@ ifneq (,$(shell which kubectl 2>/dev/null)$(shell which oc 2>/dev/null))
 include build/make/deploy.mk
 endif
 
-OPERATOR_SDK_VERSION = v1.7.2
+OPERATOR_SDK_VERSION = v1.8.0
 OPM_VERSION = v1.17.1
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)

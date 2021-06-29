@@ -1,8 +1,10 @@
-# Labels to add to all resources and selectors.
-commonLabels:
-  app.kubernetes.io/name: devworkspace-controller
-  app.kubernetes.io/part-of: devworkspace-operator
+# The prefixed base has to be used separately to add namePrefix to all resources,
+# as namePrefix cannot be disabled for specific types, and we need the
+# CSV's .metadata.name to be unchanged
 
 bases:
-- ../service-ca
+- prefixed
 - ../components/csv
+
+patchesStrategicMerge:
+- crd_webhooks_patch.yaml

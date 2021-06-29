@@ -12,9 +12,8 @@ spec:
       conversionReviewVersions: ["v1"]
       clientConfig:
         service:
-          namespace: devworkspace-operator
-          # Note: service name is hard-coded in pkg/webhook/server/server.go
-          name: devworkspace-webhookserver
+          namespace: system
+          name: devworkspace-controller-service
           path: /convert
           port: 443
         # caBundle will be filled by Service CA operator
@@ -34,9 +33,8 @@ spec:
       conversionReviewVersions: ["v1"]
       clientConfig:
         service:
-          namespace: devworkspace-operator
-          # Note: service name is hard-coded in pkg/webhook/server/server.go
-          name: devworkspace-webhookserver
+          namespace: system
+          name: devworkspace-controller-service
           path: /convert
           port: 443
         # caBundle will be filled by Service CA operator

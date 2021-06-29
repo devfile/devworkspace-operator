@@ -13,3 +13,12 @@ spec:
         env:
         - name: WEBHOOK_SECRET_NAME
           value: $(WEBHOOK_CA_SECRET_NAME)
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: webhook-tls-certs
+          readOnly: true
+      volumes:
+      - name: webhook-tls-certs
+        secret:
+          defaultMode: 420
+          secretName: $(WEBHOOK_CA_SECRET_NAME)

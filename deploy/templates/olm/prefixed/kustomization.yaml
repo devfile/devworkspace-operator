@@ -1,0 +1,13 @@
+# This has to be a separate kustomize file, since namePrefix below cannot be
+# disabled for specific types, and we need the CSV's .metadata.name to be unchanged
+
+# Labels to add to all resources and selectors.
+commonLabels:
+  app.kubernetes.io/name: devworkspace-controller
+  app.kubernetes.io/part-of: devworkspace-operator
+
+# Prefix for names of all resources created by this kustomization
+namePrefix: devworkspace-controller-
+
+bases:
+- ../../base

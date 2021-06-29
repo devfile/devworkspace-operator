@@ -18,6 +18,8 @@ spec:
   # Note: service name is hard-coded in pkg/webhook/server/server.go
   - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc
   - devworkspace-webhookserver.$(OPERATOR_NAMESPACE).svc.cluster.local
+  - devworkspace-controller-service.$(OPERATOR_NAMESPACE).svc
+  - devworkspace-controller-service.$(OPERATOR_NAMESPACE).svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer

@@ -17,6 +17,9 @@ patchesStrategicMerge:
 - manager_certmanager_patch.yaml
 - crd_webhooks_patch.yaml
 
+configurations:
+- kustomizeconfig.yaml
+
 vars:
 - name: WEBHOOK_CA_SECRET_NAME
   objref:

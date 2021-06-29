@@ -15,6 +15,9 @@ spec:
           ports:
             - name: liveness-port
               containerPort: 6789
+            - name: conversion
+              protocol: TCP
+              containerPort: 9443
           livenessProbe:
             failureThreshold: 5
             httpGet:

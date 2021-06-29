@@ -14,7 +14,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-webhookserver
+          name: devworkspace-controller-service
           namespace: devworkspace-controller
           path: /convert
           port: 443

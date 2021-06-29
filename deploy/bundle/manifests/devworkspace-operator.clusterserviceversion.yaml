@@ -7,9 +7,6 @@ metadata:
     operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
     operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  labels:
-    app.kubernetes.io/name: devworkspace-controller
-    app.kubernetes.io/part-of: devworkspace-operator
   name: devworkspace-operator.v0.6.0
 spec:
   apiservicedefinitions: {}
@@ -321,6 +318,9 @@ spec:
                   timeoutSeconds: 5
                 name: devworkspace-controller
                 ports:
+                - containerPort: 9443
+                  name: conversion
+                  protocol: TCP
                 - containerPort: 6789
                   name: liveness-port
                 readinessProbe:
@@ -401,3 +401,26 @@ spec:
     name: Devfile
     url: https://devfile.io
   version: 0.6.0
+  webhookdefinitions:
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    conversionCRDs:
+    - devworkspaces.workspace.devfile.io
+    deploymentName: devworkspace-controller-manager
+    generateName: cdevworkspaces.kb.io
+    sideEffects: None
+    targetPort: conversion
+    type: ConversionWebhook
+    webhookPath: /convert
+  - admissionReviewVersions:
+    - v1
+    containerPort: 443
+    conversionCRDs:
+    - devworkspacetemplates.workspace.devfile.io
+    deploymentName: devworkspace-controller-manager
+    generateName: cdevworkspacetemplates.kb.io
+    sideEffects: None
+    targetPort: conversion
+    type: ConversionWebhook
+    webhookPath: /convert

@@ -10,6 +10,8 @@ spec:
   dnsNames:
   - devworkspace-webhookserver.devworkspace-controller.svc
   - devworkspace-webhookserver.devworkspace-controller.svc.cluster.local
+  - devworkspace-controller-service.devworkspace-controller.svc
+  - devworkspace-controller-service.devworkspace-controller.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: devworkspace-controller-selfsigned-issuer

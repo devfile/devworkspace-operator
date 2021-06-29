@@ -3699,7 +3699,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-webhookserver
+          name: devworkspace-controller-service
           namespace: devworkspace-controller
           path: /convert
           port: 443
@@ -11217,7 +11217,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-webhookserver
+          name: devworkspace-controller-service
           namespace: devworkspace-controller
           path: /convert
           port: 443
@@ -18712,6 +18712,26 @@ spec:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: devworkspace-webhooks-tls
+  labels:
+    app.kubernetes.io/name: devworkspace-controller
+    app.kubernetes.io/part-of: devworkspace-operator
+  name: devworkspace-controller-service
+  namespace: devworkspace-controller
+spec:
+  ports:
+  - name: https
+    port: 443
+    protocol: TCP
+    targetPort: conversion
+  selector:
+    app.kubernetes.io/name: devworkspace-controller
+    app.kubernetes.io/part-of: devworkspace-operator
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18787,6 +18807,9 @@ spec:
           timeoutSeconds: 5
         name: devworkspace-controller
         ports:
+        - containerPort: 9443
+          name: conversion
+          protocol: TCP
         - containerPort: 6789
           name: liveness-port
         readinessProbe:
@@ -18806,5 +18829,14 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: webhook-tls-certs
+          readOnly: true
       serviceAccountName: devworkspace-controller-serviceaccount
       terminationGracePeriodSeconds: 10
+      volumes:
+      - name: webhook-tls-certs
+        secret:
+          defaultMode: 420
+          secretName: devworkspace-webhooks-tls

@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  creationTimestamp: null
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
-  name: devworkspace-controller-service
+  name: devworkspace-controller-manager-service
+  namespace: devworkspace-controller
 spec:
   ports:
   - name: https
@@ -15,5 +15,3 @@ spec:
   selector:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
-status:
-  loadBalancer: {}

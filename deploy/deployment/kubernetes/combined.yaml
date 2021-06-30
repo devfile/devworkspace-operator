@@ -3699,7 +3699,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-controller-service
+          name: devworkspace-controller-manager-service
           namespace: devworkspace-controller
           path: /convert
           port: 443
@@ -11217,7 +11217,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-controller-service
+          name: devworkspace-controller-manager-service
           namespace: devworkspace-controller
           path: /convert
           port: 443
@@ -18718,7 +18718,7 @@ metadata:
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
-  name: devworkspace-controller-service
+  name: devworkspace-controller-manager-service
   namespace: devworkspace-controller
 spec:
   ports:
@@ -18853,8 +18853,8 @@ spec:
   dnsNames:
   - devworkspace-webhookserver.devworkspace-controller.svc
   - devworkspace-webhookserver.devworkspace-controller.svc.cluster.local
-  - devworkspace-controller-service.devworkspace-controller.svc
-  - devworkspace-controller-service.devworkspace-controller.svc.cluster.local
+  - devworkspace-controller-manager-service.devworkspace-controller.svc
+  - devworkspace-controller-manager-service.devworkspace-controller.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: devworkspace-controller-selfsigned-issuer

@@ -3699,7 +3699,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-controller-service
+          name: devworkspace-controller-manager-service
           namespace: devworkspace-controller
           path: /convert
           port: 443
@@ -11217,7 +11217,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-controller-service
+          name: devworkspace-controller-manager-service
           namespace: devworkspace-controller
           path: /convert
           port: 443
@@ -18720,7 +18720,7 @@ metadata:
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
-  name: devworkspace-controller-service
+  name: devworkspace-controller-manager-service
   namespace: devworkspace-controller
 spec:
   ports:

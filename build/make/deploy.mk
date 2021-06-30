@@ -76,7 +76,9 @@ endif
 	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	$(K8S_CLI) delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
+ifneq ($(NAMESPACE),openshift-operators)
 	$(K8S_CLI) delete namespace $(NAMESPACE) --ignore-not-found
+endif
 
 _check_cert_manager:
 ifeq ($(PLATFORM),kubernetes)

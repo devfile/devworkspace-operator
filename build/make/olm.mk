@@ -20,6 +20,7 @@ generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_f
 		--channels fast \
 		--metadata && \
 	mv bundle.Dockerfile build/
+	find deploy/bundle/manifests -name '*.yaml' -exec yq --indentless -iYw 1000000000 . {} \;
 
 ### build_bundle_image: build and push DevWorkspace Operator bundle image
 build_bundle_image: _print_vars _check_operator_sdk_version

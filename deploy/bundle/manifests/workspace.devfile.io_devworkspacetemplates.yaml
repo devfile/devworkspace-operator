@@ -13,7 +13,7 @@ spec:
       clientConfig:
         caBundle: Cg==
         service:
-          name: devworkspace-controller-service
+          name: devworkspace-controller-manager-service
           namespace: system
           path: /convert
           port: 443

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: service
+  name: manager-service
   namespace: system
 spec:
   ports:

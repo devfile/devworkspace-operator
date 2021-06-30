@@ -11,7 +11,7 @@ spec:
       clientConfig:
         service:
           namespace: system
-          name: devworkspace-controller-service
+          name: devworkspace-controller-manager-service
           path: /convert
           port: 443
         # caBundle will be filled by Service CA operator
@@ -30,7 +30,7 @@ spec:
       clientConfig:
         service:
           namespace: system
-          name: devworkspace-controller-service
+          name: devworkspace-controller-manager-service
           path: /convert
           port: 443
         # caBundle will be filled by Service CA operator

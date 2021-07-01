@@ -10,10 +10,10 @@
 #
 
 ### generate_olm_bundle: Generate yaml files for building an OLM bundle image
-generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_files
+generate_olm_bundle_yaml: $(OPERATOR_SDK) _generate_olm_deployment_files
 # Note: operator-sdk provides no way to specify output dir for bundle.Dockerfile so
 # we have to move it manually
-	operator-sdk generate bundle \
+	$(OPERATOR_SDK) generate bundle \
 		--deploy-dir deploy/deployment/olm \
 		--output-dir deploy/bundle \
 		--manifests \
@@ -22,7 +22,7 @@ generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_f
 	mv bundle.Dockerfile build/
 
 ### build_bundle_image: build and push DevWorkspace Operator bundle image
-build_bundle_image: _print_vars _check_operator_sdk_version
+build_bundle_image: _print_vars
 ifneq ($(INITIATOR),CI)
 ifeq ($(DWO_BUNDLE_IMG),quay.io/devfile/devworkspace-operator-bundle:next)
 	@echo -n "Are you sure you want to push $(DWO_BUNDLE_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
@@ -70,16 +70,6 @@ unregister_catalogsource:
 
 _generate_olm_deployment_files:
 	deploy/generate-deployment.sh --generate-olm
-
-_check_operator_sdk_version:
-	if ! command -v operator-sdk &>/dev/null; then \
-		echo "Operator SDK is required for this rule; see https://github.com/operator-framework/operator-sdk" ;\
-		exit 1 ;\
-	fi
-	if [ "$$(operator-sdk version | grep -o 'operator-sdk version: [^ ,]*')" != 'operator-sdk version: "$(OPERATOR_SDK_VERSION)"' ]; then \
-		echo "Operator SDK version $(OPERATOR_SDK_VERSION) is required." ;\
-		exit 1 ;\
-	fi
 
 _check_opm_version:
 	if ! command -v opm &>/dev/null; then \

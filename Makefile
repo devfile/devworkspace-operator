@@ -51,6 +51,8 @@ OPM_VERSION = v1.17.1
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true"
 
+include .bingo/Variables.mk
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -128,14 +130,8 @@ manifests: controller-gen
 	patch/patch_crds.sh
 
 ### fmt: Runs go fmt against code
-fmt:
-ifneq ($(shell command -v goimports 2> /dev/null),)
-	find . -name '*.go' -exec goimports -w {} \;
-else
-	@echo "WARN: goimports is not installed -- formatting using go fmt instead."
-	@echo "      Please install goimports to ensure file imports are consistent."
-	go fmt -x ./...
-endif
+fmt: $(GOIMPORTS)
+	find . -name '*.go' -exec $(GOIMPORTS) -w {} \;
 
 ### fmt_license: Ensures the license header is set on all files
 fmt_license:
@@ -147,15 +143,9 @@ else
 endif
 
 ### check_fmt: Checks the formatting on files in repo
-check_fmt:
-ifeq ($(shell command -v goimports 2> /dev/null),)
-	$(error "goimports must be installed for this rule" && exit 1)
-endif
-ifeq ($(shell command -v addlicense 2> /dev/null),)
-	$(error "error addlicense must be installed for this rule: go get -u github.com/google/addlicense")
-endif
+check_fmt: $(GOIMPORTS)
 	@{
-		if [[ $$(find . -name '*.go' -exec goimports -l {} \;) != "" ]]; then \
+		if [[ $$(find . -name '*.go' -exec $(GOIMPORTS) -l {} \;) != "" ]]; then \
 			echo "Files not formatted; run 'make fmt'"; exit 1 ;\
 		fi ;\
 		if ! addlicense -check -f license_header.txt $$(find . -name '*.go'); then \

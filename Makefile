@@ -27,7 +27,7 @@ export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
-export DEVWORKSPACE_API_VERSION ?= cd9c30e6aa05b15445bb05386692f470323c826f
+export DEVWORKSPACE_API_VERSION ?= 03e023e7078b64884216d8e6dce8f0cf8b7e74d2
 
 # Enable using Podman instead of Docker
 export DOCKER ?= docker

@@ -48,6 +48,9 @@ endif
 OPERATOR_SDK_VERSION = v1.8.0
 OPM_VERSION = v1.17.1
 
+CONTROLLER_GEN_VERSION = v0.6.1
+CONTROLLER_GEN=$(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)
+
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true"
 
@@ -190,18 +193,19 @@ endif
 ### controller-gen: Finds or downloads controller-gen
 # download controller-gen if necessary
 controller-gen:
-ifeq (, $(shell which controller-gen 2>/dev/null))
+ifeq (, $(shell which controller-gen-$(CONTROLLER_GEN_VERSION) 2>/dev/null))
+	@echo "Installing controller gen as $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
 	@{ \
 	set -e ;\
 	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
 	cd $$CONTROLLER_GEN_TMP_DIR ;\
 	go mod init tmp ;\
-	GOFLAGS="" go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.3.0 ;\
+	go get -d -v sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
+	go build -o $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION) sigs.k8s.io/controller-tools/cmd/controller-gen
 	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
 else
-CONTROLLER_GEN=$(shell which controller-gen)
+	@echo "Using installed $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
 endif
 
 ### compile-devworkspace-controller: Compiles the devworkspace-controller binary

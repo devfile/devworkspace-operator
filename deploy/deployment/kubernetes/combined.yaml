@@ -63,12 +63,14 @@ spec:
                       attributes:
                         additionalProperties:
                           x-kubernetes-preserve-unknown-fields: true
+                        allOf:
+                        - x-kubernetes-preserve-unknown-fields: true
+                        - x-kubernetes-preserve-unknown-fields: true
                         description: "Map of implementation-dependant string-based
                           free-form attributes. \n Examples of Che-specific attributes:
                           \n - cookiesAuthEnabled: \"true\" / \"false\", \n - type:
                           \"terminal\" / \"ide\" / \"ide-dev\","
                         type: object
-                        x-kubernetes-preserve-unknown-fields: true
                       exposure:
                         default: public
                         description: "Describes how the endpoint should be exposed
@@ -3728,6 +3730,7 @@ spec:
       jsonPath: .status.ideUrl
       name: URL
       type: string
+    deprecated: true
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -9203,9 +9206,16 @@ spec:
                               - name
                               type: object
                             registryUrl:
+                              description: Registry URL to pull the parent devfile
+                                from when using id in the parent reference. To ensure
+                                the parent devfile gets resolved consistently in different
+                                environments, it is recommended to always specify
+                                the `regsitryURL` when `Id` is used.
                               type: string
                             uri:
-                              description: Uri of a Devfile yaml file
+                              description: URI Reference of a parent devfile YAML
+                                file. It can be a full URL or a relative URI with
+                                the current devfile as the base URI.
                               type: string
                           type: object
                         volume:
@@ -10595,9 +10605,17 @@ spec:
                                       type: string
                                   type: object
                                 registryUrl:
+                                  description: Registry URL to pull the parent devfile
+                                    from when using id in the parent reference. To
+                                    ensure the parent devfile gets resolved consistently
+                                    in different environments, it is recommended to
+                                    always specify the `regsitryURL` when `Id` is
+                                    used.
                                   type: string
                                 uri:
-                                  description: Uri of a Devfile yaml file
+                                  description: URI Reference of a parent devfile YAML
+                                    file. It can be a full URL or a relative URI with
+                                    the current devfile as the base URI.
                                   type: string
                               type: object
                             volume:
@@ -10647,8 +10665,6 @@ spec:
                           - required:
                             - git
                           - required:
-                            - github
-                          - required:
                             - zip
                           properties:
                             attributes:
@@ -10692,35 +10708,6 @@ spec:
                                     configured
                                   type: object
                               type: object
-                            github:
-                              description: Project's GitHub source. Deprecated, use
-                                `Git` instead
-                              properties:
-                                checkoutFrom:
-                                  description: Defines from what the project should
-                                    be checked out. Required if there are more than
-                                    one remote configured
-                                  properties:
-                                    remote:
-                                      description: The remote name should be used
-                                        as init. Required if there are more than one
-                                        remote configured
-                                      type: string
-                                    revision:
-                                      description: The revision to checkout from.
-                                        Should be branch name, tag or commit id. Default
-                                        branch is used if missing or specified revision
-                                        is not found.
-                                      type: string
-                                  type: object
-                                remotes:
-                                  additionalProperties:
-                                    type: string
-                                  description: The remotes map which should be initialized
-                                    in the git project. Must have at least one remote
-                                    configured
-                                  type: object
-                              type: object
                             name:
                               description: Project name
                               maxLength: 63
@@ -10730,15 +10717,8 @@ spec:
                               description: Type of project source
                               enum:
                               - Git
-                              - Github
                               - Zip
                               type: string
-                            sparseCheckoutDirs:
-                              description: Populate the project sparsely with selected
-                                directories.
-                              items:
-                                type: string
-                              type: array
                             zip:
                               description: Project's Zip source
                               properties:
@@ -10752,6 +10732,11 @@ spec:
                           type: object
                         type: array
                       registryUrl:
+                        description: Registry URL to pull the parent devfile from
+                          when using id in the parent reference. To ensure the parent
+                          devfile gets resolved consistently in different environments,
+                          it is recommended to always specify the `regsitryURL` when
+                          `Id` is used.
                         type: string
                       starterProjects:
                         description: Overrides of starterProjects encapsulated in
@@ -10761,8 +10746,6 @@ spec:
                           oneOf:
                           - required:
                             - git
-                          - required:
-                            - github
                           - required:
                             - zip
                           properties:
@@ -10802,35 +10785,6 @@ spec:
                                     configured
                                   type: object
                               type: object
-                            github:
-                              description: Project's GitHub source. Deprecated, use
-                                `Git` instead
-                              properties:
-                                checkoutFrom:
-                                  description: Defines from what the project should
-                                    be checked out. Required if there are more than
-                                    one remote configured
-                                  properties:
-                                    remote:
-                                      description: The remote name should be used
-                                        as init. Required if there are more than one
-                                        remote configured
-                                      type: string
-                                    revision:
-                                      description: The revision to checkout from.
-                                        Should be branch name, tag or commit id. Default
-                                        branch is used if missing or specified revision
-                                        is not found.
-                                      type: string
-                                  type: object
-                                remotes:
-                                  additionalProperties:
-                                    type: string
-                                  description: The remotes map which should be initialized
-                                    in the git project. Must have at least one remote
-                                    configured
-                                  type: object
-                              type: object
                             name:
                               description: Project name
                               maxLength: 63
@@ -10840,7 +10794,6 @@ spec:
                               description: Type of project source
                               enum:
                               - Git
-                              - Github
                               - Zip
                               type: string
                             subDir:
@@ -10860,7 +10813,9 @@ spec:
                           type: object
                         type: array
                       uri:
-                        description: Uri of a Devfile yaml file
+                        description: URI Reference of a parent devfile YAML file.
+                          It can be a full URL or a relative URI with the current
+                          devfile as the base URI.
                         type: string
                       variables:
                         additionalProperties:
@@ -10877,8 +10832,6 @@ spec:
                       oneOf:
                       - required:
                         - git
-                      - required:
-                        - github
                       - required:
                         - zip
                       - required:
@@ -10939,36 +10892,6 @@ spec:
                           required:
                           - remotes
                           type: object
-                        github:
-                          description: Project's GitHub source. Deprecated, use `Git`
-                            instead
-                          properties:
-                            checkoutFrom:
-                              description: Defines from what the project should be
-                                checked out. Required if there are more than one remote
-                                configured
-                              properties:
-                                remote:
-                                  description: The remote name should be used as init.
-                                    Required if there are more than one remote configured
-                                  type: string
-                                revision:
-                                  description: The revision to checkout from. Should
-                                    be branch name, tag or commit id. Default branch
-                                    is used if missing or specified revision is not
-                                    found.
-                                  type: string
-                              type: object
-                            remotes:
-                              additionalProperties:
-                                type: string
-                              description: The remotes map which should be initialized
-                                in the git project. Must have at least one remote
-                                configured
-                              type: object
-                          required:
-                          - remotes
-                          type: object
                         name:
                           description: Project name
                           maxLength: 63
@@ -10978,16 +10901,9 @@ spec:
                           description: Type of project source
                           enum:
                           - Git
-                          - Github
                           - Zip
                           - Custom
                           type: string
-                        sparseCheckoutDirs:
-                          description: Populate the project sparsely with selected
-                            directories.
-                          items:
-                            type: string
-                          type: array
                         zip:
                           description: Project's Zip source
                           properties:
@@ -11007,8 +10923,6 @@ spec:
                       oneOf:
                       - required:
                         - git
-                      - required:
-                        - github
                       - required:
                         - zip
                       - required:
@@ -11064,36 +10978,6 @@ spec:
                           required:
                           - remotes
                           type: object
-                        github:
-                          description: Project's GitHub source. Deprecated, use `Git`
-                            instead
-                          properties:
-                            checkoutFrom:
-                              description: Defines from what the project should be
-                                checked out. Required if there are more than one remote
-                                configured
-                              properties:
-                                remote:
-                                  description: The remote name should be used as init.
-                                    Required if there are more than one remote configured
-                                  type: string
-                                revision:
-                                  description: The revision to checkout from. Should
-                                    be branch name, tag or commit id. Default branch
-                                    is used if missing or specified revision is not
-                                    found.
-                                  type: string
-                              type: object
-                            remotes:
-                              additionalProperties:
-                                type: string
-                              description: The remotes map which should be initialized
-                                in the git project. Must have at least one remote
-                                configured
-                              type: object
-                          required:
-                          - remotes
-                          type: object
                         name:
                           description: Project name
                           maxLength: 63
@@ -11103,7 +10987,6 @@ spec:
                           description: Type of project source
                           enum:
                           - Git
-                          - Github
                           - Zip
                           - Custom
                           type: string
@@ -11130,10 +11013,10 @@ spec:
                       in the devfile. Values can can be referenced via {{variable-key}}
                       to replace the corresponding value in string fields in the devfile.
                       Replacement cannot be used for \n  - schemaVersion, metadata,
-                      parent source  - element identifiers, e.g. command id, component
-                      name, endpoint name, project name  - references to identifiers,
+                      parent source \n  - element identifiers, e.g. command id, component
+                      name, endpoint name, project name \n  - references to identifiers,
                       e.g. in events, a command's component, container's volume mount
-                      name  - string enums, e.g. command group kind, endpoint exposure"
+                      name \n  - string enums, e.g. command group kind, endpoint exposure"
                     type: object
                 type: object
             required:
@@ -11233,7 +11116,8 @@ spec:
     singular: devworkspacetemplate
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - deprecated: true
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: DevWorkspaceTemplate is the Schema for the devworkspacetemplates
@@ -16445,9 +16329,16 @@ spec:
                           - name
                           type: object
                         registryUrl:
+                          description: Registry URL to pull the parent devfile from
+                            when using id in the parent reference. To ensure the parent
+                            devfile gets resolved consistently in different environments,
+                            it is recommended to always specify the `regsitryURL`
+                            when `Id` is used.
                           type: string
                         uri:
-                          description: Uri of a Devfile yaml file
+                          description: URI Reference of a parent devfile YAML file.
+                            It can be a full URL or a relative URI with the current
+                            devfile as the base URI.
                           type: string
                       type: object
                     volume:
@@ -17783,9 +17674,16 @@ spec:
                                   type: string
                               type: object
                             registryUrl:
+                              description: Registry URL to pull the parent devfile
+                                from when using id in the parent reference. To ensure
+                                the parent devfile gets resolved consistently in different
+                                environments, it is recommended to always specify
+                                the `regsitryURL` when `Id` is used.
                               type: string
                             uri:
-                              description: Uri of a Devfile yaml file
+                              description: URI Reference of a parent devfile YAML
+                                file. It can be a full URL or a relative URI with
+                                the current devfile as the base URI.
                               type: string
                           type: object
                         volume:
@@ -17834,8 +17732,6 @@ spec:
                       - required:
                         - git
                       - required:
-                        - github
-                      - required:
                         - zip
                       properties:
                         attributes:
@@ -17878,34 +17774,6 @@ spec:
                                 configured
                               type: object
                           type: object
-                        github:
-                          description: Project's GitHub source. Deprecated, use `Git`
-                            instead
-                          properties:
-                            checkoutFrom:
-                              description: Defines from what the project should be
-                                checked out. Required if there are more than one remote
-                                configured
-                              properties:
-                                remote:
-                                  description: The remote name should be used as init.
-                                    Required if there are more than one remote configured
-                                  type: string
-                                revision:
-                                  description: The revision to checkout from. Should
-                                    be branch name, tag or commit id. Default branch
-                                    is used if missing or specified revision is not
-                                    found.
-                                  type: string
-                              type: object
-                            remotes:
-                              additionalProperties:
-                                type: string
-                              description: The remotes map which should be initialized
-                                in the git project. Must have at least one remote
-                                configured
-                              type: object
-                          type: object
                         name:
                           description: Project name
                           maxLength: 63
@@ -17915,15 +17783,8 @@ spec:
                           description: Type of project source
                           enum:
                           - Git
-                          - Github
                           - Zip
                           type: string
-                        sparseCheckoutDirs:
-                          description: Populate the project sparsely with selected
-                            directories.
-                          items:
-                            type: string
-                          type: array
                         zip:
                           description: Project's Zip source
                           properties:
@@ -17937,6 +17798,11 @@ spec:
                       type: object
                     type: array
                   registryUrl:
+                    description: Registry URL to pull the parent devfile from when
+                      using id in the parent reference. To ensure the parent devfile
+                      gets resolved consistently in different environments, it is
+                      recommended to always specify the `regsitryURL` when `Id` is
+                      used.
                     type: string
                   starterProjects:
                     description: Overrides of starterProjects encapsulated in a parent
@@ -17946,8 +17812,6 @@ spec:
                       oneOf:
                       - required:
                         - git
-                      - required:
-                        - github
                       - required:
                         - zip
                       properties:
@@ -17986,34 +17850,6 @@ spec:
                                 configured
                               type: object
                           type: object
-                        github:
-                          description: Project's GitHub source. Deprecated, use `Git`
-                            instead
-                          properties:
-                            checkoutFrom:
-                              description: Defines from what the project should be
-                                checked out. Required if there are more than one remote
-                                configured
-                              properties:
-                                remote:
-                                  description: The remote name should be used as init.
-                                    Required if there are more than one remote configured
-                                  type: string
-                                revision:
-                                  description: The revision to checkout from. Should
-                                    be branch name, tag or commit id. Default branch
-                                    is used if missing or specified revision is not
-                                    found.
-                                  type: string
-                              type: object
-                            remotes:
-                              additionalProperties:
-                                type: string
-                              description: The remotes map which should be initialized
-                                in the git project. Must have at least one remote
-                                configured
-                              type: object
-                          type: object
                         name:
                           description: Project name
                           maxLength: 63
@@ -18023,7 +17859,6 @@ spec:
                           description: Type of project source
                           enum:
                           - Git
-                          - Github
                           - Zip
                           type: string
                         subDir:
@@ -18043,7 +17878,9 @@ spec:
                       type: object
                     type: array
                   uri:
-                    description: Uri of a Devfile yaml file
+                    description: URI Reference of a parent devfile YAML file. It can
+                      be a full URL or a relative URI with the current devfile as
+                      the base URI.
                     type: string
                   variables:
                     additionalProperties:
@@ -18060,8 +17897,6 @@ spec:
                   oneOf:
                   - required:
                     - git
-                  - required:
-                    - github
                   - required:
                     - zip
                   - required:
@@ -18118,33 +17953,6 @@ spec:
                       required:
                       - remotes
                       type: object
-                    github:
-                      description: Project's GitHub source. Deprecated, use `Git`
-                        instead
-                      properties:
-                        checkoutFrom:
-                          description: Defines from what the project should be checked
-                            out. Required if there are more than one remote configured
-                          properties:
-                            remote:
-                              description: The remote name should be used as init.
-                                Required if there are more than one remote configured
-                              type: string
-                            revision:
-                              description: The revision to checkout from. Should be
-                                branch name, tag or commit id. Default branch is used
-                                if missing or specified revision is not found.
-                              type: string
-                          type: object
-                        remotes:
-                          additionalProperties:
-                            type: string
-                          description: The remotes map which should be initialized
-                            in the git project. Must have at least one remote configured
-                          type: object
-                      required:
-                      - remotes
-                      type: object
                     name:
                       description: Project name
                       maxLength: 63
@@ -18154,15 +17962,9 @@ spec:
                       description: Type of project source
                       enum:
                       - Git
-                      - Github
                       - Zip
                       - Custom
                       type: string
-                    sparseCheckoutDirs:
-                      description: Populate the project sparsely with selected directories.
-                      items:
-                        type: string
-                      type: array
                     zip:
                       description: Project's Zip source
                       properties:
@@ -18182,8 +17984,6 @@ spec:
                   oneOf:
                   - required:
                     - git
-                  - required:
-                    - github
                   - required:
                     - zip
                   - required:
@@ -18236,33 +18036,6 @@ spec:
                       required:
                       - remotes
                       type: object
-                    github:
-                      description: Project's GitHub source. Deprecated, use `Git`
-                        instead
-                      properties:
-                        checkoutFrom:
-                          description: Defines from what the project should be checked
-                            out. Required if there are more than one remote configured
-                          properties:
-                            remote:
-                              description: The remote name should be used as init.
-                                Required if there are more than one remote configured
-                              type: string
-                            revision:
-                              description: The revision to checkout from. Should be
-                                branch name, tag or commit id. Default branch is used
-                                if missing or specified revision is not found.
-                              type: string
-                          type: object
-                        remotes:
-                          additionalProperties:
-                            type: string
-                          description: The remotes map which should be initialized
-                            in the git project. Must have at least one remote configured
-                          type: object
-                      required:
-                      - remotes
-                      type: object
                     name:
                       description: Project name
                       maxLength: 63
@@ -18272,7 +18045,6 @@ spec:
                       description: Type of project source
                       enum:
                       - Git
-                      - Github
                       - Zip
                       - Custom
                       type: string
@@ -18299,10 +18071,10 @@ spec:
                   in the devfile. Values can can be referenced via {{variable-key}}
                   to replace the corresponding value in string fields in the devfile.
                   Replacement cannot be used for \n  - schemaVersion, metadata, parent
-                  source  - element identifiers, e.g. command id, component name,
-                  endpoint name, project name  - references to identifiers, e.g. in
-                  events, a command's component, container's volume mount name  -
-                  string enums, e.g. command group kind, endpoint exposure"
+                  source \n  - element identifiers, e.g. command id, component name,
+                  endpoint name, project name \n  - references to identifiers, e.g.
+                  in events, a command's component, container's volume mount name
+                  \n  - string enums, e.g. command group kind, endpoint exposure"
                 type: object
             type: object
         type: object

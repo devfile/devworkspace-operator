@@ -173,6 +173,7 @@ vet:
 ### generate: Generates code
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	@$(MAKE) fmt
 
 ### docker: Builds and pushes controller image
 docker: _print_vars docker-build docker-push

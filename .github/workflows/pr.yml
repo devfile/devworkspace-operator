@@ -99,9 +99,14 @@ jobs:
     -
       name: Check deployment files
       run: |
-        make generate_default_deployment generate_olm_bundle_yaml
+        # Workaround: GitHub actions does not allocate a tty, and in this case stdin
+        # behaves like a pipe. Operator SDK checks if stdin is an open pipe and assumes
+        # it's reading from stdin in that case. To make Operator SDK work correctly here,
+        # we need to explicitly close stdin.
+        # See issue: https://github.com/actions/runner/issues/241
+        make generate_default_deployment generate_olm_bundle_yaml 0<&-
         if [[ ! -z $(git status -s) ]]; then
-          echo 'Generated deployment files are out of date; run `make generate_default_deployment generate_olm_bundle_yaml`.'
+          echo "Generated deployment files are out of date; run 'make generate_default_deployment generate_olm_bundle_yaml'."
           echo " GitHub actions has $(which kustomize) @ $(kustomize version)"
           echo "Diff: "
           git --no-pager diff

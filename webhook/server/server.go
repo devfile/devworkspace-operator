@@ -40,10 +40,6 @@ const (
 	WebhookServerSAName = "devworkspace-webhook-server"
 
 	WebhookServerCertsVolumeName = "webhook-tls-certs"
-
-	// Secret name with TLS certs inside (tls.crt + tls.key) that is mounted to webhook server
-	// when running on OpenShift
-	WebhookServerTLSSecretName = "devworkspace-webhookserver-tls"
 )
 
 var log = logf.Log.WithName("webhook.server")

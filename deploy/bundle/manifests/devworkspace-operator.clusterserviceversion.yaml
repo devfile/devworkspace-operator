@@ -266,6 +266,8 @@ spec:
                 - /usr/local/bin/devworkspace-controller
                 - --enable-leader-election
                 env:
+                - name: WEBHOOK_SECRET_NAME
+                  value: devworkspace-webhookserver-tls
                 - name: RELATED_IMAGE_devworkspace_webhook_server
                   value: quay.io/devfile/devworkspace-controller:next
                 - name: RELATED_IMAGE_project_clone

@@ -13,6 +13,7 @@ configMapGenerator:
 
 patchesStrategicMerge:
 - manager_image_patch.yaml
+- webhooks_name_env_patch.yaml
 
 vars:
 - name: OPERATOR_NAMESPACE

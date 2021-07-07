@@ -17,12 +17,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	webhook_k8s "github.com/devfile/devworkspace-operator/pkg/webhook/kubernetes"
 	webhook_openshift "github.com/devfile/devworkspace-operator/pkg/webhook/openshift"
-	"github.com/devfile/devworkspace-operator/webhook/server"
-
-	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"k8s.io/client-go/rest"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,9 +53,11 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 		return err
 	}
 
-	var secretName string
+	secretName, err := config.GetWebhooksSecretName()
+	if err != nil {
+		return fmt.Errorf("could not deploy webhooks server: %w", err)
+	}
 	if infrastructure.IsOpenShift() {
-		secretName = server.WebhookServerTLSSecretName
 		// Set up the certs for OpenShift
 		log.Info("Setting up the OpenShift webhook server secure service")
 		log.Info("Injecting serving cert using the Service CA operator")
@@ -66,10 +66,6 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 			return err
 		}
 	} else {
-		secretName, err = config.GetWebhooksSecretName()
-		if err != nil {
-			return fmt.Errorf("could not deploy webhooks server: %w", err)
-		}
 		log.Info("Setting up the Kubernetes webhook server secure service")
 		log.Info(fmt.Sprintf("Using certificate stored in secret '%s' to serve webhooks", secretName))
 		err = webhook_k8s.SetupSecureService(client, ctx, namespace)

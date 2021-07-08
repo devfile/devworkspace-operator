@@ -33,7 +33,7 @@ bump_version () {
 
   echo "Updating project version to ${NEXT_VERSION}"
   # change version/version.go file
-  sed -i version/version.go -r -e 's#(Version = ")(v?[0-9.]+)(")#\1'"${VERSION}"'\3#g'
+  sed -i version/version.go -r -e "s#(Version = \")(v?[0-9.]+)(\")#\1${NEXT_VERSION}\3#g"
   if [[ ! -z $(git status -s) ]]; then # dirty
     git add version/version.go
     COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
@@ -109,8 +109,10 @@ fi
 set -e
 
 # change version/version.go file
-sed -i version/version.go -r -e 's#(Version = ")(v?[0-9.]+)(")#\1'"${VERSION}"'\3#g'
-
+sed -i version/version.go -r -e "s#(Version = \")(v?[0-9.]+)(\")#\1${VERSION}\3#g"
+# change image tag in Makefile
+sed -i Makefile -r -e "s#export DWO_IMG \?= quay.io/devfile/devworkspace-controller:.*#export DWO_IMG \?= quay.io/devfile/devworkspace-controller:${VERSION}#g"
+sed -i Makefile -r -e "s#export PROJECT_CLONE_IMG \?= quay.io/devfile/project-clone:.*#export PROJECT_CLONE_IMG \?= quay.io/devfile/project-clone:${VERSION}#g"
 DWO_QUAY_IMG="quay.io/devfile/devworkspace-controller:${VERSION}"
 docker build -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile .
 docker push "${DWO_QUAY_IMG}"

@@ -13,6 +13,8 @@
 package shell
 
 import (
+	"fmt"
+	"log"
 	"os"
 	"os/exec"
 )
@@ -28,6 +30,25 @@ func GitCloneProject(repoUrl, defaultRemoteName, destPath string) error {
 		destPath,
 	}
 	return executeCommand("git", args...)
+}
+
+// GitResetProject runs `git reset --hard` in the project specified by projectPath
+func GitResetProject(projectPath string) error {
+	currDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %s", err)
+	}
+	defer func() {
+		if err := os.Chdir(currDir); err != nil {
+			log.Printf("failed to return to original working directory: %s", err)
+		}
+	}()
+
+	err = os.Chdir(projectPath)
+	if err != nil {
+		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
+	}
+	return executeCommand("git", "reset", "--hard")
 }
 
 func executeCommand(name string, args ...string) error {

@@ -125,7 +125,7 @@ func CheckoutReference(repo *git.Repository, project *dw.Project) error {
 			continue
 		}
 		if ref.Name().IsBranch() {
-			return checkoutRemoteBranch(repo, defaultRemoteName, ref)
+			return checkoutRemoteBranch(internal.GetClonePath(project), repo, defaultRemoteName, ref)
 		} else if ref.Name().IsTag() {
 			return checkoutTag(repo, defaultRemoteName, ref)
 		}
@@ -139,7 +139,7 @@ func CheckoutReference(repo *git.Repository, project *dw.Project) error {
 	return checkoutCommit(repo, hash)
 }
 
-func checkoutRemoteBranch(repo *git.Repository, remote string, branchRef *plumbing.Reference) error {
+func checkoutRemoteBranch(projectPath string, repo *git.Repository, remote string, branchRef *plumbing.Reference) error {
 	// Implement logic of `git checkout <remote-branch-name>`:
 	// 1. Create tracking info in .git/config to properly track remote branch
 	// 2. Create local branch to match name of remote branch with hash matching remote branch
@@ -169,6 +169,14 @@ func checkoutRemoteBranch(repo *git.Repository, remote string, branchRef *plumbi
 	})
 	if err != nil {
 		return fmt.Errorf("failed to checkout branch %s: %s", branchName, err)
+	}
+
+	// Need to also reset git repo due to how go-git handles some untracked files (https://github.com/go-git/go-git/issues/99)
+	// NOTE: using reset in go-git will not work in some cases, as that implementation of reset respects gitignore, so e.g.
+	// a .gitignored file that is checked in will never be reset.
+	err = shell.GitResetProject(path.Join(internal.ProjectsRoot, projectPath))
+	if err != nil {
+		return fmt.Errorf("failed to git reset: %s", err)
 	}
 
 	return nil

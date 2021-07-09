@@ -37,6 +37,11 @@ _gen_configuration_env:
 	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" >> $(CONTROLLER_ENV_FILE)
 	cat $(CONTROLLER_ENV_FILE)
 
+_store_tls_cert:
+	mkdir -p /tmp/k8s-webhook-server/serving-certs/
+	$(K8S_CLI) get secret devworkspace-webhooks-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
+	$(K8S_CLI) get secret devworkspace-webhooks-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
+
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _check_cert_manager _print_vars _init_devworkspace_crds _create_namespace generate_deployment
 ifeq ($(PLATFORM),kubernetes)
@@ -108,7 +113,7 @@ endif
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
 ### run: Runs against the configured Kubernetes cluster in ~/.kube/config
-run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
+run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _store_tls_cert
 	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
@@ -116,7 +121,7 @@ run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspac
 		go run ./main.go
 
 ### debug: Runs the controller locally with debugging enabled, watching cluster defined in ~/.kube/config
-debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa
+debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _store_tls_cert
 	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \

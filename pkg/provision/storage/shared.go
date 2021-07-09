@@ -24,14 +24,15 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
+	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func getCommonPVCSpec(namespace string) (*corev1.PersistentVolumeClaim, error) {
-	pvcStorageQuantity, err := resource.ParseQuantity(constants.PVCStorageSize)
+func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
+	pvcStorageQuantity, err := resource.ParseQuantity(size)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +80,16 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 }
 
 func syncCommonPVC(namespace string, clusterAPI provision.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
-	pvc, err := getCommonPVCSpec(namespace)
+	namespacedConfig, err := nsconfig.ReadNamespacedConfig(namespace, clusterAPI)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
+	}
+	pvcSize := constants.PVCStorageSize
+	if namespacedConfig != nil && namespacedConfig.CommonPVCSize != "" {
+		pvcSize = namespacedConfig.CommonPVCSize
+	}
+
+	pvc, err := getCommonPVCSpec(namespace, pvcSize)
 	if err != nil {
 		return nil, err
 	}

@@ -77,4 +77,8 @@ const (
 	// Only secrets with 'true' value will be mount as pull secret
 	// Should be assigned to secrets with type docker config types (kubernetes.io/dockercfg and kubernetes.io/dockerconfigjson)
 	DevWorkspacePullSecretLabel = "controller.devfile.io/devworkspace_pullsecret"
+
+	// NamespacedConfigLabelKey is a label applied to configmaps to mark them as a configuration for all DevWorkspaces in
+	// the current namespace.
+	NamespacedConfigLabelKey = "controller.devfile.io/namespaced-config"
 )

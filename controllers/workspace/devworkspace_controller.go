@@ -76,6 +76,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups="",resources=pods/exec,verbs=create
 // +kubebuilder:rbac:groups=apps;extensions,resources=replicasets,verbs=get;list;watch
 // +kubebuilder:rbac:groups=apps;extensions,resources=deployments,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;create;delete
 
 func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	ctx := context.Background()

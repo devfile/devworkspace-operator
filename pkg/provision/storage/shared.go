@@ -153,12 +153,12 @@ func addEphemeralVolumesToPodAdditions(podAdditions *v1alpha1.PodAdditions, work
 // volumes, and the projects volume, which must be handled specially. If the workspace does not define a projects volume,
 // the returned value is nil.
 func getWorkspaceVolumes(workspace *dw.DevWorkspace) (persistent, ephemeral []dw.Component, projects *dw.Component) {
-	for _, component := range workspace.Spec.Template.Components {
+	for idx, component := range workspace.Spec.Template.Components {
 		if component.Volume == nil {
 			continue
 		}
 		if component.Name == devfileConstants.ProjectsVolumeName {
-			projects = &component
+			projects = &workspace.Spec.Template.Components[idx]
 			continue
 		}
 		if component.Volume.Ephemeral {

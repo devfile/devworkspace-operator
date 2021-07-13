@@ -112,11 +112,11 @@ set -e
 sed -i version/version.go -r -e "s#(Version = \")(v?[0-9.]+)(\")#\1${VERSION}\3#g"
 # change image tag in Makefile
 DWO_QUAY_IMG="quay.io/devfile/devworkspace-controller:${VERSION}"
-sed -i Makefile -r -e "s#quay.io/devfile/devworkspace-controller:.*#${DWO_QUAY_IMG}#g"
+sed -i Makefile -r -e "s#quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+#${DWO_QUAY_IMG}#g"
 docker build -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile .
 docker push "${DWO_QUAY_IMG}"
 PROJECT_CLONE_QUAY_IMG="quay.io/devfile/project-clone:${VERSION}"
-sed -i Makefile -r -e "s#quay.io/devfile/project-clone:.*#${PROJECT_CLONE_QUAY_IMG}#g"
+sed -i Makefile -r -e "s#quay.io/devfile/project-clone:.*[0-9a-zA-Z._-]#${PROJECT_CLONE_QUAY_IMG}#g"
 docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
 docker push "${PROJECT_CLONE_QUAY_IMG}"
 

@@ -88,7 +88,6 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 		devfileVolumes[devfileConstants.ProjectsVolumeName] = projectsVolume
 	}
 
-	// TODO: Support more than the common PVC strategy here (storage provisioner interface?)
 	// TODO: What should we do when a volume isn't explicitly defined?
 	commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
 	rewriteVolumeMounts := func(containers []corev1.Container) error {

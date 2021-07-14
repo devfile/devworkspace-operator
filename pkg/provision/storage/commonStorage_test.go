@@ -15,6 +15,8 @@ package storage
 import (
 	"io/ioutil"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -100,10 +102,10 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
 	commonPVC, err := getCommonPVCSpec("test-namespace")
-	commonPVC.Status.Phase = corev1.ClaimBound
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}
+	commonPVC.Status.Phase = corev1.ClaimBound
 	clusterAPI := provision.ClusterAPI{
 		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
 		Logger: zap.New(),
@@ -124,6 +126,8 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 				if !assert.NoError(t, err, "Should not return error") {
 					return
 				}
+				sortVolumesAndVolumeMounts(&tt.Output.PodAdditions)
+				sortVolumesAndVolumeMounts(&tt.Input.PodAdditions)
 				assert.Equal(t, tt.Output.PodAdditions, tt.Input.PodAdditions, "PodAdditions should match expected output")
 			}
 		})
@@ -233,5 +237,20 @@ func TestNeedsStorage(t *testing.T) {
 				assert.False(t, needsStorage(workspace), tt.Explanation)
 			}
 		})
+	}
+}
+
+func sortVolumesAndVolumeMounts(podAdditions *v1alpha1.PodAdditions) {
+	if podAdditions.Volumes != nil {
+		sort.Slice(podAdditions.Volumes, func(i, j int) bool {
+			return strings.Compare(podAdditions.Volumes[i].Name, podAdditions.Volumes[j].Name) < 0
+		})
+	}
+	for idx, container := range podAdditions.Containers {
+		if container.VolumeMounts != nil {
+			sort.Slice(podAdditions.Containers[idx].VolumeMounts, func(i, j int) bool {
+				return strings.Compare(podAdditions.Containers[idx].VolumeMounts[i].Name, podAdditions.Containers[idx].VolumeMounts[j].Name) < 0
+			})
+		}
 	}
 }

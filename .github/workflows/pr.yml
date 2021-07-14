@@ -9,7 +9,7 @@ jobs:
     name: Check sources
     runs-on: ubuntu-20.04
     env:
-      OPERATOR_SDK_VERSION: v1.7.2
+      OPERATOR_SDK_VERSION: v1.8.0
     steps:
     -
       name: Set up Go 1.x

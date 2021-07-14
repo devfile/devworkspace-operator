@@ -66,4 +66,7 @@ const (
 	// AsyncStorageClassType defines the 'asynchronous' storage policy. An rsync sidecar is added to devworkspaces that uses SSH to connect
 	// to a storage deployment that mounts a common PVC for the namespace.
 	AsyncStorageClassType = "async"
+	// EphemeralStorageClassType defines the 'ephemeral' storage policy: all volumes are allocated as emptyDir volumes and
+	// so do not require cleanup. When a DevWorkspace is stopped, all local changes are lost.
+	EphemeralStorageClassType = "ephemeral"
 )

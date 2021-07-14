@@ -76,6 +76,7 @@ func CloneProject(project *dw.Project) error {
 // SetupRemotes sets up a git remote in repo for each remote in project.Git.Remotes
 func SetupRemotes(repo *git.Repository, project *dw.Project) error {
 	log.Printf("Setting up remotes for project %s", project.Name)
+	clonePath := internal.GetClonePath(project)
 	for remoteName, remoteUrl := range project.Git.Remotes {
 		_, err := repo.CreateRemote(&gitConfig.RemoteConfig{
 			Name: remoteName,
@@ -84,10 +85,8 @@ func SetupRemotes(repo *git.Repository, project *dw.Project) error {
 		if err != nil && err != git.ErrRemoteExists {
 			return fmt.Errorf("failed to add remote %s: %s", remoteName, err)
 		}
-		err = repo.Fetch(&git.FetchOptions{
-			RemoteName: remoteName,
-		})
-		if err != nil && err != git.NoErrAlreadyUpToDate {
+		err = shell.GitFetchRemote(path.Join(internal.ProjectsRoot, clonePath), remoteName)
+		if err != nil {
 			return fmt.Errorf("failed to fetch from remote %s: %s", remoteUrl, err)
 		}
 		log.Printf("Fetched remote %s at %s", remoteName, remoteUrl)

@@ -95,9 +95,8 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 	return tests
 }
 
-func TestRewriteContainerVolumeMounts(t *testing.T) {
-	tests := loadAllTestCasesOrPanic(t, "testdata")
-	// tests := []testCase{loadTestCaseOrPanic(t, "testdata/can-make-projects-ephemeral.yaml")}
+func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
+	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
 	commonPVC, err := getCommonPVCSpec("test-namespace")

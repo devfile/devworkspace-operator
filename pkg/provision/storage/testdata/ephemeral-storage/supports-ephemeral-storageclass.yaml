@@ -1,0 +1,68 @@
+name: "Supports ephemeral storageclass"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        volumeMounts:
+          - name: testvol-1
+            mountPath: testPath1
+          - name: testvol-3
+            mountPath: testPath3
+      - name: testing-container-2
+        image: testing-image-2
+        volumeMounts:
+          - name: testvol-2
+            mountPath: testPath2
+          - name: "projects"
+            mountPath: "/projects"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          mountSources: false
+      - name: testing-container-2
+        container:
+          image: testing-image-2
+          mountSources: true
+
+      - name: testvol-1
+        volume:
+          ephemeral: true
+      - name: testvol-2
+        volume:
+          ephemeral: false
+      - name: testvol-3
+        volume: {}
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image-1
+        volumeMounts:
+          - name: testvol-1
+            mountPath: testPath1
+          - name: testvol-3
+            mountPath: testPath3
+      - name: testing-container-2
+        image: testing-image-2
+        volumeMounts:
+          - name: testvol-2
+            mountPath: testPath2
+          - name: projects
+            mountPath: /projects
+
+    volumes:
+      - name: projects
+        emptyDir: {}
+      - name: testvol-1
+        emptyDir: {}
+      - name: testvol-2
+        emptyDir: {}
+      - name: testvol-3
+        emptyDir: {}

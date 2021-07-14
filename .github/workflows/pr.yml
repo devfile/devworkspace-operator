@@ -6,7 +6,7 @@ on:
 
 jobs:
   go:
-    name: Check go sources
+    name: Check sources
     runs-on: ubuntu-20.04
     env:
       OPERATOR_SDK_VERSION: v1.7.2

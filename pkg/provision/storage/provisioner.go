@@ -49,6 +49,8 @@ func GetProvisioner(workspace *dw.DevWorkspace) (Provisioner, error) {
 		return &CommonStorageProvisioner{}, nil
 	case constants.AsyncStorageClassType:
 		return &AsyncStorageProvisioner{}, nil
+	case constants.EphemeralStorageClassType:
+		return &EphemeralStorageProvisioner{}, nil
 	default:
 		return nil, UnsupportedStorageStrategy
 	}

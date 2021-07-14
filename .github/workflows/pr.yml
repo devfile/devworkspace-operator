@@ -107,6 +107,7 @@ jobs:
         make generate_default_deployment generate_olm_bundle_yaml 0<&-
         if [[ ! -z $(git status -s) ]]; then
           echo "Generated deployment files are out of date; run 'make generate_default_deployment generate_olm_bundle_yaml'."
+          git status
           echo "Diff: "
           git --no-pager diff
           exit 1

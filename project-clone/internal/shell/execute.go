@@ -51,6 +51,23 @@ func GitResetProject(projectPath string) error {
 	return executeCommand("git", "reset", "--hard")
 }
 
+func GitFetchRemote(projectPath, remote string) error {
+	currDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %s", err)
+	}
+	defer func() {
+		if err := os.Chdir(currDir); err != nil {
+			log.Printf("failed to return to original working directory: %s", err)
+		}
+	}()
+	err = os.Chdir(projectPath)
+	if err != nil {
+		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
+	}
+	return executeCommand("git", "fetch", remote)
+}
+
 func executeCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stderr = os.Stderr

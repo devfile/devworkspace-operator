@@ -100,7 +100,7 @@ func SyncDeploymentToCluster(
 	specDeployment, err := getSpecDeployment(workspace, podAdditions, envFromSourceAdditions, saName, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
+			ProvisioningStatus{
 				Err:         err,
 				FailStartup: true,
 			},
@@ -109,18 +109,22 @@ func SyncDeploymentToCluster(
 	clusterDeployment, err := getClusterDeployment(specDeployment.Name, workspace.Namespace, clusterAPI.Client)
 	if err != nil {
 		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Err: err},
+			ProvisioningStatus{Err: err},
 		}
 	}
 
 	if clusterDeployment == nil {
 		clusterAPI.Logger.Info("Creating deployment...")
-		err := clusterAPI.Client.Create(context.TODO(), specDeployment)
+		if err := clusterAPI.Client.Create(context.TODO(), specDeployment); err != nil {
+			return DeploymentProvisioningStatus{
+				ProvisioningStatus{
+					Err:         err,
+					FailStartup: k8sErrors.IsInvalid(err),
+				},
+			}
+		}
 		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Requeue: true,
-				Err:     err,
-			},
+			ProvisioningStatus{Requeue: true},
 		}
 	}
 
@@ -142,7 +146,9 @@ func SyncDeploymentToCluster(
 		err := clusterAPI.Client.Update(context.TODO(), clusterDeployment)
 		if err != nil {
 			if k8sErrors.IsConflict(err) {
-				return DeploymentProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
+				return DeploymentProvisioningStatus{ProvisioningStatus{Requeue: true}}
+			} else if k8sErrors.IsInvalid(err) {
+				return DeploymentProvisioningStatus{ProvisioningStatus{Err: err, FailStartup: true}}
 			}
 			return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
 		}

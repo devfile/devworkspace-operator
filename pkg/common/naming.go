@@ -76,3 +76,11 @@ func PVCCleanupJobName(workspaceId string) string {
 func MetadataConfigMapName(workspaceId string) string {
 	return fmt.Sprintf("%s-metadata", workspaceId)
 }
+
+func AutoMountConfigMapVolumeName(volumeName string) string {
+	return fmt.Sprintf("automount-configmap-%s", volumeName)
+}
+
+func AutoMountSecretVolumeName(volumeName string) string {
+	return fmt.Sprintf("automount-secret-%s", volumeName)
+}

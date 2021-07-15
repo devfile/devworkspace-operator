@@ -64,6 +64,9 @@ var deploymentDiffOpts = cmp.Options{
 	cmpopts.SortSlices(func(a, b corev1.Volume) bool {
 		return strings.Compare(a.Name, b.Name) > 0
 	}),
+	cmpopts.SortSlices(func(a, b corev1.VolumeMount) bool {
+		return strings.Compare(a.Name, b.Name) > 0
+	}),
 }
 
 func SyncDeploymentToCluster(

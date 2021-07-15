@@ -22,6 +22,7 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
@@ -58,14 +59,14 @@ func getDevWorkspaceConfigmaps(namespace string, client runtimeClient.Client) (*
 	for _, configmap := range configmaps.Items {
 		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		if mountAs == "env" {
-			additionalEnvVars = append(additionalEnvVars, getConfigMapEnvFromSource(configmap.Name))
+			additionalEnvVars = append(additionalEnvVars, getAutoMountConfigMapEnvFromSource(configmap.Name))
 		} else {
 			mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
 			if mountPath == "" {
 				mountPath = path.Join("/etc/config/", configmap.Name)
 			}
-			podAdditions.Volumes = append(podAdditions.Volumes, getVolumeWithConfigMap(configmap.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getVolumeMounts(mountPath, configmap.Name))
+			podAdditions.Volumes = append(podAdditions.Volumes, getAutoMountVolumeWithConfigMap(configmap.Name))
+			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getAutoMountConfigMapVolumeMount(mountPath, configmap.Name))
 		}
 	}
 	return podAdditions, additionalEnvVars, nil
@@ -83,23 +84,23 @@ func getDevWorkspaceSecrets(namespace string, client runtimeClient.Client) (*v1a
 	for _, secret := range secrets.Items {
 		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		if mountAs == "env" {
-			additionalEnvVars = append(additionalEnvVars, getSecretEnvFromSource(secret.Name))
+			additionalEnvVars = append(additionalEnvVars, getAutoMountSecretEnvFromSource(secret.Name))
 		} else {
 			mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
 			if mountPath == "" {
 				mountPath = path.Join("/etc/", "secret/", secret.Name)
 			}
-			podAdditions.Volumes = append(podAdditions.Volumes, getVolumeWithSecret(secret.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getVolumeMounts(mountPath, secret.Name))
+			podAdditions.Volumes = append(podAdditions.Volumes, getAutoMountVolumeWithSecret(secret.Name))
+			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getAutoMountSecretVolumeMount(mountPath, secret.Name))
 		}
 	}
 	return podAdditions, additionalEnvVars, nil
 }
 
-func getVolumeWithConfigMap(name string) corev1.Volume {
+func getAutoMountVolumeWithConfigMap(name string) corev1.Volume {
 	modeReadOnly := int32(0640)
 	workspaceVolumeMount := corev1.Volume{
-		Name: name,
+		Name: common.AutoMountConfigMapVolumeName(name),
 		VolumeSource: corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
@@ -112,10 +113,10 @@ func getVolumeWithConfigMap(name string) corev1.Volume {
 	return workspaceVolumeMount
 }
 
-func getVolumeWithSecret(name string) corev1.Volume {
+func getAutoMountVolumeWithSecret(name string) corev1.Volume {
 	modeReadOnly := int32(0640)
 	workspaceVolumeMount := corev1.Volume{
-		Name: name,
+		Name: common.AutoMountSecretVolumeName(name),
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  name,
@@ -126,16 +127,25 @@ func getVolumeWithSecret(name string) corev1.Volume {
 	return workspaceVolumeMount
 }
 
-func getVolumeMounts(mountPath, name string) corev1.VolumeMount {
+func getAutoMountConfigMapVolumeMount(mountPath, name string) corev1.VolumeMount {
 	workspaceVolumeMount := corev1.VolumeMount{
-		Name:      name,
+		Name:      common.AutoMountConfigMapVolumeName(name),
 		ReadOnly:  true,
 		MountPath: mountPath,
 	}
 	return workspaceVolumeMount
 }
 
-func getConfigMapEnvFromSource(name string) corev1.EnvFromSource {
+func getAutoMountSecretVolumeMount(mountPath, name string) corev1.VolumeMount {
+	workspaceVolumeMount := corev1.VolumeMount{
+		Name:      common.AutoMountSecretVolumeName(name),
+		ReadOnly:  true,
+		MountPath: mountPath,
+	}
+	return workspaceVolumeMount
+}
+
+func getAutoMountConfigMapEnvFromSource(name string) corev1.EnvFromSource {
 	return corev1.EnvFromSource{
 		ConfigMapRef: &corev1.ConfigMapEnvSource{
 			LocalObjectReference: corev1.LocalObjectReference{
@@ -145,7 +155,7 @@ func getConfigMapEnvFromSource(name string) corev1.EnvFromSource {
 	}
 }
 
-func getSecretEnvFromSource(name string) corev1.EnvFromSource {
+func getAutoMountSecretEnvFromSource(name string) corev1.EnvFromSource {
 	return corev1.EnvFromSource{
 		SecretRef: &corev1.SecretEnvSource{
 			LocalObjectReference: corev1.LocalObjectReference{
@@ -156,14 +166,10 @@ func getSecretEnvFromSource(name string) corev1.EnvFromSource {
 }
 
 func checkAutoMountVolumesForCollision(base, automount []v1alpha1.PodAdditions) error {
-	// Check that auto-mounted volumes do not have duplicated names
+	// Get a map of automounted volume names to volume structs
 	automountVolumeNames := map[string]corev1.Volume{}
 	for _, podAddition := range automount {
 		for _, volume := range podAddition.Volumes {
-			if conflict, exists := automountVolumeNames[volume.Name]; exists {
-				return fmt.Errorf("auto-mounted %s and %s have the same name",
-					formatVolumeDescription(volume), formatVolumeDescription(conflict))
-			}
 			automountVolumeNames[volume.Name] = volume
 		}
 	}

@@ -16,7 +16,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -370,56 +369,6 @@ func getPods(workspace *dw.DevWorkspace, client runtimeClient.Client) (*corev1.P
 	return pods, nil
 }
 
-func getDevWorkspaceConfigmaps(namespace string, client runtimeClient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
-	configmaps := &corev1.ConfigMapList{}
-	if err := client.List(context.TODO(), configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
-		constants.DevWorkspaceMountLabel: "true",
-	}); err != nil {
-		return nil, nil, err
-	}
-	podAdditions := &v1alpha1.PodAdditions{}
-	var additionalEnvVars []corev1.EnvFromSource
-	for _, configmap := range configmaps.Items {
-		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
-		if mountAs == "env" {
-			additionalEnvVars = append(additionalEnvVars, getConfigMapEnvFromSource(configmap.Name))
-		} else {
-			mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
-			if mountPath == "" {
-				mountPath = path.Join("/etc/", "config/", configmap.Name)
-			}
-			podAdditions.Volumes = append(podAdditions.Volumes, getVolumeWithConfigMap(configmap.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getVolumeMounts(mountPath, configmap.Name))
-		}
-	}
-	return podAdditions, additionalEnvVars, nil
-}
-
-func getDevWorkspaceSecrets(namespace string, client runtimeClient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
-	secrets := &corev1.SecretList{}
-	if err := client.List(context.TODO(), secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
-		constants.DevWorkspaceMountLabel: "true",
-	}); err != nil {
-		return nil, nil, err
-	}
-	podAdditions := &v1alpha1.PodAdditions{}
-	var additionalEnvVars []corev1.EnvFromSource
-	for _, secret := range secrets.Items {
-		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
-		if mountAs == "env" {
-			additionalEnvVars = append(additionalEnvVars, getSecretEnvFromSource(secret.Name))
-		} else {
-			mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
-			if mountPath == "" {
-				mountPath = path.Join("/etc/", "secret/", secret.Name)
-			}
-			podAdditions.Volumes = append(podAdditions.Volumes, getVolumeWithSecret(secret.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getVolumeMounts(mountPath, secret.Name))
-		}
-	}
-	return podAdditions, additionalEnvVars, nil
-}
-
 // checkFailedPods check if related pods has unrecoverable states: CrashLoopBackOffReason, ImagePullErr
 // Returns optional message with detected unrecoverable state details
 //         error is any happens during check
@@ -516,45 +465,6 @@ func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {
 	return workspaceVolumeMount
 }
 
-func getVolumeWithConfigMap(name string) corev1.Volume {
-	modeReadOnly := int32(0640)
-	workspaceVolumeMount := corev1.Volume{
-		Name: name,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: name,
-				},
-				DefaultMode: &modeReadOnly,
-			},
-		},
-	}
-	return workspaceVolumeMount
-}
-
-func getVolumeWithSecret(name string) corev1.Volume {
-	modeReadOnly := int32(0640)
-	workspaceVolumeMount := corev1.Volume{
-		Name: name,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName:  name,
-				DefaultMode: &modeReadOnly,
-			},
-		},
-	}
-	return workspaceVolumeMount
-}
-
-func getVolumeMounts(mountPath, name string) corev1.VolumeMount {
-	workspaceVolumeMount := corev1.VolumeMount{
-		Name:      name,
-		ReadOnly:  true,
-		MountPath: mountPath,
-	}
-	return workspaceVolumeMount
-}
-
 func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
 	commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
 	for _, vol := range podAdditions.Volumes {
@@ -574,24 +484,4 @@ func checkContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok
 		}
 	}
 	return true
-}
-
-func getConfigMapEnvFromSource(name string) corev1.EnvFromSource {
-	return corev1.EnvFromSource{
-		ConfigMapRef: &corev1.ConfigMapEnvSource{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: name,
-			},
-		},
-	}
-}
-
-func getSecretEnvFromSource(name string) corev1.EnvFromSource {
-	return corev1.EnvFromSource{
-		SecretRef: &corev1.SecretEnvSource{
-			LocalObjectReference: corev1.LocalObjectReference{
-				Name: name,
-			},
-		},
-	}
 }

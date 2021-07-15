@@ -14,6 +14,7 @@ package provision
 
 import (
 	"context"
+	"fmt"
 	"path"
 
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +24,27 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
+
+func getAutoMountResources(namespace string, client runtimeClient.Client) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+	cmPodAdditions, cmEnvAdditions, err := getDevWorkspaceConfigmaps(namespace, client)
+	if err != nil {
+		return nil, nil, err
+	}
+	secretPodAdditions, secretEnvAdditions, err := getDevWorkspaceSecrets(namespace, client)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var allPodAdditions []v1alpha1.PodAdditions
+	if cmPodAdditions != nil {
+		allPodAdditions = append(allPodAdditions, *cmPodAdditions)
+	}
+	if secretPodAdditions != nil {
+		allPodAdditions = append(allPodAdditions, *secretPodAdditions)
+	}
+
+	return allPodAdditions, append(cmEnvAdditions, secretEnvAdditions...), nil
+}
 
 func getDevWorkspaceConfigmaps(namespace string, client runtimeClient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
 	configmaps := &corev1.ConfigMapList{}
@@ -131,4 +153,79 @@ func getSecretEnvFromSource(name string) corev1.EnvFromSource {
 			},
 		},
 	}
+}
+
+func checkAutoMountVolumesForCollision(base, automount []v1alpha1.PodAdditions) error {
+	// Check that auto-mounted volumes do not have duplicated names
+	automountVolumeNames := map[string]corev1.Volume{}
+	for _, podAddition := range automount {
+		for _, volume := range podAddition.Volumes {
+			if conflict, exists := automountVolumeNames[volume.Name]; exists {
+				return fmt.Errorf("auto-mounted %s and %s have the same name",
+					formatVolumeDescription(volume), formatVolumeDescription(conflict))
+			}
+			automountVolumeNames[volume.Name] = volume
+		}
+	}
+
+	// Check that workspace volumes do not conflict with automounted volumes
+	for _, podAddition := range base {
+		for _, volume := range podAddition.Volumes {
+			if conflict, exists := automountVolumeNames[volume.Name]; exists {
+				return fmt.Errorf("DevWorkspace volume %s conflicts with automounted volume from %s",
+					volume.Name, formatVolumeDescription(conflict))
+			}
+		}
+	}
+
+	// Check that automounted mountPaths do not collide
+	automountVolumeMountsByMountPath := map[string]corev1.VolumeMount{}
+	for _, podAddition := range automount {
+		for _, vm := range podAddition.VolumeMounts {
+			if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
+				return fmt.Errorf("auto-mounted volumes from %s and %s have the same mount path",
+					getVolumeDescriptionFromVolumeMount(vm, automount), getVolumeDescriptionFromVolumeMount(conflict, automount))
+			}
+			automountVolumeMountsByMountPath[vm.MountPath] = vm
+		}
+	}
+
+	// Check that automounted volume mountPaths do not conflict with existing mountPaths in any container
+	for _, podAddition := range base {
+		for _, container := range podAddition.Containers {
+			for _, vm := range container.VolumeMounts {
+				if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
+					return fmt.Errorf("DevWorkspace volume %s in container %s has same mountpath as auto-mounted volume from %s",
+						getVolumeDescriptionFromVolumeMount(vm, base), container.Name, getVolumeDescriptionFromVolumeMount(conflict, automount))
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// getVolumeDescriptionFromVolumeMount takes a volumeMount and returns a formatted description of the underlying volume
+// (i.e. "secret <secretName>" or "configmap <configmapName>" as defined by formatVolumeDescription) the provided slice
+// of podAdditions. If a match cannot be found, the volumeMount name is returned.
+func getVolumeDescriptionFromVolumeMount(vm corev1.VolumeMount, podAdditions []v1alpha1.PodAdditions) string {
+	for _, podAddition := range podAdditions {
+		for _, volume := range podAddition.Volumes {
+			if volume.Name == vm.Name {
+				return formatVolumeDescription(volume)
+			}
+		}
+	}
+	return vm.Name
+}
+
+// formatVolumeDescription formats a given volume as either "configmap <configmap-name>" or "secret <secret-name>",
+// depending on whether the volume refers to a configmap or secret. If the volume is neither a secret nor configmap,
+// returns the name of the volume itself.
+func formatVolumeDescription(vol corev1.Volume) string {
+	if vol.Secret != nil {
+		return fmt.Sprintf("secret %s", vol.Secret.SecretName)
+	} else if vol.ConfigMap != nil {
+		return fmt.Sprintf("configmap %s", vol.ConfigMap.Name)
+	}
+	return vol.Name
 }

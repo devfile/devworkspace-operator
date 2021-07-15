@@ -74,28 +74,22 @@ func SyncDeploymentToCluster(
 	saName string,
 	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
 
-	cmPodAdditions, configmapEnvFromSourceAdditions, err := getDevWorkspaceConfigmaps(workspace.Namespace, clusterAPI.Client)
+	automountPodAdditions, automountEnv, err := getAutoMountResources(workspace.Namespace, clusterAPI.Client)
 	if err != nil {
 		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Err: err},
+			ProvisioningStatus{Err: err},
 		}
 	}
-	podAdditions = append(podAdditions, *cmPodAdditions)
-
-	sPodAdditions, secretEnvFromSourceAdditions, err := getDevWorkspaceSecrets(workspace.Namespace, clusterAPI.Client)
-	if err != nil {
+	if err := checkAutoMountVolumesForCollision(podAdditions, automountPodAdditions); err != nil {
 		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Err: err},
+			ProvisioningStatus{Err: err, FailStartup: true},
 		}
 	}
-	podAdditions = append(podAdditions, *sPodAdditions)
+	podAdditions = append(podAdditions, automountPodAdditions...)
 
 	var envFromSourceAdditions []corev1.EnvFromSource
-	if configmapEnvFromSourceAdditions != nil {
-		envFromSourceAdditions = append(envFromSourceAdditions, configmapEnvFromSourceAdditions...)
-	}
-	if secretEnvFromSourceAdditions != nil {
-		envFromSourceAdditions = append(envFromSourceAdditions, secretEnvFromSourceAdditions...)
+	if automountEnv != nil {
+		envFromSourceAdditions = append(envFromSourceAdditions, automountEnv...)
 	}
 
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each

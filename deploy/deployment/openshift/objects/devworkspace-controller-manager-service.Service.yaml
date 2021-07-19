@@ -14,6 +14,9 @@ spec:
     port: 443
     protocol: TCP
     targetPort: conversion
+  - name: metrics
+    port: 8443
+    targetPort: metrics
   selector:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator

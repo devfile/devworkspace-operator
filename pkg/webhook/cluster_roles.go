@@ -100,6 +100,28 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 					"watch",
 				},
 			},
+			{
+				APIGroups: []string{
+					"authentication.k8s.io",
+				},
+				Resources: []string{
+					"tokenreviews",
+				},
+				Verbs: []string{
+					"create",
+				},
+			},
+			{
+				APIGroups: []string{
+					"authorization.k8s.io",
+				},
+				Resources: []string{
+					"subjectaccessreviews",
+				},
+				Verbs: []string{
+					"create",
+				},
+			},
 		},
 	}
 

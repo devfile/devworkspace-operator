@@ -13,6 +13,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/signal"
@@ -60,6 +61,10 @@ func init() {
 func main() {
 	logf.SetLogger(zap.New(zap.UseDevMode(config.GetDevModeEnabled())))
 
+	var metricsAddr string
+	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.Parse()
+
 	// Print versions
 	log.Info(fmt.Sprintf("Operator Version: %s", version.Version))
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -84,6 +89,7 @@ func main() {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Namespace:              namespace,
 		Scheme:                 scheme,
+		MetricsBindAddress:     metricsAddr,
 		HealthProbeBindAddress: ":6789",
 		CertDir:                server.WebhookServerCertDir,
 	})

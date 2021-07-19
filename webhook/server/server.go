@@ -36,6 +36,8 @@ const (
 	WebhookServerServiceName = "devworkspace-webhookserver"
 	WebhookServerPortName    = "webhook-server"
 
+	WebhookMetricsPortName = "metrics"
+
 	// Holds webhook server related SA name and SA-related objects, like ClusterRole, ClusterRoleBinding
 	WebhookServerSAName = "devworkspace-webhook-server"
 

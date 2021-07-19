@@ -20,6 +20,7 @@ import (
 	"time"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -120,6 +121,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		workspace.Status.Phase = dw.DevWorkspaceStatusStarting
 		workspace.Status.Message = "Initializing DevWorkspace"
 		err = r.Status().Update(ctx, workspace)
+		metrics.WorkspaceStarted(workspace, reqLogger)
 		return reconcile.Result{Requeue: true}, err
 	}
 

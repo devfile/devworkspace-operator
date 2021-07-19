@@ -22,6 +22,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 
 	"github.com/go-logr/logr"
@@ -65,6 +66,7 @@ var healthHttpClient = &http.Client{
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
 func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+	updateMetricsForPhase(workspace, status.phase, logger)
 	workspace.Status.Phase = status.phase
 
 	syncConditions(&workspace.Status, status)
@@ -214,4 +216,21 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 
 	// No conditions are set but workspace is not running; unclear what value should be set.
 	return ""
+}
+
+// updateMetricsForPhase increments DevWorkspace startup metrics based on phase transitions in a DevWorkspace. It avoids
+// incrementing the underlying metrics where possible (e.g. reconciling an already running workspace) by only incrementing
+// counters when the new phase is different from the current on in the DevWorkspace.
+func updateMetricsForPhase(workspace *dw.DevWorkspace, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
+	if workspace.Status.Phase == newPhase {
+		return
+	}
+	switch newPhase {
+	case dw.DevWorkspaceStatusRunning:
+		metrics.WorkspaceRunning(workspace, logger)
+	case dw.DevWorkspaceStatusFailed:
+		metrics.WorkspaceFailed(workspace, logger)
+	case dw.DevWorkspaceStatusStarting:
+		metrics.WorkspaceStarted(workspace, logger)
+	}
 }

@@ -66,6 +66,9 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req 
 
 	newCreator, found := newWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if !found {
+		if newWksp.Labels == nil {
+			newWksp.Labels = map[string]string{}
+		}
 		newWksp.Labels[constants.DevWorkspaceCreatorLabel] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}
@@ -96,6 +99,9 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(_ context.Context, req 
 
 	newCreator, found := newWksp.Labels[constants.DevWorkspaceCreatorLabel]
 	if !found {
+		if newWksp.Labels == nil {
+			newWksp.Labels = map[string]string{}
+		}
 		newWksp.Labels[constants.DevWorkspaceCreatorLabel] = oldCreator
 		return h.returnPatched(req, newWksp)
 	}

@@ -15,23 +15,18 @@ package controllers
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
-)
 
-const (
-	PullSecretsReady     dw.DevWorkspaceConditionType = "PullSecretsReady"
-	DevWorkspaceResolved dw.DevWorkspaceConditionType = "DevWorkspaceResolved"
-	StorageReady         dw.DevWorkspaceConditionType = "StorageReady"
-	DeploymentReady      dw.DevWorkspaceConditionType = "DeploymentReady"
-	DevWorkspaceWarning  dw.DevWorkspaceConditionType = "DevWorkspaceWarning"
+	"github.com/devfile/devworkspace-operator/pkg/conditions"
 )
 
 var conditionOrder = []dw.DevWorkspaceConditionType{
-	DevWorkspaceResolved,
-	StorageReady,
+	conditions.Started,
+	conditions.DevWorkspaceResolved,
+	conditions.StorageReady,
 	dw.DevWorkspaceRoutingReady,
 	dw.DevWorkspaceServiceAccountReady,
-	PullSecretsReady,
-	DeploymentReady,
+	conditions.PullSecretsReady,
+	conditions.DeploymentReady,
 	dw.DevWorkspaceReady,
 }
 
@@ -68,15 +63,6 @@ func (c *workspaceConditions) setConditionFalse(conditionType dw.DevWorkspaceCon
 		Status:  corev1.ConditionFalse,
 		Message: msg,
 	}
-}
-
-func getConditionByType(conditions []dw.DevWorkspaceCondition, t dw.DevWorkspaceConditionType) *dw.DevWorkspaceCondition {
-	for _, condition := range conditions {
-		if condition.Type == t {
-			return &condition
-		}
-	}
-	return nil
 }
 
 // getFirstFalse checks current conditions in a set order (defined by conditionOrder) and returns the first

@@ -63,11 +63,10 @@ func CreateOrUpdateSecureService(client crclient.Client, ctx context.Context, na
 
 		// Cannot naively copy spec, as clusterIP is unmodifiable
 		clusterIP := existingCfg.Spec.ClusterIP
-		service.Spec = existingCfg.Spec
-		service.Spec.ClusterIP = clusterIP
-		service.ResourceVersion = existingCfg.ResourceVersion
+		existingCfg.Spec = service.Spec
+		existingCfg.Spec.ClusterIP = clusterIP
 
-		err = client.Update(ctx, service)
+		err = client.Update(ctx, existingCfg)
 		if err != nil {
 			return err
 		}

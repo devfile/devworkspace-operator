@@ -24,6 +24,7 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
+	"github.com/devfile/devworkspace-operator/pkg/conditions"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -72,7 +73,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 	syncConditions(&workspace.Status, status)
 
 	infoMessage := getInfoMessage(workspace, status)
-	if warn := getConditionByType(workspace.Status.Conditions, DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
+	if warn := conditions.GetConditionByType(workspace.Status.Conditions, conditions.DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
 		infoMessage = fmt.Sprintf("%s %s", warningPresentInfoMessage, infoMessage)
 	}
 	if workspace.Status.Message != infoMessage {

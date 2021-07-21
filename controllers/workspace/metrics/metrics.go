@@ -53,9 +53,20 @@ var (
 			metricSourceLabel,
 		},
 	)
+	workspaceStartupTimesHist = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Namespace: "devworkspace",
+			Name:      "startup_time",
+			Help:      "Total time taken to start a DevWorkspace, in seconds",
+			Buckets:   []float64{10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180},
+		},
+		[]string{
+			metricSourceLabel,
+		},
+	)
 )
 
 func init() {
 	// Register custom metrics with the global prometheus registry
-	metrics.Registry.MustRegister(workspaceTotal, workspaceStarts, workspaceFailures)
+	metrics.Registry.MustRegister(workspaceTotal, workspaceStarts, workspaceFailures, workspaceStartupTimesHist)
 }

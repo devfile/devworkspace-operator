@@ -67,10 +67,9 @@ var healthHttpClient = &http.Client{
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
 func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+	syncConditions(&workspace.Status, status)
 	updateMetricsForPhase(workspace, status.phase, logger)
 	workspace.Status.Phase = status.phase
-
-	syncConditions(&workspace.Status, status)
 
 	infoMessage := getInfoMessage(workspace, status)
 	if warn := conditions.GetConditionByType(workspace.Status.Conditions, conditions.DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {

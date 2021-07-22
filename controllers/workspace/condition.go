@@ -22,6 +22,7 @@ const (
 	DevWorkspaceResolved dw.DevWorkspaceConditionType = "DevWorkspaceResolved"
 	StorageReady         dw.DevWorkspaceConditionType = "StorageReady"
 	DeploymentReady      dw.DevWorkspaceConditionType = "DeploymentReady"
+	DevWorkspaceWarning  dw.DevWorkspaceConditionType = "DevWorkspaceWarning"
 )
 
 var conditionOrder = []dw.DevWorkspaceConditionType{

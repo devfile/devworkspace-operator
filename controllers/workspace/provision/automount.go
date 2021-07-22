@@ -19,14 +19,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getAutoMountResources(namespace string, client runtimeClient.Client) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+func getAutoMountResources(namespace string, client k8sclient.Client) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
 	cmPodAdditions, cmEnvAdditions, err := getDevWorkspaceConfigmaps(namespace, client)
 	if err != nil {
 		return nil, nil, err
@@ -47,7 +46,7 @@ func getAutoMountResources(namespace string, client runtimeClient.Client) ([]v1a
 	return allPodAdditions, append(cmEnvAdditions, secretEnvAdditions...), nil
 }
 
-func getDevWorkspaceConfigmaps(namespace string, client runtimeClient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+func getDevWorkspaceConfigmaps(namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
 	configmaps := &corev1.ConfigMapList{}
 	if err := client.List(context.TODO(), configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -72,7 +71,7 @@ func getDevWorkspaceConfigmaps(namespace string, client runtimeClient.Client) (*
 	return podAdditions, additionalEnvVars, nil
 }
 
-func getDevWorkspaceSecrets(namespace string, client runtimeClient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+func getDevWorkspaceSecrets(namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
 	secrets := &corev1.SecretList{}
 	if err := client.List(context.TODO(), secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",

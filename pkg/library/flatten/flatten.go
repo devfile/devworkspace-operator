@@ -21,6 +21,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
+	"github.com/devfile/api/v2/pkg/validation/variables"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
@@ -50,18 +51,24 @@ type ResolverTools struct {
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
 // are inlined as components.
-func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools) (*dw.DevWorkspaceTemplateSpec, error) {
+func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools) (*dw.DevWorkspaceTemplateSpec, *variables.VariableWarning, error) {
 	// Web terminals get default container components if they do not specify one
 	if err := web_terminal.AddDefaultContainerIfNeeded(workspace); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	resolutionCtx := &resolutionContextTree{}
 	resolvedDW, err := recursiveResolve(workspace, tooling, resolutionCtx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return resolvedDW, nil
+
+	warnings := variables.ValidateAndReplaceGlobalVariable(resolvedDW)
+	if len(warnings.Commands) > 0 || len(warnings.Components) > 0 || len(warnings.Projects) > 0 || len(warnings.StarterProjects) > 0 {
+		return resolvedDW, &warnings, nil
+	}
+
+	return resolvedDW, nil, nil
 }
 
 func recursiveResolve(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools, resolveCtx *resolutionContextTree) (*dw.DevWorkspaceTemplateSpec, error) {
@@ -314,4 +321,21 @@ func canImportDWT(dwNamespace string, dwt *dw.DevWorkspaceTemplate) bool {
 		}
 	}
 	return false
+}
+
+func FormatVariablesWarning(warn *variables.VariableWarning) string {
+	var msg []string
+	for componentName, warnings := range warn.Components {
+		msg = append(msg, fmt.Sprintf("invalid variables in component %s: '%s'", componentName, strings.Join(warnings, "', '")))
+	}
+	for commandName, warnings := range warn.Commands {
+		msg = append(msg, fmt.Sprintf("invalid variables in component %s: '%s'", commandName, strings.Join(warnings, "', '")))
+	}
+	for projectName, warnings := range warn.Projects {
+		msg = append(msg, fmt.Sprintf("invalid variables in project %s: '%s'", projectName, strings.Join(warnings, "', '")))
+	}
+	for starterProjectName, warnings := range warn.StarterProjects {
+		msg = append(msg, fmt.Sprintf("invalid variables in starter project %s: '%s'", starterProjectName, strings.Join(warnings, "', '")))
+	}
+	return fmt.Sprintf("Error processing variable replacements: %s", strings.Join(msg, "; "))
 }

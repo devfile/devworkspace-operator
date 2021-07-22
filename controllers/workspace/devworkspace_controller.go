@@ -180,9 +180,14 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		InternalRegistry:   &registry.InternalRegistryImpl{},
 		HttpClient:         http.DefaultClient,
 	}
-	flattenedWorkspace, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, flattenHelpers)
+	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, flattenHelpers)
 	if err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), reqLogger, &reconcileStatus)
+	}
+	if warnings != nil {
+		reconcileStatus.setConditionTrue(DevWorkspaceWarning, flatten.FormatVariablesWarning(warnings))
+	} else {
+		reconcileStatus.setConditionFalse(DevWorkspaceWarning, "No warnings in processing DevWorkspace")
 	}
 	workspace.Spec.Template = *flattenedWorkspace
 	reconcileStatus.setConditionTrue(DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")

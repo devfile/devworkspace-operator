@@ -46,7 +46,7 @@ spec:
     will be available in all namespaces on the cluster. DevWorkspace creation is
     driven by the DevWorkspace custom resource, which can be created in any
     namespace to provision a full development environment. To get started, browse
-    the DevWorkspace [spec](TODO) or view preconfigured [samples](TODO).
+    the DevWorkspace [spec](https://docs.devfile.io/devfile/2.1.0/user-guide/api-reference.html).
 
     Once a DevWorkspace is started, it can be accessed via the URL in its
     `.status.mainUrl` field.
@@ -57,8 +57,9 @@ spec:
     ## Uninstalling the operator
     The DevWorkspace Operator utilizes finalizers on resources it creates and
     webhooks to restrict access to development resources. As a result, manual steps
-    are required in uninstalling the operator. See the [documentation](TODO) for
-    details.
+    are required in uninstalling the operator. See the
+    [documentation](https://github.com/devfile/devworkspace-operator/blob/main/doc/uninstall.md)
+    for details.
 
   displayName: DevWorkspace Operator
   icon:

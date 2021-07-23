@@ -39,6 +39,9 @@ const (
 	// devworkspacePhaseFailing represents a DevWorkspace that has encountered an unrecoverable error and is in
 	// the process of stopping.
 	devworkspacePhaseFailing dw.DevWorkspacePhase = "Failing"
+
+	// warningPresentInfoMessage is the info message printed
+	warningPresentInfoMessage string = "[warnings present]"
 )
 
 type currentStatus struct {
@@ -67,6 +70,9 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 	syncConditions(&workspace.Status, status)
 
 	infoMessage := getInfoMessage(workspace, status)
+	if warn := getConditionByType(workspace.Status.Conditions, DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
+		infoMessage = fmt.Sprintf("%s %s", warningPresentInfoMessage, infoMessage)
+	}
 	if workspace.Status.Message != infoMessage {
 		workspace.Status.Message = infoMessage
 	}

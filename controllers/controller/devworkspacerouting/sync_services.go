@@ -31,7 +31,7 @@ import (
 
 var serviceDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(corev1.Service{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "SessionAffinity"),
+	cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs", "SessionAffinity"),
 	cmpopts.IgnoreFields(corev1.ServicePort{}, "TargetPort"),
 	cmpopts.SortSlices(func(a, b corev1.ServicePort) bool {
 		return strings.Compare(a.Name, b.Name) > 0

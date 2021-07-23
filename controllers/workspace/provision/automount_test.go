@@ -72,7 +72,7 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 				{
 					name:       "baseVolume",
 					mountPath:  "basePath",
-					volumeType: configMapVolumeType,
+					volumeType: devWorkspaceVolume,
 				},
 			},
 			automountPodAdditions: []volumeDesc{
@@ -82,7 +82,7 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 					volumeType: configMapVolumeType,
 				},
 			},
-			errRegexp: "DevWorkspace volume baseVolume conflicts with automounted volume from configmap baseVolume",
+			errRegexp: "DevWorkspace volume 'baseVolume' conflicts with automounted volume from configmap 'baseVolume'",
 		},
 		{
 			name: "Detects mountPath collision with DevWorkspace",
@@ -100,7 +100,7 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 					volumeType: secretVolumeType,
 				},
 			},
-			errRegexp: fmt.Sprintf("DevWorkspace volume baseVolume in container %s has same mountpath as auto-mounted volume from secret testVolume", testContainerName),
+			errRegexp: fmt.Sprintf("DevWorkspace volume 'baseVolume' in container %s has same mountpath as auto-mounted volume from secret 'testVolume'", testContainerName),
 		},
 		{
 			name: "Detects mountPath collision in automounted volumes",
@@ -116,7 +116,7 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 					volumeType: configMapVolumeType,
 				},
 			},
-			errRegexp: "auto-mounted volumes from configmap testVolume2 and secret testVolume1 have the same mount path",
+			errRegexp: "auto-mounted volumes from configmap 'testVolume2' and secret 'testVolume1' have the same mount path",
 		},
 	}
 	for _, tt := range tests {

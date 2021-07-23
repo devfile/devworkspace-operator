@@ -177,7 +177,7 @@ func checkAutoMountVolumesForCollision(base, automount []v1alpha1.PodAdditions) 
 	for _, podAddition := range base {
 		for _, volume := range podAddition.Volumes {
 			if conflict, exists := automountVolumeNames[volume.Name]; exists {
-				return fmt.Errorf("DevWorkspace volume %s conflicts with automounted volume from %s",
+				return fmt.Errorf("DevWorkspace volume '%s' conflicts with automounted volume from %s",
 					volume.Name, formatVolumeDescription(conflict))
 			}
 		}
@@ -223,14 +223,14 @@ func getVolumeDescriptionFromVolumeMount(vm corev1.VolumeMount, podAdditions []v
 	return vm.Name
 }
 
-// formatVolumeDescription formats a given volume as either "configmap <configmap-name>" or "secret <secret-name>",
+// formatVolumeDescription formats a given volume as either "configmap '<configmap-name>'" or "secret '<secret-name>'",
 // depending on whether the volume refers to a configmap or secret. If the volume is neither a secret nor configmap,
 // returns the name of the volume itself.
 func formatVolumeDescription(vol corev1.Volume) string {
 	if vol.Secret != nil {
-		return fmt.Sprintf("secret %s", vol.Secret.SecretName)
+		return fmt.Sprintf("secret '%s'", vol.Secret.SecretName)
 	} else if vol.ConfigMap != nil {
-		return fmt.Sprintf("configmap %s", vol.ConfigMap.Name)
+		return fmt.Sprintf("configmap '%s'", vol.ConfigMap.Name)
 	}
-	return vol.Name
+	return fmt.Sprintf("'%s'", vol.Name)
 }

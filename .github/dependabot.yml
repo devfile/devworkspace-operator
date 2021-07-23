@@ -1,9 +1,0 @@
-version: 2
-updates:
-  # Enable version updates for Docker
-  - package-ecosystem: "docker"
-    # Look for a `Dockerfile` in the `build` directory
-    directory: "/build"
-    # Check for updates once a week
-    schedule:
-      interval: "daily"

@@ -18547,7 +18547,7 @@ spec:
         - name: RELATED_IMAGE_web_terminal_tooling
           value: quay.io/wto/web-terminal-tooling:latest
         - name: RELATED_IMAGE_pvc_cleanup_job
-          value: quay.io/libpod/busybox:1.30.1
+          value: registry.access.redhat.com/ubi8-micro:8.4-81
         - name: RELATED_IMAGE_async_storage_server
           value: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
         - name: RELATED_IMAGE_async_storage_sidecar

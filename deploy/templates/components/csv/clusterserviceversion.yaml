@@ -62,9 +62,6 @@ spec:
     for details.
 
   displayName: DevWorkspace Operator
-  icon:
-  - base64data: ""
-    mediatype: ""
   install:
     spec:
       clusterPermissions: null

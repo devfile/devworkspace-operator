@@ -61,9 +61,6 @@ spec:
     [documentation](https://github.com/devfile/devworkspace-operator/blob/main/doc/uninstall.md)
     for details.
   displayName: DevWorkspace Operator
-  icon:
-  - base64data: ""
-    mediatype: ""
   install:
     spec:
       clusterPermissions:

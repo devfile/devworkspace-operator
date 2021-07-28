@@ -39,7 +39,8 @@ WORKDIR /
 COPY --from=builder /project-clone/_output/bin/project-clone /usr/local/bin/project-clone
 
 ENV USER_UID=1001 \
-    USER_NAME=project-clone
+    USER_NAME=project-clone \
+    HOME=/home/user
 
 COPY build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup

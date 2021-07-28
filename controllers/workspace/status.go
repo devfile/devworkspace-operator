@@ -98,9 +98,11 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 		currCondition, ok := currentStatus.conditions[workspaceCondition.Type]
 		if !ok {
 			// Didn't observe this condition this time; set status to unknown
-			workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
-			workspaceStatus.Conditions[idx].Status = corev1.ConditionUnknown
-			workspaceStatus.Conditions[idx].Message = ""
+			if workspaceCondition.Status != corev1.ConditionUnknown {
+				workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
+				workspaceStatus.Conditions[idx].Status = corev1.ConditionUnknown
+				workspaceStatus.Conditions[idx].Message = ""
+			}
 			continue
 		}
 

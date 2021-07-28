@@ -18533,7 +18533,7 @@ spec:
             fieldRef:
               fieldPath: spec.serviceAccountName
         - name: MAX_CONCURRENT_RECONCILES
-          value: "1"
+          value: "5"
         - name: WEBHOOKS_SERVER_MEMORY_LIMIT
           value: 300Mi
         - name: WEBHOOKS_SERVER_MEMORY_REQUEST
@@ -18583,11 +18583,11 @@ spec:
           timeoutSeconds: 5
         resources:
           limits:
-            cpu: 200m
-            memory: 300Mi
+            cpu: 1000m
+            memory: 1Gi
           requests:
-            cpu: 100m
-            memory: 20Mi
+            cpu: 250m
+            memory: 100Mi
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-tls-certs

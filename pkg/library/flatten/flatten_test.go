@@ -37,7 +37,7 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 				WorkspaceNamespace: "test-ignored",
 				K8sClient:          testClient,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -67,7 +67,7 @@ func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
 				Context:          context.Background(),
 				InternalRegistry: testRegistry,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -98,7 +98,7 @@ func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 				Context:    context.Background(),
 				HttpClient: testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -129,7 +129,7 @@ func TestResolveDevWorkspacePluginURI(t *testing.T) {
 				Context:    context.Background(),
 				HttpClient: testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -165,7 +165,7 @@ func TestResolveDevWorkspaceParents(t *testing.T) {
 				K8sClient:          testK8sClient,
 				HttpClient:         testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -203,7 +203,7 @@ func TestResolveDevWorkspaceMissingDefaults(t *testing.T) {
 				K8sClient:  testK8sClient,
 				HttpClient: testHttpGetter,
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -239,7 +239,7 @@ func TestResolveDevWorkspaceAnnotations(t *testing.T) {
 				HttpClient:         testHttpGetter,
 				WorkspaceNamespace: "default-namespace",
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -275,7 +275,7 @@ func TestResolveDevWorkspaceTemplateNamespaceRestriction(t *testing.T) {
 				HttpClient:         testHttpGetter,
 				WorkspaceNamespace: "test-namespace",
 			}
-			outputWorkspace, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

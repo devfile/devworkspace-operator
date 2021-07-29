@@ -17,6 +17,7 @@ import (
 	"reflect"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // resolutionContextTree is a recursive structure representing information about the devworkspace that is
@@ -63,4 +64,16 @@ func formatImportCycle(end *resolutionContextTree) string {
 		cycle = fmt.Sprintf("%s -> %s", end.componentName, cycle)
 	}
 	return cycle
+}
+
+func getOriginalNameForComponent(component dw.Component) string {
+	if component.Attributes.Exists(constants.PluginSourceAttribute) {
+		var err error
+		componentName := component.Attributes.GetString(constants.PluginSourceAttribute, &err)
+		if err != nil {
+			return component.Name
+		}
+		return componentName
+	}
+	return component.Name
 }

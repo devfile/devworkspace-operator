@@ -28,15 +28,7 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
-			testClient := &testutil.FakeK8sClient{
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:            context.Background(),
-				WorkspaceNamespace: "test-ignored",
-				K8sClient:          testClient,
-			}
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -59,14 +51,8 @@ func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
-			testRegistry := &testutil.FakeInternalRegistry{
-				Plugins: tt.Input.DevWorkspaceResources,
-				Errors:  tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:          context.Background(),
-				InternalRegistry: testRegistry,
-			}
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
+
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -89,15 +75,8 @@ func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
-			testHttpGetter := &testutil.FakeHTTPGetter{
-				DevfileResources:      tt.Input.DevfileResources,
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:    context.Background(),
-				HttpClient: testHttpGetter,
-			}
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
+
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -120,15 +99,8 @@ func TestResolveDevWorkspacePluginURI(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
-			testHttpGetter := &testutil.FakeHTTPGetter{
-				DevfileResources:      tt.Input.DevfileResources,
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:    context.Background(),
-				HttpClient: testHttpGetter,
-			}
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
+
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -150,21 +122,8 @@ func TestResolveDevWorkspaceParents(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
-			testHttpGetter := &testutil.FakeHTTPGetter{
-				DevfileResources:      tt.Input.DevfileResources,
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testK8sClient := &testutil.FakeK8sClient{
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:            context.Background(),
-				WorkspaceNamespace: "test-ignored",
-				K8sClient:          testK8sClient,
-				HttpClient:         testHttpGetter,
-			}
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
+
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -189,20 +148,9 @@ func TestResolveDevWorkspaceMissingDefaults(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
-			testHttpGetter := &testutil.FakeHTTPGetter{
-				DevfileResources:      tt.Input.DevfileResources,
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testK8sClient := &testutil.FakeK8sClient{
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:    context.Background(),
-				K8sClient:  testK8sClient,
-				HttpClient: testHttpGetter,
-			}
+			testResolverTools := getTestingTools(tt.Input, "")
+			testResolverTools.InternalRegistry = nil
+
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -224,21 +172,8 @@ func TestResolveDevWorkspaceAnnotations(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
-			testHttpGetter := &testutil.FakeHTTPGetter{
-				DevfileResources:      tt.Input.DevfileResources,
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testK8sClient := &testutil.FakeK8sClient{
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:            context.Background(),
-				K8sClient:          testK8sClient,
-				HttpClient:         testHttpGetter,
-				WorkspaceNamespace: "default-namespace",
-			}
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
+
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -260,21 +195,8 @@ func TestResolveDevWorkspaceTemplateNamespaceRestriction(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
-			testHttpGetter := &testutil.FakeHTTPGetter{
-				DevfileResources:      tt.Input.DevfileResources,
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testK8sClient := &testutil.FakeK8sClient{
-				DevWorkspaceResources: tt.Input.DevWorkspaceResources,
-				Errors:                tt.Input.Errors,
-			}
-			testResolverTools := ResolverTools{
-				Context:            context.Background(),
-				K8sClient:          testK8sClient,
-				HttpClient:         testHttpGetter,
-				WorkspaceNamespace: "test-namespace",
-			}
+			testResolverTools := getTestingTools(tt.Input, "test-namespace")
+
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -287,5 +209,29 @@ func TestResolveDevWorkspaceTemplateNamespaceRestriction(t *testing.T) {
 					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
 			}
 		})
+	}
+}
+
+func getTestingTools(input testutil.TestInput, testNamespace string) ResolverTools {
+	testHttpGetter := &testutil.FakeHTTPGetter{
+		DevfileResources:      input.DevfileResources,
+		DevWorkspaceResources: input.DevWorkspaceResources,
+		Errors:                input.Errors,
+	}
+	testK8sClient := &testutil.FakeK8sClient{
+		DevWorkspaceResources: input.DevWorkspaceResources,
+		Errors:                input.Errors,
+	}
+	testRegistry := &testutil.FakeInternalRegistry{
+		Plugins: input.DevWorkspaceResources,
+
+		Errors: input.Errors,
+	}
+	return ResolverTools{
+		Context:            context.Background(),
+		InternalRegistry:   testRegistry,
+		K8sClient:          testK8sClient,
+		HttpClient:         testHttpGetter,
+		WorkspaceNamespace: testNamespace,
 	}
 }

@@ -68,7 +68,7 @@ var healthHttpClient = &http.Client{
 // updating the status.
 func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
 	syncConditions(&workspace.Status, status)
-	updateMetricsForPhase(workspace, status.phase, logger)
+	oldPhase := workspace.Status.Phase
 	workspace.Status.Phase = status.phase
 
 	infoMessage := getInfoMessage(workspace, status)
@@ -85,7 +85,10 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 		if reconcileError == nil {
 			reconcileError = err
 		}
+	} else {
+		updateMetricsForPhase(workspace, oldPhase, status.phase, logger)
 	}
+
 	return reconcileResult, reconcileError
 }
 
@@ -221,8 +224,8 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 // updateMetricsForPhase increments DevWorkspace startup metrics based on phase transitions in a DevWorkspace. It avoids
 // incrementing the underlying metrics where possible (e.g. reconciling an already running workspace) by only incrementing
 // counters when the new phase is different from the current on in the DevWorkspace.
-func updateMetricsForPhase(workspace *dw.DevWorkspace, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
-	if workspace.Status.Phase == newPhase {
+func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
+	if oldPhase == newPhase {
 		return
 	}
 	switch newPhase {

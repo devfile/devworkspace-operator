@@ -17,6 +17,7 @@ import (
 	"reflect"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // resolutionContextTree is a recursive structure representing information about the devworkspace that is
@@ -63,4 +64,21 @@ func formatImportCycle(end *resolutionContextTree) string {
 		cycle = fmt.Sprintf("%s -> %s", end.componentName, cycle)
 	}
 	return cycle
+}
+
+// getSourceForComponent returns the 'original' name for a component in a flattened DevWorkspace. Given a component, it
+// returns the name of the plugin component that imported it if the component came via a plugin, and the actual
+// component name otherwise.
+//
+// The purpose of this function is mainly to enable providing better messages to end-users, as a component name may
+// not match the name of the plugin in the original DevWorkspace.
+func getSourceForComponent(component dw.Component) string {
+	if component.Attributes.Exists(constants.PluginSourceAttribute) {
+		var err error
+		componentName := component.Attributes.GetString(constants.PluginSourceAttribute, &err)
+		if err == nil {
+			return componentName
+		}
+	}
+	return component.Name
 }

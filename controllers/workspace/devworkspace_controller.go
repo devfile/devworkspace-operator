@@ -120,18 +120,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 			return reconcile.Result{}, err
 		}
 		workspace.Status.DevWorkspaceId = workspaceId
-		workspace.Status.Phase = dw.DevWorkspaceStatusStarting
-		workspace.Status.Message = "Initializing DevWorkspace"
-		workspace.Status.Conditions = []dw.DevWorkspaceCondition{
-			{
-				Type:               conditions.Started,
-				Status:             corev1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: clock.Now()},
-				Message:            "DevWorkspace is starting",
-			},
-		}
 		err = r.Status().Update(ctx, workspace)
-		metrics.WorkspaceStarted(workspace, reqLogger)
 		return reconcile.Result{Requeue: true}, err
 	}
 
@@ -158,6 +147,27 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 		timing.ClearAnnotations(workspace)
 		r.syncTimingToCluster(ctx, workspace, map[string]string{}, reqLogger)
 		return r.stopWorkspace(workspace, reqLogger)
+	}
+
+	// If this is the first reconcile for a starting workspace, mark it as starting now. This is done outside the regular
+	// updateWorkspaceStatus function to ensure it gets set immediately
+	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting && workspace.Status.Phase != dw.DevWorkspaceStatusRunning {
+		// Set 'Started' condition as early as possible to get accurate timing metrics
+		workspace.Status.Phase = dw.DevWorkspaceStatusStarting
+		workspace.Status.Message = "Initializing DevWorkspace"
+		workspace.Status.Conditions = []dw.DevWorkspaceCondition{
+			{
+				Type:               conditions.Started,
+				Status:             corev1.ConditionTrue,
+				LastTransitionTime: metav1.Time{Time: clock.Now()},
+				Message:            "DevWorkspace is starting",
+			},
+		}
+		err = r.Status().Update(ctx, workspace)
+		if err == nil {
+			metrics.WorkspaceStarted(workspace, reqLogger)
+		}
+		return reconcile.Result{}, err
 	}
 
 	// Prepare handling workspace status and condition
@@ -370,8 +380,10 @@ func (r *DevWorkspaceReconciler) stopWorkspace(workspace *dw.DevWorkspace, logge
 		switch status.phase {
 		case devworkspacePhaseFailing, dw.DevWorkspaceStatusFailed:
 			status.phase = dw.DevWorkspaceStatusFailed
+			status.setConditionFalse(conditions.Started, "Workspace stopped due to error")
 		default:
 			status.phase = dw.DevWorkspaceStatusStopped
+			status.setConditionFalse(conditions.Started, "Workspace is stopped")
 		}
 	}
 	return r.updateWorkspaceStatus(workspace, logger, &status, reconcile.Result{}, nil)

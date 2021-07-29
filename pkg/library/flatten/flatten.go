@@ -68,6 +68,11 @@ func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling Resolve
 		return resolvedDW, &warnings, nil
 	}
 
+	err = resolveWorkspaceEnvVar(resolvedDW)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to process workspaceEnv: %w", err)
+	}
+
 	return resolvedDW, nil, nil
 }
 

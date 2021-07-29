@@ -17,10 +17,10 @@ input:
             # Note this fails to deserialize because it's just a yaml string, not a list.
             # JSON can be used here if you remove the pipe
             workspaceEnv: |
-              [{"name": "TEST_ENV_1",
-               "value": "TEST_VAL_1"},
-              {"name": "TEST_ENV_2",
-               "value": "TEST_VAL_2"}]
+              {
+                "TEST_ENV_1": "TEST_ENV_1",
+                "TEST_ENV_2": "TEST_ENV_2",
+              }
           container:
             name: test-container
             image: test-image

@@ -48,10 +48,8 @@ func resolveWorkspaceEnvVar(flattenedDW *dw.DevWorkspaceTemplateSpec) error {
 }
 
 func collectWorkspaceEnv(flattenedDW *dw.DevWorkspaceTemplateSpec) ([]dw.EnvVar, error) {
-	var workspaceEnv []dw.EnvVar
+	workspaceEnvMap := map[string]string{}
 
-	// Keep track of used workspace env vars to detect conflicts
-	usedEnvVar := map[string]string{}
 	// Bookkeeping map so that we can format error messages in case of conflict
 	envVarToComponent := map[string]string{}
 
@@ -60,22 +58,25 @@ func collectWorkspaceEnv(flattenedDW *dw.DevWorkspaceTemplateSpec) ([]dw.EnvVar,
 			continue
 		}
 
-		var componentEnv []dw.EnvVar
-		err := component.Attributes.GetInto(WorkspaceEnvAttribute, &componentEnv)
+		componentEnvMap := map[string]string{}
+		err := component.Attributes.GetInto(WorkspaceEnvAttribute, &componentEnvMap)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read attribute %s on component %s: %w", WorkspaceEnvAttribute, getOriginalNameForComponent(component), err)
 		}
 
-		for _, envVar := range componentEnv {
-			if existingVal, exists := usedEnvVar[envVar.Name]; exists && existingVal != envVar.Value {
+		for name, value := range componentEnvMap {
+			if existingVal, exists := workspaceEnvMap[name]; exists && existingVal != value {
 				return nil, fmt.Errorf("conflicting definition of environment variable %s in components '%s' and '%s'",
-					envVar.Name, envVarToComponent[envVar.Name], component.Name)
+					name, envVarToComponent[name], component.Name)
 			}
-			usedEnvVar[envVar.Name] = envVar.Value
-			envVarToComponent[envVar.Name] = getOriginalNameForComponent(component)
+			workspaceEnvMap[name] = value
+			envVarToComponent[name] = getOriginalNameForComponent(component)
 		}
+	}
 
-		workspaceEnv = append(workspaceEnv, componentEnv...)
+	var workspaceEnv []dw.EnvVar
+	for name, value := range workspaceEnvMap {
+		workspaceEnv = append(workspaceEnv, dw.EnvVar{Name: name, Value: value})
 	}
 	return workspaceEnv, nil
 }

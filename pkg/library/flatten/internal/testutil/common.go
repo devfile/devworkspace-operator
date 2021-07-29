@@ -34,6 +34,9 @@ var WorkspaceTemplateDiffOpts = cmp.Options{
 	cmpopts.SortSlices(func(a, b string) bool {
 		return strings.Compare(a, b) > 0
 	}),
+	cmpopts.SortSlices(func(a, b dw.EnvVar) bool {
+		return strings.Compare(a.Name, b.Name) > 0
+	}),
 	// TODO: Devworkspace overriding results in empty []string instead of nil
 	cmpopts.IgnoreFields(dw.DevWorkspaceEvents{}, "PostStart", "PreStop", "PostStop"),
 }

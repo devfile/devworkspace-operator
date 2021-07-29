@@ -6,8 +6,7 @@ input:
       - name: test-container
         attributes:
           workspaceEnv:
-            - name: TEST_ENV_2
-              value: NOT_TEST_VAL_2
+            TEST_ENV_2: NOT_TEST_VAL_2
         container:
           image: test-image
       - name: test-plugin
@@ -22,10 +21,8 @@ input:
         - name: plugin-a
           attributes:
             workspaceEnv:
-            - name: TEST_ENV_1
-              value: TEST_VAL_1
-            - name: TEST_ENV_2
-              value: TEST_VAL_2
+              TEST_ENV_1: TEST_VAL_1
+              TEST_ENV_2: TEST_VAL_2
           container:
             name: test-container
             image: test-image

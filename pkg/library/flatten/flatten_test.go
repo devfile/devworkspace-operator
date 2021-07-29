@@ -212,6 +212,29 @@ func TestResolveDevWorkspaceTemplateNamespaceRestriction(t *testing.T) {
 	}
 }
 
+func TestResolveDevWorkspaceWorkspaceEnv(t *testing.T) {
+	tests := testutil.LoadAllTestsOrPanic(t, "testdata/workspace-env")
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			// sanity check: input defines components
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
+
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
+				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
+			} else {
+				if !assert.NoError(t, err, "Should not return error") {
+					return
+				}
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+			}
+		})
+	}
+}
+
 func getTestingTools(input testutil.TestInput, testNamespace string) ResolverTools {
 	testHttpGetter := &testutil.FakeHTTPGetter{
 		DevfileResources:      input.DevfileResources,

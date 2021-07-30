@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // Map to store diff options for each type we're handling.
@@ -39,7 +39,7 @@ var diffOpts = map[reflect.Type]cmp.Options{
 }
 
 // SyncMutableObjects synchronizes runtime objects and changes/updates existing ones
-func SyncMutableObjects(objects []runtime.Object, client client.Client, reqLogger logr.Logger) (requeue bool, err error) {
+func SyncMutableObjects(objects []runtimeClient.Object, client runtimeClient.Client, reqLogger logr.Logger) (requeue bool, err error) {
 	for _, object := range objects {
 		_, shouldRequeue, err := SyncObject(object, client, reqLogger, true)
 		if err != nil {
@@ -51,7 +51,7 @@ func SyncMutableObjects(objects []runtime.Object, client client.Client, reqLogge
 }
 
 // SyncObject synchronizes a runtime object and changes/updates existing ones
-func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logger, update bool) (clusterObject runtime.Object, requeue bool, apiErr error) {
+func SyncObject(object runtimeClient.Object, client runtimeClient.Client, reqLogger logr.Logger, update bool) (clusterObject runtime.Object, requeue bool, apiErr error) {
 	objMeta, isMeta := object.(metav1.Object)
 	if !isMeta {
 		return nil, true, errors.NewBadRequest("Converted objects are not valid K8s objects")
@@ -61,7 +61,7 @@ func SyncObject(object runtime.Object, client client.Client, reqLogger logr.Logg
 
 	reqLogger.V(1).Info("Managing K8s Object", "kind", objType.String(), "name", objMeta.GetName())
 
-	found := reflect.New(objType).Interface().(runtime.Object)
+	found := reflect.New(objType).Interface().(runtimeClient.Object)
 	err := client.Get(context.TODO(), types.NamespacedName{Name: objMeta.GetName(), Namespace: objMeta.GetNamespace()}, found)
 	if err != nil {
 		if !errors.IsNotFound(err) {

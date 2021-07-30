@@ -15,7 +15,7 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/webhook/workspace/handler"
-	"k8s.io/api/admission/v1beta1"
+	admissionv1 "k8s.io/api/admission/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -32,7 +32,7 @@ func NewResourcesValidator(controllerUID, controllerSAName string) *ResourcesVal
 }
 
 func (v *ResourcesValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-	if req.Kind == handler.V1PodExecOptionKind && req.Operation == v1beta1.Connect {
+	if req.Kind == handler.V1PodExecOptionKind && req.Operation == admissionv1.Connect {
 		return v.ValidateExecOnConnect(ctx, req)
 	}
 	// Do not allow operation if the corresponding handler is not found

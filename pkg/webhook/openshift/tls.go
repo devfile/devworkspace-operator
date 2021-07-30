@@ -16,7 +16,7 @@ import (
 	"context"
 
 	"github.com/devfile/devworkspace-operator/pkg/webhook/service"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )

@@ -19,10 +19,10 @@ import (
 	"os"
 	"runtime"
 
-	corev1 "k8s.io/api/core/v1"
-
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting"
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
+	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
@@ -31,17 +31,16 @@ import (
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
-
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	templatev1 "github.com/openshift/api/template/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -113,7 +112,7 @@ func main() {
 
 	// Index Events on involvedObject.name to allow us to get events involving a DevWorkspace's pod(s). This is used to
 	// check for issues that prevent the pod from starting, so that DevWorkspaces aren't just hanging indefinitely.
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Event{}, "involvedObject.name", func(obj k8sruntime.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Event{}, "involvedObject.name", func(obj client.Object) []string {
 		ev := obj.(*corev1.Event)
 		return []string{ev.InvolvedObject.Name}
 	}); err != nil {

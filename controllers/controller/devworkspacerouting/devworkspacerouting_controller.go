@@ -63,9 +63,7 @@ type DevWorkspaceRoutingReconciler struct {
 // +kubebuidler:rbac:groups=route.openshift.io,resources=routes/status,verbs=get,list,watch
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes/custom-host,verbs=create
 
-func (r *DevWorkspaceRoutingReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
-
+func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 
 	// Fetch the DevWorkspaceRouting instance

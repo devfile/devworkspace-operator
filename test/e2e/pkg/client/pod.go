@@ -50,7 +50,7 @@ func (w *K8sClient) WaitForRunningPodBySelector(namespace, selector string, time
 	}
 	if len(podList.Items) == 0 {
 		log.Printf("Pod not created yet with selector '%s' in namespace %s", selector, namespace)
-		return fmt.Errorf("Pod not created yet in %s with label %s", namespace, selector)
+		return fmt.Errorf("pod not created yet in %s with label %s", namespace, selector)
 	}
 
 	for _, pod := range podList.Items {

@@ -18,7 +18,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/webhook/service"
 
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var log = logf.Log.WithName("webhook-k8s")

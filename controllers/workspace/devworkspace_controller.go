@@ -67,6 +67,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=workspace.devfile.io,resources=*,verbs=*
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=*,verbs=*
 /////// Required permissions for controller
+// +kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;create;update
 // +kubebuilder:rbac:groups=apps;extensions,resources=deployments;replicasets,verbs=*
 // +kubebuilder:rbac:groups="",resources=pods;serviceaccounts;secrets;configmaps;persistentvolumeclaims,verbs=*
 // +kubebuilder:rbac:groups="",resources=namespaces;events,verbs=get;list;watch
@@ -82,8 +83,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=apps;extensions,resources=deployments,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,resourceNames=workspace-credentials-secret,verbs=get;create;delete
 
-func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ctrl.Result, err error) {
-	ctx := context.Background()
+func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	clusterAPI := wsprovision.ClusterAPI{
 		Client: r.Client,
@@ -465,9 +465,8 @@ func getWorkspaceId(instance *dw.DevWorkspace) (string, error) {
 
 // Mapping the pod to the devworkspace
 func dwRelatedPodsHandler() handler.EventHandler {
-	podToDW := func(mapObj handler.MapObject) []reconcile.Request {
-		meta := mapObj.Meta
-		labels := meta.GetLabels()
+	podToDW := func(obj client.Object) []reconcile.Request {
+		labels := obj.GetLabels()
 		if _, ok := labels[constants.DevWorkspaceNameLabel]; !ok {
 			return nil
 		}
@@ -481,12 +480,12 @@ func dwRelatedPodsHandler() handler.EventHandler {
 			{
 				NamespacedName: types.NamespacedName{
 					Name:      labels[constants.DevWorkspaceNameLabel],
-					Namespace: meta.GetNamespace(),
+					Namespace: obj.GetNamespace(),
 				},
 			},
 		}
 	}
-	return &handler.EnqueueRequestsFromMapFunc{ToRequests: handler.ToRequestsFunc(podToDW)}
+	return handler.EnqueueRequestsFromMapFunc(podToDW)
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {

@@ -20,7 +20,6 @@ import (
 	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -32,9 +31,9 @@ func SyncRBAC(workspace *dw.DevWorkspace, client client.Client, reqLogger logr.L
 	return ProvisioningStatus{Continue: !requeue, Err: err}
 }
 
-func generateRBAC(namespace string) []runtime.Object {
+func generateRBAC(namespace string) []client.Object {
 	// TODO: The rolebindings here are created namespace-wide; find a way to limit this, given that each workspace
-	return []runtime.Object{
+	return []client.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "workspace",

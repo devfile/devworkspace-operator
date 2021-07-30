@@ -7,7 +7,7 @@ metadata:
     operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
-  name: devworkspace-operator.v0.8.0
+  name: devworkspace-operator.v0.9.0
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -95,4 +95,6 @@ spec:
   provider:
     name: Devfile
     url: https://devfile.io
-  version: 0.8.0
+  # uncomment the below when devworkspace-operator.v0.8.0 is availble
+  # replaces: devworkspace-operator.v0.8.0
+  version: 0.9.0

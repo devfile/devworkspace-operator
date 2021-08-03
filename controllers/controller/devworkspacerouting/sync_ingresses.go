@@ -20,7 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,11 +29,11 @@ import (
 )
 
 var ingressDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(v1beta1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmpopts.IgnoreFields(v1beta1.HTTPIngressPath{}, "PathType"),
+	cmpopts.IgnoreFields(networkingv1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(networkingv1.HTTPIngressPath{}, "PathType"),
 }
 
-func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.DevWorkspaceRouting, specIngresses []v1beta1.Ingress) (ok bool, clusterIngresses []v1beta1.Ingress, err error) {
+func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.DevWorkspaceRouting, specIngresses []networkingv1.Ingress) (ok bool, clusterIngresses []networkingv1.Ingress, err error) {
 	ingressesInSync := true
 
 	clusterIngresses, err = r.getClusterIngresses(routing)
@@ -74,8 +74,8 @@ func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha
 	return ingressesInSync, clusterIngresses, nil
 }
 
-func (r *DevWorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv1alpha1.DevWorkspaceRouting) ([]v1beta1.Ingress, error) {
-	found := &v1beta1.IngressList{}
+func (r *DevWorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv1alpha1.DevWorkspaceRouting) ([]networkingv1.Ingress, error) {
+	found := &networkingv1.IngressList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, routing.Spec.DevWorkspaceId))
 	if err != nil {
 		return nil, err
@@ -91,8 +91,8 @@ func (r *DevWorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv
 	return found.Items, nil
 }
 
-func getIngressesToDelete(clusterIngresses, specIngresses []v1beta1.Ingress) []v1beta1.Ingress {
-	var toDelete []v1beta1.Ingress
+func getIngressesToDelete(clusterIngresses, specIngresses []networkingv1.Ingress) []networkingv1.Ingress {
+	var toDelete []networkingv1.Ingress
 	for _, clusterIngress := range clusterIngresses {
 		if contains, _ := listContainsIngressByName(clusterIngress, specIngresses); !contains {
 			toDelete = append(toDelete, clusterIngress)
@@ -101,7 +101,7 @@ func getIngressesToDelete(clusterIngresses, specIngresses []v1beta1.Ingress) []v
 	return toDelete
 }
 
-func listContainsIngressByName(query v1beta1.Ingress, list []v1beta1.Ingress) (exists bool, idx int) {
+func listContainsIngressByName(query networkingv1.Ingress, list []networkingv1.Ingress) (exists bool, idx int) {
 	for idx, listIngress := range list {
 		if query.Name == listIngress.Name {
 			return true, idx

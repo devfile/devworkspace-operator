@@ -21,7 +21,7 @@ import (
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -165,8 +165,8 @@ func getRoutesForSpec(routingSuffix string, endpoints map[string]controllerv1alp
 	return routes
 }
 
-func getIngressesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []v1beta1.Ingress {
-	var ingresses []v1beta1.Ingress
+func getIngressesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []networkingv1.Ingress {
+	var ingresses []networkingv1.Ingress
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure != dw.PublicEndpointExposure {
@@ -208,12 +208,11 @@ func getRouteForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWor
 	}
 }
 
-func getIngressForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWorkspaceMetadata) v1beta1.Ingress {
-	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
+func getIngressForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWorkspaceMetadata) networkingv1.Ingress {
 	endpointName := common.EndpointName(endpoint.Name)
 	hostname := common.EndpointHostname(routingSuffix, meta.DevWorkspaceId, endpointName, endpoint.TargetPort)
-	ingressPathType := v1beta1.PathTypeImplementationSpecific
-	return v1beta1.Ingress{
+	ingressPathType := networkingv1.PathTypeImplementationSpecific
+	return networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.RouteName(meta.DevWorkspaceId, endpointName),
 			Namespace: meta.Namespace,
@@ -222,17 +221,19 @@ func getIngressForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevW
 			},
 			Annotations: nginxIngressAnnotations(endpoint.Name),
 		},
-		Spec: v1beta1.IngressSpec{
-			Rules: []v1beta1.IngressRule{
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
 				{
 					Host: hostname,
-					IngressRuleValue: v1beta1.IngressRuleValue{
-						HTTP: &v1beta1.HTTPIngressRuleValue{
-							Paths: []v1beta1.HTTPIngressPath{
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
 								{
-									Backend: v1beta1.IngressBackend{
-										ServiceName: common.ServiceName(meta.DevWorkspaceId),
-										ServicePort: targetEndpoint,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: common.ServiceName(meta.DevWorkspaceId),
+											Port: networkingv1.ServiceBackendPort{Number: int32(endpoint.TargetPort)},
+										},
 									},
 									PathType: &ingressPathType,
 									Path:     "/",

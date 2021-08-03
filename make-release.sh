@@ -33,7 +33,7 @@ Arguments:
   --version     : version to release, v0.8.0
   --prerelease  : flag to perform prerelease. Is performed from main branch
   --release     : flag to perform release. Is performed from v0.x.y branch
-  --revision    : GIT_SHA of the target brach to be used for releasing
+  --revision    : [is not implemented yet] GIT_SHA of the target brach to be used for releasing
 
 Development arguments to debug:
   --dry-run     : do not push changes locally
@@ -59,16 +59,17 @@ parse_args() {
       '--tmp-dir') TMP=$(mktemp -d); shift 0;;
       '--release') DO_RELEASE=true; shift 0;;
       '--prerelease') DO_PRERELEASE='true'; shift 0;;
+      '--revision') echo "[ERROR] --revision is not implemented yet"; exit 1;;
       '--dry-run') DRY_RUN='dryrun'; shift 0;;
       '--verbose') VERBOSE='true'; shift 0;;
       '--help') usage; exit 0;;
-      *) echo "Unknown parameter is used: $1."; usage; exit 1;;
+      *) echo "[ERROR] Unknown parameter is used: $1."; usage; exit 1;;
     esac
     shift 1
   done
 
   if [ -z "${VERSION}" ]; then
-    echo "Required parameter --version is missing."
+    echo "[ERROR] Required parameter --version is missing."
     usage
     exit 1
   fi
@@ -86,12 +87,17 @@ bump_version () {
   git checkout "${BUMP_BRANCH}"
 
   # change version/version.go file
-  sed -i version/version.go -r -e "s#(Version = \")(v?[0-9.]+).*(\")#\1v${NEXT_VERSION}+rc\3#g"
+  VERSION_GO="v${NEXT_VERSION}"
+  if [[ "$BUMP_BRANCH" == "$MAIN_BRANCH" ]]; then
+    VERSION_GO="$VERSION_GO+dev"
+  fi
+  sed -i version/version.go -e "s#Version = \".*\"#Version = \"${VERSION_GO}\"#g"
   sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(name: devworkspace-operator.)(v[0-9.]+)#\1v${NEXT_VERSION}#g"
-  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${NEXT_VERSION}#g" 
+  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${NEXT_VERSION}#g"
+  git add -A
   if [[ ! -z $(git status -s) ]]; then # dirty
     COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
-    git commit -asm "${COMMIT_MSG}"
+    git commit -m "${COMMIT_MSG}" --signoff
   fi
   git pull origin "${BUMP_BRANCH}"
 
@@ -118,58 +124,47 @@ bump_version () {
 }
 
 prerelease() {
+  if [ "${VERSION##*.}" != "0" ]; then
+    echo "[ERROR] Flag --prerelease should not be used for bugfix versions"
+    exit 1
+  fi
+
   echo "[INFO] Starting prerelease procedure"
   # derive bugfix branch from version
-  BRANCH=${VERSION#v}
-  BRANCH=${BRANCH%.*}.x
+  X_BRANCH=${VERSION#v}
+  X_BRANCH=${X_BRANCH%.*}.x
 
-  echo "[INFO] Creating ${BRANCH} from ${MAIN_BRANCH}"
+  echo "[INFO] Creating ${X_BRANCH} from ${MAIN_BRANCH}"
   git checkout ${MAIN_BRANCH}
-  git branch "${BRANCH}" || git checkout "${BRANCH}"
-  sed -i version/version.go -r -e "s#(Version = \")(v?[0-9.]+-rc)(\")#\1${VERSION}\3#g"
+  git checkout -b "${X_BRANCH}"
+  sed -i version/version.go -e "s#Version = \".*\"#Version = \"${VERSION}\"#g"
   if [[ ! -z $(git status -s) ]]; then # dirty
-    COMMIT_MSG="[prerelease] Remove rc from version"
-    git commit -asm "${COMMIT_MSG}"
+    git add -A
+    COMMIT_MSG="[prerelease] Remove dev from version"
+    git commit -m "${COMMIT_MSG}" --signoff
   fi
-  $DRY_RUN git push origin "${BRANCH}"
-  git fetch origin "${BRANCH}:${BRANCH}" || true
-  git checkout "${BRANCH}"
+  $DRY_RUN git push origin "${X_BRANCH}"
 
-  # change VERSION file + commit change into ${BASEBRANCH} branch
-  # bump the y digit, if it is a major release
-  [[ $BRANCH =~ ^([0-9]+)\.([0-9]+)\.x ]] && BASE=${BASH_REMATCH[1]}; NEXT=${BASH_REMATCH[2]}; (( NEXT=NEXT+1 )) # for BRANCH=0.1.x, get BASE=0, NEXT=2
-  NEXT_VERSION_Y="${BASE}.${NEXT}.0"
-  bump_version "${NEXT_VERSION_Y}" "${MAIN_BRANCH}"
-  echo "Prerelease is done"
+  # bump version in MAIN_BRANCH to next dev version
+  [[ $X_BRANCH =~ ^([0-9]+)\.([0-9]+)\.x ]] \
+    && BASE=${BASH_REMATCH[1]}; \
+    NEXT=${BASH_REMATCH[2]}; \
+    (( NEXT=NEXT+1 )) # for X_BRANCH=0.1.x, get BASE=0, NEXT=2
+
+  NEXT_DEV_VERSION="${BASE}.${NEXT}.0"
+  bump_version "${NEXT_DEV_VERSION}" "${MAIN_BRANCH}"
+  echo "[INFO] Prerelease is done"
 }
 
 release() {
   echo "[INFO] Starting Release procedure"
   # derive bugfix branch from version
-  BRANCH=${VERSION#v}
-  BRANCH=${BRANCH%.*}.x
+  X_BRANCH=${VERSION#v}
+  X_BRANCH=${X_BRANCH%.*}.x
 
-  BASEBRANCH="${BRANCH}"
+  git fetch origin "${X_BRANCH}:${X_BRANCH}" || true
+  git checkout "${X_BRANCH}"
 
-  git remote show origin
-
-  # get sources from ${BASEBRANCH} branch
-  git fetch origin "${BASEBRANCH}":"${BASEBRANCH}" || true
-  git checkout "${BASEBRANCH}"
-
-  # create new branch off ${BASEBRANCH} (or check out latest commits if branch already exists), then push to origin
-  if [[ "${BASEBRANCH}" != "${BRANCH}" ]]; then
-    git branch "${BRANCH}" || git checkout "${BRANCH}"
-    $DRY_RUN git push origin "${BRANCH}"
-    git fetch origin "${BRANCH}:${BRANCH}" || true
-    git checkout "${BRANCH}"
-  else
-    git fetch origin "${BRANCH}:${BRANCH}" || true
-    git checkout "${BRANCH}"
-  fi
-
-  # change version/version.go file
-  sed -i version/version.go -r -e "s#(Version = \")(v?[0-9.]+)(\")#\1${VERSION}\3#g"
   # change image tag in Makefile
   DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
   sed -i Makefile -r -e "s#quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+#${DWO_QUAY_IMG}#g"
@@ -177,7 +172,7 @@ release() {
   $DRY_RUN docker push "${DWO_QUAY_IMG}"
 
   PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
-  sed -i Makefile -r -e "s#quay.io/devfile/project-clone:.*[0-9a-zA-Z._-]#${PROJECT_CLONE_QUAY_IMG}#g"
+  sed -i Makefile -r -e "s#quay.io/devfile/project-clone:[0-9a-zA-Z._-]+#${PROJECT_CLONE_QUAY_IMG}#g"
   docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
   $DRY_RUN docker push "${PROJECT_CLONE_QUAY_IMG}"
 
@@ -189,21 +184,21 @@ release() {
   # tag the release if the version/version.go file has changed
   if [[ ! -z $(git status -s) ]]; then # dirty
     COMMIT_MSG="[release] Release ${VERSION}"
-    git add version/version.go
-    git commit -asm "${COMMIT_MSG}"
+    git add -A
+    git commit -m "${COMMIT_MSG}" --signoff
   fi
   git tag "${VERSION}"
   $DRY_RUN git push origin "${VERSION}"
 
-  # now update ${BASEBRANCH} to the new rc version
-  git checkout "${BASEBRANCH}"
+  # now update ${X_BRANCH} to the new rc version
+  git checkout "${X_BRANCH}"
 
   # bump the z digit
   [[ ${VERSION#v} =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]] \
     && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}";  \
     NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3
   NEXT_VERSION_Z="${BASE}.${NEXT}"
-  bump_version "${NEXT_VERSION_Z}" "${BRANCH}"
+  bump_version "${NEXT_VERSION_Z}" "${X_BRANCH}"
   echo "[INFO] Release is done"
 }
 
@@ -214,7 +209,6 @@ parse_args "$@"
 # work in tmp dir
 if [[ $TMP ]] && [[ -d $TMP ]]; then
   pushd "$TMP" > /dev/null || exit 1
-  # get sources from ${BASEBRANCH} branch
   echo "[INFO] Check out ${DWO_REPO} to ${TMP}/${DWO_REPO##*/}"
   git clone "${DWO_REPO}" -q
   cd "${DWO_REPO##*/}" || exit 1

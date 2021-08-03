@@ -16,8 +16,8 @@ import (
 	"fmt"
 
 	routeV1 "github.com/openshift/api/route/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -26,8 +26,8 @@ import (
 )
 
 type RoutingObjects struct {
-	Services     []v1.Service
-	Ingresses    []v1beta1.Ingress
+	Services     []corev1.Service
+	Ingresses    []networkingv1.Ingress
 	Routes       []routeV1.Route
 	PodAdditions *controllerv1alpha1.PodAdditions
 }

@@ -28,7 +28,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,7 +58,7 @@ type DevWorkspaceRoutingReconciler struct {
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceroutings,verbs=*
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceroutings/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=services,verbs=*
-// +kubebuilder:rbac:groups=extensions,resources=ingresses,verbs=*
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=*
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=*
 // +kubebuidler:rbac:groups=route.openshift.io,resources=routes/status,verbs=get,list,watch
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes/custom-host,verbs=create
@@ -311,7 +311,7 @@ func (r *DevWorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		For(&controllerv1alpha1.DevWorkspaceRouting{}).
 		Owns(&corev1.Service{}).
-		Owns(&v1beta1.Ingress{})
+		Owns(&networkingv1.Ingress{})
 	if infrastructure.IsOpenShift() {
 		bld.Owns(&routeV1.Route{})
 	}

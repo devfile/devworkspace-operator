@@ -1,3 +1,10 @@
+# This service cannot be modified; added ports will be removed in an OLM install,
+# and changing the name defined below will result in duplicate services being created
+# when installed via OLM. This service is also necessary for conversion webhooks to
+# be created successfully in OLM.
+# In other words, take great care in modifying the object below.
+# See issue https://github.com/operator-framework/operator-lifecycle-manager/issues/2233
+# for details.
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,9 +16,6 @@ spec:
     port: 443
     targetPort: conversion
     protocol: TCP
-  - name: metrics
-    port: 8443
-    targetPort: metrics
   selector:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator

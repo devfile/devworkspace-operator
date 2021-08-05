@@ -2,6 +2,7 @@ resources:
 - manager.yaml
 - serviceaccount.yaml
 - service.yaml
+- service-metrics.yaml
 
 vars:
 - name: CONTROLLER_SERVICE_ACCOUNT

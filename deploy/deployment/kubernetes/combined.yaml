@@ -18767,6 +18767,20 @@ spec:
     port: 443
     protocol: TCP
     targetPort: conversion
+  selector:
+    app.kubernetes.io/name: devworkspace-controller
+    app.kubernetes.io/part-of: devworkspace-operator
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/name: devworkspace-controller
+    app.kubernetes.io/part-of: devworkspace-operator
+  name: devworkspace-controller-metrics
+  namespace: devworkspace-controller
+spec:
+  ports:
   - name: metrics
     port: 8443
     targetPort: metrics

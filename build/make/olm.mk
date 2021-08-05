@@ -20,6 +20,7 @@ generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_f
 # from stdin in that case. To make Operator SDK work correctly here,
 # we need to explicitly close stdin. 
 # See issue: https://github.com/actions/runner/issues/241
+	rm -rf deploy/bundle/manifests
 	operator-sdk generate bundle \
 		--deploy-dir deploy/deployment/olm \
 		--output-dir deploy/bundle \

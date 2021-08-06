@@ -16,7 +16,6 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	dwEnv "github.com/devfile/devworkspace-operator/controllers/workspace/env"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -159,7 +158,7 @@ func devfileVolumeMountsToContainerVolumeMounts(devfileVolumeMounts []dw.VolumeM
 func devfileEnvToContainerEnv(componentName string, devfileEnvVars []dw.EnvVar) []v1.EnvVar {
 	var env = []v1.EnvVar{
 		{
-			Name:  dwEnv.DevWorkspaceComponentName,
+			Name:  constants.DevWorkspaceComponentName,
 			Value: componentName,
 		},
 	}

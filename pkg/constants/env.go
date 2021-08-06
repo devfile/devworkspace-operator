@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package env
+package constants
 
 const (
 	// DevWorkspaceNamespace contains env var name which value is the current namespace where DevWorkspace CR

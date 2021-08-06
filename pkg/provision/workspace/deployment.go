@@ -21,7 +21,6 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/env"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -263,7 +262,7 @@ func getSpecDeployment(
 
 	creator := workspace.Labels[constants.DevWorkspaceCreatorLabel]
 	var envVars []corev1.EnvVar
-	envVars = append(envVars, env.CommonEnvironmentVariables(workspace.Name, workspace.Status.DevWorkspaceId, workspace.Namespace, creator)...)
+	envVars = append(envVars, CommonEnvironmentVariables(workspace.Name, workspace.Status.DevWorkspaceId, workspace.Namespace, creator)...)
 	for idx := range podAdditions.Containers {
 		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, envVars...)
 		podAdditions.Containers[idx].VolumeMounts = append(podAdditions.Containers[idx].VolumeMounts, podAdditions.VolumeMounts...)

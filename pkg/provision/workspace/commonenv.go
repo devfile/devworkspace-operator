@@ -10,33 +10,35 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package env
+package workspace
 
 import (
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
-	return []corev1.EnvVar{
+func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []v1.EnvVar {
+	return []v1.EnvVar{
 		{
-			Name:  DevWorkspaceNamespace,
+			Name:  constants.DevWorkspaceNamespace,
 			Value: namespace,
 		},
 		{
-			Name:  DevWorkspaceName,
+			Name:  constants.DevWorkspaceName,
 			Value: workspaceName,
 		},
 		{
-			Name:  DevWorkspaceId,
+			Name:  constants.DevWorkspaceId,
 			Value: workspaceId,
 		},
 		{
-			Name:  DevWorkspaceCreator,
+			Name:  constants.DevWorkspaceCreator,
 			Value: creator,
 		},
 		{
-			Name:  DevWorkspaceIdleTimeout,
+			Name:  constants.DevWorkspaceIdleTimeout,
 			Value: config.ControllerCfg.GetWorkspaceIdleTimeout(),
 		},
 	}

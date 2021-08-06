@@ -13,9 +13,6 @@
 package asyncstorage
 
 import (
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
-	"github.com/devfile/devworkspace-operator/internal/images"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -24,9 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
-func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI provision.ClusterAPI) (*appsv1.Deployment, error) {
+func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI workspace.ClusterAPI) (*appsv1.Deployment, error) {
 	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, storage)
 	clusterDeployment, err := GetWorkspaceSyncDeploymentCluster(namespace, clusterAPI)
 	if err != nil {
@@ -139,7 +139,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 						},
 					},
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					SecurityContext:               provision.GetDevWorkspaceSecurityContext(),
+					SecurityContext:               workspace.GetDevWorkspaceSecurityContext(),
 					AutomountServiceAccountToken:  nil,
 				},
 			},
@@ -148,7 +148,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 	return deployment
 }
 
-func GetWorkspaceSyncDeploymentCluster(namespace string, clusterAPI provision.ClusterAPI) (*appsv1.Deployment, error) {
+func GetWorkspaceSyncDeploymentCluster(namespace string, clusterAPI workspace.ClusterAPI) (*appsv1.Deployment, error) {
 	deploy := &appsv1.Deployment{}
 	namespacedName := types.NamespacedName{
 		Name:      "async-storage", // TODO

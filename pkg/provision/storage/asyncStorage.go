@@ -18,16 +18,17 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
-	"github.com/devfile/devworkspace-operator/internal/images"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
-	"github.com/devfile/devworkspace-operator/pkg/provision/storage/asyncstorage"
 
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/storage/asyncstorage"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 // The AsyncStorageProvisioner provisions one PVC per namespace and creates an ssh deployment that syncs data into that PVC.
@@ -41,7 +42,7 @@ func (*AsyncStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateS
 	return needsStorage(workspace)
 }
 
-func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI workspace.ClusterAPI) error {
 	if err := checkConfigured(); err != nil {
 		return &ProvisioningError{
 			Message: fmt.Sprintf("%s. Contact an administrator to resolve this issue.", err.Error()),
@@ -140,7 +141,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	return nil
 }
 
-func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI provision.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI workspace.ClusterAPI) error {
 	// TODO: This approach relies on there being a maximum of one workspace running per namespace.
 	asyncDeploy, err := asyncstorage.GetWorkspaceSyncDeploymentCluster(workspace.Namespace, clusterAPI)
 	if err != nil {
@@ -239,7 +240,7 @@ func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1
 // getAsyncWorkspaceCount returns whether the async storage provider can support starting a workspace.
 // Due to how cleanup for the async storage PVC is implemented, only one workspace that uses the async storage
 // type can be running at a time.
-func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(api provision.ClusterAPI) (started, total int, err error) {
+func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(api workspace.ClusterAPI) (started, total int, err error) {
 	workspaces := &dw.DevWorkspaceList{}
 	err = api.Client.List(api.Ctx, workspaces)
 	if err != nil {

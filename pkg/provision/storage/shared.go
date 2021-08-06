@@ -18,17 +18,17 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
@@ -79,7 +79,7 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return containerlib.AnyMountSources(workspace.Components)
 }
 
-func syncCommonPVC(namespace string, clusterAPI provision.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func syncCommonPVC(namespace string, clusterAPI workspace.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
@@ -93,7 +93,7 @@ func syncCommonPVC(namespace string, clusterAPI provision.ClusterAPI) (*corev1.P
 	if err != nil {
 		return nil, err
 	}
-	currObject, requeue, err := provision.SyncObject(pvc, clusterAPI.Client, clusterAPI.Logger, false)
+	currObject, requeue, err := workspace.SyncObject(pvc, clusterAPI.Client, clusterAPI.Logger, false)
 	if err != nil {
 		return nil, err
 	}

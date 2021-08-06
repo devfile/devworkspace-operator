@@ -21,16 +21,17 @@ import (
 	"sort"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
-	"github.com/devfile/devworkspace-operator/pkg/conditions"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclock "k8s.io/apimachinery/pkg/util/clock"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
+	"github.com/devfile/devworkspace-operator/pkg/conditions"
+	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -139,7 +140,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 	})
 }
 
-func syncWorkspaceMainURL(workspace *dw.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI provision.ClusterAPI) (ok bool, err error) {
+func syncWorkspaceMainURL(workspace *dw.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI wsprovision.ClusterAPI) (ok bool, err error) {
 	mainUrl := getMainUrl(exposedEndpoints)
 
 	if workspace.Status.MainUrl == mainUrl {

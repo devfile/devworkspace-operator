@@ -16,8 +16,8 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/library/container"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 // The EphemeralStorageProvisioner provisions all workspace storage as emptyDir volumes.
@@ -32,7 +32,7 @@ func (e EphemeralStorageProvisioner) NeedsStorage(_ *dw.DevWorkspaceTemplateSpec
 	return false
 }
 
-func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, _ provision.ClusterAPI) error {
+func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, _ workspace.ClusterAPI) error {
 	persistent, ephemeral, projects := getWorkspaceVolumes(workspace)
 	if _, err := addEphemeralVolumesToPodAdditions(podAdditions, persistent); err != nil {
 		return err
@@ -56,6 +56,6 @@ func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.Pod
 	return nil
 }
 
-func (e EphemeralStorageProvisioner) CleanupWorkspaceStorage(_ *dw.DevWorkspace, _ provision.ClusterAPI) error {
+func (e EphemeralStorageProvisioner) CleanupWorkspaceStorage(_ *dw.DevWorkspace, _ workspace.ClusterAPI) error {
 	return nil
 }

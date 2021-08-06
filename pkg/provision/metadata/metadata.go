@@ -25,10 +25,10 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -46,7 +46,7 @@ const (
 // ProvisionWorkspaceMetadata creates a configmap on the cluster that stores metadata about the workspace and configures all
 // workspace containers to mount that configmap at /devworkspace-metadata. Each container has the environment
 // variable DEVWORKSPACE_METADATA set to the mount path for the configmap
-func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, flattened *dw.DevWorkspace, api *provision.ClusterAPI) error {
+func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, flattened *dw.DevWorkspace, api *workspace.ClusterAPI) error {
 	cm, err := getSpecMetadataConfigMap(original, flattened)
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, f
 	return nil
 }
 
-func syncConfigMapToCluster(specCM *corev1.ConfigMap, api *provision.ClusterAPI) (inSync bool, err error) {
+func syncConfigMapToCluster(specCM *corev1.ConfigMap, api *workspace.ClusterAPI) (inSync bool, err error) {
 	clusterCM := &corev1.ConfigMap{}
 	err = api.Client.Get(context.TODO(), types.NamespacedName{Name: specCM.Name, Namespace: specCM.Namespace}, clusterCM)
 

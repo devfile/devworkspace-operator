@@ -21,7 +21,6 @@ import (
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -33,6 +32,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
+	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
 	"github.com/go-logr/logr"
@@ -84,7 +84,7 @@ type DevWorkspaceReconciler struct {
 func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	ctx := context.Background()
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	clusterAPI := provision.ClusterAPI{
+	clusterAPI := wsprovision.ClusterAPI{
 		Client: r.Client,
 		Scheme: r.Scheme,
 		Logger: reqLogger,
@@ -255,14 +255,14 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 
-	rbacStatus := provision.SyncRBAC(workspace, r.Client, reqLogger)
+	rbacStatus := wsprovision.SyncRBAC(workspace, r.Client, reqLogger)
 	if rbacStatus.Err != nil || !rbacStatus.Continue {
 		return reconcile.Result{Requeue: true}, rbacStatus.Err
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
 	timing.SetTime(timingInfo, timing.RoutingCreated)
-	routingStatus := provision.SyncRoutingToCluster(workspace, clusterAPI)
+	routingStatus := wsprovision.SyncRoutingToCluster(workspace, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
 			return r.failWorkspace(workspace, routingStatus.Message, reqLogger, &reconcileStatus)
@@ -315,7 +315,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	if routingPodAdditions != nil {
 		saAnnotations = routingPodAdditions.ServiceAccountAnnotations
 	}
-	serviceAcctStatus := provision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
+	serviceAcctStatus := wsprovision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
 	if !serviceAcctStatus.Continue {
 		// FailStartup is not possible for generating the serviceaccount
 		reqLogger.Info("Waiting for workspace ServiceAccount")
@@ -325,7 +325,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 
-	pullSecretStatus := provision.PullSecrets(clusterAPI)
+	pullSecretStatus := wsprovision.PullSecrets(clusterAPI)
 	if !pullSecretStatus.Continue {
 		reconcileStatus.setConditionFalse(conditions.PullSecretsReady, "Waiting for DevWorkspace pull secrets")
 		return reconcile.Result{Requeue: pullSecretStatus.Requeue}, pullSecretStatus.Err
@@ -335,7 +335,7 @@ func (r *DevWorkspaceReconciler) Reconcile(req ctrl.Request) (reconcileResult ct
 
 	// Step six: Create deployment and wait for it to be ready
 	timing.SetTime(timingInfo, timing.DeploymentCreated)
-	deploymentStatus := provision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)
+	deploymentStatus := wsprovision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			return r.failWorkspace(workspace, deploymentStatus.Info(), reqLogger, &reconcileStatus)
@@ -407,7 +407,7 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 	replicas := workspaceDeployment.Spec.Replicas
 	if replicas == nil || *replicas > 0 {
 		logger.Info("Stopping workspace")
-		err = provision.ScaleDeploymentToZero(workspace, r.Client)
+		err = wsprovision.ScaleDeploymentToZero(workspace, r.Client)
 		if err != nil && !k8sErrors.IsConflict(err) {
 			return false, err
 		}

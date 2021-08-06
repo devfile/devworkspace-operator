@@ -16,10 +16,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -44,7 +45,7 @@ func getSSHAuthorizedKeysConfigMapSpec(namespace string, authorizedKeys []byte) 
 	return cm
 }
 
-func getSSHAuthorizedKeysConfigMapCluster(namespace string, clusterAPI provision.ClusterAPI) (*corev1.ConfigMap, error) {
+func getSSHAuthorizedKeysConfigMapCluster(namespace string, clusterAPI workspace.ClusterAPI) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
 	namespaceName := types.NamespacedName{
 		Name:      sshAuthorizedKeysConfigMapName,

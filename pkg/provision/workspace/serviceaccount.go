@@ -10,13 +10,12 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package provision
+package workspace
 
 import (
 	"context"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -24,6 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/devfile/devworkspace-operator/pkg/common"
 )
 
 type ServiceAcctProvisioningStatus struct {

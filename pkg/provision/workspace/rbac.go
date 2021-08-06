@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package provision
+package workspace
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"

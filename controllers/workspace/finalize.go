@@ -17,15 +17,15 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
-	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
-
 	"github.com/go-logr/logr"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
+	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -44,7 +44,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	}
 
 	// Need to make sure Deployment is cleaned up before starting job to avoid mounting issues for RWO PVCs
-	wait, err := provision.DeleteWorkspaceDeployment(ctx, workspace, r.Client)
+	wait, err := wsprovision.DeleteWorkspaceDeployment(ctx, workspace, r.Client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -69,7 +69,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
 		return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
 	}
-	err = storageProvisioner.CleanupWorkspaceStorage(workspace, provision.ClusterAPI{
+	err = storageProvisioner.CleanupWorkspaceStorage(workspace, wsprovision.ClusterAPI{
 		Ctx:    ctx,
 		Client: r.Client,
 		Scheme: r.Scheme,

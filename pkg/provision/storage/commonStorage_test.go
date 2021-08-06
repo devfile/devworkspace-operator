@@ -21,10 +21,6 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/workspace/provision"
-	"github.com/devfile/devworkspace-operator/pkg/config"
-
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,6 +29,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/yaml"
+
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 var scheme = runtime.NewScheme()
@@ -106,7 +106,7 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 		t.Fatalf("Failure during setup: %s", err)
 	}
 	commonPVC.Status.Phase = corev1.ClaimBound
-	clusterAPI := provision.ClusterAPI{
+	clusterAPI := workspace.ClusterAPI{
 		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
 		Logger: zap.New(),
 	}

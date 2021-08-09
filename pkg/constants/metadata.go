@@ -38,6 +38,11 @@ const (
 	// If mountAs is not provided, the default behaviour will be to mount as a file.
 	DevWorkspaceMountAsAnnotation = "controller.devfile.io/mount-as"
 
+	// DevWorkspaceMountReadyOnlyAnnotation is an annotation to configure whether a mounted volume is as read-write or
+	// as read-only. If "true", the volume is mounted as read-only. PersistentVolumeClaims are by default mounted
+	// read-write. Automounted configmaps and secrets are always mounted read-only and this annotation is ignored.
+	DevWorkspaceMountReadyOnlyAnnotation = "controller.devfile.io/read-only"
+
 	// DevWorkspaceRestrictedAccessAnnotation marks the intention that devworkspace access is restricted to only the creator; setting this
 	// annotation will cause devworkspace start to fail if webhooks are disabled.
 	// Operator also propagates it to the devworkspace-related objects to perform authorization.

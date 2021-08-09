@@ -43,6 +43,9 @@ func WorkspaceFailed(wksp *dw.DevWorkspace, log logr.Logger) {
 
 func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
 	sourceLabel := wksp.Labels[workspaceSourceLabel]
+	if sourceLabel == "" {
+		sourceLabel = "unknown"
+	}
 	routingClass := wksp.Spec.RoutingClass
 	if routingClass == "" {
 		routingClass = config.ControllerCfg.GetDefaultRoutingClass()
@@ -56,6 +59,9 @@ func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWork
 
 func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger) {
 	sourceLabel := wksp.Labels[workspaceSourceLabel]
+	if sourceLabel == "" {
+		sourceLabel = "unknown"
+	}
 	routingClass := wksp.Spec.RoutingClass
 	if routingClass == "" {
 		routingClass = config.ControllerCfg.GetDefaultRoutingClass()

@@ -27,8 +27,8 @@ const (
 	DevWorkspaceMountLabel = "controller.devfile.io/mount-to-devworkspace"
 
 	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
-	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name> and secrets will
-	// be mounted at /etc/secret/<secret-name>
+	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name>, secrets will
+	// be mounted at /etc/secret/<secret-name>, and persistent volume claims will be mounted to /tmp/<claim-name>
 	DevWorkspaceMountPathAnnotation = "controller.devfile.io/mount-path"
 
 	// DevWorkspaceMountAsAnnotation is the annotation key to configure the way how configmaps or secrets should be mounted.

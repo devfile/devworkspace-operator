@@ -84,3 +84,7 @@ func AutoMountConfigMapVolumeName(volumeName string) string {
 func AutoMountSecretVolumeName(volumeName string) string {
 	return fmt.Sprintf("automount-secret-%s", volumeName)
 }
+
+func AutoMountPVCVolumeName(pvcName string) string {
+	return fmt.Sprintf("automount-pvc-%s", pvcName)
+}

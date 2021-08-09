@@ -41,11 +41,18 @@ func getAutoMountPVCs(namespace string, client k8sclient.Client) (*v1alpha1.PodA
 		if mountPath == "" {
 			mountPath = path.Join("/tmp/", pvc.Name)
 		}
+
+		mountReadOnly := false
+		if pvc.Annotations[constants.DevWorkspaceMountReadyOnlyAnnotation] == "true" {
+			mountReadOnly = true
+		}
+
 		podAdditions.Volumes = append(podAdditions.Volumes, corev1.Volume{
 			Name: common.AutoMountPVCVolumeName(pvc.Name),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 					ClaimName: pvc.Name,
+					ReadOnly:  mountReadOnly,
 				},
 			},
 		})

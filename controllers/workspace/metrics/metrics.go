@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	workspaceSourceLabel = "controller.devfile.io/devworkspace-source"
-	metricSourceLabel    = "source"
+	workspaceSourceLabel     = "controller.devfile.io/devworkspace-source"
+	metricSourceLabel        = "source"
+	metricsRoutingClassLabel = "routingclass"
 )
 
 var (
@@ -31,6 +32,7 @@ var (
 		},
 		[]string{
 			metricSourceLabel,
+			metricsRoutingClassLabel,
 		},
 	)
 	workspaceStarts = prometheus.NewCounterVec(
@@ -41,6 +43,7 @@ var (
 		},
 		[]string{
 			metricSourceLabel,
+			metricsRoutingClassLabel,
 		},
 	)
 	workspaceFailures = prometheus.NewCounterVec(
@@ -51,6 +54,7 @@ var (
 		},
 		[]string{
 			metricSourceLabel,
+			metricsRoutingClassLabel,
 		},
 	)
 	workspaceStartupTimesHist = prometheus.NewHistogramVec(
@@ -62,6 +66,7 @@ var (
 		},
 		[]string{
 			metricSourceLabel,
+			metricsRoutingClassLabel,
 		},
 	)
 )

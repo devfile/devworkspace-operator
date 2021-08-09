@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package workspace
+package automount
 
 import (
 	"fmt"
@@ -178,7 +178,7 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 			for _, desc := range tt.automountPodAdditions {
 				automount = append(automount, convertToPodAddition(desc))
 			}
-			outErr := checkAutoMountVolumesForCollision(base, automount)
+			outErr := CheckAutoMountVolumesForCollision(base, automount)
 			if tt.errRegexp == "" {
 				assert.Nil(t, outErr, "Expected no error but got %s", outErr)
 			} else {

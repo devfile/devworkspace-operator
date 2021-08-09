@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 // WorkspaceStarted updates metrics for workspaces entering the 'Starting' phase, given a workspace. If an error is
@@ -42,7 +43,11 @@ func WorkspaceFailed(wksp *dw.DevWorkspace, log logr.Logger) {
 
 func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
 	sourceLabel := wksp.Labels[workspaceSourceLabel]
-	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel})
+	routingClass := wksp.Spec.RoutingClass
+	if routingClass == "" {
+		routingClass = config.ControllerCfg.GetDefaultRoutingClass()
+	}
+	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
 	}
@@ -51,7 +56,11 @@ func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWork
 
 func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger) {
 	sourceLabel := wksp.Labels[workspaceSourceLabel]
-	hist, err := workspaceStartupTimesHist.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel})
+	routingClass := wksp.Spec.RoutingClass
+	if routingClass == "" {
+		routingClass = config.ControllerCfg.GetDefaultRoutingClass()
+	}
+	hist, err := workspaceStartupTimesHist.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
 		log.Error(err, "Failed to update metric")
 	}

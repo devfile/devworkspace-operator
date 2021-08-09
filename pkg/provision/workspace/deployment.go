@@ -26,6 +26,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/automount"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
@@ -83,13 +84,13 @@ func SyncDeploymentToCluster(
 	saName string,
 	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
 
-	automountPodAdditions, automountEnv, err := getAutoMountResources(workspace.Namespace, clusterAPI.Client)
+	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(workspace.Namespace, clusterAPI.Client)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus{Err: err},
 		}
 	}
-	if err := checkAutoMountVolumesForCollision(podAdditions, automountPodAdditions); err != nil {
+	if err := automount.CheckAutoMountVolumesForCollision(podAdditions, automountPodAdditions); err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus{Err: err, FailStartup: true},
 		}

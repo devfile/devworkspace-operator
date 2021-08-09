@@ -30,6 +30,10 @@ func GetAutoMountResources(namespace string, client k8sclient.Client) ([]v1alpha
 	if err != nil {
 		return nil, nil, err
 	}
+	pvcPodAdditions, err := getAutoMountPVCs(namespace, client)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	var allPodAdditions []v1alpha1.PodAdditions
 	if cmPodAdditions != nil {
@@ -37,6 +41,9 @@ func GetAutoMountResources(namespace string, client k8sclient.Client) ([]v1alpha
 	}
 	if secretPodAdditions != nil {
 		allPodAdditions = append(allPodAdditions, *secretPodAdditions)
+	}
+	if pvcPodAdditions != nil {
+		allPodAdditions = append(allPodAdditions, *pvcPodAdditions)
 	}
 
 	return allPodAdditions, append(cmEnvAdditions, secretEnvAdditions...), nil

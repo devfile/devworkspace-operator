@@ -90,6 +90,7 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - events
           - namespaces
           verbs:
           - get

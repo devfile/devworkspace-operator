@@ -57,9 +57,10 @@ func generateRBAC(namespace string) []runtime.Object {
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
-					Resources: []string{"secrets"},
-					APIGroups: []string{""},
-					Verbs:     []string{"get", "list", "create", "delete"},
+					Resources:     []string{"secrets"},
+					APIGroups:     []string{""},
+					Verbs:         []string{"get", "create", "delete"},
+					ResourceNames: []string{"workspace-credentials-secret"},
 				},
 				{
 					Resources: []string{"devworkspaces"},

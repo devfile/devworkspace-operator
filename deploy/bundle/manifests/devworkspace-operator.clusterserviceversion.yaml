@@ -104,6 +104,16 @@ spec:
           - create
         - apiGroups:
           - ""
+          resourceNames:
+          - workspace-credentials-secret
+          resources:
+          - secrets
+          verbs:
+          - create
+          - delete
+          - get
+        - apiGroups:
+          - ""
           resources:
           - services
           verbs:

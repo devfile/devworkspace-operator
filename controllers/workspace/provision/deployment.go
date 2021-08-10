@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/fields"
+
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/env"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
@@ -41,11 +43,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-var ContainerFailureStateReasons = []string{
+var containerFailureStateReasons = []string{
 	"CrashLoopBackOff",
 	"ImagePullBackOff",
 	"CreateContainerError",
 	"RunContainerError",
+}
+
+var unrecoverablePodEventReasons = []string{
+	"FailedMount",
+	"FailedScheduling",
+	"MountVolume.SetUp failed",
+	"FailedCreate",
+	"ReplicaSetCreateError",
 }
 
 type DeploymentProvisioningStatus struct {
@@ -163,7 +173,7 @@ func SyncDeploymentToCluster(
 		}
 	}
 
-	failureMsg, checkErr := checkFailedPods(workspace, clusterAPI)
+	failureMsg, checkErr := checkPodsState(workspace, clusterAPI)
 	if checkErr != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -171,13 +181,16 @@ func SyncDeploymentToCluster(
 			},
 		}
 	}
-
-	return DeploymentProvisioningStatus{
-		ProvisioningStatus: ProvisioningStatus{
-			FailStartup: failureMsg != "",
-			Message:     failureMsg,
-		},
+	if failureMsg != "" {
+		return DeploymentProvisioningStatus{
+			ProvisioningStatus{
+				FailStartup: true,
+				Message:     failureMsg,
+			},
+		}
 	}
+
+	return DeploymentProvisioningStatus{}
 }
 
 // DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace
@@ -369,10 +382,12 @@ func getPods(workspace *dw.DevWorkspace, client runtimeClient.Client) (*corev1.P
 	return pods, nil
 }
 
-// checkFailedPods check if related pods has unrecoverable states: CrashLoopBackOffReason, ImagePullErr
+// checkPodsState checks if workspace-related pods are in an unrecoverable state. A pod is considered to be unrecoverable
+// if it has a container with one of the containerStateFailureReasons states, or if an unrecoverable event (with reason
+// matching unrecoverablePodEventReasons) has the pod as the involved object.
 // Returns optional message with detected unrecoverable state details
-//         error is any happens during check
-func checkFailedPods(workspace *dw.DevWorkspace,
+//         error if any happens during check
+func checkPodsState(workspace *dw.DevWorkspace,
 	clusterAPI ClusterAPI) (stateMsg string, checkFailure error) {
 	podList, err := getPods(workspace, clusterAPI.Client)
 	if err != nil {
@@ -388,6 +403,31 @@ func checkFailedPods(workspace *dw.DevWorkspace,
 		for _, initContainerStatus := range pod.Status.InitContainerStatuses {
 			if !checkContainerStatusForFailure(&initContainerStatus) {
 				return fmt.Sprintf("Init Container %s has state %s", initContainerStatus.Name, initContainerStatus.State.Waiting.Reason), nil
+			}
+		}
+		if msg, err := checkPodEvents(&pod, clusterAPI); err != nil || msg != "" {
+			return msg, err
+		}
+	}
+	return "", nil
+}
+
+func checkPodEvents(pod *corev1.Pod, clusterAPI ClusterAPI) (msg string, err error) {
+	evs := &corev1.EventList{}
+	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse field selector: %s", err)
+	}
+	if err := clusterAPI.Client.List(clusterAPI.Ctx, evs, k8sclient.InNamespace(pod.Namespace), k8sclient.MatchingFieldsSelector{Selector: selector}); err != nil {
+		return "", fmt.Errorf("failed to list events in namespace %s: %w", pod.Namespace, err)
+	}
+	for _, ev := range evs.Items {
+		if ev.InvolvedObject.Kind != "Pod" {
+			continue
+		}
+		for _, fatalEv := range unrecoverablePodEventReasons {
+			if ev.Reason == fatalEv {
+				return fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, ev.Message), nil
 			}
 		}
 	}
@@ -477,7 +517,7 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
 
 func checkContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok bool) {
 	if containerStatus.State.Waiting != nil {
-		for _, failureReason := range ContainerFailureStateReasons {
+		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Waiting.Reason == failureReason {
 				return false
 			}

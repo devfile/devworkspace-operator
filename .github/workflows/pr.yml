@@ -72,7 +72,9 @@ jobs:
     -
       name: Check format
       run: |
-        go get -u github.com/google/addlicense
+        # Have to use older version of addlicense as newer versions *require* Go 1.16. This
+        # requirement can be removed once this project moves to Go 1.16
+        go get -u github.com/google/addlicense@99ebc9c9db7bceb8623073e894533b978d7b7c8a
         go get -u golang.org/x/tools/cmd/goimports
         git reset HEAD --hard
 

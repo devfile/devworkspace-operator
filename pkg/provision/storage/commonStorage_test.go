@@ -32,7 +32,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
+	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 var scheme = runtime.NewScheme()
@@ -106,7 +106,7 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 		t.Fatalf("Failure during setup: %s", err)
 	}
 	commonPVC.Status.Phase = corev1.ClaimBound
-	clusterAPI := workspace.ClusterAPI{
+	clusterAPI := wsprovision.ClusterAPI{
 		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
 		Logger: zap.New(),
 	}

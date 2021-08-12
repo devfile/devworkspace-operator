@@ -16,19 +16,16 @@ import (
 	"errors"
 	"fmt"
 
-	clientConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
-
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-
-	"github.com/devfile/devworkspace-operator/pkg/config"
-
-	"k8s.io/api/admissionregistration/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	clientConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
@@ -113,8 +110,8 @@ func Configure(ctx context.Context) error {
 	return nil
 }
 
-func getMutatingWebhook(ctx context.Context, c client.Client, mutatingWebhookCfg *v1beta1.MutatingWebhookConfiguration) (*v1beta1.MutatingWebhookConfiguration, error) {
-	existingCfg := &v1beta1.MutatingWebhookConfiguration{}
+func getMutatingWebhook(ctx context.Context, c client.Client, mutatingWebhookCfg *admregv1.MutatingWebhookConfiguration) (*admregv1.MutatingWebhookConfiguration, error) {
+	existingCfg := &admregv1.MutatingWebhookConfiguration{}
 	err := c.Get(ctx, types.NamespacedName{
 		Name:      mutatingWebhookCfg.Name,
 		Namespace: mutatingWebhookCfg.Namespace,
@@ -122,8 +119,8 @@ func getMutatingWebhook(ctx context.Context, c client.Client, mutatingWebhookCfg
 	return existingCfg, err
 }
 
-func getValidateWebhook(ctx context.Context, c client.Client, validateWebhookCfg *v1beta1.ValidatingWebhookConfiguration) (*v1beta1.ValidatingWebhookConfiguration, error) {
-	existingCfg := &v1beta1.ValidatingWebhookConfiguration{}
+func getValidateWebhook(ctx context.Context, c client.Client, validateWebhookCfg *admregv1.ValidatingWebhookConfiguration) (*admregv1.ValidatingWebhookConfiguration, error) {
+	existingCfg := &admregv1.ValidatingWebhookConfiguration{}
 	err := c.Get(ctx, types.NamespacedName{
 		Name:      validateWebhookCfg.Name,
 		Namespace: validateWebhookCfg.Namespace,

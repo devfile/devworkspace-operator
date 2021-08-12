@@ -12,7 +12,7 @@
 package workspace
 
 import (
-	"k8s.io/api/admissionregistration/v1beta1"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -23,18 +23,18 @@ import (
 const (
 	MutateWebhookCfgName       = "controller.devfile.io"
 	mutateWebhookPath          = "/mutate"
-	mutateWebhookFailurePolicy = v1beta1.Fail
+	mutateWebhookFailurePolicy = admregv1.Fail
 )
 
 // BuildMutateWebhookCfg creates the mutating webhook configuration for the controller
-func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfiguration {
+func BuildMutateWebhookCfg(namespace string) *admregv1.MutatingWebhookConfiguration {
 	mutateWebhookFailurePolicy := mutateWebhookFailurePolicy
 	mutateWebhookPath := mutateWebhookPath
 	labelExistsOp := metav1.LabelSelectorOpExists
-	equivalentMatchPolicy := v1beta1.Equivalent
-	sideEffectsNone := v1beta1.SideEffectClassNone
-	webhookClientConfig := v1beta1.WebhookClientConfig{
-		Service: &v1beta1.ServiceReference{
+	equivalentMatchPolicy := admregv1.Equivalent
+	sideEffectsNone := admregv1.SideEffectClassNone
+	webhookClientConfig := admregv1.WebhookClientConfig{
+		Service: &admregv1.ServiceReference{
 			Name:      server.WebhookServerServiceName,
 			Namespace: namespace,
 			Path:      &mutateWebhookPath,
@@ -42,23 +42,23 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 		CABundle: server.CABundle,
 	}
 
-	workspaceMutateWebhook := v1beta1.MutatingWebhook{
+	workspaceMutateWebhook := admregv1.MutatingWebhook{
 		Name:          "mutate.devworkspace-controller.svc",
 		FailurePolicy: &mutateWebhookFailurePolicy,
 		ClientConfig:  webhookClientConfig,
 		SideEffects:   &sideEffectsNone,
-		Rules: []v1beta1.RuleWithOperations{
+		Rules: []admregv1.RuleWithOperations{
 			{
-				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-				Rule: v1beta1.Rule{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
 					APIGroups:   []string{"workspace.devfile.io"},
 					APIVersions: []string{"v1alpha1", "v1alpha2"},
 					Resources:   []string{"devworkspaces"},
 				},
 			},
 			{
-				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-				Rule: v1beta1.Rule{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
 					APIGroups:   []string{"controller.devfile.io"},
 					APIVersions: []string{"v1alpha1"},
 					Resources:   []string{"devworkspaceroutings", "components"},
@@ -67,7 +67,7 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 		},
 	}
 
-	workspaceObjMutateWebhook := v1beta1.MutatingWebhook{
+	workspaceObjMutateWebhook := admregv1.MutatingWebhook{
 		Name:          "mutate-ws-resources.devworkspace-controller.svc",
 		FailurePolicy: &mutateWebhookFailurePolicy,
 		ClientConfig:  webhookClientConfig,
@@ -80,42 +80,50 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 			},
 		},
 		MatchPolicy: &equivalentMatchPolicy,
-		Rules: []v1beta1.RuleWithOperations{
+		Rules: []admregv1.RuleWithOperations{
 			{
-				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-				Rule: v1beta1.Rule{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
 					APIGroups:   []string{""},
 					APIVersions: []string{"v1"},
 					Resources:   []string{"pods"},
 				},
 			},
 			{
-				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-				Rule: v1beta1.Rule{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
 					APIGroups:   []string{""},
 					APIVersions: []string{"v1"},
 					Resources:   []string{"services"},
 				},
 			},
 			{
-				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-				Rule: v1beta1.Rule{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
 					APIGroups:   []string{"apps"},
 					APIVersions: []string{"v1"},
 					Resources:   []string{"deployments"},
 				},
 			},
 			{
-				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-				Rule: v1beta1.Rule{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
 					APIGroups:   []string{"extensions"},
 					APIVersions: []string{"v1beta1"},
 					Resources:   []string{"ingresses"},
 				},
 			},
 			{
-				Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-				Rule: v1beta1.Rule{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
+					APIGroups:   []string{"networking.k8s.io"},
+					APIVersions: []string{"v1"},
+					Resources:   []string{"ingresses"},
+				},
+			},
+			{
+				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+				Rule: admregv1.Rule{
 					APIGroups:   []string{"batch"},
 					APIVersions: []string{"v1"},
 					Resources:   []string{"jobs"},
@@ -126,9 +134,9 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 	// n.b. Routes do not get UserInfo.UID filled in webhooks for some reason
 	// ref: https://github.com/eclipse/che/issues/17114
 	if infrastructure.IsOpenShift() {
-		workspaceObjMutateWebhook.Rules = append(workspaceObjMutateWebhook.Rules, v1beta1.RuleWithOperations{
-			Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
-			Rule: v1beta1.Rule{
+		workspaceObjMutateWebhook.Rules = append(workspaceObjMutateWebhook.Rules, admregv1.RuleWithOperations{
+			Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
+			Rule: admregv1.Rule{
 				APIGroups:   []string{"route.openshift.io"},
 				APIVersions: []string{"v1"},
 				Resources:   []string{"routes"},
@@ -136,12 +144,12 @@ func BuildMutateWebhookCfg(namespace string) *v1beta1.MutatingWebhookConfigurati
 		})
 	}
 
-	return &v1beta1.MutatingWebhookConfiguration{
+	return &admregv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   MutateWebhookCfgName,
 			Labels: server.WebhookServerAppLabels(),
 		},
-		Webhooks: []v1beta1.MutatingWebhook{
+		Webhooks: []admregv1.MutatingWebhook{
 			workspaceMutateWebhook,
 			workspaceObjMutateWebhook,
 		},

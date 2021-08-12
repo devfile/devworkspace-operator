@@ -12,43 +12,44 @@
 package workspace
 
 import (
-	"github.com/devfile/devworkspace-operator/webhook/server"
-	"k8s.io/api/admissionregistration/v1beta1"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/devfile/devworkspace-operator/webhook/server"
 )
 
 const (
 	ValidateWebhookCfgName       = "controller.devfile.io"
 	validateWebhookPath          = "/validate"
-	validateWebhookFailurePolicy = v1beta1.Fail
+	validateWebhookFailurePolicy = admregv1.Fail
 )
 
-func buildValidatingWebhookCfg(namespace string) *v1beta1.ValidatingWebhookConfiguration {
+func buildValidatingWebhookCfg(namespace string) *admregv1.ValidatingWebhookConfiguration {
 	validateWebhookFailurePolicy := validateWebhookFailurePolicy
 	validateWebhookPath := validateWebhookPath
-	sideEffectsNone := v1beta1.SideEffectClassNone
-	return &v1beta1.ValidatingWebhookConfiguration{
+	sideEffectsNone := admregv1.SideEffectClassNone
+	return &admregv1.ValidatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ValidateWebhookCfgName,
 			Labels: server.WebhookServerAppLabels(),
 		},
-		Webhooks: []v1beta1.ValidatingWebhook{
+		Webhooks: []admregv1.ValidatingWebhook{
 			{
 				Name:          "validate-exec.devworkspace-controller.svc",
 				FailurePolicy: &validateWebhookFailurePolicy,
 				SideEffects:   &sideEffectsNone,
-				ClientConfig: v1beta1.WebhookClientConfig{
-					Service: &v1beta1.ServiceReference{
+				ClientConfig: admregv1.WebhookClientConfig{
+					Service: &admregv1.ServiceReference{
 						Name:      server.WebhookServerServiceName,
 						Namespace: namespace,
 						Path:      &validateWebhookPath,
 					},
 					CABundle: server.CABundle,
 				},
-				Rules: []v1beta1.RuleWithOperations{
+				Rules: []admregv1.RuleWithOperations{
 					{
-						Operations: []v1beta1.OperationType{v1beta1.Connect},
-						Rule: v1beta1.Rule{
+						Operations: []admregv1.OperationType{admregv1.Connect},
+						Rule: admregv1.Rule{
 							APIGroups:   []string{""},
 							APIVersions: []string{"v1"},
 							Resources:   []string{"pods/exec"},

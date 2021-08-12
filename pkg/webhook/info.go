@@ -16,18 +16,19 @@ import (
 	"context"
 	"fmt"
 
-	webhookCfg "github.com/devfile/devworkspace-operator/webhook/workspace"
-	"k8s.io/api/admissionregistration/v1beta1"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	webhookCfg "github.com/devfile/devworkspace-operator/webhook/workspace"
 )
 
 var webhooksCreationTimestamp = metav1.Time{}
 
 func GetWebhooksCreationTimestamp(client client.Client) (metav1.Time, error) {
 	if webhooksCreationTimestamp.IsZero() {
-		webhook := &v1beta1.MutatingWebhookConfiguration{}
+		webhook := &admregv1.MutatingWebhookConfiguration{}
 		err := client.Get(context.TODO(), types.NamespacedName{Name: webhookCfg.MutateWebhookCfgName}, webhook)
 		if err != nil {
 			return metav1.Time{}, fmt.Errorf("failed to get webhook: %w", err)

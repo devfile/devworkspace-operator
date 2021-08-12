@@ -23,7 +23,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
-	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
+	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 // The CommonStorageProvisioner provisions one PVC per namespace and configures all volumes in a workspace
@@ -36,7 +36,7 @@ func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplate
 	return needsStorage(workspace)
 }
 
-func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI workspace.ClusterAPI) error {
+func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) error {
 	// Add ephemeral volumes
 	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
 		return err
@@ -60,7 +60,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	return nil
 }
 
-func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI workspace.ClusterAPI) error {
+func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) error {
 	return runCommonPVCCleanupJob(workspace, clusterAPI)
 }
 

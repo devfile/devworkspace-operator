@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
+	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -50,7 +50,7 @@ func getSSHSidecarSecretSpec(workspace *dw.DevWorkspace, privateKey []byte) *cor
 	return secret
 }
 
-func getSSHSidecarSecretCluster(workspace *dw.DevWorkspace, clusterAPI workspace.ClusterAPI) (*corev1.Secret, error) {
+func getSSHSidecarSecretCluster(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	namespacedName := types.NamespacedName{
 		Name:      GetSSHSidecarSecretName(workspace.Status.DevWorkspaceId),

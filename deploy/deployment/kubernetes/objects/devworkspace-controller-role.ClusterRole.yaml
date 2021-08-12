@@ -128,11 +128,13 @@ rules:
   - patch
   - update
 - apiGroups:
-  - extensions
+  - coordination.k8s.io
   resources:
-  - ingresses
+  - leases
   verbs:
-  - '*'
+  - create
+  - get
+  - update
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -140,6 +142,12 @@ rules:
   verbs:
   - create
   - get
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - ingresses
+  verbs:
+  - '*'
 - apiGroups:
   - oauth.openshift.io
   resources:

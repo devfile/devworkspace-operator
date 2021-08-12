@@ -695,6 +695,23 @@ spec:
                               required:
                               - port
                               type: object
+                            terminationGracePeriodSeconds:
+                              description: Optional duration in seconds the pod needs
+                                to terminate gracefully upon probe failure. The grace
+                                period is the duration in seconds after the processes
+                                running in the pod are sent a termination signal and
+                                the time when the processes are forcibly halted with
+                                a kill signal. Set this value longer than the expected
+                                cleanup time for your process. If this value is nil,
+                                the pod's terminationGracePeriodSeconds will be used.
+                                Otherwise, this value overrides the value provided
+                                by the pod spec. Value must be non-negative integer.
+                                The value zero indicates stop immediately via the
+                                kill signal (no opportunity to shut down). This is
+                                an alpha field and requires enabling ProbeTerminationGracePeriod
+                                feature gate.
+                              format: int64
+                              type: integer
                             timeoutSeconds:
                               description: 'Number of seconds after which the probe
                                 times out. Defaults to 1 second. Minimum value is
@@ -869,6 +886,23 @@ spec:
                               required:
                               - port
                               type: object
+                            terminationGracePeriodSeconds:
+                              description: Optional duration in seconds the pod needs
+                                to terminate gracefully upon probe failure. The grace
+                                period is the duration in seconds after the processes
+                                running in the pod are sent a termination signal and
+                                the time when the processes are forcibly halted with
+                                a kill signal. Set this value longer than the expected
+                                cleanup time for your process. If this value is nil,
+                                the pod's terminationGracePeriodSeconds will be used.
+                                Otherwise, this value overrides the value provided
+                                by the pod spec. Value must be non-negative integer.
+                                The value zero indicates stop immediately via the
+                                kill signal (no opportunity to shut down). This is
+                                an alpha field and requires enabling ProbeTerminationGracePeriod
+                                feature gate.
+                              format: int64
+                              type: integer
                             timeoutSeconds:
                               description: 'Number of seconds after which the probe
                                 times out. Defaults to 1 second. Minimum value is
@@ -878,7 +912,7 @@ spec:
                           type: object
                         resources:
                           description: 'Compute Resources required by this container.
-                            Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           properties:
                             limits:
                               additionalProperties:
@@ -888,7 +922,7 @@ spec:
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                               description: 'Limits describes the maximum amount of
-                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                               type: object
                             requests:
                               additionalProperties:
@@ -901,7 +935,7 @@ spec:
                                 of compute resources required. If Requests is omitted
                                 for a container, it defaults to Limits if that is
                                 explicitly specified, otherwise to an implementation-defined
-                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                               type: object
                           type: object
                         securityContext:
@@ -1173,6 +1207,23 @@ spec:
                               required:
                               - port
                               type: object
+                            terminationGracePeriodSeconds:
+                              description: Optional duration in seconds the pod needs
+                                to terminate gracefully upon probe failure. The grace
+                                period is the duration in seconds after the processes
+                                running in the pod are sent a termination signal and
+                                the time when the processes are forcibly halted with
+                                a kill signal. Set this value longer than the expected
+                                cleanup time for your process. If this value is nil,
+                                the pod's terminationGracePeriodSeconds will be used.
+                                Otherwise, this value overrides the value provided
+                                by the pod spec. Value must be non-negative integer.
+                                The value zero indicates stop immediately via the
+                                kill signal (no opportunity to shut down). This is
+                                an alpha field and requires enabling ProbeTerminationGracePeriod
+                                feature gate.
+                              format: int64
+                              type: integer
                             timeoutSeconds:
                               description: 'Number of seconds after which the probe
                                 times out. Defaults to 1 second. Minimum value is
@@ -1804,6 +1855,23 @@ spec:
                               required:
                               - port
                               type: object
+                            terminationGracePeriodSeconds:
+                              description: Optional duration in seconds the pod needs
+                                to terminate gracefully upon probe failure. The grace
+                                period is the duration in seconds after the processes
+                                running in the pod are sent a termination signal and
+                                the time when the processes are forcibly halted with
+                                a kill signal. Set this value longer than the expected
+                                cleanup time for your process. If this value is nil,
+                                the pod's terminationGracePeriodSeconds will be used.
+                                Otherwise, this value overrides the value provided
+                                by the pod spec. Value must be non-negative integer.
+                                The value zero indicates stop immediately via the
+                                kill signal (no opportunity to shut down). This is
+                                an alpha field and requires enabling ProbeTerminationGracePeriod
+                                feature gate.
+                              format: int64
+                              type: integer
                             timeoutSeconds:
                               description: 'Number of seconds after which the probe
                                 times out. Defaults to 1 second. Minimum value is
@@ -1978,6 +2046,23 @@ spec:
                               required:
                               - port
                               type: object
+                            terminationGracePeriodSeconds:
+                              description: Optional duration in seconds the pod needs
+                                to terminate gracefully upon probe failure. The grace
+                                period is the duration in seconds after the processes
+                                running in the pod are sent a termination signal and
+                                the time when the processes are forcibly halted with
+                                a kill signal. Set this value longer than the expected
+                                cleanup time for your process. If this value is nil,
+                                the pod's terminationGracePeriodSeconds will be used.
+                                Otherwise, this value overrides the value provided
+                                by the pod spec. Value must be non-negative integer.
+                                The value zero indicates stop immediately via the
+                                kill signal (no opportunity to shut down). This is
+                                an alpha field and requires enabling ProbeTerminationGracePeriod
+                                feature gate.
+                              format: int64
+                              type: integer
                             timeoutSeconds:
                               description: 'Number of seconds after which the probe
                                 times out. Defaults to 1 second. Minimum value is
@@ -1987,7 +2072,7 @@ spec:
                           type: object
                         resources:
                           description: 'Compute Resources required by this container.
-                            Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                            Cannot be updated. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                           properties:
                             limits:
                               additionalProperties:
@@ -1997,7 +2082,7 @@ spec:
                                 pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                 x-kubernetes-int-or-string: true
                               description: 'Limits describes the maximum amount of
-                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                                compute resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                               type: object
                             requests:
                               additionalProperties:
@@ -2010,7 +2095,7 @@ spec:
                                 of compute resources required. If Requests is omitted
                                 for a container, it defaults to Limits if that is
                                 explicitly specified, otherwise to an implementation-defined
-                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                                value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                               type: object
                           type: object
                         securityContext:
@@ -2282,6 +2367,23 @@ spec:
                               required:
                               - port
                               type: object
+                            terminationGracePeriodSeconds:
+                              description: Optional duration in seconds the pod needs
+                                to terminate gracefully upon probe failure. The grace
+                                period is the duration in seconds after the processes
+                                running in the pod are sent a termination signal and
+                                the time when the processes are forcibly halted with
+                                a kill signal. Set this value longer than the expected
+                                cleanup time for your process. If this value is nil,
+                                the pod's terminationGracePeriodSeconds will be used.
+                                Otherwise, this value overrides the value provided
+                                by the pod spec. Value must be non-negative integer.
+                                The value zero indicates stop immediately via the
+                                kill signal (no opportunity to shut down). This is
+                                an alpha field and requires enabling ProbeTerminationGracePeriod
+                                feature gate.
+                              format: int64
+                              type: integer
                             timeoutSeconds:
                               description: 'Number of seconds after which the probe
                                 times out. Defaults to 1 second. Minimum value is
@@ -2865,15 +2967,15 @@ spec:
                           type: object
                         ephemeral:
                           description: "Ephemeral represents a volume that is handled
-                            by a cluster storage driver (Alpha feature). The volume's
-                            lifecycle is tied to the pod that defines it - it will
-                            be created before the pod starts, and deleted when the
-                            pod is removed. \n Use this if: a) the volume is only
-                            needed while the pod runs, b) features of normal volumes
-                            like restoring from snapshot or capacity    tracking are
-                            needed, c) the storage driver is specified through a storage
-                            class, and d) the storage driver supports dynamic volume
-                            provisioning through    a PersistentVolumeClaim (see EphemeralVolumeSource
+                            by a cluster storage driver. The volume's lifecycle is
+                            tied to the pod that defines it - it will be created before
+                            the pod starts, and deleted when the pod is removed. \n
+                            Use this if: a) the volume is only needed while the pod
+                            runs, b) features of normal volumes like restoring from
+                            snapshot or capacity    tracking are needed, c) the storage
+                            driver is specified through a storage class, and d) the
+                            storage driver supports dynamic volume provisioning through
+                            \   a PersistentVolumeClaim (see EphemeralVolumeSource
                             for more    information on the connection between this
                             volume type    and PersistentVolumeClaim). \n Use PersistentVolumeClaim
                             or one of the vendor-specific APIs for volumes that persist
@@ -2882,12 +2984,9 @@ spec:
                             CSI driver is meant to be used that way - see the documentation
                             of the driver for more information. \n A pod can use both
                             types of ephemeral volumes and persistent volumes at the
-                            same time."
+                            same time. \n This is a beta feature and only available
+                            when the GenericEphemeralVolume feature gate is enabled."
                           properties:
-                            readOnly:
-                              description: Specifies a read-only configuration for
-                                the volume. Defaults to false (read/write).
-                              type: boolean
                             volumeClaimTemplate:
                               description: "Will be used to create a stand-alone PVC
                                 to provision the volume. The pod in which this EphemeralVolumeSource
@@ -2977,7 +3076,7 @@ spec:
                                             x-kubernetes-int-or-string: true
                                           description: 'Limits describes the maximum
                                             amount of compute resources allowed. More
-                                            info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                                            info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                                           type: object
                                         requests:
                                           additionalProperties:
@@ -2991,7 +3090,7 @@ spec:
                                             If Requests is omitted for a container,
                                             it defaults to Limits if that is explicitly
                                             specified, otherwise to an implementation-defined
-                                            value. More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/'
+                                            value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
                                           type: object
                                       type: object
                                     selector:

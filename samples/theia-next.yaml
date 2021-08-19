@@ -17,6 +17,6 @@ spec:
     commands:
       - id: say-hello
         exec:
-          component: theia
+          component: theia-ide
           commandLine: echo "Hello from $(pwd)"
           workingDir: ${PROJECTS_ROOT}/project/app

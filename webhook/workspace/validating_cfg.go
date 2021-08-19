@@ -58,6 +58,29 @@ func buildValidatingWebhookCfg(namespace string) *admregv1.ValidatingWebhookConf
 				},
 				AdmissionReviewVersions: []string{"v1beta1", "v1"},
 			},
+			{
+				Name:          "validate-devfile.devworkspace-controller.svc",
+				FailurePolicy: &validateWebhookFailurePolicy,
+				SideEffects:   &sideEffectsNone,
+				ClientConfig: v1beta1.WebhookClientConfig{
+					Service: &v1beta1.ServiceReference{
+						Name:      server.WebhookServerServiceName,
+						Namespace: namespace,
+						Path:      &validateWebhookPath,
+					},
+					CABundle: server.CABundle,
+				},
+				Rules: []v1beta1.RuleWithOperations{
+					{
+						Operations: []v1beta1.OperationType{v1beta1.Create, v1beta1.Update},
+						Rule: v1beta1.Rule{
+							APIGroups:   []string{"workspace.devfile.io"},
+							APIVersions: []string{"v1alpha2"},
+							Resources:   []string{"devworkspaces"},
+						},
+					},
+				},
+			},
 		},
 	}
 }

@@ -32,6 +32,15 @@
       "remotePath": "${workspaceFolder}",
       "port": 2345,
       "host": "127.0.0.1"
+    },
+    {
+      "name": "Connect debug to webhook server",
+      "type": "go",
+      "request": "attach",
+      "mode": "remote",
+      "remotePath": "${workspaceFolder}",
+      "port": 5678,
+      "host": "127.0.0.1"
     }
   ]
 }

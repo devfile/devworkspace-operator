@@ -65,12 +65,14 @@ func BuildMutateWebhookCfg(namespace string) *admregv1.MutatingWebhookConfigurat
 				},
 			},
 		},
+		AdmissionReviewVersions: []string{"v1beta1", "v1"},
 	}
 
 	workspaceObjMutateWebhook := admregv1.MutatingWebhook{
 		Name:          "mutate-ws-resources.devworkspace-controller.svc",
 		FailurePolicy: &mutateWebhookFailurePolicy,
 		ClientConfig:  webhookClientConfig,
+		SideEffects:   &sideEffectsNone,
 		ObjectSelector: &metav1.LabelSelector{
 			MatchExpressions: []metav1.LabelSelectorRequirement{
 				{
@@ -130,6 +132,7 @@ func BuildMutateWebhookCfg(namespace string) *admregv1.MutatingWebhookConfigurat
 				},
 			},
 		},
+		AdmissionReviewVersions: []string{"v1beta1", "v1"},
 	}
 	// n.b. Routes do not get UserInfo.UID filled in webhooks for some reason
 	// ref: https://github.com/eclipse/che/issues/17114

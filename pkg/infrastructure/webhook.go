@@ -32,7 +32,7 @@ func IsWebhookConfigurationEnabled() (bool, error) {
 		return false, err
 	}
 
-	if admissionRegistrationResources := findAPIResources(apiResources, "admissionregistration.k8s.io/v1beta1"); admissionRegistrationResources != nil {
+	if admissionRegistrationResources := findAPIResources(apiResources, "admissionregistration.k8s.io/v1"); admissionRegistrationResources != nil {
 		isMutatingHookAvailable := false
 		isValidatingMutatingHookAvailable := false
 		for i := range admissionRegistrationResources {

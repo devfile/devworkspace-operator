@@ -21,7 +21,9 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -186,31 +188,7 @@ func WatchControllerConfig(mgr manager.Manager) error {
 
 	updateConfigMap(nonCachedClient, configMap.GetObjectMeta(), configMap)
 
-	// TODO: Workaround since we don't have a controller here; we should remove configmap and use
-	//       env vars instead.
-	//var emptyMapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
-	//	return []reconcile.Request{}
-	//}
-	//err = ctr.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{
-	//	ToRequests: emptyMapper,
-	//}, predicate.Funcs{
-	//	UpdateFunc: func(evt event.UpdateEvent) bool {
-	//		updateConfigMap(mgr.GetClient(), evt.MetaNew, evt.ObjectNew)
-	//		return false
-	//	},
-	//	CreateFunc: func(evt event.CreateEvent) bool {
-	//		updateConfigMap(mgr.GetClient(), evt.Meta, evt.Object)
-	//		return false
-	//	},
-	//	DeleteFunc: func(evt event.DeleteEvent) bool {
-	//		return false
-	//	},
-	//	GenericFunc: func(evt event.GenericEvent) bool {
-	//		return false
-	//	},
-	//})
-
-	return err
+	return nil
 }
 
 func SetupConfigForTesting(cm *corev1.ConfigMap) {
@@ -260,4 +238,23 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 	}
 
 	return nil
+}
+
+func ConfigMapPredicates(mgr manager.Manager) predicate.Predicate {
+	return predicate.Funcs{
+		UpdateFunc: func(evt event.UpdateEvent) bool {
+			updateConfigMap(mgr.GetClient(), evt.MetaNew, evt.ObjectNew)
+			return false
+		},
+		CreateFunc: func(evt event.CreateEvent) bool {
+			updateConfigMap(mgr.GetClient(), evt.Meta, evt.Object)
+			return false
+		},
+		DeleteFunc: func(evt event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(evt event.GenericEvent) bool {
+			return false
+		},
+	}
 }

@@ -46,6 +46,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -494,6 +495,12 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	var emptyMapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
+		return []reconcile.Request{}
+	}
+
+	var configMapWatcher builder.WatchesOption = builder.WithPredicates(config.ConfigMapPredicates(mgr))
+
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
 	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
@@ -506,6 +513,9 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&batchv1.Job{}).
 		Owns(&controllerv1alpha1.DevWorkspaceRouting{}).
 		Watches(&source.Kind{Type: &corev1.Pod{}}, dwRelatedPodsHandler()).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{
+			ToRequests: emptyMapper,
+		}, configMapWatcher).
 		WithEventFilter(predicates).
 		WithEventFilter(podPredicates).
 		Complete(r)

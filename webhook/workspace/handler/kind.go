@@ -24,7 +24,7 @@ var (
 	AppsV1DeploymentKind = metav1.GroupVersionKind{Kind: "Deployment", Group: "apps", Version: "v1"}
 	V1PodKind            = metav1.GroupVersionKind{Kind: "Pod", Group: "", Version: "v1"}
 	V1ServiceKind        = metav1.GroupVersionKind{Kind: "Service", Group: "", Version: "v1"}
-	V1beta1IngressKind   = metav1.GroupVersionKind{Kind: "Ingress", Group: "extensions", Version: "v1beta1"}
+	V1IngressKind        = metav1.GroupVersionKind{Kind: "Ingress", Group: "networking.k8s.io", Version: "v1"}
 	V1JobKind            = metav1.GroupVersionKind{Kind: "Job", Group: "batch", Version: "v1"}
 	V1RouteKind          = metav1.GroupVersionKind{Kind: "Route", Group: "route.openshift.io", Version: "v1"}
 )

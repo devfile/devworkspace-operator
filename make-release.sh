@@ -94,6 +94,7 @@ bump_version () {
   sed -i version/version.go -e "s#Version = \".*\"#Version = \"${VERSION_GO}\"#g"
   sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(name: devworkspace-operator.)(v[0-9.]+)#\1v${NEXT_VERSION}#g"
   sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${NEXT_VERSION}#g"
+  make generate_olm_bundle_yaml
   git add -A
   if [[ ! -z $(git status -s) ]]; then # dirty
     COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"

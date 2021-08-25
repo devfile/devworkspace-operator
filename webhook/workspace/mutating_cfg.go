@@ -110,8 +110,8 @@ func BuildMutateWebhookCfg(namespace string) *admregv1.MutatingWebhookConfigurat
 			{
 				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
 				Rule: admregv1.Rule{
-					APIGroups:   []string{"extensions"},
-					APIVersions: []string{"v1beta1"},
+					APIGroups:   []string{"networking"},
+					APIVersions: []string{"v1"},
 					Resources:   []string{"ingresses"},
 				},
 			},

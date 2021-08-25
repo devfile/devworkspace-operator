@@ -14,7 +14,7 @@ package version
 
 var (
 	// Version is the operator version
-	Version = "v0.9.0+dev"
+	Version = "v0.10.0+dev"
 	// Commit is the commit hash corresponding to the code that was built. Can be suffixed with `-dirty`
 	Commit string = "unknown"
 	// BuildTime is the time of build of the binary

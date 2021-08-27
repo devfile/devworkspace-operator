@@ -18,7 +18,6 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/prometheus/common/log"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,9 +156,6 @@ func createOrUpdateGitSecret(secretName string, namespace string, config string,
 		if err != nil {
 			return err
 		}
-		log.Info("Updated git secret")
-	} else {
-		log.Info("Created git secret")
 	}
 	return nil
 }
@@ -216,9 +212,7 @@ func createOrUpdateGitConfigMap(configMapName string, namespace string, config s
 		if err != nil {
 			return err
 		}
-		log.Info("Updated git config map")
-	} else {
-		log.Info("Created git config map")
+
 	}
 	return nil
 }

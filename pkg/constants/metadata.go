@@ -26,6 +26,9 @@ const (
 	// DevWorkspaceMountLabel is the label key to store if a configmap or secret should be mounted to the devworkspace
 	DevWorkspaceMountLabel = "controller.devfile.io/mount-to-devworkspace"
 
+	// DevWorkspaceGitCredentialLabel is the label key to specify if the secret is a git credential
+	DevWorkspaceGitCredentialLabel = "controller.devfile.io/git-credential"
+
 	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
 	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name>, secrets will
 	// be mounted at /etc/secret/<secret-name>, and persistent volume claims will be mounted to /tmp/<claim-name>

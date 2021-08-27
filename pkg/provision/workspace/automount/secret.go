@@ -42,14 +42,14 @@ func getDevWorkspaceSecrets(namespace string, client k8sclient.Client) (*v1alpha
 			if mountPath == "" {
 				mountPath = path.Join("/etc/", "secret/", secret.Name)
 			}
-			podAdditions.Volumes = append(podAdditions.Volumes, getAutoMountVolumeWithSecret(secret.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getAutoMountSecretVolumeMount(mountPath, secret.Name))
+			podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithSecret(secret.Name))
+			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, GetAutoMountSecretVolumeMount(mountPath, secret.Name))
 		}
 	}
 	return podAdditions, additionalEnvVars, nil
 }
 
-func getAutoMountVolumeWithSecret(name string) v1.Volume {
+func GetAutoMountVolumeWithSecret(name string) v1.Volume {
 	modeReadOnly := int32(0640)
 	workspaceVolumeMount := v1.Volume{
 		Name: common.AutoMountSecretVolumeName(name),
@@ -63,7 +63,7 @@ func getAutoMountVolumeWithSecret(name string) v1.Volume {
 	return workspaceVolumeMount
 }
 
-func getAutoMountSecretVolumeMount(mountPath, name string) v1.VolumeMount {
+func GetAutoMountSecretVolumeMount(mountPath, name string) v1.VolumeMount {
 	workspaceVolumeMount := v1.VolumeMount{
 		Name:      common.AutoMountSecretVolumeName(name),
 		ReadOnly:  true,

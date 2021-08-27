@@ -42,14 +42,14 @@ func getDevWorkspaceConfigmaps(namespace string, client k8sclient.Client) (*v1al
 			if mountPath == "" {
 				mountPath = path.Join("/etc/config/", configmap.Name)
 			}
-			podAdditions.Volumes = append(podAdditions.Volumes, getAutoMountVolumeWithConfigMap(configmap.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getAutoMountConfigMapVolumeMount(mountPath, configmap.Name))
+			podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithConfigMap(configmap.Name))
+			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, GetAutoMountConfigMapVolumeMount(mountPath, configmap.Name))
 		}
 	}
 	return podAdditions, additionalEnvVars, nil
 }
 
-func getAutoMountVolumeWithConfigMap(name string) corev1.Volume {
+func GetAutoMountVolumeWithConfigMap(name string) corev1.Volume {
 	modeReadOnly := int32(0640)
 	workspaceVolumeMount := corev1.Volume{
 		Name: common.AutoMountConfigMapVolumeName(name),
@@ -65,7 +65,7 @@ func getAutoMountVolumeWithConfigMap(name string) corev1.Volume {
 	return workspaceVolumeMount
 }
 
-func getAutoMountConfigMapVolumeMount(mountPath, name string) corev1.VolumeMount {
+func GetAutoMountConfigMapVolumeMount(mountPath, name string) corev1.VolumeMount {
 	workspaceVolumeMount := corev1.VolumeMount{
 		Name:      common.AutoMountConfigMapVolumeName(name),
 		ReadOnly:  true,

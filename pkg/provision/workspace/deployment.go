@@ -84,7 +84,7 @@ func SyncDeploymentToCluster(
 	saName string,
 	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
 
-	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(workspace.Namespace, clusterAPI.Client)
+	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(workspace, clusterAPI.Client, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus{Err: err},

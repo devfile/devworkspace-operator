@@ -95,12 +95,7 @@ func mountGitConfigMap(configMapName, mountPath string, devworkspace *dw.DevWork
 	credentialsGitConfig := fmt.Sprintf(credentialTemplate, filepath.Join(mountPath, gitCredentialsName))
 
 	// Create the configmap that stores the gitconfig
-	gitConfigMap, err := createOrUpdateGitConfigMap(configMapName, devworkspace.GetNamespace(), credentialsGitConfig, client)
-	if err != nil {
-		return nil, err
-	}
-
-	err = controllerutil.SetOwnerReference(devworkspace, gitConfigMap, scheme)
+	err := createOrUpdateGitConfigMap(configMapName, devworkspace.GetNamespace(), credentialsGitConfig, devworkspace, client, scheme)
 	if err != nil {
 		return nil, err
 	}
@@ -126,12 +121,7 @@ func mountGitCredentialsSecret(secretName, mountPath, credentials string, devwor
 	podAdditions := &v1alpha1.PodAdditions{}
 
 	// Create the configmap that stores all the users credentials
-	gitSecret, err := createOrUpdateGitSecret(secretName, devworkspace.GetNamespace(), credentials, client)
-	if err != nil {
-		return nil, err
-	}
-
-	err = controllerutil.SetOwnerReference(devworkspace, gitSecret, scheme)
+	err := createOrUpdateGitSecret(secretName, devworkspace.GetNamespace(), credentials, devworkspace, client, scheme)
 	if err != nil {
 		return nil, err
 	}
@@ -148,26 +138,30 @@ func mountGitCredentialsSecret(secretName, mountPath, credentials string, devwor
 	return podAdditions, nil
 }
 
-func createOrUpdateGitSecret(secretName string, namespace string, config string, client k8sclient.Client) (*corev1.Secret, error) {
+func createOrUpdateGitSecret(secretName string, namespace string, config string, devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) error {
 	secret := getGitSecret(secretName, namespace, config)
+	err := controllerutil.SetOwnerReference(devworkspace, secret, scheme)
+	if err != nil {
+		return err
+	}
 	if err := client.Create(context.TODO(), secret); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
-			return secret, err
+			return err
 		}
 		existingCfg, err := getClusterGitSecret(secretName, namespace, client)
 		if err != nil {
-			return secret, err
+			return err
 		}
 		secret.ResourceVersion = existingCfg.ResourceVersion
 		err = client.Update(context.TODO(), secret)
 		if err != nil {
-			return secret, err
+			return err
 		}
 		log.Info("Updated git secret")
 	} else {
 		log.Info("Created git secret")
 	}
-	return secret, nil
+	return nil
 }
 
 func getClusterGitSecret(secretName string, namespace string, client k8sclient.Client) (*corev1.Secret, error) {
@@ -203,26 +197,30 @@ func getGitSecret(secretName string, namespace string, config string) *corev1.Se
 	return gitConfigMap
 }
 
-func createOrUpdateGitConfigMap(configMapName string, namespace string, config string, client k8sclient.Client) (*corev1.ConfigMap, error) {
+func createOrUpdateGitConfigMap(configMapName string, namespace string, config string, devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) error {
 	configMap := getGitConfigMap(configMapName, namespace, config)
+	err := controllerutil.SetOwnerReference(devworkspace, configMap, scheme)
+	if err != nil {
+		return err
+	}
 	if err := client.Create(context.TODO(), configMap); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
-			return configMap, err
+			return err
 		}
 		existingCfg, err := getClusterGitConfigMap(configMapName, namespace, client)
 		if err != nil {
-			return configMap, err
+			return err
 		}
 		configMap.ResourceVersion = existingCfg.ResourceVersion
 		err = client.Update(context.TODO(), configMap)
 		if err != nil {
-			return configMap, err
+			return err
 		}
 		log.Info("Updated git config map")
 	} else {
 		log.Info("Created git config map")
 	}
-	return configMap, nil
+	return nil
 }
 
 func getClusterGitConfigMap(configMapName string, namespace string, client k8sclient.Client) (*corev1.ConfigMap, error) {

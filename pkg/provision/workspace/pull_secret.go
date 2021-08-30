@@ -16,6 +16,8 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/types"
+
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
@@ -29,7 +31,7 @@ type PullSecretsProvisioningStatus struct {
 	v1alpha1.PodAdditions
 }
 
-func PullSecrets(clusterAPI ClusterAPI) PullSecretsProvisioningStatus {
+func PullSecrets(clusterAPI ClusterAPI, serviceAccountName, namespace string) PullSecretsProvisioningStatus {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspacePullSecretLabel, "true"))
 	if err != nil {
 		return PullSecretsProvisioningStatus{
@@ -50,12 +52,27 @@ func PullSecrets(clusterAPI ClusterAPI) PullSecretsProvisioningStatus {
 		}
 	}
 
-	var dockerCfgs []corev1.LocalObjectReference
+	serviceAccount := &corev1.ServiceAccount{}
+	namespacedName := types.NamespacedName{
+		Name:      serviceAccountName,
+		Namespace: namespace,
+	}
+	err = clusterAPI.Client.Get(context.TODO(), namespacedName, serviceAccount)
+	if err != nil {
+		return PullSecretsProvisioningStatus{
+			ProvisioningStatus: ProvisioningStatus{
+				Err: err,
+			},
+		}
+	}
+
+	dockerCfgs := serviceAccount.ImagePullSecrets
 	for _, s := range secrets.Items {
 		if s.Type == corev1.SecretTypeDockercfg || s.Type == corev1.SecretTypeDockerConfigJson {
 			dockerCfgs = append(dockerCfgs, corev1.LocalObjectReference{Name: s.Name})
 		}
 	}
+
 	return PullSecretsProvisioningStatus{
 		ProvisioningStatus: ProvisioningStatus{
 			Continue: true,

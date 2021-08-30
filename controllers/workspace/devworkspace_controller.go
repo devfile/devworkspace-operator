@@ -326,7 +326,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 
-	pullSecretStatus := wsprovision.PullSecrets(clusterAPI)
+	pullSecretStatus := wsprovision.PullSecrets(clusterAPI, serviceAcctName, workspace.GetNamespace())
 	if !pullSecretStatus.Continue {
 		reconcileStatus.setConditionFalse(conditions.PullSecretsReady, "Waiting for DevWorkspace pull secrets")
 		return reconcile.Result{Requeue: pullSecretStatus.Requeue}, pullSecretStatus.Err

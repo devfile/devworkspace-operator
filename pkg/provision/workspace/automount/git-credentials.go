@@ -44,9 +44,10 @@ const credentialTemplate = "[credential]\n\thelper = store --file %s\n"
 func getDevWorkspaceGitConfig(devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) (*v1alpha1.PodAdditions, error) {
 	namespace := devworkspace.GetNamespace()
 	secrets := &corev1.SecretList{}
-	if err := client.List(context.TODO(), secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	err := client.List(context.TODO(), secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceGitCredentialLabel: "true",
-	}); err != nil {
+	})
+	if err != nil {
 		return nil, err
 	}
 	var credentials []string
@@ -78,7 +79,6 @@ func getDevWorkspaceGitConfig(devworkspace *dw.DevWorkspace, client k8sclient.Cl
 		}
 		podAdditions.Volumes = append(podAdditions.Volumes, secretAdditions.Volumes...)
 		podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, secretAdditions.VolumeMounts...)
-
 	}
 	return podAdditions, nil
 }

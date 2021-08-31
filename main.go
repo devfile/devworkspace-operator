@@ -19,6 +19,8 @@ import (
 	"os"
 	"runtime"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting"
@@ -113,7 +115,7 @@ func main() {
 
 	// Index Events on involvedObject.name to allow us to get events involving a DevWorkspace's pod(s). This is used to
 	// check for issues that prevent the pod from starting, so that DevWorkspaces aren't just hanging indefinitely.
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Event{}, "involvedObject.name", func(obj k8sruntime.Object) []string {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Event{}, "involvedObject.name", func(obj client.Object) []string {
 		ev := obj.(*corev1.Event)
 		return []string{ev.InvolvedObject.Name}
 	}); err != nil {

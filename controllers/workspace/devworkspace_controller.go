@@ -494,7 +494,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	var emptyMapper handler.ToRequestsFunc = func(obj handler.MapObject) []reconcile.Request {
+	var emptyMapper = func(obj client.Object) []reconcile.Request {
 		return []reconcile.Request{}
 	}
 
@@ -512,9 +512,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&batchv1.Job{}).
 		Owns(&controllerv1alpha1.DevWorkspaceRouting{}).
 		Watches(&source.Kind{Type: &corev1.Pod{}}, dwRelatedPodsHandler()).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestsFromMapFunc{
-			ToRequests: emptyMapper,
-		}, configMapWatcher).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configMapWatcher).
 		WithEventFilter(predicates).
 		WithEventFilter(podPredicates).
 		Complete(r)

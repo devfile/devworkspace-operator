@@ -29,7 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
@@ -115,9 +114,9 @@ func (wc *ControllerConfig) GetWorkspaceControllerSA() (string, error) {
 	return saName, nil
 }
 
-func updateConfigMap(client client.Client, meta metav1.Object, obj runtime.Object) {
-	if meta.GetNamespace() != ConfigMapReference.Namespace ||
-		meta.GetName() != ConfigMapReference.Name {
+func updateConfigMap(client client.Client, obj client.Object) {
+	if obj.GetNamespace() != ConfigMapReference.Namespace ||
+		obj.GetName() != ConfigMapReference.Name {
 		return
 	}
 	if cm, isConfigMap := obj.(*corev1.ConfigMap); isConfigMap {
@@ -186,7 +185,7 @@ func WatchControllerConfig(mgr manager.Manager) error {
 		return err
 	}
 
-	updateConfigMap(nonCachedClient, configMap.GetObjectMeta(), configMap)
+	updateConfigMap(nonCachedClient, configMap)
 
 	return nil
 }
@@ -243,11 +242,11 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 func ConfigMapPredicates(mgr manager.Manager) predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			updateConfigMap(mgr.GetClient(), evt.MetaNew, evt.ObjectNew)
+			updateConfigMap(mgr.GetClient(), evt.ObjectNew)
 			return false
 		},
 		CreateFunc: func(evt event.CreateEvent) bool {
-			updateConfigMap(mgr.GetClient(), evt.Meta, evt.Object)
+			updateConfigMap(mgr.GetClient(), evt.Object)
 			return false
 		},
 		DeleteFunc: func(evt event.DeleteEvent) bool {

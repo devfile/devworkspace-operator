@@ -16,9 +16,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
-	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
-
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -34,44 +31,12 @@ func (h *WebhookHandler) ValidateDevfile(ctx context.Context, req admission.Requ
 
 	workspace := &wksp.Spec.Template
 
-	// flatten the devworkspace if its not already flattened
-	if !flatten.DevWorkspaceIsFlattened(&wksp.Spec.Template) {
-		flattenHelpers := flatten.ResolverTools{
-			WorkspaceNamespace: wksp.Namespace,
-			Context:            ctx,
-			K8sClient:          h.Client,
-			InternalRegistry:   &registry.InternalRegistryImpl{},
-			HttpClient:         http.DefaultClient,
-		}
-		workspace, _, err = flatten.ResolveDevWorkspace(&wksp.Spec.Template, flattenHelpers)
-		if err != nil {
-			return admission.Errored(http.StatusInternalServerError, err)
-		}
-	}
-
 	commands := workspace.Commands
-	components := workspace.Components
 	events := workspace.Events
 	projects := workspace.Projects
 	starterProjects := workspace.StarterProjects
 
 	var devfileErrors []string
-
-	// validate commands
-	if commands != nil && components != nil {
-		cmdErrors := devfilevalidation.ValidateCommands(commands, components)
-		if cmdErrors != nil {
-			devfileErrors = append(devfileErrors, cmdErrors.Error())
-		}
-	}
-
-	// validate components
-	if components != nil {
-		componentErrors := devfilevalidation.ValidateComponents(components)
-		if componentErrors != nil {
-			devfileErrors = append(devfileErrors, componentErrors.Error())
-		}
-	}
 
 	// validate events
 	if events != nil {

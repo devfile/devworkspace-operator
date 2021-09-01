@@ -15,6 +15,7 @@ on:
         default: 'false'
       dryrun:
         description: If true, dry-run will be executed - no result are pushed
+        required: false
         default: 'false'
 
 jobs:
@@ -86,10 +87,6 @@ jobs:
           cd ${GITHUB_WORKSPACE}
 
       - name: Release
-        env:
-          DWO_REPO: git@github.com:sleshchenko/devworkspace-operator
-          DWO_QUAY_REPO: quay.io/sleshche/devworkspace-controller
-          PROJECT_CLONE_QUAY_REPO: quay.io/sleshche/project-clone
         run: |
           git config --global user.name "Mykhailo Kuznietsov"
           git config --global user.email "mkuznets@redhat.com"
@@ -98,7 +95,7 @@ jobs:
 
           RELEASE_COMMAND="./make-release.sh --version ${{ github.event.inputs.version }}"
           if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
-           RELEASE_COMMAND="$RELEASE_COMMAND --prerelease"
+            RELEASE_COMMAND="$RELEASE_COMMAND --prerelease"
           else
             RELEASE_COMMAND="$RELEASE_COMMAND --prerelease"
           fi

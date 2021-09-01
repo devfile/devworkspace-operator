@@ -4,21 +4,30 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'release version in format v0.y.z'
+        description: 'version in format v0.y.z'
+        required: true
+      prerelease:
+        description: If true, prerelease will be done, otherwise release
         required: true
       forceRecreateTags:
         description: If true, tags will be recreated. Use with caution
         required: false
         default: 'false'
+      dryrun:
+        description: If true, dry-run will be executed - no result are pushed
+        default: 'false'
 
 jobs:
   release:
+    env:
+      OPERATOR_SDK_VERSION: v1.8.0
     runs-on: ubuntu-20.04
     steps:
       - name: Clone source code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
+
       - name: Check existing tags
         run: |
           set +e
@@ -36,13 +45,36 @@ jobs:
           else
             echo "[INFO] No existing tags detected for $VERSION"
           fi
+
+      -
+        name: Cache Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
+        uses: actions/cache@v2
+        id: cache-operator-sdk
+        with:
+          path: ~/cache
+          key: operator-sdk-${{ env.OPERATOR_SDK_VERSION }}
+      -
+        name: Download Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
+        if: steps.cache-operator-sdk.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/cache
+          wget https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 -O ~/cache/operator-sdk-${OPERATOR_SDK_VERSION} > /dev/null -O ~/cache/operator-sdk-${OPERATOR_SDK_VERSION} > /dev/null
+          chmod +x ~/cache/operator-sdk-${OPERATOR_SDK_VERSION}
+      -
+        name: Install Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
+        run: |
+          mkdir -p ~/bin
+          cp ~/cache/operator-sdk-${OPERATOR_SDK_VERSION} ~/bin/operator-sdk
+          echo "$HOME/bin" >> $GITHUB_PATH
+
       - name: Login to quay.io
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
           registry: quay.io
-      - name: Set up Python 3.6
+
+      - name: Set up yq
         uses: actions/setup-python@v2
         with:
           python-version: 3.6
@@ -52,22 +84,39 @@ jobs:
           pip install yq
 
           cd ${GITHUB_WORKSPACE}
-      - name: Build image, generate deployments and push git tag
+
+      - name: Release
+        env:
+          DWO_REPO: git@github.com:sleshchenko/devworkspace-operator
+          DWO_QUAY_REPO: quay.io/sleshche/devworkspace-controller
+          PROJECT_CLONE_QUAY_REPO: quay.io/sleshche/project-clone
         run: |
           git config --global user.name "Mykhailo Kuznietsov"
           git config --global user.email "mkuznets@redhat.com"
 
           export GITHUB_TOKEN=${{ secrets.CHE_INCUBATOR_BOT_GITHUB_TOKEN }}
-          ./make-release.sh --version ${{ github.event.inputs.version}}
+
+          RELEASE_COMMAND="./make-release.sh --version ${{ github.event.inputs.version }}"
+          if [[ "${{ github.event.inputs.prerelease }}" == "true" ]]; then
+           RELEASE_COMMAND="$RELEASE_COMMAND --prerelease"
+          else
+            RELEASE_COMMAND="$RELEASE_COMMAND --prerelease"
+          fi
+
+          if [[ "${{ github.event.inputs.dry-run }}" == "true" ]]; then
+            RELEASE_COMMAND="$RELEASE_COMMAND --dry-run"
+          fi
+          $RELEASE_COMMAND
+
       - name: Create failure MM message
         if: ${{ failure() }}
         run: |
-          echo "{\"text\":\":no_entry_sign: Devworkspace Operator ${{ github.event.inputs.version }} release has failed: https://github.com/devfile/devworkspace-operator/actions/workflows/release.yml\"}" > mattermost.json
+          echo "{\"text\":\":no_entry_sign: DevWorkspace Operator ${{ github.event.inputs.version }} release has failed: https://github.com/devfile/devworkspace-operator/actions/workflows/release.yml\"}" > mattermost.json
       - name: Create success MM message
         run: |
-          echo "{\"text\":\":white_check_mark: Devworkspace Operator ${{ github.event.inputs.version }} has been released: https://quay.io/devfile/devworkspace-operator:${{ github.event.inputs.version }}\"}" > mattermost.json
+          echo "{\"text\":\":white_check_mark: DevWorkspace Operator ${{ github.event.inputs.version }} has been released: https://quay.io/devfile/devworkspace-operator:${{ github.event.inputs.version }}\"}" > mattermost.json
       - name: Send MM message
-        if: ${{ success() }} || ${{ failure() }}
+        if: ${{ github.event.inputs.dryrun != true && github.event.inputs.prerelease == false && (success() || failure()) }}
         uses: mattermost/action-mattermost-notify@1.1.0
         env:
           MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}

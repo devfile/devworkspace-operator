@@ -47,8 +47,8 @@ ifeq ($(PLATFORM),kubernetes)
 	$(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
 	$(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
 else
-	$(K8S_CLI) get secret devworkspace-webhooks-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
-	$(K8S_CLI) get secret devworkspace-webhooks-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
+	$(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
+	$(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
 endif
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
@@ -138,11 +138,7 @@ debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworksp
 		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
 ### debug-webhook-server: Debug the webhook server
-debug-webhook-server:
-# Generate a local self signed cert
-	rm -rf /tmp/k8s-webhook-server
-	mkdir -p /tmp/k8s-webhook-server/serving-certs/
-	deploy/scripts/generate-cert.sh /tmp/k8s-webhook-server/serving-certs/
+debug-webhook-server: _store_tls_cert
 # Connect to telepresence which will redirect traffic from the webhook to the local server
 	telepresence connect
 	telepresence intercept devworkspace-webhook-server --port 8443:443 --env-file /tmp/test-env.env

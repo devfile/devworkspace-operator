@@ -10,7 +10,7 @@
 #
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8/go-toolset
-FROM registry.access.redhat.com/ubi8/go-toolset:1.15.13-4 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.15.14-3 as builder
 ENV GOPATH=/go/
 USER root
 WORKDIR /devworkspace-operator
@@ -30,7 +30,7 @@ RUN make compile-devworkspace-controller
 RUN make compile-webhook-server
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
-FROM registry.access.redhat.com/ubi8-minimal:8.4-205.1626828526
+FROM registry.access.redhat.com/ubi8-minimal:8.4-208
 RUN microdnf -y update && microdnf clean all && rm -rf /var/cache/yum && echo "Installed Packages" && rpm -qa | sort -V && echo "End Of Installed Packages"
 WORKDIR /
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller

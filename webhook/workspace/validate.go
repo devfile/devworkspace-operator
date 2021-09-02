@@ -35,7 +35,7 @@ func (v *ResourcesValidator) Handle(ctx context.Context, req admission.Request) 
 	if req.Kind == handler.V1PodExecOptionKind && req.Operation == admissionv1.Connect {
 		return v.ValidateExecOnConnect(ctx, req)
 	}
-	if req.Kind == handler.V1alpha2DevWorkspaceKind && (req.Operation == v1beta1.Create || req.Operation == v1beta1.Update) {
+	if req.Kind == handler.V1alpha2DevWorkspaceKind && (req.Operation == admissionv1.Create || req.Operation == admissionv1.Update) {
 		return v.ValidateDevfile(ctx, req)
 	}
 

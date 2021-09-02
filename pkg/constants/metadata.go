@@ -26,7 +26,12 @@ const (
 	// DevWorkspaceMountLabel is the label key to store if a configmap or secret should be mounted to the devworkspace
 	DevWorkspaceMountLabel = "controller.devfile.io/mount-to-devworkspace"
 
-	// DevWorkspaceGitCredentialLabel is the label key to specify if the secret is a git credential
+	// DevWorkspaceGitCredentialLabel is the label key to specify if the secret is a git credential. All secrets who
+	// specify this label in a namespace will consolidate into one secret before mounting into a devworkspace.
+	// Only secret data with the credentials key will be used and credentials must be the base64 encoded version
+	//	of https://{USERNAME}:{PERSONAL_ACCESS_TOKEN}@{GIT_WEBSITE}
+	// E.g. echo -n "https://{USERNAME}:{PERSONAL_ACCESS_TOKEN}@{GIT_WEBSITE}" | base64
+	// see https://git-scm.com/docs/git-credential-store#_storage_format for more details
 	DevWorkspaceGitCredentialLabel = "controller.devfile.io/git-credential"
 
 	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.

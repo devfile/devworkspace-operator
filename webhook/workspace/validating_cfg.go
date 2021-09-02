@@ -80,6 +80,7 @@ func buildValidatingWebhookCfg(namespace string) *admregv1.ValidatingWebhookConf
 						},
 					},
 				},
+				AdmissionReviewVersions: []string{"v1beta1", "v1"},
 			},
 		},
 	}

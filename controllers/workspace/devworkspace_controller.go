@@ -15,10 +15,11 @@ package controllers
 import (
 	"context"
 	"fmt"
-	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"net/http"
 	"strings"
 	"time"
+
+	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"

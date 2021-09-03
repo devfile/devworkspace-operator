@@ -433,7 +433,7 @@ spec:
   provider:
     name: Devfile
     url: https://devfile.io
-  replaces: devworkspace-operator.v0.8.0
+  replaces: devworkspace-operator.v0.9.0
   version: 0.10.0
   webhookdefinitions:
   - admissionReviewVersions:

@@ -7,7 +7,7 @@ metadata:
     operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
     operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: devworkspace-operator.v0.9.0
+  name: devworkspace-operator.v0.9.1
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -283,7 +283,7 @@ spec:
                 - name: RELATED_IMAGE_kube_rbac_proxy
                   value: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8
                 - name: RELATED_IMAGE_project_clone
-                  value: quay.io/devfile/project-clone:next
+                  value: quay.io/devfile/project-clone:v0.9.0
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -425,7 +425,8 @@ spec:
   provider:
     name: Devfile
     url: https://devfile.io
-  version: 0.9.0
+  replaces: devworkspace-operator.v0.8.0
+  version: 0.9.1
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

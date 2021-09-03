@@ -99,7 +99,12 @@ jobs:
           echo "${DOCKER_PASSWORD}" | docker login --username "${DOCKER_USERNAME}" --password-stdin quay.io
 
       - name: "Build Bundle & Index images"
-        run: make build_bundle_image build_index_image
+        run: |
+          # next OLM images is just for quick testing and don't have all versions.
+          # so, drop it from there
+          sed -i '/replaces: devworkspace-operator.v*/d' deploy/bundle/manifests/devworkspace-operator.clusterserviceversion.yaml
+
+          make build_bundle_image build_index_image
 
       - name: "Docker Logout"
         run: docker logout

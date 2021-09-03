@@ -19,10 +19,10 @@ MAKEFLAGS += --silent
 endif
 
 export NAMESPACE ?= devworkspace-controller
-export DWO_IMG ?= quay.io/devfile/devworkspace-controller:next
+export DWO_IMG ?= quay.io/devfile/devworkspace-controller:v0.9.0
 export DWO_BUNDLE_IMG ?= quay.io/devfile/devworkspace-operator-bundle:next
 export DWO_INDEX_IMG ?= quay.io/devfile/devworkspace-operator-index:next
-export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:next
+export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:v0.9.0
 export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
@@ -185,7 +185,7 @@ docker-build:
 ### docker-push: Pushes the controller image
 docker-push:
 ifneq ($(INITIATOR),CI)
-ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
+ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:v0.9.0)
 	@echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
 endif
 endif

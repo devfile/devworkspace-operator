@@ -19,6 +19,8 @@ import (
 	"strings"
 	"time"
 
+	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -216,6 +218,15 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	workspace.Spec.Template = *flattenedWorkspace
 	reconcileStatus.setConditionTrue(conditions.DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")
+
+	// Verify that the devworkspace components are valid after flattening
+	components := workspace.Spec.Template.Components
+	if components != nil {
+		eventErrors := devfilevalidation.ValidateComponents(components)
+		if eventErrors != nil {
+			return r.failWorkspace(workspace, eventErrors.Error(), reqLogger, &reconcileStatus)
+		}
+	}
 
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {

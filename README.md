@@ -122,6 +122,19 @@ oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replic
 make debug
 ```
 
+### Run webhook server locally and debug
+Debugging the webhook server depends on `telepresence` being installed (`https://www.telepresence.io/docs/latest/install/`). Teleprescence works by redirecting traffic going from the webhook-server in the cluster to the local webhook-server you will be running on your computer.
+
+```bash
+make debug-webhook-server
+```
+
+when you are done debugging you have to manually uninstall the telepresence agent
+
+```bash
+make disconnect-debug-webhook-server
+```
+
 ### Controller configuration
 
 Controller behavior can be configured with data from the `devworkspace-controller` config map in the same namespace where controller lives.

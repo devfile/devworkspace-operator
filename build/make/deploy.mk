@@ -47,8 +47,8 @@ ifeq ($(PLATFORM),kubernetes)
 	$(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
 	$(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
 else
-	$(K8S_CLI) get secret devworkspace-webhooks-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
-	$(K8S_CLI) get secret devworkspace-webhooks-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
+	$(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
+	$(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
 endif
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
@@ -136,3 +136,18 @@ debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworksp
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
 		WATCH_NAMESPACE=$(NAMESPACE) \
 		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
+
+### debug-webhook-server: Debug the webhook server
+debug-webhook-server: _store_tls_cert
+# Connect to telepresence which will redirect traffic from the webhook to the local server
+	telepresence connect
+	telepresence intercept devworkspace-webhook-server --port 8443:443 --env-file /tmp/test-env.env
+	export WATCH_NAMESPACE=$(NAMESPACE)
+	export CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA)
+	sudo mkdir -p /var/run/secrets/kubernetes.io/serviceaccount/
+	echo $(NAMESPACE) | sudo tee /var/run/secrets/kubernetes.io/serviceaccount/namespace
+	dlv debug --listen=:5678 --headless=true --api-version=2 ./webhook/main.go --
+
+### disconnect-debug-webhook-server: Disconnect the teleprescense agent from the webhook-server pod
+disconnect-debug-webhook-server:
+	telepresence uninstall --everything

@@ -1,5 +1,5 @@
 kind: DevWorkspace
-apiVersion: workspace.devfile.io/v1alpha1
+apiVersion: workspace.devfile.io/v1alpha2
 metadata:
   name: web-terminal
   annotations:
@@ -12,6 +12,6 @@ spec:
   routingClass: 'web-terminal'
   template:
     components:
-      - plugin:
-          name: web-terminal
+      - name: web-terminal
+        plugin:
           id: redhat-developer/web-terminal/latest

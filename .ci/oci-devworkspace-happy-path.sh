@@ -41,20 +41,22 @@ export HAPPY_PATH_TEST_PROJECT='https://github.com/che-samples/java-spring-petcl
 export GIT_COMMITTER_NAME="CI BOT"
 export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
 
+deployDWO() {
+  export DWO_IMG='${DEVWORKSPACE_OPERATOR}'
+  make install
+}
+
 deployChe() {
-  cat > /tmp/che-cr-patch.yaml <<EOL
-spec:
-  devWorkspace:
-    enable: true
-    controllerImage: '${DEVWORKSPACE_OPERATOR}'
-EOL
+  # create fake DWO CSV to prevent Che Operator getting
+  # ownerships of DWO resources
+  kubectl apply -f ./resources/fake-dwo-csv.yaml
 
-  echo "INFO: Using the following Che Cluster CR"
-  cat /tmp/che-cr-patch.yaml
-
-  echo "----------------------------------"
-
-  /tmp/chectl/bin/chectl server:deploy --che-operator-cr-patch-yaml=/tmp/che-cr-patch.yaml -p openshift --batch --telemetry=off --installer=operator
+  /tmp/chectl/bin/chectl server:deploy \
+    -p openshift \
+    --batch \
+    --telemetry=off \
+    --installer=operator \
+    --workspace-engine=dev-workspace
 }
 
 startHappyPathTest() {
@@ -90,8 +92,6 @@ startHappyPathTest() {
 }
 
 runTest() {
-  deployChe
-
   startHappyPathTest
 
   # wait for the test to finish
@@ -116,4 +116,6 @@ runTest() {
 
 installChectl
 provisionOpenShiftOAuthUser
+deployDWO
+deployChe
 runTest

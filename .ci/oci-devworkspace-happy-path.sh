@@ -49,7 +49,8 @@ deployDWO() {
 deployChe() {
   # create fake DWO CSV to prevent Che Operator getting
   # ownerships of DWO resources
-  kubectl apply -f ./resources/fake-dwo-csv.yaml
+  oc new-project eclipse-che || true
+  kubectl apply -f ${SCRIPT_DIR}/resources/fake-dwo-csv.yaml
 
   /tmp/chectl/bin/chectl server:deploy \
     -p openshift \

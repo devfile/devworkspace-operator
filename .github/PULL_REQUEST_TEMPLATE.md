@@ -9,6 +9,6 @@
 
 ### PR Checklist
 
-- [ ] E2E tests pass (when PR is ready, comment `/test v8-devworkspaces-operator-e2e, v8-devworkspace-happy-path` to trigger)
-    - [ ] `v8-devworkspaces-operator-e2e`: DevWorkspace e2e test
-    - [ ] `v8-devworkspace-happy-path`: DevWorkspace e2e test
+- [ ] E2E tests pass (when PR is ready, comment `/test v8-devworkspace-operator-e2e, v8-che-happy-path` to trigger)
+    - [ ] `v8-devworkspace-operator-e2e`: DevWorkspace e2e test
+    - [ ] `v8-che-happy-path`: Happy path for verification integration with Che

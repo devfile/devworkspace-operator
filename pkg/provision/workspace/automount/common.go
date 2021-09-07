@@ -23,6 +23,21 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+type FatalError struct {
+	Err error
+}
+
+func (e *FatalError) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+	return ""
+}
+
+func (e *FatalError) Unwrap() error {
+	return e.Err
+}
+
 func GetAutoMountResources(devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
 	namespace := devworkspace.GetNamespace()
 	gitCMPodAdditions, err := getDevWorkspaceGitConfig(devworkspace, client, scheme)

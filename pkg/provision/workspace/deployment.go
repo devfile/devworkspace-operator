@@ -86,8 +86,15 @@ func SyncDeploymentToCluster(
 
 	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(workspace, clusterAPI.Client, clusterAPI.Scheme)
 	if err != nil {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{Err: err},
+		var fatalErr *automount.FatalError
+		if errors.As(err, &fatalErr) {
+			return DeploymentProvisioningStatus{
+				ProvisioningStatus{Err: err, FailStartup: true},
+			}
+		} else {
+			return DeploymentProvisioningStatus{
+				ProvisioningStatus{Err: err},
+			}
 		}
 	}
 	if err := automount.CheckAutoMountVolumesForCollision(podAdditions, automountPodAdditions); err != nil {

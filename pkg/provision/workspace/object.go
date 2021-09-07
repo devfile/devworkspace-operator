@@ -14,8 +14,10 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -85,6 +87,9 @@ func SyncObject(object runtimeClient.Object, client runtimeClient.Client, reqLog
 	}
 	if !cmp.Equal(object, found, diffOpt) {
 		reqLogger.Info("Updating "+objType.String(), "namespace", objMeta.GetNamespace(), "name", objMeta.GetName())
+		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+			reqLogger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(object, found, diffOpt)))
+		}
 		updateErr := client.Update(context.TODO(), object)
 		if errors.IsConflict(updateErr) {
 			return found, true, nil

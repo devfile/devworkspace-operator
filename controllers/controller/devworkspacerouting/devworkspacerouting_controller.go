@@ -53,6 +53,8 @@ type DevWorkspaceRoutingReconciler struct {
 	Scheme *runtime.Scheme
 	// SolverGetter will be used to get solvers for a particular devWorkspaceRouting
 	SolverGetter solvers.RoutingSolverGetter
+	// Enable additional debug logging
+	DebugLogging bool
 }
 
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceroutings,verbs=*

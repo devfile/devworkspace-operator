@@ -128,7 +128,7 @@ func SyncDeploymentToCluster(
 	}
 
 	if clusterDeployment == nil {
-		clusterAPI.Logger.Info("Creating deployment...")
+		clusterAPI.Logger.Info("Creating deployment")
 		if err := clusterAPI.Client.Create(context.TODO(), specDeployment); err != nil {
 			return DeploymentProvisioningStatus{
 				ProvisioningStatus{
@@ -143,7 +143,7 @@ func SyncDeploymentToCluster(
 	}
 
 	if !cmp.Equal(specDeployment.Spec.Selector, clusterDeployment.Spec.Selector) {
-		clusterAPI.Logger.Info("Deployment selector is different. Recreating deployment...")
+		clusterAPI.Logger.Info("Deployment selector is different. Recreating deployment")
 		clusterDeployment.Spec = specDeployment.Spec
 		err := clusterAPI.Client.Delete(context.TODO(), clusterDeployment)
 		if err != nil {
@@ -155,7 +155,10 @@ func SyncDeploymentToCluster(
 	}
 
 	if !cmp.Equal(specDeployment, clusterDeployment, deploymentDiffOpts) {
-		clusterAPI.Logger.Info("Updating deployment...")
+		clusterAPI.Logger.Info("Updating deployment")
+		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specDeployment, clusterDeployment, deploymentDiffOpts)))
+		}
 		clusterDeployment.Spec = specDeployment.Spec
 		err := clusterAPI.Client.Update(context.TODO(), clusterDeployment)
 		if err != nil {

@@ -94,6 +94,10 @@ func SyncRoutingToCluster(
 	}
 
 	if !cmp.Equal(specRouting, clusterRouting, routingDiffOpts) {
+		clusterAPI.Logger.Info("Updating DevWorkspaceRouting")
+		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specRouting, clusterRouting, routingDiffOpts)))
+		}
 		clusterRouting.Labels = specRouting.Labels
 		clusterRouting.Annotations = specRouting.Annotations
 		clusterRouting.Spec = specRouting.Spec

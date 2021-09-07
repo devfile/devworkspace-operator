@@ -14,6 +14,7 @@ package workspace
 
 import (
 	"context"
+	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/google/go-cmp/cmp"
@@ -25,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 type ServiceAcctProvisioningStatus struct {
@@ -86,6 +88,9 @@ func SyncServiceAccount(
 
 	if !cmp.Equal(specSA.Annotations, clusterSA.Annotations) {
 		clusterAPI.Logger.Info("Updating DevWorkspace ServiceAccount")
+		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specSA.Annotations, clusterSA.Annotations)))
+		}
 		patch := runtimeClient.MergeFrom(&specSA)
 		err := clusterAPI.Client.Patch(context.TODO(), clusterSA, patch)
 		if err != nil {

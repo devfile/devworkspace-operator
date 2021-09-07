@@ -55,6 +55,10 @@ func (r *DevWorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.D
 		if contains, idx := listContainsRouteByName(specRoute, clusterRoutes); contains {
 			clusterRoute := clusterRoutes[idx]
 			if !cmp.Equal(specRoute, clusterRoute, routeDiffOpts) {
+				r.Log.Info("Updating route")
+				if r.DebugLogging {
+					r.Log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specRoute, clusterRoute, routeDiffOpts)))
+				}
 				// Update route's spec
 				clusterRoute.Spec = specRoute.Spec
 				err := r.Update(context.TODO(), &clusterRoute)

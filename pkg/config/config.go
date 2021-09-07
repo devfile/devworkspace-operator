@@ -114,7 +114,7 @@ func (wc *ControllerConfig) GetWorkspaceControllerSA() (string, error) {
 	return saName, nil
 }
 
-func updateConfigMap(client client.Client, obj client.Object) {
+func syncConfigmapFromCluster(client client.Client, obj client.Object) {
 	if obj.GetNamespace() != ConfigMapReference.Namespace ||
 		obj.GetName() != ConfigMapReference.Name {
 		return
@@ -185,7 +185,7 @@ func WatchControllerConfig(mgr manager.Manager) error {
 		return err
 	}
 
-	updateConfigMap(nonCachedClient, configMap)
+	syncConfigmapFromCluster(nonCachedClient, configMap)
 
 	return nil
 }
@@ -242,11 +242,15 @@ func fillOpenShiftRouteSuffixIfNecessary(nonCachedClient client.Client, configMa
 func ConfigMapPredicates(mgr manager.Manager) predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(evt event.UpdateEvent) bool {
-			updateConfigMap(mgr.GetClient(), evt.ObjectNew)
+			if evt.ObjectNew.GetName() == ConfigMapReference.Name && evt.ObjectNew.GetNamespace() == ConfigMapReference.Namespace {
+				syncConfigmapFromCluster(mgr.GetClient(), evt.ObjectNew)
+			}
 			return false
 		},
 		CreateFunc: func(evt event.CreateEvent) bool {
-			updateConfigMap(mgr.GetClient(), evt.Object)
+			if evt.Object.GetName() == ConfigMapReference.Name && evt.Object.GetNamespace() == ConfigMapReference.Namespace {
+				syncConfigmapFromCluster(mgr.GetClient(), evt.Object)
+			}
 			return false
 		},
 		DeleteFunc: func(evt event.DeleteEvent) bool {

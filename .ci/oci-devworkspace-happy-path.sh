@@ -37,7 +37,7 @@ trap 'Catch_Finish $?' EXIT SIGINT
 
 # ENV used by PROW ci
 export CI="openshift"
-export NAMESPACE="eclipse-che"
+export CHE_NAMESPACE="eclipse-che"
 export HAPPY_PATH_POD_NAME=happy-path-che
 export HAPPY_PATH_TEST_PROJECT='https://github.com/che-samples/java-spring-petclinic/tree/devfilev2'
 # Pod created by openshift ci don't have user. Using this envs should avoid errors with git user.
@@ -45,6 +45,7 @@ export GIT_COMMITTER_NAME="CI BOT"
 export GIT_COMMITTER_EMAIL="ci_bot@notused.com"
 
 deployDWO() {
+  export NAMESPACE="devworkspace-controller"
   export DWO_IMG='${DEVWORKSPACE_OPERATOR}'
   make install
 }
@@ -65,12 +66,12 @@ deployChe() {
 
 startHappyPathTest() {
   # patch happy-path-che.yaml 
-  ECLIPSE_CHE_URL=http://$(oc get route -n "${NAMESPACE}" che -o jsonpath='{.status.ingress[0].host}')
+  ECLIPSE_CHE_URL=http://$(oc get route -n "${CHE_NAMESPACE}" che -o jsonpath='{.status.ingress[0].host}')
   TS_SELENIUM_DEVWORKSPACE_URL="${ECLIPSE_CHE_URL}/#${HAPPY_PATH_TEST_PROJECT}"
   HAPPY_PATH_POD_FILE=${SCRIPT_DIR}/resources/pod-che-happy-path.yaml
   sed -i "s@CHE_URL@${ECLIPSE_CHE_URL}@g" ${HAPPY_PATH_POD_FILE}
   sed -i "s@WORKSPACE_ROUTE@${TS_SELENIUM_DEVWORKSPACE_URL}@g" ${HAPPY_PATH_POD_FILE}
-  sed -i "s@CHE-NAMESPACE@${NAMESPACE}@g" ${HAPPY_PATH_POD_FILE}
+  sed -i "s@CHE-NAMESPACE@${CHE_NAMESPACE}@g" ${HAPPY_PATH_POD_FILE}
 
   echo "[INFO] Applying the following patched Che Happy Path Pod:"
   cat ${HAPPY_PATH_POD_FILE}
@@ -80,7 +81,7 @@ startHappyPathTest() {
   n=0
   while [ $n -le 120 ]
   do
-    PHASE=$(oc get pod -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME} \
+    PHASE=$(oc get pod -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} \
         --template='{{ .status.phase }}')
     if [[ ${PHASE} == "Running" ]]; then
       echo "[INFO] Happy-path test started succesfully."
@@ -99,18 +100,18 @@ runTest() {
   startHappyPathTest
 
   # wait for the test to finish
-  oc logs -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test -f
+  oc logs -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test -f
 
   # just to sleep
   sleep 3
 
   # download the test results
   mkdir -p /tmp/e2e
-  oc rsync -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME}:/tmp/e2e/report/ /tmp/e2e -c download-reports
-  oc exec -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME} -c download-reports -- touch /tmp/done
+  oc rsync -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME}:/tmp/e2e/report/ /tmp/e2e -c download-reports
+  oc exec -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c download-reports -- touch /tmp/done
   cp -r /tmp/e2e ${ARTIFACT_DIR}
 
-  EXIT_CODE=$(oc logs -n ${NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test | grep EXIT_CODE)
+  EXIT_CODE=$(oc logs -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test | grep EXIT_CODE)
 
   if [[ ${EXIT_CODE} == "+ EXIT_CODE=1" ]]; then
     echo "[ERROR] Happy-path test failed."

@@ -522,6 +522,9 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&batchv1.Job{}).
 		Owns(&controllerv1alpha1.DevWorkspaceRouting{}).
+		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Secret{}).
+		Owns(&corev1.ServiceAccount{}).
 		Watches(&source.Kind{Type: &corev1.Pod{}}, dwRelatedPodsHandler()).
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configMapWatcher).
 		WithEventFilter(predicates).

@@ -28,7 +28,7 @@ spec:
         - name: TS_SELENIUM_LOG_LEVEL
           value: TRACE
         - name: TS_SELENIUM_OCP_USERNAME
-          value: 'user'
+          value: 'che-user'
         - name: TS_SELENIUM_OCP_PASSWORD
           value: "user"
         - name: TS_SELENIUM_VALUE_OPENSHIFT_OAUTH

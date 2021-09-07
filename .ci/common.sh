@@ -36,25 +36,6 @@ function bumpPodsInfo() {
     oc get events -n $NS -o=yaml > $TARGET_DIR/events.log || true
 }
 
-
-# Create cluster-admin user inside of openshift cluster and login
-function provisionOpenShiftOAuthUser() {
-  SCRIPT_DIR=$(dirname $(readlink -f "$0"))
-  oc create secret generic htpass-secret --from-file=htpasswd="$SCRIPT_DIR/resources/users.htpasswd" -n openshift-config
-  oc apply -f "$SCRIPT_DIR/resources/htpasswdProvider.yaml"
-  oc adm policy add-cluster-role-to-user cluster-admin user
-
-  echo -e "[INFO] Waiting for htpasswd auth to be working up to 5 minutes"
-  CURRENT_TIME=$(date +%s)
-  ENDTIME=$(($CURRENT_TIME + 300))
-  while [ $(date +%s) -lt $ENDTIME ]; do
-      if oc login -u user -p user --insecure-skip-tls-verify=false; then
-          break
-      fi
-      sleep 10
-  done
-}
-
 installChectl() {
   wget $(curl https://che-incubator.github.io/chectl/download-link/next-linux-x64)
   tar -xzf chectl-linux-x64.tar.gz

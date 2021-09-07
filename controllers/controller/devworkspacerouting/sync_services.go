@@ -59,6 +59,10 @@ func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1
 		if contains, idx := listContainsByName(specService, clusterServices); contains {
 			clusterService := clusterServices[idx]
 			if !cmp.Equal(specService, clusterService, serviceDiffOpts) {
+				r.Log.Info("Updating service")
+				if r.DebugLogging {
+					r.Log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specService, clusterService, serviceDiffOpts)))
+				}
 				// Cannot naively copy spec, as clusterIP is unmodifiable
 				clusterIP := clusterService.Spec.ClusterIP
 				clusterService.Spec = specService.Spec

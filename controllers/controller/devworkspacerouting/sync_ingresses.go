@@ -54,6 +54,10 @@ func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha
 		if contains, idx := listContainsIngressByName(specIngress, clusterIngresses); contains {
 			clusterIngress := clusterIngresses[idx]
 			if !cmp.Equal(specIngress, clusterIngress, ingressDiffOpts) {
+				r.Log.Info("Updating ingress")
+				if r.DebugLogging {
+					r.Log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specIngress, clusterIngress, ingressDiffOpts)))
+				}
 				// Update ingress's spec
 				clusterIngress.Spec = specIngress.Spec
 				err := r.Update(context.TODO(), &clusterIngress)

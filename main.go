@@ -128,6 +128,7 @@ func main() {
 		Log:          ctrl.Log.WithName("controllers").WithName("DevWorkspaceRouting"),
 		Scheme:       mgr.GetScheme(),
 		SolverGetter: &solvers.SolverGetter{},
+		DebugLogging: config.ControllerCfg.GetExperimentalFeaturesEnabled(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DevWorkspaceRouting")
 		os.Exit(1)

@@ -27,7 +27,7 @@ func GetAutoMountResources(devworkspace *dw.DevWorkspace, client k8sclient.Clien
 	namespace := devworkspace.GetNamespace()
 	gitCMPodAdditions, err := getDevWorkspaceGitConfig(devworkspace, client, scheme)
 	if err != nil {
-		return nil, nil, nil
+		return nil, nil, err
 	}
 
 	cmPodAdditions, cmEnvAdditions, err := getDevWorkspaceConfigmaps(namespace, client)

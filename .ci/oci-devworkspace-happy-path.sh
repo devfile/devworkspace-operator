@@ -23,12 +23,15 @@ source "${SCRIPT_DIR}"/common.sh
 
 # Catch the finish of the job and write logs in artifacts.
 function Catch_Finish() {
-    # grab devworkspace-controller namespace events after running e2e
     bumpPodsInfo "devworkspace-controller"
-    bumpPodsInfo "devworkspace-che"
-    bumpPodsInfo "admin-che"
-    oc get devworkspaces -n "admin-che" -o=yaml > $ARTIFACT_DIR/devworkspaces.yaml
-    /tmp/chectl/bin/chectl server:logs --chenamespace=${NAMESPACE} --directory=${ARTIFACT_DIR} --telemetry=off
+    bumpPodsInfo "eclipse-che"
+    USERS_CHE_NS="che-user-che"
+    bumpPodsInfo $USERS_CHE_NS
+    # Fetch DW related CRs but do not fail when CRDs are not installed yet
+    oc get devworkspace -n $USERS_CHE_NS -o=yaml > ${ARTIFACT_DIR}/devworkspaces.yaml || true
+    oc get devworkspacetemplate -n $USERS_CHE_NS -o=yaml > ${ARTIFACT_DIR}/devworkspace-templates.yaml || true
+    oc get devworkspacerouting -n $USERS_CHE_NS -o=yaml > ${ARTIFACT_DIR}/devworkspace-routings.yaml || true
+    /tmp/chectl/bin/chectl server:logs --chenamespace=eclipse-che --directory=${ARTIFACT_DIR}/chectl-server-logs --telemetry=off
 }
 trap 'Catch_Finish $?' EXIT SIGINT
 

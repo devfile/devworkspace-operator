@@ -55,6 +55,9 @@ func getDevWorkspaceGitConfig(devworkspace *dw.DevWorkspace, client k8sclient.Cl
 	for _, secret := range secrets.Items {
 		credentials = append(credentials, string(secret.Data[gitCredentialsName]))
 		if val, ok := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]; ok {
+			if mountpath != "" && val != mountpath {
+				return nil, &FatalError{fmt.Errorf("auto-mounted git credentials have conflicting mountPaths")}
+			}
 			mountpath = val
 		}
 	}

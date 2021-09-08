@@ -3,13 +3,16 @@ ifeq (,$(shell which kubectl))
 ifeq (,$(shell which oc))
 $(error oc or kubectl is required to proceed)
 else
-K8S_CLI := oc
+# Note: we close stdin ('<&-') here because kubectl will prompt for a password if the current context has a user
+# without auth credentials. This can occur if e.g. oc logout is executed and is particularly a problem for the
+# PLATFORM check below, which will silently hang indefinitely.
+K8S_CLI := oc <&-
 endif
 else
-K8S_CLI := kubectl
+K8S_CLI := kubectl <&-
 endif
 
-ifeq ($(shell $(K8S_CLI) api-resources --api-group='route.openshift.io'  2>&1 | grep -o routes),routes)
+ifeq ($(shell $(K8S_CLI) api-resources --api-group='route.openshift.io' 2>&1 | grep -o routes),routes)
 PLATFORM := openshift
 else
 PLATFORM := kubernetes
@@ -52,13 +55,12 @@ else
 endif
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
-install: _check_cert_manager _print_vars _init_devworkspace_crds _create_namespace generate_deployment
+install: _print_vars _check_cert_manager _init_devworkspace_crds _create_namespace generate_deployment
 ifeq ($(PLATFORM),kubernetes)
 	$(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml
 else
 	$(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
 endif
-
 
 ### install_plugin_templates: Deploys the sample plugin templates to namespace devworkspace-plugins:
 install_plugin_templates: _print_vars

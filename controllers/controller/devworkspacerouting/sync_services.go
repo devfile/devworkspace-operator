@@ -59,7 +59,7 @@ func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1
 		if contains, idx := listContainsByName(specService, clusterServices); contains {
 			clusterService := clusterServices[idx]
 			if !cmp.Equal(specService, clusterService, serviceDiffOpts) {
-				r.Log.Info("Updating service")
+				r.Log.Info(fmt.Sprintf("Updating service: %s", clusterService.Name))
 				if r.DebugLogging {
 					r.Log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specService, clusterService, serviceDiffOpts)))
 				}

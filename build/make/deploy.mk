@@ -11,12 +11,14 @@ K8S_CLI := kubectl <&-
 # Check if logged in and warn if not
 ifeq ($(findstring Please enter Username,$(shell kubectl auth can-i '*' '*' <&- 2>&1)),Please enter Username)
 $(info Warning: current context is not authenticated with a cluster)
+LOGGED_IN="false"
 endif
 else
 K8S_CLI := oc <&-
 # Check if logged in and warn if not
 ifeq ($(findstring Forbidden,$(shell oc whoami 2>&1)),Forbidden)
 $(info Warning: current context is not authenticated with a cluster)
+LOGGED_IN="false"
 endif
 endif
 
@@ -107,9 +109,11 @@ endif
 
 _check_cert_manager:
 ifeq ($(PLATFORM),kubernetes)
-	if ! ${K8S_CLI} api-versions | grep -q '^cert-manager.io/v1$$' ; then \
-		echo "Cert-manager is required for deploying on Kubernetes. See 'make install_cert_manager'" ;\
-		exit 1 ;\
+	if [ ! -z "$$LOGGED_IN" ]; then \
+		if ! ${K8S_CLI} api-versions | grep -q '^cert-manager.io/v1$$' ; then \
+			echo "Cert-manager is required for deploying on Kubernetes. See 'make install_cert_manager'" ;\
+			exit 1 ;\
+		fi \
 	fi
 endif
 

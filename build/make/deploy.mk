@@ -1,16 +1,25 @@
 
-ifeq (,$(shell which kubectl))
-ifeq (,$(shell which oc))
+ifeq (,$(shell which kubectl)$(shell which oc))
 $(error oc or kubectl is required to proceed)
-else
+endif
+
 # Note: we close stdin ('<&-') here because kubectl will prompt for a password if the current context has a user
 # without auth credentials. This can occur if e.g. oc logout is executed and is particularly a problem for the
 # PLATFORM check below, which will silently hang indefinitely.
-K8S_CLI := oc <&-
+ifneq (,$(shell which kubectl))
+K8S_CLI := kubectl <&-
+# Check if logged in and warn if not
+ifeq ($(findstring Please enter Username,$(shell kubectl auth can-i '*' '*' <&- 2>&1)),Please enter Username)
+$(info Warning: current context is not authenticated with a cluster)
 endif
 else
-K8S_CLI := kubectl <&-
+K8S_CLI := oc <&-
+# Check if logged in and warn if not
+ifeq ($(findstring Forbidden,$(shell oc whoami 2>&1)),Forbidden)
+$(info Warning: current context is not authenticated with a cluster)
 endif
+endif
+
 
 ifeq ($(shell $(K8S_CLI) api-resources --api-group='route.openshift.io' 2>&1 | grep -o routes),routes)
 PLATFORM := openshift

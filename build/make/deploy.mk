@@ -74,7 +74,7 @@ restart_webhook:
 	$(K8S_CLI) rollout restart -n $(NAMESPACE) deployment/devworkspace-webhook-server
 
 ### uninstall: Removes the controller resources from the cluster
-uninstall: generate_deployment
+uninstall: _print_vars generate_deployment
 # It's safer to delete all workspaces before deleting the controller; otherwise we could
 # leave workspaces in a hanging state if we add finalizers.
 	$(K8S_CLI) delete devworkspaces.workspace.devfile.io --all-namespaces --all --wait || true

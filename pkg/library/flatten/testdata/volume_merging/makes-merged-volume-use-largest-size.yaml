@@ -1,0 +1,37 @@
+name: "Makes merged volume persistent use largest size from duplicates"
+
+input:
+  devworkspace:
+    parent:
+      uri: "parent"
+    components:
+      - name: duplicated-volume
+        volume: {}
+      - name: "plugin-1"
+        plugin:
+          uri: "plugin-1"
+
+  devfileResources:
+    "parent":
+      schemaVersion: 2.0.0
+      metadata:
+        name: "parent"
+      components:
+        - name: duplicated-volume
+          volume:
+            size: 2Gi
+    "plugin-1":
+      schemaVersion: 2.0.0
+      metadata:
+        name: "plugin-1"
+      components:
+        - name: duplicated-volume
+          volume:
+            size: 1Gi
+
+output:
+  devworkspace:
+    components:
+      - name: duplicated-volume
+        volume:
+          size: 2Gi

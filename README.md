@@ -32,6 +32,7 @@ metadata:
 - sed
 - jq
 - yq (python-yq from https://github.com/kislyuk/yq#installation, other distributions may not work)
+- skopeo
 - docker
 
 Note: kustomize `v4.0.5` is required for most tasks. It is downloaded automatically to the `.kustomize` folder in this repo when required. This downloaded version is used regardless of whether or not kustomize is already installed on the system.

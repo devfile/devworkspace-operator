@@ -107,6 +107,7 @@ To see all rules supported by the makefile, run `make help`
 ### Run controller locally
 ```bash
 make install
+oc project devworkspace-controller
 oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}"
 make run
 ```

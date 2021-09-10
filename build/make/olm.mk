@@ -107,6 +107,6 @@ _check_opm_version:
 
 _check_skopeo_installed:
 	if ! command -v skopeo &> /dev/null; then \
-		echo "Skopeo is required for building and deploying bundle, but it is not instealled." ;\
+		echo "Skopeo is required for building and deploying bundle, but it is not installed." ;\
 		exit 1
 	fi

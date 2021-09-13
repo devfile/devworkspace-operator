@@ -12,6 +12,9 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
+    - kind: DevWorkspaceOperatorConfig
+      name: devworkspaceoperatorconfigs.controller.devfile.io
+      version: v1alpha1
     - kind: DevWorkspaceRouting
       name: devworkspaceroutings.controller.devfile.io
       version: v1alpha1

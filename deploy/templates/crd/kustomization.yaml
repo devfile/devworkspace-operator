@@ -3,6 +3,7 @@
 # It should be run by deploy/templates/default
 resources:
 - bases/controller.devfile.io_devworkspaceroutings.yaml
+- bases/controller.devfile.io_devworkspaceoperatorconfigs.yaml
 - bases/workspace.devfile.io_devworkspaces.yaml
 - bases/workspace.devfile.io_devworkspacetemplates.yaml
 # +kubebuilder:scaffold:crdkustomizeresource

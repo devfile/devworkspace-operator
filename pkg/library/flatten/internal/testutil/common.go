@@ -21,10 +21,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
-
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 var WorkspaceTemplateDiffOpts = cmp.Options{
@@ -39,21 +36,6 @@ var WorkspaceTemplateDiffOpts = cmp.Options{
 	}),
 	// TODO: Devworkspace overriding results in empty []string instead of nil
 	cmpopts.IgnoreFields(dw.DevWorkspaceEvents{}, "PostStart", "PreStop", "PostStop"),
-}
-
-var testControllerCfg = &corev1.ConfigMap{
-	Data: map[string]string{
-		"devworkspace.default_dockerimage.redhat-developer.web-terminal": `
-name: default-web-terminal-tooling
-container:
-  name: default-web-terminal-tooling-container
-  image: test-image
-`,
-	},
-}
-
-func SetupControllerCfg() {
-	config.SetupConfigForTesting(testControllerCfg)
 }
 
 type TestCase struct {

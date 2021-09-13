@@ -17,6 +17,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -67,4 +68,12 @@ func GetResourceQuantityFromEnvVar(env string) (*resource.Quantity, error) {
 		return nil, fmt.Errorf("failed to parse environment variable %s: %s", env, err)
 	}
 	return &quantity, nil
+}
+
+func GetWorkspaceControllerSA() (string, error) {
+	saName := os.Getenv(constants.ControllerServiceAccountNameEnvVar)
+	if saName == "" {
+		return "", fmt.Errorf("environment variable %s is unset", constants.ControllerServiceAccountNameEnvVar)
+	}
+	return saName, nil
 }

@@ -22,14 +22,14 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"github.com/devfile/api/v2/pkg/validation/variables"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -123,16 +123,13 @@ func recursiveResolve(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTo
 		}
 	}
 
-	if err := mergeVolumeComponents(resolvedContent, resolvedParent, pluginSpecContents...); err != nil {
-		return nil, fmt.Errorf("failed to merge DevWorkspace volumes: %w", err)
-	}
-	resolvedContent, err := overriding.MergeDevWorkspaceTemplateSpec(resolvedContent, resolvedParent, pluginSpecContents...)
+	mergedSpecContent, err := mergeDevWorkspaceElements(resolvedContent, resolvedParent, pluginSpecContents...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to merge DevWorkspace parents/plugins: %w", err)
+		return nil, err
 	}
 
 	return &dw.DevWorkspaceTemplateSpec{
-		DevWorkspaceTemplateSpecContent: *resolvedContent,
+		DevWorkspaceTemplateSpecContent: *mergedSpecContent,
 	}, nil
 }
 
@@ -298,85 +295,6 @@ func resolveElementByURI(
 		return nil, fmt.Errorf("failed to resolve component %s by URI: %w", name, err)
 	}
 	return dwt, nil
-}
-
-// mergeVolumeComponents merges volume components sharing the same name according to the following rules
-// * If a volume is defined in main and duplicated in parent/plugins, the copy in parent/plugins is removed
-// * If a volume is defined in parent and duplicated in plugins, the copy in plugins is removed
-// * If a volume is defined in multiple plugins, all but the first definition is removed
-// * If a volume is defined as persistent, all duplicates will be persistent
-// * If duplicate volumes set a size, the larger size will be used.
-// Following the invocation of this function, there are no duplicate volumes defined across the main devworkspace, its
-// parent, and its plugins.
-func mergeVolumeComponents(main, parent *dw.DevWorkspaceTemplateSpecContent, plugins ...*dw.DevWorkspaceTemplateSpecContent) error {
-	volumeComponents := map[string]dw.Component{}
-	for _, component := range main.Components {
-		if component.Volume == nil {
-			continue
-		}
-		if _, exists := volumeComponents[component.Name]; exists {
-			return fmt.Errorf("duplicate volume found in devfile: %s", component.Name)
-		}
-		volumeComponents[component.Name] = component
-	}
-
-	mergeVolumeComponents := func(spec *dw.DevWorkspaceTemplateSpecContent) error {
-		var newComponents []dw.Component
-		for _, component := range spec.Components {
-			if component.Volume == nil {
-				newComponents = append(newComponents, component)
-				continue
-			}
-			if existingVol, exists := volumeComponents[component.Name]; exists {
-				if err := mergeVolume(existingVol.Volume, component.Volume); err != nil {
-					return err
-				}
-			} else {
-				newComponents = append(newComponents, component)
-				volumeComponents[component.Name] = component
-			}
-		}
-		spec.Components = newComponents
-		return nil
-	}
-	if err := mergeVolumeComponents(parent); err != nil {
-		return err
-	}
-
-	for _, plugin := range plugins {
-		if err := mergeVolumeComponents(plugin); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func mergeVolume(into, from *dw.VolumeComponent) error {
-	// If the new volume is persistent, make the original persistent
-	if !from.Ephemeral {
-		into.Ephemeral = false
-	}
-	intoSize := into.Size
-	if intoSize == "" {
-		intoSize = "0"
-	}
-	intoSizeQty, err := resource.ParseQuantity(intoSize)
-	if err != nil {
-		return err
-	}
-	fromSize := from.Size
-	if fromSize == "" {
-		fromSize = "0"
-	}
-	fromSizeQty, err := resource.ParseQuantity(fromSize)
-	if err != nil {
-		return err
-	}
-	if fromSizeQty.Cmp(intoSizeQty) > 0 {
-		into.Size = from.Size
-	}
-	return nil
 }
 
 // canImportDW returns true if a DevWorkspace in dwNamespace is allowed to reference the provided DevWorkspaceTemplate

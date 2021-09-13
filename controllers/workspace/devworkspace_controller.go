@@ -529,7 +529,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return []reconcile.Request{}
 	}
 
-	var configMapWatcher builder.WatchesOption = builder.WithPredicates(config.ConfigMapPredicates(mgr))
+	var configWatcher builder.WatchesOption = builder.WithPredicates(config.Predicates())
 
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
 	return ctrl.NewControllerManagedBy(mgr).
@@ -546,7 +546,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
 		Watches(&source.Kind{Type: &corev1.Pod{}}, dwRelatedPodsHandler()).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configMapWatcher).
+		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configWatcher).
 		WithEventFilter(predicates).
 		WithEventFilter(podPredicates).
 		Complete(r)

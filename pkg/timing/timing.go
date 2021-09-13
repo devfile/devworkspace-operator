@@ -23,7 +23,7 @@ import (
 
 // IsEnabled returns whether storing timing info is enabled for the operator
 func IsEnabled() bool {
-	return config.ControllerCfg.GetExperimentalFeaturesEnabled()
+	return config.ExperimentalFeaturesEnabled()
 }
 
 // SetTime applies a given event annotation to the devworkspace with the current

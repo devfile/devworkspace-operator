@@ -129,7 +129,7 @@ func getValidateWebhook(ctx context.Context, c client.Client, validateWebhookCfg
 }
 
 func controllerSAUID(ctx context.Context, c client.Client) (string, string, error) {
-	saName, err := config.ControllerCfg.GetWorkspaceControllerSA()
+	saName, err := config.GetWorkspaceControllerSA()
 	if err != nil {
 		return "", "", err
 	}

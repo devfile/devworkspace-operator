@@ -33,7 +33,6 @@ func SetupWebhooks(ctx context.Context, cfg *rest.Config) error {
 	namespace, err := infrastructure.GetOperatorNamespace()
 	if err != nil {
 		namespace = os.Getenv(infrastructure.WatchNamespaceEnvVar)
-		config.ConfigMapReference.Namespace = namespace
 	}
 
 	client, err := crclient.New(cfg, crclient.Options{})

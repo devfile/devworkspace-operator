@@ -155,7 +155,7 @@ func SyncDeploymentToCluster(
 
 	if !cmp.Equal(specDeployment, clusterDeployment, deploymentDiffOpts) {
 		clusterAPI.Logger.Info("Updating deployment")
-		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+		if config.ExperimentalFeaturesEnabled() {
 			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specDeployment, clusterDeployment, deploymentDiffOpts)))
 		}
 		clusterDeployment.Spec = specDeployment.Spec
@@ -503,7 +503,7 @@ func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions,
 }
 
 func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {
-	volumeName := config.ControllerCfg.GetWorkspacePVCName()
+	volumeName := config.Workspace.PVCName
 
 	workspaceVolumeMount := corev1.VolumeMount{
 		Name:      volumeName,
@@ -515,7 +515,7 @@ func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {
 }
 
 func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
-	commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
+	commonPVCName := config.Workspace.PVCName
 	for _, vol := range podAdditions.Volumes {
 		if vol.Name == commonPVCName {
 			return true

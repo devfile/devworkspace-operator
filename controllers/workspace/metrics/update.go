@@ -48,7 +48,7 @@ func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWork
 	}
 	routingClass := wksp.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.ControllerCfg.GetDefaultRoutingClass()
+		routingClass = config.Routing.DefaultRoutingClass
 	}
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
@@ -64,7 +64,7 @@ func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger
 	}
 	routingClass := wksp.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.ControllerCfg.GetDefaultRoutingClass()
+		routingClass = config.Routing.DefaultRoutingClass
 	}
 	hist, err := workspaceStartupTimesHist.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {

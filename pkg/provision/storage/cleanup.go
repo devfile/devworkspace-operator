@@ -108,7 +108,7 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprovision.C
 
 func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.DevWorkspaceId
-	pvcName := config.ControllerCfg.GetWorkspacePVCName()
+	pvcName := config.Workspace.PVCName
 	jobLabels := map[string]string{
 		constants.DevWorkspaceIDLabel: workspaceId,
 	}
@@ -197,7 +197,7 @@ func getClusterCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprov
 
 func commonPVCExists(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) (bool, error) {
 	namespacedName := types.NamespacedName{
-		Name:      config.ControllerCfg.GetWorkspacePVCName(),
+		Name:      config.Workspace.PVCName,
 		Namespace: workspace.Namespace,
 	}
 	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, &corev1.PersistentVolumeClaim{})

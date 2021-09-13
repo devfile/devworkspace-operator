@@ -89,7 +89,7 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 	}
 
 	// TODO: What should we do when a volume isn't explicitly defined?
-	commonPVCName := config.ControllerCfg.GetWorkspacePVCName()
+	commonPVCName := config.Workspace.PVCName
 	rewriteVolumeMounts := func(containers []corev1.Container) error {
 		for cIdx, container := range containers {
 			for vmIdx, vm := range container.VolumeMounts {

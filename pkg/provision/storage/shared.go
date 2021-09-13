@@ -39,7 +39,7 @@ func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeCl
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.ControllerCfg.GetWorkspacePVCName(),
+			Name:      config.Workspace.PVCName,
 			Namespace: namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -51,7 +51,7 @@ func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeCl
 					"storage": pvcStorageQuantity,
 				},
 			},
-			StorageClassName: config.ControllerCfg.GetPVCStorageClassName(),
+			StorageClassName: config.Workspace.StorageClassName,
 		},
 	}, nil
 }

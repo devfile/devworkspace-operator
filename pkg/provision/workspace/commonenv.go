@@ -39,7 +39,7 @@ func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator s
 		},
 		{
 			Name:  constants.DevWorkspaceIdleTimeout,
-			Value: config.ControllerCfg.GetWorkspaceIdleTimeout(),
+			Value: config.Workspace.IdleTimeout,
 		},
 	}
 }

@@ -18,14 +18,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-	corev1 "k8s.io/api/core/v1"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/yaml"
+
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 type testCase struct {
@@ -39,14 +38,14 @@ type testOutput struct {
 	ErrRegexp    *string                `json:"errRegexp,omitempty"`
 }
 
-var testControllerCfg = &corev1.ConfigMap{
-	Data: map[string]string{
-		"devworkspace.sidecar.image_pull_policy": "Always",
+var testControllerCfg = &v1alpha1.OperatorConfiguration{
+	Workspace: &v1alpha1.WorkspaceConfig{
+		ImagePullPolicy: "Always",
 	},
 }
 
 func setupControllerCfg() {
-	config.SetupConfigForTesting(testControllerCfg)
+	config.SetConfigForTesting(testControllerCfg)
 }
 
 func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {

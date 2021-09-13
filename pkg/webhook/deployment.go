@@ -77,7 +77,7 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 		return nil, fmt.Errorf("failed to create webhooks server deployment: %s", err)
 	}
 
-	controllerSA, err := config.ControllerCfg.GetWorkspaceControllerSA()
+	controllerSA, err := config.GetWorkspaceControllerSA()
 	if err != nil {
 		return nil, err
 	}

@@ -48,3 +48,17 @@ func GetWatchNamespace() (string, error) {
 	}
 	return ns, nil
 }
+
+// GetNamespace gets the namespace of the operator by checking GetOperatorNamespace and GetWatchNamespace in that order.
+// Returns an error if both GetOperatorNamespace and GetWatchNamespace return an error.
+func GetNamespace() (string, error) {
+	ns, operErr := GetOperatorNamespace()
+	if operErr == nil {
+		return ns, nil
+	}
+	ns, watchErr := GetWatchNamespace()
+	if watchErr != nil {
+		return "", fmt.Errorf("failed to get current namespace: %s; %s", operErr, watchErr)
+	}
+	return ns, nil
+}

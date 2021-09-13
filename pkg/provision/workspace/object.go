@@ -87,7 +87,7 @@ func SyncObject(object runtimeClient.Object, client runtimeClient.Client, reqLog
 	}
 	if !cmp.Equal(object, found, diffOpt) {
 		reqLogger.Info("Updating "+objType.String(), "namespace", objMeta.GetNamespace(), "name", objMeta.GetName())
-		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+		if config.ExperimentalFeaturesEnabled() {
 			reqLogger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(object, found, diffOpt)))
 		}
 		updateErr := client.Update(context.TODO(), object)

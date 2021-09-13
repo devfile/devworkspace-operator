@@ -56,9 +56,9 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
-	routingSuffix := config.ControllerCfg.GetProperty(config.RoutingSuffix)
-	if routingSuffix == nil {
-		return routingObjects, errors.New(config.RoutingSuffix + " must be set for basic routing")
+	routingSuffix := config.Routing.ClusterHostSuffix
+	if routingSuffix == "" {
+		return routingObjects, errors.New("basic routing requires .config.routing.clusterHostSuffix to be set in operator config")
 	}
 
 	spec := routing.Spec
@@ -66,9 +66,9 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRou
 	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
 	routingObjects.Services = services
 	if infrastructure.IsOpenShift() {
-		routingObjects.Routes = getRoutesForSpec(*routingSuffix, spec.Endpoints, workspaceMeta)
+		routingObjects.Routes = getRoutesForSpec(routingSuffix, spec.Endpoints, workspaceMeta)
 	} else {
-		routingObjects.Ingresses = getIngressesForSpec(*routingSuffix, spec.Endpoints, workspaceMeta)
+		routingObjects.Ingresses = getIngressesForSpec(routingSuffix, spec.Endpoints, workspaceMeta)
 	}
 
 	return routingObjects, nil

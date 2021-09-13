@@ -44,7 +44,7 @@ func convertContainerToK8s(devfileComponent dw.Component) (*v1.Container, error)
 		Ports:           devfileEndpointsToContainerPorts(devfileContainer.Endpoints),
 		Env:             devfileEnvToContainerEnv(devfileComponent.Name, devfileContainer.Env),
 		VolumeMounts:    devfileVolumeMountsToContainerVolumeMounts(devfileContainer.VolumeMounts),
-		ImagePullPolicy: v1.PullPolicy(config.ControllerCfg.GetSidecarPullPolicy()),
+		ImagePullPolicy: v1.PullPolicy(config.Workspace.ImagePullPolicy),
 	}
 
 	return container, nil

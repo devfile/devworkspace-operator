@@ -88,7 +88,7 @@ func SyncServiceAccount(
 
 	if !cmp.Equal(specSA.Annotations, clusterSA.Annotations) {
 		clusterAPI.Logger.Info("Updating DevWorkspace ServiceAccount")
-		if config.ControllerCfg.GetExperimentalFeaturesEnabled() {
+		if config.ExperimentalFeaturesEnabled() {
 			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specSA.Annotations, clusterSA.Annotations)))
 		}
 		patch := runtimeClient.MergeFrom(&specSA)

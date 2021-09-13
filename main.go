@@ -128,7 +128,7 @@ func main() {
 		Log:          ctrl.Log.WithName("controllers").WithName("DevWorkspaceRouting"),
 		Scheme:       mgr.GetScheme(),
 		SolverGetter: &solvers.SolverGetter{},
-		DebugLogging: config.ControllerCfg.GetExperimentalFeaturesEnabled(),
+		DebugLogging: config.ExperimentalFeaturesEnabled(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DevWorkspaceRouting")
 		os.Exit(1)
@@ -183,21 +183,11 @@ func main() {
 }
 
 func setupControllerConfig(mgr ctrl.Manager) error {
-	operatorNamespace, err := infrastructure.GetOperatorNamespace()
-	if err == nil {
-		config.ConfigMapReference.Namespace = operatorNamespace
-	} else {
-		config.ConfigMapReference.Namespace = os.Getenv(infrastructure.WatchNamespaceEnvVar)
-	}
-	err = config.WatchControllerConfig(mgr)
+	nonCachedClient, err := client.New(mgr.GetConfig(), client.Options{
+		Scheme: mgr.GetScheme(),
+	})
 	if err != nil {
 		return err
 	}
-
-	err = config.ControllerCfg.Validate()
-	if err != nil {
-		setupLog.Error(err, "Controller configuration is invalid")
-		return err
-	}
-	return nil
+	return config.SetupControllerConfig(nonCachedClient)
 }

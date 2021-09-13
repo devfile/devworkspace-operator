@@ -1,0 +1,118 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.6.1
+  creationTimestamp: null
+  name: devworkspaceoperatorconfigs.controller.devfile.io
+spec:
+  group: controller.devfile.io
+  names:
+    kind: DevWorkspaceOperatorConfig
+    listKind: DevWorkspaceOperatorConfigList
+    plural: devworkspaceoperatorconfigs
+    shortNames:
+    - dwoc
+    singular: devworkspaceoperatorconfig
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          config:
+            description: OperatorConfiguration defines configuration options for the
+              DevWorkspace Operator.
+            properties:
+              enableExperimentalFeatures:
+                description: EnableExperimentalFeatures turns on in-development features
+                  of the controller. This option should generally not be enabled,
+                  as any capabilites are subject to removal without notice.
+                type: boolean
+              routing:
+                description: Routing defines configuration options related to DevWorkspace
+                  networking
+                properties:
+                  clusterHostSuffix:
+                    description: ClusterHostSuffix is the hostname suffix to be used
+                      for DevWorkspace endpoints. On OpenShift, the DevWorkspace Operator
+                      will attempt to determine the appropriate value automatically.
+                      Must be specified on Kubernetes.
+                    type: string
+                  defaultRoutingClass:
+                    description: DefaultRoutingClass specifies the routingClass to
+                      be used when a DevWorkspace specifies an empty `.spec.routingClass`.
+                      Supported routingClasses can be defined in other controllers.
+                      If not specified, the default value of "basic" is used.
+                    type: string
+                type: object
+              workspace:
+                description: Workspace defines configuration options related to how
+                  DevWorkspaces are managed
+                properties:
+                  idleTimeout:
+                    description: IdleTimeout determines how long a workspace should
+                      sit idle before being automatically scaled down. Proper functionality
+                      of this configuration property requires support in the workspace
+                      being started. If not specified, the default value of "15m"
+                      is used.
+                    type: string
+                  ignoredUnrecoverableEvents:
+                    description: IgnoredUnrecoverableEvents defines a list of Kubernetes
+                      event names that should be ignored when deciding to fail a DevWorkspace
+                      startup. This option should be used if a transient cluster issue
+                      is triggering false-positives (for example, if the cluster occasionally
+                      encounters FailedScheduling events). Events listed here will
+                      not trigger DevWorkspace failures.
+                    items:
+                      type: string
+                    type: array
+                  imagePullPolicy:
+                    description: ImagePullPolicy defines the imagePullPolicy used
+                      for containers in a DevWorkspace For additional information,
+                      see Kubernetes documentation for imagePullPolicy. If not specified,
+                      the default value of "Always" is used.
+                    enum:
+                    - IfNotPresent
+                    - Always
+                    - Never
+                    type: string
+                  pvcName:
+                    description: PVCName defines the name used for the persistent
+                      volume claim created to support workspace storage when the 'common'
+                      storage class is used. If not specified, the default value of
+                      `claim-devworkspace` is used.
+                    maxLength: 63
+                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                  storageClassName:
+                    description: StorageClassName defines and optional storageClass
+                      to use for persistent volume claims created to support DevWorkspaces
+                    type: string
+                type: object
+            type: object
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+        type: object
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

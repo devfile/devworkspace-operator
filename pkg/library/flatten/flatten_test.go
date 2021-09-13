@@ -46,7 +46,6 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 
 func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/internal-registry")
-	testutil.SetupControllerCfg()
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
@@ -70,7 +69,6 @@ func TestResolveDevWorkspaceInternalRegistry(t *testing.T) {
 
 func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/plugin-id")
-	testutil.SetupControllerCfg()
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
@@ -94,7 +92,6 @@ func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 
 func TestResolveDevWorkspacePluginURI(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/plugin-uri")
-	testutil.SetupControllerCfg()
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components
@@ -237,7 +234,6 @@ func TestResolveDevWorkspaceWorkspaceEnv(t *testing.T) {
 
 func TestMergesDuplicateVolumeComponents(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/volume_merging")
-	testutil.SetupControllerCfg()
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check: input defines components

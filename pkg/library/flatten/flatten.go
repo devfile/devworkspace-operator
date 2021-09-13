@@ -29,7 +29,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
-	"github.com/devfile/devworkspace-operator/pkg/library/flatten/web_terminal"
 )
 
 const (
@@ -53,11 +52,6 @@ type ResolverTools struct {
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
 // are inlined as components.
 func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools) (*dw.DevWorkspaceTemplateSpec, *variables.VariableWarning, error) {
-	// Web terminals get default container components if they do not specify one
-	if err := web_terminal.AddDefaultContainerIfNeeded(workspace); err != nil {
-		return nil, nil, err
-	}
-
 	resolutionCtx := &resolutionContextTree{}
 	resolvedDW, err := recursiveResolve(workspace, tooling, resolutionCtx)
 	if err != nil {

@@ -37,9 +37,4 @@ const (
 
 	devworkspaceIdleTimeout        = "devworkspace.idle_timeout"
 	defaultDevWorkspaceIdleTimeout = "15m"
-
-	// Skip Verify for TLS connections
-	// It's insecure and should be used only for testing
-	tlsInsecureSkipVerify        = "tls.insecure_skip_verify"
-	defaultTlsInsecureSkipVerify = "false"
 )

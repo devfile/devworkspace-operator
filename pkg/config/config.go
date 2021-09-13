@@ -78,10 +78,6 @@ func (wc *ControllerConfig) GetSidecarPullPolicy() string {
 	return wc.GetPropertyOrDefault(sidecarPullPolicy, defaultSidecarPullPolicy)
 }
 
-func (wc *ControllerConfig) GetTlsInsecureSkipVerify() string {
-	return wc.GetPropertyOrDefault(tlsInsecureSkipVerify, defaultTlsInsecureSkipVerify)
-}
-
 func (wc *ControllerConfig) GetProperty(name string) *string {
 	val, exists := wc.configMap.Data[name]
 	if exists {
@@ -104,14 +100,6 @@ func (wc *ControllerConfig) Validate() error {
 
 func (wc *ControllerConfig) GetWorkspaceIdleTimeout() string {
 	return wc.GetPropertyOrDefault(devworkspaceIdleTimeout, defaultDevWorkspaceIdleTimeout)
-}
-
-func (wc *ControllerConfig) GetWorkspaceControllerSA() (string, error) {
-	saName := os.Getenv(constants.ControllerServiceAccountNameEnvVar)
-	if saName == "" {
-		return "", fmt.Errorf("could not get service account name")
-	}
-	return saName, nil
 }
 
 func syncConfigmapFromCluster(client client.Client, obj client.Object) {

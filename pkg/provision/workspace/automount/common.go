@@ -15,10 +15,8 @@ package automount
 import (
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -38,9 +36,8 @@ func (e *FatalError) Unwrap() error {
 	return e.Err
 }
 
-func GetAutoMountResources(devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
-	namespace := devworkspace.GetNamespace()
-	gitCMPodAdditions, err := getDevWorkspaceGitConfig(devworkspace, client, scheme)
+func GetAutoMountResources(client k8sclient.Client, namespace string) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+	gitCMPodAdditions, err := getDevWorkspaceGitConfig(client, namespace)
 	if err != nil {
 		return nil, nil, err
 	}

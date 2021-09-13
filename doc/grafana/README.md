@@ -23,7 +23,7 @@ To quickly test metrics locally (without installing Prometheus Grafana in the cl
     ```
 3. In another terminal, use `kubectl port-forward` to expose the controller's service locally
     ```bash
-    kubectl port-forward service/devworkspace-controller-metrics 8443:8443 &&
+    kubectl port-forward service/devworkspace-controller-metrics 8443:8443 &
     kubectl port-forward service/devworkspace-webhookserver 9443:9443
     ```
     We can check that the token works and metrics are accessible:

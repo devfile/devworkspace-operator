@@ -23,14 +23,26 @@ const (
 	workspaceSourceLabel     = "controller.devfile.io/devworkspace-source"
 	metricSourceLabel        = "source"
 	metricsRoutingClassLabel = "routingclass"
+	metricsReasonLabel       = "reason"
+
+	reasonInfrastructureFailure = "infrastructure_failure"
+	reasonUnknown               = "unknown"
 )
+
+var infrastructureFailures = []string{
+	"CrashLoopBackOff",
+	"ImagePullBackOff",
+	"CreateContainerError",
+	"RunContainerError",
+	"ErrImagePull",
+}
 
 var (
 	workspaceTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Namespace: "devworkspace",
 			Name:      "started_total",
-			Help:      "Number of devworkspace starting events",
+			Help:      "Number of DevWorkspace starting events",
 		},
 		[]string{
 			metricSourceLabel,
@@ -41,7 +53,7 @@ var (
 		prometheus.CounterOpts{
 			Namespace: "devworkspace",
 			Name:      "started_success_total",
-			Help:      "Number of devworkspaces successfully entering the 'Running' phase",
+			Help:      "Number of DevWorkspaces successfully entering the 'Running' phase",
 		},
 		[]string{
 			metricSourceLabel,
@@ -55,8 +67,7 @@ var (
 			Help:      "Number of failed DevWorkspaces",
 		},
 		[]string{
-			metricSourceLabel,
-			metricsRoutingClassLabel,
+			metricsReasonLabel,
 		},
 	)
 	workspaceStartupTimesHist = prometheus.NewHistogramVec(

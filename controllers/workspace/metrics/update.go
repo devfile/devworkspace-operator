@@ -15,6 +15,8 @@
 package metrics
 
 import (
+	"strings"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
@@ -40,7 +42,7 @@ func WorkspaceRunning(wksp *dw.DevWorkspace, log logr.Logger) {
 // WorkspaceFailed updates metrics for workspace entering the 'Failed' phase. If an error is encountered, the provided
 // logger is used to log the error.
 func WorkspaceFailed(wksp *dw.DevWorkspace, log logr.Logger) {
-	incrementMetricForWorkspace(workspaceFailures, wksp, log)
+	incrementMetricForWorkspaceFailure(workspaceFailures, wksp, log)
 }
 
 func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
@@ -53,6 +55,22 @@ func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWork
 		routingClass = config.Routing.DefaultRoutingClass
 	}
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
+	if err != nil {
+		log.Error(err, "Failed to increment metric")
+	}
+	ctr.Inc()
+}
+
+func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
+	reason := reasonUnknown
+	for _, failure := range infrastructureFailures {
+		if strings.Contains(wksp.Status.Message, failure) {
+			reason = reasonInfrastructureFailure
+			break
+		}
+	}
+
+	ctr, err := metric.GetMetricWith(map[string]string{metricsReasonLabel: reason})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
 	}

@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package config
+package configmap
 
 import (
 	"context"

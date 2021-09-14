@@ -6,11 +6,6 @@ bases:
 generatorOptions:
   disableNameSuffixHash: true
 
-configMapGenerator:
-- name: configmap
-  envs:
-  - config.properties
-
 patchesStrategicMerge:
 - manager_image_patch.yaml
 - webhooks_name_env_patch.yaml

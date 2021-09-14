@@ -10,7 +10,7 @@
 //   Red Hat, Inc. - initial API and implementation
 //
 
-package config
+package configmap
 
 const (
 	// image pull policy that is applied to every container within workspace

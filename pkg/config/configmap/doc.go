@@ -20,4 +20,4 @@
 // - . is used to separate subcomponents
 // - _ is used to separate words in the component name
 //
-package config
+package configmap

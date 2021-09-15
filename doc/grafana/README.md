@@ -1,6 +1,6 @@
 # Grafana dashboards for the DevWorkspace Operator
 
-This directory contains a sample Grafana dashboard that processes some of the prometheus metrics exposed by the DevWorkspace Operator. Once Prometheus and Grafana are configured with the DevWorkspace Operator's metrics server as a source, the dashboard can be imported from [json](grafana-dashbaord.json).
+This directory contains a sample Grafana dashboard that processes some of the prometheus metrics exposed by the DevWorkspace Operator. Once Prometheus and Grafana are configured with the DevWorkspace Operator's metrics server as a source, the dashboard can be imported from [json](grafana-dashboard.json).
 
 ## Testing DevWorkspace Operator metrics locally
 

@@ -1,0 +1,11 @@
+kind: DevWorkspaceOperatorConfig
+apiVersion: controller.devfile.io/v1alpha1
+metadata:
+  name: devworkspace-operator-config
+  namespace: ${NAMESPACE}
+config:
+  routing:
+    clusterHostSuffix: ${ROUTING_SUFFIX}
+    defaultRoutingClass: ${DEFAULT_ROUTING}
+  workspace:
+    imagePullPolicy: ${PULL_POLICY}

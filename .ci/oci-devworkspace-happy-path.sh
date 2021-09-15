@@ -65,4 +65,4 @@ deployChe() {
 installChectl
 deployDWO
 deployChe
-"${SCRIPT_DIR}"/che-happy-path.sh
+"${SCRIPT_DIR}/che-happy-path.sh"

@@ -26,7 +26,6 @@ function provisionOpenShiftOAuthUser() {
     return 0
   fi
   echo "Che User does not exist. Setting up htpassw oauth for it."
-  SCRIPT_DIR=$(dirname $(readlink -f "$0"))
   oc delete secret che-htpass-secret -n openshift-config || true
   oc create secret generic che-htpass-secret --from-file=htpasswd="$SCRIPT_DIR/resources/users.htpasswd" -n openshift-config
 
@@ -69,7 +68,7 @@ startHappyPathTest() {
     PHASE=$(oc get pod -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} \
         --template='{{ .status.phase }}')
     if [[ ${PHASE} == "Running" ]]; then
-      echo "[INFO] Happy-path test started succesfully."
+      echo "[INFO] Happy-path test started successfully."
       return
     fi
 
@@ -85,20 +84,16 @@ provisionOpenShiftOAuthUser
 
 startHappyPathTest
 
-echo "1"
-# wait for the test to finish
+echo "Waiting until happy path pod finished"
 oc logs -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test -f
-echo "2"
 # just to sleep
 sleep 3
 
-echo "3"
-# download the test results
+echo "Downloading test report."
 mkdir -p /tmp/e2e
 oc rsync -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME}:/tmp/e2e/report/ /tmp/e2e -c download-reports
 oc exec -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c download-reports -- touch /tmp/done
 cp -r /tmp/e2e ${ARTIFACT_DIR}
-echo "4"
 EXIT_CODE=$(oc logs -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test | grep EXIT_CODE)
 if [[ ${EXIT_CODE} == "+ EXIT_CODE=1" ]]; then
     echo "[ERROR] Happy-path test failed."

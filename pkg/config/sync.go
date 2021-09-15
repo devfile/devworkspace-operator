@@ -28,7 +28,10 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
-const OperatorConfigName = "devworkspace-operator-config"
+const (
+	OperatorConfigName     = "devworkspace-operator-config"
+	openShiftTestRouteName = "devworkspace-controller-test-route"
+)
 
 var (
 	Routing         *controller.RoutingConfig
@@ -41,7 +44,8 @@ var (
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = config.DeepCopy()
+	internalConfig = DefaultConfig.DeepCopy()
+	mergeConfig(config, internalConfig)
 	updatePublicConfig()
 }
 
@@ -130,7 +134,7 @@ func discoverRouteSuffix(client crclient.Client) (string, error) {
 	testRoute := &routeV1.Route{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: configNamespace,
-			Name:      "devworkspace-controller-test-route",
+			Name:      openShiftTestRouteName,
 		},
 		Spec: routeV1.RouteSpec{
 			To: routeV1.RouteTargetReference{
@@ -142,10 +146,21 @@ func discoverRouteSuffix(client crclient.Client) (string, error) {
 
 	err := client.Create(context.TODO(), testRoute)
 	if err != nil {
-		return "", err
+		if k8sErrors.IsAlreadyExists(err) {
+			err := client.Get(context.TODO(), types.NamespacedName{
+				Name:      openShiftTestRouteName,
+				Namespace: configNamespace,
+			}, testRoute)
+			if err != nil {
+				return "", err
+			}
+		} else {
+			return "", err
+		}
 	}
+	defer client.Delete(context.TODO(), testRoute)
 	host := testRoute.Spec.Host
-	prefixToRemove := fmt.Sprintf("%s-%s.", "devworkspace-controller-test-route", configNamespace)
+	prefixToRemove := fmt.Sprintf("%s-%s.", openShiftTestRouteName, configNamespace)
 	host = strings.TrimPrefix(host, prefixToRemove)
 	return host, nil
 }

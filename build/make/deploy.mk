@@ -72,6 +72,10 @@ install: _print_vars _check_cert_manager _init_devworkspace_crds _create_namespa
   else
 	  $(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
   endif
+  # Can't pipe into $(K8S_CLI) as stdin is closed.
+	cat deploy/default-config.yaml | envsubst > deploy/default-config.temp.yaml
+	$(K8S_CLI) apply -f deploy/default-config.temp.yaml
+	rm -rf deploy/default-config.temp.yaml
 
 ### install_plugin_templates: Deploys the sample plugin templates to namespace devworkspace-plugins:
 install_plugin_templates: _print_vars

@@ -15,9 +15,12 @@ package config
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
+	routeV1 "github.com/openshift/api/route/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,11 +30,13 @@ import (
 
 const OperatorConfigName = "devworkspace-operator-config"
 
-var internalConfig *controller.OperatorConfiguration
-var configMutex sync.Mutex
-var Routing *controller.RoutingConfig
-var Workspace *controller.WorkspaceConfig
-var configNamespace string
+var (
+	Routing         *controller.RoutingConfig
+	Workspace       *controller.WorkspaceConfig
+	internalConfig  *controller.OperatorConfiguration
+	configMutex     sync.Mutex
+	configNamespace string
+)
 
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
 	configMutex.Lock()
@@ -59,6 +64,16 @@ func SetupControllerConfig(client crclient.Client) error {
 		updatePublicConfig()
 	} else {
 		syncConfigFrom(config)
+	}
+	if internalConfig.Routing.ClusterHostSuffix == "" {
+		routeSuffix, err := discoverRouteSuffix(client)
+		if err != nil {
+			return err
+		}
+		internalConfig.Routing.ClusterHostSuffix = routeSuffix
+		// Set routing suffix in default config as well to ensure value is persisted across config changes
+		DefaultConfig.Routing.ClusterHostSuffix = routeSuffix
+		updatePublicConfig()
 	}
 	return nil
 }
@@ -102,6 +117,37 @@ func restoreDefaultConfig() {
 func updatePublicConfig() {
 	Routing = internalConfig.Routing.DeepCopy()
 	Workspace = internalConfig.Workspace.DeepCopy()
+}
+
+// discoverRouteSuffix attempts to determine a clusterHostSuffix that is compatible with the current cluster.
+// On OpenShift, this is done by creating a temporary route and reading the auto-filled .spec.host. On Kubernetes,
+// there's no way to determine this value automatically so ("", nil) is returned.
+func discoverRouteSuffix(client crclient.Client) (string, error) {
+	if !infrastructure.IsOpenShift() {
+		return "", nil
+	}
+
+	testRoute := &routeV1.Route{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: configNamespace,
+			Name:      "devworkspace-controller-test-route",
+		},
+		Spec: routeV1.RouteSpec{
+			To: routeV1.RouteTargetReference{
+				Kind: "Service",
+				Name: "devworkspace-controller-test-route",
+			},
+		},
+	}
+
+	err := client.Create(context.TODO(), testRoute)
+	if err != nil {
+		return "", err
+	}
+	host := testRoute.Spec.Host
+	prefixToRemove := fmt.Sprintf("%s-%s.", "devworkspace-controller-test-route", configNamespace)
+	host = strings.TrimPrefix(host, prefixToRemove)
+	return host, nil
 }
 
 func mergeConfig(from, to *controller.OperatorConfiguration) {

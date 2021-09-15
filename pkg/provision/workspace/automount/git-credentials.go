@@ -18,21 +18,20 @@ import (
 	"path/filepath"
 	"strings"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const gitCredentialsName = "credentials"
 const gitConfigName = "gitconfig"
 const gitConfigLocation = "/etc/" + gitConfigName
+const gitCredentialsSecretName = "devworkspace-merged-git-credentials"
+const gitCredentialsConfigMapName = "devworkspace-gitconfig"
 const credentialTemplate = "[credential]\n\thelper = store --file %s\n"
 
 // getDevWorkspaceGitConfig takes care of mounting git credentials and a gitconfig into a devworkspace.
@@ -41,8 +40,7 @@ const credentialTemplate = "[credential]\n\thelper = store --file %s\n"
 //			and condensing them into one string
 //		2. Creating and mounting a gitconfig config map to /etc/gitconfig that points to where the credentials are stored
 //		3. Creating and mounting a credentials secret to mountpath/credentials that stores the users git credentials
-func getDevWorkspaceGitConfig(devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) (*v1alpha1.PodAdditions, error) {
-	namespace := devworkspace.GetNamespace()
+func getDevWorkspaceGitConfig(client k8sclient.Client, namespace string) (*v1alpha1.PodAdditions, error) {
 	secrets := &corev1.SecretList{}
 	err := client.List(context.TODO(), secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceGitCredentialLabel: "true",
@@ -64,10 +62,8 @@ func getDevWorkspaceGitConfig(devworkspace *dw.DevWorkspace, client k8sclient.Cl
 
 	podAdditions := &v1alpha1.PodAdditions{}
 	if len(credentials) > 0 {
-		gitCredsName := devworkspace.Status.DevWorkspaceId + "-" + gitConfigName
-
 		// mount the gitconfig
-		configMapAdditions, err := mountGitConfigMap(gitCredsName, mountpath, devworkspace, client, scheme)
+		configMapAdditions, err := mountGitConfigMap(gitCredentialsConfigMapName, mountpath, namespace, client)
 		if err != nil {
 			return podAdditions, err
 		}
@@ -76,7 +72,7 @@ func getDevWorkspaceGitConfig(devworkspace *dw.DevWorkspace, client k8sclient.Cl
 
 		// mount the users git credentials
 		joinedCredentials := strings.Join(credentials, "\n")
-		secretAdditions, err := mountGitCredentialsSecret(gitCredsName, mountpath, joinedCredentials, devworkspace, client, scheme)
+		secretAdditions, err := mountGitCredentialsSecret(gitCredentialsSecretName, mountpath, joinedCredentials, namespace, client)
 		if err != nil {
 			return podAdditions, err
 		}
@@ -91,14 +87,14 @@ func getDevWorkspaceGitConfig(devworkspace *dw.DevWorkspace, client k8sclient.Cl
 //		1. Creating the configmap that stores the gitconfig if it does not exist
 //		2. Setting the proper owner ref to the devworkspace
 //		3. Adding the new config map volume and volume mount to the pod additions
-func mountGitConfigMap(configMapName, mountPath string, devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) (*v1alpha1.PodAdditions, error) {
+func mountGitConfigMap(configMapName, mountPath, namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, error) {
 	podAdditions := &v1alpha1.PodAdditions{}
 
 	// Initialize the gitconfig template
 	credentialsGitConfig := fmt.Sprintf(credentialTemplate, filepath.Join(mountPath, gitCredentialsName))
 
 	// Create the configmap that stores the gitconfig
-	err := createOrUpdateGitConfigMap(configMapName, devworkspace.GetNamespace(), credentialsGitConfig, devworkspace, client, scheme)
+	err := createOrUpdateGitConfigMap(configMapName, namespace, credentialsGitConfig, client)
 	if err != nil {
 		return nil, err
 	}
@@ -120,11 +116,11 @@ func mountGitConfigMap(configMapName, mountPath string, devworkspace *dw.DevWork
 //		1. Creating the secret that stores the credentials if it does not exist
 //		2. Setting the proper owner ref to the devworkspace
 //		3. Adding the new secret volume and volume mount to the pod additions
-func mountGitCredentialsSecret(secretName, mountPath, credentials string, devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) (*v1alpha1.PodAdditions, error) {
+func mountGitCredentialsSecret(secretName, mountPath, credentials, namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, error) {
 	podAdditions := &v1alpha1.PodAdditions{}
 
 	// Create the configmap that stores all the users credentials
-	err := createOrUpdateGitSecret(secretName, devworkspace.GetNamespace(), credentials, devworkspace, client, scheme)
+	err := createOrUpdateGitSecret(secretName, namespace, credentials, client)
 	if err != nil {
 		return nil, err
 	}
@@ -141,12 +137,8 @@ func mountGitCredentialsSecret(secretName, mountPath, credentials string, devwor
 	return podAdditions, nil
 }
 
-func createOrUpdateGitSecret(secretName string, namespace string, config string, devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) error {
+func createOrUpdateGitSecret(secretName string, namespace string, config string, client k8sclient.Client) error {
 	secret := getGitSecret(secretName, namespace, config)
-	err := controllerutil.SetOwnerReference(devworkspace, secret, scheme)
-	if err != nil {
-		return err
-	}
 	if err := client.Create(context.TODO(), secret); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
@@ -197,12 +189,8 @@ func getGitSecret(secretName string, namespace string, config string) *corev1.Se
 	return gitConfigMap
 }
 
-func createOrUpdateGitConfigMap(configMapName string, namespace string, config string, devworkspace *dw.DevWorkspace, client k8sclient.Client, scheme *runtime.Scheme) error {
+func createOrUpdateGitConfigMap(configMapName string, namespace string, config string, client k8sclient.Client) error {
 	configMap := getGitConfigMap(configMapName, namespace, config)
-	err := controllerutil.SetOwnerReference(devworkspace, configMap, scheme)
-	if err != nil {
-		return err
-	}
 	if err := client.Create(context.TODO(), configMap); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err

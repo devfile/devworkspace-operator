@@ -41,6 +41,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dw.AddToScheme(scheme))
+	config.SetConfigForTesting(nil)
 }
 
 type testCase struct {

@@ -67,6 +67,7 @@ var (
 			Help:      "Number of failed DevWorkspaces",
 		},
 		[]string{
+			metricSourceLabel,
 			metricsReasonLabel,
 		},
 	)

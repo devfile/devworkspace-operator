@@ -62,6 +62,10 @@ func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWork
 }
 
 func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
+	sourceLabel := wksp.Labels[workspaceSourceLabel]
+	if sourceLabel == "" {
+		sourceLabel = "unknown"
+	}
 	reason := reasonUnknown
 	for _, failure := range infrastructureFailures {
 		if strings.Contains(wksp.Status.Message, failure) {
@@ -70,7 +74,7 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 		}
 	}
 
-	ctr, err := metric.GetMetricWith(map[string]string{metricsReasonLabel: reason})
+	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: reason})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
 	}

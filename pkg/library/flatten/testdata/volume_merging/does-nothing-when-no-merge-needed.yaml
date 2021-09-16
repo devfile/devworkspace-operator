@@ -1,0 +1,41 @@
+name: "Merges volume components from parent and plugins"
+
+input:
+  devworkspace:
+    parent:
+      uri: "parent"
+    components:
+      - name: normal-workspace-volume
+        volume: {}
+      - name: "plugin-1"
+        plugin:
+          uri: "plugin-1"
+  devfileResources:
+    "parent":
+      schemaVersion: 2.0.0
+      metadata:
+        name: "parent"
+      components:
+        - name: new-parent-volume
+          volume: {}
+    "plugin-1":
+      schemaVersion: 2.0.0
+      metadata:
+        name: "plugin-1"
+      components:
+        - name: new-plugin-1-volume
+          volume: {}
+
+output:
+  devworkspace:
+    components:
+      - name: normal-workspace-volume
+        volume: {}
+      - name: new-parent-volume
+        attributes:
+          "controller.devfile.io/imported-by": parent
+        volume: {}
+      - name: new-plugin-1-volume
+        attributes:
+          "controller.devfile.io/imported-by": plugin-1
+        volume: {}

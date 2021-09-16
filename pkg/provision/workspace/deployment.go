@@ -53,7 +53,6 @@ var containerFailureStateReasons = []string{
 var unrecoverablePodEventReasons = []string{
 	"FailedMount",
 	"FailedScheduling",
-	"MountVolume.SetUp failed",
 	"FailedCreate",
 	"ReplicaSetCreateError",
 }

@@ -421,28 +421,6 @@ func checkPodsState(workspace *dw.DevWorkspace,
 	return "", nil
 }
 
-func checkPodEvents(pod *corev1.Pod, clusterAPI ClusterAPI) (msg string, err error) {
-	evs := &corev1.EventList{}
-	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
-	if err != nil {
-		return "", fmt.Errorf("failed to parse field selector: %s", err)
-	}
-	if err := clusterAPI.Client.List(clusterAPI.Ctx, evs, k8sclient.InNamespace(pod.Namespace), k8sclient.MatchingFieldsSelector{Selector: selector}); err != nil {
-		return "", fmt.Errorf("failed to list events in namespace %s: %w", pod.Namespace, err)
-	}
-	for _, ev := range evs.Items {
-		if ev.InvolvedObject.Kind != "Pod" {
-			continue
-		}
-		for _, fatalEv := range unrecoverablePodEventReasons {
-			if ev.Reason == fatalEv {
-				return fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, ev.Message), nil
-			}
-		}
-	}
-	return "", nil
-}
-
 func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions, error) {
 	podAdditions := &v1alpha1.PodAdditions{}
 
@@ -524,13 +502,44 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
 	return false
 }
 
+func checkPodEvents(pod *corev1.Pod, clusterAPI ClusterAPI) (msg string, err error) {
+	evs := &corev1.EventList{}
+	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse field selector: %s", err)
+	}
+	if err := clusterAPI.Client.List(clusterAPI.Ctx, evs, k8sclient.InNamespace(pod.Namespace), k8sclient.MatchingFieldsSelector{Selector: selector}); err != nil {
+		return "", fmt.Errorf("failed to list events in namespace %s: %w", pod.Namespace, err)
+	}
+	for _, ev := range evs.Items {
+		if ev.InvolvedObject.Kind != "Pod" {
+			continue
+		}
+		for _, fatalEv := range unrecoverablePodEventReasons {
+			if ev.Reason == fatalEv && !checkIfUnrecoverableEventIgnored(ev.Reason) {
+				return fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, ev.Message), nil
+			}
+		}
+	}
+	return "", nil
+}
+
 func checkContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok bool) {
 	if containerStatus.State.Waiting != nil {
 		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Waiting.Reason == failureReason {
-				return false
+				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason)
 			}
 		}
 	}
 	return true
+}
+
+func checkIfUnrecoverableEventIgnored(reason string) (ignored bool) {
+	for _, ignoredReason := range config.Workspace.IgnoredUnrecoverableEvents {
+		if ignoredReason == reason {
+			return true
+		}
+	}
+	return false
 }

@@ -63,6 +63,11 @@ type WorkspaceConfig struct {
 	// requires support in the workspace being started. If not specified, the default
 	// value of "15m" is used.
 	IdleTimeout string `json:"idleTimeout,omitempty"`
+	// StartProgressTimeout determines the maximum duration a DevWorkspace can be in
+	// a "Starting" phase without progressing before it is automatically failed.
+	// Duration should be specified in a format parseable by Go's time package, e.g.
+	// "15m", "20s", "1h30m", etc. If not specified, the default value of "5m" is used.
+	StartProgressTimeout string `json:"startProgressTimeout,omitempty"`
 	// IgnoredUnrecoverableEvents defines a list of Kubernetes event names that should
 	// be ignored when deciding to fail a DevWorkspace startup. This option should be used
 	// if a transient cluster issue is triggering false-positives (for example, if

@@ -207,6 +207,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.IdleTimeout != "" {
 			to.Workspace.IdleTimeout = from.Workspace.IdleTimeout
 		}
+		if from.Workspace.StartProgressTimeout != "" {
+			to.Workspace.StartProgressTimeout = from.Workspace.StartProgressTimeout
+		}
 		if from.Workspace.IgnoredUnrecoverableEvents != nil {
 			to.Workspace.IgnoredUnrecoverableEvents = from.Workspace.IgnoredUnrecoverableEvents
 		}

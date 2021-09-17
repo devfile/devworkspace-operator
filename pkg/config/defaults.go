@@ -21,8 +21,9 @@ var DefaultConfig = &v1alpha1.OperatorConfiguration{
 		ClusterHostSuffix:   "", // is auto discovered when running on OpenShift. Must be defined by CR on Kubernetes.
 	},
 	Workspace: &v1alpha1.WorkspaceConfig{
-		ImagePullPolicy: "Always",
-		PVCName:         "claim-devworkspace",
-		IdleTimeout:     "15m",
+		ImagePullPolicy:      "Always",
+		PVCName:              "claim-devworkspace",
+		IdleTimeout:          "15m",
+		StartProgressTimeout: "5m",
 	},
 }

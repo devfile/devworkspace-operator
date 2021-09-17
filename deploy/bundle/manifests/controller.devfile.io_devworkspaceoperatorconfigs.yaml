@@ -66,6 +66,9 @@ spec:
                     maxLength: 63
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                     type: string
+                  startProgressTimeout:
+                    description: StartProgressTimeout determines the maximum duration a DevWorkspace can be in a "Starting" phase without progressing before it is automatically failed. Duration should be specified in a format parseable by Go's time package, e.g. "15m", "20s", "1h30m", etc. If not specified, the default value of "5m" is used.
+                    type: string
                   storageClassName:
                     description: StorageClassName defines and optional storageClass to use for persistent volume claims created to support DevWorkspaces
                     type: string

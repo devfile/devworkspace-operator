@@ -154,9 +154,11 @@ make disconnect-debug-webhook-server
 
 ### Controller configuration
 
-Controller behavior can be configured with data from the `devworkspace-controller` config map in the same namespace where controller lives.
+Controller behavior can be configured using the `DevWorkspaceOperatorConfig` custom resource (`dwoc` for short). To configure the controller, create a `DevWorkspaceOperatorConfig` named `devworkspace-operator-config` in the same namespace as the controller. If using the Makefile to deploy the DevWorkspaceOperator, a pre-filled config is created automatically (see `deploy/default-config.yaml`).
 
-For all available configuration properties and their default values, see [pkg/config](https://github.com/devfile/devworkspace-operator/tree/main/pkg/config)
+Configuration settings in the `DevWorkspaceOperatorConfig` override default values found in [pkg/config](https://github.com/devfile/devworkspace-operator/tree/main/pkg/config). The only required configuration setting is `.routing.clusterHostSuffix`, which is required when running on Kubernetes.
+
+To see documentation on configuration settings, including default values, use `kubectl explain` or `oc explain` -- e.g. `kubectl explain dwoc.config.routing.clusterHostSuffix`
 
 ### Remove controller from your K8s/OS Cluster
 To uninstall the controller and associated CRDs, use the Makefile uninstall rule:

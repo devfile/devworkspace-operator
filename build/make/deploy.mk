@@ -22,13 +22,6 @@ else
   endif
 endif
 
-
-ifeq ($(shell $(K8S_CLI) api-resources --api-group='route.openshift.io' 2>&1 | grep -o routes),routes)
-PLATFORM := openshift
-else
-PLATFORM := kubernetes
-endif
-
 # minikube handling
 ifeq ($(shell $(K8S_CLI) config current-context 2>&1),minikube)
   # check ingress addon is enabled
@@ -36,6 +29,15 @@ ifeq ($(shell $(K8S_CLI) config current-context 2>&1),minikube)
     $(error ingress addon should be enabled on top of minikube)
   endif
   export ROUTING_SUFFIX := $(shell minikube ip).nip.io
+endif
+
+ifeq ($(shell $(K8S_CLI) api-resources --api-group='route.openshift.io' 2>&1 | grep -o routes),routes)
+  PLATFORM := openshift
+else
+  PLATFORM := kubernetes
+  ifeq (,$(ROUTING_SUFFIX))
+    $(warning environment variable ROUTING_SUFFIX is unset; required to install on kubernetes)
+  endif
 endif
 
 _create_namespace:

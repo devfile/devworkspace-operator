@@ -23,7 +23,6 @@ export DWO_IMG ?= quay.io/devfile/devworkspace-controller:next
 export DWO_BUNDLE_IMG ?= quay.io/devfile/devworkspace-operator-bundle:next
 export DWO_INDEX_IMG ?= quay.io/devfile/devworkspace-operator-index:next
 export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:next
-export ROUTING_SUFFIX ?= 192.168.99.100.nip.io
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config

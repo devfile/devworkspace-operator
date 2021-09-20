@@ -22,6 +22,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -39,6 +40,7 @@ var (
 	internalConfig  *controller.OperatorConfiguration
 	configMutex     sync.Mutex
 	configNamespace string
+	log             = ctrl.Log.WithName("operator-configuration")
 )
 
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
@@ -121,6 +123,7 @@ func restoreDefaultConfig() {
 func updatePublicConfig() {
 	Routing = internalConfig.Routing.DeepCopy()
 	Workspace = internalConfig.Workspace.DeepCopy()
+	log.Info(fmt.Sprintf("Updated config to [%s]", formatCurrentConfig()))
 }
 
 // discoverRouteSuffix attempts to determine a clusterHostSuffix that is compatible with the current cluster.
@@ -206,4 +209,45 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			to.Workspace.IgnoredUnrecoverableEvents = from.Workspace.IgnoredUnrecoverableEvents
 		}
 	}
+}
+
+// formatCurrentConfig formats the current operator configuration as a plain string
+func formatCurrentConfig() string {
+	if internalConfig == nil {
+		return ""
+	}
+	var config []string
+	if Routing != nil {
+		if Routing.ClusterHostSuffix != "" && Routing.ClusterHostSuffix != DefaultConfig.Routing.ClusterHostSuffix {
+			config = append(config, fmt.Sprintf("routing.clusterHostSuffix=%s", Routing.ClusterHostSuffix))
+		}
+		if Routing.DefaultRoutingClass != DefaultConfig.Routing.DefaultRoutingClass {
+			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", Routing.DefaultRoutingClass))
+		}
+	}
+	if Workspace != nil {
+		if Workspace.ImagePullPolicy != DefaultConfig.Workspace.ImagePullPolicy {
+			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", Workspace.ImagePullPolicy))
+		}
+		if Workspace.PVCName != DefaultConfig.Workspace.PVCName {
+			config = append(config, fmt.Sprintf("workspace.pvcName=%s", Workspace.PVCName))
+		}
+		if Workspace.StorageClassName != nil && Workspace.StorageClassName != DefaultConfig.Workspace.StorageClassName {
+			config = append(config, fmt.Sprintf("workspace.storageClassName=%s", *Workspace.StorageClassName))
+		}
+		if Workspace.IdleTimeout != DefaultConfig.Workspace.IdleTimeout {
+			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", Workspace.IdleTimeout))
+		}
+		if Workspace.IgnoredUnrecoverableEvents != nil {
+			config = append(config, fmt.Sprintf("workspace.ignoredUnrecoverableEvents=%s",
+				strings.Join(Workspace.IgnoredUnrecoverableEvents, ";")))
+		}
+	}
+	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {
+		config = append(config, "enableExperimentalFeatures=true")
+	}
+	if len(config) == 0 {
+		return "(default config)"
+	}
+	return strings.Join(config, ", ")
 }

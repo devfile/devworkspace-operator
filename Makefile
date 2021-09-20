@@ -15,7 +15,7 @@ SHELL := bash
 .DEFAULT_GOAL := help
 
 ifndef VERBOSE
-MAKEFLAGS += --silent
+  MAKEFLAGS += --silent
 endif
 
 export NAMESPACE ?= devworkspace-controller
@@ -42,7 +42,7 @@ include build/make/version.mk
 include build/make/olm.mk
 
 ifneq (,$(shell which kubectl 2>/dev/null)$(shell which oc 2>/dev/null))
-include build/make/deploy.mk
+  include build/make/deploy.mk
 endif
 
 OPERATOR_SDK_VERSION = v1.8.0
@@ -56,9 +56,9 @@ CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
+  GOBIN=$(shell go env GOPATH)/bin
 else
-GOBIN=$(shell go env GOBIN)
+  GOBIN=$(shell go env GOBIN)
 endif
 
 all: help
@@ -126,44 +126,44 @@ generate_default_deployment:
 ### manifests: Generates the manifests e.g. CRD, RBAC etc.
 manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=role webhook paths="./..." \
-			output:crd:artifacts:config=deploy/templates/crd/bases \
-			output:rbac:artifacts:config=deploy/templates/components/rbac
+	    output:crd:artifacts:config=deploy/templates/crd/bases \
+	    output:rbac:artifacts:config=deploy/templates/components/rbac
 	patch/patch_crds.sh
 
 ### fmt: Runs go fmt against code
 fmt:
-ifneq ($(shell command -v goimports 2> /dev/null),)
-	find . -name '*.go' -exec goimports -w {} \;
-else
-	@echo "WARN: goimports is not installed -- formatting using go fmt instead."
-	@echo "      Please install goimports to ensure file imports are consistent."
-	go fmt -x ./...
-endif
+  ifneq ($(shell command -v goimports 2> /dev/null),)
+	  find . -name '*.go' -exec goimports -w {} \;
+  else
+	  @echo "WARN: goimports is not installed -- formatting using go fmt instead."
+	  @echo "      Please install goimports to ensure file imports are consistent."
+	  go fmt -x ./...
+  endif
 
 ### fmt_license: Ensures the license header is set on all files
 fmt_license:
-ifneq ($(shell command -v addlicense 2> /dev/null),)
-	@echo 'addlicense -v -f license_header.txt **/*.go'
-	addlicense -v -f license_header.txt $$(find . -name '*.go')
-else
-	$(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
-endif
+  ifneq ($(shell command -v addlicense 2> /dev/null),)
+	  @echo 'addlicense -v -f license_header.txt **/*.go'
+	  addlicense -v -f license_header.txt $$(find . -name '*.go')
+  else
+	  $(error addlicense must be installed for this rule: go get -u github.com/google/addlicense)
+  endif
 
 ### check_fmt: Checks the formatting on files in repo
 check_fmt:
-ifeq ($(shell command -v goimports 2> /dev/null),)
-	$(error "goimports must be installed for this rule" && exit 1)
-endif
-ifeq ($(shell command -v addlicense 2> /dev/null),)
-	$(error "error addlicense must be installed for this rule: go get -u github.com/google/addlicense")
-endif
+  ifeq ($(shell command -v goimports 2> /dev/null),)
+	  $(error "goimports must be installed for this rule" && exit 1)
+  endif
+  ifeq ($(shell command -v addlicense 2> /dev/null),)
+	  $(error "error addlicense must be installed for this rule: go get -u github.com/google/addlicense")
+  endif
 	@{
-		if [[ $$(find . -name '*.go' -exec goimports -l {} \;) != "" ]]; then \
-			echo "Files not formatted; run 'make fmt'"; exit 1 ;\
-		fi ;\
-		if ! addlicense -check -f license_header.txt $$(find . -name '*.go'); then \
-			echo "Licenses are not formatted; run 'make fmt_license'"; exit 1 ;\
-		fi \
+	  if [[ $$(find . -name '*.go' -exec goimports -l {} \;) != "" ]]; then \
+	    echo "Files not formatted; run 'make fmt'"; exit 1 ;\
+	  fi ;\
+	  if ! addlicense -check -f license_header.txt $$(find . -name '*.go'); then \
+	    echo "Licenses are not formatted; run 'make fmt_license'"; exit 1 ;\
+	  fi \
 	}
 
 ### vet: Runs go vet against code
@@ -184,51 +184,51 @@ docker-build:
 
 ### docker-push: Pushes the controller image
 docker-push:
-ifneq ($(INITIATOR),CI)
-ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
-	@echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
-endif
-endif
+  ifneq ($(INITIATOR),CI)
+    ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
+	    @echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
+    endif
+  endif
 	$(DOCKER) push ${DWO_IMG}
 
 ### controller-gen: Finds or downloads controller-gen
 # download controller-gen if necessary
 controller-gen:
-ifeq (, $(shell which controller-gen-$(CONTROLLER_GEN_VERSION) 2>/dev/null))
-	@echo "Installing controller gen as $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get -d -v sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
-	go build -o $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION) sigs.k8s.io/controller-tools/cmd/controller-gen
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-else
-	@echo "Using installed $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
-endif
+  ifeq (, $(shell which controller-gen-$(CONTROLLER_GEN_VERSION) 2>/dev/null))
+	  @echo "Installing controller gen as $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
+	  @{ \
+	  set -e ;\
+	  CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	  cd $$CONTROLLER_GEN_TMP_DIR ;\
+	  go mod init tmp ;\
+	  go get -d -v sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
+	  go build -o $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION) sigs.k8s.io/controller-tools/cmd/controller-gen
+	  rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	  }
+  else
+	  @echo "Using installed $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
+  endif
 
 ### compile-devworkspace-controller: Compiles the devworkspace-controller binary
 .PHONY: compile-devworkspace-controller
 compile-devworkspace-controller:
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
-	-a -o _output/bin/devworkspace-controller \
-	-gcflags all=-trimpath=/ \
-	-asmflags all=-trimpath=/ \
-	-ldflags "-X $(GO_PACKAGE_PATH)/version.Commit=$(GIT_COMMIT_ID) \
-	-X $(GO_PACKAGE_PATH)/version.BuildTime=$(BUILD_TIME)" \
+	  -a -o _output/bin/devworkspace-controller \
+	  -gcflags all=-trimpath=/ \
+	  -asmflags all=-trimpath=/ \
+	  -ldflags "-X $(GO_PACKAGE_PATH)/version.Commit=$(GIT_COMMIT_ID) \
+	  -X $(GO_PACKAGE_PATH)/version.BuildTime=$(BUILD_TIME)" \
 	main.go
 
 ### compile-webhook-server: Compiles the webhook-server
 .PHONY: compile-webhook-server
 compile-webhook-server:
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
-	-o _output/bin/webhook-server \
-	-gcflags all=-trimpath=/ \
-	-asmflags all=-trimpath=/ \
-	-ldflags "-X $(GO_PACKAGE_PATH)/version.Commit=$(GIT_COMMIT_ID) \
-	-X $(GO_PACKAGE_PATH)/version.BuildTime=$(BUILD_TIME)" \
+	  -o _output/bin/webhook-server \
+	  -gcflags all=-trimpath=/ \
+	  -asmflags all=-trimpath=/ \
+	  -ldflags "-X $(GO_PACKAGE_PATH)/version.Commit=$(GIT_COMMIT_ID) \
+	  -X $(GO_PACKAGE_PATH)/version.BuildTime=$(BUILD_TIME)" \
 	webhook/main.go
 
 .PHONY: help

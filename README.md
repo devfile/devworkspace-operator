@@ -72,7 +72,21 @@ You need to register custom catalog source to make it available on your cluster 
 DWO_INDEX_IMG=quay.io/devfile/devworkspace-operator-index:next
 make register_catalogsource
 ```
-After OLM processed created catalog source, DWO should appear on Operators page of OpenShift Console.
+After OLM finishes processing the created catalog source, DWO should appear on Operators page of OpenShift Console.
+
+In order to build a custom bundle, the following env vars should be set:
+| variable | purpose | default value |
+|---|---|---|
+| `DWO_BUNDLE_IMG` | Image used for Operator bundle image | `quay.io/devfile/devworkspace-operator-bundle:next` |
+| `DWO_INDEX_IMG` | Image used for Operator index image | `quay.io/devfile/devworkspace-operator-index:next` |
+| `DEFAULT_DWO_IMG` | Image used for controller when generating defaults | `quay.io/devfile/devworkspace-controller:next` |
+
+To build the index image and register its catalogsource to the cluster, run
+```
+make generate_olm_bundle_yaml build_bundle_image build_index_image register_catalogsource
+```
+
+Note that setting `DEFAULT_DWO_IMG` while generating sources will result in local changes to the repo which should be `git restored` before committing. This can also be done by unsetting the `DEFAULT_DWO_IMG` env var and re-running `make generate_olm_bundle_yaml`
 
 ## Development
 
@@ -81,6 +95,7 @@ The repository contains a Makefile; building and deploying can be configured via
 |variable|purpose|default value|
 |---|---|---|
 | `DWO_IMG` | Image used for controller | `quay.io/devfile/devworkspace-controller:next` |
+| `DEFAULT_DWO_IMG` | Image used for controller when generating default deployment templates. Can be used to override the controller image in the OLM bundle | `quay.io/devfile/devworkspace-controller:next` |
 | `NAMESPACE` | Namespace to use for deploying controller | `devworkspace-controller` |
 | `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
 | `PULL_POLICY` | Image pull policy for controller | `Always` |

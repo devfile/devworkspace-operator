@@ -1,25 +1,25 @@
 
 ifeq (,$(shell which kubectl)$(shell which oc))
-$(error oc or kubectl is required to proceed)
+  $(error oc or kubectl is required to proceed)
 endif
 
 # Note: we close stdin ('<&-') here because kubectl will prompt for a password if the current context has a user
 # without auth credentials. This can occur if e.g. oc logout is executed and is particularly a problem for the
 # PLATFORM check below, which will silently hang indefinitely.
 ifneq (,$(shell which kubectl))
-K8S_CLI := kubectl <&-
-# Check if logged in and warn if not
-ifeq ($(findstring Please enter Username,$(shell kubectl auth can-i '*' '*' <&- 2>&1)),Please enter Username)
-$(info Warning: current context is not authenticated with a cluster)
-LOGGED_IN="false"
-endif
+  K8S_CLI := kubectl <&-
+  # Check if logged in and warn if not
+  ifeq ($(findstring Please enter Username,$(shell kubectl auth can-i '*' '*' <&- 2>&1)),Please enter Username)
+    $(info Warning: current context is not authenticated with a cluster)
+    LOGGED_IN="false"
+  endif
 else
-K8S_CLI := oc <&-
-# Check if logged in and warn if not
-ifeq ($(findstring Forbidden,$(shell oc whoami 2>&1)),Forbidden)
-$(info Warning: current context is not authenticated with a cluster)
-LOGGED_IN="false"
-endif
+  K8S_CLI := oc <&-
+  # Check if logged in and warn if not
+  ifeq ($(findstring Forbidden,$(shell oc whoami 2>&1)),Forbidden)
+    $(info Warning: current context is not authenticated with a cluster)
+    LOGGED_IN="false"
+  endif
 endif
 
 
@@ -31,11 +31,11 @@ endif
 
 # minikube handling
 ifeq ($(shell $(K8S_CLI) config current-context 2>&1),minikube)
-# check ingress addon is enabled
-ifeq ($(shell minikube addons list -o json | jq -r .ingress.Status), disabled)
-$(error ingress addon should be enabled on top of minikube)
-endif
-export ROUTING_SUFFIX := $(shell minikube ip).nip.io
+  # check ingress addon is enabled
+  ifeq ($(shell minikube addons list -o json | jq -r .ingress.Status), disabled)
+    $(error ingress addon should be enabled on top of minikube)
+  endif
+  export ROUTING_SUFFIX := $(shell minikube ip).nip.io
 endif
 
 _create_namespace:
@@ -44,34 +44,34 @@ _create_namespace:
 _gen_configuration_env:
 	mkdir -p $(INTERNAL_TMP_DIR)
 	cat deploy/templates/components/manager/manager.yaml \
-		| yq -r \
-			'.spec.template.spec.containers[]
-				| select(.name=="devworkspace-controller")
-				| .env[]
-				| select(has("value"))
-				| "export \(.name)=\"$${\(.name):-\(.value)}\""' \
-		> $(CONTROLLER_ENV_FILE)
+	  | yq -r \
+	    '.spec.template.spec.containers[]
+	      | select(.name=="devworkspace-controller")
+	      | .env[]
+	      | select(has("value"))
+	      | "export \(.name)=\"$${\(.name):-\(.value)}\""' \
+	  > $(CONTROLLER_ENV_FILE)
 	echo "export RELATED_IMAGE_devworkspace_webhook_server=$(DWO_IMG)" >> $(CONTROLLER_ENV_FILE)
 	echo "export WEBHOOK_SECRET_NAME=devworkspace-operator-webhook-cert" >> $(CONTROLLER_ENV_FILE)
 	cat $(CONTROLLER_ENV_FILE)
 
 _store_tls_cert:
 	mkdir -p /tmp/k8s-webhook-server/serving-certs/
-ifeq ($(PLATFORM),kubernetes)
-	$(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
-	$(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
-else
-	$(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
-	$(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
-endif
+  ifeq ($(PLATFORM),kubernetes)
+	  $(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
+	  $(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
+  else
+	  $(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
+	  $(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
+  endif
 
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _check_cert_manager _init_devworkspace_crds _create_namespace generate_deployment
-ifeq ($(PLATFORM),kubernetes)
-	$(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml
-else
-	$(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
-endif
+  ifeq ($(PLATFORM),kubernetes)
+	  $(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml
+  else
+	  $(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
+  endif
 
 ### install_plugin_templates: Deploys the sample plugin templates to namespace devworkspace-plugins:
 install_plugin_templates: _print_vars
@@ -94,28 +94,28 @@ uninstall: _print_vars generate_deployment
 	$(K8S_CLI) delete devworkspacetemplates.workspace.devfile.io --all-namespaces --all || true
 	$(K8S_CLI) delete devworkspaceroutings.controller.devfile.io --all-namespaces --all --wait || true
 
-ifeq ($(PLATFORM),kubernetes)
-	$(K8S_CLI) delete --ignore-not-found -f deploy/current/kubernetes/combined.yaml || true
-else
-	$(K8S_CLI) delete --ignore-not-found -f deploy/current/openshift/combined.yaml || true
-endif
+  ifeq ($(PLATFORM),kubernetes)
+	  $(K8S_CLI) delete --ignore-not-found -f deploy/current/kubernetes/combined.yaml || true
+  else
+	  $(K8S_CLI) delete --ignore-not-found -f deploy/current/openshift/combined.yaml || true
+  endif
 
 	$(K8S_CLI) delete all -l "app.kubernetes.io/part-of=devworkspace-operator" --all-namespaces
 	$(K8S_CLI) delete mutatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
 	$(K8S_CLI) delete validatingwebhookconfigurations.admissionregistration.k8s.io controller.devfile.io --ignore-not-found
-ifneq ($(NAMESPACE),openshift-operators)
-	$(K8S_CLI) delete namespace $(NAMESPACE) --ignore-not-found
-endif
+  ifneq ($(NAMESPACE),openshift-operators)
+	  $(K8S_CLI) delete namespace $(NAMESPACE) --ignore-not-found
+  endif
 
 _check_cert_manager:
-ifeq ($(PLATFORM),kubernetes)
-	if [ ! -z "$$LOGGED_IN" ]; then \
-		if ! ${K8S_CLI} api-versions | grep -q '^cert-manager.io/v1$$' ; then \
-			echo "Cert-manager is required for deploying on Kubernetes. See 'make install_cert_manager'" ;\
-			exit 1 ;\
-		fi \
-	fi
-endif
+  ifeq ($(PLATFORM),kubernetes)
+	  if [ ! -z "$$LOGGED_IN" ]; then \
+	    if ! ${K8S_CLI} api-versions | grep -q '^cert-manager.io/v1$$' ; then \
+	      echo "Cert-manager is required for deploying on Kubernetes. See 'make install_cert_manager'" ;\
+	      exit 1 ;\
+	    fi \
+	  fi
+  endif
 
 _login_with_devworkspace_sa:
 	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' | base64 --decode ))
@@ -129,11 +129,11 @@ install_cert_manager:
 # it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
 _bump_kubeconfig:
 	mkdir -p $(INTERNAL_TMP_DIR)
-ifndef KUBECONFIG
-	$(eval CONFIG_FILE = ${HOME}/.kube/config)
-else
-	$(eval CONFIG_FILE = ${KUBECONFIG})
-endif
+  ifndef KUBECONFIG
+	  $(eval CONFIG_FILE = ${HOME}/.kube/config)
+  else
+	  $(eval CONFIG_FILE = ${KUBECONFIG})
+  endif
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
 ### run: Runs against the configured Kubernetes cluster in ~/.kube/config
@@ -141,16 +141,16 @@ run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspac
 	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
-		WATCH_NAMESPACE=$(NAMESPACE) \
-		go run ./main.go
+	  WATCH_NAMESPACE=$(NAMESPACE) \
+	  go run ./main.go
 
 ### debug: Runs the controller locally with debugging enabled, watching cluster defined in ~/.kube/config
 debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _store_tls_cert
 	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
-		WATCH_NAMESPACE=$(NAMESPACE) \
-		dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
+	  WATCH_NAMESPACE=$(NAMESPACE) \
+	  dlv debug --listen=:2345 --headless=true --api-version=2 ./main.go --
 
 ### debug-webhook-server: Debug the webhook server
 debug-webhook-server: _store_tls_cert

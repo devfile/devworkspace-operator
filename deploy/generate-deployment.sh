@@ -78,7 +78,7 @@ while [[ "$#" -gt 0 ]]; do
       OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
       ;;
       --default-image)
-      DEFAULT_IMAGE=$2
+      DEFAULT_DWO_IMG=$2
       shift
       ;;
       --project-clone-image)
@@ -105,7 +105,7 @@ done
 if $USE_DEFAULT_ENV; then
   echo "Using defaults for environment variables"
   export NAMESPACE=devworkspace-controller
-  export DWO_IMG=${DEFAULT_IMAGE:-"quay.io/devfile/devworkspace-controller:next"}
+  export DWO_IMG=${DEFAULT_DWO_IMG:-"quay.io/devfile/devworkspace-controller:next"}
   export PROJECT_CLONE_IMG=${PROJECT_CLONE_IMG:-"quay.io/devfile/project-clone:next"}
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic

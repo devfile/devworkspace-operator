@@ -1,0 +1,21 @@
+# This file demostrates basic support for restricting access to DevWorkspace containers.
+# It is mainly used in e2e tests.
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: restricted-access
+  annotations:
+    controller.devfile.io/restricted-access: "true"
+  labels:
+    # it's a label OpenShift console uses a flag to mark terminal's workspaces
+    console.openshift.io/terminal: "true"
+spec:
+  started: true
+  routingClass: 'web-terminal'
+  template:
+    components:
+      - name: restricted-access-container
+        container:
+          image: quay.io/wto/web-terminal-tooling:latest
+          mountSources: false
+          args: ["tail", "-f", "/dev/null"]

@@ -23,6 +23,8 @@ import (
 type DevWorkspaceRoutingSpec struct {
 	// Id for the DevWorkspace being routed
 	DevWorkspaceId string `json:"devworkspaceId"`
+	// Started is true if the owning DevWorkspace has .spec.started=true
+	Started bool `json:"started"`
 	// Class of the routing: this drives which DevWorkspaceRouting controller will manage this routing
 	RoutingClass DevWorkspaceRoutingClass `json:"routingClass,omitempty"`
 	// Machines to endpoints map

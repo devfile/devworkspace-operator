@@ -21,6 +21,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
@@ -169,7 +170,7 @@ func getSpecRouting(
 
 	routing := &v1alpha1.DevWorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("routing-%s", workspace.Status.DevWorkspaceId),
+			Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
@@ -178,6 +179,7 @@ func getSpecRouting(
 		},
 		Spec: v1alpha1.DevWorkspaceRoutingSpec{
 			DevWorkspaceId: workspace.Status.DevWorkspaceId,
+			Started:        workspace.Spec.Started,
 			RoutingClass:   v1alpha1.DevWorkspaceRoutingClass(routingClass),
 			Endpoints:      endpoints,
 			PodSelector: map[string]string{

@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
@@ -33,6 +34,7 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
@@ -239,4 +241,30 @@ func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.Dev
 	case dw.DevWorkspaceStatusStarting:
 		metrics.WorkspaceStarted(workspace, logger)
 	}
+}
+
+// checkForStartTimeOut checks if the provided workspace has not progressed for longer than the configured
+// startup timeout. This is determined by checking to see if the last condition transition time is more
+// than [timeout] duration ago. Workspaces that are not in the "Starting" phase cannot timeout. Returns
+// an error with message when timeout is reached.
+func checkForStartTimeOut(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus) error {
+	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting {
+		return nil
+	}
+	timeout, err := time.ParseDuration(config.Workspace.StartProgressTimeout)
+	if err != nil {
+		return fmt.Errorf("invalid duration specified for timeout: %w", err)
+	}
+	currTime := clock.Now()
+	lastUpdateTime := time.Time{}
+	for _, condition := range workspace.Status.Conditions {
+		if condition.LastTransitionTime.Time.After(lastUpdateTime) {
+			lastUpdateTime = condition.LastTransitionTime.Time
+		}
+	}
+	if !lastUpdateTime.IsZero() && lastUpdateTime.Add(timeout).Before(currTime) {
+		return fmt.Errorf("devworkspace failed to progress past phase '%s' for longer than timeout (%s)",
+			workspace.Status.Phase, config.Workspace.StartProgressTimeout)
+	}
+	return nil
 }

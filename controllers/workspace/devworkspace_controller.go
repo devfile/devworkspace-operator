@@ -61,6 +61,10 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
+const (
+	startingWorkspaceRequeueInterval = 5 * time.Second
+)
+
 // DevWorkspaceReconciler reconciles a DevWorkspace object
 type DevWorkspaceReconciler struct {
 	client.Client
@@ -183,8 +187,16 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	clusterWorkspace := workspace.DeepCopy()
 	timingInfo := map[string]string{}
 	timing.SetTime(timingInfo, timing.DevWorkspaceStarted)
+
 	defer func() (reconcile.Result, error) {
 		r.syncTimingToCluster(ctx, clusterWorkspace, timingInfo, reqLogger)
+		// Don't accidentally suppress errors by overwriting here; only check for timeout when no error
+		// encountered in main reconcile loop.
+		if err == nil {
+			if timeoutErr := checkForStartTimeOut(clusterWorkspace, reqLogger, &reconcileStatus); timeoutErr != nil {
+				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), reqLogger, &reconcileStatus)
+			}
+		}
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
@@ -288,6 +300,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			message = routingStatus.Message
 		}
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceRoutingReady, message)
+		if !routingStatus.Requeue && routingStatus.Err == nil {
+			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
+		}
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "Networking ready")
@@ -335,6 +350,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// FailStartup is not possible for generating the serviceaccount
 		reqLogger.Info("Waiting for workspace ServiceAccount")
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
+		if !serviceAcctStatus.Requeue && serviceAcctStatus.Err == nil {
+			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
+		}
 		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
@@ -343,6 +361,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	pullSecretStatus := wsprovision.PullSecrets(clusterAPI, serviceAcctName, workspace.GetNamespace())
 	if !pullSecretStatus.Continue {
 		reconcileStatus.setConditionFalse(conditions.PullSecretsReady, "Waiting for DevWorkspace pull secrets")
+		if !pullSecretStatus.Requeue && pullSecretStatus.Err == nil {
+			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
+		}
 		return reconcile.Result{Requeue: pullSecretStatus.Requeue}, pullSecretStatus.Err
 	}
 	allPodAdditions = append(allPodAdditions, pullSecretStatus.PodAdditions)
@@ -357,6 +378,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		reqLogger.Info("Waiting on deployment to be ready")
 		reconcileStatus.setConditionFalse(conditions.DeploymentReady, "Waiting for workspace deployment")
+		if !deploymentStatus.Requeue && deploymentStatus.Err == nil {
+			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
+		}
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
 	reconcileStatus.setConditionTrue(conditions.DeploymentReady, "DevWorkspace deployment ready")

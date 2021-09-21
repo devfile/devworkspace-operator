@@ -139,10 +139,14 @@ spec:
                   description: 'Class of the routing: this drives which DevWorkspaceRouting
                     controller will manage this routing'
                   type: string
+                started:
+                  description: Started is true if the owning DevWorkspace has .spec.started=true
+                  type: boolean
               required:
                 - devworkspaceId
                 - endpoints
                 - podSelector
+                - started
               type: object
             status:
               description: DevWorkspaceRoutingStatus defines the observed state of

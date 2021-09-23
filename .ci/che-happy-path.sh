@@ -95,7 +95,7 @@ oc rsync -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME}:/tmp/e2e/report/ /tmp/e2e -c
 oc exec -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c download-reports -- touch /tmp/done
 cp -r /tmp/e2e ${ARTIFACT_DIR}
 EXIT_CODE=$(oc logs -n ${CHE_NAMESPACE} ${HAPPY_PATH_POD_NAME} -c happy-path-test | grep EXIT_CODE)
-if [[ ${EXIT_CODE} == "+ EXIT_CODE=1" ]]; then
+if [[ ${EXIT_CODE} != "+ EXIT_CODE=0" ]]; then
     echo "[ERROR] Happy-path test failed."
     exit 1
 fi

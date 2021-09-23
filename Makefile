@@ -29,7 +29,7 @@ export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:next
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
-export DEVWORKSPACE_API_VERSION ?= 03e023e7078b64884216d8e6dce8f0cf8b7e74d2
+export DEVWORKSPACE_API_VERSION ?= 089a48011460cbd9f06f200bad5452137a25f34b
 
 # Enable using Podman instead of Docker
 export DOCKER ?= docker

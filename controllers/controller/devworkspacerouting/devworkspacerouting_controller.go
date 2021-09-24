@@ -81,6 +81,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+	if instance.Annotations != nil && instance.Annotations[constants.DevWorkspaceStartedStatusAnnotation] == "false" {
+		return reconcile.Result{}, nil
+	}
+
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, instance.Spec.DevWorkspaceId)
 	reqLogger.Info("Reconciling DevWorkspaceRouting")
 

@@ -21,6 +21,7 @@ import (
 
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -414,6 +415,28 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 			return true, nil
 		}
 		return false, err
+	}
+
+	// Update DevWorkspaceRouting to have .spec.started=false
+	routing := &v1alpha1.DevWorkspaceRouting{}
+	routingRef := types.NamespacedName{
+		Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
+		Namespace: workspace.Namespace,
+	}
+	err = r.Get(context.TODO(), routingRef, routing)
+	if err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return false, err
+		}
+	} else if routing.Annotations != nil && routing.Annotations[constants.DevWorkspaceStartedStatusAnnotation] != "false" {
+		routing.Annotations[constants.DevWorkspaceStartedStatusAnnotation] = "false"
+		err := r.Update(context.TODO(), routing)
+		if err != nil {
+			if k8sErrors.IsConflict(err) {
+				return false, nil
+			}
+			return false, err
+		}
 	}
 
 	replicas := workspaceDeployment.Spec.Replicas

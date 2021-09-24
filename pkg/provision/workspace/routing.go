@@ -23,6 +23,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
@@ -155,6 +156,7 @@ func getSpecRouting(
 	if val, ok := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; ok {
 		annotations = maputils.Append(annotations, constants.DevWorkspaceRestrictedAccessAnnotation, val)
 	}
+	annotations[constants.DevWorkspaceStartedStatusAnnotation] = "true"
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
 	expectedAnnotationPrefix := workspace.Spec.RoutingClass + constants.RoutingAnnotationInfix
@@ -171,7 +173,7 @@ func getSpecRouting(
 
 	routing := &v1alpha1.DevWorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("routing-%s", workspace.Status.DevWorkspaceId),
+			Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,

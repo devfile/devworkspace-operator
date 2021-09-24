@@ -22,6 +22,10 @@ import (
 
 var NonAlphaNumRegexp = regexp.MustCompile(`[^a-z0-9]+`)
 
+func DevWorkspaceRoutingName(workspaceId string) string {
+	return fmt.Sprintf("routing-%s", workspaceId)
+}
+
 func EndpointName(endpointName string) string {
 	name := strings.ToLower(endpointName)
 	name = NonAlphaNumRegexp.ReplaceAllString(name, "-")

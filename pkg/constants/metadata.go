@@ -58,6 +58,11 @@ const (
 	// Operator also propagates it to the devworkspace-related objects to perform authorization.
 	DevWorkspaceRestrictedAccessAnnotation = "controller.devfile.io/restricted-access"
 
+	// DevWorkspaceStartedStatusAnnotation is applied to subresources of DevWorkspaces to indicate the owning object's
+	// .spec.started value. This annotation is applied to DevWorkspaceRoutings to trigger reconciles when a DevWorkspace
+	// is started or stopped.
+	DevWorkspaceStartedStatusAnnotation = "controller.devfile.io/devworkspace-started"
+
 	// DevWorkspaceStopReasonAnnotation marks the reason why the devworkspace was stopped; when a devworkspace is restarted
 	// this annotation will be cleared
 	DevWorkspaceStopReasonAnnotation = "controller.devfile.io/stopped-by"

@@ -138,7 +138,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// If debug annotation is present, leave the deployment in place to let users
 		// view logs.
 		if workspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true" {
-			return reconcile.Result{}, nil
+			if isTimeout, err := checkForFailingTimeout(workspace); err != nil {
+				return reconcile.Result{}, err
+			} else if !isTimeout {
+				return reconcile.Result{}, nil
+			}
 		}
 
 		patch := []byte(`{"spec":{"started": false}}`)
@@ -191,7 +195,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Don't accidentally suppress errors by overwriting here; only check for timeout when no error
 		// encountered in main reconcile loop.
 		if err == nil {
-			if timeoutErr := checkForStartTimeOut(clusterWorkspace, reqLogger, &reconcileStatus); timeoutErr != nil {
+			if timeoutErr := checkForStartTimeout(clusterWorkspace); timeoutErr != nil {
 				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), reqLogger, &reconcileStatus)
 			}
 		}

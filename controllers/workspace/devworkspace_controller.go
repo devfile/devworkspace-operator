@@ -419,7 +419,7 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 		return false, err
 	}
 
-	// Update DevWorkspaceRouting to have .spec.started=false
+	// Update DevWorkspaceRouting to have `devworkspace-started` annotation "false"
 	routing := &v1alpha1.DevWorkspaceRouting{}
 	routingRef := types.NamespacedName{
 		Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),

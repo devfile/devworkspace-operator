@@ -156,7 +156,7 @@ func getSpecRouting(
 	if val, ok := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; ok {
 		annotations = maputils.Append(annotations, constants.DevWorkspaceRestrictedAccessAnnotation, val)
 	}
-	annotations[constants.DevWorkspaceStartedStatusAnnotation] = "true"
+	annotations = maputils.Append(annotations, constants.DevWorkspaceStartedStatusAnnotation, "true")
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
 	expectedAnnotationPrefix := workspace.Spec.RoutingClass + constants.RoutingAnnotationInfix

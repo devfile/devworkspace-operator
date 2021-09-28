@@ -14,6 +14,12 @@ spec:
       - name: theia
         plugin:
           uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/next/devfile.yaml
+          components:
+            - name: theia-ide
+              container:
+                env:
+                  - name: THEIA_HOST
+                    value: 0.0.0.0
     commands:
       - id: say-hello
         exec:

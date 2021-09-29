@@ -29,10 +29,10 @@ const (
 	routingClass        = "devworkspace.default_routing_class"
 	defaultRoutingClass = "basic"
 
-	// RoutingSuffix is the base domain for routes/ingresses created on the cluster. All
-	// routes/ingresses will be created with URL http(s)://<unique-to-workspace-part>.<RoutingSuffix>
+	// routingSuffix is the base domain for routes/ingresses created on the cluster. All
+	// routes/ingresses will be created with URL http(s)://<unique-to-workspace-part>.<routingSuffix>
 	// is supposed to be used by embedded routing solvers only
-	RoutingSuffix = "devworkspace.routing.cluster_host_suffix"
+	routingSuffix = "devworkspace.routing.cluster_host_suffix"
 
 	experimentalFeaturesEnabled        = "devworkspace.experimental_features_enabled"
 	defaultExperimentalFeaturesEnabled = "false"

@@ -16,49 +16,18 @@ package config
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/google/go-cmp/cmp"
 	fuzz "github.com/google/gofuzz"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
-
-const testNamespace = "test-namespace"
-
-var (
-	scheme   = runtime.NewScheme()
-	trueBool = true
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dw.AddToScheme(scheme))
-	utilruntime.Must(routev1.Install(scheme))
-}
-
-func setupForTest(t *testing.T) {
-	if err := os.Setenv("WATCH_NAMESPACE", testNamespace); err != nil {
-		t.Fatalf("failed to set up for test: %s", err)
-	}
-	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
-	originalDefaultConfig := DefaultConfig.DeepCopy()
-	t.Cleanup(func() {
-		internalConfig = nil
-		DefaultConfig = originalDefaultConfig
-	})
-}
 
 func TestSetupControllerConfigUsesDefault(t *testing.T) {
 	setupForTest(t)
@@ -270,14 +239,4 @@ func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	f.Fuzz(expectedConfig)
 	mergeConfig(expectedConfig, actualConfig)
 	assert.Equal(t, expectedConfig, actualConfig, "merging configs should merge all fields")
-}
-
-func buildConfig(config *v1alpha1.OperatorConfiguration) *v1alpha1.DevWorkspaceOperatorConfig {
-	return &v1alpha1.DevWorkspaceOperatorConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      OperatorConfigName,
-			Namespace: testNamespace,
-		},
-		Config: config,
-	}
 }

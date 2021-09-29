@@ -39,7 +39,7 @@ func (e *FatalError) Unwrap() error {
 }
 
 func GetAutoMountResources(api sync.ClusterAPI, namespace string) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
-	gitCMPodAdditions, err := getDevWorkspaceGitConfig(api, namespace)
+	gitCMPodAdditions, err := provisionGitConfiguration(api, namespace)
 	if err != nil {
 		return nil, nil, err
 	}

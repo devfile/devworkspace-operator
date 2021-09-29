@@ -191,5 +191,8 @@ func setupControllerConfig(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+	if err := config.MigrateConfigFromConfigMap(nonCachedClient); err != nil {
+		return err
+	}
 	return config.SetupControllerConfig(nonCachedClient)
 }

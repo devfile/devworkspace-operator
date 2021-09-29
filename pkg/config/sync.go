@@ -71,14 +71,13 @@ func SetupControllerConfig(client crclient.Client) error {
 	} else {
 		syncConfigFrom(config)
 	}
+	defaultRoutingSuffix, err := discoverRouteSuffix(client)
+	if err != nil {
+		return err
+	}
+	DefaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 	if internalConfig.Routing.ClusterHostSuffix == "" {
-		routeSuffix, err := discoverRouteSuffix(client)
-		if err != nil {
-			return err
-		}
-		internalConfig.Routing.ClusterHostSuffix = routeSuffix
-		// Set routing suffix in default config as well to ensure value is persisted across config changes
-		DefaultConfig.Routing.ClusterHostSuffix = routeSuffix
+		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 		updatePublicConfig()
 	}
 	return nil

@@ -90,10 +90,11 @@ func mergeVolumeComponents(main, parent *dw.DevWorkspaceTemplateSpecContent, plu
 
 func mergeVolume(into, from *dw.VolumeComponent) error {
 	// If the new volume is persistent, make the original persistent
+	boolFalse := false
 	if from.Ephemeral == nil {
 		into.Ephemeral = nil
-	} else {
-		from = into
+	} else if !*from.Ephemeral {
+		into.Ephemeral = &boolFalse
 	}
 	intoSize := into.Size
 	if intoSize == "" {

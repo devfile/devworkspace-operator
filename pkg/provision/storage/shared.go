@@ -59,7 +59,7 @@ func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeCl
 }
 
 // isEphemeral evaluates is volume component is configured as ephemeral
-func isEphemeral(volume dw.VolumeComponent) bool {
+func isEphemeral(volume *dw.VolumeComponent) bool {
 	return volume.Ephemeral != nil && *volume.Ephemeral
 }
 
@@ -70,11 +70,11 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	for _, component := range workspace.Components {
 		if component.Volume != nil {
 			// If any non-ephemeral volumes are defined, we need to mount storage
-			if isEphemeral(*component.Volume) {
+			if !isEphemeral(component.Volume) {
 				return true
 			}
 			if component.Name == devfileConstants.ProjectsVolumeName {
-				projectsVolumeIsEphemeral = isEphemeral(*component.Volume)
+				projectsVolumeIsEphemeral = isEphemeral(component.Volume)
 			}
 		}
 	}
@@ -131,7 +131,7 @@ func addEphemeralVolumesFromWorkspace(workspace *dw.DevWorkspace, podAdditions *
 	if err != nil {
 		return &ProvisioningError{Message: "Failed to add ephemeral volumes to workspace", Err: err}
 	}
-	if projectsVolume != nil && isEphemeral(*projectsVolume.Volume) {
+	if projectsVolume != nil && isEphemeral(projectsVolume.Volume) {
 		if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume}); err != nil {
 			return &ProvisioningError{Message: "Failed to add projects volume to workspace", Err: err}
 		}
@@ -178,7 +178,7 @@ func getWorkspaceVolumes(workspace *dw.DevWorkspace) (persistent, ephemeral []dw
 			projects = &workspace.Spec.Template.Components[idx]
 			continue
 		}
-		if component.Volume.Ephemeral != nil && *component.Volume.Ephemeral {
+		if isEphemeral(component.Volume) {
 			ephemeral = append(ephemeral, component)
 		} else {
 			persistent = append(persistent, component)

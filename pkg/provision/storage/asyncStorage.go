@@ -218,7 +218,7 @@ func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1
 
 	projectsVolume, needed := processProjectsVolume(&workspace.Spec.Template)
 	if needed {
-		if projectsVolume != nil && !projectsVolume.Volume.Ephemeral {
+		if projectsVolume != nil && !isEphemeral(*projectsVolume.Volume) {
 			vol, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume})
 			if err != nil {
 				return nil, err

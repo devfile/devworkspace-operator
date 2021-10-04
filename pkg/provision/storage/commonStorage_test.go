@@ -15,6 +15,7 @@
 package storage
 
 import (
+	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
@@ -131,7 +132,8 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 				}
 				sortVolumesAndVolumeMounts(&tt.Output.PodAdditions)
 				sortVolumesAndVolumeMounts(&tt.Input.PodAdditions)
-				assert.Equal(t, tt.Output.PodAdditions, tt.Input.PodAdditions, "PodAdditions should match expected output")
+				diff := cmp.Diff(&tt.Output.PodAdditions, &tt.Input.PodAdditions)
+				assert.Equal(t, "", diff, "The PodAdditions diff should ")
 			}
 		})
 	}
@@ -166,7 +168,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: true,
+								Ephemeral: &boolTrue,
 							},
 						},
 					},
@@ -208,7 +210,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: true,
+								Ephemeral: &boolTrue,
 							},
 						},
 					},

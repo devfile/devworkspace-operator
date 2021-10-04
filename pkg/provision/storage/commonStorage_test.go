@@ -15,12 +15,13 @@
 package storage
 
 import (
-	"github.com/google/go-cmp/cmp"
 	"io/ioutil"
 	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 

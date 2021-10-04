@@ -17,6 +17,7 @@ package devworkspacerouting
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -33,10 +34,25 @@ import (
 
 var serviceDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(corev1.Service{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmpopts.IgnoreFields(corev1.ServiceSpec{}, "ClusterIP", "ClusterIPs", "IPFamilies", "IPFamilyPolicy", "SessionAffinity"),
-	cmpopts.IgnoreFields(corev1.ServicePort{}, "TargetPort"),
-	cmpopts.SortSlices(func(a, b corev1.ServicePort) bool {
-		return strings.Compare(a.Name, b.Name) > 0
+	cmp.Comparer(func(x, y corev1.ServiceSpec) bool {
+		xCopy := x.DeepCopy()
+		yCopy := y.DeepCopy()
+		if !cmp.Equal(xCopy.Selector, yCopy.Selector) {
+			return false
+		}
+		// Function that takes a slice of servicePorts and returns the appropriate comparison
+		// function to pass to sort.Slice() for that slice of servicePorts.
+		servicePortSorter := func(servicePorts []corev1.ServicePort) func(i, j int) bool {
+			return func(i, j int) bool {
+				return strings.Compare(servicePorts[i].Name, servicePorts[j].Name) > 0
+			}
+		}
+		sort.Slice(xCopy.Ports, servicePortSorter(xCopy.Ports))
+		sort.Slice(yCopy.Ports, servicePortSorter(yCopy.Ports))
+		if !cmp.Equal(xCopy.Ports, yCopy.Ports) {
+			return false
+		}
+		return xCopy.Type == yCopy.Type
 	}),
 }
 

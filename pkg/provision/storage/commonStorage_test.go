@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -131,7 +132,8 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 				}
 				sortVolumesAndVolumeMounts(&tt.Output.PodAdditions)
 				sortVolumesAndVolumeMounts(&tt.Input.PodAdditions)
-				assert.Equal(t, tt.Output.PodAdditions, tt.Input.PodAdditions, "PodAdditions should match expected output")
+				assert.Equal(t, tt.Output.PodAdditions, tt.Input.PodAdditions,
+					"PodAdditions should match expected output: Diff: %s", cmp.Diff(tt.Output.PodAdditions, tt.Input.PodAdditions))
 			}
 		})
 	}
@@ -166,7 +168,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: true,
+								Ephemeral: &boolTrue,
 							},
 						},
 					},
@@ -208,7 +210,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: true,
+								Ephemeral: &boolTrue,
 							},
 						},
 					},

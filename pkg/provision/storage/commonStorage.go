@@ -99,7 +99,7 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 				if !ok {
 					return fmt.Errorf("container '%s' references undefined volume '%s'", container.Name, vm.Name)
 				}
-				if !volume.Ephemeral {
+				if !isEphemeral(&volume) {
 					containers[cIdx].VolumeMounts[vmIdx].SubPath = fmt.Sprintf("%s/%s", workspaceId, vm.Name)
 					containers[cIdx].VolumeMounts[vmIdx].Name = commonPVCName
 				}

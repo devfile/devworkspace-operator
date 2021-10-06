@@ -8308,7 +8308,7 @@ spec:
             - workspaceId
             type: object
         type: object
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -16003,7 +16003,7 @@ spec:
                 type: array
             type: object
         type: object
-    served: true
+    served: false
     storage: false
   - name: v1alpha2
     schema:

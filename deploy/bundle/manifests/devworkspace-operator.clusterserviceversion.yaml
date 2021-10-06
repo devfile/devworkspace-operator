@@ -20,13 +20,7 @@ spec:
       version: v1alpha1
     - kind: DevWorkspace
       name: devworkspaces.workspace.devfile.io
-      version: v1alpha1
-    - kind: DevWorkspace
-      name: devworkspaces.workspace.devfile.io
       version: v1alpha2
-    - kind: DevWorkspaceTemplate
-      name: devworkspacetemplates.workspace.devfile.io
-      version: v1alpha1
     - kind: DevWorkspaceTemplate
       name: devworkspacetemplates.workspace.devfile.io
       version: v1alpha2

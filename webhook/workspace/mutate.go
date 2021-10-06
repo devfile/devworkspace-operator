@@ -41,8 +41,6 @@ func (m *ResourcesMutator) Handle(ctx context.Context, req admission.Request) ad
 	case admissionv1.Create:
 		{
 			switch req.Kind {
-			case handler.V1alpha1DevWorkspaceKind:
-				return m.MutateWorkspaceV1alpha1OnCreate(ctx, req)
 			case handler.V1alpha2DevWorkspaceKind:
 				return m.MutateWorkspaceV1alpha2OnCreate(ctx, req)
 			case handler.V1PodKind:
@@ -58,8 +56,6 @@ func (m *ResourcesMutator) Handle(ctx context.Context, req admission.Request) ad
 	case admissionv1.Update:
 		{
 			switch req.Kind {
-			case handler.V1alpha1DevWorkspaceKind:
-				return m.MutateWorkspaceV1alpha1OnUpdate(ctx, req)
 			case handler.V1alpha2DevWorkspaceKind:
 				return m.MutateWorkspaceV1alpha2OnUpdate(ctx, req)
 			case handler.V1PodKind:

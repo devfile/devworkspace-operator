@@ -55,7 +55,7 @@ func BuildMutateWebhookCfg(namespace string) *admregv1.MutatingWebhookConfigurat
 				Operations: []admregv1.OperationType{admregv1.Create, admregv1.Update},
 				Rule: admregv1.Rule{
 					APIGroups:   []string{"workspace.devfile.io"},
-					APIVersions: []string{"v1alpha1", "v1alpha2"},
+					APIVersions: []string{"v1alpha2"},
 					Resources:   []string{"devworkspaces"},
 				},
 			},

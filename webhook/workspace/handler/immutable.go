@@ -17,8 +17,6 @@ package handler
 import (
 	"context"
 	"fmt"
-
-	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -38,7 +36,6 @@ const serviceCAUsername = "system:serviceaccount:openshift-service-ca:service-ca
 var RestrictedAccessDiffOptions = []cmp.Option{
 	// field managed by cluster and should be ignored while comparing
 	cmpopts.IgnoreTypes(metav1.ObjectMeta{}),
-	cmpopts.IgnoreFields(dwv1.DevWorkspaceSpec{}, "Started"),
 	cmpopts.IgnoreFields(dwv2.DevWorkspaceSpec{}, "Started"),
 }
 
@@ -92,20 +89,6 @@ func (h *WebhookHandler) HandleRestrictedAccessCreate(_ context.Context, req adm
 		return admission.Allowed("Object created by workspace controller service account.")
 	}
 	return admission.Denied("Only the workspace controller can create workspace objects.")
-}
-
-func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp *dwv1.DevWorkspace, uid string) (allowed bool, msg string) {
-	if oldWksp.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] != "true" {
-		return true, "workspace does not have restricted access configured"
-	}
-	creatorUID := oldWksp.Labels[constants.DevWorkspaceCreatorLabel]
-	if uid == creatorUID || uid == h.ControllerUID {
-		return true, "workspace with restricted-access is updated by owner or controller"
-	}
-	if !cmp.Equal(oldWksp, newWksp, RestrictedAccessDiffOptions[:]...) {
-		return false, "workspace has restricted-access enabled and can only be modified by its creator."
-	}
-	return checkRestrictedWorkspaceMetadata(&oldWksp.ObjectMeta, &newWksp.ObjectMeta)
 }
 
 func (h *WebhookHandler) checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp *dwv2.DevWorkspace, uid string) (allowed bool, msg string) {

@@ -23,7 +23,6 @@ import (
 	"runtime"
 	"syscall"
 
-	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
@@ -57,7 +56,6 @@ func init() {
 	}
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(dwv1.AddToScheme(scheme))
 	utilruntime.Must(dwv2.AddToScheme(scheme))
 }
 

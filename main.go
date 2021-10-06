@@ -32,7 +32,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"github.com/devfile/devworkspace-operator/version"
 
-	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -68,7 +67,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dwv1.AddToScheme(scheme))
 	utilruntime.Must(dwv2.AddToScheme(scheme))
 
 	if infrastructure.IsOpenShift() {
@@ -158,9 +156,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv1.DevWorkspace{}).Complete(); err != nil {
-		setupLog.Error(err, "failed creating conversion webhook for DevWorkspaces v1alpha1")
-	}
 	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv2.DevWorkspace{}).Complete(); err != nil {
 		setupLog.Error(err, "failed creating conversion webhook for DevWorkspaces v1alpha2")
 	}

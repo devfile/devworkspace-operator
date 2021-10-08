@@ -60,7 +60,8 @@ dryrun() {
 parse_args() {
   while [[ "$#" -gt 0 ]]; do
     case $1 in
-      '-v'|'--version') VERSION="${2#v}"; shift 1;;
+      # Ensure version parameter is in format vX.Y.Z
+      '-v'|'--version') VERSION="v${2#v}"; shift 1;;
       '--tmp-dir') TMP=$(mktemp -d); shift 0;;
       '--release') DO_RELEASE=true; shift 0;;
       '--prerelease') DO_PRERELEASE='true'; shift 0;;
@@ -86,7 +87,7 @@ parse_args() {
 # Args:
 #    $1 - Version to set in files
 update_version() {
-  local VERSION=$1
+  local VERSION=${1#v}
 
   # change version/version.go file
   VERSION_GO="v${VERSION}"
@@ -146,7 +147,6 @@ git_commit_and_push() {
 #   $1 - Next version to release (e.g. v0.10.0). Should be minor release, not bugfix
 prerelease() {
   local VERSION=$1
-  VERSION="$VERSION"
 
   if [ "${VERSION##*.}" != "0" ]; then
     echo "[ERROR] Flag --prerelease should not be used for bugfix versions"
@@ -207,8 +207,8 @@ release() {
   docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
   $DRY_RUN docker push "${PROJECT_CLONE_QUAY_IMG}"
 
-  local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
-  local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
+  export local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
+  export local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
   make generate manifests generate_default_deployment generate_olm_bundle_yaml
 
   # tag the release if the version/version.go file has changed

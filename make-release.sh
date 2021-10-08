@@ -60,7 +60,7 @@ dryrun() {
 parse_args() {
   while [[ "$#" -gt 0 ]]; do
     case $1 in
-      '-v'|'--version') VERSION="$2"; shift 1;;
+      '-v'|'--version') VERSION="${2#v}"; shift 1;;
       '--tmp-dir') TMP=$(mktemp -d); shift 0;;
       '--release') DO_RELEASE=true; shift 0;;
       '--prerelease') DO_PRERELEASE='true'; shift 0;;
@@ -80,36 +80,44 @@ parse_args() {
   fi
 }
 
-# bumps the version in version/version.go
-bump_version () {
-  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-
-  NEXT_VERSION=$1
-  BUMP_BRANCH=$2
-
-  echo "[INFO] Bumping version ${BUMP_BRANCH} to ${NEXT_VERSION}"
-
-  git checkout "${BUMP_BRANCH}"
+# Updates hard-coded version strings in repo (version.go, CSV templates). For go files, version is prepended with 'v',
+# e.g. if version is 0.10.0, Go files use version v0.10.0. Files are regenerated but changes are not committed to the
+# repo.
+# Args:
+#    $1 - Version to set in files
+update_version() {
+  local VERSION=$1
 
   # change version/version.go file
-  VERSION_GO="v${NEXT_VERSION}"
-  if [[ "$BUMP_BRANCH" == "$MAIN_BRANCH" ]]; then
-    VERSION_GO="$VERSION_GO+dev"
-  fi
+  VERSION_GO="v${VERSION}"
+  VERSION_CSV="${VERSION%%+*}"
+
   sed -i version/version.go -e "s#Version = \".*\"#Version = \"${VERSION_GO}\"#g"
-  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(name: devworkspace-operator.)(v[0-9.]+)#\1v${NEXT_VERSION}#g"
-  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${NEXT_VERSION}#g"
-  make generate_olm_bundle_yaml
+  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(name: devworkspace-operator.)(v[0-9.]+)#\1v${VERSION_CSV}#g"
+  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${VERSION_CSV}#g"
+
+  make generate manifests generate_default_deployment generate_olm_bundle_yaml
+}
+
+# Commit and push changes in local repo to remote (respecting DRY_RUN setting). If the branch cannot be pushed to,
+# create a temporary branch and open a PR based off it. If repo state is clean, no new commit is created and branch
+# is pushed.
+# Args:
+#    $1 - Commit message to use for commit
+#    $2 - PR branch name to use if necessary
+git_commit_and_push() {
+  local COMMIT_MSG="$1"
+  local PR_BRANCH="$2"
+  local CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
   git add -A
   if [[ ! -z $(git status -s) ]]; then # dirty
-    COMMIT_MSG="[release] Bump to ${NEXT_VERSION} in ${BUMP_BRANCH}"
     git commit -m "${COMMIT_MSG}" --signoff
   fi
-  git pull origin "${BUMP_BRANCH}"
 
   if [[ -z "$DRY_RUN" ]]; then
     set +e
-    PUSH_TRY="$(git push origin "${BUMP_BRANCH}")"
+    PUSH_TRY="$(git push origin "${CURRENT_BRANCH}")"
     PUSH_TRY_EXIT_CODE=$?
     set -e
   else
@@ -117,19 +125,29 @@ bump_version () {
   fi
   # shellcheck disable=SC2181
   if [[ "${PUSH_TRY_EXIT_CODE}" -gt 0 ]] || [[ $PUSH_TRY == *"protected branch hook declined"* ]]; then
-    PR_BRANCH=pr-${BUMP_BRANCH}-to-${NEXT_VERSION}
     # create pull request for the main branch branch, as branch is restricted
     git branch "${PR_BRANCH}"
     git checkout "${PR_BRANCH}"
     git pull origin "${PR_BRANCH}" || true
     $DRY_RUN git push origin "${PR_BRANCH}"
     lastCommitComment="$(git log -1 --pretty=%B)"
-    $DRY_RUN hub pull-request -f -m "${lastCommitComment}" -b "${BUMP_BRANCH}" -h "${PR_BRANCH}"
+    $DRY_RUN hub pull-request -f -m "${lastCommitComment}" -b "${CURRENT_BRANCH}" -h "${PR_BRANCH}"
   fi
   git checkout "${CURRENT_BRANCH}"
 }
 
+# Perform prerelease actions in repo based on VERSION env var (--version flag):
+#   1. Create a new release branch, e.g v0.10.x if $VERSION is v0.10.0
+#   2. Update version in release branch to reflect $VERSION
+#   3. Push release branch to remote repo
+#   4. Update main branch to reflect next version
+#   5. Push changes to remote main branch (via PR if necessary)
+# Args:
+#   $1 - Next version to release (e.g. v0.10.0). Should be minor release, not bugfix
 prerelease() {
+  local VERSION=$1
+  VERSION="$VERSION"
+
   if [ "${VERSION##*.}" != "0" ]; then
     echo "[ERROR] Flag --prerelease should not be used for bugfix versions"
     exit 1
@@ -143,13 +161,11 @@ prerelease() {
   echo "[INFO] Creating ${X_BRANCH} from ${MAIN_BRANCH}"
   git checkout ${MAIN_BRANCH}
   git checkout -b "${X_BRANCH}"
-  sed -i version/version.go -e "s#Version = \".*\"#Version = \"${VERSION}\"#g"
-  if [[ ! -z $(git status -s) ]]; then # dirty
-    git add -A
-    COMMIT_MSG="[prerelease] Remove dev from version"
-    git commit -m "${COMMIT_MSG}" --signoff
-  fi
-  $DRY_RUN git push origin "${X_BRANCH}"
+
+  echo "[INFO] Updating version to $VERSION"
+  update_version $VERSION
+
+  git_commit_and_push "[prerelease] Prepare branch for release" "ci-prerelease-$VERSION"
 
   # bump version in MAIN_BRANCH to next dev version
   [[ $X_BRANCH =~ ^([0-9]+)\.([0-9]+)\.x ]] \
@@ -157,12 +173,21 @@ prerelease() {
     NEXT=${BASH_REMATCH[2]}; \
     (( NEXT=NEXT+1 )) # for X_BRANCH=0.1.x, get BASE=0, NEXT=2
 
-  NEXT_DEV_VERSION="${BASE}.${NEXT}.0"
-  bump_version "${NEXT_DEV_VERSION}" "${MAIN_BRANCH}"
+  NEXT_DEV_VERSION="${BASE}.${NEXT}.0+dev"
+  git checkout ${MAIN_BRANCH}
+  update_version $NEXT_DEV_VERSION
+  git_commit_and_push "[release] Bump to ${NEXT_DEV_VERSION} in $MAIN_BRANCH" "ci-bump-$MAIN_BRANCH-$NEXT_DEV_VERSION"
+
   echo "[INFO] Prerelease is done"
 }
 
+# Perform release process for new version. Assumes that pre-release has been completed:
+#
+# Args:
+#    $1 - Version to release
 release() {
+  local VERSION=$1
+
   echo "[INFO] Starting Release procedure"
   # derive bugfix branch from version
   X_BRANCH=${VERSION#v}
@@ -182,17 +207,12 @@ release() {
   docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
   $DRY_RUN docker push "${PROJECT_CLONE_QUAY_IMG}"
 
-  bash -x ./deploy/generate-deployment.sh \
-    --use-defaults \
-    --default-image "${DWO_QUAY_IMG}" \
-    --project-clone-image "${PROJECT_CLONE_QUAY_IMG}"
+  local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
+  local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
+  make generate manifests generate_default_deployment generate_olm_bundle_yaml
 
   # tag the release if the version/version.go file has changed
-  if [[ ! -z $(git status -s) ]]; then # dirty
-    COMMIT_MSG="[release] Release ${VERSION}"
-    git add -A
-    git commit -m "${COMMIT_MSG}" --signoff
-  fi
+  git_commit_and_push "[release] Release ${VERSION}" "ci-release-version-$VERSION"
   git tag "${VERSION}"
   $DRY_RUN git push origin "${VERSION}"
 
@@ -204,7 +224,9 @@ release() {
     && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}";  \
     NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3
   NEXT_VERSION_Z="${BASE}.${NEXT}"
-  bump_version "${NEXT_VERSION_Z}" "${X_BRANCH}"
+  update_version "${NEXT_VERSION_Z}"
+  git_commit_and_push "[release] Bump to ${NEXT_VERSION_Z} in $X_BRANCH" "ci-bump-$X_BRANCH-$NEXT_VERSION_Z"
+
   echo "[INFO] Release is done"
 }
 
@@ -220,9 +242,9 @@ if [[ $TMP ]] && [[ -d $TMP ]]; then
   cd "${DWO_REPO##*/}" || exit 1
 fi
 
-[[ ! -z "$DO_PRERELEASE" ]] && prerelease
+[[ ! -z "$DO_PRERELEASE" ]] && prerelease $VERSION
 
-[[ ! -z "$DO_RELEASE" ]] && release
+[[ ! -z "$DO_RELEASE" ]] && release $VERSION
 
 # cleanup tmp dir
 if [[ $TMP ]] && [[ -d $TMP ]]; then

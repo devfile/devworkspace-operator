@@ -109,10 +109,11 @@ update_version() {
 git_commit_and_push() {
   local COMMIT_MSG="$1"
   local PR_BRANCH="$2"
-  local CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  local CURRENT_BRANCH
+  CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
   git add -A
-  if [[ ! -z $(git status -s) ]]; then # dirty
+  if [[ -n $(git status -s) ]]; then # dirty
     git commit -m "${COMMIT_MSG}" --signoff
   fi
 
@@ -163,7 +164,7 @@ prerelease() {
   git checkout -b "${X_BRANCH}"
 
   echo "[INFO] Updating version to $VERSION"
-  update_version $VERSION
+  update_version "$VERSION"
 
   git_commit_and_push "[prerelease] Prepare branch for release" "ci-prerelease-$VERSION"
 
@@ -175,7 +176,7 @@ prerelease() {
 
   NEXT_DEV_VERSION="${BASE}.${NEXT}.0+dev"
   git checkout ${MAIN_BRANCH}
-  update_version $NEXT_DEV_VERSION
+  update_version "$NEXT_DEV_VERSION"
   git_commit_and_push "[release] Bump to ${NEXT_DEV_VERSION} in $MAIN_BRANCH" "ci-bump-$MAIN_BRANCH-$NEXT_DEV_VERSION"
 
   echo "[INFO] Prerelease is done"
@@ -232,7 +233,7 @@ release() {
 
 parse_args "$@"
 
-[[ ! -z $VERBOSE ]] && echo "[INFO] Enabling verbose output" && set -x
+[[ -n $VERBOSE ]] && echo "[INFO] Enabling verbose output" && set -x
 
 # work in tmp dir
 if [[ $TMP ]] && [[ -d $TMP ]]; then
@@ -242,9 +243,9 @@ if [[ $TMP ]] && [[ -d $TMP ]]; then
   cd "${DWO_REPO##*/}" || exit 1
 fi
 
-[[ ! -z "$DO_PRERELEASE" ]] && prerelease $VERSION
+[[ -n "$DO_PRERELEASE" ]] && prerelease "$VERSION"
 
-[[ ! -z "$DO_RELEASE" ]] && release $VERSION
+[[ -n "$DO_RELEASE" ]] && release "$VERSION"
 
 # cleanup tmp dir
 if [[ $TMP ]] && [[ -d $TMP ]]; then

@@ -69,7 +69,6 @@ build_index_image: _print_vars _check_skopeo_installed _check_opm_version
 
 export_manifests: _print_vars _check_opm_version
 	rm -rf ./generated/exported-manifests
-	# Export the bundles with the name web-terminal inside of $(DWO_INDEX_IMG)
 	# This command basic exports the index back into the old format
 	opm index export -c $(DOCKER) -f ./generated/exported-manifests -i $(DWO_INDEX_IMG)
 

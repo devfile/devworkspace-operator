@@ -97,7 +97,7 @@ update_version() {
   sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(name: devworkspace-operator.)(v[0-9.]+)#\1v${VERSION_CSV}#g"
   sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${VERSION_CSV}#g"
 
-  make generate manifests generate_default_deployment generate_olm_bundle_yaml
+  make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
 }
 
 # Commit and push changes in local repo to remote (respecting DRY_RUN setting). If the branch cannot be pushed to,
@@ -210,7 +210,7 @@ release() {
 
   export local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
   export local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
-  make generate manifests generate_default_deployment generate_olm_bundle_yaml
+  make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
 
   # tag the release if the version/version.go file has changed
   git_commit_and_push "[release] Release ${VERSION}" "ci-release-version-$VERSION"

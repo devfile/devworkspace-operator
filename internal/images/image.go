@@ -36,7 +36,6 @@ var log = logf.Log.WithName("container-images")
 var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
 
 const (
-	webTerminalToolingImageEnvVar  = "RELATED_IMAGE_web_terminal_tooling"
 	webhookServerImageEnvVar       = "RELATED_IMAGE_devworkspace_webhook_server"
 	kubeRBACProxyImageEnvVar       = "RELATED_IMAGE_kube_rbac_proxy"
 	pvcCleanupJobImageEnvVar       = "RELATED_IMAGE_pvc_cleanup_job"
@@ -62,17 +61,6 @@ func GetKubeRBACProxyImage() string {
 	val, ok := os.LookupEnv(kubeRBACProxyImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", kubeRBACProxyImageEnvVar), "Could not get webhook server image")
-		return ""
-	}
-	return val
-}
-
-// GetWebTerminalToolingImage returns the image reference for the default web tooling image. Returns
-// the empty string if environment variable RELATED_IMAGE_web_terminal_tooling is not defined
-func GetWebTerminalToolingImage() string {
-	val, ok := os.LookupEnv(webTerminalToolingImageEnvVar)
-	if !ok {
-		log.Error(fmt.Errorf("environment variable %s is not set", webTerminalToolingImageEnvVar), "Could not get web terminal tooling image")
 		return ""
 	}
 	return val

@@ -20065,10 +20065,6 @@ spec:
           value: 200m
         - name: WEBHOOKS_SERVER_CPU_REQUEST
           value: 100m
-        - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
-          value: quay.io/eclipse/che-machine-exec:nightly
-        - name: RELATED_IMAGE_web_terminal_tooling
-          value: quay.io/wto/web-terminal-tooling:latest
         - name: RELATED_IMAGE_pvc_cleanup_job
           value: registry.access.redhat.com/ubi8-micro:8.4-81
         - name: RELATED_IMAGE_async_storage_server

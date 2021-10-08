@@ -36,10 +36,9 @@ type DevWorkspaceRoutingSpec struct {
 type DevWorkspaceRoutingClass string
 
 const (
-	DevWorkspaceRoutingBasic       DevWorkspaceRoutingClass = "basic"
-	DevWorkspaceRoutingCluster     DevWorkspaceRoutingClass = "cluster"
-	DevWorkspaceRoutingClusterTLS  DevWorkspaceRoutingClass = "cluster-tls"
-	DevWorkspaceRoutingWebTerminal DevWorkspaceRoutingClass = "web-terminal"
+	DevWorkspaceRoutingBasic      DevWorkspaceRoutingClass = "basic"
+	DevWorkspaceRoutingCluster    DevWorkspaceRoutingClass = "cluster"
+	DevWorkspaceRoutingClusterTLS DevWorkspaceRoutingClass = "cluster-tls"
 )
 
 // DevWorkspaceRoutingStatus defines the observed state of DevWorkspaceRouting

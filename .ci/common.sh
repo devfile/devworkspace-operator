@@ -42,10 +42,3 @@ function bumpPodsInfo() {
     echo "======== Bumping events -n ${NS} ========"
     oc get events -n $NS -o=yaml > $TARGET_DIR/events.log || true
 }
-
-installChectl() {
-  wget $(curl https://che-incubator.github.io/chectl/download-link/next-linux-x64)
-  tar -xzf chectl-linux-x64.tar.gz
-  mv chectl /tmp
-  /tmp/chectl/bin/chectl --version
-}

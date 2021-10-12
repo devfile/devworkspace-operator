@@ -73,6 +73,12 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 			break
 		}
 	}
+	for _, failure := range badRequestFailures {
+		if strings.Contains(wksp.Status.Message, failure) {
+			reason = reasonBadRequest
+			break
+		}
+	}
 
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: reason})
 	if err != nil {

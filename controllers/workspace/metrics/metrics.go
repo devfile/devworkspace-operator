@@ -25,16 +25,20 @@ const (
 	metricsRoutingClassLabel = "routingclass"
 	metricsReasonLabel       = "reason"
 
+	reasonBadRequest            = "bad_request"
 	reasonInfrastructureFailure = "infrastructure_failure"
 	reasonUnknown               = "unknown"
 )
 
+var badRequestFailures = []string{
+	"ImagePullBackOff",
+	"ErrImagePull",
+}
+
 var infrastructureFailures = []string{
 	"CrashLoopBackOff",
-	"ImagePullBackOff",
 	"CreateContainerError",
 	"RunContainerError",
-	"ErrImagePull",
 }
 
 var (

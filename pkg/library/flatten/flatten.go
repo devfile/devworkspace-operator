@@ -241,6 +241,10 @@ func resolveElementById(
 	registryUrl string,
 	tools ResolverTools) (resolvedPlugin *dw.DevWorkspaceTemplateSpec, err error) {
 
+	if registryUrl == "" {
+		return nil, fmt.Errorf("plugin %s does not specify a registryUrl", name)
+	}
+
 	if tools.HttpClient == nil {
 		return nil, fmt.Errorf("cannot resolve resources by id: no HTTP client provided")
 	}

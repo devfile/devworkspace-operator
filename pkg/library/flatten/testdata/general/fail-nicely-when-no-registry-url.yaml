@@ -8,4 +8,4 @@ input:
           id: test/plugin
 
 output:
-  errRegexp: "plugin test-plugin does not specify a registryUrl and no internal registry is configured"
+  errRegexp: "plugin test-plugin does not specify a registryUrl"

@@ -265,7 +265,7 @@ func getSpecDeployment(
 	saName string,
 	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	replicas := int32(1)
-	terminationGracePeriod := int64(1)
+	terminationGracePeriod := int64(10)
 
 	podAdditions, err := mergePodAdditions(podAdditionsList)
 	if err != nil {

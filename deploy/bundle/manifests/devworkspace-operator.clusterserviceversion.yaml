@@ -432,26 +432,3 @@ spec:
     url: https://devfile.io
   replaces: devworkspace-operator.v0.9.0
   version: 0.11.0
-  webhookdefinitions:
-  - admissionReviewVersions:
-    - v1
-    containerPort: 443
-    conversionCRDs:
-    - devworkspaces.workspace.devfile.io
-    deploymentName: devworkspace-controller-manager
-    generateName: cdevworkspaces.kb.io
-    sideEffects: None
-    targetPort: conversion
-    type: ConversionWebhook
-    webhookPath: /convert
-  - admissionReviewVersions:
-    - v1
-    containerPort: 443
-    conversionCRDs:
-    - devworkspacetemplates.workspace.devfile.io
-    deploymentName: devworkspace-controller-manager
-    generateName: cdevworkspacetemplates.kb.io
-    sideEffects: None
-    targetPort: conversion
-    type: ConversionWebhook
-    webhookPath: /convert

@@ -6,5 +6,3 @@ bases:
 - prefixed
 - ../components/csv
 
-patchesStrategicMerge:
-- crd_webhooks_patch.yaml

@@ -13,6 +13,5 @@ bases:
 - ../base
 
 patchesStrategicMerge:
-- crd_webhooks_patch.yaml
 - manager_service_ca_patch.yaml
 - service_cert_patch.yaml

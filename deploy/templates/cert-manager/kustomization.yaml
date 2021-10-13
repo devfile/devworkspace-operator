@@ -15,7 +15,6 @@ bases:
 
 patchesStrategicMerge:
 - manager_certmanager_patch.yaml
-- crd_webhooks_patch.yaml
 
 configurations:
 - kustomizeconfig.yaml

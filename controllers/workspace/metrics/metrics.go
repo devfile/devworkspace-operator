@@ -31,12 +31,12 @@ const (
 )
 
 var badRequestFailures = []string{
-	"ImagePullBackOff",
+	"CrashLoopBackOff",
 	"ErrImagePull",
+	"ImagePullBackOff",
 }
 
 var infrastructureFailures = []string{
-	"CrashLoopBackOff",
 	"CreateContainerError",
 	"RunContainerError",
 }

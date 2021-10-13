@@ -32,9 +32,6 @@ generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_f
 	  --channels fast \
 	  --metadata <&- && \
 	mv bundle.Dockerfile build/
-  # Operator SDK v1.8.0 does not output webhooks in a stable order, so we have to sort the yaml files to avoid
-  # spurious changes. See issue https://github.com/operator-framework/operator-sdk/issues/5022
-	yq -iY '.spec.webhookdefinitions |= sort' deploy/bundle/manifests/devworkspace-operator.clusterserviceversion.yaml
   # OLM creates a configmap that contains the files in bundle when an operator is installed. Since the maximum size
   # of a resource in etcd is 1MiB, we need to do a bit of squishing on our yaml files to get the total bundle under the
   # 1MiB limit. This command puts all YAML strings on a single line, avoiding ~200KiB of newlines and indentation.

@@ -17,6 +17,7 @@ package handler
 import (
 	"context"
 	"fmt"
+
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"

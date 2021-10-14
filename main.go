@@ -22,12 +22,9 @@ import (
 	"os"
 	"runtime"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting"
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
+	"github.com/devfile/devworkspace-operator/pkg/cache"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
@@ -42,11 +39,13 @@ import (
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	templatev1 "github.com/openshift/api/template/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -99,6 +98,12 @@ func main() {
 	setupLog.Info(fmt.Sprintf("Commit: %s", version.Commit))
 	setupLog.Info(fmt.Sprintf("BuildTime: %s", version.BuildTime))
 
+	cacheFunc, err := cache.GetCacheFunc()
+	if err != nil {
+		setupLog.Error(err, "failed to set up objects cache")
+		os.Exit(1)
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		MetricsBindAddress:     metricsAddr,
@@ -106,6 +111,7 @@ func main() {
 		HealthProbeBindAddress: ":6789",
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "8d217f93.devfile.io",
+		NewCache:               cacheFunc,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

@@ -26,6 +26,14 @@ const (
 	// DevWorkspaceNameLabel is the label key to store workspace name
 	DevWorkspaceNameLabel = "controller.devfile.io/devworkspace_name"
 
+	// DevWorkspaceWatchConfigMapLabel marks a configmap so that it is watched by the controller. This label is required on all
+	// configmaps that should be seen by the controller
+	DevWorkspaceWatchConfigMapLabel = "controller.devfile.io/watch-configmap"
+
+	// DevWorkspaceWatchSecretLabel marks a secret so that it is watched by the controller. This label is required on all
+	// secrets that should be seen by the controller
+	DevWorkspaceWatchSecretLabel = "controller.devfile.io/watch-secret"
+
 	// DevWorkspaceMountLabel is the label key to store if a configmap or secret should be mounted to the devworkspace
 	DevWorkspaceMountLabel = "controller.devfile.io/mount-to-devworkspace"
 

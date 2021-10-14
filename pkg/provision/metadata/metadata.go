@@ -87,21 +87,38 @@ func syncConfigMapToCluster(specCM *corev1.ConfigMap, api *wsprovision.ClusterAP
 	err = api.Client.Get(context.TODO(), types.NamespacedName{Name: specCM.Name, Namespace: specCM.Namespace}, clusterCM)
 
 	switch {
+
 	case err == nil:
 		if maputils.Equal(specCM.Data, clusterCM.Data) {
 			return true, nil
 		}
 		clusterCM.Data = specCM.Data
-		err = api.Client.Update(context.TODO(), clusterCM)
+		if err := api.Client.Update(context.TODO(), clusterCM); k8sErrors.IsConflict(err) {
+			return false, nil
+		} else {
+			return false, err
+		}
+
 	case k8sErrors.IsNotFound(err):
-		err = api.Client.Create(context.TODO(), specCM)
+		createErr := api.Client.Create(context.TODO(), specCM)
+		// Edge case: since we now only watch configmaps with the "controller.devfile.io/watch-configmap" label, we can
+		// get caught in a loop where we can't read the cluster: Get will return IsNotFound, but Create will return
+		// AlreadyExists.
+		if k8sErrors.IsAlreadyExists(createErr) {
+			// Try to update to add label so that we can see the configmap (i.e. so that it is cached)
+			err := api.Client.Update(context.TODO(), specCM)
+			if err == nil || k8sErrors.IsConflict(err) || k8sErrors.IsNotFound(err) {
+				// If error is `IsNotFound`, then configmap actually does not exist.
+				return false, nil
+			}
+			return false, err
+		} else {
+			return false, err
+		}
+
 	default:
 		return false, err
 	}
-	if k8sErrors.IsConflict(err) || k8sErrors.IsAlreadyExists(err) {
-		return false, nil
-	}
-	return false, err
 }
 
 func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.ConfigMap, error) {
@@ -115,11 +132,13 @@ func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.Con
 		return nil, fmt.Errorf("failed to marshal flattened DevWorkspace yaml: %w", err)
 	}
 
+	cmLabels := constants.ControllerAppLabels()
+	cmLabels[constants.DevWorkspaceWatchConfigMapLabel] = "true"
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.MetadataConfigMapName(original.Status.DevWorkspaceId),
 			Namespace: original.Namespace,
-			Labels:    constants.ControllerAppLabels(),
+			Labels:    cmLabels,
 		},
 		Data: map[string]string{
 			originalYamlFilename:  string(originalYaml),

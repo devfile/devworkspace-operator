@@ -14,6 +14,8 @@
 package cache
 
 import (
+	"fmt"
+
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,6 +31,16 @@ import (
 // result in very high memory usage on large clusters (e.g. clusters with tens of thousands of secrets).
 func GetCacheFunc() (cache.NewCacheFunc, error) {
 	devworkspaceObjectSelector, err := labels.Parse(constants.DevWorkspaceIDLabel)
+	if err != nil {
+		return nil, err
+	}
+
+	// We have to treat secrets and configmaps separately since we need to support auto-mounting
+	secretObjectSelector, err := labels.Parse(fmt.Sprintf("%s=true", constants.DevWorkspaceWatchSecretLabel))
+	if err != nil {
+		return nil, err
+	}
+	configmapObjectSelector, err := labels.Parse(fmt.Sprintf("%s=true", constants.DevWorkspaceWatchConfigMapLabel))
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +66,12 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		},
 		&routev1.Route{}: {
 			Label: devworkspaceObjectSelector,
+		},
+		&corev1.ConfigMap{}: {
+			Label: configmapObjectSelector,
+		},
+		&corev1.Secret{}: {
+			Label: secretObjectSelector,
 		},
 	}
 

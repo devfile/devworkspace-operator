@@ -23,6 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
@@ -40,8 +41,9 @@ func getSSHSidecarSecretSpec(workspace *dw.DevWorkspace, privateKey []byte) *cor
 			Name:      GetSSHSidecarSecretName(workspace.Status.DevWorkspaceId),
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":    "async-storage", // TODO
-				"app.kubernetes.io/part-of": "devworkspace-operator",
+				"app.kubernetes.io/name":               "async-storage", // TODO
+				"app.kubernetes.io/part-of":            "devworkspace-operator",
+				constants.DevWorkspaceWatchSecretLabel: "true",
 			},
 		},
 		Data: map[string][]byte{

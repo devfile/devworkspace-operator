@@ -181,8 +181,9 @@ func getGitSecret(secretName string, namespace string, config string) *corev1.Se
 			Name:      secretName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":    "git-config-secret",
-				"app.kubernetes.io/part-of": "devworkspace-operator",
+				"app.kubernetes.io/name":               "git-config-secret",
+				"app.kubernetes.io/part-of":            "devworkspace-operator",
+				constants.DevWorkspaceWatchSecretLabel: "true",
 			},
 		},
 		Data: map[string][]byte{
@@ -234,8 +235,9 @@ func getGitConfigMap(configMapName string, namespace string, config string) *cor
 			Name:      configMapName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":    "git-config-secret",
-				"app.kubernetes.io/part-of": "devworkspace-operator",
+				"app.kubernetes.io/name":                  "git-config-secret",
+				"app.kubernetes.io/part-of":               "devworkspace-operator",
+				constants.DevWorkspaceWatchConfigMapLabel: "true",
 			},
 		},
 		Data: map[string]string{

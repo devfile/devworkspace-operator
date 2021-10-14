@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,8 +38,9 @@ func getSSHAuthorizedKeysConfigMapSpec(namespace string, authorizedKeys []byte) 
 			Name:      sshAuthorizedKeysConfigMapName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":    "async-storage", // TODO
-				"app.kubernetes.io/part-of": "devworkspace-operator",
+				"app.kubernetes.io/name":                  "async-storage", // TODO
+				"app.kubernetes.io/part-of":               "devworkspace-operator",
+				constants.DevWorkspaceWatchConfigMapLabel: "true",
 			},
 		},
 		Data: map[string]string{

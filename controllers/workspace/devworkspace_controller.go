@@ -493,7 +493,7 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 func (r *DevWorkspaceReconciler) failWorkspace(workspace *dw.DevWorkspace, msg string, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
 	logger.Info("DevWorkspace failed to start: " + msg)
 	status.phase = devworkspacePhaseFailing
-	status.setConditionTrue(dw.DevWorkspaceFailedStart, msg)
+	status.setConditionTrue(dw.DevWorkspaceFailedStart, metrics.WorkspaceEngineFailurePrefix+msg)
 	if workspace.Spec.Started {
 		return reconcile.Result{Requeue: true}, nil
 	}

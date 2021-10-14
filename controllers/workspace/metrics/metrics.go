@@ -21,14 +21,17 @@ import (
 )
 
 const (
+	WorkspaceEngineFailurePrefix = "Workspace failure: "
+
 	workspaceSourceLabel     = "controller.devfile.io/devworkspace-source"
 	metricSourceLabel        = "source"
 	metricsRoutingClassLabel = "routingclass"
 	metricsReasonLabel       = "reason"
 
-	reasonBadRequest            = "bad_request"
-	reasonInfrastructureFailure = "infrastructure_failure"
-	reasonUnknown               = "unknown"
+	reasonBadRequest             = "bad_request"
+	reasonInfrastructureFailure  = "infrastructure_failure"
+	reasonWorkspaceEngineFailure = "workspace_engine_failure"
+	reasonUnknown                = "unknown"
 )
 
 var badRequestFailures = []string{

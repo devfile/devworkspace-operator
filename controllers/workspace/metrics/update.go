@@ -79,6 +79,9 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 // determinateFailureReason scans devworkspace .status.message and try to match
 // it to the know category. Unknown is return when no one is matched
 func determinateFailureReason(wksp *dw.DevWorkspace) string {
+	if strings.HasPrefix(wksp.Status.Message, WorkspaceEngineFailurePrefix) {
+		return reasonWorkspaceEngineFailure
+	}
 	for _, failure := range badRequestFailures {
 		if strings.Contains(wksp.Status.Message, failure) {
 			return reasonBadRequest

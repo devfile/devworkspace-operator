@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 package conditions
 
 import dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"

@@ -18,44 +18,15 @@ package devworkspacerouting
 import (
 	"context"
 	"fmt"
-	"sort"
-	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
-
-var serviceDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(corev1.Service{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmp.Comparer(func(x, y corev1.ServiceSpec) bool {
-		xCopy := x.DeepCopy()
-		yCopy := y.DeepCopy()
-		if !cmp.Equal(xCopy.Selector, yCopy.Selector) {
-			return false
-		}
-		// Function that takes a slice of servicePorts and returns the appropriate comparison
-		// function to pass to sort.Slice() for that slice of servicePorts.
-		servicePortSorter := func(servicePorts []corev1.ServicePort) func(i, j int) bool {
-			return func(i, j int) bool {
-				return strings.Compare(servicePorts[i].Name, servicePorts[j].Name) > 0
-			}
-		}
-		sort.Slice(xCopy.Ports, servicePortSorter(xCopy.Ports))
-		sort.Slice(yCopy.Ports, servicePortSorter(yCopy.Ports))
-		if !cmp.Equal(xCopy.Ports, yCopy.Ports) {
-			return false
-		}
-		return xCopy.Type == yCopy.Type
-	}),
-}
 
 func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1.DevWorkspaceRouting, specServices []corev1.Service) (ok bool, clusterServices []corev1.Service, err error) {
 	servicesInSync := true
@@ -74,34 +45,31 @@ func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1
 		servicesInSync = false
 	}
 
-	for _, specService := range specServices {
-		if contains, idx := listContainsByName(specService, clusterServices); contains {
-			clusterService := clusterServices[idx]
-			if !cmp.Equal(specService, clusterService, serviceDiffOpts) {
-				r.Log.Info(fmt.Sprintf("Updating service: %s", clusterService.Name))
-				if r.DebugLogging {
-					r.Log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specService, clusterService, serviceDiffOpts)))
-				}
-				// Cannot naively copy spec, as clusterIP is unmodifiable
-				clusterIP := clusterService.Spec.ClusterIP
-				clusterService.Spec = specService.Spec
-				clusterService.Spec.ClusterIP = clusterIP
-				err := r.Update(context.TODO(), &clusterService)
-				if err != nil && !errors.IsConflict(err) {
-					return false, nil, err
-				}
-				servicesInSync = false
-			}
-		} else {
-			err := r.Create(context.TODO(), &specService)
-			if err != nil {
-				return false, nil, err
-			}
-			servicesInSync = false
-		}
+	clusterAPI := sync.ClusterAPI{
+		Client: r.Client,
+		Scheme: r.Scheme,
+		Logger: r.Log.WithValues("Request.Namespace", routing.Namespace, "Request.Name", routing.Name),
+		Ctx:    context.TODO(),
 	}
 
-	return servicesInSync, clusterServices, nil
+	var updatedClusterServices []corev1.Service
+	for _, specIngress := range specServices {
+		clusterObj, err := sync.SyncObjectWithCluster(&specIngress, clusterAPI)
+		switch t := err.(type) {
+		case nil:
+			break
+		case *sync.NotInSyncError:
+			servicesInSync = false
+			continue
+		case *sync.UnrecoverableSyncError:
+			return false, nil, t.Cause
+		default:
+			return false, nil, err
+		}
+		updatedClusterServices = append(updatedClusterServices, *clusterObj.(*corev1.Service))
+	}
+
+	return servicesInSync, updatedClusterServices, nil
 }
 
 func (r *DevWorkspaceRoutingReconciler) getClusterServices(routing *controllerv1alpha1.DevWorkspaceRouting) ([]corev1.Service, error) {

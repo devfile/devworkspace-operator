@@ -19,8 +19,10 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	routeV1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
@@ -56,4 +58,15 @@ var configmapDiffOpts = cmp.Options{
 
 var routingDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{}, "ObjectMeta", "TypeMeta", "Status"),
+}
+
+var routeDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(routeV1.Route{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(routeV1.RouteSpec{}, "WildcardPolicy", "Host"),
+	cmpopts.IgnoreFields(routeV1.RouteTargetReference{}, "Weight"),
+}
+
+var ingressDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(networkingv1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(networkingv1.HTTPIngressPath{}, "PathType"),
 }

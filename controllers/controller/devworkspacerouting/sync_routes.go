@@ -20,22 +20,13 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	routeV1 "github.com/openshift/api/route/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
-
-var routeDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(routeV1.Route{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmpopts.IgnoreFields(routeV1.RouteSpec{}, "WildcardPolicy", "Host"),
-	cmpopts.IgnoreFields(routeV1.RouteTargetReference{}, "Weight"),
-}
 
 func (r *DevWorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.DevWorkspaceRouting, specRoutes []routeV1.Route) (ok bool, clusterRoutes []routeV1.Route, err error) {
 	routesInSync := true
@@ -54,33 +45,31 @@ func (r *DevWorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.D
 		routesInSync = false
 	}
 
-	for _, specRoute := range specRoutes {
-		if contains, idx := listContainsRouteByName(specRoute, clusterRoutes); contains {
-			clusterRoute := clusterRoutes[idx]
-			if !cmp.Equal(specRoute, clusterRoute, routeDiffOpts) {
-				r.Log.Info(fmt.Sprintf("Updating route: %s", clusterRoute.Name))
-				if r.DebugLogging {
-					r.Log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specRoute, clusterRoute, routeDiffOpts)))
-				}
-				// Update route's spec
-				clusterRoute.Spec = specRoute.Spec
-				err := r.Update(context.TODO(), &clusterRoute)
-				if err != nil && !errors.IsConflict(err) {
-					return false, nil, err
-				}
-
-				routesInSync = false
-			}
-		} else {
-			err := r.Create(context.TODO(), &specRoute)
-			if err != nil {
-				return false, nil, err
-			}
-			routesInSync = false
-		}
+	clusterAPI := sync.ClusterAPI{
+		Client: r.Client,
+		Scheme: r.Scheme,
+		Logger: r.Log.WithValues("Request.Namespace", routing.Namespace, "Request.Name", routing.Name),
+		Ctx:    context.TODO(),
 	}
 
-	return routesInSync, clusterRoutes, nil
+	var updatedClusterRoutes []routeV1.Route
+	for _, specIngress := range specRoutes {
+		clusterObj, err := sync.SyncObjectWithCluster(&specIngress, clusterAPI)
+		switch t := err.(type) {
+		case nil:
+			break
+		case *sync.NotInSyncError:
+			routesInSync = false
+			continue
+		case *sync.UnrecoverableSyncError:
+			return false, nil, t.Cause
+		default:
+			return false, nil, err
+		}
+		updatedClusterRoutes = append(updatedClusterRoutes, *clusterObj.(*routeV1.Route))
+	}
+
+	return routesInSync, updatedClusterRoutes, nil
 }
 
 func (r *DevWorkspaceRoutingReconciler) getClusterRoutes(routing *controllerv1alpha1.DevWorkspaceRouting) ([]routeV1.Route, error) {

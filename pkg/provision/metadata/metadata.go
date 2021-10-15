@@ -16,20 +16,16 @@
 package metadata
 
 import (
-	"context"
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
@@ -49,7 +45,7 @@ const (
 // ProvisionWorkspaceMetadata creates a configmap on the cluster that stores metadata about the workspace and configures all
 // workspace containers to mount that configmap at /devworkspace-metadata. Each container has the environment
 // variable DEVWORKSPACE_METADATA set to the mount path for the configmap
-func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, flattened *dw.DevWorkspace, api *sync.ClusterAPI) error {
+func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, flattened *dw.DevWorkspace, api sync.ClusterAPI) error {
 	cm, err := getSpecMetadataConfigMap(original, flattened)
 	if err != nil {
 		return err
@@ -58,11 +54,16 @@ func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, f
 	if err != nil {
 		return err
 	}
-	if inSync, err := syncConfigMapToCluster(cm, api); err != nil {
-		return err
-	} else if !inSync {
-		return &NotReadyError{
-			Message: "Waiting for DevWorkspace metadata configmap to be ready",
+	_, err = sync.SyncObjectWithCluster(cm, api)
+	switch t := err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
+		return &NotReadyError{Message: "Waiting for DevWorkspace metadata configmap to be ready"}
+	case *sync.UnrecoverableSyncError:
+		return &ProvisioningError{
+			Err:     t.Cause,
+			Message: "Failed to sync DevWorkspace metadata configmap with cluster",
 		}
 	}
 
@@ -80,45 +81,6 @@ func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, f
 	}
 
 	return nil
-}
-
-func syncConfigMapToCluster(specCM *corev1.ConfigMap, api *sync.ClusterAPI) (inSync bool, err error) {
-	clusterCM := &corev1.ConfigMap{}
-	err = api.Client.Get(context.TODO(), types.NamespacedName{Name: specCM.Name, Namespace: specCM.Namespace}, clusterCM)
-
-	switch {
-
-	case err == nil:
-		if maputils.Equal(specCM.Data, clusterCM.Data) {
-			return true, nil
-		}
-		clusterCM.Data = specCM.Data
-		if err := api.Client.Update(context.TODO(), clusterCM); k8sErrors.IsConflict(err) {
-			return false, nil
-		} else {
-			return false, err
-		}
-
-	case k8sErrors.IsNotFound(err):
-		createErr := api.Client.Create(context.TODO(), specCM)
-		// Edge case: since we now only watch configmaps with the "controller.devfile.io/watch-configmap" label, we can
-		// get caught in a loop where we can't read the cluster: Get will return IsNotFound, but Create will return
-		// AlreadyExists.
-		if k8sErrors.IsAlreadyExists(createErr) {
-			// Try to update to add label so that we can see the configmap (i.e. so that it is cached)
-			err := api.Client.Update(context.TODO(), specCM)
-			if err == nil || k8sErrors.IsConflict(err) || k8sErrors.IsNotFound(err) {
-				// If error is `IsNotFound`, then configmap actually does not exist.
-				return false, nil
-			}
-			return false, err
-		} else {
-			return false, err
-		}
-
-	default:
-		return false, err
-	}
 }
 
 func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.ConfigMap, error) {

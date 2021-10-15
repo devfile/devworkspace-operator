@@ -50,6 +50,10 @@ var deploymentDiffOpts = cmp.Options{
 	}),
 }
 
+var configmapDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
+}
+
 var routingDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{}, "ObjectMeta", "TypeMeta", "Status"),
 }

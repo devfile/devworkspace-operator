@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 package config
 
 import "github.com/devfile/devworkspace-operator/test/e2e/pkg/client"

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 package maputils
 
 func Append(target map[string]string, key, value string) map[string]string {

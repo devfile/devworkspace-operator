@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -31,7 +32,6 @@ import (
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
@@ -87,7 +87,7 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return containerlib.AnyMountSources(workspace.Components)
 }
 
-func syncCommonPVC(namespace string, clusterAPI wsprovision.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
@@ -101,15 +101,23 @@ func syncCommonPVC(namespace string, clusterAPI wsprovision.ClusterAPI) (*corev1
 	if err != nil {
 		return nil, err
 	}
-	currObject, requeue, err := wsprovision.SyncObject(pvc, clusterAPI.Client, clusterAPI.Logger, false)
-	if err != nil {
-		return nil, err
-	}
-	if requeue {
+	currObject, err := sync.SyncObjectWithCluster(pvc, clusterAPI)
+	switch t := err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
 		return nil, &NotReadyError{
 			Message: "Updated common PVC on cluster",
 		}
+	case *sync.UnrecoverableSyncError:
+		return nil, &ProvisioningError{
+			Message: "failed to sync PVC to cluster",
+			Err:     t.Cause,
+		}
+	default:
+		return nil, err
 	}
+
 	currPVC, ok := currObject.(*corev1.PersistentVolumeClaim)
 	if !ok {
 		return nil, errors.New("tried to sync PVC to cluster but did not get a PVC back")

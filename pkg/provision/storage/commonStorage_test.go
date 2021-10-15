@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,6 @@ import (
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 var scheme = runtime.NewScheme()
@@ -111,7 +111,7 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 		t.Fatalf("Failure during setup: %s", err)
 	}
 	commonPVC.Status.Phase = corev1.ClaimBound
-	clusterAPI := wsprovision.ClusterAPI{
+	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
 		Logger: zap.New(),
 	}

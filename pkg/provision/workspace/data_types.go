@@ -15,14 +15,6 @@
 
 package workspace
 
-import (
-	"context"
-
-	"github.com/go-logr/logr"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
 type ProvisioningStatus struct {
 	// Continue should be true if cluster state matches spec state for this step
 	Continue    bool
@@ -44,11 +36,4 @@ func (s *ProvisioningStatus) Info() string {
 		}
 	}
 	return message
-}
-
-type ClusterAPI struct {
-	Client client.Client
-	Scheme *runtime.Scheme
-	Logger logr.Logger
-	Ctx    context.Context
 }

@@ -19,9 +19,8 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/stretchr/testify/assert"
-
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 func TestRewriteContainerVolumeMountsForEphemeralStorageClass(t *testing.T) {
@@ -37,7 +36,7 @@ func TestRewriteContainerVolumeMountsForEphemeralStorageClass(t *testing.T) {
 			workspace.Spec.Template = *tt.Input.Workspace
 			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"
-			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, wsprovision.ClusterAPI{})
+			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, sync.ClusterAPI{})
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -34,7 +35,7 @@ type PullSecretsProvisioningStatus struct {
 	v1alpha1.PodAdditions
 }
 
-func PullSecrets(clusterAPI ClusterAPI, serviceAccountName, namespace string) PullSecretsProvisioningStatus {
+func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace string) PullSecretsProvisioningStatus {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspacePullSecretLabel, "true"))
 	if err != nil {
 		return PullSecretsProvisioningStatus{

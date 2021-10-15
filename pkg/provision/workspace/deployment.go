@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -84,7 +85,7 @@ func SyncDeploymentToCluster(
 	workspace *dw.DevWorkspace,
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
-	clusterAPI ClusterAPI) DeploymentProvisioningStatus {
+	clusterAPI sync.ClusterAPI) DeploymentProvisioningStatus {
 
 	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(clusterAPI.Client, workspace.GetNamespace())
 	if err != nil {
@@ -122,59 +123,23 @@ func SyncDeploymentToCluster(
 			},
 		}
 	}
-	clusterDeployment, err := getClusterDeployment(specDeployment.Name, workspace.Namespace, clusterAPI.Client)
-	if err != nil {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{Err: err},
-		}
-	}
 
-	if clusterDeployment == nil {
-		clusterAPI.Logger.Info("Creating deployment")
-		if err := clusterAPI.Client.Create(context.TODO(), specDeployment); err != nil {
-			return DeploymentProvisioningStatus{
-				ProvisioningStatus{
-					Err:         err,
-					FailStartup: k8sErrors.IsInvalid(err),
-				},
-			}
-		}
+	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
+	switch t := err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus{Requeue: true},
 		}
-	}
-
-	if !cmp.Equal(specDeployment.Spec.Selector, clusterDeployment.Spec.Selector) {
-		clusterAPI.Logger.Info("Deployment selector is different. Recreating deployment")
-		clusterDeployment.Spec = specDeployment.Spec
-		err := clusterAPI.Client.Delete(context.TODO(), clusterDeployment)
-		if err != nil {
-			return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
-		}
+	case *sync.UnrecoverableSyncError:
 		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Requeue: true},
+			ProvisioningStatus{FailStartup: true, Err: t.Cause},
 		}
+	default:
+		return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
 	}
-
-	if !cmp.Equal(specDeployment, clusterDeployment, deploymentDiffOpts) {
-		clusterAPI.Logger.Info("Updating deployment")
-		if config.ExperimentalFeaturesEnabled() {
-			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specDeployment, clusterDeployment, deploymentDiffOpts)))
-		}
-		clusterDeployment.Spec = specDeployment.Spec
-		err := clusterAPI.Client.Update(context.TODO(), clusterDeployment)
-		if err != nil {
-			if k8sErrors.IsConflict(err) {
-				return DeploymentProvisioningStatus{ProvisioningStatus{Requeue: true}}
-			} else if k8sErrors.IsInvalid(err) {
-				return DeploymentProvisioningStatus{ProvisioningStatus{Err: err, FailStartup: true}}
-			}
-			return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
-		}
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Requeue: true},
-		}
-	}
+	clusterDeployment := clusterObj.(*appsv1.Deployment)
 
 	deploymentReady := checkDeploymentStatus(clusterDeployment)
 	if deploymentReady {
@@ -207,14 +172,12 @@ func SyncDeploymentToCluster(
 
 // DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace
 func DeleteWorkspaceDeployment(ctx context.Context, workspace *dw.DevWorkspace, client runtimeClient.Client) (wait bool, err error) {
-	clusterDeployment, err := getClusterDeployment(common.DeploymentName(workspace.Status.DevWorkspaceId), workspace.Namespace, client)
-	if err != nil {
-		return false, err
-	}
-	if clusterDeployment == nil {
-		return false, nil
-	}
-	err = client.Delete(ctx, clusterDeployment)
+	err = client.Delete(ctx, &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: workspace.Namespace,
+			Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
+		},
+	})
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return false, nil
@@ -368,22 +331,6 @@ func getSpecDeployment(
 	return deployment, nil
 }
 
-func getClusterDeployment(name string, namespace string, client runtimeClient.Client) (*appsv1.Deployment, error) {
-	deployment := &appsv1.Deployment{}
-	namespacedName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}
-	err := client.Get(context.TODO(), namespacedName, deployment)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return deployment, nil
-}
-
 func getPods(workspace *dw.DevWorkspace, client runtimeClient.Client) (*corev1.PodList, error) {
 	pods := &corev1.PodList{}
 	if err := client.List(context.TODO(), pods, k8sclient.InNamespace(workspace.Namespace), k8sclient.MatchingLabels{
@@ -400,7 +347,7 @@ func getPods(workspace *dw.DevWorkspace, client runtimeClient.Client) (*corev1.P
 // Returns optional message with detected unrecoverable state details
 //         error if any happens during check
 func checkPodsState(workspace *dw.DevWorkspace,
-	clusterAPI ClusterAPI) (stateMsg string, checkFailure error) {
+	clusterAPI sync.ClusterAPI) (stateMsg string, checkFailure error) {
 	podList, err := getPods(workspace, clusterAPI.Client)
 	if err != nil {
 		return "", err
@@ -505,7 +452,7 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
 	return false
 }
 
-func checkPodEvents(pod *corev1.Pod, clusterAPI ClusterAPI) (msg string, err error) {
+func checkPodEvents(pod *corev1.Pod, clusterAPI sync.ClusterAPI) (msg string, err error) {
 	evs := &corev1.EventList{}
 	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
 	if err != nil {

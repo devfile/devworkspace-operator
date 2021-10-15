@@ -23,6 +23,7 @@ import (
 	"time"
 
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -95,7 +96,7 @@ type DevWorkspaceReconciler struct {
 
 func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
-	clusterAPI := wsprovision.ClusterAPI{
+	clusterAPI := sync.ClusterAPI{
 		Client: r.Client,
 		Scheme: r.Scheme,
 		Logger: reqLogger,
@@ -287,7 +288,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 
-	rbacStatus := wsprovision.SyncRBAC(workspace, r.Client, reqLogger)
+	rbacStatus := wsprovision.SyncRBAC(workspace, clusterAPI)
 	if rbacStatus.Err != nil || !rbacStatus.Continue {
 		return reconcile.Result{Requeue: true}, rbacStatus.Err
 	}

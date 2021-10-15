@@ -16,20 +16,14 @@
 package workspace
 
 import (
-	"context"
-	"fmt"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/google/go-cmp/cmp"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 type ServiceAcctProvisioningStatus struct {
@@ -40,15 +34,19 @@ type ServiceAcctProvisioningStatus struct {
 func SyncServiceAccount(
 	workspace *dw.DevWorkspace,
 	additionalAnnotations map[string]string,
-	clusterAPI ClusterAPI) ServiceAcctProvisioningStatus {
+	clusterAPI sync.ClusterAPI) ServiceAcctProvisioningStatus {
 	// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
 	autoMountServiceAccount := true
 	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
 
-	specSA := corev1.ServiceAccount{
+	specSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: workspace.Namespace,
+			Labels: map[string]string{
+				constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
+				constants.DevWorkspaceNameLabel: workspace.Name,
+			},
 		},
 		AutomountServiceAccountToken: &autoMountServiceAccount,
 	}
@@ -60,15 +58,7 @@ func SyncServiceAccount(
 		}
 	}
 
-	err := controllerutil.SetControllerReference(workspace, &specSA, clusterAPI.Scheme)
-	if err != nil {
-		return ServiceAcctProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Err: err,
-			},
-		}
-	}
-	clusterSA, err := getClusterSA(specSA, clusterAPI.Client)
+	err := controllerutil.SetControllerReference(workspace, specSA, clusterAPI.Scheme)
 	if err != nil {
 		return ServiceAcctProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -77,34 +67,16 @@ func SyncServiceAccount(
 		}
 	}
 
-	if clusterSA == nil {
-		clusterAPI.Logger.Info("Creating DevWorkspace ServiceAccount")
-		err := clusterAPI.Client.Create(context.TODO(), &specSA)
-		return ServiceAcctProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Continue: false,
-				Requeue:  true,
-				Err:      err,
-			},
-		}
-	}
-
-	if !cmp.Equal(specSA.Annotations, clusterSA.Annotations) {
-		clusterAPI.Logger.Info("Updating DevWorkspace ServiceAccount")
-		if config.ExperimentalFeaturesEnabled() {
-			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specSA.Annotations, clusterSA.Annotations)))
-		}
-		patch := runtimeClient.MergeFrom(&specSA)
-		err := clusterAPI.Client.Patch(context.TODO(), clusterSA, patch)
-		if err != nil {
-			if errors.IsConflict(err) {
-				return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
-			}
-			return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
-		}
-		return ServiceAcctProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Requeue: true},
-		}
+	_, err = sync.SyncObjectWithCluster(specSA, clusterAPI)
+	switch t := err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
+		return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
+	case *sync.UnrecoverableSyncError:
+		return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{FailStartup: true, Err: t.Cause}}
+	default:
+		return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
 	}
 
 	return ServiceAcctProvisioningStatus{
@@ -113,20 +85,4 @@ func SyncServiceAccount(
 		},
 		ServiceAccountName: saName,
 	}
-}
-
-func getClusterSA(sa corev1.ServiceAccount, client runtimeClient.Client) (*corev1.ServiceAccount, error) {
-	clusterSA := &corev1.ServiceAccount{}
-	namespacedName := types.NamespacedName{
-		Name:      sa.Name,
-		Namespace: sa.Namespace,
-	}
-	err := client.Get(context.TODO(), namespacedName, clusterSA)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return clusterSA, nil
 }

@@ -19,8 +19,10 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -31,7 +33,9 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(rbacv1.RoleBinding{}):           basicDiffFunc(rolebindingDiffOpts),
 	reflect.TypeOf(corev1.ServiceAccount{}):        labelsAndAnnotationsDiffFunc,
 	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, basicDiffFunc(deploymentDiffOpts)),
+	reflect.TypeOf(corev1.ConfigMap{}):             basicDiffFunc(configmapDiffOpts),
 	reflect.TypeOf(v1alpha1.DevWorkspaceRouting{}): allDiffFuncs(routingDiffFunc, labelsAndAnnotationsDiffFunc, basicDiffFunc(routingDiffOpts)),
+	reflect.TypeOf(batchv1.Job{}):                  jobDiffFunc,
 }
 
 func basicDiffFunc(diffOpt cmp.Options) diffFunc {
@@ -84,4 +88,11 @@ func routingDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 		return true, false
 	}
 	return false, false
+}
+
+func jobDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
+	specJob := spec.(*batchv1.Job)
+	clusterJob := cluster.(*batchv1.Job)
+	// TODO: previously, this delete was specified with a background deletion policy, which is currently unsupported.
+	return !equality.Semantic.DeepDerivative(specJob.Spec, clusterJob.Spec), false
 }

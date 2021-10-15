@@ -22,11 +22,8 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,29 +64,19 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 	if err != nil {
 		return err
 	}
-	clusterJob, err := getClusterCommonPVCCleanupJob(workspace, clusterAPI)
-	if err != nil {
+	clusterObj, err := sync.SyncObjectWithCluster(specJob, clusterAPI)
+	switch t := err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
+		return &NotReadyError{Message: t.Error()}
+	case *sync.UnrecoverableSyncError:
+		return &ProvisioningError{Message: "Failed to sync cleanup job with cluster", Err: t.Cause}
+	default:
 		return err
 	}
-	if clusterJob == nil {
-		err := clusterAPI.Client.Create(clusterAPI.Ctx, specJob)
-		if err != nil && !k8sErrors.IsAlreadyExists(err) {
-			return err
-		}
-		return &NotReadyError{
-			Message: "Created PVC cleanup job",
-		}
-	}
-	if !equality.Semantic.DeepDerivative(specJob.Spec, clusterJob.Spec) {
-		propagationPolicy := metav1.DeletePropagationBackground
-		err := clusterAPI.Client.Delete(clusterAPI.Ctx, clusterJob, &client.DeleteOptions{PropagationPolicy: &propagationPolicy})
-		if err != nil {
-			return err
-		}
-		return &NotReadyError{
-			Message: "Need to recreate PVC cleanup job",
-		}
-	}
+
+	clusterJob := clusterObj.(*batchv1.Job)
 	for _, condition := range clusterJob.Status.Conditions {
 		if condition.Status != corev1.ConditionTrue {
 			continue
@@ -179,24 +166,6 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 		return nil, err
 	}
 	return job, nil
-}
-
-func getClusterCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
-	namespacedName := types.NamespacedName{
-		Name:      common.PVCCleanupJobName(workspace.Status.DevWorkspaceId),
-		Namespace: workspace.Namespace,
-	}
-	clusterJob := &batchv1.Job{}
-
-	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, clusterJob)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-
-	return clusterJob, nil
 }
 
 func commonPVCExists(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (bool, error) {

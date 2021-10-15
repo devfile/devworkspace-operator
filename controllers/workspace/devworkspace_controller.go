@@ -326,7 +326,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	annotate.AddURLAttributesToEndpoints(&workspace.Spec.Template, routingStatus.ExposedEndpoints)
 
 	// Step three: provision a configmap on the cluster to mount the flattened devfile in deployment containers
-	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, workspace, &clusterAPI)
+	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, workspace, clusterAPI)
 	if err != nil {
 		switch provisionErr := err.(type) {
 		case *metadata.NotReadyError:

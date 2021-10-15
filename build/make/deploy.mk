@@ -128,9 +128,9 @@ _login_with_devworkspace_sa:
 	echo "Logging as controller's SA in $(NAMESPACE)"
 	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
 
-### install_cert_manager: Installs Cert Mananger v1.0.4 on the cluster
+### install_cert_manager: Installs Cert Mananger v1.5.4 on the cluster
 install_cert_manager:
-	${K8S_CLI} apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.0.4/cert-manager.yaml
+	${K8S_CLI} apply --validate=false -f https://github.com/jetstack/cert-manager/releases/download/v1.5.4/cert-manager.yaml
 
 # it's easier to bump whole kubeconfig instead of grabbing cluster URL from the current context
 _bump_kubeconfig:

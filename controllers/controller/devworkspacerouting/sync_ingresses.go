@@ -20,21 +20,14 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
-
-var ingressDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(networkingv1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmpopts.IgnoreFields(networkingv1.HTTPIngressPath{}, "PathType"),
-}
 
 func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.DevWorkspaceRouting, specIngresses []networkingv1.Ingress) (ok bool, clusterIngresses []networkingv1.Ingress, err error) {
 	ingressesInSync := true
@@ -53,32 +46,31 @@ func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha
 		ingressesInSync = false
 	}
 
-	for _, specIngress := range specIngresses {
-		if contains, idx := listContainsIngressByName(specIngress, clusterIngresses); contains {
-			clusterIngress := clusterIngresses[idx]
-			if !cmp.Equal(specIngress, clusterIngress, ingressDiffOpts) {
-				r.Log.Info(fmt.Sprintf("Updating ingress: %s", clusterIngress.Name))
-				if r.DebugLogging {
-					r.Log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specIngress, clusterIngress, ingressDiffOpts)))
-				}
-				// Update ingress's spec
-				clusterIngress.Spec = specIngress.Spec
-				err := r.Update(context.TODO(), &clusterIngress)
-				if err != nil && !errors.IsConflict(err) {
-					return false, nil, err
-				}
-				ingressesInSync = false
-			}
-		} else {
-			err := r.Create(context.TODO(), &specIngress)
-			if err != nil {
-				return false, nil, err
-			}
-			ingressesInSync = false
-		}
+	clusterAPI := sync.ClusterAPI{
+		Client: r.Client,
+		Scheme: r.Scheme,
+		Logger: r.Log.WithValues("Request.Namespace", routing.Namespace, "Request.Name", routing.Name),
+		Ctx:    context.TODO(),
 	}
 
-	return ingressesInSync, clusterIngresses, nil
+	var updatedClusterIngresses []networkingv1.Ingress
+	for _, specIngress := range specIngresses {
+		clusterObj, err := sync.SyncObjectWithCluster(&specIngress, clusterAPI)
+		switch t := err.(type) {
+		case nil:
+			break
+		case *sync.NotInSyncError:
+			ingressesInSync = false
+			continue
+		case *sync.UnrecoverableSyncError:
+			return false, nil, t.Cause
+		default:
+			return false, nil, err
+		}
+		updatedClusterIngresses = append(updatedClusterIngresses, *clusterObj.(*networkingv1.Ingress))
+	}
+
+	return ingressesInSync, updatedClusterIngresses, nil
 }
 
 func (r *DevWorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv1alpha1.DevWorkspaceRouting) ([]networkingv1.Ingress, error) {

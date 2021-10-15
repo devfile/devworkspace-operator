@@ -72,7 +72,7 @@ func createObjectGeneric(specObj crclient.Object, api ClusterAPI) error {
 	case err == nil:
 		return NewNotInSync(specObj, CreatedObjectReason)
 	case k8sErrors.IsAlreadyExists(err):
-		// Need to try to update the object to address an edge case where removing a label
+		// Need to try to update the object to address an edge case where removing a labelselector
 		// results in the object not being tracked by the controller's cache.
 		return updateObjectGeneric(specObj, api)
 	case k8sErrors.IsInvalid(err):

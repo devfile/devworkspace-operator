@@ -30,6 +30,7 @@ type ClusterAPI struct {
 	Ctx    context.Context
 }
 
+// NotInSyncError is returned when a spec object is out-of-sync with its cluster counterpart
 type NotInSyncError struct {
 	Reason NotInSyncReason
 	Object crclient.Object
@@ -47,6 +48,7 @@ func (e *NotInSyncError) Error() string {
 	return fmt.Sprintf("%s %s is not ready: %s", reflect.TypeOf(e.Object).Elem().String(), e.Object.GetName(), e.Reason)
 }
 
+// NewNotInSync wraps creation of NotInSyncErrors for simplicity
 func NewNotInSync(obj crclient.Object, reason NotInSyncReason) *NotInSyncError {
 	return &NotInSyncError{
 		Reason: reason,
@@ -54,6 +56,8 @@ func NewNotInSync(obj crclient.Object, reason NotInSyncReason) *NotInSyncError {
 	}
 }
 
+// UnrecoverableSyncError is returned when provided objects cannot be synced with the cluster due to
+// an unexpected error (e.g. they are invalid according to the object's spec).
 type UnrecoverableSyncError struct {
 	Cause error
 }

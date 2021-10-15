@@ -51,10 +51,14 @@ func SyncObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Ob
 	}
 	shouldDelete, shouldUpdate := diffFunc(specObj, clusterObj)
 	if shouldDelete {
+		if config.ExperimentalFeaturesEnabled() {
+			api.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specObj, clusterObj)))
+		}
 		err := api.Client.Delete(api.Ctx, specObj)
 		if err != nil {
 			return nil, err
 		}
+		api.Logger.Info("Deleted object", "kind", objType.String(), "name", specObj.GetName())
 		return nil, NewNotInSync(specObj, UpdatedObjectReason)
 	}
 	if shouldUpdate {
@@ -70,6 +74,7 @@ func createObjectGeneric(specObj crclient.Object, api ClusterAPI) error {
 	err := api.Client.Create(api.Ctx, specObj)
 	switch {
 	case err == nil:
+		api.Logger.Info("Created object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())
 		return NewNotInSync(specObj, CreatedObjectReason)
 	case k8sErrors.IsAlreadyExists(err):
 		// Need to try to update the object to address an edge case where removing a labelselector
@@ -86,6 +91,7 @@ func updateObjectGeneric(specObj crclient.Object, api ClusterAPI) error {
 	err := api.Client.Update(api.Ctx, specObj)
 	switch {
 	case err == nil:
+		api.Logger.Info("Updated object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())
 		return NewNotInSync(specObj, UpdatedObjectReason)
 	case k8sErrors.IsConflict(err), k8sErrors.IsNotFound(err):
 		// Need to catch IsNotFound here because we attempt to update when creation fails with AlreadyExists

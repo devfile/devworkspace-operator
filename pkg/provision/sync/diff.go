@@ -30,6 +30,8 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// diffFunc represents a function that compares a spec object against the corresponding cluster object and
+// returns whether the object should be deleted or updated.
 type diffFunc func(spec crclient.Object, cluster crclient.Object) (delete, update bool)
 
 var diffFuncs = map[reflect.Type]diffFunc{
@@ -45,12 +47,15 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(routev1.Route{}):                basicDiffFunc(routeDiffOpts),
 }
 
+// basicDiffFunc returns a diffFunc that specifies an object needs an update if cmp.Equal fails
 func basicDiffFunc(diffOpt cmp.Options) diffFunc {
 	return func(spec, cluster crclient.Object) (delete, update bool) {
 		return false, !cmp.Equal(spec, cluster, diffOpt)
 	}
 }
 
+// labelsAndAnnotationsDiffFunc requires an object to be updated if any label or annotation present in the spec
+// object is not present in the cluster object.
 func labelsAndAnnotationsDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	clusterAnnotations := cluster.GetAnnotations()
 	for k, v := range spec.GetAnnotations() {
@@ -67,6 +72,8 @@ func labelsAndAnnotationsDiffFunc(spec, cluster crclient.Object) (delete, update
 	return false, false
 }
 
+// allDiffFuncs represents an 'and' condition across specified diffFuncs. Functions are checked in provided order,
+// returning the result of the first function to require an update/deletion.
 func allDiffFuncs(funcs ...diffFunc) diffFunc {
 	return func(spec, cluster crclient.Object) (delete, update bool) {
 		for _, df := range funcs {

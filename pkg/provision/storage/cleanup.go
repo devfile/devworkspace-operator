@@ -21,6 +21,7 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -53,7 +54,7 @@ var (
 	pvcCleanupPodCPURequest    = resource.MustParse(constants.PVCCleanupPodCPURequest)
 )
 
-func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) error {
+func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
 	PVCexists, err := commonPVCExists(workspace, clusterAPI)
 	if err != nil {
 		return err
@@ -109,7 +110,7 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprovision.C
 	}
 }
 
-func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) (*batchv1.Job, error) {
+func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.DevWorkspaceId
 	pvcName := config.Workspace.PVCName
 	jobLabels := map[string]string{
@@ -180,7 +181,7 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprovisi
 	return job, nil
 }
 
-func getClusterCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) (*batchv1.Job, error) {
+func getClusterCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
 	namespacedName := types.NamespacedName{
 		Name:      common.PVCCleanupJobName(workspace.Status.DevWorkspaceId),
 		Namespace: workspace.Namespace,
@@ -198,7 +199,7 @@ func getClusterCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI wsprov
 	return clusterJob, nil
 }
 
-func commonPVCExists(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) (bool, error) {
+func commonPVCExists(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (bool, error) {
 	namespacedName := types.NamespacedName{
 		Name:      config.Workspace.PVCName,
 		Namespace: workspace.Namespace,

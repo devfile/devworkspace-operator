@@ -16,11 +16,10 @@
 package workspace
 
 import (
-	"context"
-	"fmt"
 	"strings"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
@@ -28,13 +27,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -44,30 +38,9 @@ type RoutingProvisioningStatus struct {
 	ExposedEndpoints map[string]v1alpha1.ExposedEndpointList
 }
 
-var routingDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{}, "TypeMeta", "Status"),
-	// To ensure updates to annotations and labels are noticed, we need to ignore all fields in ObjectMeta
-	// *except* labels and annotations.
-	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{},
-		"ObjectMeta.Name",
-		"ObjectMeta.GenerateName",
-		"ObjectMeta.Namespace",
-		"ObjectMeta.SelfLink",
-		"ObjectMeta.UID",
-		"ObjectMeta.ResourceVersion",
-		"ObjectMeta.Generation",
-		"ObjectMeta.CreationTimestamp",
-		"ObjectMeta.DeletionTimestamp",
-		"ObjectMeta.DeletionGracePeriodSeconds",
-		"ObjectMeta.OwnerReferences",
-		"ObjectMeta.Finalizers",
-		"ObjectMeta.ClusterName",
-		"ObjectMeta.ManagedFields"),
-}
-
 func SyncRoutingToCluster(
 	workspace *dw.DevWorkspace,
-	clusterAPI ClusterAPI) RoutingProvisioningStatus {
+	clusterAPI sync.ClusterAPI) RoutingProvisioningStatus {
 
 	specRouting, err := getSpecRouting(workspace, clusterAPI.Scheme)
 	if err != nil {
@@ -76,44 +49,19 @@ func SyncRoutingToCluster(
 		}
 	}
 
-	clusterRouting, err := getClusterRouting(specRouting.Name, specRouting.Namespace, clusterAPI.Client)
-	if err != nil {
-		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Err: err},
-		}
+	clusterObj, err := sync.SyncObjectWithCluster(specRouting, clusterAPI)
+	switch t := err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
+		return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
+	case *sync.UnrecoverableSyncError:
+		return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{FailStartup: true, Err: t.Cause}}
+	default:
+		return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
 	}
 
-	if clusterRouting == nil {
-		err := clusterAPI.Client.Create(context.TODO(), specRouting)
-		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Requeue: true, Err: err},
-		}
-	}
-
-	if specRouting.Spec.RoutingClass != clusterRouting.Spec.RoutingClass {
-		err := clusterAPI.Client.Delete(context.TODO(), clusterRouting)
-		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Requeue: true, Err: err},
-		}
-	}
-
-	if !cmp.Equal(specRouting, clusterRouting, routingDiffOpts) {
-		clusterAPI.Logger.Info("Updating DevWorkspaceRouting")
-		if config.ExperimentalFeaturesEnabled() {
-			clusterAPI.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specRouting, clusterRouting, routingDiffOpts)))
-		}
-		clusterRouting.Labels = specRouting.Labels
-		clusterRouting.Annotations = specRouting.Annotations
-		clusterRouting.Spec = specRouting.Spec
-		err := clusterAPI.Client.Update(context.TODO(), clusterRouting)
-		if err != nil && !errors.IsConflict(err) {
-			return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
-		}
-		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Requeue: true},
-		}
-	}
-
+	clusterRouting := clusterObj.(*v1alpha1.DevWorkspaceRouting)
 	if clusterRouting.Status.Phase == v1alpha1.RoutingFailed {
 		return RoutingProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{FailStartup: true, Message: clusterRouting.Status.Message},
@@ -195,21 +143,5 @@ func getSpecRouting(
 		return nil, err
 	}
 
-	return routing, nil
-}
-
-func getClusterRouting(name string, namespace string, client runtimeClient.Client) (*v1alpha1.DevWorkspaceRouting, error) {
-	routing := &v1alpha1.DevWorkspaceRouting{}
-	namespacedName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      name,
-	}
-	err := client.Get(context.TODO(), namespacedName, routing)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
 	return routing, nil
 }

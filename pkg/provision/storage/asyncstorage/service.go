@@ -16,6 +16,7 @@
 package asyncstorage
 
 import (
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -24,11 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
-func SyncWorkspaceSyncServiceToCluster(asyncDeploy *appsv1.Deployment, api wsprovision.ClusterAPI) (*corev1.Service, error) {
+func SyncWorkspaceSyncServiceToCluster(asyncDeploy *appsv1.Deployment, api sync.ClusterAPI) (*corev1.Service, error) {
 	specService := getWorkspaceSyncServiceSpec(asyncDeploy)
 	err := controllerutil.SetOwnerReference(asyncDeploy, specService, api.Scheme)
 	if err != nil {
@@ -81,7 +80,7 @@ func getWorkspaceSyncServiceSpec(asyncDeploy *appsv1.Deployment) *corev1.Service
 	}
 }
 
-func getWorkspaceSyncServiceCluster(namespace string, api wsprovision.ClusterAPI) (*corev1.Service, error) {
+func getWorkspaceSyncServiceCluster(namespace string, api sync.ClusterAPI) (*corev1.Service, error) {
 	service := &corev1.Service{}
 	namespacedName := types.NamespacedName{
 		Name:      asyncServerServiceName,

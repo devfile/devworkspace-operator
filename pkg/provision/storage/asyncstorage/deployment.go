@@ -16,6 +16,7 @@
 package asyncstorage
 
 import (
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -29,7 +30,7 @@ import (
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
-func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI wsprovision.ClusterAPI) (*appsv1.Deployment, error) {
+func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
 	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, storage)
 	clusterDeployment, err := GetWorkspaceSyncDeploymentCluster(namespace, clusterAPI)
 	if err != nil {
@@ -151,7 +152,7 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 	return deployment
 }
 
-func GetWorkspaceSyncDeploymentCluster(namespace string, clusterAPI wsprovision.ClusterAPI) (*appsv1.Deployment, error) {
+func GetWorkspaceSyncDeploymentCluster(namespace string, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
 	deploy := &appsv1.Deployment{}
 	namespacedName := types.NamespacedName{
 		Name:      "async-storage", // TODO

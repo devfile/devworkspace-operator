@@ -17,21 +17,34 @@ package workspace
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // SyncRBAC generates RBAC and synchronizes the runtime objects
-func SyncRBAC(workspace *dw.DevWorkspace, client client.Client, reqLogger logr.Logger) ProvisioningStatus {
-	rbac := generateRBAC(workspace.Namespace)
+func SyncRBAC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) ProvisioningStatus {
+	rbacs := generateRBAC(workspace.Namespace)
+	requeue := false
+	for _, rbac := range rbacs {
+		_, err := sync.SyncObjectWithCluster(rbac, clusterAPI)
+		switch t := err.(type) {
+		case nil:
+			break
+		case *sync.NotInSyncError:
+			requeue = true
+		case *sync.UnrecoverableSyncError:
+			return ProvisioningStatus{FailStartup: true, Err: t.Cause}
+		default:
+			return ProvisioningStatus{Err: err}
+		}
+	}
 
-	requeue, err := SyncMutableObjects(rbac, client, reqLogger)
-	return ProvisioningStatus{Continue: !requeue, Err: err}
+	return ProvisioningStatus{Continue: !requeue}
 }
 
 func generateRBAC(namespace string) []client.Object {

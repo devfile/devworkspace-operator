@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -26,7 +27,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 // The CommonStorageProvisioner provisions one PVC per namespace and configures all volumes in a workspace
@@ -39,7 +39,7 @@ func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplate
 	return needsStorage(workspace)
 }
 
-func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) error {
+func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
 	// Add ephemeral volumes
 	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
 		return err
@@ -63,7 +63,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	return nil
 }
 
-func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) error {
+func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
 	return runCommonPVCCleanupJob(workspace, clusterAPI)
 }
 

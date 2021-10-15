@@ -17,11 +17,10 @@ package asyncstorage
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 // GetOrCreateSSHConfig returns the secret and configmap used for the asynchronous deployment. The Secret is generated per-workspace
@@ -37,7 +36,7 @@ import (
 // In both cases, if the ConfigMap does not exist, it is created.
 //
 // Returns NotReadyError if changes were made to the cluster.
-func GetOrCreateSSHConfig(workspace *dw.DevWorkspace, clusterAPI wsprovision.ClusterAPI) (*corev1.Secret, *corev1.ConfigMap, error) {
+func GetOrCreateSSHConfig(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*corev1.Secret, *corev1.ConfigMap, error) {
 	var pubKey []byte
 	clusterSecret, err := getSSHSidecarSecretCluster(workspace, clusterAPI)
 	if err != nil {

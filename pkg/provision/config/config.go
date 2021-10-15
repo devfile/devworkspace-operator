@@ -19,12 +19,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -38,7 +38,7 @@ type NamespacedConfig struct {
 // ReadNamespacedConfig reads the per-namespace DevWorkspace configmap and returns it as a struct. If there are
 // no valid configmaps in the specified namespace, returns (nil, nil). If there are multiple configmaps with the
 // per-namespace configmap label, returns an error.
-func ReadNamespacedConfig(namespace string, api wsprovision.ClusterAPI) (*NamespacedConfig, error) {
+func ReadNamespacedConfig(namespace string, api sync.ClusterAPI) (*NamespacedConfig, error) {
 	cmList := &corev1.ConfigMapList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=true", constants.NamespacedConfigLabelKey))
 	if err != nil {

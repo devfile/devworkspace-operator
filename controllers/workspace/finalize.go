@@ -19,6 +19,7 @@ import (
 	"context"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/go-logr/logr"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
@@ -72,7 +73,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
 		return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
 	}
-	err = storageProvisioner.CleanupWorkspaceStorage(workspace, wsprovision.ClusterAPI{
+	err = storageProvisioner.CleanupWorkspaceStorage(workspace, sync.ClusterAPI{
 		Ctx:    ctx,
 		Client: r.Client,
 		Scheme: r.Scheme,

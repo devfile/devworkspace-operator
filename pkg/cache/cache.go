@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -64,15 +65,25 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		&networkingv1.Ingress{}: {
 			Label: devworkspaceObjectSelector,
 		},
-		&routev1.Route{}: {
-			Label: devworkspaceObjectSelector,
-		},
 		&corev1.ConfigMap{}: {
 			Label: configmapObjectSelector,
 		},
 		&corev1.Secret{}: {
 			Label: secretObjectSelector,
 		},
+	}
+
+	if infrastructure.IsOpenShift() {
+		// Annoying quirk: cache.SelectorsByObject uses an internal struct for values (internal.Selector)
+		// so we _can't_ just add Routes here since we cannot initialize the corresponding value.
+		openShiftSelectors := cache.SelectorsByObject{
+			&routev1.Route{}: {
+				Label: devworkspaceObjectSelector,
+			},
+		}
+		for k, v := range openShiftSelectors {
+			selectors[k] = v
+		}
 	}
 
 	return cache.BuilderWithOptions(cache.Options{

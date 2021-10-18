@@ -16,40 +16,31 @@
 package asyncstorage
 
 import (
+	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/devfile/devworkspace-operator/internal/images"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
 	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, storage)
-	clusterDeployment, err := GetWorkspaceSyncDeploymentCluster(namespace, clusterAPI)
-	if err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return nil, err
-		}
-		err := clusterAPI.Client.Create(clusterAPI.Ctx, specDeployment)
-		if err != nil && !k8sErrors.IsAlreadyExists(err) {
-			return nil, err
-		}
+	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
+	switch err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
 		return nil, NotReadyError
+	case *sync.UnrecoverableSyncError:
+		return nil, err // TODO: This should fail workspace start
+	default:
+		return nil, err
 	}
-	if !equality.Semantic.DeepDerivative(specDeployment.Spec, clusterDeployment.Spec) {
-		err := clusterAPI.Client.Patch(clusterAPI.Ctx, specDeployment, client.Merge)
-		if err != nil && !k8sErrors.IsConflict(err) {
-			return nil, err
-		}
-		return nil, NotReadyError
-	}
+
+	clusterDeployment := clusterObj.(*appsv1.Deployment)
 	if clusterDeployment.Status.ReadyReplicas > 0 {
 		return clusterDeployment, nil
 	}

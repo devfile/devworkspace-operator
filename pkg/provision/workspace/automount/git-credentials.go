@@ -24,9 +24,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -142,37 +140,17 @@ func mountGitCredentialsSecret(secretName, mountPath, credentials, namespace str
 
 func createOrUpdateGitSecret(secretName string, namespace string, config string, api sync.ClusterAPI) error {
 	secret := getGitSecret(secretName, namespace, config)
-	if err := api.Client.Create(api.Ctx, secret); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-		existingCfg, err := getClusterGitSecret(secretName, namespace, api)
-		if err != nil {
-			return err
-		}
-		secret.ResourceVersion = existingCfg.ResourceVersion
-		err = api.Client.Update(api.Ctx, secret)
-		if err != nil {
-			return err
-		}
+	_, err := sync.SyncObjectWithCluster(secret, api)
+	switch t := err.(type) {
+	case nil:
+		return nil
+	case *sync.NotInSyncError:
+		return nil // Continue optimistically (as originally implemented)
+	case *sync.UnrecoverableSyncError:
+		return &FatalError{Err: t.Cause}
+	default:
+		return err
 	}
-	return nil
-}
-
-func getClusterGitSecret(secretName string, namespace string, api sync.ClusterAPI) (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
-	namespacedName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      secretName,
-	}
-	err := api.Client.Get(api.Ctx, namespacedName, secret)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return secret, nil
 }
 
 func getGitSecret(secretName string, namespace string, config string) *corev1.Secret {
@@ -195,38 +173,17 @@ func getGitSecret(secretName string, namespace string, config string) *corev1.Se
 
 func createOrUpdateGitConfigMap(configMapName string, namespace string, config string, api sync.ClusterAPI) error {
 	configMap := getGitConfigMap(configMapName, namespace, config)
-	if err := api.Client.Create(api.Ctx, configMap); err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			return err
-		}
-		existingCfg, err := getClusterGitConfigMap(configMapName, namespace, api)
-		if err != nil {
-			return err
-		}
-		configMap.ResourceVersion = existingCfg.ResourceVersion
-		err = api.Client.Update(api.Ctx, configMap)
-		if err != nil {
-			return err
-		}
-
+	_, err := sync.SyncObjectWithCluster(configMap, api)
+	switch t := err.(type) {
+	case nil:
+		return nil
+	case *sync.NotInSyncError:
+		return nil // Continue optimistically (as originally implemented)
+	case *sync.UnrecoverableSyncError:
+		return &FatalError{Err: t.Cause}
+	default:
+		return err
 	}
-	return nil
-}
-
-func getClusterGitConfigMap(configMapName string, namespace string, api sync.ClusterAPI) (*corev1.ConfigMap, error) {
-	configMap := &corev1.ConfigMap{}
-	namespacedName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      configMapName,
-	}
-	err := api.Client.Get(api.Ctx, namespacedName, configMap)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return configMap, nil
 }
 
 func getGitConfigMap(configMapName string, namespace string, config string) *corev1.ConfigMap {

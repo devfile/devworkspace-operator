@@ -16,9 +16,9 @@
 package automount
 
 import (
-	"context"
 	"path"
 
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	v1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,9 +27,9 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getDevWorkspaceSecrets(namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, []v1.EnvFromSource, error) {
+func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAdditions, []v1.EnvFromSource, error) {
 	secrets := &v1.SecretList{}
-	if err := client.List(context.TODO(), secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, nil, err

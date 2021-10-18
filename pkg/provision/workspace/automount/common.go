@@ -18,9 +18,8 @@ package automount
 import (
 	"fmt"
 
-	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -39,21 +38,21 @@ func (e *FatalError) Unwrap() error {
 	return e.Err
 }
 
-func GetAutoMountResources(client k8sclient.Client, namespace string) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
-	gitCMPodAdditions, err := getDevWorkspaceGitConfig(client, namespace)
+func GetAutoMountResources(api sync.ClusterAPI, namespace string) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+	gitCMPodAdditions, err := getDevWorkspaceGitConfig(api, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	cmPodAdditions, cmEnvAdditions, err := getDevWorkspaceConfigmaps(namespace, client)
+	cmPodAdditions, cmEnvAdditions, err := getDevWorkspaceConfigmaps(namespace, api)
 	if err != nil {
 		return nil, nil, err
 	}
-	secretPodAdditions, secretEnvAdditions, err := getDevWorkspaceSecrets(namespace, client)
+	secretPodAdditions, secretEnvAdditions, err := getDevWorkspaceSecrets(namespace, api)
 	if err != nil {
 		return nil, nil, err
 	}
-	pvcPodAdditions, err := getAutoMountPVCs(namespace, client)
+	pvcPodAdditions, err := getAutoMountPVCs(namespace, api)
 	if err != nil {
 		return nil, nil, err
 	}

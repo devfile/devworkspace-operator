@@ -16,9 +16,9 @@
 package automount
 
 import (
-	"context"
 	"path"
 
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,9 +27,9 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getDevWorkspaceConfigmaps(namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
 	configmaps := &corev1.ConfigMapList{}
-	if err := client.List(context.TODO(), configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, nil, err

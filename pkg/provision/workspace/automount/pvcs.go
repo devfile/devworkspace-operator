@@ -16,9 +16,9 @@
 package automount
 
 import (
-	"context"
 	"path"
 
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -27,9 +27,9 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getAutoMountPVCs(namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, error) {
+func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAdditions, error) {
 	pvcs := &corev1.PersistentVolumeClaimList{}
-	if err := client.List(context.TODO(), pvcs, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, pvcs, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, err

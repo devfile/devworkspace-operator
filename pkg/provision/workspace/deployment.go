@@ -87,7 +87,7 @@ func SyncDeploymentToCluster(
 	saName string,
 	clusterAPI sync.ClusterAPI) DeploymentProvisioningStatus {
 
-	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(clusterAPI.Client, workspace.GetNamespace())
+	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(clusterAPI, workspace.GetNamespace())
 	if err != nil {
 		var fatalErr *automount.FatalError
 		if errors.As(err, &fatalErr) {

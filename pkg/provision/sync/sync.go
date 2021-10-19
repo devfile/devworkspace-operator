@@ -65,7 +65,7 @@ func SyncObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Ob
 		if config.ExperimentalFeaturesEnabled() {
 			api.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specObj, clusterObj)))
 		}
-		return nil, updateObjectGeneric(specObj, api)
+		return nil, updateObjectGeneric(specObj, clusterObj, api)
 	}
 	return clusterObj, nil
 }
@@ -79,7 +79,7 @@ func createObjectGeneric(specObj crclient.Object, api ClusterAPI) error {
 	case k8sErrors.IsAlreadyExists(err):
 		// Need to try to update the object to address an edge case where removing a labelselector
 		// results in the object not being tracked by the controller's cache.
-		return updateObjectGeneric(specObj, api)
+		return updateObjectGeneric(specObj, nil, api)
 	case k8sErrors.IsInvalid(err):
 		return &UnrecoverableSyncError{err}
 	default:
@@ -87,8 +87,18 @@ func createObjectGeneric(specObj crclient.Object, api ClusterAPI) error {
 	}
 }
 
-func updateObjectGeneric(specObj crclient.Object, api ClusterAPI) error {
-	err := api.Client.Update(api.Ctx, specObj)
+func updateObjectGeneric(specObj, clusterObj crclient.Object, api ClusterAPI) error {
+	updateFunc := getUpdateFunc(specObj)
+	updatedObj, err := updateFunc(specObj, clusterObj)
+	if err != nil {
+		if err := api.Client.Delete(api.Ctx, specObj); err != nil {
+			return err
+		}
+		api.Logger.Info("Deleted object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())
+		return NewNotInSync(specObj, UpdatedObjectReason)
+	}
+
+	err = api.Client.Update(api.Ctx, updatedObj)
 	switch {
 	case err == nil:
 		api.Logger.Info("Updated object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())

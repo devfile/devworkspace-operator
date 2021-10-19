@@ -48,4 +48,5 @@ deployChe() {
 
 deployDWO
 deployChe
-bash <(curl -s https://raw.githubusercontent.com/eclipse/che/main/tests/devworkspace-happy-path/remote-launch.sh)
+export CHE_REPO_BRANCH="main"
+bash <(curl -s https://raw.githubusercontent.com/eclipse/che/${CHE_REPO_BRANCH}/tests/devworkspace-happy-path/remote-launch.sh)

@@ -17,9 +17,15 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	routev1 "github.com/openshift/api/route/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,20 +57,16 @@ func SyncObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Ob
 	}
 	shouldDelete, shouldUpdate := diffFunc(specObj, clusterObj)
 	if shouldDelete {
-		if config.ExperimentalFeaturesEnabled() {
-			api.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specObj, clusterObj)))
-		}
+		printDiff(specObj, clusterObj, api.Logger)
 		err := api.Client.Delete(api.Ctx, specObj)
 		if err != nil {
 			return nil, err
 		}
 		api.Logger.Info("Deleted object", "kind", objType.String(), "name", specObj.GetName())
-		return nil, NewNotInSync(specObj, UpdatedObjectReason)
+		return nil, NewNotInSync(specObj, DeletedObjectReason)
 	}
 	if shouldUpdate {
-		if config.ExperimentalFeaturesEnabled() {
-			api.Logger.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specObj, clusterObj)))
-		}
+		printDiff(specObj, clusterObj, api.Logger)
 		return nil, updateObjectGeneric(specObj, clusterObj, api)
 	}
 	return clusterObj, nil
@@ -95,7 +97,7 @@ func updateObjectGeneric(specObj, clusterObj crclient.Object, api ClusterAPI) er
 			return err
 		}
 		api.Logger.Info("Deleted object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())
-		return NewNotInSync(specObj, UpdatedObjectReason)
+		return NewNotInSync(specObj, DeletedObjectReason)
 	}
 
 	err = api.Client.Update(api.Ctx, updatedObj)
@@ -119,5 +121,30 @@ func isMutableObject(obj crclient.Object) bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func printDiff(specObj, clusterObj crclient.Object, log logr.Logger) {
+	if config.ExperimentalFeaturesEnabled() {
+		var diffOpts cmp.Options
+		switch specObj.(type) {
+		case *rbacv1.Role:
+			diffOpts = roleDiffOpts
+		case *rbacv1.RoleBinding:
+			diffOpts = rolebindingDiffOpts
+		case *appsv1.Deployment:
+			diffOpts = deploymentDiffOpts
+		case *corev1.ConfigMap:
+			diffOpts = configmapDiffOpts
+		case *v1alpha1.DevWorkspaceRouting:
+			diffOpts = routingDiffOpts
+		case *networkingv1.Ingress:
+			diffOpts = ingressDiffOpts
+		case *routev1.Route:
+			diffOpts = routeDiffOpts
+		default:
+			diffOpts = nil
+		}
+		log.Info(fmt.Sprintf("Diff: %s", cmp.Diff(specObj, clusterObj, diffOpts)))
 	}
 }

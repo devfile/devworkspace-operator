@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 var NonAlphaNumRegexp = regexp.MustCompile(`[^a-z0-9]+`)
@@ -94,4 +96,12 @@ func AutoMountSecretVolumeName(volumeName string) string {
 
 func AutoMountPVCVolumeName(pvcName string) string {
 	return fmt.Sprintf("automount-pvc-%s", pvcName)
+}
+
+func WorkspaceRoleName() string {
+	return "workspace"
+}
+
+func WorkspaceRolebindingName() string {
+	return constants.ServiceAccount + "dw"
 }

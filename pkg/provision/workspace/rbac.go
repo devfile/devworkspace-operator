@@ -17,9 +17,8 @@ package workspace
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-
-	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +51,7 @@ func generateRBAC(namespace string) []client.Object {
 	return []client.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "workspace",
+				Name:      common.WorkspaceRoleName(),
 				Namespace: namespace,
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -96,7 +95,7 @@ func generateRBAC(namespace string) []client.Object {
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      constants.ServiceAccount + "-dw",
+				Name:      common.WorkspaceRolebindingName(),
 				Namespace: namespace,
 			},
 			RoleRef: rbacv1.RoleRef{

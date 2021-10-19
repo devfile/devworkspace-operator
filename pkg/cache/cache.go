@@ -16,6 +16,7 @@ package cache
 import (
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	routev1 "github.com/openshift/api/route/v1"
@@ -23,6 +24,8 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
@@ -70,6 +73,12 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		},
 		&corev1.Secret{}: {
 			Label: secretObjectSelector,
+		},
+		&rbacv1.Role{}: {
+			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.WorkspaceRoleName()}),
+		},
+		&rbacv1.RoleBinding{}: {
+			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.WorkspaceRolebindingName()}),
 		},
 	}
 

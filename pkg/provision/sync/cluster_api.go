@@ -41,6 +41,7 @@ type NotInSyncReason string
 const (
 	UpdatedObjectReason NotInSyncReason = "Updated object"
 	CreatedObjectReason NotInSyncReason = "Created object"
+	DeletedObjectReason NotInSyncReason = "Deleted object"
 	NeedRetryReason     NotInSyncReason = "Need to retry"
 )
 

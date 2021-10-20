@@ -113,6 +113,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 				workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
 				workspaceStatus.Conditions[idx].Status = corev1.ConditionUnknown
 				workspaceStatus.Conditions[idx].Message = ""
+				workspaceStatus.Conditions[idx].Reason = ""
 			}
 			continue
 		}
@@ -122,6 +123,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 			workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
 			workspaceStatus.Conditions[idx].Status = currCondition.Status
 			workspaceStatus.Conditions[idx].Message = currCondition.Message
+			workspaceStatus.Conditions[idx].Reason = currCondition.Reason
 		}
 	}
 
@@ -136,6 +138,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 			Type:               condType,
 			Status:             cond.Status,
 			Message:            cond.Message,
+			Reason:             cond.Reason,
 		})
 	}
 

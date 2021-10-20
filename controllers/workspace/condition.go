@@ -39,6 +39,10 @@ type workspaceConditions struct {
 }
 
 func (c *workspaceConditions) setConditionTrue(conditionType dw.DevWorkspaceConditionType, msg string) {
+	c.setConditionTrueWithReason(conditionType, msg, "")
+}
+
+func (c *workspaceConditions) setConditionTrueWithReason(conditionType dw.DevWorkspaceConditionType, msg string, reason string) {
 	if c.conditions == nil {
 		c.conditions = map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition{}
 	}
@@ -46,6 +50,7 @@ func (c *workspaceConditions) setConditionTrue(conditionType dw.DevWorkspaceCond
 	c.conditions[conditionType] = dw.DevWorkspaceCondition{
 		Status:  corev1.ConditionTrue,
 		Message: msg,
+		Reason:  reason,
 	}
 }
 

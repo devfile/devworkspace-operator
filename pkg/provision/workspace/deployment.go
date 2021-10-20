@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -60,6 +61,19 @@ var unrecoverablePodEventReasons = []string{
 	"FailedScheduling",
 	"FailedCreate",
 	"ReplicaSetCreateError",
+}
+
+var badRequestFailures = []string{
+	"CrashLoopBackOff",
+	"ErrImagePull",
+	"ImagePullBackOff",
+}
+
+var infrastructureFailures = []string{
+	"CreateContainerError",
+	"RunContainerError",
+	"FailedScheduling",
+	"FailedMount",
 }
 
 type DeploymentProvisioningStatus struct {
@@ -217,6 +231,23 @@ func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
 		}
 	}
 	return &corev1.PodSecurityContext{}
+}
+
+// DetermineStartupFailureReason scans a deployment failed startup message and returns
+// the corresponding failure reason.
+// Unknown reason is returned when failure reason cannot be found.
+func DetermineStartupFailureReason(failStartupMsg string) metrics.FailureReason {
+	for _, failure := range badRequestFailures {
+		if strings.Contains(failStartupMsg, failure) {
+			return metrics.ReasonBadRequest
+		}
+	}
+	for _, failure := range infrastructureFailures {
+		if strings.Contains(failStartupMsg, failure) {
+			return metrics.ReasonInfrastructureFailure
+		}
+	}
+	return metrics.ReasonUnknown
 }
 
 func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {

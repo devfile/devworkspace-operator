@@ -16,8 +16,6 @@
 package metrics
 
 import (
-	"strings"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
@@ -67,32 +65,20 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	reason := determinateFailureReason(wksp)
-
-	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: reason})
+	reason := getFailureReason(wksp)
+	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: reason.SnakeCase()})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
 	}
 	ctr.Inc()
 }
 
-// determinateFailureReason scans devworkspace .status.message and try to match
-// it to the know category. Unknown is return when no one is matched
-func determinateFailureReason(wksp *dw.DevWorkspace) string {
-	if strings.HasPrefix(wksp.Status.Message, WorkspaceEngineFailurePrefix) {
-		return reasonWorkspaceEngineFailure
+func getFailureReason(wksp *dw.DevWorkspace) FailureReason {
+	failedCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceFailedStart)
+	if failedCondition != nil && len(failedCondition.Reason) > 0 {
+		return GetFailureReasonFromStr(failedCondition.Reason)
 	}
-	for _, failure := range badRequestFailures {
-		if strings.Contains(wksp.Status.Message, failure) {
-			return reasonBadRequest
-		}
-	}
-	for _, failure := range infrastructureFailures {
-		if strings.Contains(wksp.Status.Message, failure) {
-			return reasonInfrastructureFailure
-		}
-	}
-	return reasonUnknown
+	return ReasonUnknown
 }
 
 func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger) {

@@ -191,8 +191,13 @@ if $GEN_OLM; then
   echo "Generating base deployment files for OLM"
   export RBAC_PROXY_IMAGE="${OPENSHIFT_RBAC_PROXY_IMAGE:-registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8}"
   export NAMESPACE=openshift-operators
+  # It's needed to filter out the ServiceAccount object for OLM, as having a serviceaccount that matches the serviceaccount
+  # in the CSV causes scorecard failures. The easiest way to do this is by filtering it out *here*, as kustomize makes it
+  # impossible to drop the serviceaccount without reworking the templates significantly (the manager.yaml deployment depends
+  # on the SERVICE_ACCOUNT_NAME variable pulled from the serviceaccount)
   ${KUSTOMIZE} build "${SCRIPT_DIR}/templates/olm" \
     | envsubst "$SUBST_VARS" \
+    | yq -Y 'select(.kind != "ServiceAccount")' \
     > "${OLM_DIR}/${COMBINED_FILENAME}"
   unset RBAC_PROXY_IMAGE
   echo "File saved to ${OLM_DIR}/${COMBINED_FILENAME}"

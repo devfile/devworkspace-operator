@@ -1,0 +1,30 @@
+name: "Should add postStart lifecycle hook for event with workingDir"
+
+input:
+  devfile:
+    commands:
+      - id: test-postStart
+        exec:
+          component: test-component
+          commandLine: "echo 'hello world'"
+          workingDir: "/tmp/test-dir"
+    events:
+      postStart:
+        - test-postStart
+  containers:
+    - name: test-component
+      image: test-img
+
+output:
+  containers:
+    - name: test-component
+      image: test-img
+      lifecycle:
+        postStart:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - |-
+                cd /tmp/test-dir
+                echo 'hello world'

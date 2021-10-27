@@ -1,0 +1,21 @@
+name: "Returns error when postStart command requires env vars"
+
+input:
+  devfile:
+    commands:
+      - id: test-cmd
+        exec:
+          component: test-component
+          commandLine: "echo hello world ${MY_ENV}"
+          env:
+            - name: MY_ENV
+              value: /projects
+    events:
+      postStart:
+        - test-cmd
+  containers:
+    - name: test-component
+      image: test-img
+
+output:
+  errRegexp: ".*env vars in postStart command are unsupported.*"

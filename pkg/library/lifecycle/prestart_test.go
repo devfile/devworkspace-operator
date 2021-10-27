@@ -26,25 +26,25 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type testCase struct {
+type preStartTestCase struct {
 	Name   string                             `json:"name,omitempty"`
 	Input  dw.DevWorkspaceTemplateSpecContent `json:"input,omitempty"`
-	Output testOutput                         `json:"output,omitempty"`
+	Output preStartTestOutput                 `json:"output,omitempty"`
 }
 
-type testOutput struct {
+type preStartTestOutput struct {
 	InitContainers []dw.Component `json:"initContainers,omitempty"`
 	MainContainers []dw.Component `json:"mainContainers,omitempty"`
 	ErrRegexp      *string        `json:"errRegexp,omitempty"`
 }
 
-func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
-	testPath := filepath.Join("./testdata/lifecycle", testFilename)
+func loadPreStartTestCaseOrPanic(t *testing.T, testFilename string) preStartTestCase {
+	testPath := filepath.Join("./testdata/prestart", testFilename)
 	bytes, err := ioutil.ReadFile(testPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var test testCase
+	var test preStartTestCase
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
@@ -53,11 +53,11 @@ func loadTestCaseOrPanic(t *testing.T, testFilename string) testCase {
 }
 
 func TestGetInitContainers(t *testing.T) {
-	tests := []testCase{
-		loadTestCaseOrPanic(t, "no_events.yaml"),
-		loadTestCaseOrPanic(t, "prestart_exec_command.yaml"),
-		loadTestCaseOrPanic(t, "prestart_apply_command.yaml"),
-		loadTestCaseOrPanic(t, "init_and_main_container.yaml"),
+	tests := []preStartTestCase{
+		loadPreStartTestCaseOrPanic(t, "no_events.yaml"),
+		loadPreStartTestCaseOrPanic(t, "prestart_exec_command.yaml"),
+		loadPreStartTestCaseOrPanic(t, "prestart_apply_command.yaml"),
+		loadPreStartTestCaseOrPanic(t, "init_and_main_container.yaml"),
 	}
 
 	for _, tt := range tests {

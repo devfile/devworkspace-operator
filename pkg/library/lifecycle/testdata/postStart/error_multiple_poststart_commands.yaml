@@ -1,0 +1,23 @@
+name: "returns error when multiple postStart commands use same component"
+
+input:
+  devfile:
+    commands:
+      - id: test-cmd-1
+        exec:
+          component: test-component
+          commandLine: "echo 'hello world 1'"
+      - id: test-cmd-2
+        exec:
+          component: test-component
+          commandLine: "echo 'hello world 2'"
+    events:
+      postStart:
+        - test-cmd-1
+        - test-cmd-2
+  containers:
+    - name: test-component
+      image: test-img
+
+output:
+  errRegexp: ".*component .* has multiple postStart events attached to it.*"

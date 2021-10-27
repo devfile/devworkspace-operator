@@ -1,0 +1,10 @@
+name: "Returns error when postStart command does not exist"
+
+input:
+  devfile:
+    events:
+      postStart:
+        - test-cmd
+
+output:
+  errRegexp: ".*could not resolve command for postStart event 'test-cmd'.*"

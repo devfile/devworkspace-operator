@@ -1,0 +1,18 @@
+name: "Returns error when postStart command requires nonexistent container"
+
+input:
+  devfile:
+    commands:
+      - id: test-cmd
+        exec:
+          component: test-component-wrong-name
+          commandLine: "echo hello world"
+    events:
+      postStart:
+        - test-cmd
+  containers:
+    - name: test-component
+      image: test-img
+
+output:
+  errRegexp: ".*failed to process postStart event test-cmd:.*container component with name .* not found.*"

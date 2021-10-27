@@ -1,0 +1,51 @@
+name: "Adds all postStart events to containers"
+
+input:
+  devfile:
+    commands:
+      - id: test-postStart-1
+        exec:
+          component: test-component-1
+          commandLine: "echo 'hello world 1'"
+      - id: test-postStart-2
+        exec:
+          component: test-component-2
+          commandLine: "echo 'hello world 2'"
+          workingDir: "/tmp/test-dir"
+    events:
+      postStart:
+        - test-postStart-1
+        - test-postStart-2
+
+  containers:
+    - name: test-component-1
+      image: test-img
+    - name: test-component-2
+      image: test-img
+    - name: test-component-3
+      image: test-img
+
+output:
+  containers:
+    - name: test-component-1
+      image: test-img
+      lifecycle:
+        postStart:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - echo 'hello world 1'
+    - name: test-component-2
+      image: test-img
+      lifecycle:
+        postStart:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - |-
+                cd /tmp/test-dir
+                echo 'hello world 2'
+    - name: test-component-3
+      image: test-img

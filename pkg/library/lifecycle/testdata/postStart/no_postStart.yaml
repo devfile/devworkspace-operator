@@ -1,0 +1,20 @@
+name: "Should do nothing when devfile does not include postStart events"
+
+input:
+  devfile:
+    commands:
+      - id: prestart-cmd
+        exec:
+          component: theia-ide
+          commandLine: echo "Hello from $(pwd)"
+    events:
+      preStart:
+        - prestart-cmd
+  containers:
+    - name: test-container
+      image: my-test-image
+
+output:
+  containers:
+    - name: test-container
+      image: my-test-image

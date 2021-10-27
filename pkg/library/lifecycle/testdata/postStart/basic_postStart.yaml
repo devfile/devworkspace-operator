@@ -1,0 +1,27 @@
+name: "Should add postStart lifecycle hook for basic event"
+
+input:
+  devfile:
+    commands:
+      - id: test-postStart
+        exec:
+          component: test-component
+          commandLine: "echo 'hello world'"
+    events:
+      postStart:
+        - test-postStart
+  containers:
+    - name: test-component
+      image: test-img
+
+output:
+  containers:
+    - name: test-component
+      image: test-img
+      lifecycle:
+        postStart:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - "echo 'hello world'"

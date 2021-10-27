@@ -1,0 +1,14 @@
+name: "Returns error when postStart command is not exec-type"
+
+input:
+  devfile:
+    commands:
+      - id: test-command
+        apply:
+          component: my-component
+    events:
+      postStart:
+        - test-command
+
+output:
+  errRegexp: "can not use Apply-type command in postStart lifecycle event"

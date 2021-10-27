@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Package container contains library functions for converting DevWorkspace Container components to Kubernetes
 // components
 //
@@ -63,6 +64,10 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec) (*v1al
 		}
 		handleMountSources(k8sContainer, component.Container)
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)
+	}
+
+	if err := lifecycle.AddPostStartLifecycleHooks(workspace, podAdditions.Containers); err != nil {
+		return nil, err
 	}
 
 	for _, container := range initContainers {

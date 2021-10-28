@@ -1,0 +1,20 @@
+name: Linting with Vale
+on:
+  - pull_request
+  - push
+jobs:
+  prose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - name: Vale Linter
+        uses: errata-ai/vale-action@v1.4.0
+        with:
+          files: __onlyModified
+          styles: https://github.com/vale-at-red-hat/vale-at-red-hat/releases/latest/download/RedHat.zip
+          config: https://raw.githubusercontent.com/vale-at-red-hat/vale-at-red-hat/master/.vale-for-github-action.ini
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+  

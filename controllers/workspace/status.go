@@ -172,12 +172,8 @@ func checkServerStatus(workspace *dw.DevWorkspace) (ok bool, err error) {
 	if err != nil {
 		return false, err
 	}
-	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		// Assume endpoint is unimplemented and * is covered with authentication.
-		return true, nil
-	}
-	if resp.StatusCode == 404 {
-		// Compatibility: assume endpoint is unimplemented.
+	if (resp.StatusCode / 100) == 4 {
+		// Assume endpoint is unimplemented and/or * is covered with authentication.
 		return true, nil
 	}
 	ok = (resp.StatusCode / 100) == 2

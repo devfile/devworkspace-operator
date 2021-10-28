@@ -5,7 +5,7 @@
       "type": "grafana",
       "id": "grafana",
       "name": "Grafana",
-      "version": "8.0.6"
+      "version": "8.1.6"
     },
     {
       "type": "panel",
@@ -17,6 +17,12 @@
       "type": "panel",
       "id": "heatmap",
       "name": "Heatmap",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "piechart",
+      "name": "Pie chart",
       "version": ""
     },
     {
@@ -41,6 +47,12 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
@@ -113,7 +125,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.6",
       "targets": [
         {
           "exemplar": true,
@@ -544,7 +556,7 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 6,
         "x": 12,
         "y": 14
       },
@@ -564,7 +576,7 @@
         "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.6",
       "targets": [
         {
           "exemplar": true,
@@ -576,6 +588,65 @@
       ],
       "title": "DevWorkspace failure rate",
       "type": "stat"
+    },
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 14
+      },
+      "id": 47,
+      "options": {
+        "displayLabels": [
+          "percent"
+        ],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "exemplar": true,
+          "expr": "devworkspace_fail_total{}",
+          "format": "time_series",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "{{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "DevWorkspace Startup Failure Reasons",
+      "type": "piechart"
     },
     {
       "collapsed": false,
@@ -623,7 +694,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -981,7 +1052,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1074,7 +1145,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1175,7 +1246,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "8.0.6",
+      "pluginVersion": "8.1.6",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -1265,5 +1336,5 @@
   "timezone": "",
   "title": "DWO",
   "uid": "EdJ14YW7k",
-  "version": 10
+  "version": 11
 }

@@ -54,6 +54,7 @@ var containerFailureStateReasons = []string{
 }
 
 var unrecoverablePodEventReasons = []string{
+	"FailedPostStartHook",
 	"FailedMount",
 	"FailedScheduling",
 	"FailedCreate",

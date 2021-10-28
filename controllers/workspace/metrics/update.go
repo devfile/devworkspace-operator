@@ -66,7 +66,7 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 		sourceLabel = "unknown"
 	}
 	reason := getFailureReason(wksp)
-	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: reason.SnakeCase()})
+	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: reason.GetReason()})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
 	}
@@ -75,7 +75,7 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 
 func getFailureReason(wksp *dw.DevWorkspace) FailureReason {
 	failedCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceFailedStart)
-	if failedCondition != nil && len(failedCondition.Reason) > 0 {
+	if failedCondition != nil && failedCondition.Reason != "" {
 		return GetFailureReasonFromStr(failedCondition.Reason)
 	}
 	return ReasonUnknown

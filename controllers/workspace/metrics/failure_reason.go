@@ -15,19 +15,16 @@
 
 package metrics
 
-import (
-	"strings"
-)
-
 type FailureReason struct {
 	snakeCase string
+	camelCase string
 }
 
 var (
-	ReasonBadRequest             = FailureReason{snakeCase: "bad_request"}
-	ReasonInfrastructureFailure  = FailureReason{snakeCase: "infrastructure_failure"}
-	ReasonWorkspaceEngineFailure = FailureReason{snakeCase: "workspace_engine_failure"}
-	ReasonUnknown                = FailureReason{snakeCase: "unknown"}
+	ReasonBadRequest             = FailureReason{snakeCase: "bad_request", camelCase: "BadRequest"}
+	ReasonInfrastructureFailure  = FailureReason{snakeCase: "infrastructure_failure", camelCase: "InfrastructureFailure"}
+	ReasonWorkspaceEngineFailure = FailureReason{snakeCase: "workspace_engine_failure", camelCase: "WorkspaceEngineFailure"}
+	ReasonUnknown                = FailureReason{snakeCase: "unknown", camelCase: "Unknown"}
 )
 
 var devworkspaceFailureReasons [4]FailureReason = [4]FailureReason{
@@ -38,7 +35,7 @@ var devworkspaceFailureReasons [4]FailureReason = [4]FailureReason{
 }
 
 func (f *FailureReason) CamelCase() string {
-	return convertSnakeCaseToCamelCase(f.snakeCase)
+	return f.camelCase
 }
 
 func (f *FailureReason) SnakeCase() string {
@@ -49,26 +46,9 @@ func (f *FailureReason) SnakeCase() string {
 // string representation. The input string representation can be snake case or camel case.
 func GetFailureReasonFromStr(reason string) FailureReason {
 	for _, v := range devworkspaceFailureReasons {
-		if v.snakeCase == reason || convertSnakeCaseToCamelCase(v.snakeCase) == reason {
+		if reason == v.snakeCase || reason == v.camelCase {
 			return v
 		}
 	}
 	return ReasonUnknown
-}
-
-// convertSnakeCaseToCamelCase converts the input string from camel case to snake case.
-func convertSnakeCaseToCamelCase(str string) (result string) {
-	result = ""
-	prevUnderscore := false
-	for k, v := range str {
-		if prevUnderscore || k == 0 {
-			result += strings.ToUpper(string(v))
-			prevUnderscore = false
-		} else if v != '_' {
-			result += string(v)
-		} else {
-			prevUnderscore = true
-		}
-	}
-	return result
 }

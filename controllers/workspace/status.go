@@ -119,7 +119,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 		}
 
 		// Update condition if needed
-		if workspaceCondition.Status != currCondition.Status || workspaceCondition.Message != currCondition.Message {
+		if workspaceCondition.Status != currCondition.Status || workspaceCondition.Message != currCondition.Message || workspaceCondition.Reason != currCondition.Reason {
 			workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
 			workspaceStatus.Conditions[idx].Status = currCondition.Status
 			workspaceStatus.Conditions[idx].Message = currCondition.Message

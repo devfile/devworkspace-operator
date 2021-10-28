@@ -379,7 +379,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	deploymentStatus := wsprovision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
-			failureReason := wsprovision.DetermineStartupFailureReason(deploymentStatus.Info())
+			failureReason := metrics.DetermineProvisioningFailureReason(deploymentStatus)
 			return r.failWorkspace(workspace, deploymentStatus.Info(), failureReason, reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on deployment to be ready")
@@ -493,7 +493,7 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 func (r *DevWorkspaceReconciler) failWorkspace(workspace *dw.DevWorkspace, msg string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
 	logger.Info("DevWorkspace failed to start: " + msg)
 	status.phase = devworkspacePhaseFailing
-	status.setConditionTrueWithReason(dw.DevWorkspaceFailedStart, msg, reason.CamelCase())
+	status.setConditionTrueWithReason(dw.DevWorkspaceFailedStart, msg, reason.GetReason())
 	if workspace.Spec.Started {
 		return reconcile.Result{Requeue: true}, nil
 	}

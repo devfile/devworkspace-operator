@@ -16,37 +16,32 @@
 package metrics
 
 type FailureReason struct {
-	snakeCase string
-	camelCase string
+	reason string
 }
 
 var (
-	ReasonBadRequest             = FailureReason{snakeCase: "bad_request", camelCase: "BadRequest"}
-	ReasonInfrastructureFailure  = FailureReason{snakeCase: "infrastructure_failure", camelCase: "InfrastructureFailure"}
-	ReasonWorkspaceEngineFailure = FailureReason{snakeCase: "workspace_engine_failure", camelCase: "WorkspaceEngineFailure"}
-	ReasonUnknown                = FailureReason{snakeCase: "unknown", camelCase: "Unknown"}
+	ReasonBadRequest             = FailureReason{reason: "BadRequest"}
+	ReasonInfrastructureFailure  = FailureReason{"InfrastructureFailure"}
+	ReasonWorkspaceEngineFailure = FailureReason{"WorkspaceEngineFailure"}
+	ReasonUnknown                = FailureReason{"Unknown"}
 )
 
-var devworkspaceFailureReasons [4]FailureReason = [4]FailureReason{
+var devworkspaceFailureReasons = []FailureReason{
 	ReasonBadRequest,
 	ReasonInfrastructureFailure,
 	ReasonWorkspaceEngineFailure,
 	ReasonUnknown,
 }
 
-func (f *FailureReason) CamelCase() string {
-	return f.camelCase
-}
-
-func (f *FailureReason) SnakeCase() string {
-	return f.snakeCase
+func (f *FailureReason) GetReason() string {
+	return f.reason
 }
 
 // GetFailureReasonFromStr returns the corresponding FailureReason given an input
 // string representation. The input string representation can be snake case or camel case.
 func GetFailureReasonFromStr(reason string) FailureReason {
 	for _, v := range devworkspaceFailureReasons {
-		if reason == v.snakeCase || reason == v.camelCase {
+		if reason == v.reason {
 			return v
 		}
 	}

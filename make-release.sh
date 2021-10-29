@@ -19,26 +19,34 @@ set -e
 DWO_REPO="${DWO_REPO:-git@github.com:devfile/devworkspace-operator}"
 DWO_QUAY_REPO="${DWO_QUAY_REPO:-quay.io/devfile/devworkspace-controller}"
 PROJECT_CLONE_QUAY_REPO="${PROJECT_CLONE_QUAY_REPO:-quay.io/devfile/project-clone}"
+DWO_BUNDLE_QUAY_REPO="${DWO_BUNDLE_QUAY_REPO:-quay.io/devfile/devworkspace-operator-bundle}"
+DWO_INDEX_QUAY_REPO="${DWO_INDEX_QUAY_REPO:-quay.io/devfile/devworkspace-operator-index}"
 MAIN_BRANCH="main"
 VERBOSE=""
 TMP=""
 
 usage () {
 cat << EOF
-This scripts handles upstream releasing stuff.
+This scripts handles the upstream release process for DWO.
 
-Prerelease is supposed to happen first, that will create .x
-branch that will be used as a based for downstream DWO release.
+To begin a new release process, use the '--prerelease' flag. This will create a
+branch, e.g. '0.<VERSION>.x' for the specified version and update all relevant
+files within that branch to reflect the new version. This branch should then be
+tested, with additional commits cherry-picked as necessary to prepare for
+release. Once the HEAD commit of the '0.<VERSION>.x' branch is ready for
+release, use the '--release' from the release branch to create the release tag
+and build and push release container images to the Quay repo. Running with the
+release flag will also update versions in the release branch to reflect the next
+bugfix release (e.g. will update from v0.8.0 to v0.8.1).
 
-After DWO release candidate bits are built, tested and pushed to prod
-Release is supposed to happen, which will tag the DWO downstream release
-base revision.
+To issue a bugfix release, cherry-pick commits into the existing release branch
+as necessary and run this script with the '--release' flag for the given bugfix
+version.
 
 Arguments:
-  --version     : version to release, v0.8.0
+  --version     : version to release, e.g. v0.8.0
   --prerelease  : flag to perform prerelease. Is performed from main branch
   --release     : flag to perform release. Is performed from v0.x.y branch
-  --revision    : [is not implemented yet] GIT_SHA of the target brach to be used for releasing
 
 Development arguments to debug:
   --dry-run     : do not push changes locally
@@ -47,7 +55,7 @@ Development arguments to debug:
 
 Examples:
 $0 --prerelease --version v0.1.0
-$0 --release --version v0.1.0 --revision ${GIT_SHA}
+$0 --release --version v0.1.0
 
 This script is intended to be triggered by GitHub Actions on the repo.
 EOF
@@ -65,7 +73,6 @@ parse_args() {
       '--tmp-dir') TMP=$(mktemp -d); shift 0;;
       '--release') DO_RELEASE=true; shift 0;;
       '--prerelease') DO_PRERELEASE='true'; shift 0;;
-      '--revision') echo "[ERROR] --revision is not implemented yet"; exit 1;;
       '--dry-run') DRY_RUN='dryrun'; shift 0;;
       '--verbose') VERBOSE='true'; shift 0;;
       '--help') usage; exit 0;;
@@ -78,6 +85,12 @@ parse_args() {
     echo "[ERROR] Required parameter --version is missing."
     usage
     exit 1
+  fi
+
+  version_pattern='^v[0-9]+\.[0-9]+\.[0-9]+$'
+  if [[ ! ${VERSION} =~ $version_pattern ]]; then
+    echo "did not match"
+    echo "exit 1"
   fi
 }
 
@@ -98,6 +111,51 @@ update_version() {
   sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${VERSION_CSV}#g"
 
   make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
+}
+
+# Updates container images and tags used in deployment templates for a release version
+# of DWO. Sets appropriate image names for controller and project clone images and
+# updates defaults in Makefile. Does not commit changes to repo.
+# Args:
+#   $1 - Version for images
+update_images() {
+  VERSION="$1"
+  # Get image tags
+  DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
+  PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
+  DWO_BUNDLE_QUAY_IMG="${DWO_BUNDLE_QUAY_REPO}:${VERSION}"
+  DWO_INDEX_QUAY_IMG="${DWO_INDEX_QUAY_REPO}:${VERSION}"
+
+  # Update defaults in Makefile
+  sed -i Makefile -r -e \
+    "s|quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+|${DWO_QUAY_IMG}|g"
+  sed -i Makefile -r -e \
+    "s|quay.io/devfile/project-clone:[0-9a-zA-Z._-]+|${PROJECT_CLONE_QUAY_IMG}|g"
+  sed -i Makefile -r -e \
+    "s|quay.io/devfile/devworkspace-operator-bundle:[0-9a-zA-Z._-]+|${DWO_BUNDLE_QUAY_IMG}|g"
+  sed -i Makefile -r -e \
+    "s|quay.io/devfile/devworkspace-operator-index:[0-9a-zA-Z._-]+|${DWO_INDEX_QUAY_IMG}|g"
+
+  local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
+  local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
+
+  export DEFAULT_DWO_IMG
+  export PROJECT_CLONE_IMG
+  make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
+}
+
+# Build and push images for specified release version. Respects the DRY_RUN flag
+# TODO:
+#   - Build release images for bundle and index
+# Args:
+#   $1 - Version for images
+build_and_push_images() {
+  DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
+  PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
+  docker build -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile .
+  $DRY_RUN docker push "${DWO_QUAY_IMG}"
+  docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
+  $DRY_RUN docker push "${PROJECT_CLONE_QUAY_IMG}"
 }
 
 # Commit and push changes in local repo to remote (respecting DRY_RUN setting). If the branch cannot be pushed to,
@@ -165,6 +223,7 @@ prerelease() {
 
   echo "[INFO] Updating version to $VERSION"
   update_version "$VERSION"
+  update_images "$VERSION"
 
   git_commit_and_push "[prerelease] Prepare branch for release" "ci-prerelease-$VERSION"
 
@@ -189,6 +248,11 @@ prerelease() {
 release() {
   local VERSION=$1
 
+  if git ls-remote --exit-code --tags origin "${VERSION}" > /dev/null; then
+    echo "Version $VERSION is already tagged; aborting"
+    exit 1
+  fi
+
   echo "[INFO] Starting Release procedure"
   # derive bugfix branch from version
   X_BRANCH=${VERSION#v}
@@ -197,27 +261,14 @@ release() {
   git fetch origin "${X_BRANCH}:${X_BRANCH}" || true
   git checkout "${X_BRANCH}"
 
-  # change image tag in Makefile
-  DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
-  sed -i Makefile -r -e "s#quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+#${DWO_QUAY_IMG}#g"
-  docker build -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile .
-  $DRY_RUN docker push "${DWO_QUAY_IMG}"
-
-  PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
-  sed -i Makefile -r -e "s#quay.io/devfile/project-clone:[0-9a-zA-Z._-]+#${PROJECT_CLONE_QUAY_IMG}#g"
-  docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
-  $DRY_RUN docker push "${PROJECT_CLONE_QUAY_IMG}"
-
-  export local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
-  export local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
-  make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
-
-  # tag the release if the version/version.go file has changed
-  git_commit_and_push "[release] Release ${VERSION}" "ci-release-version-$VERSION"
+  # Tag current commit as release version
   git tag "${VERSION}"
   $DRY_RUN git push origin "${VERSION}"
 
-  # now update ${X_BRANCH} to the new rc version
+  # Build container images for relase
+  build_and_push_images "$VERSION"
+
+  # Update ${X_BRANCH} to the new rc version
   git checkout "${X_BRANCH}"
 
   # bump the z digit
@@ -225,7 +276,9 @@ release() {
     && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}";  \
     NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3
   NEXT_VERSION_Z="${BASE}.${NEXT}"
-  update_version "${NEXT_VERSION_Z}"
+
+  update_version "$NEXT_VERSION_Z"
+  update_images "$NEXT_VERSION_Z"
   git_commit_and_push "[release] Bump to ${NEXT_VERSION_Z} in $X_BRANCH" "ci-bump-$X_BRANCH-$NEXT_VERSION_Z"
 
   echo "[INFO] Release is done"

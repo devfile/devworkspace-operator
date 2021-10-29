@@ -88,8 +88,8 @@ jobs:
 
       - name: Release
         run: |
-          git config --global user.name "Mykhailo Kuznietsov"
-          git config --global user.email "mkuznets@redhat.com"
+          git config --global user.name "Angel Misevski"
+          git config --global user.email "amisevsk@redhat.com"
 
           export GITHUB_TOKEN=${{ secrets.CHE_INCUBATOR_BOT_GITHUB_TOKEN }}
 

@@ -87,8 +87,6 @@ spec:
   maintainers:
   - email: amisevsk@redhat.com
     name: Angel Misevski
-  - email: sleshche@redhat.com
-    name: Serhii Leshchenko
   - email: jpinkney@redhat.com
     name: Josh Pinkney
   maturity: alpha

@@ -48,7 +48,7 @@ ifneq (,$(shell which kubectl 2>/dev/null)$(shell which oc 2>/dev/null))
 endif
 
 OPERATOR_SDK_VERSION = v1.8.0
-OPM_VERSION = v1.17.1
+OPM_VERSION = v1.19.1
 
 CONTROLLER_GEN_VERSION = v0.6.1
 CONTROLLER_GEN=$(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)

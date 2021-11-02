@@ -52,7 +52,7 @@ jobs:
     env:
       DWO_BUNDLE_IMG: quay.io/devfile/devworkspace-operator-bundle:next
       DWO_INDEX_IMG: quay.io/devfile/devworkspace-operator-index:next
-      OPM_VERSION: v1.17.1
+      OPM_VERSION: v1.19.1
       OPERATOR_SDK_VERSION: v1.8.0
     steps:
 

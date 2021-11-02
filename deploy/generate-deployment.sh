@@ -191,6 +191,23 @@ if $GEN_OLM; then
   echo "Generating base deployment files for OLM"
   export RBAC_PROXY_IMAGE="${OPENSHIFT_RBAC_PROXY_IMAGE:-registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8}"
   export NAMESPACE=openshift-operators
+  # Generate .spec.relatedImages for CSV based on deployment
+  TMPCSV="csv.tmp.yaml"
+  yq -Y -s '
+    .[0].spec.relatedImages =
+        [ .[1].spec.template.spec.containers[].env |
+          select(length>0) |
+          .[] |
+          select(.name | test("RELATED_IMAGE.*")) |
+          {
+            image: .value,
+            name: .name | sub("RELATED_IMAGE_"; "")
+          }
+        ] | .[0]' \
+    deploy/templates/components/csv/clusterserviceversion.yaml \
+    deploy/templates/components/manager/manager.yaml > "$TMPCSV"
+  mv $TMPCSV deploy/templates/components/csv/clusterserviceversion.yaml
+
   # It's needed to filter out the ServiceAccount object for OLM, as having a serviceaccount that matches the serviceaccount
   # in the CSV causes scorecard failures. The easiest way to do this is by filtering it out *here*, as kustomize makes it
   # impossible to drop the serviceaccount without reworking the templates significantly (the manager.yaml deployment depends

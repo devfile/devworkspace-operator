@@ -434,6 +434,23 @@ spec:
   provider:
     name: Devfile
     url: https://devfile.io
+  relatedImages:
+  - image: quay.io/eclipse/che-machine-exec:nightly
+    name: plugin_redhat_developer_web_terminal_4_5_0
+  - image: quay.io/wto/web-terminal-tooling:latest
+    name: web_terminal_tooling
+  - image: quay.io/devfile/devworkspace-controller:next
+    name: devworkspace_webhook_server
+  - image: registry.access.redhat.com/ubi8-micro:8.4-81
+    name: pvc_cleanup_job
+  - image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
+    name: async_storage_server
+  - image: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
+    name: async_storage_sidecar
+  - image: quay.io/devfile/project-clone:next
+    name: project_clone
+  - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+    name: kube_rbac_proxy
   replaces: devworkspace-operator.v0.10.0
   version: 0.11.0
   webhookdefinitions:

@@ -12,21 +12,21 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - kind: DevWorkspaceRouting
-      name: devworkspaceroutings.controller.devfile.io
-      version: v1alpha1
-    - kind: DevWorkspace
-      name: devworkspaces.workspace.devfile.io
-      version: v1alpha1
-    - kind: DevWorkspace
-      name: devworkspaces.workspace.devfile.io
-      version: v1alpha2
-    - kind: DevWorkspaceTemplate
-      name: devworkspacetemplates.workspace.devfile.io
-      version: v1alpha1
-    - kind: DevWorkspaceTemplate
-      name: devworkspacetemplates.workspace.devfile.io
-      version: v1alpha2
+      - kind: DevWorkspaceRouting
+        name: devworkspaceroutings.controller.devfile.io
+        version: v1alpha1
+      - kind: DevWorkspace
+        name: devworkspaces.workspace.devfile.io
+        version: v1alpha1
+      - kind: DevWorkspace
+        name: devworkspaces.workspace.devfile.io
+        version: v1alpha2
+      - kind: DevWorkspaceTemplate
+        name: devworkspacetemplates.workspace.devfile.io
+        version: v1alpha1
+      - kind: DevWorkspaceTemplate
+        name: devworkspacetemplates.workspace.devfile.io
+        version: v1alpha2
   description: |
     The DevWorkspace Operator enables cluster-level support for the
     [Devfile 2.0 spec](https://docs.devfile.io), enabling static, reproducible
@@ -60,7 +60,6 @@ spec:
     are required in uninstalling the operator. See the
     [documentation](https://github.com/devfile/devworkspace-operator/blob/main/doc/uninstall.md)
     for details.
-
   displayName: DevWorkspace Operator
   install:
     spec:
@@ -69,29 +68,46 @@ spec:
       permissions: null
     strategy: deployment
   installModes:
-  - supported: false
-    type: OwnNamespace
-  - supported: false
-    type: SingleNamespace
-  - supported: false
-    type: MultiNamespace
-  - supported: true
-    type: AllNamespaces
+    - supported: false
+      type: OwnNamespace
+    - supported: false
+      type: SingleNamespace
+    - supported: false
+      type: MultiNamespace
+    - supported: true
+      type: AllNamespaces
   keywords:
-  - Devworkspace Operator
-  - DevWorkspaces
-  - Devfile
+    - Devworkspace Operator
+    - DevWorkspaces
+    - Devfile
   links:
-  - name: Devworkspace Operator
-    url: https://github.com/devfile/devworkspace-operator
+    - name: Devworkspace Operator
+      url: https://github.com/devfile/devworkspace-operator
   maintainers:
-  - email: amisevsk@redhat.com
-    name: Angel Misevski
-  - email: jpinkney@redhat.com
-    name: Josh Pinkney
+    - email: amisevsk@redhat.com
+      name: Angel Misevski
+    - email: jpinkney@redhat.com
+      name: Josh Pinkney
   maturity: alpha
   provider:
     name: Devfile
     url: https://devfile.io
   replaces: devworkspace-operator.v0.10.0
   version: 0.11.0
+  relatedImages:
+    - image: quay.io/eclipse/che-machine-exec:nightly
+      name: plugin_redhat_developer_web_terminal_4_5_0
+    - image: quay.io/wto/web-terminal-tooling:latest
+      name: web_terminal_tooling
+    - image: quay.io/devfile/devworkspace-controller:next
+      name: devworkspace_webhook_server
+    - image: registry.access.redhat.com/ubi8-micro:8.4-81
+      name: pvc_cleanup_job
+    - image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
+      name: async_storage_server
+    - image: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
+      name: async_storage_sidecar
+    - image: quay.io/devfile/project-clone:next
+      name: project_clone
+    - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+      name: kube_rbac_proxy

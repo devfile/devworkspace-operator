@@ -65,20 +65,12 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	reason := getFailureReason(wksp)
-	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: reason.GetReason()})
+	reason := GetFailureReason(wksp)
+	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: string(reason)})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
 	}
 	ctr.Inc()
-}
-
-func getFailureReason(wksp *dw.DevWorkspace) FailureReason {
-	failedCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceFailedStart)
-	if failedCondition != nil && failedCondition.Reason != "" {
-		return GetFailureReasonFromStr(failedCondition.Reason)
-	}
-	return ReasonUnknown
 }
 
 func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger) {

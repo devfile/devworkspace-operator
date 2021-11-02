@@ -200,7 +200,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// encountered in main reconcile loop.
 		if err == nil {
 			if timeoutErr := checkForStartTimeout(clusterWorkspace); timeoutErr != nil {
-				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus)
+				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 			}
 		}
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
@@ -494,7 +494,7 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 func (r *DevWorkspaceReconciler) failWorkspace(workspace *dw.DevWorkspace, msg string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
 	logger.Info("DevWorkspace failed to start: " + msg)
 	status.phase = devworkspacePhaseFailing
-	status.setConditionTrueWithReason(dw.DevWorkspaceFailedStart, msg, reason.GetReason())
+	status.setConditionTrueWithReason(dw.DevWorkspaceFailedStart, msg, string(reason))
 	if workspace.Spec.Started {
 		return reconcile.Result{Requeue: true}, nil
 	}

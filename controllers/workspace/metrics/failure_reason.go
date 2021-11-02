@@ -15,15 +15,18 @@
 
 package metrics
 
-type FailureReason struct {
-	reason string
-}
+import (
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/conditions"
+)
 
-var (
-	ReasonBadRequest             = FailureReason{reason: "BadRequest"}
-	ReasonInfrastructureFailure  = FailureReason{"InfrastructureFailure"}
-	ReasonWorkspaceEngineFailure = FailureReason{"WorkspaceEngineFailure"}
-	ReasonUnknown                = FailureReason{"Unknown"}
+type FailureReason string
+
+const (
+	ReasonBadRequest             FailureReason = "BadRequest"
+	ReasonInfrastructureFailure  FailureReason = "InfrastructureFailure"
+	ReasonWorkspaceEngineFailure FailureReason = "WorkspaceEngineFailure"
+	ReasonUnknown                FailureReason = "Unknown"
 )
 
 var devworkspaceFailureReasons = []FailureReason{
@@ -33,16 +36,14 @@ var devworkspaceFailureReasons = []FailureReason{
 	ReasonUnknown,
 }
 
-func (f *FailureReason) GetReason() string {
-	return f.reason
-}
-
-// GetFailureReasonFromStr returns the corresponding FailureReason given an input
-// string representation. The input string representation can be snake case or camel case.
-func GetFailureReasonFromStr(reason string) FailureReason {
-	for _, v := range devworkspaceFailureReasons {
-		if reason == v.reason {
-			return v
+// GetFailureReason returns the FailureReason of the provided DevWorkspace
+func GetFailureReason(wksp *dw.DevWorkspace) FailureReason {
+	failedCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceFailedStart)
+	if failedCondition != nil {
+		for _, reason := range devworkspaceFailureReasons {
+			if failedCondition.Reason == string(reason) {
+				return reason
+			}
 		}
 	}
 	return ReasonUnknown

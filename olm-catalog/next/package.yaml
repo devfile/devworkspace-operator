@@ -1,0 +1,3 @@
+schema: olm.package
+defaultChannel: next
+name: devworkspace-operator

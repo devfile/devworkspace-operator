@@ -40,38 +40,13 @@ generate_olm_bundle_yaml: _check_operator_sdk_version _generate_olm_deployment_f
   # 1MiB limit. This command puts all YAML strings on a single line, avoiding ~200KiB of newlines and indentation.
 	find deploy/bundle/manifests -name '*.yaml' -exec yq --indentless -w 1000000000 -iY . {} \;
 
-### build_bundle_image: build and push DevWorkspace Operator bundle image
-build_bundle_image: _print_vars _check_operator_sdk_version
-  ifneq ($(INITIATOR),CI)
-    ifeq ($(DWO_BUNDLE_IMG),quay.io/devfile/devworkspace-operator-bundle:next)
-	    @echo -n "Are you sure you want to push $(DWO_BUNDLE_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
-    endif
-  endif
-	$(DOCKER) build . -t $(DWO_BUNDLE_IMG) -f build/bundle.Dockerfile
-	$(DOCKER) push $(DWO_BUNDLE_IMG)
-
-### build_index_image: build and push DevWorkspace Operator index image
-build_index_image: _print_vars _check_skopeo_installed _check_opm_version
-  ifneq ($(INITIATOR),CI)
-    ifeq ($(DWO_INDEX_IMG),quay.io/devfile/devworkspace-operator-index:next)
-	    @echo -n "Are you sure you want to push $(DWO_INDEX_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
-    endif
-  endif
-	export BUNDLE_DIGEST=$$(skopeo inspect docker://$(DWO_BUNDLE_IMG) | jq -r '.Digest') ;\
-	echo "$$BUNDLE_DIGEST" ;\
-	export BUNDLE_IMG=$(DWO_BUNDLE_IMG) ;\
-	export BUNDLE_IMG_DIGEST="$${BUNDLE_IMG%:*}@$${BUNDLE_DIGEST}" ;\
-	opm index add \
-	  --bundles "$${BUNDLE_IMG_DIGEST}" \
-	  --tag $(DWO_INDEX_IMG) \
-	  --container-tool $(DOCKER)
-	$(DOCKER) push $(DWO_INDEX_IMG)
-
-export_manifests: _print_vars _check_opm_version
-	rm -rf ./generated/exported-manifests
-	# Export the bundles with the name web-terminal inside of $(DWO_INDEX_IMG)
-	# This command basic exports the index back into the old format
-	opm index export -c $(DOCKER) -f ./generated/exported-manifests -i $(DWO_INDEX_IMG)
+### build_bundle_and_index: build and push DevWorkspace Operator OLM bundle and index images
+build_bundle_and_index: _print_vars _check_skopeo_installed _check_opm_version
+	./build/scripts/build_index_image.sh \
+		--bundle-repo $${DWO_BUNDLE_IMG%%:*} \
+		--bundle-tag $${DWO_BUNDLE_IMG##*:} \
+		--index-image $(DWO_INDEX_IMG) \
+		--container-tool $(DOCKER)
 
 ### register_catalogsource: create the catalogsource to make the operator be available on the marketplace
 register_catalogsource: _check_skopeo_installed

@@ -1,0 +1,3 @@
+schema: olm.package
+defaultChannel: fast
+name: devworkspace-operator

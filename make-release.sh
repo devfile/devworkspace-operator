@@ -20,7 +20,7 @@ DWO_REPO="${DWO_REPO:-git@github.com:devfile/devworkspace-operator}"
 DWO_QUAY_REPO="${DWO_QUAY_REPO:-quay.io/devfile/devworkspace-controller}"
 PROJECT_CLONE_QUAY_REPO="${PROJECT_CLONE_QUAY_REPO:-quay.io/devfile/project-clone}"
 DWO_BUNDLE_QUAY_REPO="${DWO_BUNDLE_QUAY_REPO:-quay.io/devfile/devworkspace-operator-bundle}"
-DWO_INDEX_QUAY_REPO="${DWO_INDEX_QUAY_REPO:-quay.io/devfile/devworkspace-operator-index}"
+DWO_INDEX_IMAGE="${DWO_INDEX_IMAGE:-quay.io/devfile/devworkspace-operator-index:release}"
 MAIN_BRANCH="main"
 VERBOSE=""
 TMP=""
@@ -124,7 +124,6 @@ update_images() {
   DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
   PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
   DWO_BUNDLE_QUAY_IMG="${DWO_BUNDLE_QUAY_REPO}:${VERSION}"
-  DWO_INDEX_QUAY_IMG="${DWO_INDEX_QUAY_REPO}:${VERSION}"
 
   # Update defaults in Makefile
   sed -i Makefile -r -e \
@@ -134,7 +133,7 @@ update_images() {
   sed -i Makefile -r -e \
     "s|quay.io/devfile/devworkspace-operator-bundle:[0-9a-zA-Z._-]+|${DWO_BUNDLE_QUAY_IMG}|g"
   sed -i Makefile -r -e \
-    "s|quay.io/devfile/devworkspace-operator-index:[0-9a-zA-Z._-]+|${DWO_INDEX_QUAY_IMG}|g"
+    "s|quay.io/devfile/devworkspace-operator-index:[0-9a-zA-Z._-]+|${DWO_INDEX_IMAGE}|g"
 
   local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
   local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
@@ -260,6 +259,17 @@ release() {
 
   git fetch origin "${X_BRANCH}:${X_BRANCH}" || true
   git checkout "${X_BRANCH}"
+
+  # Build bundle and index images
+  $DRY_RUN build/scripts/build_index_image.sh \
+    --release \
+    --bundle-tag "$VERSION" \
+    --bundle-repo "$DWO_BUNDLE_QUAY_REPO" \
+    --index-image "$DWO_INDEX_IMAGE" \
+    --force
+
+  # Commit changes from releasing bundle
+  git_commit_and_push "[release] Add OLM bundle for $VERSION in $X_BRANCH" "ci-add-bundle-$VERSION"
 
   # Tag current commit as release version
   git tag "${VERSION}"

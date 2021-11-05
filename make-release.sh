@@ -254,6 +254,13 @@ release() {
     exit 1
   fi
 
+  # Check that CSV has a `replaces` field, since this will be required for adding the new version
+  # to a downstream operator catalog
+  if ! yq -e '.spec.replaces != null' deploy/bundle/manifests/devworkspace-operator.clusterserviceversion.yaml >/dev/null; then
+    echo "[ERROR] ClusterServiceVersion for operator must have manually-added .spec.replaces field"
+    exit 1
+  fi
+
   echo "[INFO] Starting Release procedure"
   # derive bugfix branch from version
   X_BRANCH=${VERSION#v}

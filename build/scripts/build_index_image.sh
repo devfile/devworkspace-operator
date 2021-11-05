@@ -130,13 +130,17 @@ if [ "$RELEASE" == "true" ]; then
     # Bugfix release: replace previous bugfix release for this minor version.
     CURR_MAJOR_MINOR="${BUNDLE_NAME%.*}" # Current release, without bugfix
     PREV_BUGFIX=$(echo "$ENTRIES" | grep "$CURR_MAJOR_MINOR" | sort -V | tail -n 1)
-    ENTRY_JSON=$(yq --arg prev_bugfix "$PREV_BUGFIX" '{name, replaces: $prev_bugfix}' "$BUNDLE_FILE")
+    ENTRY_JSON=$(yq --arg replaces "$PREV_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE")
   else
     # Non-bugfix release: replace previous vX.Y.0 version; skipRange bugfixes for it.
     LATEST_MINOR=$(echo "$ENTRIES" | grep "\.0$" | sort -V | tail -n 1) # latest non-bugfix release (devworkspace-operator.vX.Y.0)
     LATEST_MINOR_BUGFIX=$(echo "$ENTRIES" | grep "${LATEST_MINOR%.0}" | sort -V | tail -n 1) # latest bugfix for this minor release
-    SKIP_RANGE=">=${LATEST_MINOR#*.v} <=${LATEST_MINOR_BUGFIX#*.v}" # build version range, dropping 'devworkspace-operator.v' from start
-    ENTRY_JSON=$(yq --arg skip_range "$SKIP_RANGE" --arg replaces "$LATEST_MINOR_BUGFIX" '{name, replaces: $replaces, skipRange: $skip_range}' "$BUNDLE_FILE" )
+    if [ "$LATEST_MINOR" == "$LATEST_MINOR_BUGFIX" ]; then
+      ENTRY_JSON=$(yq --arg replaces "$LATEST_MINOR_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE" )
+    else
+      SKIP_RANGE=">=${LATEST_MINOR#*.v} <=${LATEST_MINOR_BUGFIX#*.v}" # build version range, dropping 'devworkspace-operator.v' from start
+      ENTRY_JSON=$(yq --arg skip_range "$SKIP_RANGE" --arg replaces "$LATEST_MINOR_BUGFIX" '{name, replaces: $replaces, skipRange: $skip_range}' "$BUNDLE_FILE" )
+    fi
   fi
 else
   ENTRY_JSON=$(yq '{name}' "$BUNDLE_FILE")

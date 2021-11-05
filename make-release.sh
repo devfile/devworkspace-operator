@@ -51,7 +51,7 @@ Arguments:
 Development arguments to debug:
   --dry-run     : do not push changes locally
   --verbose     : enables verbose output
-  --tmp-dir     : perform operation in repo cloned into temporary folder. Repo can be mofidied with DWO_REPO env var
+  --tmp-dir     : perform operation in repo cloned into temporary folder. Repo can be modified with DWO_REPO env var
 
 Examples:
 $0 --prerelease --version v0.1.0
@@ -104,11 +104,13 @@ update_version() {
 
   # change version/version.go file
   VERSION_GO="v${VERSION}"
-  VERSION_CSV="${VERSION%%+*}"
+  VERSION_CSV="$VERSION"
 
   sed -i version/version.go -e "s#Version = \".*\"#Version = \"${VERSION_GO}\"#g"
-  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(name: devworkspace-operator.)(v[0-9.]+)#\1v${VERSION_CSV}#g"
-  sed -i deploy/templates/components/csv/clusterserviceversion.yaml -r -e "s#(version: )([0-9.]+)#\1${VERSION_CSV}#g"
+  yq -Yi \
+    --arg operator_name "devworkspace-operator.v$VERSION_CSV" \
+    --arg version "$VERSION_CSV" \
+    '.metadata.name = $operator_name | .spec.version = $version' deploy/templates/components/csv/clusterserviceversion.yaml
 
   make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
 }
@@ -232,7 +234,7 @@ prerelease() {
     NEXT=${BASH_REMATCH[2]}; \
     (( NEXT=NEXT+1 )) # for X_BRANCH=0.1.x, get BASE=0, NEXT=2
 
-  NEXT_DEV_VERSION="${BASE}.${NEXT}.0+dev"
+  NEXT_DEV_VERSION="${BASE}.${NEXT}.0-dev"
   git checkout ${MAIN_BRANCH}
   update_version "$NEXT_DEV_VERSION"
   git_commit_and_push "[release] Bump to ${NEXT_DEV_VERSION} in $MAIN_BRANCH" "ci-bump-$MAIN_BRANCH-$NEXT_DEV_VERSION"

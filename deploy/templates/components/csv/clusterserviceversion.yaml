@@ -92,7 +92,6 @@ spec:
   provider:
     name: Devfile
     url: https://devfile.io
-  replaces: devworkspace-operator.v0.10.0
   version: 0.11.0-dev
   relatedImages:
     - image: quay.io/eclipse/che-machine-exec:nightly

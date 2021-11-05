@@ -1,0 +1,47 @@
+---
+image: quay.io/devfile/devworkspace-operator-bundle@sha256:27ffcea52c7666d4fb13388a1ccef935bc7d55dd52ad973b46879143c67286a0
+name: devworkspace-operator.v0.10.0
+package: devworkspace-operator
+properties:
+- type: olm.gvk
+  value:
+    group: controller.devfile.io
+    kind: DevWorkspaceOperatorConfig
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: controller.devfile.io
+    kind: DevWorkspaceRouting
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspace
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspace
+    version: v1alpha2
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspaceTemplate
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspaceTemplate
+    version: v1alpha2
+- type: olm.package
+  value:
+    packageName: devworkspace-operator
+    version: 0.10.0
+relatedImages:
+- image: quay.io/devfile/devworkspace-controller:v0.10.0
+  name: ""
+- image: quay.io/devfile/devworkspace-operator-bundle@sha256:27ffcea52c7666d4fb13388a1ccef935bc7d55dd52ad973b46879143c67286a0
+  name: ""
+- image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8
+  name: ""
+schema: olm.bundle

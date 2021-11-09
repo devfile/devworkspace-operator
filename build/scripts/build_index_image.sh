@@ -77,12 +77,14 @@ if [ "$RELEASE" == "true" ]; then
   fi
   INDEX_IMAGE="${INDEX_IMAGE:-DEFAULT_RELEASE_INDEX_IMAGE}"
   OUTDIR="olm-catalog/release"
+  DOCKERFILE="build/index.release.Dockerfile"
 else
   # Set defaults and warn if pushing to main repos in case of accident
   BUNDLE_REPO="${BUNDLE_REPO:-DEFAULT_BUNDLE_REPO}"
   BUNDLE_TAG="${BUNDLE_TAG:-DEFAULT_BUNDLE_TAG}"
   INDEX_IMAGE="${INDEX_IMAGE:-DEFAULT_INDEX_IMAGE}"
   OUTDIR="olm-catalog/next"
+  DOCKERFILE="build/index.next.Dockerfile"
 fi
 
 BUNDLE_IMAGE="${BUNDLE_REPO}:${BUNDLE_TAG}"
@@ -153,7 +155,7 @@ opm validate "$OUTDIR"
 
 # Build index container
 echo "Building index image $INDEX_IMAGE"
-$PODMAN build . -t "$INDEX_IMAGE" -f build/index.next.Dockerfile | sed 's|^|    |'
+$PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE" | sed 's|^|    |'
 $PODMAN push "$INDEX_IMAGE" 2>&1 | sed 's|^|    |'
 
 if [ $DEBUG != "true" ] && [ "$RELEASE" != "true" ]; then

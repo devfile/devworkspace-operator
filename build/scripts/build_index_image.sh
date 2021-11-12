@@ -99,6 +99,21 @@ fi
 
 CHANNEL_FILE="$OUTDIR/channel.yaml"
 
+# Set required versions in vars based on current release
+CHANNEL_ENTRIES=$(yq -r '.entries[]?.name' "$CHANNEL_FILE")
+LATEST_MINOR_RELEASE=$(echo "$CHANNEL_ENTRIES" | grep "\.0$" | sort -V | tail -n 1)
+LATEST_BUGFIX=$(echo "$CHANNEL_ENTRIES" | grep "${LATEST_MINOR_RELEASE%.0}" | sort -V | tail -n 1)
+
+if [ "$RELEASE" == "true" ]; then
+  yq -Yi --arg replaces "$LATEST_BUGFIX" '.spec.replaces = $replaces' \
+    deploy/templates/components/csv/clusterserviceversion.yaml
+else
+  # Remove replaces field from CSVs in nightly builds since the 'next' catalog doesn't currently support
+  # an upgrade path.
+  yq -Yi 'del(.spec.replaces)' deploy/templates/components/csv/clusterserviceversion.yaml
+fi
+make generate_olm_bundle_yaml
+
 echo "Building bundle image $BUNDLE_IMAGE"
 $PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile | sed 's|^|    |'
 $PODMAN push "$BUNDLE_IMAGE" 2>&1 | sed 's|^|    |'
@@ -126,25 +141,11 @@ fi
 # Add bundle entry to channel
 echo "Adding $BUNDLE_NAME to channel"
 if [ "$RELEASE" == "true" ]; then
-  # We need to add a replaces and potentially skipRange field to the channel entry
-  ENTRIES=$(yq -r '.entries[]?.name' "$CHANNEL_FILE")
-  if [ "${BUNDLE_TAG##*.}" != "0" ]; then
-    # Bugfix release: replace previous bugfix release for this minor version.
-    CURR_MAJOR_MINOR="${BUNDLE_NAME%.*}" # Current release, without bugfix
-    PREV_BUGFIX=$(echo "$ENTRIES" | grep "$CURR_MAJOR_MINOR" | sort -V | tail -n 1)
-    ENTRY_JSON=$(yq --arg replaces "$PREV_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE")
-  else
-    # Non-bugfix release: replace previous vX.Y.0 version; skipRange bugfixes for it.
-    LATEST_MINOR=$(echo "$ENTRIES" | grep "\.0$" | sort -V | tail -n 1) # latest non-bugfix release (devworkspace-operator.vX.Y.0)
-    LATEST_MINOR_BUGFIX=$(echo "$ENTRIES" | grep "${LATEST_MINOR%.0}" | sort -V | tail -n 1) # latest bugfix for this minor release
-    if [ "$LATEST_MINOR" == "$LATEST_MINOR_BUGFIX" ]; then
-      ENTRY_JSON=$(yq --arg replaces "$LATEST_MINOR_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE" )
-    else
-      SKIP_RANGE=">=${LATEST_MINOR#*.v} <=${LATEST_MINOR_BUGFIX#*.v}" # build version range, dropping 'devworkspace-operator.v' from start
-      ENTRY_JSON=$(yq --arg skip_range "$SKIP_RANGE" --arg replaces "$LATEST_MINOR_BUGFIX" '{name, replaces: $replaces, skipRange: $skip_range}' "$BUNDLE_FILE" )
-    fi
-  fi
+  # Generate a new channel entry that replaces the last release
+  # TODO: Also generate a skipRange so that e.g. v0.10.0 replaces v0.9.3 and skips v0.9.0-v0.9.2
+  ENTRY_JSON=$(yq --arg replaces "$LATEST_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE")
 else
+  # Generate a basic entry with no upgrade path for nightly releases
   ENTRY_JSON=$(yq '{name}' "$BUNDLE_FILE")
 fi
 # shellcheck disable=SC2016
@@ -154,8 +155,23 @@ echo "Validating current index"
 opm validate "$OUTDIR"
 
 # Build index container
+# Building file-based-catalogs with OPM is broken in v1.19.1 due to https://github.com/operator-framework/operator-registry/pull/807
+# Instead, use previous opm v1.18.z process
+# $PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE" | sed 's|^|    |'
+# $PODMAN push "$INDEX_IMAGE" 2>&1 | sed 's|^|    |'
 echo "Building index image $INDEX_IMAGE"
-$PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE" | sed 's|^|    |'
+if [ "$RELEASE" == "true" ]; then
+  # The command below makes this script fragile. The index image represents the global (i.e. across all releases)
+  # state of the operator update graph so if the new bundle doesn't slot cleanly into what exists, this will fail.
+  opm index add \
+    --bundles "$BUNDLE_DIGEST" \
+    --from-index "$INDEX_IMAGE" \
+    --tag "$INDEX_IMAGE"
+else
+  opm index add \
+    --bundles "$BUNDLE_DIGEST" \
+    --tag "$INDEX_IMAGE"
+fi
 $PODMAN push "$INDEX_IMAGE" 2>&1 | sed 's|^|    |'
 
 if [ $DEBUG != "true" ] && [ "$RELEASE" != "true" ]; then

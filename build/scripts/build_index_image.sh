@@ -68,7 +68,7 @@ parse_args "$@"
 if [ "$RELEASE" == "true" ]; then
   # Set up for release and check arguments
   BUNDLE_REPO="${BUNDLE_REPO:-DEFAULT_BUNDLE_REPO}"
-  if [ -z $BUNDLE_TAG ]; then
+  if [ -z "$BUNDLE_TAG" ]; then
     error "Argument --bundle-tag is required when --release is specified (should be release version)"
   fi
   TAG_REGEX='^v[0-9]+\.[0-9]+\.[0-9]+$'
@@ -105,6 +105,7 @@ LATEST_MINOR_RELEASE=$(echo "$CHANNEL_ENTRIES" | grep "\.0$" | sort -V | tail -n
 LATEST_BUGFIX=$(echo "$CHANNEL_ENTRIES" | grep "${LATEST_MINOR_RELEASE%.0}" | sort -V | tail -n 1)
 
 if [ "$RELEASE" == "true" ]; then
+  # shellcheck disable=SC2016
   yq -Yi --arg replaces "$LATEST_BUGFIX" '.spec.replaces = $replaces' \
     deploy/templates/components/csv/clusterserviceversion.yaml
 else
@@ -143,6 +144,7 @@ echo "Adding $BUNDLE_NAME to channel"
 if [ "$RELEASE" == "true" ]; then
   # Generate a new channel entry that replaces the last release
   # TODO: Also generate a skipRange so that e.g. v0.10.0 replaces v0.9.3 and skips v0.9.0-v0.9.2
+  # shellcheck disable=SC2016
   ENTRY_JSON=$(yq --arg replaces "$LATEST_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE")
 else
   # Generate a basic entry with no upgrade path for nightly releases

@@ -128,14 +128,16 @@ update_images() {
   DWO_BUNDLE_QUAY_IMG="${DWO_BUNDLE_QUAY_REPO}:${VERSION}"
 
   # Update defaults in Makefile
-  sed -i Makefile -r -e \
-    "s|quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+|${DWO_QUAY_IMG}|g"
-  sed -i Makefile -r -e \
-    "s|quay.io/devfile/project-clone:[0-9a-zA-Z._-]+|${PROJECT_CLONE_QUAY_IMG}|g"
-  sed -i Makefile -r -e \
-    "s|quay.io/devfile/devworkspace-operator-bundle:[0-9a-zA-Z._-]+|${DWO_BUNDLE_QUAY_IMG}|g"
-  sed -i Makefile -r -e \
-    "s|quay.io/devfile/devworkspace-operator-index:[0-9a-zA-Z._-]+|${DWO_INDEX_IMAGE}|g"
+  sed -i Makefile -r \
+    -e "s|quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+|${DWO_QUAY_IMG}|g" \
+    -e "s|quay.io/devfile/project-clone:[0-9a-zA-Z._-]+|${PROJECT_CLONE_QUAY_IMG}|g" \
+    -e "s|quay.io/devfile/devworkspace-operator-bundle:[0-9a-zA-Z._-]+|${DWO_BUNDLE_QUAY_IMG}|g" \
+    -e "s|quay.io/devfile/devworkspace-operator-index:[0-9a-zA-Z._-]+|${DWO_INDEX_IMAGE}|g"
+
+  # Update defaults in generate-deployment.sh
+  sed -i deploy/generate-deployment.sh -r \
+    -e "s|quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+|${DWO_QUAY_IMG}|g" \
+    -e "s|quay.io/devfile/project-clone:[0-9a-zA-Z._-]+|${PROJECT_CLONE_QUAY_IMG}|g"
 
   local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
   local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"

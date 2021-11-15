@@ -95,14 +95,14 @@ const (
 	//             All volumeMounts used for devworkspaces are emptyDir
 	DevWorkspaceStorageTypeAtrr = "controller.devfile.io/storage-type"
 
-	// WorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
+	// DevWorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
 	DevWorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"
 
 	// DevWorkspaceDiscoverableServiceAnnotation marks a service in a devworkspace as created for a discoverable endpoint,
 	// as opposed to a service created to support the devworkspace itself.
 	DevWorkspaceDiscoverableServiceAnnotation = "controller.devfile.io/discoverable-service"
 
-	// PullSecretLabel marks the intention that secret should be used as pull secret for devworkspaces withing namespace
+	// DevWorkspacePullSecretLabel marks the intention that secret should be used as pull secret for devworkspaces withing namespace
 	// Only secrets with 'true' value will be mount as pull secret
 	// Should be assigned to secrets with type docker config types (kubernetes.io/dockercfg and kubernetes.io/dockerconfigjson)
 	DevWorkspacePullSecretLabel = "controller.devfile.io/devworkspace_pullsecret"

@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// package constants defines constant values used throughout the DevWorkspace Operator
+
+// Package constants defines constant values used throughout the DevWorkspace Operator
 package constants
 
 // Labels which should be used for controller related objects
@@ -62,6 +63,7 @@ const (
 	ProjectCloneCPURequest    = "100m"
 
 	// Constants describing storage classes supported by the controller
+
 	// CommonStorageClassType defines the 'common' storage policy -- one PVC is provisioned per namespace and all devworkspace storage
 	// is mounted in it on subpaths according to devworkspace ID.
 	CommonStorageClassType = "common"

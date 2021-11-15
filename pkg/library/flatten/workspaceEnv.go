@@ -19,20 +19,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-)
-
-const (
-	// WorkspaceEnvAttribute is an attribute that specifies a set of environment variables provided by a component
-	// that should be added to all workspace containers. The structure of the attribute value should be a list of
-	// Devfile 2.0 EnvVar, e.g.
-	//
-	//   attributes:
-	//     workspaceEnv:
-	//       - name: ENV_1
-	//         value: VAL_1
-	//       - name: ENV_2
-	//         value: VAL_2
-	WorkspaceEnvAttribute = "workspaceEnv"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 func resolveWorkspaceEnvVar(flattenedDW *dw.DevWorkspaceTemplateSpec) error {
@@ -58,14 +45,14 @@ func collectWorkspaceEnv(flattenedDW *dw.DevWorkspaceTemplateSpec) ([]dw.EnvVar,
 	envVarToComponent := map[string]string{}
 
 	for _, component := range flattenedDW.Components {
-		if !component.Attributes.Exists(WorkspaceEnvAttribute) {
+		if !component.Attributes.Exists(constants.WorkspaceEnvAttribute) {
 			continue
 		}
 
 		var componentEnv []dw.EnvVar
-		err := component.Attributes.GetInto(WorkspaceEnvAttribute, &componentEnv)
+		err := component.Attributes.GetInto(constants.WorkspaceEnvAttribute, &componentEnv)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read attribute %s on component %s: %w", WorkspaceEnvAttribute, getSourceForComponent(component), err)
+			return nil, fmt.Errorf("failed to read attribute %s on component %s: %w", constants.WorkspaceEnvAttribute, getSourceForComponent(component), err)
 		}
 
 		for _, envVar := range componentEnv {

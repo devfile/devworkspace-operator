@@ -94,7 +94,7 @@ const (
 	// as opposed to a service created to support the devworkspace itself.
 	DevWorkspaceDiscoverableServiceAnnotation = "controller.devfile.io/discoverable-service"
 
-	// DevWorkspacePullSecretLabel marks the intention that secret should be used as pull secret for devworkspaces withing namespace
+	// DevWorkspacePullSecretLabel marks the intention that this secret should be used as a pull secret for devworkspaces within namespace
 	// Only secrets with 'true' value will be mount as pull secret
 	// Should be assigned to secrets with type docker config types (kubernetes.io/dockercfg and kubernetes.io/dockerconfigjson)
 	DevWorkspacePullSecretLabel = "controller.devfile.io/devworkspace_pullsecret"

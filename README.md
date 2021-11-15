@@ -4,17 +4,13 @@ Dev Workspace operator repository that contains the controller for the DevWorksp
 
 ## DevWorkspace CR
 
-### Annotations
+### Additional configuration
 
-You can add these Kubernetes annotations to specific DevWorkspace CR to customize their behavior.
-
-|Name|Value|
-|----|----|
-|[controller.devfile.io/restricted-access](#restricted-access)|true or false|
+DevWorkspaces can be configured through DevWorkspace attributes and Kubernetes labels/annotations. For a list of all options available, see [additional documentation](docs/additional-configuration.md)
 
 #### Restricted Access
 
-The `controller.devfile.io/restricted-access` specifies that a DevWorkspace needs additional access control (in addition to RBAC). When a DevWorkspace is created with the `controller.devfile.io/restricted-access` annotation set to `true`, the webhook server will guarantee
+The `controller.devfile.io/restricted-access` annotation specifies that a DevWorkspace needs additional access control (in addition to RBAC). When a DevWorkspace is created with the `controller.devfile.io/restricted-access` annotation set to `true`, the webhook server will guarantee
 - Only the DevWorkspace Operator ServiceAccount or DevWorkspace creator can modify important fields in the devworksapce
 - Only the DevWorkspace creator can create `pods/exec` into devworkspace-related containers.
 

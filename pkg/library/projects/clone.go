@@ -28,6 +28,9 @@ const (
 )
 
 func AddProjectClonerComponent(workspace *dw.DevWorkspaceTemplateSpec) {
+	if workspace.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {
+		return
+	}
 	if len(workspace.Projects) == 0 {
 		return
 	}

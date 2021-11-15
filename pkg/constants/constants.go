@@ -73,4 +73,9 @@ const (
 	// EphemeralStorageClassType defines the 'ephemeral' storage policy: all volumes are allocated as emptyDir volumes and
 	// so do not require cleanup. When a DevWorkspace is stopped, all local changes are lost.
 	EphemeralStorageClassType = "ephemeral"
+
+	// Constants describing configuration for automatic project cloning
+
+	// ProjectCloneDisable specifies that project cloning should be disabled.
+	ProjectCloneDisable = "disable"
 )

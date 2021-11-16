@@ -47,7 +47,8 @@ func SyncRBAC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) Provisioni
 }
 
 func generateRBAC(namespace string) []client.Object {
-	// TODO: The rolebindings here are created namespace-wide; find a way to limit this, given that each workspace
+	// TODO: The rolebindings here are created namespace-wide; find a way to limit this, given that each workspace is only
+	//       interested in a specific set of resources (e.g. the workspace shouldn't need to watch other pods, etc.)
 	return []client.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{

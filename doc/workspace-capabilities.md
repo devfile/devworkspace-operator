@@ -76,7 +76,7 @@ rules:
 
 Additional permissions can be bound to the DevWorkspace ServiceAccount as follows:
 
-1. Find the *DevWorkspace ID* for the DevWorksapce in question. This is available on the `.status.devworkspaceId` field in the object, which can be obtained using `jq`:
+1. Find the *DevWorkspace ID* for the DevWorkspace in question. This is available on the `.status.devworkspaceId` field in the object, which can be obtained using `jq`:
     ```bash
     DEVWORKSPACE_ID=$(kubectl get devworkspaces <workspace-name> -o json | jq -r '.status.devworkspaceId')
     ```

@@ -21,12 +21,14 @@ import (
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
@@ -42,8 +44,11 @@ var (
 func TestOneConfigMapWithNoUserMountPath(t *testing.T) {
 	mountPath := ""
 	clusterConfig := buildConfig(defaultName, mountPath, defaultData)
-	client := fake.NewClientBuilder().WithObjects(clusterConfig).Build()
-	_, gitconfig, err := constructGitConfig(client, testNamespace, mountPath)
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, mountPath)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -53,8 +58,11 @@ func TestOneConfigMapWithNoUserMountPath(t *testing.T) {
 func TestOneConfigMapWithMountPathAndHostAndCert(t *testing.T) {
 	mountPath := "/sample/test"
 	clusterConfig := buildConfig(defaultName, mountPath, defaultData)
-	client := fake.NewClientBuilder().WithObjects(clusterConfig).Build()
-	_, gitconfig, err := constructGitConfig(client, testNamespace, mountPath)
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, mountPath)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -64,9 +72,12 @@ func TestOneConfigMapWithMountPathAndHostAndCert(t *testing.T) {
 func TestOneConfigMapWithMountPathAndWithoutHostAndWithoutCert(t *testing.T) {
 	mountPath := "/sample/test"
 	clusterConfig := buildConfig(defaultName, mountPath, map[string]string{})
-	client := fake.NewClientBuilder().WithObjects(clusterConfig).Build()
-	_, _, err := constructGitConfig(client, testNamespace, mountPath)
-	assert.Equal(t, err.Error(), fmt.Sprintf("Could not find certificate field in configmap %s", defaultName))
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
+		Logger: zap.New(),
+	}
+	_, _, err := constructGitConfig(clusterAPI, testNamespace, mountPath)
+	assert.Equal(t, err.Error(), fmt.Sprintf("could not find certificate field in configmap %s", defaultName))
 }
 
 func TestOneConfigMapWithMountPathAndWithoutHostAndWithCert(t *testing.T) {
@@ -74,8 +85,11 @@ func TestOneConfigMapWithMountPathAndWithoutHostAndWithCert(t *testing.T) {
 	clusterConfig := buildConfig(defaultName, mountPath, map[string]string{
 		certificateKey: "test_cert_data",
 	})
-	client := fake.NewClientBuilder().WithObjects(clusterConfig).Build()
-	_, gitconfig, err := constructGitConfig(client, testNamespace, mountPath)
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, mountPath)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -87,9 +101,12 @@ func TestOneConfigMapWithMountPathAndWithHostAndWithoutCert(t *testing.T) {
 	clusterConfig := buildConfig(defaultName, mountPath, map[string]string{
 		hostKey: "some_host",
 	})
-	client := fake.NewClientBuilder().WithObjects(clusterConfig).Build()
-	_, _, err := constructGitConfig(client, testNamespace, mountPath)
-	assert.Equal(t, err.Error(), fmt.Sprintf("Could not find certificate field in configmap %s", defaultName))
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
+		Logger: zap.New(),
+	}
+	_, _, err := constructGitConfig(clusterAPI, testNamespace, mountPath)
+	assert.Equal(t, err.Error(), fmt.Sprintf("could not find certificate field in configmap %s", defaultName))
 }
 
 func TestOneConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
@@ -104,17 +121,22 @@ func TestOneConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
 		},
 		Data: defaultData,
 	}
-	client := fake.NewClientBuilder().WithObjects(clusterConfig).Build()
-	_, _, err := constructGitConfig(client, testNamespace, mountPath)
-	assert.Equal(t, err.Error(), fmt.Sprintf("Could not find mount path in configmap %s", defaultName))
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
+		Logger: zap.New(),
+	}
+	_, _, err := constructGitConfig(clusterAPI, testNamespace, mountPath)
+	assert.Equal(t, err.Error(), fmt.Sprintf("could not find mount path in configmap %s", defaultName))
 }
 
 func TestTwoConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
 	config1 := buildConfig("configmap1", "/folder1", defaultData)
 	config2 := buildConfig("configmap2", "/folder2", defaultData)
-
-	client := fake.NewClientBuilder().WithObjects(config1, config2).Build()
-	_, gitconfig, err := constructGitConfig(client, testNamespace, "")
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(config1, config2).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, "")
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -130,8 +152,11 @@ func TestTwoConfigMapWithOneDefaultTLSAndOtherGithubTLS(t *testing.T) {
 		certificateKey: "sample_data_here",
 	})
 
-	client := fake.NewClientBuilder().WithObjects(config1, config2).Build()
-	_, gitconfig, err := constructGitConfig(client, testNamespace, "")
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(config1, config2).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, "")
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -146,15 +171,21 @@ func TestTwoConfigMapWithBothMissingHost(t *testing.T) {
 		certificateKey: "sample_data_here",
 	})
 
-	client := fake.NewClientBuilder().WithObjects(config1, config2).Build()
-	_, _, err := constructGitConfig(client, testNamespace, "")
-	assert.Equal(t, err.Error(), "Multiple git tls credentials do not have host specified")
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(config1, config2).Build(),
+		Logger: zap.New(),
+	}
+	_, _, err := constructGitConfig(clusterAPI, testNamespace, "")
+	assert.Equal(t, err.Error(), "multiple git tls credentials do not have host specified")
 }
 
 func TestGitConfigIsFullyMounted(t *testing.T) {
 	defaultConfig := buildConfig(defaultName, defaultMountPath, defaultData)
-	client := fake.NewClientBuilder().WithObjects(defaultConfig).Build()
-	podAdditions, err := provisionGitConfig(client, testNamespace, defaultMountPath)
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(defaultConfig).Build(),
+		Logger: zap.New(),
+	}
+	podAdditions, err := provisionGitConfig(clusterAPI, testNamespace, defaultMountPath)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}

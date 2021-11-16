@@ -18,6 +18,8 @@ import (
 	"testing"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,8 +27,11 @@ import (
 
 func TestUserCredentialsAreMountedWithOneCredential(t *testing.T) {
 	mountPath := "/sample/test"
-	client := fake.NewClientBuilder().Build()
-	podAdditions, err := provisionUserGitCredentials(client, testNamespace, mountPath, []string{
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().Build(),
+		Logger: zap.New(),
+	}
+	podAdditions, err := provisionUserGitCredentials(clusterAPI, testNamespace, mountPath, []string{
 		"my_credentials",
 	})
 	if !assert.NoError(t, err, "Should not return error") {
@@ -40,8 +45,11 @@ func TestUserCredentialsAreMountedWithOneCredential(t *testing.T) {
 
 func TestUserCredentialsAreOnlyMountedOnceWithMultipleCredentials(t *testing.T) {
 	mountPath := "/sample/test"
-	client := fake.NewClientBuilder().Build()
-	podAdditions, err := provisionUserGitCredentials(client, testNamespace, mountPath, []string{
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().Build(),
+		Logger: zap.New(),
+	}
+	podAdditions, err := provisionUserGitCredentials(clusterAPI, testNamespace, mountPath, []string{
 		"my_credentials",
 		"my_other_credentials",
 	})

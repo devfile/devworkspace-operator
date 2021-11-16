@@ -47,7 +47,7 @@ func provisionGitConfiguration(api sync.ClusterAPI, namespace string) (*v1alpha1
 	podAdditions := &v1alpha1.PodAdditions{}
 
 	// Grab the gitconfig additions
-	gitConfigAdditions, err := provisionGitConfig(api.Client, namespace, userMountPath)
+	gitConfigAdditions, err := provisionGitConfig(api, namespace, userMountPath)
 	if err != nil {
 		return podAdditions, err
 	}
@@ -57,7 +57,7 @@ func provisionGitConfiguration(api sync.ClusterAPI, namespace string) (*v1alpha1
 
 	// Grab the credentials additions
 	if len(credentials) > 0 {
-		credentialsAdditions, err := provisionUserGitCredentials(api.Client, namespace, userMountPath, credentials)
+		credentialsAdditions, err := provisionUserGitCredentials(api, namespace, userMountPath, credentials)
 		if err != nil {
 			return podAdditions, err
 		}

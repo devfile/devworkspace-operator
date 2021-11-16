@@ -14,12 +14,12 @@
 package automount
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,13 +56,13 @@ const defaultGitServerTemplate = `[http]
 //			a. Git user credentials if specified
 //			b. Git server credentials if specified
 //		3. Creating and mounting a gitconfig config map to /etc/gitconfig with the above information
-func provisionGitConfig(client k8sclient.Client, namespace string, userMountPath string) (*v1alpha1.PodAdditions, error) {
-	podAdditions, gitconfig, err := constructGitConfig(client, namespace, userMountPath)
+func provisionGitConfig(api sync.ClusterAPI, namespace string, userMountPath string) (*v1alpha1.PodAdditions, error) {
+	podAdditions, gitconfig, err := constructGitConfig(api, namespace, userMountPath)
 	if err != nil {
 		return podAdditions, nil
 	}
 
-	configMapPodAdditions, err := mountGitConfigMap(gitCredentialsConfigMapName, namespace, client, gitconfig)
+	configMapPodAdditions, err := mountGitConfigMap(gitCredentialsConfigMapName, namespace, api, gitconfig)
 	if err != nil {
 		return configMapPodAdditions, err
 	}
@@ -73,7 +73,7 @@ func provisionGitConfig(client k8sclient.Client, namespace string, userMountPath
 }
 
 // constructGitConfig constructs the gitconfig and adds any relevant user and server credentials
-func constructGitConfig(client k8sclient.Client, namespace string, userMountPath string) (*v1alpha1.PodAdditions, string, error) {
+func constructGitConfig(api sync.ClusterAPI, namespace string, userMountPath string) (*v1alpha1.PodAdditions, string, error) {
 	gitconfig := ""
 
 	if userMountPath != "" {
@@ -82,7 +82,7 @@ func constructGitConfig(client k8sclient.Client, namespace string, userMountPath
 	}
 
 	configmap := &corev1.ConfigMapList{}
-	err := client.List(context.TODO(), configmap, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	err := api.Client.List(api.Ctx, configmap, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceGitTLSLabel: "true",
 	})
 	if err != nil {
@@ -135,11 +135,11 @@ func constructGitConfig(client k8sclient.Client, namespace string, userMountPath
 //   It does so by:
 //		1. Creating the configmap that stores the gitconfig if it does not exist
 //		2. Adding the new config map volume and volume mount to the pod additions
-func mountGitConfigMap(configMapName, namespace string, client k8sclient.Client, credentialsGitConfig string) (*v1alpha1.PodAdditions, error) {
+func mountGitConfigMap(configMapName, namespace string, api sync.ClusterAPI, credentialsGitConfig string) (*v1alpha1.PodAdditions, error) {
 	podAdditions := &v1alpha1.PodAdditions{}
 
 	// Create the configmap that stores the gitconfig
-	err := createOrUpdateGitConfigMap(configMapName, namespace, credentialsGitConfig, client)
+	err := createOrUpdateGitConfigMap(configMapName, namespace, credentialsGitConfig, api)
 	if err != nil {
 		return nil, err
 	}
@@ -161,18 +161,21 @@ func getGitConfigMapVolumeMount(configMapName string) corev1.VolumeMount {
 	return gitConfigMapVolumeMount
 }
 
-func createOrUpdateGitConfigMap(configMapName string, namespace string, config string, client k8sclient.Client) error {
+func createOrUpdateGitConfigMap(configMapName string, namespace string, config string, api sync.ClusterAPI) error {
 	configMap := getGitConfigMap(configMapName, namespace, config)
-	if err := client.Create(context.TODO(), configMap); err != nil {
+	if err := api.Client.Create(api.Ctx, configMap); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg, err := getClusterGitConfigMap(configMapName, namespace, client)
+		existingCfg, err := getClusterGitConfigMap(configMapName, namespace, api)
 		if err != nil {
 			return err
 		}
+		if existingCfg == nil {
+			return nil
+		}
 		configMap.ResourceVersion = existingCfg.ResourceVersion
-		err = client.Update(context.TODO(), configMap)
+		err = api.Client.Update(api.Ctx, configMap)
 		if err != nil {
 			return err
 		}
@@ -181,13 +184,13 @@ func createOrUpdateGitConfigMap(configMapName string, namespace string, config s
 	return nil
 }
 
-func getClusterGitConfigMap(configMapName string, namespace string, client k8sclient.Client) (*corev1.ConfigMap, error) {
+func getClusterGitConfigMap(configMapName string, namespace string, api sync.ClusterAPI) (*corev1.ConfigMap, error) {
 	configMap := &corev1.ConfigMap{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
 		Name:      configMapName,
 	}
-	err := client.Get(context.TODO(), namespacedName, configMap)
+	err := api.Client.Get(api.Ctx, namespacedName, configMap)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
@@ -203,8 +206,9 @@ func getGitConfigMap(configMapName string, namespace string, config string) *cor
 			Name:      configMapName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/defaultName": "git-config-secret",
-				"app.kubernetes.io/part-of":     "devworkspace-operator",
+				"app.kubernetes.io/defaultName":         "git-config-secret",
+				"app.kubernetes.io/part-of":             "devworkspace-operator",
+				"controller.devfile.io/watch-configmap": "true",
 			},
 		},
 		Data: map[string]string{

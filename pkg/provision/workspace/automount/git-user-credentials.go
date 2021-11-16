@@ -13,16 +13,15 @@
 package automount
 
 import (
-	"context"
 	"path/filepath"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const gitCredentialsName = "credentials"
@@ -33,10 +32,10 @@ const gitCredentialsSecretName = "devworkspace-merged-git-credentials"
 //		1. Finding all secrets labeled with "controller.devfile.io/git-credential": "true" and grabbing all the user credentials
 //			and condensing them into one string
 //		2. Creating and mounting a secret named gitCredentialsSecretName into the workspace pod
-func provisionUserGitCredentials(client k8sclient.Client, namespace string, mountpath string, credentials []string) (*v1alpha1.PodAdditions, error) {
+func provisionUserGitCredentials(api sync.ClusterAPI, namespace string, mountpath string, credentials []string) (*v1alpha1.PodAdditions, error) {
 	// mount the users git credentials
 	joinedCredentials := strings.Join(credentials, "\n")
-	secretAdditions, err := mountGitCredentialsSecret(mountpath, joinedCredentials, namespace, client)
+	secretAdditions, err := mountGitCredentialsSecret(mountpath, joinedCredentials, namespace, api)
 	if err != nil {
 		return nil, err
 	}
@@ -47,11 +46,11 @@ func provisionUserGitCredentials(client k8sclient.Client, namespace string, moun
 //   It does so by:
 //		1. Creating the secret that stores the credentials if it does not exist
 //		2. Adding the new secret volume and volume mount to the pod additions
-func mountGitCredentialsSecret(mountPath, credentials, namespace string, client k8sclient.Client) (*v1alpha1.PodAdditions, error) {
+func mountGitCredentialsSecret(mountPath, credentials, namespace string, api sync.ClusterAPI) (*v1alpha1.PodAdditions, error) {
 	podAdditions := &v1alpha1.PodAdditions{}
 
 	// Create the configmap that stores all the users credentials
-	err := createOrUpdateGitSecret(gitCredentialsSecretName, namespace, credentials, client)
+	err := createOrUpdateGitSecret(gitCredentialsSecretName, namespace, credentials, api)
 	if err != nil {
 		return nil, err
 	}
@@ -73,18 +72,21 @@ func getGitCredentialsVolumeMount(mountPath string, secretName string) corev1.Vo
 	return gitSecretVolumeMount
 }
 
-func createOrUpdateGitSecret(secretName string, namespace string, config string, client k8sclient.Client) error {
+func createOrUpdateGitSecret(secretName string, namespace string, config string, api sync.ClusterAPI) error {
 	secret := getGitSecret(secretName, namespace, config)
-	if err := client.Create(context.TODO(), secret); err != nil {
+	if err := api.Client.Create(api.Ctx, secret); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
 			return err
 		}
-		existingCfg, err := getClusterGitSecret(secretName, namespace, client)
+		existingCfg, err := getClusterGitSecret(secretName, namespace, api)
 		if err != nil {
 			return err
 		}
+		if existingCfg == nil {
+			return nil
+		}
 		secret.ResourceVersion = existingCfg.ResourceVersion
-		err = client.Update(context.TODO(), secret)
+		err = api.Client.Update(api.Ctx, secret)
 		if err != nil {
 			return err
 		}
@@ -92,13 +94,13 @@ func createOrUpdateGitSecret(secretName string, namespace string, config string,
 	return nil
 }
 
-func getClusterGitSecret(secretName string, namespace string, client k8sclient.Client) (*corev1.Secret, error) {
+func getClusterGitSecret(secretName string, namespace string, api sync.ClusterAPI) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
 		Name:      secretName,
 	}
-	err := client.Get(context.TODO(), namespacedName, secret)
+	err := api.Client.Get(api.Ctx, namespacedName, secret)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, nil
@@ -114,8 +116,9 @@ func getGitSecret(secretName string, namespace string, config string) *corev1.Se
 			Name:      secretName,
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/defaultName": "git-config-secret",
-				"app.kubernetes.io/part-of":     "devworkspace-operator",
+				"app.kubernetes.io/defaultName":      "git-config-secret",
+				"app.kubernetes.io/part-of":          "devworkspace-operator",
+				"controller.devfile.io/watch-secret": "true",
 			},
 		},
 		Data: map[string][]byte{

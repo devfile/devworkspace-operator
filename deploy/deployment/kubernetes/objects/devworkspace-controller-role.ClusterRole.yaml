@@ -9,6 +9,17 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  resourceNames:
+  - workspace-preferences-configmap
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+- apiGroups:
+  - ""
   resources:
   - configmaps
   - persistentvolumeclaims
@@ -42,6 +53,7 @@ rules:
   - create
   - delete
   - get
+  - patch
 - apiGroups:
   - ""
   resources:

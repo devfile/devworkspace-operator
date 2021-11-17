@@ -77,6 +77,12 @@ func generateRBAC(namespace string) []client.Object {
 					ResourceNames: []string{"workspace-credentials-secret"},
 				},
 				{
+					Resources:     []string{"configmaps"},
+					APIGroups:     []string{""},
+					Verbs:         []string{"get", "create", "patch", "delete"},
+					ResourceNames: []string{"workspace-preferences-configmap"},
+				},
+				{
 					Resources: []string{"devworkspaces"},
 					APIGroups: []string{"workspace.devfile.io"},
 					Verbs:     []string{"get", "watch", "list", "patch", "update"},

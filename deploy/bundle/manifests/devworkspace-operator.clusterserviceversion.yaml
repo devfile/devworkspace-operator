@@ -181,6 +181,13 @@ spec:
           - list
           - watch
         - apiGroups:
+          - authorization.k8s.io
+          resources:
+          - localsubjectaccessreviews
+          - subjectaccessreviews
+          verbs:
+          - create
+        - apiGroups:
           - batch
           resources:
           - jobs

@@ -120,6 +120,7 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 				},
 				Resources: []string{
 					"subjectaccessreviews",
+					"localsubjectaccessreviews",
 				},
 				Verbs: []string{
 					"create",

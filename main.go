@@ -38,6 +38,7 @@ import (
 
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routev1 "github.com/openshift/api/route/v1"
+	securityv1 "github.com/openshift/api/security/v1"
 	templatev1 "github.com/openshift/api/template/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -75,6 +76,9 @@ func init() {
 		utilruntime.Must(routev1.Install(scheme))
 		utilruntime.Must(templatev1.Install(scheme))
 		utilruntime.Must(oauthv1.Install(scheme))
+		// Enable controller to manage SCCs in OpenShift; permissions to do this are not requested
+		// by default and must be added by a cluster-admin.
+		utilruntime.Must(securityv1.Install(scheme))
 	}
 
 	// +kubebuilder:scaffold:scheme

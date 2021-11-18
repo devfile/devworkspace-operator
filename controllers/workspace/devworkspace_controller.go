@@ -355,7 +355,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	serviceAcctStatus := wsprovision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
 	if !serviceAcctStatus.Continue {
-		// FailStartup is not possible for generating the serviceaccount
+		if serviceAcctStatus.FailStartup {
+			return r.failWorkspace(workspace, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		}
 		reqLogger.Info("Waiting for workspace ServiceAccount")
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
 		if !serviceAcctStatus.Requeue && serviceAcctStatus.Err == nil {

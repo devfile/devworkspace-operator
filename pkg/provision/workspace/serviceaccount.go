@@ -22,7 +22,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	securityv1 "github.com/openshift/api/security/v1"
-	v1 "k8s.io/api/authorization/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,19 +106,10 @@ func SyncServiceAccount(
 func addSCCToServiceAccount(saName, namespace, sccName string, clusterAPI sync.ClusterAPI) (retry bool, err error) {
 	serviceaccount := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
 
-	canList, canWatch, err := checkControllerSCCAccess(sccName, clusterAPI)
-	if err != nil {
-		return false, fmt.Errorf("failed to check access to %s SecurityContextConstraints: %w", sccName, err)
-	} else if !canList {
-		return false, fmt.Errorf("controller is not permitted to list SecurityContextConstraints")
-	} else if !canWatch {
-		return false, fmt.Errorf("controller is not permitted to watch SecurityContextConstraints")
-	}
-
 	scc := &securityv1.SecurityContextConstraints{}
-	if err := clusterAPI.Client.Get(clusterAPI.Ctx, types.NamespacedName{Name: sccName}, scc); err != nil {
+	if err := clusterAPI.NonCachingClient.Get(clusterAPI.Ctx, types.NamespacedName{Name: sccName}, scc); err != nil {
 		switch {
-		case k8sErrors.IsUnauthorized(err):
+		case k8sErrors.IsForbidden(err):
 			return false, fmt.Errorf("operator does not have permissions to get the '%s' SecurityContextConstraints", sccName)
 		case k8sErrors.IsNotFound(err):
 			return false, fmt.Errorf("requested SecurityContextConstraints '%s' not found on cluster", sccName)
@@ -136,9 +126,9 @@ func addSCCToServiceAccount(saName, namespace, sccName string, clusterAPI sync.C
 	}
 
 	scc.Users = append(scc.Users, serviceaccount)
-	if err := clusterAPI.Client.Update(clusterAPI.Ctx, scc); err != nil {
+	if err := clusterAPI.NonCachingClient.Update(clusterAPI.Ctx, scc); err != nil {
 		switch {
-		case k8sErrors.IsUnauthorized(err):
+		case k8sErrors.IsForbidden(err):
 			return false, fmt.Errorf("operator does not have permissions to update the '%s' SecurityContextConstraints", sccName)
 		case k8sErrors.IsConflict(err):
 			return true, nil
@@ -148,54 +138,4 @@ func addSCCToServiceAccount(saName, namespace, sccName string, clusterAPI sync.C
 	}
 
 	return false, nil
-}
-
-// checkControllerSCCAccess checks RBAC *prerequisites* for managing SecurityContextConstraints on OpenShift.
-// Checking this specifically is required the controller does not have these permissions by default, and the
-// internal cache in controller-runtime attempts to use listWatches under the hood. Attempting to use SCCs in
-// workspaces without the additional RBAC will lock the reconcile as any client actions that depend on the
-// cache will fail to return an error.
-func checkControllerSCCAccess(sccName string, clusterAPI sync.ClusterAPI) (canList, canWatch bool, err error) {
-	// Controller caching functionality depends on being able to list and watch resources. Errors due to these
-	// RBAC verbs not being available will be thrown out-of-band with the reconcile and cannot be detected by
-	// e.g. a failed Get()
-	listSSAR := &v1.SelfSubjectAccessReview{
-		Spec: v1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &v1.ResourceAttributes{
-				Verb:     "list",
-				Group:    "security.openshift.io",
-				Version:  "v1",
-				Resource: "securitycontextconstraints",
-				Name:     sccName,
-			},
-		},
-	}
-	if err := clusterAPI.Client.Create(clusterAPI.Ctx, listSSAR); err != nil {
-		return false, false, err
-	}
-
-	if !listSSAR.Status.Allowed {
-		return false, false, nil
-	}
-
-	watchSSAR := &v1.SelfSubjectAccessReview{
-		Spec: v1.SelfSubjectAccessReviewSpec{
-			ResourceAttributes: &v1.ResourceAttributes{
-				Verb:     "watch",
-				Group:    "security.openshift.io",
-				Version:  "v1",
-				Resource: "securitycontextconstraints",
-				Name:     sccName,
-			},
-		},
-	}
-	if err := clusterAPI.Client.Create(clusterAPI.Ctx, watchSSAR); err != nil {
-		return true, false, err
-	}
-
-	if !watchSSAR.Status.Allowed {
-		return true, false, nil
-	}
-
-	return true, true, nil
 }

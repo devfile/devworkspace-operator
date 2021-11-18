@@ -126,6 +126,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	nonCachingClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: scheme})
+	if err != nil {
+		setupLog.Error(err, "unable to initialize non-caching client")
+		os.Exit(1)
+	}
+
 	// Index Events on involvedObject.name to allow us to get events involving a DevWorkspace's pod(s). This is used to
 	// check for issues that prevent the pod from starting, so that DevWorkspaces aren't just hanging indefinitely.
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &corev1.Event{}, "involvedObject.name", func(obj client.Object) []string {
@@ -147,9 +153,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&workspacecontroller.DevWorkspaceReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("DevWorkspace"),
-		Scheme: mgr.GetScheme(),
+		Client:           mgr.GetClient(),
+		NonCachingClient: nonCachingClient,
+		Log:              ctrl.Log.WithName("controllers").WithName("DevWorkspace"),
+		Scheme:           mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DevWorkspace")
 		os.Exit(1)

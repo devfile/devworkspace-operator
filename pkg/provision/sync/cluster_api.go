@@ -24,10 +24,11 @@ import (
 )
 
 type ClusterAPI struct {
-	Client crclient.Client
-	Scheme *runtime.Scheme
-	Logger logr.Logger
-	Ctx    context.Context
+	Client           crclient.Client
+	NonCachingClient crclient.Client
+	Scheme           *runtime.Scheme
+	Logger           logr.Logger
+	Ctx              context.Context
 }
 
 // NotInSyncError is returned when a spec object is out-of-sync with its cluster counterpart

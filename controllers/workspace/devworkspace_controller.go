@@ -70,8 +70,9 @@ const (
 // DevWorkspaceReconciler reconciles a DevWorkspace object
 type DevWorkspaceReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	NonCachingClient client.Client
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
 }
 
 /////// CRD-related RBAC roles
@@ -99,10 +100,11 @@ type DevWorkspaceReconciler struct {
 func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
 	clusterAPI := sync.ClusterAPI{
-		Client: r.Client,
-		Scheme: r.Scheme,
-		Logger: reqLogger,
-		Ctx:    ctx,
+		Client:           r.Client,
+		NonCachingClient: r.NonCachingClient,
+		Scheme:           r.Scheme,
+		Logger:           reqLogger,
+		Ctx:              ctx,
 	}
 
 	// Fetch the Workspace instance

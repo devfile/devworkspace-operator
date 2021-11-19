@@ -16,6 +16,7 @@
 package workspace
 
 import (
+	"context"
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -26,6 +27,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -103,6 +105,27 @@ func SyncServiceAccount(
 	}
 }
 
+func NeedsServiceAccountFinalizer(workspace *dw.DevWorkspaceTemplateSpec) bool {
+	if !workspace.Attributes.Exists(constants.WorkspaceSCCAttribute) {
+		return false
+	}
+	if workspace.Attributes.GetString(constants.WorkspaceSCCAttribute, nil) == "" {
+		return false
+	}
+	return true
+}
+
+func FinalizeServiceAccount(workspace *dw.DevWorkspace, ctx context.Context, nonCachingClient crclient.Client) (retry bool, err error) {
+	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+	namespace := workspace.Namespace
+	if !workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
+		return false, nil
+	}
+	sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
+
+	return removeSCCFromServiceAccount(saName, namespace, sccName, ctx, nonCachingClient)
+}
+
 func addSCCToServiceAccount(saName, namespace, sccName string, clusterAPI sync.ClusterAPI) (retry bool, err error) {
 	serviceaccount := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
 
@@ -127,6 +150,50 @@ func addSCCToServiceAccount(saName, namespace, sccName string, clusterAPI sync.C
 
 	scc.Users = append(scc.Users, serviceaccount)
 	if err := clusterAPI.NonCachingClient.Update(clusterAPI.Ctx, scc); err != nil {
+		switch {
+		case k8sErrors.IsForbidden(err):
+			return false, fmt.Errorf("operator does not have permissions to update the '%s' SecurityContextConstraints", sccName)
+		case k8sErrors.IsConflict(err):
+			return true, nil
+		default:
+			return false, err
+		}
+	}
+
+	return false, nil
+}
+
+func removeSCCFromServiceAccount(saName, namespace, sccName string, ctx context.Context, nonCachingClient crclient.Client) (retry bool, err error) {
+	serviceaccount := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
+
+	scc := &securityv1.SecurityContextConstraints{}
+	if err := nonCachingClient.Get(ctx, types.NamespacedName{Name: sccName}, scc); err != nil {
+		switch {
+		case k8sErrors.IsForbidden(err):
+			return false, fmt.Errorf("operator does not have permissions to get the '%s' SecurityContextConstraints", sccName)
+		case k8sErrors.IsNotFound(err):
+			return false, fmt.Errorf("requested SecurityContextConstraints '%s' not found on cluster", sccName)
+		default:
+			return false, err
+		}
+	}
+
+	found := false
+	var newUsers []string
+	for _, user := range scc.Users {
+		if user == serviceaccount {
+			found = true
+			continue
+		}
+		newUsers = append(newUsers, user)
+	}
+	if !found {
+		return false, err
+	}
+
+	scc.Users = newUsers
+
+	if err := nonCachingClient.Update(ctx, scc); err != nil {
 		switch {
 		case k8sErrors.IsForbidden(err):
 			return false, fmt.Errorf("operator does not have permissions to update the '%s' SecurityContextConstraints", sccName)

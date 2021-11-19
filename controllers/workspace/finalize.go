@@ -33,13 +33,23 @@ import (
 )
 
 const (
-	storageCleanupFinalizer = "storage.controller.devfile.io"
+	storageCleanupFinalizer        = "storage.controller.devfile.io"
+	serviceAccountCleanupFinalizer = "serviceaccount.controller.devfile.io"
 )
 
-func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
-	if !coputil.HasFinalizer(workspace, storageCleanupFinalizer) {
-		return reconcile.Result{}, nil
+func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *dw.DevWorkspace) bool {
+	for _, finalizer := range workspace.Finalizers {
+		if finalizer == storageCleanupFinalizer {
+			return true
+		}
+		if finalizer == serviceAccountCleanupFinalizer {
+			return true
+		}
 	}
+	return false
+}
+
+func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
 	workspace.Status.Message = "Cleaning up resources for deletion"
 	workspace.Status.Phase = devworkspacePhaseTerminating
 	err := r.Client.Status().Update(ctx, workspace)
@@ -47,6 +57,18 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		return reconcile.Result{}, err
 	}
 
+	for _, finalizer := range workspace.Finalizers {
+		switch finalizer {
+		case storageCleanupFinalizer:
+			return r.finalizeStorage(ctx, log, workspace)
+		case serviceAccountCleanupFinalizer:
+			return r.finalizeServiceAccount(ctx, log, workspace)
+		}
+	}
+	return reconcile.Result{}, nil
+}
+
+func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
 	// Need to make sure Deployment is cleaned up before starting job to avoid mounting issues for RWO PVCs
 	wait, err := wsprovision.DeleteWorkspaceDeployment(ctx, workspace, r.Client)
 	if err != nil {
@@ -98,8 +120,20 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 
-func isFinalizerNecessary(workspace *dw.DevWorkspace, provisioner storage.Provisioner) bool {
-	return provisioner.NeedsStorage(&workspace.Spec.Template)
+func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
+	retry, err := wsprovision.FinalizeServiceAccount(workspace, ctx, r.NonCachingClient)
+	if err != nil {
+		log.Error(err, "Failed to finalize workspace ServiceAccount")
+		failedStatus := currentStatus{phase: dw.DevWorkspaceStatusError}
+		failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
+		return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
+	}
+	if retry {
+		return reconcile.Result{Requeue: true}, nil
+	}
+	log.Info("ServiceAccount clean up successful; clearing finalizer")
+	coputil.RemoveFinalizer(workspace, serviceAccountCleanupFinalizer)
+	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 
 func (r *DevWorkspaceReconciler) namespaceIsTerminating(ctx context.Context, namespace string) (bool, error) {

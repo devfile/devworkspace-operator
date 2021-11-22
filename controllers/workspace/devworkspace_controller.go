@@ -269,7 +269,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspace.Spec.Template)
 	if err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
 
 	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspace, clusterAPI)

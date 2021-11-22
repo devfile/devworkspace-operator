@@ -324,6 +324,22 @@ func getSpecDeployment(
 		deployment.Spec.Template.Annotations = maputils.Append(deployment.Spec.Template.Annotations, constants.DevWorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
+	if workspace.Spec.Template.Attributes.Exists(constants.PodTolerationsAttribute) {
+		var tolerations []corev1.Toleration
+		if err := workspace.Spec.Template.Attributes.GetInto(constants.PodTolerationsAttribute, &tolerations); err != nil {
+			return nil, fmt.Errorf("failed to parse %s attribute: %w", constants.PodTolerationsAttribute, err)
+		}
+		deployment.Spec.Template.Spec.Tolerations = tolerations
+	}
+
+	if workspace.Spec.Template.Attributes.Exists(constants.NodeSelectorAttribute) {
+		nodeSelector := map[string]string{}
+		if err := workspace.Spec.Template.Attributes.GetInto(constants.NodeSelectorAttribute, &nodeSelector); err != nil {
+			return nil, fmt.Errorf("failed to parse %s attribute: %w", constants.NodeSelectorAttribute, err)
+		}
+		deployment.Spec.Template.Spec.NodeSelector = nodeSelector
+	}
+
 	err = controllerutil.SetControllerReference(workspace, deployment, scheme)
 	if err != nil {
 		return nil, err

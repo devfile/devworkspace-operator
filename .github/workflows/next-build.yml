@@ -50,7 +50,8 @@ jobs:
   build-next-olm-imgs:
     runs-on: ubuntu-latest
     env:
-      DWO_BUNDLE_IMG: quay.io/devfile/devworkspace-operator-bundle:next
+      DWO_BUNDLE_REPO: quay.io/devfile/devworkspace-operator-bundle
+      DWO_BUNDLE_TAG: next
       DWO_INDEX_IMG: quay.io/devfile/devworkspace-operator-index:next
       OPM_VERSION: v1.19.1
       OPERATOR_SDK_VERSION: v1.8.0
@@ -107,7 +108,12 @@ jobs:
 
       - name: "Build Bundle & Index images"
         run: |
-          make build_bundle_image build_index_image
+          ./build/scripts/build_index_image.sh \
+            --bundle-repo ${DWO_BUNDLE_REPO} \
+            --bundle-tag ${DWO_BUNDLE_TAG} \
+            --index-image ${DWO_INDEX_IMG} \
+            --container-tool docker \
+            --force
 
       - name: "Docker Logout"
         run: docker logout

@@ -44,7 +44,7 @@ This is useful in case a DevWorkspace is expected to contain sensitive informati
 
 
 ## Configuring persistent storage used for a DevWorkspace
-The top-level Devfile attribute `controller.devfile.io/storage-type` can be used to configur persistent storage for DevWorkspaces:
+The top-level Devfile attribute `controller.devfile.io/storage-type` can be used to configure persistent storage for DevWorkspaces:
 ```yaml
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
@@ -58,7 +58,7 @@ spec:
 where `<storage-type>` is one of
 - `common`: Use one PVC for all workspace volumes, mounting Devfile volumes in subpaths within the common PVC
 - `ephemeral`: Replace all volumes with `emptyDir` volumes. This storage type is non-persistent; any local changes will be lost when the workspace is stopped. This is the equivalent of marking all volumes in the Devfile as `ephemeral: true`
-- `async`: Use emptyDir volumes for workspace volumes, but include a sidecar that synchronises local changes to a persistent volume as in the `common` strategy. This can potentially avoid issues where mounting volumes to a workspace on start takes a long time.
+- `async`: Use `emptyDir` volumes for workspace volumes, but include a sidecar that synchronises local changes to a persistent volume as in the `common` strategy. This can potentially avoid issues where mounting volumes to a workspace on startup takes a long time.
 
 ## Configuring project cloning
 The top-level Devfile attribute `controller.devfile.io/project-clone` can be used to configure how storage is mounted to workspaces. By default, the DevWorkspace Operator will add an init container to the workspace deployment that will clone any projects to the workspace before start. This can be disabled by setting `controller.devfile.io/project-clone: disable` in the attributes field:
@@ -87,7 +87,7 @@ to the resource. For secrets and configmaps, it's also necessary to apply an add
 By default, resources will be mounted based on the resource name:
 * Secrets will be mounted to `/etc/secret/<secret-name>`
 * Configmaps will be mounted to `/etc/config/<configmap-name>`
-* Persistent volume claims will be mounted to `/tmp/<pvc-name>
+* Persistent volume claims will be mounted to `/tmp/<pvc-name>`
 
 Mounting resources can be additionally configured via **annotations**:
 * `controller.devfile.io/mount-path`: configure where the resource should be mounted
@@ -102,7 +102,7 @@ Labelling secrets with `controller.devfile.io/devworkspace_pullsecret: true` mar
 Note: As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to image pull secrets
 
 ## Adding git credentials to a workspace
-Labelling secrets with `controller.devfile.io/git-credential` marks the secret as containing git credentials. All git credential secrets will be merged into a single secret (leavin the original resources in-tact). See [git documentation](https://git-scm.com/docs/git-credential-store#_storage_format) for details on the file format for this configuration. For example
+Labelling secrets with `controller.devfile.io/git-credential` marks the secret as containing git credentials. All git credential secrets will be merged into a single secret (leaving the original resources in-tact). See [git documentation](https://git-scm.com/docs/git-credential-store#_storage_format) for details on the file format for this configuration. For example
 ```yaml
 kind: Secret
 apiVersion: v1

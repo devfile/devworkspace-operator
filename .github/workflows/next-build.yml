@@ -108,6 +108,8 @@ jobs:
 
       - name: "Build Bundle & Index images"
         run: |
+          # Ubuntu latest comes with the _other_ version of yq.
+          pip install yq
           ./build/scripts/build_index_image.sh \
             --bundle-repo ${DWO_BUNDLE_REPO} \
             --bundle-tag ${DWO_BUNDLE_TAG} \

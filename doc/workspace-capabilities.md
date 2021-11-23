@@ -43,6 +43,17 @@ rules:
   - patch
   - delete
 - apiGroups:
+  - ""
+  resourceNames:
+  - workspace-preferences-configmap
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - create
+  - patch
+  - delete
+- apiGroups:
   - workspace.devfile.io
   resources:
   - devworkspaces

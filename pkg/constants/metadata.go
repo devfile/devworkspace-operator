@@ -83,6 +83,9 @@ const (
 	// WebhookRestartedAtAnnotation holds the the time (unixnano) of when the webhook server was forced to restart by controller
 	WebhookRestartedAtAnnotation = "controller.devfile.io/restarted-at"
 
+	// DevWorkspaceStartedAtAnnotation holds the the time (unixnano) of when the devworkspace was started
+	DevWorkspaceStartedAtAnnotation = "controller.devfile.io/started-at"
+
 	// RoutingAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the DevWorkspaceRouting objects.
 	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
 	RoutingAnnotationInfix = ".routing.controller.devfile.io/"

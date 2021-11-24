@@ -42,7 +42,11 @@ func SetTime(timingInfo map[string]string, event string) {
 	if _, set := timingInfo[event]; set {
 		return
 	}
-	timingInfo[event] = strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
+	timingInfo[event] = CurrentTime()
+}
+
+func CurrentTime() string {
+	return strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
 }
 
 // SummarizeStartup applies aggregate annotations based off event annotations set by

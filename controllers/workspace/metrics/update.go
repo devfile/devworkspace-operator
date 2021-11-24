@@ -22,12 +22,16 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // WorkspaceStarted updates metrics for workspaces entering the 'Starting' phase, given a workspace. If an error is
 // encountered, the provided logger is used to log the error.
 func WorkspaceStarted(wksp *dw.DevWorkspace, log logr.Logger) {
-	incrementMetricForWorkspace(workspaceTotal, wksp, log)
+	_, ok := wksp.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
+	if !ok {
+		incrementMetricForWorkspace(workspaceTotal, wksp, log)
+	}
 }
 
 // WorkspaceRunning updates metrics for workspaces entering the 'Running' phase, given a workspace. If an error is

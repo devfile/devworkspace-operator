@@ -168,11 +168,13 @@ if [ "$RELEASE" == "true" ]; then
   opm index add \
     --bundles "$BUNDLE_DIGEST" \
     --from-index "$INDEX_IMAGE" \
-    --tag "$INDEX_IMAGE"
+    --tag "$INDEX_IMAGE" \
+    --container-tool "$PODMAN"
 else
   opm index add \
     --bundles "$BUNDLE_DIGEST" \
-    --tag "$INDEX_IMAGE"
+    --tag "$INDEX_IMAGE" \
+    --container-tool "$PODMAN"
 fi
 $PODMAN push "$INDEX_IMAGE" 2>&1 | sed 's|^|    |'
 

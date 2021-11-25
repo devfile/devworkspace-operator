@@ -108,6 +108,11 @@ jobs:
 
       - name: Release
         run: |
+          # Need to grab goimports otherwise formatting after this step will fail
+          # PR checks.
+          go get -u golang.org/x/tools/cmd/goimports
+          git reset HEAD --hard
+
           git config --global user.name "Angel Misevski"
           git config --global user.email "amisevsk@redhat.com"
 

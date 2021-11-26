@@ -20,9 +20,11 @@ const (
 	// DevWorkspaceStorageTypeAttribute defines the strategy used for provisioning storage for the workspace.
 	// If empty, the common PVC strategy is used.
 	// Supported options:
-	// - "common": Create one PVC per namespace, and store data for all workspaces in that namespace in that PVC
-	// - "async" : Create one PVC per namespace, and create a remote server that syncs data from workspaces to the PVC.
-	//             All volumeMounts used for devworkspaces are emptyDir
+	// - "common":    Create one PVC per namespace, and store data for all workspaces in that namespace in that PVC
+	// - "async" :    Create one PVC per namespace, and create a remote server that syncs data from workspaces to the PVC.
+	//                All volumeMounts used for devworkspaces are emptyDir
+	// - "ephemeral": Use emptyDir volumes for all volumes in the DevWorkspace. All data is lost when the workspace is
+	//                stopped.
 	DevWorkspaceStorageTypeAttribute = "controller.devfile.io/storage-type"
 
 	// WorkspaceEnvAttribute is an attribute that specifies a set of environment variables provided by a component

@@ -196,7 +196,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	timing.SetTime(timingInfo, timing.DevWorkspaceStarted)
 
 	defer func() (reconcile.Result, error) {
-		r.syncStartedAtToCluster(ctx, clusterWorkspace, reqLogger)
 		r.syncTimingToCluster(ctx, clusterWorkspace, timingInfo, reqLogger)
 
 		// Don't accidentally suppress errors by overwriting here; only check for timeout when no error
@@ -206,6 +205,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 			}
 		}
+		if reconcileStatus.phase == dw.DevWorkspaceStatusRunning {
+			metrics.WorkspaceRunning(clusterWorkspace, reqLogger)
+			r.syncStartedAtToCluster(ctx, clusterWorkspace, reqLogger)
+		}
+
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
@@ -528,13 +532,14 @@ func (r *DevWorkspaceReconciler) syncTimingToCluster(
 func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
 	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
 
+	if workspace.Annotations == nil {
+		workspace.Annotations = map[string]string{}
+	}
+
 	if _, hasStartedAtAnnotation := workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation]; hasStartedAtAnnotation {
 		return
 	}
 
-	if workspace.Annotations == nil {
-		workspace.Annotations = map[string]string{}
-	}
 	workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation] = timing.CurrentTime()
 	if err := r.Update(ctx, workspace); err != nil {
 		if k8sErrors.IsConflict(err) {

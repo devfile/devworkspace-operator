@@ -38,8 +38,11 @@ func WorkspaceStarted(wksp *dw.DevWorkspace, log logr.Logger) {
 // encountered, the provided logger is used to log the error. This function assumes the provided workspace has
 // fully-synced conditions (i.e. the WorkspaceReady condition is present).
 func WorkspaceRunning(wksp *dw.DevWorkspace, log logr.Logger) {
-	incrementMetricForWorkspace(workspaceStarts, wksp, log)
-	incrementStartTimeBucketForWorkspace(wksp, log)
+	_, ok := wksp.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
+	if !ok {
+		incrementMetricForWorkspace(workspaceStarts, wksp, log)
+		incrementStartTimeBucketForWorkspace(wksp, log)
+	}
 }
 
 // WorkspaceFailed updates metrics for workspace entering the 'Failed' phase. If an error is encountered, the provided

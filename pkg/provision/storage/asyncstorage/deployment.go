@@ -17,6 +17,7 @@ package asyncstorage
 
 import (
 	"github.com/devfile/devworkspace-operator/internal/images"
+	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,7 +28,12 @@ import (
 )
 
 func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
-	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, storage)
+	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(namespace, clusterAPI)
+	if err != nil {
+		return nil, err
+	}
+
+	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, storage, podTolerations, nodeSelector)
 	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
 	switch err.(type) {
 	case nil:
@@ -47,7 +53,13 @@ func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1
 	return nil, NotReadyError
 }
 
-func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim) *appsv1.Deployment {
+func getWorkspaceSyncDeploymentSpec(
+	namespace string,
+	sshConfigMap *corev1.ConfigMap,
+	storage *corev1.PersistentVolumeClaim,
+	tolerations []corev1.Toleration,
+	nodeSelector map[string]string) *appsv1.Deployment {
+
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
 	modeReadOnly := int32(0640)
@@ -140,6 +152,15 @@ func getWorkspaceSyncDeploymentSpec(namespace string, sshConfigMap *corev1.Confi
 			},
 		},
 	}
+
+	if tolerations != nil && len(tolerations) > 0 {
+		deployment.Spec.Template.Spec.Tolerations = tolerations
+	}
+
+	if nodeSelector != nil && len(nodeSelector) > 0 {
+		deployment.Spec.Template.Spec.NodeSelector = nodeSelector
+	}
+
 	return deployment
 }
 

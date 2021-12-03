@@ -95,6 +95,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=apps;extensions,resources=deployments,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,resourceNames=workspace-credentials-secret,verbs=get;create;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,resourceNames=workspace-preferences-configmap,verbs=get;create;patch;delete
+// +kubebuilder:rbac:groups="metrics.k8s.io",resources=pods,verbs=get;list;watch
 
 func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (reconcileResult ctrl.Result, err error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)

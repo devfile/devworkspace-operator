@@ -67,6 +67,11 @@ func generateRBAC(namespace string) []client.Object {
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
+					Resources: []string{"pods"},
+					APIGroups: []string{"metrics.k8s.io"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
 					Resources: []string{"deployments", "replicasets"},
 					APIGroups: []string{"apps", "extensions"},
 					Verbs:     []string{"get", "list", "watch"},

@@ -17,6 +17,7 @@ package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -117,9 +118,20 @@ func SyncDeploymentToCluster(
 		envFromSourceAdditions = append(envFromSourceAdditions, automountEnv...)
 	}
 
+	podTolerations, nodeSelector, err := getNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
+	if err != nil {
+		return DeploymentProvisioningStatus{
+			ProvisioningStatus{
+				Message:     "failed to read pod tolerations and node selector from namespace",
+				Err:         err,
+				FailStartup: true,
+			},
+		}
+	}
+
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
-	specDeployment, err := getSpecDeployment(workspace, podAdditions, envFromSourceAdditions, saName, clusterAPI.Scheme)
+	specDeployment, err := getSpecDeployment(workspace, podAdditions, envFromSourceAdditions, saName, podTolerations, nodeSelector, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus{
@@ -254,6 +266,8 @@ func getSpecDeployment(
 	podAdditionsList []v1alpha1.PodAdditions,
 	envFromSourceAdditions []corev1.EnvFromSource,
 	saName string,
+	podTolerations []corev1.Toleration,
+	nodeSelector map[string]string,
 	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(10)
@@ -318,6 +332,13 @@ func getSpecDeployment(
 				},
 			},
 		},
+	}
+
+	if podTolerations != nil && len(podTolerations) > 0 {
+		deployment.Spec.Template.Spec.Tolerations = podTolerations
+	}
+	if nodeSelector != nil && len(nodeSelector) > 0 {
+		deployment.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 
 	if needsPVCWorkaround(podAdditions) {
@@ -519,4 +540,30 @@ func checkIfUnrecoverableEventIgnored(reason string) (ignored bool) {
 		}
 	}
 	return false
+}
+
+func getNamespacePodTolerationsAndNodeSelector(namespace string, api sync.ClusterAPI) ([]corev1.Toleration, map[string]string, error) {
+	ns := &corev1.Namespace{}
+	err := api.Client.Get(api.Ctx, types.NamespacedName{Name: namespace}, ns)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var podTolerations []corev1.Toleration
+	podTolerationsAnnot, ok := ns.Annotations[constants.NamespacePodTolerationsAnnotation]
+	if ok && podTolerationsAnnot != "" {
+		if err := json.Unmarshal([]byte(podTolerationsAnnot), &podTolerations); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse %s annotation: %w", constants.NamespacePodTolerationsAnnotation, err)
+		}
+	}
+
+	nodeSelector := map[string]string{}
+	nodeSelectorAnnot, ok := ns.Annotations[constants.NamespaceNodeSelectorAnnotation]
+	if ok && nodeSelectorAnnot != "" {
+		if err := json.Unmarshal([]byte(nodeSelectorAnnot), &nodeSelector); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse %s annotation: %w", constants.NamespaceNodeSelectorAnnotation, err)
+		}
+	}
+
+	return podTolerations, nodeSelector, nil
 }

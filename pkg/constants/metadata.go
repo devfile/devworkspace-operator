@@ -113,4 +113,12 @@ const (
 	// NamespacedConfigLabelKey is a label applied to configmaps to mark them as a configuration for all DevWorkspaces in
 	// the current namespace.
 	NamespacedConfigLabelKey = "controller.devfile.io/namespaced-config"
+
+	// NamespacePodTolerationsAnnotation is an annotation applied to a namespace to configure pod tolerations for all workspaces
+	// in that namespace. Value should be json-encoded []corev1.Toleration struct.
+	NamespacePodTolerationsAnnotation = "controller.devfile.io/pod-tolerations"
+
+	// NamespaceNodeSelectorAnnotation is an annotation applied to a namespace to configure the node selector for all workspaces
+	// in that namespace. Value should be json-encoded map[string]string
+	NamespaceNodeSelectorAnnotation = "controller.devfile.io/node-selector"
 )

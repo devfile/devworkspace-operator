@@ -228,6 +228,14 @@ spec:
           - get
           - update
         - apiGroups:
+          - metrics.k8s.io
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
           - monitoring.coreos.com
           resources:
           - servicemonitors

@@ -62,7 +62,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec) (*v1al
 		if err != nil {
 			return nil, err
 		}
-		handleMountSources(k8sContainer, component.Container)
+		handleMountSources(k8sContainer, component.Container, workspace.Projects)
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)
 	}
 
@@ -75,7 +75,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec) (*v1al
 		if err != nil {
 			return nil, err
 		}
-		handleMountSources(k8sContainer, container.Container)
+		handleMountSources(k8sContainer, container.Container, workspace.Projects)
 		podAdditions.InitContainers = append(podAdditions.InitContainers, *k8sContainer)
 	}
 

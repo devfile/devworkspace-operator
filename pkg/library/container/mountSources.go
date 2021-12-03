@@ -16,6 +16,8 @@
 package container
 
 import (
+	"path"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 
@@ -51,7 +53,7 @@ func AnyMountSources(devfileComponents []dw.Component) bool {
 
 // handleMountSources adds a volumeMount to a container if the corresponding devfile container has
 // mountSources enabled.
-func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.ContainerComponent) {
+func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.ContainerComponent, projects []dw.Project) {
 	if !HasMountSources(devfileContainer) {
 		return
 	}
@@ -72,13 +74,30 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.Con
 			MountPath: sourceMapping,
 		})
 	}
+
+	projectsSourcePath := getProjectSourcePath(projects)
+
 	k8sContainer.Env = append(k8sContainer.Env, corev1.EnvVar{
 		Name:  devfileConstants.ProjectsRootEnvVar,
 		Value: sourceMapping,
 	}, corev1.EnvVar{
 		Name:  devfileConstants.ProjectsSourceEnvVar,
-		Value: sourceMapping, // TODO: Unclear how this should be handled in case of multiple projects
+		Value: path.Join(sourceMapping, projectsSourcePath),
 	})
+}
+
+// getProjectSourcePath gets the path, relative to PROJECTS_ROOT, that should be used for the PROJECT_SOURCE env var
+func getProjectSourcePath(projects []dw.Project) string {
+	projectPath := ""
+	if len(projects) > 0 {
+		firstProject := projects[0]
+		if firstProject.ClonePath != "" {
+			projectPath = firstProject.ClonePath
+		} else {
+			projectPath = firstProject.Name
+		}
+	}
+	return projectPath
 }
 
 // getProjectsVolumeMount returns the projects volumeMount in a container, if it is defined; if it does not exist,

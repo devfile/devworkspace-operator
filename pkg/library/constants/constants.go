@@ -17,6 +17,6 @@ package constants
 
 const (
 	ProjectsRootEnvVar   = "PROJECTS_ROOT"
-	ProjectsSourceEnvVar = "PROJECTS_SOURCE"
+	ProjectsSourceEnvVar = "PROJECT_SOURCE"
 	ProjectsVolumeName   = "projects"
 )

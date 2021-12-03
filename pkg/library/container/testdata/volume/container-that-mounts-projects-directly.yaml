@@ -39,5 +39,5 @@ output:
             value: "testing-container-1"
           - name: "PROJECTS_ROOT"
             value: "/not-source-mapping"
-          - name: "PROJECTS_SOURCE"
-            value: "/not-source-mapping" # Temp value until projects is figured out
+          - name: "PROJECT_SOURCE"
+            value: "/not-source-mapping"

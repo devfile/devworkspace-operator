@@ -16,12 +16,14 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -71,4 +73,33 @@ func ReadNamespacedConfig(namespace string, api sync.ClusterAPI) (*NamespacedCon
 	return &NamespacedConfig{
 		CommonPVCSize: cm.Data[commonPVCSizeKey],
 	}, nil
+}
+
+// GetNamespacePodTolerationsAndNodeSelector gets pod tolerations and the node selector that should be applied to all pods created
+// for workspaces in a given namespace. Tolerations and node selector are unmarshalled from json-formatted annotations on the namespace
+// itself. Returns an error if annotations are not valid JSON.
+func GetNamespacePodTolerationsAndNodeSelector(namespace string, api sync.ClusterAPI) ([]corev1.Toleration, map[string]string, error) {
+	ns := &corev1.Namespace{}
+	err := api.Client.Get(api.Ctx, types.NamespacedName{Name: namespace}, ns)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var podTolerations []corev1.Toleration
+	podTolerationsAnnot, ok := ns.Annotations[constants.NamespacePodTolerationsAnnotation]
+	if ok && podTolerationsAnnot != "" {
+		if err := json.Unmarshal([]byte(podTolerationsAnnot), &podTolerations); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse %s annotation: %w", constants.NamespacePodTolerationsAnnotation, err)
+		}
+	}
+
+	nodeSelector := map[string]string{}
+	nodeSelectorAnnot, ok := ns.Annotations[constants.NamespaceNodeSelectorAnnotation]
+	if ok && nodeSelectorAnnot != "" {
+		if err := json.Unmarshal([]byte(nodeSelectorAnnot), &nodeSelector); err != nil {
+			return nil, nil, fmt.Errorf("failed to parse %s annotation: %w", constants.NamespaceNodeSelectorAnnotation, err)
+		}
+	}
+
+	return podTolerations, nodeSelector, nil
 }

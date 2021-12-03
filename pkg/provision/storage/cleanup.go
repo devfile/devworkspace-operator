@@ -21,6 +21,7 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -106,6 +107,7 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
 		jobLabels[constants.DevWorkspaceRestrictedAccessAnnotation] = restrictedAccess
 	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.PVCCleanupJobName(workspaceId),
@@ -161,8 +163,18 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 		},
 	}
 
-	err := controllerutil.SetControllerReference(workspace, job, clusterAPI.Scheme)
+	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
 	if err != nil {
+		return nil, err
+	}
+	if podTolerations != nil && len(podTolerations) > 0 {
+		job.Spec.Template.Spec.Tolerations = podTolerations
+	}
+	if nodeSelector != nil && len(nodeSelector) > 0 {
+		job.Spec.Template.Spec.NodeSelector = nodeSelector
+	}
+
+	if err := controllerutil.SetControllerReference(workspace, job, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 	return job, nil

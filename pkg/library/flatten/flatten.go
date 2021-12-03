@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
-	registry "github.com/devfile/devworkspace-operator/pkg/library/flatten/internal_registry"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/network"
 )
 
@@ -48,7 +47,6 @@ type ResolverTools struct {
 	WorkspaceNamespace string
 	Context            context.Context
 	K8sClient          client.Client
-	InternalRegistry   registry.InternalRegistry
 	HttpClient         network.HTTPGetter
 }
 
@@ -243,20 +241,8 @@ func resolveElementById(
 	registryUrl string,
 	tools ResolverTools) (resolvedPlugin *dw.DevWorkspaceTemplateSpec, err error) {
 
-	// Check internal registry for plugins that do not specify a registry
 	if registryUrl == "" {
-		if tools.InternalRegistry == nil {
-			return nil, fmt.Errorf("plugin %s does not specify a registryUrl and no internal registry is configured", name)
-		}
-		if !tools.InternalRegistry.IsInInternalRegistry(id) {
-			return nil, fmt.Errorf("plugin for component %s does not specify a registry and is not present in the internal registry", name)
-		}
-		pluginDWT, err := tools.InternalRegistry.ReadPluginFromInternalRegistry(id)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read plugin for component %s from internal registry: %w", name, err)
-		}
-		return &pluginDWT.Spec, nil
-
+		return nil, fmt.Errorf("plugin %s does not specify a registryUrl", name)
 	}
 
 	if tools.HttpClient == nil {

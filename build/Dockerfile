@@ -39,7 +39,6 @@ RUN microdnf -y update && microdnf clean all && rm -rf /var/cache/yum && echo "I
 WORKDIR /
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
 COPY --from=builder /devworkspace-operator/_output/bin/webhook-server /usr/local/bin/webhook-server
-COPY --from=builder /devworkspace-operator/internal-registry internal-registry
 
 ENV USER_UID=1001 \
     USER_NAME=devworkspace-controller

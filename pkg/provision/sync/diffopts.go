@@ -16,6 +16,7 @@ package sync
 import (
 	"strings"
 
+	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -57,6 +58,11 @@ var configmapDiffOpts = cmp.Options{
 }
 
 var routingDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{}, "ObjectMeta", "TypeMeta", "Status"),
+	cmpopts.IgnoreFields(v1alpha2.Endpoint{}, "Secure"),
+}
+
+var testDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(v1alpha1.DevWorkspaceRouting{}, "ObjectMeta", "TypeMeta", "Status"),
 }
 

@@ -101,6 +101,29 @@ func routingDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	if specRouting.Spec.RoutingClass != clusterRouting.Spec.RoutingClass {
 		return true, false
 	}
+
+	for endPoints, endpoints := range clusterRouting.Spec.Endpoints {
+		for endpointIndex, endpoint := range endpoints {
+			if endpoint.Secure == nil {
+				var defaultSecureValue = false
+				clusterRouting.Spec.Endpoints[endPoints][endpointIndex].Secure = &defaultSecureValue
+			}
+		}
+	}
+
+	for endPoints, endpoints := range specRouting.Spec.Endpoints {
+		for endpointIndex, endpoint := range endpoints {
+			if endpoint.Secure == nil {
+				var defaultSecureValue = false
+				specRouting.Spec.Endpoints[endPoints][endpointIndex].Secure = &defaultSecureValue
+			}
+		}
+	}
+
+	if !cmp.Equal(specRouting, clusterRouting, testDiffOpts) {
+		return true, false
+	}
+
 	return false, false
 }
 

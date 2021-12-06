@@ -165,6 +165,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Handle stopped workspaces
 	if !workspace.Spec.Started {
 		timing.ClearAnnotations(workspace)
+		r.removeStartedAtFromCluster(ctx, workspace, reqLogger)
 		r.syncTimingToCluster(ctx, workspace, map[string]string{}, reqLogger)
 		return r.stopWorkspace(workspace, reqLogger)
 	}
@@ -199,6 +200,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	defer func() (reconcile.Result, error) {
 		r.syncTimingToCluster(ctx, clusterWorkspace, timingInfo, reqLogger)
+
 		// Don't accidentally suppress errors by overwriting here; only check for timeout when no error
 		// encountered in main reconcile loop.
 		if err == nil {
@@ -206,6 +208,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 			}
 		}
+		if reconcileStatus.phase == dw.DevWorkspaceStatusRunning {
+			metrics.WorkspaceRunning(clusterWorkspace, reqLogger)
+			r.syncStartedAtToCluster(ctx, clusterWorkspace, reqLogger)
+		}
+
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
@@ -529,6 +536,42 @@ func (r *DevWorkspaceReconciler) syncTimingToCluster(
 			} else {
 				reqLogger.Error(err, "Error trying to apply timing annotations to devworkspace")
 			}
+		}
+	}
+}
+
+func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
+	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
+
+	if workspace.Annotations == nil {
+		workspace.Annotations = map[string]string{}
+	}
+
+	if _, hasStartedAtAnnotation := workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation]; hasStartedAtAnnotation {
+		return
+	}
+
+	workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation] = timing.CurrentTime()
+	if err := r.Update(ctx, workspace); err != nil {
+		if k8sErrors.IsConflict(err) {
+			reqLogger.Info("Got conflict when trying to apply started-at annotations to workspace")
+		} else {
+			reqLogger.Error(err, "Error trying to apply started-at annotation to devworkspace")
+		}
+	}
+}
+
+func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
+	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
+	if workspace.Annotations == nil {
+		workspace.Annotations = map[string]string{}
+	}
+	delete(workspace.Annotations, constants.DevWorkspaceStartedAtAnnotation)
+	if err := r.Update(ctx, workspace); err != nil {
+		if k8sErrors.IsConflict(err) {
+			reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")
+		} else {
+			reqLogger.Error(err, "Error trying to apply timing annotations to devworkspace")
 		}
 	}
 }

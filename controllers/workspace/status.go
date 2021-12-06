@@ -238,8 +238,6 @@ func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.Dev
 		metrics.WorkspaceRunning(workspace, logger)
 	case dw.DevWorkspaceStatusFailed:
 		metrics.WorkspaceFailed(workspace, logger)
-	case dw.DevWorkspaceStatusStarting:
-		metrics.WorkspaceStarted(workspace, logger)
 	}
 }
 

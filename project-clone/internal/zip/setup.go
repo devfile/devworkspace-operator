@@ -44,10 +44,13 @@ func SetupZipProject(project v1alpha2.Project) error {
 	projectPath := path.Join(internal.ProjectsRoot, clonePath)
 	if exists, err := internal.DirExists(projectPath); exists {
 		// Assume project is already set up
+		log.Printf("Project '%s' is already configured", project.Name)
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("failed to check path %s: %s", projectPath, err)
 	}
+
+	tmpProjectsPath := path.Join(internal.CloneTmpDir, clonePath)
 
 	zipFilePath := path.Join(tmpDir, fmt.Sprintf("%s.zip", clonePath))
 	log.Printf("Downloading project archive from %s", url)
@@ -56,10 +59,16 @@ func SetupZipProject(project v1alpha2.Project) error {
 		return fmt.Errorf("failed to download archive: %s", err)
 	}
 
-	log.Printf("Extracting project archive to %s", projectPath)
-	err = unzip(zipFilePath, projectPath)
+	log.Printf("Extracting project archive to %s", tmpProjectsPath)
+	err = unzip(zipFilePath, tmpProjectsPath)
 	if err != nil {
 		return fmt.Errorf("failed to extract project zip archive: %s", err)
+	}
+
+	// Move unzipped project from tmp dir to final destination
+	log.Printf("Moving extracted project archive to %s", projectPath)
+	if err := os.Rename(tmpProjectsPath, projectPath); err != nil {
+		return fmt.Errorf("failed to move unzipped project to PROJECTS_ROOT: %w", err)
 	}
 
 	err = dropTopLevelFolder(projectPath)

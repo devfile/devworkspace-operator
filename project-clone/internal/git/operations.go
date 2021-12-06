@@ -18,21 +18,18 @@ package git
 import (
 	"fmt"
 	"log"
-	"path"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/go-git/go-git/v5"
 	gitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 
-	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/shell"
 )
 
-// CloneProject clones the project specified to $PROJECTS_ROOT.
-func CloneProject(project *dw.Project) error {
-	clonePath := internal.GetClonePath(project)
-	log.Printf("Cloning project %s to %s", project.Name, clonePath)
+// CloneProject clones the project to path specified by projectPath
+func CloneProject(project *dw.Project, projectPath string) error {
+	log.Printf("Cloning project %s to %s", project.Name, projectPath)
 
 	if len(project.Git.Remotes) == 0 {
 		return fmt.Errorf("project does not define remotes")
@@ -67,19 +64,18 @@ func CloneProject(project *dw.Project) error {
 	}
 
 	// Delegate to standard git binary because git.PlainClone takes a lot of memory for large repos
-	err := shell.GitCloneProject(defaultRemoteURL, defaultRemoteName, path.Join(internal.ProjectsRoot, clonePath))
+	err := shell.GitCloneProject(defaultRemoteURL, defaultRemoteName, projectPath)
 	if err != nil {
 		return fmt.Errorf("failed to git clone from %s: %s", defaultRemoteURL, err)
 	}
 
-	log.Printf("Cloned project %s to %s", project.Name, clonePath)
+	log.Printf("Cloned project %s to %s", project.Name, projectPath)
 	return nil
 }
 
 // SetupRemotes sets up a git remote in repo for each remote in project.Git.Remotes
-func SetupRemotes(repo *git.Repository, project *dw.Project) error {
+func SetupRemotes(repo *git.Repository, project *dw.Project, projectPath string) error {
 	log.Printf("Setting up remotes for project %s", project.Name)
-	clonePath := internal.GetClonePath(project)
 	for remoteName, remoteUrl := range project.Git.Remotes {
 		_, err := repo.CreateRemote(&gitConfig.RemoteConfig{
 			Name: remoteName,
@@ -88,7 +84,7 @@ func SetupRemotes(repo *git.Repository, project *dw.Project) error {
 		if err != nil && err != git.ErrRemoteExists {
 			return fmt.Errorf("failed to add remote %s: %s", remoteName, err)
 		}
-		err = shell.GitFetchRemote(path.Join(internal.ProjectsRoot, clonePath), remoteName)
+		err = shell.GitFetchRemote(projectPath, remoteName)
 		if err != nil {
 			return fmt.Errorf("failed to fetch from remote %s: %s", remoteUrl, err)
 		}
@@ -98,7 +94,7 @@ func SetupRemotes(repo *git.Repository, project *dw.Project) error {
 }
 
 // CheckoutReference sets the current HEAD in repo to point at the revision and remote referenced by checkoutFrom
-func CheckoutReference(repo *git.Repository, project *dw.Project) error {
+func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath string) error {
 	checkoutFrom := project.Git.CheckoutFrom
 	if checkoutFrom == nil {
 		return nil
@@ -127,7 +123,7 @@ func CheckoutReference(repo *git.Repository, project *dw.Project) error {
 			continue
 		}
 		if ref.Name().IsBranch() {
-			return checkoutRemoteBranch(internal.GetClonePath(project), repo, defaultRemoteName, ref)
+			return checkoutRemoteBranch(projectPath, repo, defaultRemoteName, ref)
 		} else if ref.Name().IsTag() {
 			return checkoutTag(repo, defaultRemoteName, ref)
 		}
@@ -176,7 +172,7 @@ func checkoutRemoteBranch(projectPath string, repo *git.Repository, remote strin
 	// Need to also reset git repo due to how go-git handles some untracked files (https://github.com/go-git/go-git/issues/99)
 	// NOTE: using reset in go-git will not work in some cases, as that implementation of reset respects gitignore, so e.g.
 	// a .gitignored file that is checked in will never be reset.
-	err = shell.GitResetProject(path.Join(internal.ProjectsRoot, projectPath))
+	err = shell.GitResetProject(projectPath)
 	if err != nil {
 		return fmt.Errorf("failed to git reset: %s", err)
 	}

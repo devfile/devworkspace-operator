@@ -19,7 +19,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"path"
+	"syscall"
 
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/git"
@@ -40,6 +42,18 @@ func main() {
 	}
 	mw := io.MultiWriter(os.Stdout, f)
 	log.SetOutput(mw)
+
+	// Clean up temp dir on exit
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigs
+		if err := os.RemoveAll(internal.CloneTmpDir); err != nil {
+			log.Printf("Encountered error cleaning up temporary directory: %s", err)
+		}
+		os.Exit(0)
+	}()
+	defer os.RemoveAll(internal.CloneTmpDir)
 
 	workspace, err := internal.ReadFlattenedDevWorkspace()
 	if err != nil {

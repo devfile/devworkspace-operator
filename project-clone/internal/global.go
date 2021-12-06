@@ -24,6 +24,7 @@ import (
 
 var (
 	ProjectsRoot string
+	CloneTmpDir  string
 )
 
 // Read and store ProjectsRoot env var for reuse throughout project-clone.
@@ -33,4 +34,13 @@ func init() {
 		log.Printf("Required environment variable %s is unset", constants.ProjectsRootEnvVar)
 		os.Exit(1)
 	}
+	// Have to use path within PROJECTS_ROOT in case it is a mounted directory; otherwise, moving files will fail
+	// (os.Rename fails when source and dest are on different partitions)
+	tmpDir, err := os.MkdirTemp(ProjectsRoot, "project-clone-")
+	if err != nil {
+		log.Printf("Failed to get temporary directory for setting up projects: %s", err)
+		os.Exit(1)
+	}
+	log.Printf("Using temporary directory %s", tmpDir)
+	CloneTmpDir = tmpDir
 }

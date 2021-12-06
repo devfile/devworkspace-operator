@@ -32,12 +32,12 @@ import (
 // The git repo can have additional remotes -- they will be ignored here. If both the project and git repo have remote
 // A configured, but the corresponding remote URL is different, needRemotes will be true.
 func CheckProjectState(project *dw.Project) (needClone, needRemotes bool, err error) {
-	repo, err := OpenRepo(project)
+	repo, err := OpenRepo(path.Join(ProjectsRoot, GetClonePath(project)))
 	if err != nil {
 		return false, false, err
 	}
 	if repo == nil {
-		return true, true, nil
+		return true, false, nil
 	}
 
 	for projRemote, projRemoteURL := range project.Git.Remotes {
@@ -63,12 +63,11 @@ func CheckProjectState(project *dw.Project) (needClone, needRemotes bool, err er
 
 // OpenRepo returns the git repo on disk described by the devworkspace Project. If the repo does not
 // currently exist, returns nil. Returns an error if an unexpected error occurs opening the git repo.
-func OpenRepo(project *dw.Project) (*git.Repository, error) {
-	clonePath := GetClonePath(project)
-	repo, err := git.PlainOpen(path.Join(ProjectsRoot, clonePath))
+func OpenRepo(repoPath string) (*git.Repository, error) {
+	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
 		if err != git.ErrRepositoryNotExists {
-			return nil, fmt.Errorf("encountered error reading git repo at %s: %s", clonePath, err)
+			return nil, fmt.Errorf("encountered error reading git repo at %s: %s", repoPath, err)
 		}
 		return nil, nil
 	}

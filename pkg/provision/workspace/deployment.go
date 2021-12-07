@@ -62,6 +62,10 @@ var unrecoverablePodEventReasons = []string{
 	"ReplicaSetCreateError",
 }
 
+var unrecoverableDeploymentConditionReasons = []string{
+	"FailedCreate",
+}
+
 type DeploymentProvisioningStatus struct {
 	ProvisioningStatus
 }
@@ -151,6 +155,16 @@ func SyncDeploymentToCluster(
 		}
 	}
 
+	deploymentHealthy, deploymentErrMsg := checkDeploymentConditions(clusterDeployment)
+	if !deploymentHealthy {
+		return DeploymentProvisioningStatus{
+			ProvisioningStatus: ProvisioningStatus{
+				FailStartup: true,
+				Message:     deploymentErrMsg,
+			},
+		}
+	}
+
 	failureMsg, checkErr := checkPodsState(workspace, clusterAPI)
 	if checkErr != nil {
 		return DeploymentProvisioningStatus{
@@ -221,6 +235,18 @@ func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
 
 func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
 	return deployment.Status.ReadyReplicas > 0
+}
+
+func checkDeploymentConditions(deployment *appsv1.Deployment) (healthy bool, errorMsg string) {
+	conditions := deployment.Status.Conditions
+	for _, condition := range conditions {
+		for _, unrecoverableReason := range unrecoverableDeploymentConditionReasons {
+			if condition.Reason == unrecoverableReason {
+				return false, fmt.Sprintf("Detected unrecoverable deployment condition: %s %s", condition.Reason, condition.Message)
+			}
+		}
+	}
+	return true, ""
 }
 
 func getSpecDeployment(

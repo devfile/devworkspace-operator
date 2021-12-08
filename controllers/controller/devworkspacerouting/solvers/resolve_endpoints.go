@@ -75,7 +75,7 @@ func resolveURLForEndpoint(
 
 func getURLForEndpoint(endpoint controllerv1alpha1.Endpoint, host, basePath string, secure bool) string {
 	protocol := endpoint.Protocol
-	if secure && endpoint.Secure != nil && *endpoint.Secure {
+	if secure && endpoint.Secure {
 		protocol = controllerv1alpha1.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
 	var p string

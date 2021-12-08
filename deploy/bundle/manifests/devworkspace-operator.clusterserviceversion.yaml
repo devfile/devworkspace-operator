@@ -61,7 +61,7 @@ spec:
     The DevWorkspace Operator utilizes finalizers on resources it creates and
     webhooks to restrict access to development resources. As a result, manual steps
     are required in uninstalling the operator. See the
-    [documentation](https://github.com/devfile/devworkspace-operator/blob/main/doc/uninstall.md)
+    [documentation](https://github.com/devfile/devworkspace-operator/blob/main/docs/uninstall.md)
     for details.
   displayName: DevWorkspace Operator
   install:

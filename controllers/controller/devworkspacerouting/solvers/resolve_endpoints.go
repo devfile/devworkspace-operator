@@ -20,8 +20,6 @@ import (
 	"net/url"
 	"strings"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
@@ -35,7 +33,7 @@ func getExposedEndpoints(
 
 	for machineName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure != dw.PublicEndpointExposure {
+			if endpoint.Exposure != controllerv1alpha1.PublicEndpointExposure {
 				continue
 			}
 			endpointUrl, err := resolveURLForEndpoint(endpoint, routingObj)
@@ -56,7 +54,7 @@ func getExposedEndpoints(
 }
 
 func resolveURLForEndpoint(
-	endpoint dw.Endpoint,
+	endpoint controllerv1alpha1.Endpoint,
 	routingObj RoutingObjects) (string, error) {
 	for _, route := range routingObj.Routes {
 		if route.Annotations[constants.DevWorkspaceEndpointNameAnnotation] == endpoint.Name {
@@ -75,10 +73,10 @@ func resolveURLForEndpoint(
 	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
 }
 
-func getURLForEndpoint(endpoint dw.Endpoint, host, basePath string, secure bool) string {
+func getURLForEndpoint(endpoint controllerv1alpha1.Endpoint, host, basePath string, secure bool) string {
 	protocol := endpoint.Protocol
 	if secure && endpoint.Secure != nil && *endpoint.Secure {
-		protocol = dw.EndpointProtocol(getSecureProtocol(string(protocol)))
+		protocol = controllerv1alpha1.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
 	var p string
 	if endpoint.Path != "" {

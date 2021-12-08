@@ -280,6 +280,12 @@ func getSpecDeployment(
 	creator := workspace.Labels[constants.DevWorkspaceCreatorLabel]
 	var envVars []corev1.EnvVar
 	envVars = append(envVars, CommonEnvironmentVariables(workspace.Name, workspace.Status.DevWorkspaceId, workspace.Namespace, creator)...)
+	workspaceEnvVars, err := collectWorkspaceEnv(&workspace.Spec.Template)
+	if err != nil {
+		return nil, fmt.Errorf("failed to collect workspace environment variables: %s", err)
+	}
+	envVars = append(envVars, workspaceEnvVars...)
+
 	for idx := range podAdditions.Containers {
 		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, envVars...)
 		podAdditions.Containers[idx].VolumeMounts = append(podAdditions.Containers[idx].VolumeMounts, podAdditions.VolumeMounts...)

@@ -14,7 +14,7 @@
 package lifecycle
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -41,7 +41,7 @@ type postStartTestOutput struct {
 }
 
 func loadPostStartTestCaseOrPanic(t *testing.T, testPath string) postStartTestCase {
-	bytes, err := ioutil.ReadFile(testPath)
+	bytes, err := os.ReadFile(testPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func loadPostStartTestCaseOrPanic(t *testing.T, testPath string) postStartTestCa
 }
 
 func loadAllPostStartTestCasesOrPanic(t *testing.T, fromDir string) []postStartTestCase {
-	files, err := ioutil.ReadDir(fromDir)
+	files, err := os.ReadDir(fromDir)
 	if err != nil {
 		t.Fatal(err)
 	}

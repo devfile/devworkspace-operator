@@ -17,7 +17,7 @@ package lifecycle
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -40,7 +40,7 @@ type preStartTestOutput struct {
 
 func loadPreStartTestCaseOrPanic(t *testing.T, testFilename string) preStartTestCase {
 	testPath := filepath.Join("./testdata/prestart", testFilename)
-	bytes, err := ioutil.ReadFile(testPath)
+	bytes, err := os.ReadFile(testPath)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,7 +15,7 @@ jobs:
       name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: 1.15.13
+        go-version: 1.16.6
     -
       name: Set up Python 3.8
       uses: actions/setup-python@v2
@@ -72,9 +72,7 @@ jobs:
     -
       name: Check format
       run: |
-        # Have to use older version of addlicense as newer versions *require* Go 1.16. This
-        # requirement can be removed once this project moves to Go 1.16
-        go get -u github.com/google/addlicense@99ebc9c9db7bceb8623073e894533b978d7b7c8a
+        go get -u github.com/google/addlicense
         go get -u golang.org/x/tools/cmd/goimports
         git reset HEAD --hard
 

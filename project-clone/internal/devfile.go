@@ -17,7 +17,6 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -43,7 +42,7 @@ func ReadFlattenedDevWorkspace() (*dw.DevWorkspaceTemplateSpec, error) {
 		return nil, fmt.Errorf("required environment variable %s is unset", metadata.FlattenedDevfileMountPathEnvVar)
 	}
 
-	fileBytes, err := ioutil.ReadFile(flattenedDevWorkspacePath)
+	fileBytes, err := os.ReadFile(flattenedDevWorkspacePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading YAML file: %s", err)
 	}

@@ -19,7 +19,6 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -173,8 +172,7 @@ func unzip(archivePath string, destPath string) error {
 // and removes directory /projects/my-project/my-project-master/
 // If the specified path contains additional files or directories, no changes are made.
 func dropTopLevelFolder(projectPath string) error {
-	// Use ioutil ReadDir() since os.ReadDir is unavailable in Go 1.15
-	files, err := ioutil.ReadDir(projectPath)
+	files, err := os.ReadDir(projectPath)
 	if err != nil {
 		return err
 	}
@@ -188,7 +186,7 @@ func dropTopLevelFolder(projectPath string) error {
 	}
 	topLevelPath := path.Join(projectPath, topLevelFolder.Name())
 	log.Printf("Moving files from %s to %s", topLevelPath, projectPath)
-	topLevelContents, err := ioutil.ReadDir(topLevelPath)
+	topLevelContents, err := os.ReadDir(topLevelPath)
 	if err != nil {
 		return err
 	}

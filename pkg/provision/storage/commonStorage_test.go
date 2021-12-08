@@ -16,7 +16,7 @@
 package storage
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -76,7 +76,7 @@ func setupControllerCfg() {
 }
 
 func loadTestCaseOrPanic(t *testing.T, testFilepath string) testCase {
-	bytes, err := ioutil.ReadFile(testFilepath)
+	bytes, err := os.ReadFile(testFilepath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +88,7 @@ func loadTestCaseOrPanic(t *testing.T, testFilepath string) testCase {
 }
 
 func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
-	files, err := ioutil.ReadDir(fromDir)
+	files, err := os.ReadDir(fromDir)
 	if err != nil {
 		t.Fatal(err)
 	}

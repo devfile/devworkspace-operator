@@ -17,7 +17,6 @@ package infrastructure
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -30,7 +29,7 @@ const (
 //
 // This function was ported over from Operator SDK 0.17.0 and modified.
 func GetOperatorNamespace() (string, error) {
-	nsBytes, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	nsBytes, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		if os.IsNotExist(err) {
 			return "", fmt.Errorf("could not read namespace from mounted serviceaccount info")

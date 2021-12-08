@@ -17,7 +17,7 @@ package network
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -37,7 +37,7 @@ func FetchDevWorkspaceTemplate(location string, httpClient HTTPGetter) (*dw.DevW
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("could not fetch file from %s: got status %d", location, resp.StatusCode)
 	}
-	bytes, err := ioutil.ReadAll(resp.Body)
+	bytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("could not read data from %s: %w", location, err)
 	}

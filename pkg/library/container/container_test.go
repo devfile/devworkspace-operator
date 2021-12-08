@@ -17,7 +17,7 @@ package container
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -52,7 +52,7 @@ func setupControllerCfg() {
 }
 
 func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
-	files, err := ioutil.ReadDir(fromDir)
+	files, err := os.ReadDir(fromDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 }
 
 func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
-	bytes, err := ioutil.ReadFile(testPath)
+	bytes, err := os.ReadFile(testPath)
 	if err != nil {
 		t.Fatal(err)
 	}

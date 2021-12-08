@@ -17,13 +17,13 @@ package client
 
 import (
 	"fmt"
+	"os"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
-	"io/ioutil"
 	"log"
 	"os/exec"
 	"strconv"
@@ -124,12 +124,12 @@ func (c *K8sClient) Kube() kubernetes.Interface {
 
 //read a source file and copy to the selected path
 func copyFile(sourceFile string, destinationFile string) error {
-	input, err := ioutil.ReadFile(sourceFile)
+	input, err := os.ReadFile(sourceFile)
 	if err != nil {
 		return err
 	}
 
-	err = ioutil.WriteFile(destinationFile, input, 0644)
+	err = os.WriteFile(destinationFile, input, 0644)
 	if err != nil {
 		return err
 	}

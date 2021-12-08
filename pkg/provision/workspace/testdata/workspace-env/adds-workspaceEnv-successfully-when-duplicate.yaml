@@ -1,0 +1,30 @@
+name: "Resplves workspace environment variables when env vars are duplicated"
+
+input:
+  devworkspace:
+    components:
+      - name: plugin-a
+        attributes:
+          workspaceEnv:
+            - name: TEST_ENV_1
+              value: TEST_VAL_1
+            - name: TEST_ENV_2
+              value: TEST_VAL_2
+        container:
+          name: test-container-a
+          image: test-image-a
+      - name: plugin-b
+        attributes:
+          workspaceEnv:
+            - name: TEST_ENV_1
+              value: TEST_VAL_1
+        container:
+          name: test-container-b
+          image: test-image-b
+
+output:
+  workspaceEnv:
+    - name: TEST_ENV_1
+      value: TEST_VAL_1
+    - name: TEST_ENV_2
+      value: TEST_VAL_2

@@ -1,0 +1,44 @@
+name: "Finds environment variables in a component"
+
+input:
+  devworkspace:
+    components:
+
+      - name: test-plugin
+        plugin:
+          uri: "https://my-plugin.io/test"
+
+      - name: regular-container
+        container:
+          image: test-image-regular
+
+      - name: init-container
+        container:
+          image: test-image-init
+
+      - name: plugin-a
+        attributes:
+          controller.devfile.io/imported-by: test-plugin
+          workspaceEnv:
+            - name: TEST_ENV_1
+              value: TEST_VAL_1
+            - name: TEST_ENV_2
+              value: TEST_VAL_2
+        container:
+          name: test-container
+          image: test-image
+
+    commands:
+      - id: make-init
+        apply:
+          component: init-container
+
+    events:
+      prestart: [make-init]
+
+output:
+  workspaceEnv:
+    - name: TEST_ENV_1
+      value: TEST_VAL_1
+    - name: TEST_ENV_2
+      value: TEST_VAL_2

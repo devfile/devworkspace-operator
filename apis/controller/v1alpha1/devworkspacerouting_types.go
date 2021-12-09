@@ -78,6 +78,9 @@ type EndpointList []Endpoint
 
 type ExposedEndpointList []ExposedEndpoint
 
+// EndpointExposure describes the way an endpoint is exposed on the network.
+// Only one of the following exposures may be specified: public, internal, none.
+// +kubebuilder:validation:Enum=public;internal;none
 type EndpointExposure string
 
 const (
@@ -93,8 +96,15 @@ const (
 	NoneEndpointExposure EndpointExposure = "none"
 )
 
+// EndpointProtocol defines the application and transport protocols of the traffic that will go through this endpoint.
+// Only one of the following protocols may be specified: http, ws, tcp, udp.
+// +kubebuilder:validation:Enum=http;https;ws;wss;tcp;udp
 type EndpointProtocol string
 
+// Attributes provides a way to add a map of arbitrary YAML/JSON
+// objects.
+// +kubebuilder:validation:Type=object
+// +kubebuilder:validation:XPreserveUnknownFields
 type Attributes map[string]apiext.JSON
 
 type Endpoint struct {
@@ -145,6 +155,7 @@ type Endpoint struct {
 	// Describes whether the endpoint should be secured and protected by some
 	// authentication process. This requires a protocol of `https` or `wss`.
 	// +optional
+	// +devfile:default:value=false
 	Secure bool `json:"secure,omitempty"`
 
 	// Path of the endpoint URL

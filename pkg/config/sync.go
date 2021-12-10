@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/devfile/devworkspace-operator/pkg/config/proxy"
 	routeV1 "github.com/openshift/api/route/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +45,9 @@ var (
 	configMutex     sync.Mutex
 	configNamespace string
 	log             = ctrl.Log.WithName("operator-configuration")
+
+	// Proxy stores the current proxy configuration, if one is defined. This is a parsed form for easier access
+	Proxy *proxy.Proxy
 )
 
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
@@ -83,6 +87,11 @@ func SetupControllerConfig(client crclient.Client) error {
 		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 		updatePublicConfig()
 	}
+	clusterProxy, err := proxy.GetOpenShiftClusterProxyConfig(client, log)
+	if err != nil {
+		return err
+	}
+	Proxy = clusterProxy
 	return nil
 }
 

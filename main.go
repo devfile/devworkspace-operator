@@ -36,6 +36,7 @@ import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
 
+	configv1 "github.com/openshift/api/config/v1"
 	oauthv1 "github.com/openshift/api/oauth/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -79,6 +80,8 @@ func init() {
 		// Enable controller to manage SCCs in OpenShift; permissions to do this are not requested
 		// by default and must be added by a cluster-admin.
 		utilruntime.Must(securityv1.Install(scheme))
+		// Enable controller to read cluster-wide proxy on OpenShift
+		utilruntime.Must(configv1.AddToScheme(scheme))
 	}
 
 	// +kubebuilder:scaffold:scheme

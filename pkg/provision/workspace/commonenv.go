@@ -20,13 +20,14 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
-	return []corev1.EnvVar{
+	envvars := []corev1.EnvVar{
 		{
 			Name:  constants.DevWorkspaceNamespace,
 			Value: namespace,
@@ -48,6 +49,38 @@ func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator s
 			Value: config.Workspace.IdleTimeout,
 		},
 	}
+
+	envvars = append(envvars, getProxyEnvVars()...)
+
+	return envvars
+}
+
+func getProxyEnvVars() []corev1.EnvVar {
+	if config.Proxy == nil {
+		return nil
+	}
+
+	if config.Proxy.HttpProxy == "" && config.Proxy.HttpsProxy == "" {
+		return nil
+	}
+
+	// Proxy env vars are defined by consensus rather than standard; most tools use the lower-snake-case version
+	// but some may only look at the upper-snake-case version, so we add both.
+	var env []v1.EnvVar
+	if config.Proxy.HttpProxy != "" {
+		env = append(env, v1.EnvVar{Name: "http_proxy", Value: config.Proxy.HttpProxy})
+		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: config.Proxy.HttpProxy})
+	}
+	if config.Proxy.HttpsProxy != "" {
+		env = append(env, v1.EnvVar{Name: "https_proxy", Value: config.Proxy.HttpsProxy})
+		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: config.Proxy.HttpsProxy})
+	}
+	if config.Proxy.NoProxy != "" {
+		env = append(env, v1.EnvVar{Name: "no_proxy", Value: config.Proxy.NoProxy})
+		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: config.Proxy.NoProxy})
+	}
+
+	return env
 }
 
 func collectWorkspaceEnv(flattenedDW *dw.DevWorkspaceTemplateSpec) ([]corev1.EnvVar, error) {

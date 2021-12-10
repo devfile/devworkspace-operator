@@ -30,6 +30,9 @@ import (
 const hostKey = "host"
 const certificateKey = "certificate"
 
+const usernameKey = "username"
+const emailKey = "email"
+
 const gitConfigName = "gitconfig"
 const gitConfigLocation = "/etc/" + gitConfigName
 const gitCredentialsConfigMapName = "devworkspace-gitconfig"
@@ -81,6 +84,50 @@ func constructGitConfig(api sync.ClusterAPI, namespace string, userMountPath str
 		gitconfig = fmt.Sprintf(credentialTemplate, filepath.Join(userMountPath, gitCredentialsName))
 	}
 
+	podAdditions, gitconfig, err := constructGitConfigCertificates(api, namespace, gitconfig)
+	if err != nil {
+		return nil, "", err
+	}
+
+	gitconfig, err = constructGitUserConfig(api, namespace, gitconfig)
+	if err != nil {
+		return nil, "", err
+	}
+	return podAdditions, gitconfig, nil
+}
+
+// constructGitUserConfig finds one configmap with the label: constants.DevWorkspaceGitUserLabel: "true" and then uses those to
+// construct a partial gitconfig with any relevant user credentials added
+func constructGitUserConfig(api sync.ClusterAPI, namespace string, gitconfig string) (string, error) {
+	configmap := &corev1.ConfigMapList{}
+	err := api.Client.List(api.Ctx, configmap, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+		constants.DevWorkspaceGitUserLabel: "true",
+	})
+	if err != nil {
+		return "", err
+	}
+	if len(configmap.Items) > 1 {
+		return "", &FatalError{fmt.Errorf("only one configmap in the namespace %s can have the label controller.devfile.io/git-user-credential", namespace)}
+	}
+	if len(configmap.Items) == 1 {
+		cm := configmap.Items[0]
+		username, usernameFound := cm.Data[usernameKey]
+		email, emailFound := cm.Data[emailKey]
+
+		if usernameFound {
+			gitconfig = gitconfig + fmt.Sprintf("user.name=%s\n", username)
+		}
+
+		if emailFound {
+			gitconfig = gitconfig + fmt.Sprintf("user.email=%s\n", email)
+		}
+	}
+	return gitconfig, nil
+}
+
+// constructGitConfigCertificates finds ALL configmaps with the label: constants.DevWorkspaceGitTLSLabel: "true" and then uses those to
+// construct a partial gitconfig with any relevant server credentials added
+func constructGitConfigCertificates(api sync.ClusterAPI, namespace string, gitconfig string) (*v1alpha1.PodAdditions, string, error) {
 	configmap := &corev1.ConfigMapList{}
 	err := api.Client.List(api.Ctx, configmap, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceGitTLSLabel: "true",

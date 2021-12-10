@@ -53,6 +53,12 @@ const (
 	// If the git host is not defined then the certificate will be used for all http repositories.
 	DevWorkspaceGitTLSLabel = "controller.devfile.io/git-tls-credential"
 
+	// DevWorkspaceGitUserLabel is the label key to specify if the configmap is credentials for accessing a git server.
+	// Configmap must contain the following data:
+	// username: the username of the user in git
+	// email: the email of the user in git
+	DevWorkspaceGitUserLabel = "controller.devfile.io/git-user-credential"
+
 	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
 	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name>, secrets will
 	// be mounted at /etc/secret/<secret-name>, and persistent volume claims will be mounted to /tmp/<claim-name>

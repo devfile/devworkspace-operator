@@ -52,8 +52,10 @@ func provisionGitConfiguration(api sync.ClusterAPI, namespace string) (*v1alpha1
 		return podAdditions, err
 	}
 
-	podAdditions.Volumes = append(podAdditions.Volumes, gitConfigAdditions.Volumes...)
-	podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, gitConfigAdditions.VolumeMounts...)
+	if gitConfigAdditions != nil {
+		podAdditions.Volumes = append(podAdditions.Volumes, gitConfigAdditions.Volumes...)
+		podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, gitConfigAdditions.VolumeMounts...)
+	}
 
 	// Grab the credentials additions
 	if len(credentials) > 0 {

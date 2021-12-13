@@ -88,7 +88,7 @@ func GetAutoMountSecretSubpathVolumeMounts(mountPath string, secret corev1.Secre
 		workspaceVolumeMounts = append(workspaceVolumeMounts, corev1.VolumeMount{
 			Name:      common.AutoMountSecretVolumeName(secret.Name),
 			ReadOnly:  true,
-			MountPath: mountPath,
+			MountPath: path.Join(mountPath, secretKey),
 			SubPath:   secretKey,
 		})
 	}

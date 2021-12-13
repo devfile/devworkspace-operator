@@ -62,6 +62,10 @@ func provisionGitConfig(api sync.ClusterAPI, namespace string, userMountPath str
 		return podAdditions, nil
 	}
 
+	if gitconfig == "" {
+		// Nothing to store in configmap, so don't create one
+		return nil, nil
+	}
 	configMapPodAdditions, err := mountGitConfigMap(gitCredentialsConfigMapName, namespace, api, gitconfig)
 	if err != nil {
 		return configMapPodAdditions, err

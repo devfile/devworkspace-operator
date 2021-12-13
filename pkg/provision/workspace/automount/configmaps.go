@@ -90,7 +90,7 @@ func GetAutoMountConfigMapSubpathVolumeMounts(mountPath string, cm corev1.Config
 		workspaceVolumeMounts = append(workspaceVolumeMounts, corev1.VolumeMount{
 			Name:      common.AutoMountConfigMapVolumeName(cm.Name),
 			ReadOnly:  true,
-			MountPath: mountPath,
+			MountPath: path.Join(mountPath, configmapKey),
 			SubPath:   configmapKey,
 		})
 	}

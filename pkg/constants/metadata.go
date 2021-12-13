@@ -53,7 +53,7 @@ const (
 	// If the git host is not defined then the certificate will be used for all http repositories.
 	DevWorkspaceGitTLSLabel = "controller.devfile.io/git-tls-credential"
 
-	// DevWorkspaceGitUserLabel is the label key to specify if the configmap is git user credentials that should be propogated
+	// DevWorkspaceGitUserLabel is the label key to specify if the configmap contains git user credentials that should be propogated
 	// into the gitconfig.
 	// Configmap can contain any of the following data:
 	// name: the name of the user in git

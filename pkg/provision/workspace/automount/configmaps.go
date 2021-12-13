@@ -40,11 +40,18 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*v1alpha1
 		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		if mountAs == "env" {
 			additionalEnvVars = append(additionalEnvVars, getAutoMountConfigMapEnvFromSource(configmap.Name))
+			continue
+		}
+		mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
+		if mountPath == "" {
+			mountPath = path.Join("/etc/config/", configmap.Name)
+		}
+		if mountAs == "subpath" {
+			podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithConfigMap(configmap.Name))
+			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, GetAutoMountConfigMapSubpathVolumeMounts(mountPath, configmap)...)
 		} else {
-			mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
-			if mountPath == "" {
-				mountPath = path.Join("/etc/config/", configmap.Name)
-			}
+			// mountAs == "file", "", or anything else (default). Don't treat invalid values as errors to avoid
+			// failing all workspace starts in this namespace
 			podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithConfigMap(configmap.Name))
 			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, GetAutoMountConfigMapVolumeMount(mountPath, configmap.Name))
 		}
@@ -75,6 +82,19 @@ func GetAutoMountConfigMapVolumeMount(mountPath, name string) corev1.VolumeMount
 		MountPath: mountPath,
 	}
 	return workspaceVolumeMount
+}
+
+func GetAutoMountConfigMapSubpathVolumeMounts(mountPath string, cm corev1.ConfigMap) []corev1.VolumeMount {
+	var workspaceVolumeMounts []corev1.VolumeMount
+	for configmapKey := range cm.Data {
+		workspaceVolumeMounts = append(workspaceVolumeMounts, corev1.VolumeMount{
+			Name:      common.AutoMountConfigMapVolumeName(cm.Name),
+			ReadOnly:  true,
+			MountPath: mountPath,
+			SubPath:   configmapKey,
+		})
+	}
+	return workspaceVolumeMounts
 }
 
 func getAutoMountConfigMapEnvFromSource(name string) corev1.EnvFromSource {

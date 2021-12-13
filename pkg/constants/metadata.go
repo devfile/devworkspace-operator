@@ -54,8 +54,8 @@ const (
 	DevWorkspaceGitTLSLabel = "controller.devfile.io/git-tls-credential"
 
 	// DevWorkspaceGitUserLabel is the label key to specify if the configmap is credentials for accessing a git server.
-	// Configmap must contain the following data:
-	// username: the username of the user in git
+	// Configmap can contain any of the following data:
+	// name: the name of the user in git
 	// email: the email of the user in git
 	DevWorkspaceGitUserLabel = "controller.devfile.io/git-user-credential"
 

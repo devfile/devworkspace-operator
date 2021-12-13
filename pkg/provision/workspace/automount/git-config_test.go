@@ -34,16 +34,20 @@ import (
 var (
 	defaultName      = "sample-configmap"
 	defaultMountPath = "/sample"
-	defaultData      = map[string]string{
+	defaultTLSData   = map[string]string{
 		hostKey:        "github.com",
 		certificateKey: "sample_data_here",
+	}
+	defaultUserData = map[string]string{
+		nameKey:  "sampleName",
+		emailKey: "sampleName@sampleName.com",
 	}
 	testNamespace = "test-namespace"
 )
 
 func TestOneConfigMapWithNoUserMountPath(t *testing.T) {
 	mountPath := ""
-	clusterConfig := buildConfig(defaultName, mountPath, defaultData)
+	clusterConfig := buildTLSConfig(defaultName, mountPath, defaultTLSData)
 	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
 		Logger: zap.New(),
@@ -57,7 +61,7 @@ func TestOneConfigMapWithNoUserMountPath(t *testing.T) {
 
 func TestOneConfigMapWithMountPathAndHostAndCert(t *testing.T) {
 	mountPath := "/sample/test"
-	clusterConfig := buildConfig(defaultName, mountPath, defaultData)
+	clusterConfig := buildTLSConfig(defaultName, mountPath, defaultTLSData)
 	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
 		Logger: zap.New(),
@@ -66,12 +70,12 @@ func TestOneConfigMapWithMountPathAndHostAndCert(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Contains(t, gitconfig, fmt.Sprintf(gitServerTemplate, defaultData["host"], filepath.Join(mountPath, certificateKey)))
+	assert.Contains(t, gitconfig, fmt.Sprintf(gitServerTemplate, defaultTLSData["host"], filepath.Join(mountPath, certificateKey)))
 }
 
 func TestOneConfigMapWithMountPathAndWithoutHostAndWithoutCert(t *testing.T) {
 	mountPath := "/sample/test"
-	clusterConfig := buildConfig(defaultName, mountPath, map[string]string{})
+	clusterConfig := buildTLSConfig(defaultName, mountPath, map[string]string{})
 	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
 		Logger: zap.New(),
@@ -82,7 +86,7 @@ func TestOneConfigMapWithMountPathAndWithoutHostAndWithoutCert(t *testing.T) {
 
 func TestOneConfigMapWithMountPathAndWithoutHostAndWithCert(t *testing.T) {
 	mountPath := "/sample/test"
-	clusterConfig := buildConfig(defaultName, mountPath, map[string]string{
+	clusterConfig := buildTLSConfig(defaultName, mountPath, map[string]string{
 		certificateKey: "test_cert_data",
 	})
 	clusterAPI := sync.ClusterAPI{
@@ -98,7 +102,7 @@ func TestOneConfigMapWithMountPathAndWithoutHostAndWithCert(t *testing.T) {
 
 func TestOneConfigMapWithMountPathAndWithHostAndWithoutCert(t *testing.T) {
 	mountPath := "/sample/test"
-	clusterConfig := buildConfig(defaultName, mountPath, map[string]string{
+	clusterConfig := buildTLSConfig(defaultName, mountPath, map[string]string{
 		hostKey: "some_host",
 	})
 	clusterAPI := sync.ClusterAPI{
@@ -119,7 +123,7 @@ func TestOneConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
 				constants.DevWorkspaceGitTLSLabel: "true",
 			},
 		},
-		Data: defaultData,
+		Data: defaultTLSData,
 	}
 	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewClientBuilder().WithObjects(clusterConfig).Build(),
@@ -130,8 +134,8 @@ func TestOneConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
 }
 
 func TestTwoConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
-	config1 := buildConfig("configmap1", "/folder1", defaultData)
-	config2 := buildConfig("configmap2", "/folder2", defaultData)
+	config1 := buildTLSConfig("configmap1", "/folder1", defaultTLSData)
+	config2 := buildTLSConfig("configmap2", "/folder2", defaultTLSData)
 	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewClientBuilder().WithObjects(config1, config2).Build(),
 		Logger: zap.New(),
@@ -144,10 +148,10 @@ func TestTwoConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
 }
 
 func TestTwoConfigMapWithOneDefaultTLSAndOtherGithubTLS(t *testing.T) {
-	config1 := buildConfig("configmap1", "/folder1", map[string]string{
+	config1 := buildTLSConfig("configmap1", "/folder1", map[string]string{
 		certificateKey: "sample_data_here",
 	})
-	config2 := buildConfig("configmap2", "/folder2", map[string]string{
+	config2 := buildTLSConfig("configmap2", "/folder2", map[string]string{
 		hostKey:        "github.com",
 		certificateKey: "sample_data_here",
 	})
@@ -164,10 +168,10 @@ func TestTwoConfigMapWithOneDefaultTLSAndOtherGithubTLS(t *testing.T) {
 }
 
 func TestTwoConfigMapWithBothMissingHost(t *testing.T) {
-	config1 := buildConfig("configmap1", "/folder1", map[string]string{
+	config1 := buildTLSConfig("configmap1", "/folder1", map[string]string{
 		certificateKey: "sample_data_here",
 	})
-	config2 := buildConfig("configmap2", "/folder2", map[string]string{
+	config2 := buildTLSConfig("configmap2", "/folder2", map[string]string{
 		certificateKey: "sample_data_here",
 	})
 
@@ -180,9 +184,10 @@ func TestTwoConfigMapWithBothMissingHost(t *testing.T) {
 }
 
 func TestGitConfigIsFullyMounted(t *testing.T) {
-	defaultConfig := buildConfig(defaultName, defaultMountPath, defaultData)
+	defaultTlsConfig := buildTLSConfig(defaultName, defaultMountPath, defaultTLSData)
+	defaultUserConfig := buildUserConfig("sample-configmap2", defaultUserData)
 	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewClientBuilder().WithObjects(defaultConfig).Build(),
+		Client: fake.NewClientBuilder().WithObjects(defaultTlsConfig, defaultUserConfig).Build(),
 		Logger: zap.New(),
 	}
 	podAdditions, err := provisionGitConfig(clusterAPI, testNamespace, defaultMountPath)
@@ -196,7 +201,71 @@ func TestGitConfigIsFullyMounted(t *testing.T) {
 	assert.Equal(t, podAdditions, expectedAdditions, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(podAdditions, expectedAdditions)))
 }
 
-func buildConfig(name string, mountPath string, data map[string]string) *corev1.ConfigMap {
+func TestUserConfigWithNameAndEmail(t *testing.T) {
+	config1 := buildUserConfig(defaultName, defaultUserData)
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(config1).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, "")
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+	assert.Equal(t, gitconfig, "user.name=sampleName\nuser.email=sampleName@sampleName.com\n")
+}
+
+func TestUserConfigWithName(t *testing.T) {
+	config1 := buildUserConfig(defaultName, map[string]string{
+		nameKey: defaultUserData[nameKey],
+	})
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(config1).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, "")
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+	assert.Equal(t, gitconfig, "user.name=sampleName\n")
+}
+
+func TestUserConfigWithEmail(t *testing.T) {
+	config1 := buildUserConfig(defaultName, map[string]string{
+		emailKey: defaultUserData[emailKey],
+	})
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(config1).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, "")
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+	assert.Equal(t, gitconfig, "user.email=sampleName@sampleName.com\n")
+}
+
+func TestUserConfigAndTlsConfig(t *testing.T) {
+	tlsConfig1 := buildTLSConfig("configmap1", "/folder1", map[string]string{
+		certificateKey: "sample_data_here",
+	})
+	tlsConfig2 := buildTLSConfig("configmap2", "/folder2", map[string]string{
+		hostKey:        "github.com",
+		certificateKey: "sample_data_here",
+	})
+	userConfig := buildUserConfig("configmap3", defaultUserData)
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(tlsConfig1, tlsConfig2, userConfig).Build(),
+		Logger: zap.New(),
+	}
+	_, gitconfig, err := constructGitConfig(clusterAPI, testNamespace, "")
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+	assert.Equal(t, gitconfig, "[http]\n    sslCAInfo = /folder1/certificate\n\n[http \"github.com\"]\n    sslCAInfo = /folder2/certificate\n\nuser.name=sampleName\nuser.email=sampleName@sampleName.com\n")
+}
+
+func buildTLSConfig(name string, mountPath string, data map[string]string) *corev1.ConfigMap {
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -206,6 +275,19 @@ func buildConfig(name string, mountPath string, data map[string]string) *corev1.
 			},
 			Annotations: map[string]string{
 				constants.DevWorkspaceMountPathAnnotation: mountPath,
+			},
+		},
+		Data: data,
+	}
+}
+
+func buildUserConfig(name string, data map[string]string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				constants.DevWorkspaceGitUserLabel: "true",
 			},
 		},
 		Data: data,

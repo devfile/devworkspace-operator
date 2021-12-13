@@ -92,8 +92,11 @@ By default, resources will be mounted based on the resource name:
 Mounting resources can be additionally configured via **annotations**:
 * `controller.devfile.io/mount-path`: configure where the resource should be mounted
 * `controller.devfile.io/mount-as`: for secrets and configmaps only, configure how the resource should be mounted to the workspace
-    * If `controller.devfile.io/mount-as: file`, the configmap/secret will be mounted as files within the mount path. This is the default behavior
-    * If `controller.devfile.io/mount-as: env`, the keys and values in the configmap/secret will be mounted as environment variables in all containers in the DevWorkspace
+    * If `controller.devfile.io/mount-as: file`, the configmap/secret will be mounted as files within the mount path. This is the default behavior.
+    * If `controller.devfile.io/mount-as: subpath`, the keys and values in the configmap/secret will be mounted as files within the mount path using subpath volume mounts.
+    * If `controller.devfile.io/mount-as: env`, the keys and values in the configmap/secret will be mounted as environment variables in all containers in the DevWorkspace.
+
+  When "file" is used, the configmap is mounted as a directory within the workspace, erasing any files/directories already present. When "subpath" is used, each key in the configmap/secret is mounted as a subpath volume mount in the mount path, leaving existing files intact but preventing changes to the secret/configmap from propagating into the workspace without a restart.
 * `controller.devfile.io/read-only`: for persistent volume claims, mount the resource as read-only
 
 ## Adding image pull secrets to workspaces

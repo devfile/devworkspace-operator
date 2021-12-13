@@ -7,5 +7,5 @@ metadata:
     controller.devfile.io/git-user-credential: "true"
     controller.devfile.io/watch-configmap: "true"
 data:
-  name: jpinkney
-  email: jpinkney@redhat.com
+  name: sampleName
+  email: sampleName@sampleName.com

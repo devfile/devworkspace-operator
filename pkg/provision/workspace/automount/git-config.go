@@ -30,7 +30,7 @@ import (
 const hostKey = "host"
 const certificateKey = "certificate"
 
-const usernameKey = "username"
+const nameKey = "name"
 const emailKey = "email"
 
 const gitConfigName = "gitconfig"
@@ -54,11 +54,10 @@ const defaultGitServerTemplate = `[http]
 
 // provisionGitConfig takes care of mounting a gitconfig into a devworkspace.
 //	It does so by:
-//		1. Finding all secrets labeled with "controller.devfile.io/git-tls-credential": "true"
-//		2. Fill out the gitconfig with any necessary information:
+//		1. Fill out the gitconfig with any necessary information:
 //			a. Git user credentials if specified
 //			b. Git server credentials if specified
-//		3. Creating and mounting a gitconfig config map to /etc/gitconfig with the above information
+//		2. Creating and mounting a gitconfig config map to /etc/gitconfig with the above information
 func provisionGitConfig(api sync.ClusterAPI, namespace string, userMountPath string) (*v1alpha1.PodAdditions, error) {
 	podAdditions, gitconfig, err := constructGitConfig(api, namespace, userMountPath)
 	if err != nil {
@@ -111,11 +110,11 @@ func constructGitUserConfig(api sync.ClusterAPI, namespace string, gitconfig str
 	}
 	if len(configmap.Items) == 1 {
 		cm := configmap.Items[0]
-		username, usernameFound := cm.Data[usernameKey]
+		name, nameFound := cm.Data[nameKey]
 		email, emailFound := cm.Data[emailKey]
 
-		if usernameFound {
-			gitconfig = gitconfig + fmt.Sprintf("user.name=%s\n", username)
+		if nameFound {
+			gitconfig = gitconfig + fmt.Sprintf("user.name=%s\n", name)
 		}
 
 		if emailFound {

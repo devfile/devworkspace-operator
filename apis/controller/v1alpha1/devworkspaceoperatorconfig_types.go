@@ -42,6 +42,24 @@ type RoutingConfig struct {
 	// On OpenShift, the DevWorkspace Operator will attempt to determine the appropriate
 	// value automatically. Must be specified on Kubernetes.
 	ClusterHostSuffix string `json:"clusterHostSuffix,omitempty"`
+	// ProxyConfig defines the proxy settings that should be used for all DevWorkspaces.
+	// These values are propagated to workspace containers as environment variables.
+	//
+	// On OpenShift, the operator automatically reads values from the "cluster" proxies.config.openshift.io
+	// object and this value only needs to be set to override those defaults. Values for httpProxy
+	// and httpsProxy override the cluster configuration directly. Entries for noProxy are merged
+	// with the noProxy values in the cluster configuration.
+	ProxyConfig *Proxy `json:"proxyConfig,omitempty"`
+}
+
+type Proxy struct {
+	// HttpProxy is the URL of the proxy for HTTP requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
+	HttpProxy string `json:"httpProxy,omitempty"`
+	// HttpsProxy is the URL of the proxy for HTTPS requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
+	HttpsProxy string `json:"httpsProxy,omitempty"`
+	// NoProxy is a comma-separated list of hostnames and/or CIDRs for which the proxy should not be used. Ignored
+	// when HttpProxy and HttpsProxy are unset
+	NoProxy string `json:"noProxy,omitempty"`
 }
 
 type WorkspaceConfig struct {

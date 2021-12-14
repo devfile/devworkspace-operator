@@ -15,9 +15,10 @@ package proxy
 
 import (
 	"context"
+	"fmt"
 
+	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,17 +29,10 @@ const (
 	openshiftClusterProxyName = "cluster"
 )
 
-type Proxy struct {
-	// HttpProxy is the URL of the proxy for HTTP requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
-	HttpProxy string
-	// HttpsProxy is the URL of the proxy for HTTPS requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
-	HttpsProxy string
-	// NoProxy is a comma-separated list of hostnames and/or CIDRs for which the proxy should not be used. Ignored
-	// when HttpProxy and HttpsProxy are unset
-	NoProxy string
-}
-
-func GetOpenShiftClusterProxyConfig(nonCachedClient crclient.Client, log logr.Logger) (*Proxy, error) {
+// GetClusterProxyConfig reads a proxy configuration from the "cluster" proxies.config.openshift.io on
+// OpenShift. If running in a non-OpenShift cluster, returns (nil, nil). If the cluster proxy is empty, returns
+// (nil, nil)
+func GetClusterProxyConfig(nonCachedClient crclient.Client) (*controller.Proxy, error) {
 	if !infrastructure.IsOpenShift() {
 		return nil, nil
 	}
@@ -46,17 +40,54 @@ func GetOpenShiftClusterProxyConfig(nonCachedClient crclient.Client, log logr.Lo
 	err := nonCachedClient.Get(context.Background(), types.NamespacedName{Name: openshiftClusterProxyName}, proxy)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
+			// Should never happen as OpenShift cluster proxy is always present
 			return nil, nil
 		}
 		return nil, err
 	}
 
-	proxyConfig := &Proxy{
+	if proxy.Status.HTTPProxy == "" && proxy.Status.HTTPSProxy == "" && proxy.Status.NoProxy == "" {
+		return nil, nil
+	}
+
+	proxyConfig := &controller.Proxy{
 		HttpProxy:  proxy.Status.HTTPProxy,
 		HttpsProxy: proxy.Status.HTTPSProxy,
 		NoProxy:    proxy.Status.NoProxy,
 	}
-	log.Info("Read proxy configuration", "config", proxyConfig)
 
 	return proxyConfig, nil
+}
+
+// MergeProxyConfigs merges proxy configurations from the operator and the cluster and merges them, with the
+// operator configuration taking precedence. Accepts nil arguments. If both arguments are nil, returns nil.
+func MergeProxyConfigs(operatorConfig, clusterConfig *controller.Proxy) *controller.Proxy {
+	if clusterConfig == nil {
+		return operatorConfig
+	}
+	if operatorConfig == nil {
+		return clusterConfig
+	}
+	mergedProxy := &controller.Proxy{
+		HttpProxy:  operatorConfig.HttpProxy,
+		HttpsProxy: operatorConfig.HttpsProxy,
+		NoProxy:    operatorConfig.NoProxy,
+	}
+
+	if mergedProxy.HttpProxy == "" {
+		mergedProxy.HttpProxy = clusterConfig.HttpProxy
+	}
+	if mergedProxy.HttpsProxy == "" {
+		mergedProxy.HttpsProxy = clusterConfig.HttpsProxy
+	}
+	if mergedProxy.NoProxy == "" {
+		mergedProxy.NoProxy = clusterConfig.NoProxy
+	} else {
+		// Merge noProxy fields, joining with a comma
+		if clusterConfig.NoProxy != "" {
+			mergedProxy.NoProxy = fmt.Sprintf("%s,%s", clusterConfig.NoProxy, operatorConfig.NoProxy)
+		}
+	}
+
+	return mergedProxy
 }

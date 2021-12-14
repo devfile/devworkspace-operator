@@ -47,7 +47,7 @@ var (
 	log             = ctrl.Log.WithName("operator-configuration")
 
 	// Proxy stores the current proxy configuration, if one is defined. This is a parsed form for easier access
-	Proxy *proxy.Proxy
+	Proxy *controller.Proxy
 )
 
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
@@ -87,11 +87,14 @@ func SetupControllerConfig(client crclient.Client) error {
 		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 		updatePublicConfig()
 	}
-	clusterProxy, err := proxy.GetOpenShiftClusterProxyConfig(client, log)
+
+	clusterProxy, err := proxy.GetClusterProxyConfig(client)
 	if err != nil {
 		return err
 	}
-	Proxy = clusterProxy
+	Proxy = proxy.MergeProxyConfigs(internalConfig.Routing.ProxyConfig, clusterProxy)
+	log.Info("Resolved proxy configuration", "proxy", Proxy)
+
 	return nil
 }
 

@@ -56,28 +56,28 @@ func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator s
 }
 
 func getProxyEnvVars() []corev1.EnvVar {
-	if config.Proxy == nil {
+	if config.Routing.ProxyConfig == nil {
 		return nil
 	}
 
-	if config.Proxy.HttpProxy == "" && config.Proxy.HttpsProxy == "" {
+	if config.Routing.ProxyConfig.HttpProxy == "" && config.Routing.ProxyConfig.HttpsProxy == "" {
 		return nil
 	}
 
 	// Proxy env vars are defined by consensus rather than standard; most tools use the lower-snake-case version
 	// but some may only look at the upper-snake-case version, so we add both.
 	var env []v1.EnvVar
-	if config.Proxy.HttpProxy != "" {
-		env = append(env, v1.EnvVar{Name: "http_proxy", Value: config.Proxy.HttpProxy})
-		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: config.Proxy.HttpProxy})
+	if config.Routing.ProxyConfig.HttpProxy != "" {
+		env = append(env, v1.EnvVar{Name: "http_proxy", Value: config.Routing.ProxyConfig.HttpProxy})
+		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: config.Routing.ProxyConfig.HttpProxy})
 	}
-	if config.Proxy.HttpsProxy != "" {
-		env = append(env, v1.EnvVar{Name: "https_proxy", Value: config.Proxy.HttpsProxy})
-		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: config.Proxy.HttpsProxy})
+	if config.Routing.ProxyConfig.HttpsProxy != "" {
+		env = append(env, v1.EnvVar{Name: "https_proxy", Value: config.Routing.ProxyConfig.HttpsProxy})
+		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: config.Routing.ProxyConfig.HttpsProxy})
 	}
-	if config.Proxy.NoProxy != "" {
-		env = append(env, v1.EnvVar{Name: "no_proxy", Value: config.Proxy.NoProxy})
-		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: config.Proxy.NoProxy})
+	if config.Routing.ProxyConfig.NoProxy != "" {
+		env = append(env, v1.EnvVar{Name: "no_proxy", Value: config.Routing.ProxyConfig.NoProxy})
+		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: config.Routing.ProxyConfig.NoProxy})
 	}
 
 	return env

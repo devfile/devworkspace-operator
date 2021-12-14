@@ -46,8 +46,11 @@ var (
 	configNamespace string
 	log             = ctrl.Log.WithName("operator-configuration")
 
-	// Proxy stores the current proxy configuration, if one is defined. This is a parsed form for easier access
+	// Proxy stores the current proxy configuration, if one is defined. Will be nil if no proxy settings are defined.
 	Proxy *controller.Proxy
+	// Store the cluster proxy config if it is available to allow controller proxy to be updated while
+	// controller is running.
+	clusterProxyConfig *controller.Proxy
 )
 
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
@@ -63,21 +66,23 @@ func SetupControllerConfig(client crclient.Client) error {
 		return fmt.Errorf("internal controller configuration is already set up")
 	}
 	internalConfig = &controller.OperatorConfiguration{}
+
 	namespace, err := infrastructure.GetNamespace()
 	if err != nil {
 		return err
 	}
 	configNamespace = namespace
+
 	config, err := getClusterConfig(configNamespace, client)
 	if err != nil {
 		return err
 	}
 	if config == nil {
 		internalConfig = DefaultConfig.DeepCopy()
-		updatePublicConfig()
 	} else {
 		syncConfigFrom(config)
 	}
+
 	defaultRoutingSuffix, err := discoverRouteSuffix(client)
 	if err != nil {
 		return err
@@ -85,16 +90,15 @@ func SetupControllerConfig(client crclient.Client) error {
 	DefaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 	if internalConfig.Routing.ClusterHostSuffix == "" {
 		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
-		updatePublicConfig()
 	}
 
 	clusterProxy, err := proxy.GetClusterProxyConfig(client)
 	if err != nil {
 		return err
 	}
-	Proxy = proxy.MergeProxyConfigs(internalConfig.Routing.ProxyConfig, clusterProxy)
-	log.Info("Resolved proxy configuration", "proxy", Proxy)
+	clusterProxyConfig = clusterProxy
 
+	updatePublicConfig()
 	return nil
 }
 
@@ -138,6 +142,15 @@ func updatePublicConfig() {
 	Routing = internalConfig.Routing.DeepCopy()
 	Workspace = internalConfig.Workspace.DeepCopy()
 	log.Info(fmt.Sprintf("Updated config to [%s]", formatCurrentConfig()))
+
+	if internalConfig.Routing == nil {
+		Proxy = clusterProxyConfig
+	} else {
+		Proxy = proxy.MergeProxyConfigs(internalConfig.Routing.ProxyConfig, clusterProxyConfig)
+	}
+	if Proxy != nil {
+		log.Info("Resolved proxy configuration", "proxy", Proxy)
+	}
 }
 
 // discoverRouteSuffix attempts to determine a clusterHostSuffix that is compatible with the current cluster.
@@ -201,6 +214,12 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		}
 		if from.Routing.ClusterHostSuffix != "" {
 			to.Routing.ClusterHostSuffix = from.Routing.ClusterHostSuffix
+		}
+		if from.Routing.ProxyConfig != nil {
+			if to.Routing.ProxyConfig == nil {
+				to.Routing.ProxyConfig = &controller.Proxy{}
+			}
+			to.Routing.ProxyConfig = proxy.MergeProxyConfigs(from.Routing.ProxyConfig, DefaultConfig.Routing.ProxyConfig)
 		}
 	}
 	if from.Workspace != nil {

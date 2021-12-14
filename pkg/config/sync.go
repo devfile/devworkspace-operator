@@ -45,12 +45,6 @@ var (
 	configMutex     sync.Mutex
 	configNamespace string
 	log             = ctrl.Log.WithName("operator-configuration")
-
-	// Proxy stores the current proxy configuration, if one is defined. Will be nil if no proxy settings are defined.
-	Proxy *controller.Proxy
-	// Store the cluster proxy config if it is available to allow controller proxy to be updated while
-	// controller is running.
-	clusterProxyConfig *controller.Proxy
 )
 
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
@@ -88,15 +82,14 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	DefaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
-	if internalConfig.Routing.ClusterHostSuffix == "" {
-		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
-	}
 
 	clusterProxy, err := proxy.GetClusterProxyConfig(client)
 	if err != nil {
 		return err
 	}
-	clusterProxyConfig = clusterProxy
+	DefaultConfig.Routing.ProxyConfig = clusterProxy
+
+	mergeConfig(DefaultConfig, internalConfig)
 
 	updatePublicConfig()
 	return nil
@@ -141,16 +134,7 @@ func restoreDefaultConfig() {
 func updatePublicConfig() {
 	Routing = internalConfig.Routing.DeepCopy()
 	Workspace = internalConfig.Workspace.DeepCopy()
-	log.Info(fmt.Sprintf("Updated config to [%s]", formatCurrentConfig()))
-
-	if internalConfig.Routing == nil {
-		Proxy = clusterProxyConfig
-	} else {
-		Proxy = proxy.MergeProxyConfigs(internalConfig.Routing.ProxyConfig, clusterProxyConfig)
-	}
-	if Proxy != nil {
-		log.Info("Resolved proxy configuration", "proxy", Proxy)
-	}
+	logCurrentConfig()
 }
 
 // discoverRouteSuffix attempts to determine a clusterHostSuffix that is compatible with the current cluster.
@@ -247,10 +231,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 	}
 }
 
-// formatCurrentConfig formats the current operator configuration as a plain string
-func formatCurrentConfig() string {
+// logCurrentConfig formats the current operator configuration as a plain string
+func logCurrentConfig() {
 	if internalConfig == nil {
-		return ""
+		return
 	}
 	var config []string
 	if Routing != nil {
@@ -283,7 +267,11 @@ func formatCurrentConfig() string {
 		config = append(config, "enableExperimentalFeatures=true")
 	}
 	if len(config) == 0 {
-		return "(default config)"
+		log.Info("(default config)")
+	} else {
+		log.Info("Updated config to [%s]", strings.Join(config, ","))
 	}
-	return strings.Join(config, ", ")
+	if internalConfig.Routing.ProxyConfig != nil {
+		log.Info("Resolved proxy configuration", "proxy", internalConfig.Routing.ProxyConfig)
+	}
 }

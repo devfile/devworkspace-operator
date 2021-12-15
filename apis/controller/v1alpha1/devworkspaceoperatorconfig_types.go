@@ -49,6 +49,10 @@ type RoutingConfig struct {
 	// object and this value only needs to be set to override those defaults. Values for httpProxy
 	// and httpsProxy override the cluster configuration directly. Entries for noProxy are merged
 	// with the noProxy values in the cluster configuration.
+	//
+	// Changes to the proxy configuration are detected by the DevWorkspace Operator and propagated to
+	// DevWorkspaces. However, changing the proxy configuration for the DevWorkspace Operator itself
+	// requires restarting the controller deployment.
 	ProxyConfig *Proxy `json:"proxyConfig,omitempty"`
 }
 

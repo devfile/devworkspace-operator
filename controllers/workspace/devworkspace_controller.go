@@ -18,13 +18,10 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
@@ -38,6 +35,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
@@ -232,13 +230,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	timing.SetTime(timingInfo, timing.ComponentsCreated)
-	// TODO#185 : Temporarily do devfile flattening in main reconcile loop; this should be moved to a subcontroller.
 	flattenHelpers := flatten.ResolverTools{
 		WorkspaceNamespace: workspace.Namespace,
 		Context:            ctx,
 		K8sClient:          r.Client,
-		HttpClient:         http.DefaultClient,
+		HttpClient:         httpClient,
 	}
+
 	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, flattenHelpers)
 	if err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
@@ -612,6 +610,8 @@ func dwRelatedPodsHandler() handler.EventHandler {
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	setupHttpClients()
+
 	maxConcurrentReconciles, err := config.GetMaxConcurrentReconciles()
 	if err != nil {
 		return err

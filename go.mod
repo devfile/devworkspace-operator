@@ -16,6 +16,7 @@ require (
 	github.com/redhat-cop/operator-utils v1.1.4
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
+	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781
 	k8s.io/api v0.21.3
 	k8s.io/apiextensions-apiserver v0.21.3
 	k8s.io/apimachinery v0.21.3

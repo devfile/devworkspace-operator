@@ -8,3 +8,6 @@ spec:
   image: quay.io/devfile/devworkspace-operator-index:next
   publisher: Red Hat
   displayName: DevWorkspace Operator Catalog
+  updateStrategy:
+    registryPoll:
+      interval: 1d

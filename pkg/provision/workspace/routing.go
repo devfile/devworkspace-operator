@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/conversion"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -97,7 +98,7 @@ func getSpecRouting(
 		}
 		componentEndpoints := component.Container.Endpoints
 		if len(componentEndpoints) > 0 {
-			endpoints[component.Name] = append(endpoints[component.Name], componentEndpoints...)
+			endpoints[component.Name] = append(endpoints[component.Name], conversion.ConvertAllDevfileEndpoints(componentEndpoints)...)
 		}
 	}
 

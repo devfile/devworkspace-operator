@@ -16,8 +16,6 @@
 package solvers
 
 import (
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -41,7 +39,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure == dw.NoneEndpointExposure {
+			if endpoint.Exposure == controllerv1alpha1.NoneEndpointExposure {
 				continue
 			}
 
@@ -80,7 +78,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 
 // GetServiceForEndpoints returns a single service that exposes all endpoints of given exposure types, possibly also including the discoverable types.
 // `nil` is returned if the service would expose no ports satisfying the provided criteria.
-func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, includeDiscoverable bool, exposureType ...dw.EndpointExposure) *corev1.Service {
+func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, includeDiscoverable bool, exposureType ...controllerv1alpha1.EndpointExposure) *corev1.Service {
 	// "set" of ports that are still left for exposure
 	ports := map[int]bool{}
 	for _, es := range endpoints {
@@ -90,7 +88,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 
 	// "set" of exposure types that are allowed
-	validExposures := map[dw.EndpointExposure]bool{}
+	validExposures := map[controllerv1alpha1.EndpointExposure]bool{}
 	for _, exp := range exposureType {
 		validExposures[exp] = true
 	}
@@ -145,7 +143,7 @@ func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointLis
 		return nil
 	}
 
-	service := GetServiceForEndpoints(endpoints, meta, true, dw.PublicEndpointExposure, dw.InternalEndpointExposure)
+	service := GetServiceForEndpoints(endpoints, meta, true, controllerv1alpha1.PublicEndpointExposure, controllerv1alpha1.InternalEndpointExposure)
 	if service == nil {
 		return nil
 	}
@@ -159,7 +157,7 @@ func getRoutesForSpec(routingSuffix string, endpoints map[string]controllerv1alp
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure != dw.PublicEndpointExposure {
+			if endpoint.Exposure != controllerv1alpha1.PublicEndpointExposure {
 				continue
 			}
 			routes = append(routes, getRouteForEndpoint(routingSuffix, endpoint, meta))
@@ -172,7 +170,7 @@ func getIngressesForSpec(routingSuffix string, endpoints map[string]controllerv1
 	var ingresses []networkingv1.Ingress
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
-			if endpoint.Exposure != dw.PublicEndpointExposure {
+			if endpoint.Exposure != controllerv1alpha1.PublicEndpointExposure {
 				continue
 			}
 			ingresses = append(ingresses, getIngressForEndpoint(routingSuffix, endpoint, meta))
@@ -181,7 +179,7 @@ func getIngressesForSpec(routingSuffix string, endpoints map[string]controllerv1
 	return ingresses
 }
 
-func getRouteForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWorkspaceMetadata) routeV1.Route {
+func getRouteForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpoint, meta DevWorkspaceMetadata) routeV1.Route {
 	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
 	return routeV1.Route{
@@ -211,7 +209,7 @@ func getRouteForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWor
 	}
 }
 
-func getIngressForEndpoint(routingSuffix string, endpoint dw.Endpoint, meta DevWorkspaceMetadata) networkingv1.Ingress {
+func getIngressForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpoint, meta DevWorkspaceMetadata) networkingv1.Ingress {
 	endpointName := common.EndpointName(endpoint.Name)
 	hostname := common.EndpointHostname(routingSuffix, meta.DevWorkspaceId, endpointName, endpoint.TargetPort)
 	ingressPathType := networkingv1.PathTypeImplementationSpecific

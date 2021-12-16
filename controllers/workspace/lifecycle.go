@@ -26,7 +26,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
-	"github.com/devfile/devworkspace-operator/pkg/timing"
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -84,9 +83,7 @@ func (r *DevWorkspaceReconciler) checkWorkspaceShouldBeStarted(workspace *dw.Dev
 
 	// Handle stopped workspaces
 	if !workspace.Spec.Started {
-		timing.ClearAnnotations(workspace)
 		r.removeStartedAtFromCluster(ctx, workspace, reqLogger)
-		r.syncTimingToCluster(ctx, workspace, map[string]string{}, reqLogger)
 		res, err := r.stopWorkspace(workspace, reqLogger)
 		return false, res, err
 	}

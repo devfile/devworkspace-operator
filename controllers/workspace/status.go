@@ -22,11 +22,12 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
+	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	"github.com/devfile/devworkspace-operator/pkg/timing"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
@@ -238,7 +239,7 @@ func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
 		return
 	}
 
-	workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation] = timing.CurrentTime()
+	workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation] = strconv.FormatInt(time.Now().UnixNano()/1e6, 10)
 	if err := r.Update(ctx, workspace); err != nil {
 		if k8sErrors.IsConflict(err) {
 			reqLogger.Info("Got conflict when trying to apply started-at annotations to workspace")

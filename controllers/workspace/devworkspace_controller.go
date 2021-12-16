@@ -24,6 +24,7 @@ import (
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
@@ -35,9 +36,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
-	"github.com/devfile/devworkspace-operator/pkg/timing"
-
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/go-logr/logr"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -116,12 +114,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus := currentStatus{phase: dw.DevWorkspaceStatusStarting}
 	reconcileStatus.setConditionTrue(conditions.Started, "DevWorkspace is starting")
 	clusterWorkspace := workspace.DeepCopy()
-	timingInfo := map[string]string{}
-	timing.SetTime(timingInfo, timing.DevWorkspaceStarted)
 
 	defer func() (reconcile.Result, error) {
-		r.syncTimingToCluster(ctx, clusterWorkspace, timingInfo, reqLogger)
-
 		// Don't accidentally suppress errors by overwriting here; only check for timeout when no error
 		// encountered in main reconcile loop.
 		if err == nil {
@@ -150,7 +144,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	timing.SetTime(timingInfo, timing.ComponentsCreated)
 	// TODO#185 : Temporarily do devfile flattening in main reconcile loop; this should be moved to a subcontroller.
 	flattenHelpers := flatten.ResolverTools{
 		WorkspaceNamespace: workspace.Namespace,
@@ -216,15 +209,12 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	reconcileStatus.setConditionTrue(conditions.StorageReady, "Storage ready")
 
-	timing.SetTime(timingInfo, timing.ComponentsReady)
-
 	rbacStatus := wsprovision.SyncRBAC(workspace, clusterAPI)
 	if rbacStatus.Err != nil || !rbacStatus.Continue {
 		return reconcile.Result{Requeue: true}, rbacStatus.Err
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
-	timing.SetTime(timingInfo, timing.RoutingCreated)
 	routingStatus := wsprovision.SyncRoutingToCluster(workspace, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
@@ -242,7 +232,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
 	}
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "Networking ready")
-	timing.SetTime(timingInfo, timing.RoutingReady)
 
 	statusOk, err := syncWorkspaceMainURL(clusterWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
@@ -315,7 +304,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(conditions.PullSecretsReady, "DevWorkspace secrets ready")
 
 	// Step six: Create deployment and wait for it to be ready
-	timing.SetTime(timingInfo, timing.DeploymentCreated)
 	deploymentStatus := wsprovision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
@@ -330,7 +318,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
 	reconcileStatus.setConditionTrue(conditions.DeploymentReady, "DevWorkspace deployment ready")
-	timing.SetTime(timingInfo, timing.DeploymentReady)
 
 	serverReady, err := checkServerStatus(clusterWorkspace)
 	if err != nil {
@@ -340,30 +327,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceReady, "Waiting for editor to start")
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
 	}
-	timing.SetTime(timingInfo, timing.DevWorkspaceReady)
-	timing.SummarizeStartup(clusterWorkspace)
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceReady, "")
 	reconcileStatus.phase = dw.DevWorkspaceStatusRunning
 	return reconcile.Result{}, nil
-}
-
-func (r *DevWorkspaceReconciler) syncTimingToCluster(
-	ctx context.Context, workspace *dw.DevWorkspace, timingInfo map[string]string, reqLogger logr.Logger) {
-	if timing.IsEnabled() {
-		if workspace.Annotations == nil {
-			workspace.Annotations = map[string]string{}
-		}
-		for timingEvent, timestamp := range timingInfo {
-			if _, set := workspace.Annotations[timingEvent]; !set {
-				workspace.Annotations[timingEvent] = timestamp
-			}
-		}
-		if err := r.Update(ctx, workspace); err != nil {
-			if k8sErrors.IsConflict(err) {
-				reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")
-			} else {
-				reqLogger.Error(err, "Error trying to apply timing annotations to devworkspace")
-			}
-		}
-	}
 }

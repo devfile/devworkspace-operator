@@ -106,3 +106,18 @@ func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger
 	startDuration := readyTime.Sub(startTime.Time)
 	hist.Observe(startDuration.Seconds())
 }
+
+// UpdateMetricsForPhase increments DevWorkspace startup metrics based on phase transitions in a DevWorkspace. It avoids
+// incrementing the underlying metrics where possible (e.g. reconciling an already running workspace) by only incrementing
+// counters when the new phase is different from the current on in the DevWorkspace.
+func UpdateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
+	if oldPhase == newPhase {
+		return
+	}
+	switch newPhase {
+	case dw.DevWorkspaceStatusRunning:
+		WorkspaceRunning(workspace, logger)
+	case dw.DevWorkspaceStatusFailed:
+		WorkspaceFailed(workspace, logger)
+	}
+}

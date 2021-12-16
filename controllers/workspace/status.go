@@ -22,10 +22,12 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
-	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	"github.com/devfile/devworkspace-operator/pkg/timing"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +38,6 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 const (
@@ -92,7 +93,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 			reconcileError = err
 		}
 	} else {
-		updateMetricsForPhase(workspace, oldPhase, status.phase, logger)
+		metrics.UpdateMetricsForPhase(workspace, oldPhase, status.phase, logger)
 	}
 
 	return reconcileResult, reconcileError
@@ -226,68 +227,38 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 	return ""
 }
 
-// updateMetricsForPhase increments DevWorkspace startup metrics based on phase transitions in a DevWorkspace. It avoids
-// incrementing the underlying metrics where possible (e.g. reconciling an already running workspace) by only incrementing
-// counters when the new phase is different from the current on in the DevWorkspace.
-func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
-	if oldPhase == newPhase {
+func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
+	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
+
+	if workspace.Annotations == nil {
+		workspace.Annotations = map[string]string{}
+	}
+
+	if _, hasStartedAtAnnotation := workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation]; hasStartedAtAnnotation {
 		return
 	}
-	switch newPhase {
-	case dw.DevWorkspaceStatusRunning:
-		metrics.WorkspaceRunning(workspace, logger)
-	case dw.DevWorkspaceStatusFailed:
-		metrics.WorkspaceFailed(workspace, logger)
+
+	workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation] = timing.CurrentTime()
+	if err := r.Update(ctx, workspace); err != nil {
+		if k8sErrors.IsConflict(err) {
+			reqLogger.Info("Got conflict when trying to apply started-at annotations to workspace")
+		} else {
+			reqLogger.Error(err, "Error trying to apply started-at annotation to devworkspace")
+		}
 	}
 }
 
-// checkForStartTimeout checks if the provided workspace has not progressed for longer than the configured
-// startup timeout. This is determined by checking to see if the last condition transition time is more
-// than [timeout] duration ago. Workspaces that are not in the "Starting" phase cannot timeout. Returns
-// an error with message when timeout is reached.
-func checkForStartTimeout(workspace *dw.DevWorkspace) error {
-	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting {
-		return nil
+func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
+	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
+	if workspace.Annotations == nil {
+		workspace.Annotations = map[string]string{}
 	}
-	timeout, err := time.ParseDuration(config.Workspace.ProgressTimeout)
-	if err != nil {
-		return fmt.Errorf("invalid duration specified for timeout: %w", err)
-	}
-	currTime := clock.Now()
-	lastUpdateTime := time.Time{}
-	for _, condition := range workspace.Status.Conditions {
-		if condition.LastTransitionTime.Time.After(lastUpdateTime) {
-			lastUpdateTime = condition.LastTransitionTime.Time
+	delete(workspace.Annotations, constants.DevWorkspaceStartedAtAnnotation)
+	if err := r.Update(ctx, workspace); err != nil {
+		if k8sErrors.IsConflict(err) {
+			reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")
+		} else {
+			reqLogger.Error(err, "Error trying to apply timing annotations to devworkspace")
 		}
 	}
-	if !lastUpdateTime.IsZero() && lastUpdateTime.Add(timeout).Before(currTime) {
-		return fmt.Errorf("devworkspace failed to progress past phase '%s' for longer than timeout (%s)",
-			workspace.Status.Phase, config.Workspace.ProgressTimeout)
-	}
-	return nil
-}
-
-// checkForFailingTimeout checks that the current workspace has not been in the "Failing" state for longer than the
-// configured progress timeout. If the workspace is not in the Failing state or does not have a DevWorkspaceFailed
-// condition set, returns false. Otherwise, returns true if the workspace has timed out. Returns an error if
-// timeout is configured with an unparsable duration.
-func checkForFailingTimeout(workspace *dw.DevWorkspace) (isTimedOut bool, err error) {
-	if workspace.Status.Phase != devworkspacePhaseFailing {
-		return false, nil
-	}
-	timeout, err := time.ParseDuration(config.Workspace.ProgressTimeout)
-	if err != nil {
-		return false, fmt.Errorf("invalid duration specified for timeout: %w", err)
-	}
-	currTime := clock.Now()
-	failedTime := time.Time{}
-	for _, condition := range workspace.Status.Conditions {
-		if condition.Type == dw.DevWorkspaceFailedStart {
-			failedTime = condition.LastTransitionTime.Time
-		}
-	}
-	if !failedTime.IsZero() && failedTime.Add(timeout).Before(currTime) {
-		return true, nil
-	}
-	return false, nil
 }

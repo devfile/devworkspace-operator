@@ -19,18 +19,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
-	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
@@ -41,25 +37,14 @@ import (
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
-	"github.com/go-logr/logr"
-	"github.com/google/uuid"
-	coputil "github.com/redhat-cop/operator-utils/pkg/util"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/go-logr/logr"
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -123,73 +108,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspace.Status.DevWorkspaceId)
 	reqLogger.Info("Reconciling Workspace")
 
-	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set.
-	if workspace.GetDeletionTimestamp() != nil {
-		reqLogger.Info("Finalizing DevWorkspace")
-		return r.finalize(ctx, reqLogger, workspace)
-	}
-
-	// Ensure workspaceID is set.
-	if workspace.Status.DevWorkspaceId == "" {
-		workspaceId, err := getWorkspaceId(workspace)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		workspace.Status.DevWorkspaceId = workspaceId
-		err = r.Status().Update(ctx, workspace)
-		return reconcile.Result{Requeue: true}, err
-	}
-
-	// Stop failed workspaces
-	if workspace.Status.Phase == devworkspacePhaseFailing && workspace.Spec.Started {
-		// If debug annotation is present, leave the deployment in place to let users
-		// view logs.
-		if workspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true" {
-			if isTimeout, err := checkForFailingTimeout(workspace); err != nil {
-				return reconcile.Result{}, err
-			} else if !isTimeout {
-				return reconcile.Result{}, nil
-			}
-		}
-
-		patch := []byte(`{"spec":{"started": false}}`)
-		err := r.Client.Patch(context.Background(), workspace, client.RawPatch(types.MergePatchType, patch))
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Requeue reconcile to stop workspace
-		return reconcile.Result{Requeue: true}, nil
-	}
-
-	// Handle stopped workspaces
-	if !workspace.Spec.Started {
-		timing.ClearAnnotations(workspace)
-		r.removeStartedAtFromCluster(ctx, workspace, reqLogger)
-		r.syncTimingToCluster(ctx, workspace, map[string]string{}, reqLogger)
-		return r.stopWorkspace(workspace, reqLogger)
-	}
-
-	// If this is the first reconcile for a starting workspace, mark it as starting now. This is done outside the regular
-	// updateWorkspaceStatus function to ensure it gets set immediately
-	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting && workspace.Status.Phase != dw.DevWorkspaceStatusRunning {
-		// Set 'Started' condition as early as possible to get accurate timing metrics
-		workspace.Status.Phase = dw.DevWorkspaceStatusStarting
-		workspace.Status.Message = "Initializing DevWorkspace"
-		workspace.Status.Conditions = []dw.DevWorkspaceCondition{
-			{
-				Type:               conditions.Started,
-				Status:             corev1.ConditionTrue,
-				LastTransitionTime: metav1.Time{Time: clock.Now()},
-				Message:            "DevWorkspace is starting",
-			},
-		}
-		err = r.Status().Update(ctx, workspace)
-		if err == nil {
-			metrics.WorkspaceStarted(workspace, reqLogger)
-		}
-		return reconcile.Result{}, err
+	if ok, result, err := r.checkWorkspaceShouldBeStarted(workspace, ctx, reqLogger); !ok {
+		return result, err
 	}
 
 	// Prepare handling workspace status and condition
@@ -427,99 +347,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return reconcile.Result{}, nil
 }
 
-func (r *DevWorkspaceReconciler) stopWorkspace(workspace *dw.DevWorkspace, logger logr.Logger) (reconcile.Result, error) {
-	status := currentStatus{phase: dw.DevWorkspaceStatusStopping}
-	if workspace.Status.Phase == devworkspacePhaseFailing || workspace.Status.Phase == dw.DevWorkspaceStatusFailed {
-		status.phase = workspace.Status.Phase
-		failedCondition := conditions.GetConditionByType(workspace.Status.Conditions, dw.DevWorkspaceFailedStart)
-		if failedCondition != nil {
-			status.setCondition(dw.DevWorkspaceFailedStart, *failedCondition)
-		}
-	}
-
-	stopped, err := r.doStop(workspace, logger)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	if stopped {
-		switch status.phase {
-		case devworkspacePhaseFailing, dw.DevWorkspaceStatusFailed:
-			status.phase = dw.DevWorkspaceStatusFailed
-			status.setConditionFalse(conditions.Started, "Workspace stopped due to error")
-		default:
-			status.phase = dw.DevWorkspaceStatusStopped
-			status.setConditionFalse(conditions.Started, "Workspace is stopped")
-		}
-	}
-	return r.updateWorkspaceStatus(workspace, logger, &status, reconcile.Result{}, nil)
-}
-
-func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.Logger) (stopped bool, err error) {
-	workspaceDeployment := &appsv1.Deployment{}
-	namespaceName := types.NamespacedName{
-		Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
-		Namespace: workspace.Namespace,
-	}
-	err = r.Get(context.TODO(), namespaceName, workspaceDeployment)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, err
-	}
-
-	// Update DevWorkspaceRouting to have `devworkspace-started` annotation "false"
-	routing := &v1alpha1.DevWorkspaceRouting{}
-	routingRef := types.NamespacedName{
-		Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
-		Namespace: workspace.Namespace,
-	}
-	err = r.Get(context.TODO(), routingRef, routing)
-	if err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return false, err
-		}
-	} else if routing.Annotations != nil && routing.Annotations[constants.DevWorkspaceStartedStatusAnnotation] != "false" {
-		routing.Annotations[constants.DevWorkspaceStartedStatusAnnotation] = "false"
-		err := r.Update(context.TODO(), routing)
-		if err != nil {
-			if k8sErrors.IsConflict(err) {
-				return false, nil
-			}
-			return false, err
-		}
-	}
-
-	replicas := workspaceDeployment.Spec.Replicas
-	if replicas == nil || *replicas > 0 {
-		logger.Info("Stopping workspace")
-		err = wsprovision.ScaleDeploymentToZero(workspace, r.Client)
-		if err != nil && !k8sErrors.IsConflict(err) {
-			return false, err
-		}
-		return false, nil
-	}
-
-	if workspaceDeployment.Status.Replicas == 0 {
-		return true, nil
-	}
-	return false, nil
-}
-
-// failWorkspace marks a workspace as failed by setting relevant fields in the status struct.
-// These changes are not synced to cluster immediately, and are intended to be synced to the cluster via a deferred function
-// in the main reconcile loop. If needed, changes can be flushed to the cluster immediately via `updateWorkspaceStatus()`
-func (r *DevWorkspaceReconciler) failWorkspace(workspace *dw.DevWorkspace, msg string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
-	logger.Info("DevWorkspace failed to start: " + msg)
-	status.phase = devworkspacePhaseFailing
-	status.setConditionTrueWithReason(dw.DevWorkspaceFailedStart, msg, string(reason))
-	if workspace.Spec.Started {
-		return reconcile.Result{Requeue: true}, nil
-	}
-	return reconcile.Result{}, nil
-}
-
 func (r *DevWorkspaceReconciler) syncTimingToCluster(
 	ctx context.Context, workspace *dw.DevWorkspace, timingInfo map[string]string, reqLogger logr.Logger) {
 	if timing.IsEnabled() {
@@ -539,106 +366,4 @@ func (r *DevWorkspaceReconciler) syncTimingToCluster(
 			}
 		}
 	}
-}
-
-func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
-	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
-
-	if workspace.Annotations == nil {
-		workspace.Annotations = map[string]string{}
-	}
-
-	if _, hasStartedAtAnnotation := workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation]; hasStartedAtAnnotation {
-		return
-	}
-
-	workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation] = timing.CurrentTime()
-	if err := r.Update(ctx, workspace); err != nil {
-		if k8sErrors.IsConflict(err) {
-			reqLogger.Info("Got conflict when trying to apply started-at annotations to workspace")
-		} else {
-			reqLogger.Error(err, "Error trying to apply started-at annotation to devworkspace")
-		}
-	}
-}
-
-func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
-	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
-	if workspace.Annotations == nil {
-		workspace.Annotations = map[string]string{}
-	}
-	delete(workspace.Annotations, constants.DevWorkspaceStartedAtAnnotation)
-	if err := r.Update(ctx, workspace); err != nil {
-		if k8sErrors.IsConflict(err) {
-			reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")
-		} else {
-			reqLogger.Error(err, "Error trying to apply timing annotations to devworkspace")
-		}
-	}
-}
-
-func getWorkspaceId(instance *dw.DevWorkspace) (string, error) {
-	uid, err := uuid.Parse(string(instance.UID))
-	if err != nil {
-		return "", err
-	}
-	return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
-}
-
-// Mapping the pod to the devworkspace
-func dwRelatedPodsHandler() handler.EventHandler {
-	podToDW := func(obj client.Object) []reconcile.Request {
-		labels := obj.GetLabels()
-		if _, ok := labels[constants.DevWorkspaceNameLabel]; !ok {
-			return nil
-		}
-
-		//If the dewworkspace label does not exist, do no reconcile
-		if _, ok := labels[constants.DevWorkspaceIDLabel]; !ok {
-			return nil
-		}
-
-		return []reconcile.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Name:      labels[constants.DevWorkspaceNameLabel],
-					Namespace: obj.GetNamespace(),
-				},
-			},
-		}
-	}
-	return handler.EnqueueRequestsFromMapFunc(podToDW)
-}
-
-func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	maxConcurrentReconciles, err := config.GetMaxConcurrentReconciles()
-	if err != nil {
-		return err
-	}
-
-	var emptyMapper = func(obj client.Object) []reconcile.Request {
-		return []reconcile.Request{}
-	}
-
-	var configWatcher builder.WatchesOption = builder.WithPredicates(config.Predicates())
-
-	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
-	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
-		For(&dw.DevWorkspace{}).
-		// List DevWorkspaceTemplates as owned to enable updating workspaces when templates
-		// are changed; this should be moved to whichever controller is responsible for flattening
-		// DevWorkspaces
-		Owns(&dw.DevWorkspaceTemplate{}).
-		Owns(&appsv1.Deployment{}).
-		Owns(&batchv1.Job{}).
-		Owns(&controllerv1alpha1.DevWorkspaceRouting{}).
-		Owns(&corev1.ConfigMap{}).
-		Owns(&corev1.Secret{}).
-		Owns(&corev1.ServiceAccount{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, dwRelatedPodsHandler()).
-		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configWatcher).
-		WithEventFilter(predicates).
-		WithEventFilter(podPredicates).
-		Complete(r)
 }

@@ -63,7 +63,10 @@ spec:
                       to be set to override those defaults. Values for httpProxy and
                       httpsProxy override the cluster configuration directly. Entries
                       for noProxy are merged with the noProxy values in the cluster
-                      configuration."
+                      configuration. \n Changes to the proxy configuration are detected
+                      by the DevWorkspace Operator and propagated to DevWorkspaces.
+                      However, changing the proxy configuration for the DevWorkspace
+                      Operator itself requires restarting the controller deployment."
                     properties:
                       httpProxy:
                         description: HttpProxy is the URL of the proxy for HTTP requests,

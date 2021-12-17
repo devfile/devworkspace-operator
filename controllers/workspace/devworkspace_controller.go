@@ -17,12 +17,12 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -38,6 +38,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/automount"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
 	"github.com/go-logr/logr"
@@ -286,6 +287,17 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to process workspace environment variables: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
 
+	// Add automount resources into devfile containers
+	automountPodAdditions, err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace)
+	if err != nil {
+		var fatalErr *automount.FatalError
+		if errors.As(err, &fatalErr) {
+			return r.failWorkspace(workspace, fmt.Sprintf("Failed to process automount resources: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		} else {
+			return reconcile.Result{}, err
+		}
+	}
+
 	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspace, clusterAPI)
 	if err != nil {
 		switch storageErr := err.(type) {
@@ -359,6 +371,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	routingPodAdditions := routingStatus.PodAdditions
 	if routingPodAdditions != nil {
 		allPodAdditions = append(allPodAdditions, *routingPodAdditions)
+	}
+	if automountPodAdditions != nil {
+		allPodAdditions = append(allPodAdditions, *automountPodAdditions)
 	}
 
 	// Step five: Prepare workspace ServiceAccount
@@ -475,7 +490,7 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 	}
 
 	// Update DevWorkspaceRouting to have `devworkspace-started` annotation "false"
-	routing := &v1alpha1.DevWorkspaceRouting{}
+	routing := &controllerv1alpha1.DevWorkspaceRouting{}
 	routingRef := types.NamespacedName{
 		Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
 		Namespace: workspace.Namespace,

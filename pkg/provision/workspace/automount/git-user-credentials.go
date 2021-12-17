@@ -56,7 +56,7 @@ func mountGitCredentialsSecret(mountPath, credentials, namespace string, api syn
 	}
 
 	// Create the volume for the secret
-	podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithSecret(gitCredentialsSecretName))
+	podAdditions.Volumes = append(podAdditions.Volumes, getAutoMountVolumeWithSecret(gitCredentialsSecretName))
 
 	// Create the git credentials volume mount and set it's location as mountpath/credentials
 	gitSecretVolumeMount := getGitCredentialsVolumeMount(mountPath, gitCredentialsSecretName)
@@ -66,7 +66,7 @@ func mountGitCredentialsSecret(mountPath, credentials, namespace string, api syn
 }
 
 func getGitCredentialsVolumeMount(mountPath string, secretName string) corev1.VolumeMount {
-	gitSecretVolumeMount := GetAutoMountSecretVolumeMount(filepath.Join(mountPath, gitCredentialsName), secretName)
+	gitSecretVolumeMount := getAutoMountSecretVolumeMount(filepath.Join(mountPath, gitCredentialsName), secretName)
 	gitSecretVolumeMount.ReadOnly = true
 	gitSecretVolumeMount.SubPath = gitCredentialsName
 	return gitSecretVolumeMount

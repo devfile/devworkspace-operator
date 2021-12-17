@@ -38,96 +38,97 @@ func (e *FatalError) Unwrap() error {
 	return e.Err
 }
 
-func GetAutoMountResources(api sync.ClusterAPI, namespace string) ([]v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
-	gitCMPodAdditions, err := provisionGitConfiguration(api, namespace)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cmPodAdditions, cmEnvAdditions, err := getDevWorkspaceConfigmaps(namespace, api)
-	if err != nil {
-		return nil, nil, err
-	}
-	secretPodAdditions, secretEnvAdditions, err := getDevWorkspaceSecrets(namespace, api)
-	if err != nil {
-		return nil, nil, err
-	}
-	pvcPodAdditions, err := getAutoMountPVCs(namespace, api)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var allPodAdditions []v1alpha1.PodAdditions
-	if gitCMPodAdditions != nil {
-		allPodAdditions = append(allPodAdditions, *gitCMPodAdditions)
-	}
-	if cmPodAdditions != nil {
-		allPodAdditions = append(allPodAdditions, *cmPodAdditions)
-	}
-	if secretPodAdditions != nil {
-		allPodAdditions = append(allPodAdditions, *secretPodAdditions)
-	}
-	if pvcPodAdditions != nil {
-		allPodAdditions = append(allPodAdditions, *pvcPodAdditions)
-	}
-
-	return allPodAdditions, append(cmEnvAdditions, secretEnvAdditions...), nil
+type automountResources struct {
+	Volumes       []corev1.Volume
+	VolumeMounts  []corev1.VolumeMount
+	EnvFromSource []corev1.EnvFromSource
 }
 
-func CheckAutoMountVolumesForCollision(base, automount []v1alpha1.PodAdditions) error {
+func ProvisionAutoMountResourcesInto(podAdditions []v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string) error {
+	return nil
+}
+
+func getAutomountResources(api sync.ClusterAPI, namespace string) (*automountResources, error) {
+	gitCMAutoMountResources, err := provisionGitConfiguration(api, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	cmAutoMountResources, err := getDevWorkspaceConfigmaps(namespace, api)
+	if err != nil {
+		return nil, err
+	}
+
+	secretAutoMountResources, err := getDevWorkspaceSecrets(namespace, api)
+	if err != nil {
+		return nil, err
+	}
+
+	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeAutomountResources(gitCMAutoMountResources, cmAutoMountResources, secretAutoMountResources, pvcAutoMountResources), nil
+}
+
+func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, automount *automountResources) error {
 	// Get a map of automounted volume names to volume structs
 	automountVolumeNames := map[string]corev1.Volume{}
-	for _, podAddition := range automount {
-		for _, volume := range podAddition.Volumes {
-			automountVolumeNames[volume.Name] = volume
-		}
+	for _, volume := range automount.Volumes {
+		automountVolumeNames[volume.Name] = volume
 	}
 
 	// Check that workspace volumes do not conflict with automounted volumes
-	for _, podAddition := range base {
-		for _, volume := range podAddition.Volumes {
-			if conflict, exists := automountVolumeNames[volume.Name]; exists {
-				return fmt.Errorf("DevWorkspace volume '%s' conflicts with automounted volume from %s",
-					volume.Name, formatVolumeDescription(conflict))
-			}
+	for _, volume := range podAdditions.Volumes {
+		if conflict, exists := automountVolumeNames[volume.Name]; exists {
+			return &FatalError{fmt.Errorf("DevWorkspace volume '%s' conflicts with automounted volume from %s",
+				volume.Name, formatVolumeDescription(conflict))}
 		}
 	}
 
 	// Check that automounted mountPaths do not collide
 	automountVolumeMountsByMountPath := map[string]corev1.VolumeMount{}
-	for _, podAddition := range automount {
-		for _, vm := range podAddition.VolumeMounts {
-			if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
-				return fmt.Errorf("auto-mounted volumes from %s and %s have the same mount path",
-					getVolumeDescriptionFromVolumeMount(vm, automount), getVolumeDescriptionFromVolumeMount(conflict, automount))
-			}
-			automountVolumeMountsByMountPath[vm.MountPath] = vm
+	for _, vm := range automount.VolumeMounts {
+		if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
+			return &FatalError{fmt.Errorf("auto-mounted volumes from %s and %s have the same mount path",
+				getVolumeDescriptionFromVolumeMount(vm, automount.Volumes), getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes))}
 		}
+		automountVolumeMountsByMountPath[vm.MountPath] = vm
 	}
 
 	// Check that automounted volume mountPaths do not conflict with existing mountPaths in any container
-	for _, podAddition := range base {
-		for _, container := range podAddition.Containers {
-			for _, vm := range container.VolumeMounts {
-				if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
-					return fmt.Errorf("DevWorkspace volume %s in container %s has same mountpath as auto-mounted volume from %s",
-						getVolumeDescriptionFromVolumeMount(vm, base), container.Name, getVolumeDescriptionFromVolumeMount(conflict, automount))
-				}
+	for _, container := range podAdditions.Containers {
+		for _, vm := range container.VolumeMounts {
+			if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
+				return &FatalError{fmt.Errorf("DevWorkspace volume %s in container %s has same mountpath as auto-mounted volume from %s",
+					getVolumeDescriptionFromVolumeMount(vm, podAdditions.Volumes), container.Name, getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes))}
 			}
 		}
 	}
 	return nil
 }
 
-// getVolumeDescriptionFromVolumeMount takes a volumeMount and returns a formatted description of the underlying volume
-// (i.e. "secret <secretName>" or "configmap <configmapName>" as defined by formatVolumeDescription) the provided slice
-// of podAdditions. If a match cannot be found, the volumeMount name is returned.
-func getVolumeDescriptionFromVolumeMount(vm corev1.VolumeMount, podAdditions []v1alpha1.PodAdditions) string {
-	for _, podAddition := range podAdditions {
-		for _, volume := range podAddition.Volumes {
-			if volume.Name == vm.Name {
-				return formatVolumeDescription(volume)
-			}
+func mergeAutomountResources(resources ...*automountResources) *automountResources {
+	result := &automountResources{}
+	for _, resource := range resources {
+		if resource == nil {
+			continue
+		}
+		result.Volumes = append(result.Volumes, resource.Volumes...)
+		result.VolumeMounts = append(result.VolumeMounts, resource.VolumeMounts...)
+		result.EnvFromSource = append(result.EnvFromSource, resource.EnvFromSource...)
+	}
+	return result
+}
+
+// getVolumeDescriptionFromAutoVolumeMount takes a volumeMount and list of volumes and returns a formatted description of
+// the underlying volume (i.e. "secret <secretName>" or "configmap <configmapName>" as defined by formatVolumeDescription).
+// If the volume referred to by the volumeMount does not exist in the volumes slice, the volumeMount's name is returned
+func getVolumeDescriptionFromVolumeMount(vm corev1.VolumeMount, volumes []corev1.Volume) string {
+	for _, volume := range volumes {
+		if volume.Name == vm.Name {
+			return formatVolumeDescription(volume)
 		}
 	}
 	return vm.Name

@@ -22,19 +22,19 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAdditions, []corev1.EnvFromSource, error) {
+func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*automountResources, error) {
 	secrets := &corev1.SecretList{}
 	if err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	podAdditions := &v1alpha1.PodAdditions{}
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
 	var additionalEnvVars []corev1.EnvFromSource
 	for _, secret := range secrets.Items {
 		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
@@ -47,19 +47,23 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*v1alpha1.Po
 			mountPath = path.Join("/etc/", "secret/", secret.Name)
 		}
 		if mountAs == "subpath" {
-			podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithSecret(secret.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, GetAutoMountSecretSubpathVolumeMounts(mountPath, secret)...)
+			volumes = append(volumes, getAutoMountVolumeWithSecret(secret.Name))
+			volumeMounts = append(volumeMounts, getAutoMountSecretSubpathVolumeMounts(mountPath, secret)...)
 		} else {
 			// mountAs == "file", "", or anything else (default). Don't treat invalid values as errors to avoid
 			// failing all workspace starts in this namespace
-			podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithSecret(secret.Name))
-			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, GetAutoMountSecretVolumeMount(mountPath, secret.Name))
+			volumes = append(volumes, getAutoMountVolumeWithSecret(secret.Name))
+			volumeMounts = append(volumeMounts, getAutoMountSecretVolumeMount(mountPath, secret.Name))
 		}
 	}
-	return podAdditions, additionalEnvVars, nil
+	return &automountResources{
+		Volumes:       volumes,
+		VolumeMounts:  volumeMounts,
+		EnvFromSource: additionalEnvVars,
+	}, nil
 }
 
-func GetAutoMountVolumeWithSecret(name string) corev1.Volume {
+func getAutoMountVolumeWithSecret(name string) corev1.Volume {
 	modeReadOnly := int32(0640)
 	workspaceVolumeMount := corev1.Volume{
 		Name: common.AutoMountSecretVolumeName(name),
@@ -73,7 +77,7 @@ func GetAutoMountVolumeWithSecret(name string) corev1.Volume {
 	return workspaceVolumeMount
 }
 
-func GetAutoMountSecretVolumeMount(mountPath, name string) corev1.VolumeMount {
+func getAutoMountSecretVolumeMount(mountPath, name string) corev1.VolumeMount {
 	workspaceVolumeMount := corev1.VolumeMount{
 		Name:      common.AutoMountSecretVolumeName(name),
 		ReadOnly:  true,
@@ -82,7 +86,7 @@ func GetAutoMountSecretVolumeMount(mountPath, name string) corev1.VolumeMount {
 	return workspaceVolumeMount
 }
 
-func GetAutoMountSecretSubpathVolumeMounts(mountPath string, secret corev1.Secret) []corev1.VolumeMount {
+func getAutoMountSecretSubpathVolumeMounts(mountPath string, secret corev1.Secret) []corev1.VolumeMount {
 	var workspaceVolumeMounts []corev1.VolumeMount
 	for secretKey := range secret.Data {
 		workspaceVolumeMounts = append(workspaceVolumeMounts, corev1.VolumeMount{

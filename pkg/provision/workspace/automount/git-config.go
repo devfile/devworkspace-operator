@@ -123,10 +123,10 @@ func constructGitConfig(api sync.ClusterAPI, namespace string, userMountPath str
 		}
 
 		// Create the tls certificate volume
-		podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithConfigMap(cm.Name))
+		podAdditions.Volumes = append(podAdditions.Volumes, getAutoMountVolumeWithConfigMap(cm.Name))
 
 		// Create the tls certificate volume mount and point it to the defaultMountPath
-		podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, GetAutoMountConfigMapVolumeMount(mountPath, cm.Name))
+		podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, getAutoMountConfigMapVolumeMount(mountPath, cm.Name))
 
 		if hostFound || !defaultTlsAlreadyFound {
 			gitconfig = gitconfig + fmt.Sprintf(gitServerTemplate, host, filepath.Join(mountPath, certificateKey))
@@ -149,7 +149,7 @@ func mountGitConfigMap(configMapName, namespace string, api sync.ClusterAPI, cre
 	}
 
 	// Create the volume for the configmap
-	podAdditions.Volumes = append(podAdditions.Volumes, GetAutoMountVolumeWithConfigMap(configMapName))
+	podAdditions.Volumes = append(podAdditions.Volumes, getAutoMountVolumeWithConfigMap(configMapName))
 
 	// Create the gitconfig volume mount and set it's location as /etc/gitconfig so it's automatically picked up by git
 	gitConfigMapVolumeMount := getGitConfigMapVolumeMount(configMapName)
@@ -159,7 +159,7 @@ func mountGitConfigMap(configMapName, namespace string, api sync.ClusterAPI, cre
 }
 
 func getGitConfigMapVolumeMount(configMapName string) corev1.VolumeMount {
-	gitConfigMapVolumeMount := GetAutoMountConfigMapVolumeMount(gitConfigLocation, configMapName)
+	gitConfigMapVolumeMount := getAutoMountConfigMapVolumeMount(gitConfigLocation, configMapName)
 	gitConfigMapVolumeMount.SubPath = gitConfigName
 	gitConfigMapVolumeMount.ReadOnly = false
 	return gitConfigMapVolumeMount

@@ -191,8 +191,8 @@ func TestGitConfigIsFullyMounted(t *testing.T) {
 	}
 
 	expectedAdditions := &v1alpha1.PodAdditions{}
-	expectedAdditions.Volumes = append(expectedAdditions.Volumes, GetAutoMountVolumeWithConfigMap(defaultName), GetAutoMountVolumeWithConfigMap(gitCredentialsConfigMapName))
-	expectedAdditions.VolumeMounts = append(expectedAdditions.VolumeMounts, GetAutoMountConfigMapVolumeMount(defaultMountPath, defaultName), getGitConfigMapVolumeMount(gitCredentialsConfigMapName))
+	expectedAdditions.Volumes = append(expectedAdditions.Volumes, getAutoMountVolumeWithConfigMap(defaultName), getAutoMountVolumeWithConfigMap(gitCredentialsConfigMapName))
+	expectedAdditions.VolumeMounts = append(expectedAdditions.VolumeMounts, getAutoMountConfigMapVolumeMount(defaultMountPath, defaultName), getGitConfigMapVolumeMount(gitCredentialsConfigMapName))
 	assert.Equal(t, podAdditions, expectedAdditions, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(podAdditions, expectedAdditions)))
 }
 

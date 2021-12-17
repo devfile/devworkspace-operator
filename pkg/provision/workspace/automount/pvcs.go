@@ -22,12 +22,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAdditions, error) {
+func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*automountResources, error) {
 	pvcs := &corev1.PersistentVolumeClaimList{}
 	if err := api.Client.List(api.Ctx, pvcs, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -38,7 +37,8 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAddit
 		return nil, nil
 	}
 
-	podAdditions := &v1alpha1.PodAdditions{}
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
 	for _, pvc := range pvcs.Items {
 		mountPath := pvc.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {
@@ -50,7 +50,7 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAddit
 			mountReadOnly = true
 		}
 
-		podAdditions.Volumes = append(podAdditions.Volumes, corev1.Volume{
+		volumes = append(volumes, corev1.Volume{
 			Name: common.AutoMountPVCVolumeName(pvc.Name),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
@@ -59,10 +59,13 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*v1alpha1.PodAddit
 				},
 			},
 		})
-		podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, corev1.VolumeMount{
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      common.AutoMountPVCVolumeName(pvc.Name),
 			MountPath: mountPath,
 		})
 	}
-	return podAdditions, nil
+	return &automountResources{
+		Volumes:      volumes,
+		VolumeMounts: volumeMounts,
+	}, nil
 }

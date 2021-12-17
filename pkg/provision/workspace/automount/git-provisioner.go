@@ -16,7 +16,6 @@ package automount
 import (
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
@@ -24,7 +23,7 @@ import (
 )
 
 // provisionGitConfiguration takes care of mounting git credentials and a gitconfig into a devworkspace.
-func provisionGitConfiguration(api sync.ClusterAPI, namespace string) (*v1alpha1.PodAdditions, error) {
+func provisionGitConfiguration(api sync.ClusterAPI, namespace string) (*automountResources, error) {
 	secrets := &corev1.SecretList{}
 	err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceGitCredentialLabel: "true",
@@ -44,27 +43,32 @@ func provisionGitConfiguration(api sync.ClusterAPI, namespace string) (*v1alpha1
 		}
 	}
 
-	podAdditions := &v1alpha1.PodAdditions{}
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
 
 	// Grab the gitconfig additions
 	gitConfigAdditions, err := provisionGitConfig(api, namespace, userMountPath)
 	if err != nil {
-		return podAdditions, err
+		return nil, err
 	}
 
 	if gitConfigAdditions != nil {
-		podAdditions.Volumes = append(podAdditions.Volumes, gitConfigAdditions.Volumes...)
-		podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, gitConfigAdditions.VolumeMounts...)
+		volumes = append(volumes, gitConfigAdditions.Volumes...)
+		volumeMounts = append(volumeMounts, gitConfigAdditions.VolumeMounts...)
 	}
 
 	// Grab the credentials additions
 	if len(credentials) > 0 {
 		credentialsAdditions, err := provisionUserGitCredentials(api, namespace, userMountPath, credentials)
 		if err != nil {
-			return podAdditions, err
+			return nil, err
 		}
-		podAdditions.Volumes = append(podAdditions.Volumes, credentialsAdditions.Volumes...)
-		podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, credentialsAdditions.VolumeMounts...)
+		volumes = append(volumes, credentialsAdditions.Volumes...)
+		volumeMounts = append(volumeMounts, credentialsAdditions.VolumeMounts...)
 	}
-	return podAdditions, nil
+
+	return &automountResources{
+		Volumes:      volumes,
+		VolumeMounts: volumeMounts,
+	}, nil
 }

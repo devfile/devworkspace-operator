@@ -34,11 +34,11 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
+	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
-	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/automount"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 
 	"github.com/go-logr/logr"

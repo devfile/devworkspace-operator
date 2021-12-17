@@ -39,7 +39,7 @@ func TestUserCredentialsAreMountedWithOneCredential(t *testing.T) {
 	}
 	expectedAdditions := &v1alpha1.PodAdditions{}
 	expectedAdditions.VolumeMounts = append(expectedAdditions.VolumeMounts, getGitCredentialsVolumeMount(mountPath, gitCredentialsSecretName))
-	expectedAdditions.Volumes = append(expectedAdditions.Volumes, GetAutoMountVolumeWithSecret(gitCredentialsSecretName))
+	expectedAdditions.Volumes = append(expectedAdditions.Volumes, getAutoMountVolumeWithSecret(gitCredentialsSecretName))
 	assert.Equal(t, podAdditions, expectedAdditions)
 }
 
@@ -58,6 +58,6 @@ func TestUserCredentialsAreOnlyMountedOnceWithMultipleCredentials(t *testing.T) 
 	}
 	expectedAdditions := &v1alpha1.PodAdditions{}
 	expectedAdditions.VolumeMounts = append(expectedAdditions.VolumeMounts, getGitCredentialsVolumeMount(mountPath, gitCredentialsSecretName))
-	expectedAdditions.Volumes = append(expectedAdditions.Volumes, GetAutoMountVolumeWithSecret(gitCredentialsSecretName))
+	expectedAdditions.Volumes = append(expectedAdditions.Volumes, getAutoMountVolumeWithSecret(gitCredentialsSecretName))
 	assert.Equal(t, podAdditions, expectedAdditions)
 }

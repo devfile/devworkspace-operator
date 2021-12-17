@@ -25,15 +25,13 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"k8s.io/apimachinery/pkg/fields"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/automount"
-
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -93,31 +91,6 @@ func SyncDeploymentToCluster(
 	saName string,
 	clusterAPI sync.ClusterAPI) DeploymentProvisioningStatus {
 
-	automountPodAdditions, automountEnv, err := automount.GetAutoMountResources(clusterAPI, workspace.GetNamespace())
-	if err != nil {
-		var fatalErr *automount.FatalError
-		if errors.As(err, &fatalErr) {
-			return DeploymentProvisioningStatus{
-				ProvisioningStatus{Err: err, FailStartup: true},
-			}
-		} else {
-			return DeploymentProvisioningStatus{
-				ProvisioningStatus{Err: err},
-			}
-		}
-	}
-	if err := automount.CheckAutoMountVolumesForCollision(podAdditions, automountPodAdditions); err != nil {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{Err: err, FailStartup: true},
-		}
-	}
-	podAdditions = append(podAdditions, automountPodAdditions...)
-
-	var envFromSourceAdditions []corev1.EnvFromSource
-	if automountEnv != nil {
-		envFromSourceAdditions = append(envFromSourceAdditions, automountEnv...)
-	}
-
 	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return DeploymentProvisioningStatus{
@@ -131,7 +104,7 @@ func SyncDeploymentToCluster(
 
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
-	specDeployment, err := getSpecDeployment(workspace, podAdditions, envFromSourceAdditions, saName, podTolerations, nodeSelector, clusterAPI.Scheme)
+	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, podTolerations, nodeSelector, clusterAPI.Scheme)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus{
@@ -264,7 +237,6 @@ func checkDeploymentConditions(deployment *appsv1.Deployment) (healthy bool, err
 func getSpecDeployment(
 	workspace *dw.DevWorkspace,
 	podAdditionsList []v1alpha1.PodAdditions,
-	envFromSourceAdditions []corev1.EnvFromSource,
 	saName string,
 	podTolerations []corev1.Toleration,
 	nodeSelector map[string]string,
@@ -279,11 +251,9 @@ func getSpecDeployment(
 
 	for idx := range podAdditions.Containers {
 		podAdditions.Containers[idx].VolumeMounts = append(podAdditions.Containers[idx].VolumeMounts, podAdditions.VolumeMounts...)
-		podAdditions.Containers[idx].EnvFrom = append(podAdditions.Containers[idx].EnvFrom, envFromSourceAdditions...)
 	}
 	for idx := range podAdditions.InitContainers {
 		podAdditions.InitContainers[idx].VolumeMounts = append(podAdditions.InitContainers[idx].VolumeMounts, podAdditions.VolumeMounts...)
-		podAdditions.InitContainers[idx].EnvFrom = append(podAdditions.InitContainers[idx].EnvFrom, envFromSourceAdditions...)
 	}
 
 	deployment := &appsv1.Deployment{

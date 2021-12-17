@@ -181,7 +181,7 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 			for _, desc := range tt.automountPodAdditions {
 				automount = append(automount, convertToPodAddition(desc))
 			}
-			outErr := CheckAutoMountVolumesForCollision(base, automount)
+			outErr := checkAutomountVolumesForCollision(base, automount)
 			if tt.errRegexp == "" {
 				assert.Nil(t, outErr, "Expected no error but got %s", outErr)
 			} else {

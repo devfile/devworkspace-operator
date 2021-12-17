@@ -13,12 +13,13 @@
 // limitations under the License.
 //
 
-package workspace
+package env
 
 import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
@@ -26,7 +27,26 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func CommonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
+// AddCommonEnvironmentVariables adds environment variables to each container in podAdditions. Environment variables added include common
+// info environment variables and environment variables defined by a workspaceEnv attribute in the devfile itself
+func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterDW *dw.DevWorkspace, flattenedDW *dw.DevWorkspaceTemplateSpec) error {
+	commonEnv := commonEnvironmentVariables(clusterDW.Name, clusterDW.Status.DevWorkspaceId, clusterDW.Namespace, clusterDW.Labels[constants.DevWorkspaceCreatorLabel])
+	workspaceEnv, err := collectWorkspaceEnv(flattenedDW)
+	if err != nil {
+		return err
+	}
+	for idx := range podAdditions.Containers {
+		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, commonEnv...)
+		podAdditions.Containers[idx].Env = append(podAdditions.Containers[idx].Env, workspaceEnv...)
+	}
+	for idx := range podAdditions.InitContainers {
+		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, commonEnv...)
+		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, workspaceEnv...)
+	}
+	return nil
+}
+
+func commonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
 	envvars := []corev1.EnvVar{
 		{
 			Name:  constants.DevWorkspaceNamespace,

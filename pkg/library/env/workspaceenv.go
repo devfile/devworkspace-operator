@@ -110,6 +110,22 @@ func collectWorkspaceEnv(flattenedDW *dw.DevWorkspaceTemplateSpec) ([]corev1.Env
 	// Bookkeeping map so that we can format error messages in case of conflict
 	envVarToComponent := map[string]string{}
 
+	if flattenedDW.Attributes.Exists(constants.WorkspaceEnvAttribute) {
+		var dwEnv []dw.EnvVar
+		err := flattenedDW.Attributes.GetInto(constants.WorkspaceEnvAttribute, &dwEnv)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.WorkspaceEnvAttribute, err)
+		}
+		for _, envVar := range dwEnv {
+			if existingVal, exists := workspaceEnvMap[envVar.Name]; exists && existingVal != envVar.Value {
+				return nil, fmt.Errorf("conflicting definition of environment variable %s in DevWorkspace attributes",
+					envVar.Name)
+			}
+			workspaceEnvMap[envVar.Name] = envVar.Value
+			envVarToComponent[envVar.Name] = "DevWorkspace attributes"
+		}
+	}
+
 	for _, component := range flattenedDW.Components {
 		if !component.Attributes.Exists(constants.WorkspaceEnvAttribute) {
 			continue
@@ -118,12 +134,12 @@ func collectWorkspaceEnv(flattenedDW *dw.DevWorkspaceTemplateSpec) ([]corev1.Env
 		var componentEnv []dw.EnvVar
 		err := component.Attributes.GetInto(constants.WorkspaceEnvAttribute, &componentEnv)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read attribute %s on component %s: %w", constants.WorkspaceEnvAttribute, getSourceForComponent(component), err)
+			return nil, fmt.Errorf("failed to read attribute %s on %s: %w", constants.WorkspaceEnvAttribute, getSourceForComponent(component), err)
 		}
 
 		for _, envVar := range componentEnv {
 			if existingVal, exists := workspaceEnvMap[envVar.Name]; exists && existingVal != envVar.Value {
-				return nil, fmt.Errorf("conflicting definition of environment variable %s in components '%s' and '%s'",
+				return nil, fmt.Errorf("conflicting definition of environment variable %s in %s and %s",
 					envVar.Name, envVarToComponent[envVar.Name], getSourceForComponent(component))
 			}
 			workspaceEnvMap[envVar.Name] = envVar.Value
@@ -140,7 +156,7 @@ func collectWorkspaceEnv(flattenedDW *dw.DevWorkspaceTemplateSpec) ([]corev1.Env
 
 // getSourceForComponent returns the 'original' name for a component in a flattened DevWorkspace. Given a component, it
 // returns the name of the plugin component that imported it if the component came via a plugin, and the actual
-// component name otherwise.
+// component name otherwise. Returned name is prefixed with "component " -- e.g. "component myComponent"
 //
 // The purpose of this function is mainly to enable providing better messages to end-users, as a component name may
 // not match the name of the plugin in the original DevWorkspace.
@@ -149,8 +165,8 @@ func getSourceForComponent(component dw.Component) string {
 		var err error
 		componentName := component.Attributes.GetString(constants.PluginSourceAttribute, &err)
 		if err == nil {
-			return componentName
+			return fmt.Sprintf("component %s", componentName)
 		}
 	}
-	return component.Name
+	return fmt.Sprintf("component %s", component.Name)
 }

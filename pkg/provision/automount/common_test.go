@@ -122,66 +122,96 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 			errRegexp: "auto-mounted volumes from configmap 'testVolume2' and secret 'testVolume1' have the same mount path",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			convertToPodAddition := func(desc volumeDesc) v1alpha1.PodAdditions {
-				pa := v1alpha1.PodAdditions{}
-				switch desc.volumeType {
-				case secretVolumeType:
-					pa.Volumes = append(pa.Volumes, corev1.Volume{
-						Name: desc.name,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: desc.name,
-							},
+
+	convertDescToVolume := func(desc volumeDesc) (*corev1.Volume, *corev1.VolumeMount, *corev1.Container) {
+		switch desc.volumeType {
+		case secretVolumeType:
+			volume := &corev1.Volume{
+				Name: desc.name,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: desc.name,
+					},
+				},
+			}
+			volumeMount := &corev1.VolumeMount{
+				Name:      desc.name,
+				MountPath: desc.mountPath,
+			}
+			return volume, volumeMount, nil
+		case configMapVolumeType:
+			volume := &corev1.Volume{
+				Name: desc.name,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: desc.name,
 						},
-					})
-				case configMapVolumeType:
-					pa.Volumes = append(pa.Volumes, corev1.Volume{
-						Name: desc.name,
-						VolumeSource: corev1.VolumeSource{
-							ConfigMap: &corev1.ConfigMapVolumeSource{
-								LocalObjectReference: corev1.LocalObjectReference{
-									Name: desc.name,
-								},
-							},
-						},
-					})
-				case devWorkspaceVolume:
-					pa.Volumes = append(pa.Volumes, corev1.Volume{
-						Name: desc.name,
-					})
-				}
-				switch desc.volumeType {
-				case devWorkspaceVolume:
-					container := corev1.Container{
-						Name: testContainerName,
-						VolumeMounts: []corev1.VolumeMount{
-							{
-								Name:      desc.name,
-								MountPath: desc.mountPath,
-							},
-						},
-					}
-					pa.Containers = append(pa.Containers, container)
-				case secretVolumeType, configMapVolumeType:
-					pa.VolumeMounts = append(pa.VolumeMounts, corev1.VolumeMount{
+					},
+				},
+			}
+			volumeMount := &corev1.VolumeMount{
+				Name:      desc.name,
+				MountPath: desc.mountPath,
+			}
+			return volume, volumeMount, nil
+		case devWorkspaceVolume:
+			volume := &corev1.Volume{
+				Name: desc.name,
+			}
+			container := &corev1.Container{
+				Name: testContainerName,
+				VolumeMounts: []corev1.VolumeMount{
+					{
 						Name:      desc.name,
 						MountPath: desc.mountPath,
-					})
-				}
+					},
+				},
+			}
+			return volume, nil, container
+		}
+		return nil, nil, nil
+	}
 
-				return pa
+	convertToPodAddition := func(descs ...volumeDesc) *v1alpha1.PodAdditions {
+		pa := &v1alpha1.PodAdditions{}
+		for _, desc := range descs {
+			volume, volumeMount, container := convertDescToVolume(desc)
+			if volume != nil {
+				pa.Volumes = append(pa.Volumes, *volume)
 			}
-			var base []v1alpha1.PodAdditions
-			for _, desc := range tt.basePodAdditions {
-				base = append(base, convertToPodAddition(desc))
+			if volumeMount != nil {
+				pa.VolumeMounts = append(pa.VolumeMounts, *volumeMount)
 			}
-			var automount []v1alpha1.PodAdditions
-			for _, desc := range tt.automountPodAdditions {
-				automount = append(automount, convertToPodAddition(desc))
+			if container != nil {
+				pa.Containers = append(pa.Containers, *container)
 			}
-			outErr := checkAutomountVolumesForCollision(base, automount)
+		}
+		return pa
+	}
+
+	convertToAutomountResources := func(descs ...volumeDesc) *automountResources {
+		resources := &automountResources{}
+		for _, desc := range descs {
+			volume, volumeMount, _ := convertDescToVolume(desc)
+			if volume != nil {
+				resources.Volumes = append(resources.Volumes, *volume)
+			}
+			if volumeMount != nil {
+				resources.VolumeMounts = append(resources.VolumeMounts, *volumeMount)
+			}
+		}
+		return resources
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			base := convertToPodAddition(tt.basePodAdditions...)
+
+			autoMount := convertToAutomountResources(tt.automountPodAdditions...)
+
+			outErr := checkAutomountVolumesForCollision(base, autoMount)
 			if tt.errRegexp == "" {
 				assert.Nil(t, outErr, "Expected no error but got %s", outErr)
 			} else {

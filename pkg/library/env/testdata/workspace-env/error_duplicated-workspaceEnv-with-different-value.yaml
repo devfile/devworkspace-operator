@@ -23,4 +23,4 @@ input:
           image: test-image
 
 output:
-  errRegexp: "conflicting definition of environment variable TEST_ENV_2 in components 'test-container' and 'test-plugin'"
+  errRegexp: "conflicting definition of environment variable TEST_ENV_2 in component test-container and component test-plugin"

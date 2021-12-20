@@ -58,13 +58,13 @@ func resolveURLForEndpoint(
 	routingObj RoutingObjects) (string, error) {
 	for _, route := range routingObj.Routes {
 		if route.Annotations[constants.DevWorkspaceEndpointNameAnnotation] == endpoint.Name {
-			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.Path, route.Spec.TLS != nil), nil
+			return getURLForEndpoint(endpoint, route.Spec.Host, route.Spec.Path, route.Spec.TLS != nil)
 		}
 	}
 	for _, ingress := range routingObj.Ingresses {
 		if ingress.Annotations[constants.DevWorkspaceEndpointNameAnnotation] == endpoint.Name {
 			if len(ingress.Spec.Rules) == 1 {
-				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, "", false), nil // no TLS supported for ingresses yet
+				return getURLForEndpoint(endpoint, ingress.Spec.Rules[0].Host, "", false) // no TLS supported for ingresses yet
 			} else {
 				return "", fmt.Errorf("ingress %s contains multiple rules", ingress.Name)
 			}
@@ -73,25 +73,30 @@ func resolveURLForEndpoint(
 	return "", fmt.Errorf("could not find ingress/route for endpoint '%s'", endpoint.Name)
 }
 
-func getURLForEndpoint(endpoint controllerv1alpha1.Endpoint, host, basePath string, secure bool) string {
+func getURLForEndpoint(endpoint controllerv1alpha1.Endpoint, host, basePath string, secure bool) (string, error) {
 	protocol := endpoint.Protocol
 	if secure && endpoint.Secure {
 		protocol = controllerv1alpha1.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
-	var p string
+
+	// Format host/path ensuring only a single '/' character between the two. Can't use path.Join here as it would drop
+	// a trailing '/' if present
+	basehost := fmt.Sprintf("%s/%s", strings.TrimRight(host, "/"), strings.TrimLeft(basePath, "/"))
+	baseUrl := fmt.Sprintf("%s://%s", protocol, basehost)
+
+	url, err := url.Parse(baseUrl)
+	if err != nil {
+		return "", err
+	}
+
 	if endpoint.Path != "" {
-		// the only one slash should be between these path segments.
-		// Path.join does not suite here since it eats trailing slash which may be critical for the application
-		p = fmt.Sprintf("%s/%s", strings.TrimRight(basePath, "/"), strings.TrimLeft(p, endpoint.Path))
-	} else {
-		p = basePath
+		relPath, err := url.Parse(endpoint.Path)
+		if err != nil {
+			return "", err
+		}
+		url = url.ResolveReference(relPath)
 	}
-	u := url.URL{
-		Scheme: string(protocol),
-		Host:   host,
-		Path:   p,
-	}
-	return u.String()
+	return url.String(), nil
 }
 
 // getSecureProtocol takes a (potentially unsecure protocol e.g. http) and returns the secure version (e.g. https).

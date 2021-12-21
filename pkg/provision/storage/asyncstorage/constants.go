@@ -29,6 +29,7 @@ const (
 )
 
 var asyncServerLabels = map[string]string{
-	"app.kubernetes.io/name":    "async-storage",
-	"app.kubernetes.io/part-of": "devworkspace-operator",
+	"app.kubernetes.io/name":                "async-storage",
+	"app.kubernetes.io/part-of":             "devworkspace-operator",
+	"controller.devfile.io/devworkspace_id": "",
 }

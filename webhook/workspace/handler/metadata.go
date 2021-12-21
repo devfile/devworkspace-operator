@@ -24,11 +24,14 @@ import (
 )
 
 func (h *WebhookHandler) mutateMetadataOnCreate(o *metav1.ObjectMeta) error {
-	if _, ok := o.Labels[constants.DevWorkspaceIDLabel]; !ok {
+	devworkspaceId, ok := o.Labels[constants.DevWorkspaceIDLabel]
+	if !ok {
 		return fmt.Errorf("'%s' label is missing", constants.DevWorkspaceIDLabel)
 	}
 
-	if _, ok := o.Labels[constants.DevWorkspaceCreatorLabel]; !ok {
+	// An empty devworkspaceId is used for resources that are associated with multiple workspaces
+	// e.g. the async storage server deployment.
+	if _, ok := o.Labels[constants.DevWorkspaceCreatorLabel]; !ok && devworkspaceId != "" {
 		return fmt.Errorf("'%s' label is missing", constants.DevWorkspaceCreatorLabel)
 	}
 
@@ -63,31 +66,37 @@ func mutateLabelsOnUpdate(old map[string]string, new map[string]string) (bool, e
 }
 
 func mutateWorkspaceIdLabel(old map[string]string, new map[string]string) (bool, error) {
-	oldWorkpaceId, found := old[constants.DevWorkspaceIDLabel]
-	if !found {
+	// There are cases where the old version of a resource does not have a DevWorkspaceIDLabel set
+	// and we need to enable it to be added after the fact (e.g. old instances of the async storage
+	// server before the devworkspaceId label was added)
+	oldWorkpaceId, oldFound := old[constants.DevWorkspaceIDLabel]
+	newWorkspaceId, newFound := new[constants.DevWorkspaceIDLabel]
+	switch {
+	case !newFound && !oldFound:
 		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your DevWorkspace", constants.DevWorkspaceIDLabel)
-	}
-
-	newCreator, found := new[constants.DevWorkspaceIDLabel]
-	if !found {
+	case !newFound && oldFound:
 		new[constants.DevWorkspaceIDLabel] = oldWorkpaceId
 		return true, nil
+	case newFound && !oldFound:
+		return false, nil
+	default: // oldFound && newFound
+		if newWorkspaceId != oldWorkpaceId {
+			return false, fmt.Errorf("the '%s' label is assigned when a devworkspace is created and is immutable", constants.DevWorkspaceIDLabel)
+		}
+		return false, nil
 	}
-
-	if newCreator != oldWorkpaceId {
-		return false, fmt.Errorf("'%s' label is assigned once devworkspace is created and is immutable", constants.DevWorkspaceIDLabel)
-	}
-	return false, nil
 }
 
 func mutateCreatorLabel(old map[string]string, new map[string]string) (bool, error) {
+	devworkspaceId := old[constants.DevWorkspaceIDLabel]
 	oldCreator, found := old[constants.DevWorkspaceCreatorLabel]
-	if !found {
+	// Empty devworkspaceID is used for common resources (e.g. async storage server deployment) which does not get a creator ID
+	if !found && devworkspaceId != "" {
 		return false, fmt.Errorf("'%s' label is required. Update Controller and restart your DevWorkspace", constants.DevWorkspaceCreatorLabel)
 	}
 
 	newCreator, found := new[constants.DevWorkspaceCreatorLabel]
-	if !found {
+	if !found && devworkspaceId != "" {
 		new[constants.DevWorkspaceCreatorLabel] = oldCreator
 		return true, nil
 	}

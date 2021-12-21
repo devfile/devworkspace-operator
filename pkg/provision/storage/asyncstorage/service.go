@@ -16,6 +16,7 @@
 package asyncstorage
 
 import (
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +34,7 @@ func SyncWorkspaceSyncServiceToCluster(asyncDeploy *appsv1.Deployment, api sync.
 	if err != nil {
 		return nil, err
 	}
+
 	clusterService, err := getWorkspaceSyncServiceCluster(asyncDeploy.Namespace, api)
 	if err != nil {
 		if !k8sErrors.IsNotFound(err) {
@@ -62,8 +64,9 @@ func getWorkspaceSyncServiceSpec(asyncDeploy *appsv1.Deployment) *corev1.Service
 			Name:      asyncServerServiceName,
 			Namespace: asyncDeploy.Namespace,
 			Labels: map[string]string{
-				"app.kubernetes.io/name":    "async-storage", // TODO
-				"app.kubernetes.io/part-of": "devworkspace-operator",
+				"app.kubernetes.io/name":      "async-storage", // TODO
+				"app.kubernetes.io/part-of":   "devworkspace-operator",
+				constants.DevWorkspaceIDLabel: "",
 			},
 		},
 		Spec: corev1.ServiceSpec{

@@ -85,6 +85,7 @@ func getWorkspaceSyncDeploymentSpec(
 					Labels:    asyncServerLabels,
 				},
 				Spec: corev1.PodSpec{
+					RestartPolicy: corev1.RestartPolicyAlways,
 					Containers: []corev1.Container{
 						{
 							Name:  "async-storage-server",

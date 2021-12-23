@@ -16,7 +16,13 @@
 package projects
 
 import (
+	"fmt"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -24,56 +30,57 @@ import (
 
 const (
 	projectClonerContainerName = "project-clone"
-	projectClonerCommandID     = "clone-projects"
 )
 
-func AddProjectClonerComponent(workspace *dw.DevWorkspaceTemplateSpec) {
-	if workspace.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {
-		return
-	}
-	if len(workspace.Projects) == 0 {
-		return
-	}
+func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec) (*corev1.Container, error) {
 	cloneImage := images.GetProjectClonerImage()
 	if cloneImage == "" {
-		return
+		// Assume project clone is intentionally disabled if project clone image is not defined
+		return nil, nil
 	}
-	container := getProjectClonerContainer(cloneImage)
-	command := getProjectClonerCommand()
-	workspace.Components = append(workspace.Components, *container)
-	workspace.Commands = append(workspace.Commands, *command)
-	if workspace.Events == nil {
-		workspace.Events = &dw.Events{}
+	memLimit, err := resource.ParseQuantity(constants.ProjectCloneMemoryLimit)
+	if err != nil {
+		return nil, fmt.Errorf("project clone container has invalid memory limit configured: %w", err)
 	}
-	workspace.Events.PreStart = append(workspace.Events.PreStart, projectClonerCommandID)
-}
+	memRequest, err := resource.ParseQuantity(constants.ProjectCloneMemoryRequest)
+	if err != nil {
+		return nil, fmt.Errorf("project clone container has invalid memory request configured: %w", err)
+	}
+	cpuLimit, err := resource.ParseQuantity(constants.ProjectCloneCPULimit)
+	if err != nil {
+		return nil, fmt.Errorf("project clone container has invalid CPU limit configured: %w", err)
+	}
+	cpuRequest, err := resource.ParseQuantity(constants.ProjectCloneCPURequest)
+	if err != nil {
+		return nil, fmt.Errorf("project clone container has invalid CPU request configured: %w", err)
+	}
 
-func getProjectClonerContainer(projectCloneImage string) *dw.Component {
-	boolTrue := true
-	return &dw.Component{
-		Name: projectClonerContainerName,
-		ComponentUnion: dw.ComponentUnion{
-			Container: &dw.ContainerComponent{
-				Container: dw.Container{
-					Image:         projectCloneImage,
-					MemoryLimit:   constants.ProjectCloneMemoryLimit,
-					MemoryRequest: constants.ProjectCloneMemoryRequest,
-					CpuLimit:      constants.ProjectCloneCPULimit,
-					CpuRequest:    constants.ProjectCloneCPURequest,
-					MountSources:  &boolTrue,
-				},
+	return &corev1.Container{
+		Name:  projectClonerContainerName,
+		Image: cloneImage,
+		Env: []corev1.EnvVar{
+			// TODO: add proxy env
+			{
+				Name:  devfileConstants.ProjectsRootEnvVar,
+				Value: constants.DefaultProjectsSourcesRoot,
 			},
 		},
-	}
-}
-
-func getProjectClonerCommand() *dw.Command {
-	return &dw.Command{
-		Id: projectClonerCommandID,
-		CommandUnion: dw.CommandUnion{
-			Apply: &dw.ApplyCommand{
-				Component: projectClonerContainerName,
+		Resources: corev1.ResourceRequirements{
+			Limits: map[corev1.ResourceName]resource.Quantity{
+				corev1.ResourceMemory: memLimit,
+				corev1.ResourceCPU:    cpuLimit,
+			},
+			Requests: map[corev1.ResourceName]resource.Quantity{
+				corev1.ResourceMemory: memRequest,
+				corev1.ResourceCPU:    cpuRequest,
 			},
 		},
-	}
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      devfileConstants.ProjectsVolumeName,
+				MountPath: constants.DefaultProjectsSourcesRoot,
+			},
+		},
+		ImagePullPolicy: corev1.PullPolicy(config.Workspace.ImagePullPolicy),
+	}, nil
 }

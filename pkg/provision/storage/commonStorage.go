@@ -84,6 +84,12 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 		}
 	}
 
+	// Containers in podAdditions may reference e.g. automounted volumes in their volumeMounts, and this is not an error
+	additionalVolumes := map[string]bool{}
+	for _, additionalVolume := range podAdditions.Volumes {
+		additionalVolumes[additionalVolume.Name] = true
+	}
+
 	// Add implicit projects volume to support mountSources, if needed
 	if _, exists := devfileVolumes[devfileConstants.ProjectsVolumeName]; !exists {
 		projectsVolume := dw.VolumeComponent{}
@@ -98,6 +104,11 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 			for vmIdx, vm := range container.VolumeMounts {
 				volume, ok := devfileVolumes[vm.Name]
 				if !ok {
+					// Volume is defined outside of the devfile
+					if additionalVolumes[vm.Name] {
+						continue
+					}
+					// Should never happen as flattened Devfile is validated.
 					return fmt.Errorf("container '%s' references undefined volume '%s'", container.Name, vm.Name)
 				}
 				if !isEphemeral(&volume) {

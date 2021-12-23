@@ -288,8 +288,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Add automount resources into devfile containers
-	automountPodAdditions, err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace)
-	if err != nil {
+	if err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace); err != nil {
 		var fatalErr *automount.FatalError
 		if errors.As(err, &fatalErr) {
 			return r.failWorkspace(workspace, fmt.Sprintf("Failed to process automount resources: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
@@ -371,9 +370,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	routingPodAdditions := routingStatus.PodAdditions
 	if routingPodAdditions != nil {
 		allPodAdditions = append(allPodAdditions, *routingPodAdditions)
-	}
-	if automountPodAdditions != nil {
-		allPodAdditions = append(allPodAdditions, *automountPodAdditions)
 	}
 
 	// Step five: Prepare workspace ServiceAccount

@@ -44,15 +44,15 @@ type automountResources struct {
 	EnvFromSource []corev1.EnvFromSource
 }
 
-func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string) (automountPodAdditions *v1alpha1.PodAdditions, err error) {
+func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string) error {
 	resources, err := getAutomountResources(api, namespace)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	if err := checkAutomountVolumesForCollision(podAdditions, resources); err != nil {
-		return nil, err
+		return err
 	}
 
 	for idx, container := range podAdditions.Containers {
@@ -65,11 +65,11 @@ func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sy
 		podAdditions.InitContainers[idx].EnvFrom = append(initContainer.EnvFrom, resources.EnvFromSource...)
 	}
 
-	volumesPodAddition := &v1alpha1.PodAdditions{
-		Volumes: resources.Volumes,
+	if resources.Volumes != nil {
+		podAdditions.Volumes = append(podAdditions.Volumes, resources.Volumes...)
 	}
 
-	return volumesPodAddition, nil
+	return nil
 }
 
 func getAutomountResources(api sync.ClusterAPI, namespace string) (*automountResources, error) {

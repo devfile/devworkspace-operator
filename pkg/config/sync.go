@@ -82,14 +82,18 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	DefaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
+	if internalConfig.Routing.ClusterHostSuffix == "" {
+		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
+	}
 
 	clusterProxy, err := proxy.GetClusterProxyConfig(client)
 	if err != nil {
 		return err
 	}
 	DefaultConfig.Routing.ProxyConfig = clusterProxy
-
-	mergeConfig(DefaultConfig, internalConfig)
+	if internalConfig.Routing.ProxyConfig == nil {
+		internalConfig.Routing.ProxyConfig = clusterProxy
+	}
 
 	updatePublicConfig()
 	return nil

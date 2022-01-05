@@ -3,3 +3,5 @@ package: devworkspace-operator
 name: fast
 entries:
   - name: devworkspace-operator.v0.10.0
+  - name: devworkspace-operator.v0.11.0
+    replaces: devworkspace-operator.v0.10.0

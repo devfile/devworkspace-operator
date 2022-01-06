@@ -33,6 +33,13 @@ const (
 )
 
 func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec) (*corev1.Container, error) {
+	if len(workspace.Projects) == 0 {
+		return nil, nil
+	}
+	if workspace.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {
+		return nil, nil
+	}
+
 	cloneImage := images.GetProjectClonerImage()
 	if cloneImage == "" {
 		// Assume project clone is intentionally disabled if project clone image is not defined

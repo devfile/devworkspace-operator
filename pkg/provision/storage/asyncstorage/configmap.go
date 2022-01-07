@@ -79,3 +79,25 @@ func addAuthorizedKeyToConfigMap(configmap *corev1.ConfigMap, authorizedKeyBytes
 	configmap.Data[authorizedKeysFilename] = authorizedKeys + authorizedKey
 	return true, nil
 }
+
+func removeAuthorizedKeyFromConfigMap(configmap *corev1.ConfigMap, authorizedKeyBytes []byte) (didChange bool, err error) {
+	authorizedKeys, ok := configmap.Data[authorizedKeysFilename]
+	if !ok {
+		return false, fmt.Errorf("could not find authorized_keys in configmap %s", configmap.Name)
+	}
+	authorizedKey := string(authorizedKeyBytes)
+	authorizedKeyTrimmed := strings.TrimRight(authorizedKey, "\n")
+	changed := false
+	var newKeys []string
+	for _, key := range strings.Split(authorizedKeys, "\n") {
+		if key == authorizedKeyTrimmed {
+			changed = true
+		} else {
+			newKeys = append(newKeys, key)
+		}
+	}
+	if changed {
+		configmap.Data[authorizedKeysFilename] = strings.Join(newKeys, "\n")
+	}
+	return changed, nil
+}

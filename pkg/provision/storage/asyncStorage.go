@@ -198,6 +198,17 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorks
 		return err
 	}
 
+	retry, err := asyncstorage.RemoveAuthorizedKeyFromConfigMap(workspace, clusterAPI)
+	if err != nil {
+		return &ProvisioningError{
+			Message: "Failed to remove authorized key from async storage configmap",
+			Err:     err,
+		}
+	}
+	if retry {
+		return &NotReadyError{Message: "Removing authorized key from async storage configmap"}
+	}
+
 	// Delete the async deployment if there are no workspaces except for the one being deleted
 	if totalWorkspaces <= 1 {
 		err := clusterAPI.Client.Delete(clusterAPI.Ctx, asyncDeploy)

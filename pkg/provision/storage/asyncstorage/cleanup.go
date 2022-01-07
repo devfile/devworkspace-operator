@@ -16,6 +16,7 @@ package asyncstorage
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -57,6 +58,15 @@ func RemoveAuthorizedKeyFromConfigMap(workspace *dw.DevWorkspace, api sync.Clust
 			return true, nil
 		}
 		return false, err
+	}
+
+	if coputil.HasFinalizer(sshSecret, asyncStorageFinalizer) {
+		coputil.RemoveFinalizer(sshSecret, asyncStorageFinalizer)
+		err := api.Client.Update(api.Ctx, sshSecret)
+		if err != nil && !k8sErrors.IsConflict(err) {
+			return false, err
+		}
+		return true, nil
 	}
 
 	return false, nil

@@ -26,6 +26,8 @@ const (
 	asyncSidecarMemoryLimit   = "512Mi"
 	asyncServerMemoryRequest  = "256Mi"
 	asyncServerMemoryLimit    = "512Mi"
+
+	asyncStorageFinalizer = "controller.devfile.io/async-storage"
 )
 
 var asyncServerLabels = map[string]string{

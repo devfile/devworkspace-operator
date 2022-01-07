@@ -239,7 +239,7 @@ prerelease() {
   NEXT_DEV_VERSION="${BASE}.${NEXT}.0-dev"
   git checkout ${MAIN_BRANCH}
   update_version "$NEXT_DEV_VERSION"
-  git_commit_and_push "[release] Bump to ${NEXT_DEV_VERSION} in $MAIN_BRANCH" "ci-bump-$MAIN_BRANCH-$NEXT_DEV_VERSION"
+  git_commit_and_push "chore: release: bump to ${NEXT_DEV_VERSION} in $MAIN_BRANCH" "ci-bump-$MAIN_BRANCH-$NEXT_DEV_VERSION"
 
   echo "[INFO] Prerelease is done"
 }
@@ -293,7 +293,7 @@ release() {
 
   update_version "$NEXT_VERSION_Z"
   update_images "$NEXT_VERSION_Z"
-  git_commit_and_push "[release] Bump to ${NEXT_VERSION_Z} in $X_BRANCH" "ci-bump-$X_BRANCH-$NEXT_VERSION_Z"
+  git_commit_and_push "chore: release: bump to ${NEXT_VERSION_Z} in $X_BRANCH" "ci-bump-$X_BRANCH-$NEXT_VERSION_Z"
 
   echo "[INFO] Release is done"
 }

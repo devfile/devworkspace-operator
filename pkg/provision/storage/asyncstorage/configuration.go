@@ -54,6 +54,7 @@ func GetOrCreateSSHConfig(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI
 		if err != nil {
 			return nil, nil, err
 		}
+
 		// Create secret now to make sure we don't add pubKey to the configmap and then fail to create corresponding secret
 		err = clusterAPI.Client.Create(clusterAPI.Ctx, specSecret)
 		if err != nil && !k8sErrors.IsAlreadyExists(err) {

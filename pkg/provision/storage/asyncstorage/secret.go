@@ -45,13 +45,15 @@ func getSSHSidecarSecretSpec(workspace *dw.DevWorkspace, privateKey []byte) *cor
 				"app.kubernetes.io/part-of":            "devworkspace-operator",
 				constants.DevWorkspaceWatchSecretLabel: "true",
 			},
+			Finalizers: []string{
+				asyncStorageFinalizer,
+			},
 		},
 		Data: map[string][]byte{
 			rsyncSSHKeyFilename: privateKey,
 		},
 		Type: corev1.SecretTypeOpaque,
 	}
-
 	return secret
 }
 

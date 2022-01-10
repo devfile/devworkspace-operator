@@ -229,13 +229,8 @@ func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1
 
 	projectsVolume, needed := processProjectsVolume(&workspace.Spec.Template)
 	if needed {
-		if projectsVolume != nil && !isEphemeral(projectsVolume.Volume) {
-			vol, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume})
-			if err != nil {
-				return nil, err
-			}
-			volumes = append(volumes, vol...)
-		} else {
+		if projectsVolume == nil {
+			// No explicit projects volume defined, add emptyDir volume
 			vol := corev1.Volume{
 				Name: devfileConstants.ProjectsVolumeName,
 				VolumeSource: corev1.VolumeSource{
@@ -244,6 +239,13 @@ func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1
 			}
 			podAdditions.Volumes = append(podAdditions.Volumes, vol)
 			volumes = append(volumes, vol)
+		} else if !isEphemeral(projectsVolume.Volume) {
+			// Case of explicitly defined ephemeral projects volume is handled earlier alongside other ephemeral volumes
+			vol, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume})
+			if err != nil {
+				return nil, err
+			}
+			volumes = append(volumes, vol...)
 		}
 	}
 

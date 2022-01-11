@@ -127,6 +127,13 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 				RequeueAfter: 1 * time.Second,
 			}
 		}
+		var unrecoverableErr *sync.UnrecoverableSyncError
+		if errors.As(err, &unrecoverableErr) {
+			return &ProvisioningError{
+				Message: "Failed to set up async storage service",
+				Err:     unrecoverableErr.Cause,
+			}
+		}
 		return err
 	}
 

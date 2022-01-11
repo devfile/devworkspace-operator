@@ -20,8 +20,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -35,26 +33,18 @@ func SyncWorkspaceSyncServiceToCluster(asyncDeploy *appsv1.Deployment, api sync.
 		return nil, err
 	}
 
-	clusterService, err := getWorkspaceSyncServiceCluster(asyncDeploy.Namespace, api)
-	if err != nil {
-		if !k8sErrors.IsNotFound(err) {
-			return nil, err
-		}
-		// Service does not exist; create it.
-		err := api.Client.Create(api.Ctx, specService)
-		if err != nil && !k8sErrors.IsAlreadyExists(err) {
-			return nil, err
-		}
+	clusterObj, err := sync.SyncObjectWithCluster(specService, api)
+	switch t := err.(type) {
+	case nil:
+		break
+	case *sync.NotInSyncError:
 		return nil, NotReadyError
+	case *sync.UnrecoverableSyncError:
+		return nil, t
+	default:
+		return nil, err
 	}
-	if !equality.Semantic.DeepDerivative(specService.Spec, clusterService.Spec) {
-		// Delete service so that it can be recreated.
-		err := api.Client.Delete(api.Ctx, clusterService)
-		if err != nil && !k8sErrors.IsGone(err) {
-			return nil, err
-		}
-		return nil, NotReadyError
-	}
+	clusterService := clusterObj.(*corev1.Service)
 	return clusterService, nil
 }
 
@@ -79,6 +69,7 @@ func getWorkspaceSyncServiceSpec(asyncDeploy *appsv1.Deployment) *corev1.Service
 				},
 			},
 			Selector: asyncDeploy.Spec.Selector.MatchLabels,
+			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
 }

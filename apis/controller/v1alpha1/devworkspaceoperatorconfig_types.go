@@ -97,6 +97,12 @@ type WorkspaceConfig struct {
 	// the cluster occasionally encounters FailedScheduling events). Events listed
 	// here will not trigger DevWorkspace failures.
 	IgnoredUnrecoverableEvents []string `json:"ignoredUnrecoverableEvents,omitempty"`
+	// CleanupOnStop governs how the Operator handles stopped DevWorkspaces. If set to
+	// true, additional resources associated with a DevWorkspace (e.g. services, deployments,
+	// configmaps, etc.) will be removed from the cluster when a DevWorkspace has
+	// .spec.started = false. If set to false, resources will be scaled down (e.g. deployments
+	// but the objects will be left on the cluster). The default value is false.
+	CleanupOnStop *bool `json:"cleanupOnStop,omitempty"`
 }
 
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API

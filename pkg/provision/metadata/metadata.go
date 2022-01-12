@@ -96,6 +96,7 @@ func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.Con
 
 	cmLabels := constants.ControllerAppLabels()
 	cmLabels[constants.DevWorkspaceWatchConfigMapLabel] = "true"
+	cmLabels[constants.DevWorkspaceIDLabel] = original.Status.DevWorkspaceId
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.MetadataConfigMapName(original.Status.DevWorkspaceId),

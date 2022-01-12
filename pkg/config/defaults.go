@@ -28,5 +28,8 @@ var DefaultConfig = &v1alpha1.OperatorConfiguration{
 		PVCName:         "claim-devworkspace",
 		IdleTimeout:     "15m",
 		ProgressTimeout: "5m",
+		CleanupOnStop:   &boolFalse,
 	},
 }
+
+var boolFalse = false

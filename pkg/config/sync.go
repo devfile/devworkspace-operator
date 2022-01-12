@@ -232,6 +232,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.IgnoredUnrecoverableEvents != nil {
 			to.Workspace.IgnoredUnrecoverableEvents = from.Workspace.IgnoredUnrecoverableEvents
 		}
+		if from.Workspace.CleanupOnStop != nil {
+			to.Workspace.CleanupOnStop = from.Workspace.CleanupOnStop
+		}
 	}
 }
 

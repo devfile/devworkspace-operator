@@ -87,6 +87,15 @@ spec:
                 description: Workspace defines configuration options related to how
                   DevWorkspaces are managed
                 properties:
+                  cleanupOnStop:
+                    description: CleanupOnStop governs how the Operator handles stopped
+                      DevWorkspaces. If set to true, additional resources associated
+                      with a DevWorkspace (e.g. services, deployments, configmaps,
+                      etc.) will be removed from the cluster when a DevWorkspace has
+                      .spec.started = false. If set to false, resources will be scaled
+                      down (e.g. deployments but the objects will be left on the cluster).
+                      The default value is false.
+                    type: boolean
                   idleTimeout:
                     description: IdleTimeout determines how long a workspace should
                       sit idle before being automatically scaled down. Proper functionality

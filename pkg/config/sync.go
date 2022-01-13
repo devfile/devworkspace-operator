@@ -270,11 +270,13 @@ func logCurrentConfig() {
 	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {
 		config = append(config, "enableExperimentalFeatures=true")
 	}
+
 	if len(config) == 0 {
-		log.Info("(default config)")
+		log.Info("Updated config to [(default config)]")
 	} else {
-		log.Info("Updated config to [%s]", strings.Join(config, ","))
+		log.Info(fmt.Sprintf("Updated config to [%s]", strings.Join(config, ",")))
 	}
+
 	if internalConfig.Routing.ProxyConfig != nil {
 		log.Info("Resolved proxy configuration", "proxy", internalConfig.Routing.ProxyConfig)
 	}

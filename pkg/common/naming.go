@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
@@ -34,6 +35,13 @@ func EndpointName(endpointName string) string {
 	name = NonAlphaNumRegexp.ReplaceAllString(name, "-")
 	name = strings.Trim(name, "-")
 	return name
+}
+
+func PortName(endpoint dw.Endpoint) string {
+	if len(endpoint.Name) <= 15 {
+		return endpoint.Name
+	}
+	return fmt.Sprintf("%d-%s", endpoint.TargetPort, endpoint.Protocol)
 }
 
 func ServiceName(workspaceId string) string {

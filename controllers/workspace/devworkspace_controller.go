@@ -284,6 +284,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to process workspace environment variables: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
 
+	// Add init container to clone projects
+	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template); err != nil {
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+	} else if projectClone != nil {
+		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)
+	}
+
 	// Add automount resources into devfile containers
 	if err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace); err != nil {
 		var fatalErr *automount.FatalError
@@ -292,13 +299,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		} else {
 			return reconcile.Result{}, err
 		}
-	}
-
-	// Add init container to clone projects
-	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template); err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
-	} else if projectClone != nil {
-		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)
 	}
 
 	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspace, clusterAPI)

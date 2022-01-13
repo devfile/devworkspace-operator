@@ -1,4 +1,4 @@
-name: "Handles container with multiple endpoints with same targetPort"
+name: "Uses endpoint name as port name if it it fits pod spec"
 
 input:
   components:
@@ -11,11 +11,11 @@ input:
         cpuLimit: "-1"  # isolate test to not include this field
         mountSources: false
         endpoints:
-          - name: "test-endpoint-1"
-            targetPort: 3100
+          - name: "short-name" # Should use endpoint name if <=15 chars long (as supported by pod spec)
+            targetPort: 8080
             protocol: http
-          - name: "test-endpoint-2"
-            targetPort: 3100
+          - name: "longer-endpoint-name" # Should fallback to "<port>-<protocol>" for names too long for pod spec
+            targetPort: 8081
             protocol: http
 
 output:
@@ -35,6 +35,9 @@ output:
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-1"
         ports:
-          - name: "test-endpoint-1"
-            containerPort: 3100
+          - name: "short-name"
+            containerPort: 8080
+            protocol: TCP
+          - name: "8081-http"
+            containerPort: 8081
             protocol: TCP

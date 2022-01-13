@@ -66,10 +66,10 @@ output:
           - "test"
           - "args"
         ports:
-          - name: "3100-wss"
+          - name: "test-endpoint-1"
             containerPort: 3100
             protocol: TCP
-          - name: "8080-http"
+          - name: "test-endpoint-2"
             containerPort: 8080
             protocol: TCP
         volumeMounts:

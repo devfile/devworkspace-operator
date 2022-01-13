@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -62,7 +63,7 @@ func devfileEndpointsToContainerPorts(endpoints []dw.Endpoint) []v1.ContainerPor
 		}
 		containerPorts = append(containerPorts, v1.ContainerPort{
 			// Use meaningless name for port since endpoint.Name does not match requirements for ContainerPort name
-			Name:          fmt.Sprintf("%d-%s", endpoint.TargetPort, endpoint.Protocol),
+			Name:          common.PortName(endpoint),
 			ContainerPort: int32(endpoint.TargetPort),
 			Protocol:      v1.ProtocolTCP,
 		})

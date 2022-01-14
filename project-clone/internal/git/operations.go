@@ -123,21 +123,20 @@ func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath st
 			continue
 		}
 		if ref.Name().IsBranch() {
-			return checkoutRemoteBranch(projectPath, repo, defaultRemoteName, ref)
+			return checkoutRemoteBranch(projectPath, defaultRemoteName, ref)
 		} else if ref.Name().IsTag() {
-			return checkoutTag(repo, defaultRemoteName, ref)
+			return checkoutTag(projectPath, defaultRemoteName, ref)
 		}
 	}
 
 	log.Printf("No tag or branch named %s found on remote %s; attempting to resolve commit", checkoutFrom.Revision, defaultRemoteName)
-	hash, err := repo.ResolveRevision(plumbing.Revision(checkoutFrom.Revision))
-	if err != nil {
+	if _, err := repo.ResolveRevision(plumbing.Revision(checkoutFrom.Revision)); err != nil {
 		return fmt.Errorf("failed to resolve commit %s: %s", checkoutFrom.Revision, err)
 	}
-	return checkoutCommit(repo, hash)
+	return checkoutCommit(projectPath, checkoutFrom.Revision)
 }
 
-func checkoutRemoteBranch(projectPath string, repo *git.Repository, remote string, branchRef *plumbing.Reference) error {
+func checkoutRemoteBranch(projectPath string, remote string, branchRef *plumbing.Reference) error {
 	// Implement logic of `git checkout <remote-branch-name>`:
 	// 1. Create tracking info in .git/config to properly track remote branch
 	// 2. Create local branch to match name of remote branch with hash matching remote branch
@@ -145,70 +144,28 @@ func checkoutRemoteBranch(projectPath string, repo *git.Repository, remote strin
 	branchName := branchRef.Name().Short()
 	log.Printf("Creating branch %s to track remote branch %s from %s", branchName, branchName, remote)
 
-	// repo.CreateBranch does _not_ do the equivalent of `git branch <branch-name>`. It only creates the tracking
-	// config in `.git/config` but leaves the current repos refs alone.
-	err := repo.CreateBranch(&gitConfig.Branch{
-		Name:   branchName,
-		Remote: remote,
-		Merge:  branchRef.Name(),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to create local branch %s: %s", branchName, err)
-	}
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get current worktree: %s", err)
-	}
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Hash:   branchRef.Hash(),
-		Branch: plumbing.NewBranchReferenceName(branchName),
-		Create: true,
-	})
-	if err != nil {
+	if err := shell.GitCheckoutBranch(projectPath, branchName, remote); err != nil {
 		return fmt.Errorf("failed to checkout branch %s: %s", branchName, err)
-	}
-
-	// Need to also reset git repo due to how go-git handles some untracked files (https://github.com/go-git/go-git/issues/99)
-	// NOTE: using reset in go-git will not work in some cases, as that implementation of reset respects gitignore, so e.g.
-	// a .gitignored file that is checked in will never be reset.
-	err = shell.GitResetProject(projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to git reset: %s", err)
 	}
 
 	return nil
 }
 
-func checkoutTag(repo *git.Repository, remote string, tagRef *plumbing.Reference) error {
+func checkoutTag(projectPath, remote string, tagRef *plumbing.Reference) error {
 	tagName := tagRef.Name().Short()
 	log.Printf("Checking out tag %s from remote %s", tagName, remote)
 
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get current worktree: %s", err)
-	}
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Branch: plumbing.NewTagReferenceName(tagName),
-	})
-	if err != nil {
+	if err := shell.GitCheckoutRef(projectPath, tagName); err != nil {
 		return fmt.Errorf("failed to checkout tag %s: %s", tagName, err)
 	}
 
 	return nil
 }
 
-func checkoutCommit(repo *git.Repository, hash *plumbing.Hash) error {
+func checkoutCommit(projectPath, hash string) error {
 	log.Printf("Checking out commit %s", hash)
 
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return fmt.Errorf("failed to get current worktree: %s", err)
-	}
-	err = worktree.Checkout(&git.CheckoutOptions{
-		Hash: *hash,
-	})
-	if err != nil {
+	if err := shell.GitCheckoutRef(projectPath, hash); err != nil {
 		return fmt.Errorf("failed to checkout commit %s: %s", hash, err)
 	}
 	return nil

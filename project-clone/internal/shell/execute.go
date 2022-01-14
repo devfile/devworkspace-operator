@@ -71,6 +71,40 @@ func GitFetchRemote(projectPath, remote string) error {
 	return executeCommand("git", "fetch", remote)
 }
 
+func GitCheckoutRef(projectPath, reference string) error {
+	currDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %s", err)
+	}
+	defer func() {
+		if err := os.Chdir(currDir); err != nil {
+			log.Printf("failed to return to original working directory: %s", err)
+		}
+	}()
+	err = os.Chdir(projectPath)
+	if err != nil {
+		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
+	}
+	return executeCommand("git", "checkout", reference)
+}
+
+func GitCheckoutBranch(projectPath, branchName, remote string) error {
+	currDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current working directory: %s", err)
+	}
+	defer func() {
+		if err := os.Chdir(currDir); err != nil {
+			log.Printf("failed to return to original working directory: %s", err)
+		}
+	}()
+	err = os.Chdir(projectPath)
+	if err != nil {
+		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
+	}
+	return executeCommand("git", "checkout", "-b", branchName, "--track", fmt.Sprintf("%s/%s", remote, branchName))
+}
+
 func executeCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stderr = os.Stderr

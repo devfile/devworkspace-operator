@@ -40,7 +40,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
-
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
@@ -169,7 +168,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		timing.ClearAnnotations(workspace)
 		r.removeStartedAtFromCluster(ctx, workspace, reqLogger)
 		r.syncTimingToCluster(ctx, workspace, map[string]string{}, reqLogger)
-		return r.stopWorkspace(workspace, reqLogger)
+		return r.stopWorkspace(ctx, workspace, reqLogger)
 	}
 
 	// If this is the first reconcile for a starting workspace, mark it as starting now. This is done outside the regular
@@ -447,7 +446,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return reconcile.Result{}, nil
 }
 
-func (r *DevWorkspaceReconciler) stopWorkspace(workspace *dw.DevWorkspace, logger logr.Logger) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *dw.DevWorkspace, logger logr.Logger) (reconcile.Result, error) {
 	status := currentStatus{phase: dw.DevWorkspaceStatusStopping}
 	if workspace.Status.Phase == devworkspacePhaseFailing || workspace.Status.Phase == dw.DevWorkspaceStatusFailed {
 		status.phase = workspace.Status.Phase
@@ -457,7 +456,7 @@ func (r *DevWorkspaceReconciler) stopWorkspace(workspace *dw.DevWorkspace, logge
 		}
 	}
 
-	stopped, err := r.doStop(workspace, logger)
+	stopped, err := r.doStop(ctx, workspace, logger)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -475,13 +474,13 @@ func (r *DevWorkspaceReconciler) stopWorkspace(workspace *dw.DevWorkspace, logge
 	return r.updateWorkspaceStatus(workspace, logger, &status, reconcile.Result{}, nil)
 }
 
-func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.Logger) (stopped bool, err error) {
+func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *dw.DevWorkspace, logger logr.Logger) (stopped bool, err error) {
 	workspaceDeployment := &appsv1.Deployment{}
 	namespaceName := types.NamespacedName{
 		Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
 		Namespace: workspace.Namespace,
 	}
-	err = r.Get(context.TODO(), namespaceName, workspaceDeployment)
+	err = r.Get(ctx, namespaceName, workspaceDeployment)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			return true, nil
@@ -495,14 +494,14 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 		Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
 		Namespace: workspace.Namespace,
 	}
-	err = r.Get(context.TODO(), routingRef, routing)
+	err = r.Get(ctx, routingRef, routing)
 	if err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return false, err
 		}
 	} else if routing.Annotations != nil && routing.Annotations[constants.DevWorkspaceStartedStatusAnnotation] != "false" {
 		routing.Annotations[constants.DevWorkspaceStartedStatusAnnotation] = "false"
-		err := r.Update(context.TODO(), routing)
+		err := r.Update(ctx, routing)
 		if err != nil {
 			if k8sErrors.IsConflict(err) {
 				return false, nil
@@ -511,20 +510,24 @@ func (r *DevWorkspaceReconciler) doStop(workspace *dw.DevWorkspace, logger logr.
 		}
 	}
 
-	replicas := workspaceDeployment.Spec.Replicas
-	if replicas == nil || *replicas > 0 {
-		logger.Info("Stopping workspace")
-		err = wsprovision.ScaleDeploymentToZero(workspace, r.Client)
-		if err != nil && !k8sErrors.IsConflict(err) {
-			return false, err
+	// CleanupOnStop should never be nil as a default is always set
+	if config.Workspace.CleanupOnStop == nil || !*config.Workspace.CleanupOnStop {
+		replicas := workspaceDeployment.Spec.Replicas
+		if replicas == nil || *replicas > 0 {
+			logger.Info("Stopping workspace")
+			err = wsprovision.ScaleDeploymentToZero(ctx, workspace, r.Client)
+			if err != nil && !k8sErrors.IsConflict(err) {
+				return false, err
+			}
+			return false, nil
 		}
-		return false, nil
-	}
 
-	if workspaceDeployment.Status.Replicas == 0 {
-		return true, nil
+		return workspaceDeployment.Status.Replicas == 0, nil
+	} else {
+		logger.Info("Cleaning up workspace-owned objects")
+		requeue, err := r.deleteWorkspaceOwnedObjects(ctx, workspace)
+		return !requeue, err
 	}
-	return false, nil
 }
 
 // failWorkspace marks a workspace as failed by setting relevant fields in the status struct.

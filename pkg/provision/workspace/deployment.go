@@ -188,9 +188,9 @@ func DeleteWorkspaceDeployment(ctx context.Context, workspace *dw.DevWorkspace, 
 }
 
 // ScaleDeploymentToZero scales the cluster deployment to zero
-func ScaleDeploymentToZero(workspace *dw.DevWorkspace, client runtimeClient.Client) error {
+func ScaleDeploymentToZero(ctx context.Context, workspace *dw.DevWorkspace, client runtimeClient.Client) error {
 	patch := []byte(`{"spec":{"replicas": 0}}`)
-	err := client.Patch(context.Background(), &appsv1.Deployment{
+	err := client.Patch(ctx, &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: workspace.Namespace,
 			Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),

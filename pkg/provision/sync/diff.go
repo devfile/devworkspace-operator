@@ -76,13 +76,14 @@ func labelsAndAnnotationsDiffFunc(spec, cluster crclient.Object) (delete, update
 // returning the result of the first function to require an update/deletion.
 func allDiffFuncs(funcs ...diffFunc) diffFunc {
 	return func(spec, cluster crclient.Object) (delete, update bool) {
+		// Need to check each function in case one requires the object to be deleted
+		anyDelete, anyUpdate := false, false
 		for _, df := range funcs {
 			shouldDelete, shouldUpdate := df(spec, cluster)
-			if shouldDelete || shouldUpdate {
-				return shouldDelete, shouldUpdate
-			}
+			anyDelete = anyDelete || shouldDelete
+			anyUpdate = anyUpdate || shouldUpdate
 		}
-		return false, false
+		return anyDelete, anyUpdate
 	}
 }
 

@@ -106,7 +106,7 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getCommonPVCSpec("test-namespace", "1Gi")
+	commonPVC, err := getCommonPVCSpec("test-namespace", "10Gi")
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}

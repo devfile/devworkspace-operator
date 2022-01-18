@@ -36,7 +36,7 @@ const (
 	SidecarDefaultCpuLimit   = "" // do not provide any value
 	SidecarDefaultCpuRequest = "" // do not provide any value
 
-	PVCStorageSize = "1Gi"
+	PVCStorageSize = "10Gi"
 
 	// DevWorkspaceIDLoggerKey is the key used to log workspace ID in the reconcile
 	DevWorkspaceIDLoggerKey = "devworkspace_id"

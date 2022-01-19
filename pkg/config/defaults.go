@@ -15,10 +15,13 @@
 
 package config
 
-import "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+import (
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+)
 
-// DefaultConfig represents the default configuration for the DevWorkspace Operator.
-var DefaultConfig = &v1alpha1.OperatorConfiguration{
+// defaultConfig represents the default configuration for the DevWorkspace Operator.
+var defaultConfig = &v1alpha1.OperatorConfiguration{
 	Routing: &v1alpha1.RoutingConfig{
 		DefaultRoutingClass: "basic",
 		ClusterHostSuffix:   "", // is auto discovered when running on OpenShift. Must be defined by CR on Kubernetes.
@@ -29,7 +32,19 @@ var DefaultConfig = &v1alpha1.OperatorConfiguration{
 		IdleTimeout:     "15m",
 		ProgressTimeout: "5m",
 		CleanupOnStop:   &boolFalse,
+		PodSecurityContext: &corev1.PodSecurityContext{
+			RunAsUser:    &int64UID,
+			RunAsGroup:   &int64GID,
+			RunAsNonRoot: &boolTrue,
+			FSGroup:      &int64UID,
+		},
 	},
 }
 
-var boolFalse = false
+// Necessary variables for setting pointer values
+var (
+	boolTrue  = true
+	boolFalse = false
+	int64UID  = int64(1234)
+	int64GID  = int64(0)
+)

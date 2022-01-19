@@ -50,7 +50,7 @@ var (
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = DefaultConfig.DeepCopy()
+	internalConfig = defaultConfig.DeepCopy()
 	mergeConfig(config, internalConfig)
 	updatePublicConfig()
 }
@@ -72,7 +72,7 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	if config == nil {
-		internalConfig = DefaultConfig.DeepCopy()
+		internalConfig = defaultConfig.DeepCopy()
 	} else {
 		syncConfigFrom(config)
 	}
@@ -81,7 +81,7 @@ func SetupControllerConfig(client crclient.Client) error {
 	if err != nil {
 		return err
 	}
-	DefaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
+	defaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 	if internalConfig.Routing.ClusterHostSuffix == "" {
 		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 	}
@@ -90,7 +90,7 @@ func SetupControllerConfig(client crclient.Client) error {
 	if err != nil {
 		return err
 	}
-	DefaultConfig.Routing.ProxyConfig = clusterProxy
+	defaultConfig.Routing.ProxyConfig = clusterProxy
 	if internalConfig.Routing.ProxyConfig == nil {
 		internalConfig.Routing.ProxyConfig = clusterProxy
 	}
@@ -123,7 +123,7 @@ func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {
 	}
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = DefaultConfig.DeepCopy()
+	internalConfig = defaultConfig.DeepCopy()
 	mergeConfig(newConfig.Config, internalConfig)
 	updatePublicConfig()
 }
@@ -131,7 +131,7 @@ func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {
 func restoreDefaultConfig() {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = DefaultConfig.DeepCopy()
+	internalConfig = defaultConfig.DeepCopy()
 	updatePublicConfig()
 }
 
@@ -207,7 +207,7 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			if to.Routing.ProxyConfig == nil {
 				to.Routing.ProxyConfig = &controller.Proxy{}
 			}
-			to.Routing.ProxyConfig = proxy.MergeProxyConfigs(from.Routing.ProxyConfig, DefaultConfig.Routing.ProxyConfig)
+			to.Routing.ProxyConfig = proxy.MergeProxyConfigs(from.Routing.ProxyConfig, defaultConfig.Routing.ProxyConfig)
 		}
 	}
 	if from.Workspace != nil {
@@ -235,6 +235,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.CleanupOnStop != nil {
 			to.Workspace.CleanupOnStop = from.Workspace.CleanupOnStop
 		}
+		if from.Workspace.PodSecurityContext != nil {
+			to.Workspace.PodSecurityContext = from.Workspace.PodSecurityContext
+		}
 	}
 }
 
@@ -245,24 +248,24 @@ func logCurrentConfig() {
 	}
 	var config []string
 	if Routing != nil {
-		if Routing.ClusterHostSuffix != "" && Routing.ClusterHostSuffix != DefaultConfig.Routing.ClusterHostSuffix {
+		if Routing.ClusterHostSuffix != "" && Routing.ClusterHostSuffix != defaultConfig.Routing.ClusterHostSuffix {
 			config = append(config, fmt.Sprintf("routing.clusterHostSuffix=%s", Routing.ClusterHostSuffix))
 		}
-		if Routing.DefaultRoutingClass != DefaultConfig.Routing.DefaultRoutingClass {
+		if Routing.DefaultRoutingClass != defaultConfig.Routing.DefaultRoutingClass {
 			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", Routing.DefaultRoutingClass))
 		}
 	}
 	if Workspace != nil {
-		if Workspace.ImagePullPolicy != DefaultConfig.Workspace.ImagePullPolicy {
+		if Workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
 			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", Workspace.ImagePullPolicy))
 		}
-		if Workspace.PVCName != DefaultConfig.Workspace.PVCName {
+		if Workspace.PVCName != defaultConfig.Workspace.PVCName {
 			config = append(config, fmt.Sprintf("workspace.pvcName=%s", Workspace.PVCName))
 		}
-		if Workspace.StorageClassName != nil && Workspace.StorageClassName != DefaultConfig.Workspace.StorageClassName {
+		if Workspace.StorageClassName != nil && Workspace.StorageClassName != defaultConfig.Workspace.StorageClassName {
 			config = append(config, fmt.Sprintf("workspace.storageClassName=%s", *Workspace.StorageClassName))
 		}
-		if Workspace.IdleTimeout != DefaultConfig.Workspace.IdleTimeout {
+		if Workspace.IdleTimeout != defaultConfig.Workspace.IdleTimeout {
 			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", Workspace.IdleTimeout))
 		}
 		if Workspace.IgnoredUnrecoverableEvents != nil {

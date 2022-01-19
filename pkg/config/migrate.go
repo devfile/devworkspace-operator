@@ -89,12 +89,12 @@ func convertConfigMapToConfigCRD(client crclient.Client) (*dw.DevWorkspaceOperat
 	migratedRoutingConfig := &dw.RoutingConfig{}
 	setRoutingConfig := false
 	routingSuffix := configmap.ControllerCfg.GetClusterRoutingSuffix()
-	if routingSuffix != nil && *routingSuffix != DefaultConfig.Routing.ClusterHostSuffix {
+	if routingSuffix != nil && *routingSuffix != defaultConfig.Routing.ClusterHostSuffix {
 		migratedRoutingConfig.ClusterHostSuffix = *routingSuffix
 		setRoutingConfig = true
 	}
 	defaultRoutingClass := configmap.ControllerCfg.GetDefaultRoutingClass()
-	if defaultRoutingClass != nil && *defaultRoutingClass != DefaultConfig.Routing.DefaultRoutingClass {
+	if defaultRoutingClass != nil && *defaultRoutingClass != defaultConfig.Routing.DefaultRoutingClass {
 		migratedRoutingConfig.DefaultRoutingClass = *defaultRoutingClass
 		setRoutingConfig = true
 	}
@@ -102,22 +102,22 @@ func convertConfigMapToConfigCRD(client crclient.Client) (*dw.DevWorkspaceOperat
 	migratedWorkspaceConfig := &dw.WorkspaceConfig{}
 	setWorkspaceConfig := false
 	storageClassName := configmap.ControllerCfg.GetPVCStorageClassName()
-	if storageClassName != DefaultConfig.Workspace.StorageClassName {
+	if storageClassName != defaultConfig.Workspace.StorageClassName {
 		migratedWorkspaceConfig.StorageClassName = storageClassName
 		setWorkspaceConfig = true
 	}
 	sidecarPullPolicy := configmap.ControllerCfg.GetSidecarPullPolicy()
-	if sidecarPullPolicy != nil && *sidecarPullPolicy != DefaultConfig.Workspace.ImagePullPolicy {
+	if sidecarPullPolicy != nil && *sidecarPullPolicy != defaultConfig.Workspace.ImagePullPolicy {
 		migratedWorkspaceConfig.ImagePullPolicy = *sidecarPullPolicy
 		setWorkspaceConfig = true
 	}
 	idleTimeout := configmap.ControllerCfg.GetWorkspaceIdleTimeout()
-	if idleTimeout != nil && *idleTimeout != DefaultConfig.Workspace.IdleTimeout {
+	if idleTimeout != nil && *idleTimeout != defaultConfig.Workspace.IdleTimeout {
 		migratedWorkspaceConfig.IdleTimeout = *idleTimeout
 		setWorkspaceConfig = true
 	}
 	pvcName := configmap.ControllerCfg.GetWorkspacePVCName()
-	if pvcName != nil && *pvcName != DefaultConfig.Workspace.PVCName {
+	if pvcName != nil && *pvcName != defaultConfig.Workspace.PVCName {
 		migratedWorkspaceConfig.PVCName = *pvcName
 		setWorkspaceConfig = true
 	}

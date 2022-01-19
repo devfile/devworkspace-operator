@@ -16,6 +16,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -103,6 +104,11 @@ type WorkspaceConfig struct {
 	// .spec.started = false. If set to false, resources will be scaled down (e.g. deployments
 	// but the objects will be left on the cluster). The default value is false.
 	CleanupOnStop *bool `json:"cleanupOnStop,omitempty"`
+	// PodSecurityContext overrides the default PodSecurityContext used for all workspace-related
+	// pods created by the DevWorkspace Operator when running on Kubernetes. On OpenShift, this
+	// configuration option is ignored. If set, the entire pod security context is overridden;
+	// values are not merged.
+	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
 }
 
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API

@@ -37,7 +37,7 @@ func TestSetupControllerConfigUsesDefault(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, DefaultConfig, internalConfig, "Config used should be the default")
+	assert.Equal(t, defaultConfig, internalConfig, "Config used should be the default")
 }
 
 func TestSetupControllerDefaultsAreExported(t *testing.T) {
@@ -47,8 +47,8 @@ func TestSetupControllerDefaultsAreExported(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, DefaultConfig.Routing, Routing, "Configuration should be exported")
-	assert.Equal(t, DefaultConfig.Workspace, Workspace, "Configuration should be exported")
+	assert.Equal(t, defaultConfig.Routing, Routing, "Configuration should be exported")
+	assert.Equal(t, defaultConfig.Workspace, Workspace, "Configuration should be exported")
 }
 
 func TestSetupControllerConfigFailsWhenAlreadySetup(t *testing.T) {
@@ -62,7 +62,7 @@ func TestSetupControllerConfigFailsWhenAlreadySetup(t *testing.T) {
 	if !assert.Error(t, err, "Should return error when config is already setup") {
 		return
 	}
-	assert.Equal(t, DefaultConfig, internalConfig, "Config used should be the default")
+	assert.Equal(t, defaultConfig, internalConfig, "Config used should be the default")
 }
 
 func TestSetupControllerMergesClusterConfig(t *testing.T) {
@@ -80,7 +80,7 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 	})
 	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig).Build()
 
-	expectedConfig := DefaultConfig.DeepCopy()
+	expectedConfig := defaultConfig.DeepCopy()
 	expectedConfig.Routing.DefaultRoutingClass = "test-routingClass"
 	expectedConfig.Routing.ClusterHostSuffix = "192.168.0.1.nip.io"
 	expectedConfig.Workspace.ImagePullPolicy = "IfNotPresent"
@@ -117,7 +117,7 @@ func TestSetupControllerAlwaysSetsDefaultClusterRoutingSuffix(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, "test-host", DefaultConfig.Routing.ClusterHostSuffix, "Should set default clusterRoutingSuffix even if config overrides it initially")
+	assert.Equal(t, "test-host", defaultConfig.Routing.ClusterHostSuffix, "Should set default clusterRoutingSuffix even if config overrides it initially")
 	assert.Equal(t, "192.168.0.1.nip.io", Routing.ClusterHostSuffix, "Should use value from config for clusterRoutingSuffix")
 }
 
@@ -143,7 +143,7 @@ func TestDetectsOpenShiftRouteSuffix(t *testing.T) {
 
 func TestSyncConfigFromIgnoresOtherConfigInOtherNamespaces(t *testing.T) {
 	setupForTest(t)
-	internalConfig = DefaultConfig.DeepCopy()
+	internalConfig = defaultConfig.DeepCopy()
 	config := buildConfig(&v1alpha1.OperatorConfiguration{
 		Workspace: &v1alpha1.WorkspaceConfig{
 			ImagePullPolicy: "IfNotPresent",
@@ -151,12 +151,12 @@ func TestSyncConfigFromIgnoresOtherConfigInOtherNamespaces(t *testing.T) {
 	})
 	config.Namespace = "not-test-namespace"
 	syncConfigFrom(config)
-	assert.Equal(t, DefaultConfig, internalConfig)
+	assert.Equal(t, defaultConfig, internalConfig)
 }
 
 func TestSyncConfigFromIgnoresOtherConfigWithOtherName(t *testing.T) {
 	setupForTest(t)
-	internalConfig = DefaultConfig.DeepCopy()
+	internalConfig = defaultConfig.DeepCopy()
 	config := buildConfig(&v1alpha1.OperatorConfiguration{
 		Workspace: &v1alpha1.WorkspaceConfig{
 			ImagePullPolicy: "IfNotPresent",
@@ -164,13 +164,13 @@ func TestSyncConfigFromIgnoresOtherConfigWithOtherName(t *testing.T) {
 	})
 	config.Name = "testing-name"
 	syncConfigFrom(config)
-	assert.Equal(t, DefaultConfig, internalConfig)
+	assert.Equal(t, defaultConfig, internalConfig)
 }
 
 func TestSyncConfigDoesNotChangeDefaults(t *testing.T) {
 	setupForTest(t)
-	oldDefaultConfig := DefaultConfig.DeepCopy()
-	internalConfig = DefaultConfig.DeepCopy()
+	oldDefaultConfig := defaultConfig.DeepCopy()
+	internalConfig = defaultConfig.DeepCopy()
 	config := buildConfig(&v1alpha1.OperatorConfiguration{
 		Routing: &v1alpha1.RoutingConfig{
 			DefaultRoutingClass: "test-routingClass",
@@ -183,12 +183,12 @@ func TestSyncConfigDoesNotChangeDefaults(t *testing.T) {
 	})
 	syncConfigFrom(config)
 	internalConfig.Routing.DefaultRoutingClass = "Changed after the fact"
-	assert.Equal(t, DefaultConfig, oldDefaultConfig)
+	assert.Equal(t, defaultConfig, oldDefaultConfig)
 }
 
 func TestSyncConfigRestoresClusterRoutingSuffix(t *testing.T) {
 	setupForTest(t)
-	DefaultConfig.Routing.ClusterHostSuffix = "default.routing.suffix"
+	defaultConfig.Routing.ClusterHostSuffix = "default.routing.suffix"
 	config := buildConfig(&v1alpha1.OperatorConfiguration{
 		Routing: &v1alpha1.RoutingConfig{
 			ClusterHostSuffix: "192.168.0.1.nip.io",

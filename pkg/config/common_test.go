@@ -49,10 +49,10 @@ func setupForTest(t *testing.T) {
 	}
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 	configNamespace = testNamespace
-	originalDefaultConfig := DefaultConfig.DeepCopy()
+	originalDefaultConfig := defaultConfig.DeepCopy()
 	t.Cleanup(func() {
 		internalConfig = nil
-		DefaultConfig = originalDefaultConfig
+		defaultConfig = originalDefaultConfig
 	})
 }
 

@@ -207,12 +207,14 @@ func ScaleDeploymentToZero(ctx context.Context, workspace *dw.DevWorkspace, clie
 func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
 	if !infrastructure.IsOpenShift() {
 		uID := int64(1234)
+		fsGroup := int64(1234)
 		rootGID := int64(0)
 		nonRoot := true
 		return &corev1.PodSecurityContext{
 			RunAsUser:    &uID,
 			RunAsGroup:   &rootGID,
 			RunAsNonRoot: &nonRoot,
+			FSGroup:      &fsGroup,
 		}
 	}
 	return &corev1.PodSecurityContext{}

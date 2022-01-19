@@ -20,6 +20,11 @@ const (
 	// DevWorkspaceIDLabel is the label key to store workspace identifier
 	DevWorkspaceIDLabel = "controller.devfile.io/devworkspace_id"
 
+	// WorkspaceIdOverrideAnnotation is an annotation that can be applied to DevWorkspaces
+	// to override the default DevWorkspace ID assigned by the Operator. Is only respected
+	// when a DevWorkspace is created. Once a DevWorkspace has an ID set, it cannot be changed.
+	WorkspaceIdOverrideAnnotation = "controller.devfile.io/devworkspace_id_override"
+
 	// DevWorkspaceCreatorLabel is the label key for storing the UID of the user who created the workspace
 	DevWorkspaceCreatorLabel = "controller.devfile.io/creator"
 

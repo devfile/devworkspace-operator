@@ -132,9 +132,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Ensure workspaceID is set.
 	if workspace.Status.DevWorkspaceId == "" {
-		workspaceId, err := getWorkspaceId(workspace)
+		workspaceId, err := r.getWorkspaceId(ctx, workspace)
 		if err != nil {
-			return reconcile.Result{}, err
+			workspace.Status.Phase = dw.DevWorkspaceStatusFailed
+			workspace.Status.Message = fmt.Sprintf("Failed to set DevWorkspace ID: %s", err.Error())
+			return reconcile.Result{}, r.Status().Update(ctx, workspace)
 		}
 		workspace.Status.DevWorkspaceId = workspaceId
 		err = r.Status().Update(ctx, workspace)
@@ -600,12 +602,26 @@ func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
 	}
 }
 
-func getWorkspaceId(instance *dw.DevWorkspace) (string, error) {
-	uid, err := uuid.Parse(string(instance.UID))
-	if err != nil {
-		return "", err
+func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *dw.DevWorkspace) (string, error) {
+	if idOverride := workspace.Annotations[constants.WorkspaceIdOverrideAnnotation]; idOverride != "" {
+		// TODO: Check overridden workspace ID's length (what should max be?)
+		dwList := &dw.DevWorkspaceList{}
+		if err := r.Client.List(ctx, dwList, &client.ListOptions{Namespace: workspace.Namespace}); err != nil {
+			return "", fmt.Errorf("failed to check DevWorkspace ID override: %w", err)
+		}
+		for _, existing := range dwList.Items {
+			if existing.Status.DevWorkspaceId == idOverride {
+				return "", fmt.Errorf("DevWorkspace ID specified in override already exists in namespace")
+			}
+		}
+		return idOverride, nil
+	} else {
+		uid, err := uuid.Parse(string(workspace.UID))
+		if err != nil {
+			return "", err
+		}
+		return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
 	}
-	return "workspace" + strings.Join(strings.Split(uid.String(), "-")[0:3], ""), nil
 }
 
 // Mapping the pod to the devworkspace

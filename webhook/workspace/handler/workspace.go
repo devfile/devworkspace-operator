@@ -63,6 +63,11 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req 
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+
+	if oldWksp.Status.WorkspaceId != "" && newWksp.Status.WorkspaceId != oldWksp.Status.WorkspaceId {
+		return admission.Denied("DevWorkspace ID cannot be changed once it is set")
+	}
+
 	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp, req.UserInfo.UID)
 	if !allowed {
 		return admission.Denied(msg)
@@ -96,6 +101,11 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 	if err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
+
+	if oldWksp.Status.DevWorkspaceId != "" && newWksp.Status.DevWorkspaceId != oldWksp.Status.DevWorkspaceId {
+		return admission.Denied("DevWorkspace ID cannot be changed once it is set")
+	}
+
 	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp, req.UserInfo.UID)
 	if !allowed {
 		return admission.Denied(msg)

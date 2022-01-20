@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -33,8 +32,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -67,22 +64,6 @@ var unrecoverableDeploymentConditionReasons = []string{
 
 type DeploymentProvisioningStatus struct {
 	ProvisioningStatus
-}
-
-var deploymentDiffOpts = cmp.Options{
-	cmpopts.IgnoreFields(appsv1.Deployment{}, "TypeMeta", "ObjectMeta", "Status"),
-	cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "RevisionHistoryLimit", "ProgressDeadlineSeconds"),
-	cmpopts.IgnoreFields(corev1.PodSpec{}, "DNSPolicy", "SchedulerName", "DeprecatedServiceAccount"),
-	cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
-	cmpopts.SortSlices(func(a, b corev1.Container) bool {
-		return strings.Compare(a.Name, b.Name) > 0
-	}),
-	cmpopts.SortSlices(func(a, b corev1.Volume) bool {
-		return strings.Compare(a.Name, b.Name) > 0
-	}),
-	cmpopts.SortSlices(func(a, b corev1.VolumeMount) bool {
-		return strings.Compare(a.Name, b.Name) > 0
-	}),
 }
 
 func SyncDeploymentToCluster(
@@ -205,19 +186,10 @@ func ScaleDeploymentToZero(ctx context.Context, workspace *dw.DevWorkspace, clie
 }
 
 func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
-	if !infrastructure.IsOpenShift() {
-		uID := int64(1234)
-		fsGroup := int64(1234)
-		rootGID := int64(0)
-		nonRoot := true
-		return &corev1.PodSecurityContext{
-			RunAsUser:    &uID,
-			RunAsGroup:   &rootGID,
-			RunAsNonRoot: &nonRoot,
-			FSGroup:      &fsGroup,
-		}
+	if infrastructure.IsOpenShift() {
+		return &corev1.PodSecurityContext{}
 	}
-	return &corev1.PodSecurityContext{}
+	return config.Workspace.PodSecurityContext
 }
 
 func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {

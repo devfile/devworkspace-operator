@@ -19,14 +19,12 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/client"
 	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 	_ "github.com/devfile/devworkspace-operator/test/e2e/pkg/tests"
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/reporters"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 )
 
@@ -116,10 +114,6 @@ var _ = ginkgo.SynchronizedAfterSuite(func() {
 func TestWorkspaceController(t *testing.T) {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 
-	log.Println("Creating ginkgo reporter for Test Harness: Junit and Debug Detail reporter")
-	var r []ginkgo.Reporter
-	r = append(r, reporters.NewJUnitReporter(filepath.Join(testResultsDirectory, jUnitOutputFilename)))
-
 	log.Println("Running DevWorkspace Controller e2e tests...")
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Workspaces Controller Operator Tests", r)
+	ginkgo.RunSpecs(t, "Workspaces Controller Operator Tests")
 }

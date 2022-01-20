@@ -40,6 +40,7 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(corev1.ServiceAccount{}):        labelsAndAnnotationsDiffFunc,
 	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, labelsAndAnnotationsDiffFunc, basicDiffFunc(deploymentDiffOpts)),
 	reflect.TypeOf(corev1.ConfigMap{}):             allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(configmapDiffOpts)),
+	reflect.TypeOf(corev1.Secret{}):                allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(secretDiffOpts)),
 	reflect.TypeOf(v1alpha1.DevWorkspaceRouting{}): allDiffFuncs(routingDiffFunc, labelsAndAnnotationsDiffFunc, basicDiffFunc(routingDiffOpts)),
 	reflect.TypeOf(batchv1.Job{}):                  allDiffFuncs(labelsAndAnnotationsDiffFunc, jobDiffFunc),
 	reflect.TypeOf(corev1.Service{}):               allDiffFuncs(labelsAndAnnotationsDiffFunc, serviceDiffFunc),

@@ -9,8 +9,8 @@ require (
 	github.com/google/go-cmp v0.5.5
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.1.2
-	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.14.0
+	github.com/onsi/ginkgo/v2 v2.0.0
+	github.com/onsi/gomega v1.17.0
 	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87
 	github.com/prometheus/client_golang v1.11.0
 	github.com/redhat-cop/operator-utils v1.1.4

@@ -106,12 +106,14 @@ test: generate fmt vet manifests
 
 ### test_e2e: Runs e2e test on the cluster set in context. DevWorkspace Operator must be already deployed
 test_e2e:
+	mkdir -p /tmp/artifacts
 	CGO_ENABLED=0 go test -v -c -o bin/devworkspace-controller-e2e ./test/e2e/cmd/workspaces_test.go
-	./bin/devworkspace-controller-e2e -ginkgo.failFast
+	./bin/devworkspace-controller-e2e -ginkgo.fail-fast --ginkgo.junit-report=/tmp/artifacts/junit-workspaces-operator.xml
 
 ### test_e2e_debug: Runs e2e test in debug mode, so it's possible to connect to execution via remote debugger
 test_e2e_debug:
-	dlv test --listen=:2345 --headless=true --api-version=2 ./test/e2e/cmd/workspaces_test.go -- --ginkgo.failFast
+	mkdir -p /tmp/artifacts
+	dlv test --listen=:2345 --headless=true --api-version=2 ./test/e2e/cmd/workspaces_test.go -- --ginkgo.fail-fast --ginkgo.junit-report=/tmp/artifacts/junit-workspaces-operator.xml
 
 ### manager: Build manager binary
 manager: generate fmt vet

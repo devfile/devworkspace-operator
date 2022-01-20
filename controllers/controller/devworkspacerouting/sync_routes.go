@@ -53,8 +53,8 @@ func (r *DevWorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.D
 	}
 
 	var updatedClusterRoutes []routeV1.Route
-	for _, specIngress := range specRoutes {
-		clusterObj, err := sync.SyncObjectWithCluster(&specIngress, clusterAPI)
+	for _, specRoute := range specRoutes {
+		clusterObj, err := sync.SyncObjectWithCluster(&specRoute, clusterAPI)
 		switch t := err.(type) {
 		case nil:
 			break

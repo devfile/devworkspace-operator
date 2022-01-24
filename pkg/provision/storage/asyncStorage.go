@@ -24,6 +24,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -51,7 +52,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		}
 	}
 
-	numWorkspaces, _, err := p.getAsyncWorkspaceCount(clusterAPI)
+	numWorkspaces, _, err := p.getAsyncWorkspaceCount(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
@@ -162,7 +163,7 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorks
 	}
 
 	// Check if another workspace is currently using the async server
-	numWorkspaces, totalWorkspaces, err := p.getAsyncWorkspaceCount(clusterAPI)
+	numWorkspaces, totalWorkspaces, err := p.getAsyncWorkspaceCount(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
@@ -262,9 +263,9 @@ func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1
 // getAsyncWorkspaceCount returns whether the async storage provider can support starting a workspace.
 // Due to how cleanup for the async storage PVC is implemented, only one workspace that uses the async storage
 // type can be running at a time.
-func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(api sync.ClusterAPI) (started, total int, err error) {
+func (*AsyncStorageProvisioner) getAsyncWorkspaceCount(namespace string, api sync.ClusterAPI) (started, total int, err error) {
 	workspaces := &dw.DevWorkspaceList{}
-	err = api.Client.List(api.Ctx, workspaces)
+	err = api.Client.List(api.Ctx, workspaces, &client.ListOptions{Namespace: namespace})
 	if err != nil {
 		return 0, 0, err
 	}

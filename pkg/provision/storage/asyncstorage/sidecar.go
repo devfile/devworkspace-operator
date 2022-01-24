@@ -20,7 +20,6 @@ import (
 	"strconv"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -29,7 +28,7 @@ import (
 // are mounted to `/volume.Name`, and the sshVolume is mounted to /etc/ssh/private as read-only.
 //
 // Note: in the current implementation, the image used for the async sidecar only syncs from ${CHE_PROJECTS_ROOT}
-func GetAsyncSidecar(sshVolumeName string, volumes []corev1.Volume) *corev1.Container {
+func GetAsyncSidecar(devworkspaceID, sshVolumeName string, volumes []corev1.Volume) *corev1.Container {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      sshVolumeName,
@@ -58,6 +57,14 @@ func GetAsyncSidecar(sshVolumeName string, volumes []corev1.Volume) *corev1.Cont
 			{
 				Name:  "RSYNC_PORT",
 				Value: strconv.Itoa(rsyncPort),
+			},
+			{
+				Name:  "CHE_PROJECTS_ROOT",
+				Value: "/projects",
+			},
+			{
+				Name:  "CHE_WORKSPACE_ID",
+				Value: devworkspaceID,
 			},
 		},
 		Resources: corev1.ResourceRequirements{

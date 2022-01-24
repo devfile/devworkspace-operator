@@ -144,7 +144,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	}
 
 	sshSecretVolume := asyncstorage.GetVolumeFromSecret(secret)
-	asyncSidecar := asyncstorage.GetAsyncSidecar(sshSecretVolume.Name, volumes)
+	asyncSidecar := asyncstorage.GetAsyncSidecar(workspace.Status.DevWorkspaceId, sshSecretVolume.Name, volumes)
 	podAdditions.Containers = append(podAdditions.Containers, *asyncSidecar)
 	podAdditions.Volumes = append(podAdditions.Volumes, *sshSecretVolume)
 

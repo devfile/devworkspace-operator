@@ -1,0 +1,62 @@
+image: quay.io/devfile/devworkspace-operator-bundle@sha256:f757db2ab0c18986965059eae41692790eb30a94d6757d147241c40ab0373631
+name: devworkspace-operator.v0.12.0
+package: devworkspace-operator
+properties:
+- type: olm.gvk
+  value:
+    group: controller.devfile.io
+    kind: DevWorkspaceOperatorConfig
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: controller.devfile.io
+    kind: DevWorkspaceRouting
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspace
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspace
+    version: v1alpha2
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspaceTemplate
+    version: v1alpha1
+- type: olm.gvk
+  value:
+    group: workspace.devfile.io
+    kind: DevWorkspaceTemplate
+    version: v1alpha2
+- type: olm.package
+  value:
+    packageName: devworkspace-operator
+    version: 0.12.0
+relatedImages:
+- image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+  name: kube_rbac_proxy
+- image: quay.io/devfile/devworkspace-controller:next
+  name: devworkspace_webhook_server
+- image: quay.io/devfile/devworkspace-controller:v0.12.0
+  name: ""
+- image: quay.io/devfile/devworkspace-operator-bundle@sha256:f757db2ab0c18986965059eae41692790eb30a94d6757d147241c40ab0373631
+  name: ""
+- image: quay.io/devfile/project-clone:next
+  name: project_clone
+- image: quay.io/eclipse/che-machine-exec:nightly
+  name: plugin_redhat_developer_web_terminal_4_5_0
+- image: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
+  name: async_storage_sidecar
+- image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
+  name: async_storage_server
+- image: quay.io/wto/web-terminal-tooling:latest
+  name: web_terminal_tooling
+- image: registry.access.redhat.com/ubi8-micro:8.4-81
+  name: pvc_cleanup_job
+- image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8
+  name: ""
+schema: olm.bundle

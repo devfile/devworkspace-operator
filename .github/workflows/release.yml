@@ -22,7 +22,7 @@ jobs:
   release:
     env:
       OPERATOR_SDK_VERSION: v1.8.0
-      OPM_VERSION: v1.19.1
+      OPM_VERSION: v1.19.5
     runs-on: ubuntu-20.04
     steps:
       - name: Clone source code

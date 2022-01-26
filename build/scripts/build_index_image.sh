@@ -148,7 +148,7 @@ if [ "$RELEASE" == "true" ]; then
   ENTRY_JSON=$(yq --arg replaces "$LATEST_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE")
 else
   # Generate a basic entry with no upgrade path for nightly releases
-  ENTRY_JSON=$(yq '{name}' "$BUNDLE_FILE")
+  ENTRY_JSON=$(yq --arg skipRange "<${BUNDLE_NAME##devworkspace-operator.v}" '{name, "skipRange": $skipRange}' "$BUNDLE_FILE")
 fi
 # shellcheck disable=SC2016
 yq -Y -i --argjson entry "$ENTRY_JSON" '.entries |= . + [$entry]' "$CHANNEL_FILE"
@@ -171,10 +171,7 @@ if [ "$RELEASE" == "true" ]; then
     --tag "$INDEX_IMAGE" \
     --container-tool "$PODMAN"
 else
-  opm index add \
-    --bundles "$BUNDLE_DIGEST" \
-    --tag "$INDEX_IMAGE" \
-    --container-tool "$PODMAN"
+  $PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE" | sed 's|^|    |'
 fi
 $PODMAN push "$INDEX_IMAGE" 2>&1 | sed 's|^|    |'
 

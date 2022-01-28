@@ -289,7 +289,7 @@ release() {
   [[ ${VERSION#v} =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]] \
     && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}";  \
     NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3
-  NEXT_VERSION_Z="${BASE}.${NEXT}"
+  NEXT_VERSION_Z="v${BASE}.${NEXT}"
 
   update_version "$NEXT_VERSION_Z"
   update_images "$NEXT_VERSION_Z"

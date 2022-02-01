@@ -99,8 +99,12 @@ func SetupControllerConfig(client crclient.Client) error {
 	return nil
 }
 
+func IsSetUp() bool {
+	return internalConfig != nil
+}
+
 func ExperimentalFeaturesEnabled() bool {
-	if internalConfig.EnableExperimentalFeatures == nil {
+	if internalConfig == nil || internalConfig.EnableExperimentalFeatures == nil {
 		return false
 	}
 	return *internalConfig.EnableExperimentalFeatures

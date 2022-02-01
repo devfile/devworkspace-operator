@@ -125,7 +125,7 @@ func isMutableObject(obj crclient.Object) bool {
 }
 
 func printDiff(specObj, clusterObj crclient.Object, log logr.Logger) {
-	if config.ExperimentalFeaturesEnabled() {
+	if config.IsSetUp() && config.ExperimentalFeaturesEnabled() {
 		var diffOpts cmp.Options
 		switch specObj.(type) {
 		case *rbacv1.Role:

@@ -16,6 +16,7 @@ package controllers_test
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -23,6 +24,7 @@ import (
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/internal/testutil"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
@@ -134,6 +136,9 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	// Set HTTP client to fail all requests by default; tests that require HTTP must set this up directly
+	workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+
 	// Skip trying to set up / test webhooks for now
 
 	By("Creating Namespace for the DevWorkspace")
@@ -186,4 +191,10 @@ func setupEnvVars() error {
 	}
 
 	return nil
+}
+
+func getBasicTestHttpClient() *http.Client {
+	return &http.Client{
+		Transport: &testutil.TestRoundTripper{},
+	}
 }

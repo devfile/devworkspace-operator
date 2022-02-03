@@ -19,6 +19,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,6 +87,25 @@ func markRoutingReady(mainUrl, routingName string) {
 		}
 		return k8sClient.Status().Update(ctx, routing)
 	}, 30*time.Second, 250*time.Millisecond).Should(Succeed(), "Update DevWorkspaceRouting to have mainUrl and be ready")
+}
+
+func markDeploymentReady(deploymentName string) {
+	namespacedName := types.NamespacedName{
+		Name:      deploymentName,
+		Namespace: testNamespace,
+	}
+	deploy := &appsv1.Deployment{}
+	Eventually(func() error {
+		err := k8sClient.Get(ctx, namespacedName, deploy)
+		if err != nil {
+			return err
+		}
+		deploy.Status.ReadyReplicas = 1
+		deploy.Status.Replicas = 1
+		deploy.Status.AvailableReplicas = 1
+		deploy.Status.UpdatedReplicas = 1
+		return k8sClient.Status().Update(ctx, deploy)
+	}, 30*time.Second, 250*time.Millisecond).Should(Succeed(), "Update Deployment to have 1 ready replica")
 }
 
 func devworkspaceOwnerRef(wksp *dw.DevWorkspace) metav1.OwnerReference {

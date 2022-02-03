@@ -15,12 +15,15 @@ package controllers_test
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
+	"github.com/devfile/devworkspace-operator/controllers/workspace/internal/testutil"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -268,6 +271,46 @@ var _ = Describe("DevWorkspace Controller", func() {
 			expectedOwnerReference := devworkspaceOwnerRef(devworkspace)
 			Expect(deploy.OwnerReferences).Should(ContainElement(expectedOwnerReference), "DevWorkspace Deployment should be owned by DevWorkspace")
 			Expect(deploy.Labels[constants.DevWorkspaceIDLabel]).Should(Equal(workspaceID), "Object should be labelled with DevWorkspace ID")
+		})
+
+		It("Marks DevWorkspace as Running", func() {
+			By("Getting existing DevWorkspace from cluster")
+			devworkspace := &dw.DevWorkspace{}
+			dwNN := types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}
+			Expect(k8sClient.Get(ctx, dwNN, devworkspace)).Should(Succeed())
+			workspaceID := devworkspace.Status.DevWorkspaceId
+			Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
+
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						"test-url/healthz": {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+			By("Manually making Routing ready to continue")
+			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
+
+			By("Setting the deployment to have 1 ready replica")
+			markDeploymentReady(common.DeploymentName(workspaceID))
+
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (dw.DevWorkspacePhase, error) {
+				err := k8sClient.Get(ctx, dwNN, currDW)
+				if err != nil {
+					return "", err
+				}
+				GinkgoWriter.Printf("Waiting for DevWorkspace to enter running phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)
+				return currDW.Status.Phase, nil
+			}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusRunning), "Workspace did not enter Running phase before timeout")
+
+			// Verify DevWorkspace is Running as expected
+			Expect(currDW.Status.Message).Should(Equal(currDW.Status.MainUrl))
+			runningCondition := conditions.GetConditionByType(currDW.Status.Conditions, dw.DevWorkspaceReady)
+			Expect(runningCondition).NotTo(BeNil())
+			Expect(runningCondition.Status).Should(Equal(corev1.ConditionTrue))
 		})
 
 	})

@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path"
 	"sort"
 	"time"
 
@@ -165,7 +166,7 @@ func checkServerStatus(workspace *common.DevWorkspaceWithConfig) (ok bool, err e
 	if err != nil {
 		return false, err
 	}
-	healthz.Path = healthz.Path + "healthz"
+	healthz.Path = path.Join(healthz.Path, "healthz")
 
 	resp, err := healthCheckHttpClient.Get(healthz.String())
 	if err != nil {

@@ -8,7 +8,7 @@ input:
           id: my/test/plugin
           registryUrl: "https://test-registry.io/subpath"
   devworkspaceResources:
-    "https://test-registry.io/subpath/my/test/plugin":
+    "https://test-registry.io/subpath/devfiles/my/test/plugin":
       kind: DevWorkspaceTemplate
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:

@@ -8,7 +8,7 @@ input:
           id: my/test/plugin
           registryUrl: "https://test-registry.io/subpath"
   devworkspaceResources:
-    "https://test-registry.io/subpath/my/test/plugin":
+    "https://test-registry.io/subpath/devfiles/my/test/plugin":
       metadata:
         name: test-plugin
       spec:
@@ -20,4 +20,4 @@ input:
 
 
 output:
-  errRegexp: "could not find devfile or devworkspace object at 'https://test-registry.io/subpath/my/test/plugin'"
+  errRegexp: "could not find devfile or devworkspace object at 'https://test-registry.io/subpath/devfiles/my/test/plugin'"

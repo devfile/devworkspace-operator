@@ -17,7 +17,7 @@ input:
           image: regular-test-image
           name: regular-container
   devfileResources:
-    "https://test-registry.io/test/parent/id":
+    "https://test-registry.io/devfiles/test/parent/id":
       schemaVersion: 2.1.0
       metadata:
         name: parent-devfile

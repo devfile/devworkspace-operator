@@ -286,4 +286,239 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 	})
+
+	Context("Automatic provisioning", func() {
+		const testURL = "test-url"
+
+		BeforeEach(func() {
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						fmt.Sprintf("%s/healthz", testURL): {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+			createDevWorkspace("test-devworkspace.yaml")
+		})
+
+		AfterEach(func() {
+			deleteDevWorkspace(devWorkspaceName)
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+		})
+
+		It("Mounts image pull secrets to the DevWorkspace Deployment", func() {
+			devworkspace := getExistingDevWorkspace()
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Creating secrets for docker configs")
+			dockerCfgSecretName := "test-dockercfg"
+			dockerCfg := generateSecret(dockerCfgSecretName, corev1.SecretTypeDockercfg)
+			dockerCfg.Labels[constants.DevWorkspacePullSecretLabel] = "true"
+			dockerCfg.Data[".dockercfg"] = []byte("{}")
+			createObject(dockerCfg)
+			defer deleteObject(dockerCfg)
+
+			dockerCfgSecretJsonName := "test-dockercfg-json"
+			dockerCfgJson := generateSecret(dockerCfgSecretJsonName, corev1.SecretTypeDockerConfigJson)
+			dockerCfgJson.Labels[constants.DevWorkspacePullSecretLabel] = "true"
+			dockerCfgJson.Data[".dockerconfigjson"] = []byte("{}")
+			createObject(dockerCfgJson)
+			defer deleteObject(dockerCfgJson)
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := types.NamespacedName{
+				Name:      common.DeploymentName(workspaceID),
+				Namespace: testNamespace,
+			}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			Expect(deploy.Spec.Template.Spec.ImagePullSecrets).Should(ContainElement(corev1.LocalObjectReference{Name: dockerCfgSecretName}))
+			Expect(deploy.Spec.Template.Spec.ImagePullSecrets).Should(ContainElement(corev1.LocalObjectReference{Name: dockerCfgSecretJsonName}))
+		})
+
+		It("Manages git credentials for DevWorkspace", func() {
+			devworkspace := getExistingDevWorkspace()
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Creating a secret for git credentials")
+			gitCredentialsSecretName := "test-git-credentials"
+			gitCredentials := generateSecret(gitCredentialsSecretName, corev1.SecretTypeOpaque)
+			gitCredentials.Labels[constants.DevWorkspaceGitCredentialLabel] = "true"
+			gitCredentials.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/test/path"
+			gitCredentials.Data["credentials"] = []byte("https://username:pat@github.com")
+
+			createObject(gitCredentials)
+			defer deleteObject(gitCredentials)
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := types.NamespacedName{
+				Name:      common.DeploymentName(workspaceID),
+				Namespace: testNamespace,
+			}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			modeReadOnly := int32(0640)
+			gitconfigVolumeName := common.AutoMountConfigMapVolumeName("devworkspace-gitconfig")
+			gitconfigVolume := corev1.Volume{
+				Name: gitconfigVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: "devworkspace-gitconfig"},
+						DefaultMode:          &modeReadOnly,
+					},
+				},
+			}
+			gitConfigVolumeMount := corev1.VolumeMount{
+				Name:      gitconfigVolumeName,
+				ReadOnly:  false,
+				MountPath: "/etc/gitconfig",
+				SubPath:   "gitconfig",
+			}
+			gitCredentialsVolumeName := common.AutoMountSecretVolumeName("devworkspace-merged-git-credentials")
+			gitCredentialsVolume := corev1.Volume{
+				Name: gitCredentialsVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  "devworkspace-merged-git-credentials",
+						DefaultMode: &modeReadOnly,
+					},
+				},
+			}
+			gitCredentialsVolumeMount := corev1.VolumeMount{
+				Name:      gitCredentialsVolumeName,
+				ReadOnly:  true,
+				MountPath: "/test/path/credentials",
+				SubPath:   "credentials",
+			}
+
+			volumes := deploy.Spec.Template.Spec.Volumes
+			Expect(volumes).Should(ContainElements(gitconfigVolume, gitCredentialsVolume), "Git credentials should be mounted as volumes in Deployment")
+			for _, container := range deploy.Spec.Template.Spec.Containers {
+				Expect(container.VolumeMounts).Should(ContainElements(gitConfigVolumeMount, gitCredentialsVolumeMount))
+			}
+		})
+
+		It("Automounts secrets and configmaps volumes", func() {
+			devworkspace := getExistingDevWorkspace()
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Creating a automount secrets and configmaps")
+			fileCM := generateConfigMap("file-cm")
+			fileCM.Labels[constants.DevWorkspaceMountLabel] = "true"
+			fileCM.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/file/cm"
+			createObject(fileCM)
+			defer deleteObject(fileCM)
+
+			subpathCM := generateConfigMap("subpath-cm")
+			subpathCM.Labels[constants.DevWorkspaceMountLabel] = "true"
+			subpathCM.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/subpath/cm"
+			subpathCM.Annotations[constants.DevWorkspaceMountAsAnnotation] = "subpath"
+			subpathCM.Data["testdata1"] = "testValue"
+			subpathCM.Data["testdata2"] = "testValue"
+			createObject(subpathCM)
+			defer deleteObject(subpathCM)
+
+			fileSecret := generateSecret("file-secret", corev1.SecretTypeOpaque)
+			fileSecret.Labels[constants.DevWorkspaceMountLabel] = "true"
+			fileSecret.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/file/secret"
+			createObject(fileSecret)
+			defer deleteObject(fileSecret)
+
+			subpathSecret := generateSecret("subpath-secret", corev1.SecretTypeOpaque)
+			subpathSecret.Labels[constants.DevWorkspaceMountLabel] = "true"
+			subpathSecret.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/subpath/secret"
+			subpathSecret.Annotations[constants.DevWorkspaceMountAsAnnotation] = "subpath"
+			subpathSecret.Data["testsecret"] = []byte("testValue")
+			createObject(subpathSecret)
+			defer deleteObject(subpathSecret)
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := types.NamespacedName{
+				Name:      common.DeploymentName(workspaceID),
+				Namespace: testNamespace,
+			}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			expectedAutomountVolumes := []corev1.Volume{
+				volumeFromConfigMap(fileCM),
+				volumeFromConfigMap(subpathCM),
+				volumeFromSecret(fileSecret),
+				volumeFromSecret(subpathSecret),
+			}
+			Expect(deploy.Spec.Template.Spec.Volumes).Should(ContainElements(expectedAutomountVolumes), "Automount volumes should be added to deployment")
+			expectedAutomountVolumeMounts := []corev1.VolumeMount{
+				volumeMountFromConfigMap(fileCM, "/file/cm", ""),
+				volumeMountFromConfigMap(subpathCM, "/subpath/cm", "testdata1"),
+				volumeMountFromConfigMap(subpathCM, "/subpath/cm", "testdata2"),
+				volumeMountFromSecret(fileSecret, "/file/secret", ""),
+				volumeMountFromSecret(subpathSecret, "/subpath/secret", "testsecret"),
+			}
+			for _, container := range deploy.Spec.Template.Spec.Containers {
+				Expect(container.VolumeMounts).Should(ContainElements(expectedAutomountVolumeMounts), "Automount volumeMounts should be added to all containers")
+			}
+		})
+
+		It("Automounts secrets and configmaps env vars", func() {
+			devworkspace := getExistingDevWorkspace()
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Creating a automount secrets and configmaps")
+			cm := generateConfigMap("env-cm")
+			cm.Labels[constants.DevWorkspaceMountLabel] = "true"
+			cm.Annotations[constants.DevWorkspaceMountAsAnnotation] = "env"
+			createObject(cm)
+			defer deleteObject(cm)
+
+			secret := generateSecret("env-secret", corev1.SecretTypeOpaque)
+			secret.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secret.Annotations[constants.DevWorkspaceMountAsAnnotation] = "env"
+			createObject(secret)
+			defer deleteObject(secret)
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+			deploy := &appsv1.Deployment{}
+			deployNN := types.NamespacedName{
+				Name:      common.DeploymentName(workspaceID),
+				Namespace: testNamespace,
+			}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			expectedEnvFromSources := []corev1.EnvFromSource{
+				{
+					ConfigMapRef: &corev1.ConfigMapEnvSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
+					},
+				},
+				{
+					SecretRef: &corev1.SecretEnvSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: secret.Name},
+					},
+				},
+			}
+			for _, container := range deploy.Spec.Template.Spec.Containers {
+				Expect(container.EnvFrom).Should(ContainElements(expectedEnvFromSources), "Automounted env sources should be added to containers")
+			}
+		})
+	})
+
 })

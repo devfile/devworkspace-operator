@@ -18,12 +18,41 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+func createDevWorkspace(fromFile string) {
+	By("Loading DevWorkspace from test file")
+	devworkspace := &dw.DevWorkspace{}
+	err := loadObjectFromFile(devWorkspaceName, devworkspace, fromFile)
+	Expect(err).NotTo(HaveOccurred())
+
+	By("Creating DevWorkspace on cluster")
+	Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
+	createdDW := &dw.DevWorkspace{}
+	Eventually(func() bool {
+		if err := k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, createdDW); err != nil {
+			return false
+		}
+		return createdDW.Status.DevWorkspaceId != ""
+	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue())
+}
+
+func getExistingDevWorkspace() *dw.DevWorkspace {
+	By("Getting existing DevWorkspace")
+	devworkspace := &dw.DevWorkspace{}
+	dwNN := types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}
+	Expect(k8sClient.Get(ctx, dwNN, devworkspace)).Should(Succeed())
+	workspaceID := devworkspace.Status.DevWorkspaceId
+	Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
+	return devworkspace
+}
 
 // deleteDevWorkspace forces a DevWorkspace to be deleted by removing all finalizers
 func deleteDevWorkspace(name string) {

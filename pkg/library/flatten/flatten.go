@@ -248,7 +248,9 @@ func resolveElementById(
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse registry URL for component %s: %w", name, err)
 	}
-	pluginURL.Path = path.Join(pluginURL.Path, id)
+
+	// convention: elements specified by id are served at <registryUrl>/devfiles/<id>
+	pluginURL.Path = path.Join(pluginURL.Path, "devfiles", id)
 
 	dwt, err := network.FetchDevWorkspaceTemplate(pluginURL.String(), tools.HttpClient)
 	if err != nil {

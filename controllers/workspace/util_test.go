@@ -14,12 +14,17 @@
 package controllers_test
 
 import (
+	"path"
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -90,6 +95,21 @@ func deleteDevWorkspace(name string) {
 	}).Should(BeTrue(), "DevWorkspace not deleted after timeout")
 }
 
+func createObject(obj crclient.Object) {
+	Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+	Eventually(func() error {
+		return k8sClient.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
+	}, 10*time.Second, 250*time.Millisecond).Should(Succeed(), "Creating %s with name %s", obj.GetObjectKind(), obj.GetName())
+}
+
+func deleteObject(obj crclient.Object) {
+	Expect(k8sClient.Delete(ctx, obj)).Should(Succeed())
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
+		return k8sErrors.IsNotFound(err)
+	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue(), "Deleting %s with name %s", obj.GetObjectKind(), obj.GetName())
+}
+
 func markRoutingReady(mainUrl, routingName string) {
 	namespacedName := types.NamespacedName{
 		Name:      routingName,
@@ -146,5 +166,84 @@ func devworkspaceOwnerRef(wksp *dw.DevWorkspace) metav1.OwnerReference {
 		UID:                wksp.UID,
 		Controller:         &boolTrue,
 		BlockOwnerDeletion: &boolTrue,
+	}
+}
+
+func generateSecret(name string, secretType corev1.SecretType) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				constants.DevWorkspaceWatchSecretLabel: "true",
+			},
+			Annotations: map[string]string{},
+		},
+		Type: secretType,
+		Data: map[string][]byte{},
+	}
+}
+
+func generateConfigMap(name string) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				constants.DevWorkspaceWatchConfigMapLabel: "true",
+			},
+			Annotations: map[string]string{},
+		},
+		Data: map[string]string{},
+	}
+}
+
+func volumeFromSecret(secret *corev1.Secret) corev1.Volume {
+	modeReadOnly := int32(0640)
+	return corev1.Volume{
+		Name: common.AutoMountSecretVolumeName(secret.Name),
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  secret.Name,
+				DefaultMode: &modeReadOnly,
+			},
+		},
+	}
+}
+
+func volumeFromConfigMap(cm *corev1.ConfigMap) corev1.Volume {
+	modeReadOnly := int32(0640)
+	return corev1.Volume{
+		Name: common.AutoMountConfigMapVolumeName(cm.Name),
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: cm.Name},
+				DefaultMode:          &modeReadOnly,
+			},
+		},
+	}
+}
+
+func volumeMountFromSecret(secret *corev1.Secret, mountPath, subPath string) corev1.VolumeMount {
+	if subPath != "" {
+		mountPath = path.Join(mountPath, subPath)
+	}
+	return corev1.VolumeMount{
+		Name:      common.AutoMountSecretVolumeName(secret.Name),
+		ReadOnly:  true,
+		MountPath: mountPath,
+		SubPath:   subPath,
+	}
+}
+
+func volumeMountFromConfigMap(cm *corev1.ConfigMap, mountPath, subPath string) corev1.VolumeMount {
+	if subPath != "" {
+		mountPath = path.Join(mountPath, subPath)
+	}
+	return corev1.VolumeMount{
+		Name:      common.AutoMountConfigMapVolumeName(cm.Name),
+		ReadOnly:  true,
+		MountPath: mountPath,
+		SubPath:   subPath,
 	}
 }

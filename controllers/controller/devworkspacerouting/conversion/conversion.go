@@ -35,11 +35,21 @@ func convertSecure(secure interface{}) bool {
 }
 
 func convertDevfileEndpoint(dwEndpoint dw.Endpoint) v1alpha1.Endpoint {
+	// Make sure to set defaults explicitly
+	endpointExposure := v1alpha1.EndpointExposure(dwEndpoint.Exposure)
+	if endpointExposure == "" {
+		endpointExposure = v1alpha1.PublicEndpointExposure
+	}
+	protocol := v1alpha1.EndpointProtocol(dwEndpoint.Protocol)
+	if protocol == "" {
+		protocol = "http"
+	}
+
 	return v1alpha1.Endpoint{
 		Name:       dwEndpoint.Name,
 		TargetPort: dwEndpoint.TargetPort,
-		Exposure:   v1alpha1.EndpointExposure(dwEndpoint.Exposure),
-		Protocol:   v1alpha1.EndpointProtocol(dwEndpoint.Protocol),
+		Exposure:   endpointExposure,
+		Protocol:   protocol,
 		Secure:     convertSecure(dwEndpoint.Secure),
 		Path:       dwEndpoint.Path,
 		Attributes: v1alpha1.Attributes(dwEndpoint.Attributes),

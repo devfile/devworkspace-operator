@@ -104,24 +104,12 @@ var _ = Describe("DevWorkspace Controller", func() {
 	Context("Workspace Objects creation", func() {
 
 		BeforeEach(func() {
-			By("Reading DevWorkspace from testdata file")
-			devworkspace := &dw.DevWorkspace{}
-			err := loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")
-			Expect(err).NotTo(HaveOccurred())
-
-			By("Creating a new DevWorkspace")
-			Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
-			createdDW := &dw.DevWorkspace{}
-			Eventually(func() bool {
-				if err := k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, createdDW); err != nil {
-					return false
-				}
-				return createdDW.Status.DevWorkspaceId != ""
-			}, timeout, interval).Should(BeTrue())
+			createDevWorkspace("test-devworkspace.yaml")
 		})
 
 		AfterEach(func() {
 			deleteDevWorkspace(devWorkspaceName)
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Creates roles and rolebindings", func() {
@@ -152,11 +140,8 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Creates DevWorkspaceRouting", func() {
-			By("Getting existing DevWorkspace from cluster")
-			devworkspace := &dw.DevWorkspace{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, devworkspace)).Should(Succeed())
+			devworkspace := getExistingDevWorkspace()
 			workspaceID := devworkspace.Status.DevWorkspaceId
-			Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
 
 			By("Checking that DevWorkspaceRouting is created")
 			dwr := &controllerv1alpha1.DevWorkspaceRouting{}
@@ -172,11 +157,8 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Syncs Routing mainURL to DevWorkspace", func() {
-			By("Getting existing DevWorkspace from cluster")
-			devworkspace := &dw.DevWorkspace{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, devworkspace)).Should(Succeed())
+			devworkspace := getExistingDevWorkspace()
 			workspaceID := devworkspace.Status.DevWorkspaceId
-			Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
 
 			By("Manually making Routing ready to continue")
 			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
@@ -191,11 +173,8 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Creates workspace metadata configmap", func() {
-			By("Getting existing DevWorkspace from cluster")
-			devworkspace := &dw.DevWorkspace{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, devworkspace)).Should(Succeed())
+			devworkspace := getExistingDevWorkspace()
 			workspaceID := devworkspace.Status.DevWorkspaceId
-			Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
 
 			By("Manually making Routing ready to continue")
 			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
@@ -224,11 +203,8 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Syncs the DevWorkspace ServiceAccount", func() {
-			By("Getting existing DevWorkspace from cluster")
-			devworkspace := &dw.DevWorkspace{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, devworkspace)).Should(Succeed())
+			devworkspace := getExistingDevWorkspace()
 			workspaceID := devworkspace.Status.DevWorkspaceId
-			Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
 
 			By("Manually making Routing ready to continue")
 			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
@@ -249,11 +225,8 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Syncs DevWorkspace Deployment", func() {
-			By("Getting existing DevWorkspace from cluster")
-			devworkspace := &dw.DevWorkspace{}
-			Expect(k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, devworkspace)).Should(Succeed())
+			devworkspace := getExistingDevWorkspace()
 			workspaceID := devworkspace.Status.DevWorkspaceId
-			Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
 
 			By("Manually making Routing ready to continue")
 			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
@@ -274,12 +247,8 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Marks DevWorkspace as Running", func() {
-			By("Getting existing DevWorkspace from cluster")
-			devworkspace := &dw.DevWorkspace{}
-			dwNN := types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}
-			Expect(k8sClient.Get(ctx, dwNN, devworkspace)).Should(Succeed())
+			devworkspace := getExistingDevWorkspace()
 			workspaceID := devworkspace.Status.DevWorkspaceId
-			Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
 
 			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
@@ -298,7 +267,10 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			currDW := &dw.DevWorkspace{}
 			Eventually(func() (dw.DevWorkspacePhase, error) {
-				err := k8sClient.Get(ctx, dwNN, currDW)
+				err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      devworkspace.Name,
+					Namespace: devworkspace.Namespace,
+				}, currDW)
 				if err != nil {
 					return "", err
 				}

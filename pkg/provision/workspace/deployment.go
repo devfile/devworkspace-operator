@@ -94,6 +94,10 @@ func SyncDeploymentToCluster(
 			},
 		}
 	}
+	if len(specDeployment.Spec.Template.Spec.Containers) == 0 {
+		// DevWorkspace defines no container components, cannot create a deployment
+		return DeploymentProvisioningStatus{ProvisioningStatus{Continue: true}}
+	}
 
 	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
 	switch t := err.(type) {

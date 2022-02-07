@@ -39,6 +39,10 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec) (*core
 	if workspace.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {
 		return nil, nil
 	}
+	if !hasContainerComponents(workspace) {
+		// Avoid adding project-clone init container when DevWorkspace does not define any containers
+		return nil, nil
+	}
 
 	cloneImage := images.GetProjectClonerImage()
 	if cloneImage == "" {
@@ -90,4 +94,13 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec) (*core
 		},
 		ImagePullPolicy: corev1.PullPolicy(config.Workspace.ImagePullPolicy),
 	}, nil
+}
+
+func hasContainerComponents(workspace *dw.DevWorkspaceTemplateSpec) bool {
+	for _, component := range workspace.Components {
+		if component.Container != nil {
+			return true
+		}
+	}
+	return false
 }

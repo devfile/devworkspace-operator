@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -355,7 +356,7 @@ func checkPodsState(workspace *dw.DevWorkspace,
 				return fmt.Sprintf("Init Container %s has state %s", initContainerStatus.Name, initContainerStatus.State.Waiting.Reason), nil
 			}
 		}
-		if msg, err := checkPodEvents(&pod, clusterAPI); err != nil || msg != "" {
+		if msg, err := checkPodEvents(&pod, workspace.Status.DevWorkspaceId, clusterAPI); err != nil || msg != "" {
 			return msg, err
 		}
 	}
@@ -443,7 +444,7 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
 	return false
 }
 
-func checkPodEvents(pod *corev1.Pod, clusterAPI sync.ClusterAPI) (msg string, err error) {
+func checkPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.ClusterAPI) (msg string, err error) {
 	evs := &corev1.EventList{}
 	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
 	if err != nil {
@@ -456,6 +457,15 @@ func checkPodEvents(pod *corev1.Pod, clusterAPI sync.ClusterAPI) (msg string, er
 		if ev.InvolvedObject.Kind != "Pod" {
 			continue
 		}
+
+		// On OpenShift, it's possible see "FailedMount" events when using a routingClass that depends on the service-ca
+		// operator. To avoid this, we always ignore FailedMount events if the message refers to the DWO-provisioned volume
+		if infrastructure.IsOpenShift() &&
+			ev.Reason == "FailedMount" &&
+			strings.Contains(ev.Message, common.ServingCertVolumeName(common.ServiceName(workspaceID))) {
+			continue
+		}
+
 		for _, fatalEv := range unrecoverablePodEventReasons {
 			if ev.Reason == fatalEv && !checkIfUnrecoverableEventIgnored(ev.Reason) {
 				return fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, ev.Message), nil

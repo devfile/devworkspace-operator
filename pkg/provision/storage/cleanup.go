@@ -100,7 +100,15 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 
 func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.DevWorkspaceId
-	pvcName := config.Workspace.PVCName
+
+	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	if err != nil {
+		return nil, err
+	}
+	if pvcName == "" {
+		pvcName = config.Workspace.PVCName
+	}
+
 	jobLabels := map[string]string{
 		constants.DevWorkspaceIDLabel: workspaceId,
 	}

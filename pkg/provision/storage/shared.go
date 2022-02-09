@@ -21,10 +21,11 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -33,6 +34,8 @@ import (
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
+
+const cheCommonPVCName = "claim-che-workspace"
 
 func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
 	pvcStorageQuantity, err := resource.ParseQuantity(size)
@@ -216,4 +219,20 @@ func processProjectsVolume(workspace *dw.DevWorkspaceTemplateSpec) (projectsComp
 		}
 	}
 	return
+}
+
+// checkForExistingCommonPVC checks the current namespace for existing PVCs that may be used for workspace storage. If
+// such a PVC is found, its name is returned and should be used in place of the configured common PVC. If no suitable
+// PVC is found,
+func checkForExistingCommonPVC(namespace string, api sync.ClusterAPI) (string, error) {
+	existingPVC := &corev1.PersistentVolumeClaim{}
+	namespacedName := types.NamespacedName{Name: cheCommonPVCName, Namespace: namespace}
+	err := api.Client.Get(api.Ctx, namespacedName, existingPVC)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return "", nil
+		}
+		return "", err
+	}
+	return existingPVC.Name, nil
 }

@@ -27,13 +27,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, storage *corev1.PersistentVolumeClaim, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
+func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, pvcName string, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
 	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
 
-	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, storage, podTolerations, nodeSelector)
+	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, pvcName, podTolerations, nodeSelector)
 	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
 	switch err.(type) {
 	case nil:
@@ -56,7 +56,7 @@ func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1
 func getWorkspaceSyncDeploymentSpec(
 	namespace string,
 	sshConfigMap *corev1.ConfigMap,
-	storage *corev1.PersistentVolumeClaim,
+	pvcName string,
 	tolerations []corev1.Toleration,
 	nodeSelector map[string]string) *appsv1.Deployment {
 
@@ -130,7 +130,7 @@ func getWorkspaceSyncDeploymentSpec(
 							Name: "async-storage-data",
 							VolumeSource: corev1.VolumeSource{
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-									ClaimName: storage.Name,
+									ClaimName: pvcName,
 								},
 							},
 						},

@@ -74,6 +74,10 @@ const (
 	// so do not require cleanup. When a DevWorkspace is stopped, all local changes are lost.
 	EphemeralStorageClassType = "ephemeral"
 
+	// CheCommonPVCName is the name of the common PVC equivalent used by Che. If present in the namespace, this PVC is mounted instead
+	// of the default PVC when the 'common' or 'async' storage classes are used.
+	CheCommonPVCName = "claim-che-workspace"
+
 	// Constants describing configuration for automatic project cloning
 
 	// ProjectCloneDisable specifies that project cloning should be disabled.

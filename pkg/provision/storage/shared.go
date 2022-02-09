@@ -35,8 +35,6 @@ import (
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
 
-const cheCommonPVCName = "claim-che-workspace"
-
 func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
 	pvcStorageQuantity, err := resource.ParseQuantity(size)
 	if err != nil {
@@ -226,7 +224,7 @@ func processProjectsVolume(workspace *dw.DevWorkspaceTemplateSpec) (projectsComp
 // PVC is found,
 func checkForExistingCommonPVC(namespace string, api sync.ClusterAPI) (string, error) {
 	existingPVC := &corev1.PersistentVolumeClaim{}
-	namespacedName := types.NamespacedName{Name: cheCommonPVCName, Namespace: namespace}
+	namespacedName := types.NamespacedName{Name: constants.CheCommonPVCName, Namespace: namespace}
 	err := api.Client.Get(api.Ctx, namespacedName, existingPVC)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {

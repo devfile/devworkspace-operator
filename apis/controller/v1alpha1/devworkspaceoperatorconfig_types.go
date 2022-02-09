@@ -76,6 +76,10 @@ type WorkspaceConfig struct {
 	// PVCName defines the name used for the persistent volume claim created
 	// to support workspace storage when the 'common' storage class is used.
 	// If not specified, the default value of `claim-devworkspace` is used.
+	// Note that changing this configuration value after workspaces have been
+	// created will disconnect all existing workspaces from the previously-used
+	// persistent volume claim, and will require manual removal of the old PVCs
+	// in the cluster.
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 	// +kubebuilder:validation:MaxLength=63
 	PVCName string `json:"pvcName,omitempty"`

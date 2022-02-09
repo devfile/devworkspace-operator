@@ -24,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 )
@@ -50,16 +49,25 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		return nil
 	}
 
-	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, podAdditions, &workspace.Spec.Template); err != nil {
+	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	if err != nil {
+		return err
+	}
+	if pvcName == "" {
+		commonPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
+		if err != nil {
+			return err
+		}
+		pvcName = commonPVC.Name
+	}
+
+	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, pvcName, podAdditions, &workspace.Spec.Template); err != nil {
 		return &ProvisioningError{
 			Err:     err,
 			Message: "Could not rewrite container volume mounts",
 		}
 	}
 
-	if _, err := syncCommonPVC(workspace.Namespace, clusterAPI); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -71,7 +79,7 @@ func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorksp
 // (i.e. all volume mounts are subpaths into a common PVC used by all workspaces in the namespace).
 //
 // Also adds appropriate k8s Volumes to PodAdditions to accomodate the rewritten VolumeMounts.
-func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId string, podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspaceTemplateSpec) error {
+func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId, pvcName string, podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspaceTemplateSpec) error {
 	devfileVolumes := map[string]dw.VolumeComponent{}
 
 	// Construct map of volume name -> volume Component
@@ -98,7 +106,6 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 	}
 
 	// TODO: What should we do when a volume isn't explicitly defined?
-	commonPVCName := config.Workspace.PVCName
 	rewriteVolumeMounts := func(containers []corev1.Container) error {
 		for cIdx, container := range containers {
 			for vmIdx, vm := range container.VolumeMounts {
@@ -113,7 +120,7 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 				}
 				if !isEphemeral(&volume) {
 					containers[cIdx].VolumeMounts[vmIdx].SubPath = fmt.Sprintf("%s/%s", workspaceId, vm.Name)
-					containers[cIdx].VolumeMounts[vmIdx].Name = commonPVCName
+					containers[cIdx].VolumeMounts[vmIdx].Name = pvcName
 				}
 			}
 		}
@@ -127,10 +134,10 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId stri
 	}
 
 	podAdditions.Volumes = append(podAdditions.Volumes, corev1.Volume{
-		Name: commonPVCName,
+		Name: pvcName,
 		VolumeSource: corev1.VolumeSource{
 			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: commonPVCName,
+				ClaimName: pvcName,
 			},
 		},
 	})

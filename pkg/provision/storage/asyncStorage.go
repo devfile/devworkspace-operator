@@ -88,14 +88,21 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		return err
 	}
 
-	// Create common PVC if needed
-	clusterPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
+	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
+	if pvcName != "" {
+		// Create common PVC if needed
+		clusterPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
+		if err != nil {
+			return err
+		}
+		pvcName = clusterPVC.Name
+	}
 
 	// Create async server deployment
-	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace.Namespace, configmap, clusterPVC, clusterAPI)
+	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace.Namespace, configmap, pvcName, clusterAPI)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
 			return &NotReadyError{

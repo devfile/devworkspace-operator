@@ -284,18 +284,18 @@ func getSpecDeployment(
 		deployment.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 
-	if needsPVCWorkaround(podAdditions) {
+	if needPVC, pvcName := needsPVCWorkaround(podAdditions); needPVC {
 		// Kubernetes creates directories in a PVC to support subpaths such that only the leaf directory has g+rwx permissions.
 		// This means that mounting the subpath e.g. <workspace-id>/plugins will result in the <workspace-id> directory being
 		// created with 755 permissions, requiring the root UID to remove it.
 		// To avoid this issue, we need to ensure that the first volumeMount encountered is for the <workspace-id> subpath.
 		if len(deployment.Spec.Template.Spec.InitContainers) > 0 {
 			volumeMounts := deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts
-			volumeMounts = append([]corev1.VolumeMount{getWorkspaceSubpathVolumeMount(workspace.Status.DevWorkspaceId)}, volumeMounts...)
+			volumeMounts = append([]corev1.VolumeMount{getWorkspaceSubpathVolumeMount(workspace.Status.DevWorkspaceId, pvcName)}, volumeMounts...)
 			deployment.Spec.Template.Spec.InitContainers[0].VolumeMounts = volumeMounts
 		} else {
 			volumeMounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
-			volumeMounts = append([]corev1.VolumeMount{getWorkspaceSubpathVolumeMount(workspace.Status.DevWorkspaceId)}, volumeMounts...)
+			volumeMounts = append([]corev1.VolumeMount{getWorkspaceSubpathVolumeMount(workspace.Status.DevWorkspaceId, pvcName)}, volumeMounts...)
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts = volumeMounts
 		}
 	}
@@ -421,11 +421,9 @@ func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions,
 	return podAdditions, nil
 }
 
-func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {
-	volumeName := config.Workspace.PVCName
-
+func getWorkspaceSubpathVolumeMount(workspaceId, pvcName string) corev1.VolumeMount {
 	workspaceVolumeMount := corev1.VolumeMount{
-		Name:      volumeName,
+		Name:      pvcName,
 		MountPath: "/tmp/workspace-storage",
 		SubPath:   workspaceId,
 	}
@@ -433,14 +431,17 @@ func getWorkspaceSubpathVolumeMount(workspaceId string) corev1.VolumeMount {
 	return workspaceVolumeMount
 }
 
-func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) bool {
+func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) (needs bool, pvcName string) {
 	commonPVCName := config.Workspace.PVCName
 	for _, vol := range podAdditions.Volumes {
 		if vol.Name == commonPVCName {
-			return true
+			return true, commonPVCName
+		}
+		if vol.Name == constants.CheCommonPVCName {
+			return true, constants.CheCommonPVCName
 		}
 	}
-	return false
+	return false, ""
 }
 
 func checkPodEvents(pod *corev1.Pod, clusterAPI sync.ClusterAPI) (msg string, err error) {

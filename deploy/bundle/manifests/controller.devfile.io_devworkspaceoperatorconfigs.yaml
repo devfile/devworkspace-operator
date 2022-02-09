@@ -166,7 +166,7 @@ spec:
                     description: ProgressTimeout determines the maximum duration a DevWorkspace can be in a "Starting" or "Failing" phase without progressing before it is automatically failed. Duration should be specified in a format parseable by Go's time package, e.g. "15m", "20s", "1h30m", etc. If not specified, the default value of "5m" is used.
                     type: string
                   pvcName:
-                    description: PVCName defines the name used for the persistent volume claim created to support workspace storage when the 'common' storage class is used. If not specified, the default value of `claim-devworkspace` is used.
+                    description: PVCName defines the name used for the persistent volume claim created to support workspace storage when the 'common' storage class is used. If not specified, the default value of `claim-devworkspace` is used. Note that changing this configuration value after workspaces have been created will disconnect all existing workspaces from the previously-used persistent volume claim, and will require manual removal of the old PVCs in the cluster.
                     maxLength: 63
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                     type: string

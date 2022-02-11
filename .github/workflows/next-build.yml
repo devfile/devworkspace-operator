@@ -26,32 +26,48 @@ jobs:
 
   build-next-imgs:
     runs-on: ubuntu-20.04
+
+    outputs:
+      git-sha: ${{ steps.git-sha.outputs.sha }}
+
     steps:
     - name: Checkout devworkspace-operator source code
       uses: actions/checkout@v2
-    - name: Docker Build & Push
-      uses: docker/build-push-action@v1.1.0
+
+    - name: Set output for Git short SHA
+      id: git-sha
+      run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+
+    - name: Login to quay.io
+      uses: docker/login-action@v1
       with:
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
         registry: quay.io
-        repository: devfile/devworkspace-controller
-        dockerfile: ./build/Dockerfile
-        tags: next
-        tag_with_sha: true
-    - name: Docker Build & Push (Project Clone)
-      uses: docker/build-push-action@v1.1.0
+
+    - name: Build and push
+      uses: docker/build-push-action@v2
       with:
-        username: ${{ secrets.QUAY_USERNAME }}
-        password: ${{ secrets.QUAY_PASSWORD }}
-        registry: quay.io
-        repository: devfile/project-clone
-        dockerfile: ./project-clone/Dockerfile
-        tags: next
-        tag_with_sha: true
+        context: .
+        push: true
+        tags: |
+          quay.io/devfile/devworkspace-controller:next
+          quay.io/devfile/devworkspace-controller:sha-${{ steps.git-sha.outputs.sha }}
+        file: ./build/Dockerfile
+
+    - name: Build and push
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: |
+          quay.io/devfile/project-clone:next
+          quay.io/devfile/project-clone:sha-${{ steps.git-sha.outputs.sha }}
+        file: ./project-clone/Dockerfile
 
   build-next-olm-imgs:
     runs-on: ubuntu-latest
+    needs: build-next-imgs
     env:
       DWO_BUNDLE_REPO: quay.io/devfile/devworkspace-operator-bundle
       DWO_BUNDLE_TAG: next
@@ -73,6 +89,7 @@ jobs:
           mkdir -p ~/cache
           wget https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}/operator-sdk_linux_amd64 -O ~/cache/operator-sdk-${OPERATOR_SDK_VERSION} > /dev/null
           chmod +x ~/cache/operator-sdk-${OPERATOR_SDK_VERSION}
+
       - name: Install Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
         run: |
           mkdir -p ~/bin
@@ -93,6 +110,7 @@ jobs:
           wget https://github.com/operator-framework/operator-registry/releases/download/${OPM_VERSION}/linux-amd64-opm -O ~/cache/opm${OPM_VERSION} > /dev/null
           #${OPM_VERSION} is used in binary name to prevent caching after upgrading
           chmod +x ~/cache/opm${OPM_VERSION}
+
       - name: Install OPM ${{ env.OPM_VERSION }}
         run: |
           mkdir -p ~/bin
@@ -113,6 +131,16 @@ jobs:
         run: |
           # Ubuntu latest comes with the _other_ version of yq.
           pip install yq
+
+          # Update images used in bundle to use the sha-tagged image rather than just 'next'
+          export TAG="sha-${{ needs.build-next-imgs.outputs.git-sha }}"
+          export DEFAULT_DWO_IMG="quay.io/devfile/devworkspace-controller:$TAG"
+          export PROJECT_CLONE_IMG="quay.io/devfile/project-clone:$TAG"
+
+          ./deploy/generate-deployment.sh \
+            --use-defaults \
+            --generate-olm
+
           ./build/scripts/build_index_image.sh \
             --bundle-repo ${DWO_BUNDLE_REPO} \
             --bundle-tag ${DWO_BUNDLE_TAG} \

@@ -101,7 +101,9 @@ CHANNEL_FILE="$OUTDIR/channel.yaml"
 
 # Set required versions in vars based on current release
 CHANNEL_ENTRIES=$(yq -r '.entries[]?.name' "$CHANNEL_FILE")
+# LATEST_MINOR_RELEASE is the last-released vX.Y.0 version, e.g. v0.12.0
 LATEST_MINOR_RELEASE=$(echo "$CHANNEL_ENTRIES" | grep "\.0$" | sort -V | tail -n 1)
+# LATEST_BUGFIX is the last-released vX.Y.Z version, e.g. v0.12.3
 LATEST_BUGFIX=$(echo "$CHANNEL_ENTRIES" | grep "${LATEST_MINOR_RELEASE%.0}" | sort -V | tail -n 1)
 
 if [ "$RELEASE" == "true" ]; then
@@ -116,8 +118,8 @@ fi
 make generate_olm_bundle_yaml
 
 echo "Building bundle image $BUNDLE_IMAGE"
-$PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile | sed 's|^|    |'
-$PODMAN push "$BUNDLE_IMAGE" 2>&1 | sed 's|^|    |'
+$PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
+$PODMAN push "$BUNDLE_IMAGE" 2>&1
 
 BUNDLE_SHA=$(skopeo inspect "docker://${BUNDLE_IMAGE}" | jq -r '.Digest')
 BUNDLE_DIGEST="${BUNDLE_REPO}@${BUNDLE_SHA}"
@@ -139,16 +141,33 @@ if yq -e --arg bundle_name "$BUNDLE_NAME" '[.entries[]?.name] | any(. == $bundle
   error "Bundle $BUNDLE_NAME is already present in the channel $CHANNEL_FILE"
 fi
 
+# Set vars to hold version numbers for relevant bundles -- need to strip of operator name and 'v' prefix from version
+# i.e. devworkspace-operator.v0.12.3 -> 0.12.3
+BUNDLE_VER="${BUNDLE_NAME##devworkspace-operator.v}"
+LATEST_BUGFIX_VER="${LATEST_BUGFIX##devworkspace-operator.v}"
+LATEST_MINOR_RELEASE_VER="${LATEST_MINOR_RELEASE##devworkspace-operator.v}"
+
 # Add bundle entry to channel
 echo "Adding $BUNDLE_NAME to channel"
 if [ "$RELEASE" == "true" ]; then
-  # Generate a new channel entry that replaces the last release
-  # TODO: Also generate a skipRange so that e.g. v0.10.0 replaces v0.9.3 and skips v0.9.0-v0.9.2
-  # shellcheck disable=SC2016
-  ENTRY_JSON=$(yq --arg replaces "$LATEST_BUGFIX" '{name, replaces: $replaces}' "$BUNDLE_FILE")
+  # Generate a new channel entry with replaces and  skipRange if a) the current release is a minor version increment
+  # and b) previous release had z-stream releases. Otherwise, generate a new channel entry that replaces the last release
+  MINOR_REGEX='^[0-9]+\.[0-9]+\.0$'
+  if [[ "$BUNDLE_VER" =~ $MINOR_REGEX ]] && [ "$LATEST_BUGFIX_VER" != "$LATEST_MINOR_RELEASE_VER" ]; then
+    # shellcheck disable=SC2016
+    ENTRY_JSON=$(yq \
+      --arg replaces "$LATEST_BUGFIX" \
+      --arg skipRange ">=$LATEST_MINOR_RELEASE_VER <$LATEST_BUGFIX_VER" \
+      '{name, "replaces": $replaces, "skipRange": $skipRange}' "$BUNDLE_FILE")
+  else
+    # shellcheck disable=SC2016
+    ENTRY_JSON=$(yq \
+      --arg replaces "$LATEST_BUGFIX" \
+      '{name, "replaces": $replaces}' "$BUNDLE_FILE")
+  fi
 else
-  # Generate a basic entry with no upgrade path for nightly releases
-  ENTRY_JSON=$(yq --arg skipRange "<${BUNDLE_NAME##devworkspace-operator.v}" '{name, "skipRange": $skipRange}' "$BUNDLE_FILE")
+  # Generate a basic entry that replaces all earlier versions
+  ENTRY_JSON=$(yq --arg skipRange "<${BUNDLE_VER}" '{name, "skipRange": $skipRange}' "$BUNDLE_FILE")
 fi
 # shellcheck disable=SC2016
 yq -Y -i --argjson entry "$ENTRY_JSON" '.entries |= . + [$entry]' "$CHANNEL_FILE"
@@ -157,23 +176,9 @@ echo "Validating current index"
 opm validate "$OUTDIR"
 
 # Build index container
-# Building file-based-catalogs with OPM is broken in v1.19.1 due to https://github.com/operator-framework/operator-registry/pull/807
-# Instead, use previous opm v1.18.z process
-# $PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE" | sed 's|^|    |'
-# $PODMAN push "$INDEX_IMAGE" 2>&1 | sed 's|^|    |'
 echo "Building index image $INDEX_IMAGE"
-if [ "$RELEASE" == "true" ]; then
-  # The command below makes this script fragile. The index image represents the global (i.e. across all releases)
-  # state of the operator update graph so if the new bundle doesn't slot cleanly into what exists, this will fail.
-  opm index add \
-    --bundles "$BUNDLE_DIGEST" \
-    --from-index "$INDEX_IMAGE" \
-    --tag "$INDEX_IMAGE" \
-    --container-tool "$PODMAN"
-else
-  $PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE" | sed 's|^|    |'
-fi
-$PODMAN push "$INDEX_IMAGE" 2>&1 | sed 's|^|    |'
+$PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE"
+$PODMAN push "$INDEX_IMAGE" 2>&1
 
 if [ $DEBUG != "true" ] && [ "$RELEASE" != "true" ]; then
   echo "Cleaning up"

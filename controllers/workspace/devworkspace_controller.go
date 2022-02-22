@@ -604,7 +604,9 @@ func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
 
 func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *dw.DevWorkspace) (string, error) {
 	if idOverride := workspace.Annotations[constants.WorkspaceIdOverrideAnnotation]; idOverride != "" {
-		// TODO: Check overridden workspace ID's length (what should max be?)
+		if len(idOverride) > 25 {
+			return "", fmt.Errorf("maximum length for DevWorkspace ID override is 25 characters")
+		}
 		dwList := &dw.DevWorkspaceList{}
 		if err := r.Client.List(ctx, dwList, &client.ListOptions{Namespace: workspace.Namespace}); err != nil {
 			return "", fmt.Errorf("failed to check DevWorkspace ID override: %w", err)

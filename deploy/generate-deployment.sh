@@ -195,7 +195,8 @@ if $GEN_OLM; then
   TMPCSV="csv.tmp.yaml"
   yq -Y -s '
     .[0].spec.relatedImages =
-        [ .[1].spec.template.spec.containers[].env |
+        [ .[] | select(.kind == "Deployment") |
+          .spec.template.spec.containers[].env |
           select(length>0) |
           .[] |
           select(.name | test("RELATED_IMAGE.*")) |
@@ -205,7 +206,7 @@ if $GEN_OLM; then
           }
         ] | .[0]' \
     deploy/templates/components/csv/clusterserviceversion.yaml \
-    deploy/templates/components/manager/manager.yaml > "$TMPCSV"
+    deploy/deployment/openshift/combined.yaml > "$TMPCSV"
   mv $TMPCSV deploy/templates/components/csv/clusterserviceversion.yaml
 
   # It's needed to filter out the ServiceAccount object for OLM, as having a serviceaccount that matches the serviceaccount

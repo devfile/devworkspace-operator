@@ -133,13 +133,10 @@ jobs:
           pip install yq
 
           # Update images used in bundle to use the sha-tagged image rather than just 'next'
+          # make generate_olm_bundle_yaml will be invoked by build_index_image.sh
           export TAG="sha-${{ needs.build-next-imgs.outputs.git-sha }}"
           export DEFAULT_DWO_IMG="quay.io/devfile/devworkspace-controller:$TAG"
           export PROJECT_CLONE_IMG="quay.io/devfile/project-clone:$TAG"
-
-          ./deploy/generate-deployment.sh \
-            --use-defaults \
-            --generate-olm
 
           ./build/scripts/build_index_image.sh \
             --bundle-repo ${DWO_BUNDLE_REPO} \

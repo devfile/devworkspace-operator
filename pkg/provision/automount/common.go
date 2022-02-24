@@ -23,25 +23,30 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-type FatalError struct {
-	Err error
+var (
+	modeReadOnly = int32(0640)
+)
+
+type Resources struct {
+	Volumes       []corev1.Volume
+	VolumeMounts  []corev1.VolumeMount
+	EnvFromSource []corev1.EnvFromSource
 }
 
-func (e *FatalError) Error() string {
+type AutoMountError struct {
+	Err     error
+	IsFatal bool
+}
+
+func (e *AutoMountError) Error() string {
 	if e.Err != nil {
 		return e.Err.Error()
 	}
 	return ""
 }
 
-func (e *FatalError) Unwrap() error {
+func (e *AutoMountError) Unwrap() error {
 	return e.Err
-}
-
-type automountResources struct {
-	Volumes       []corev1.Volume
-	VolumeMounts  []corev1.VolumeMount
-	EnvFromSource []corev1.EnvFromSource
 }
 
 func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string) error {
@@ -72,8 +77,8 @@ func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sy
 	return nil
 }
 
-func getAutomountResources(api sync.ClusterAPI, namespace string) (*automountResources, error) {
-	gitCMAutoMountResources, err := provisionGitConfiguration(api, namespace)
+func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, error) {
+	gitCMAutoMountResources, err := ProvisionGitConfiguration(api, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +101,7 @@ func getAutomountResources(api sync.ClusterAPI, namespace string) (*automountRes
 	return mergeAutomountResources(gitCMAutoMountResources, cmAutoMountResources, secretAutoMountResources, pvcAutoMountResources), nil
 }
 
-func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, automount *automountResources) error {
+func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, automount *Resources) error {
 	// Get a map of automounted volume names to volume structs
 	automountVolumeNames := map[string]corev1.Volume{}
 	for _, volume := range automount.Volumes {
@@ -106,8 +111,10 @@ func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, auto
 	// Check that workspace volumes do not conflict with automounted volumes
 	for _, volume := range podAdditions.Volumes {
 		if conflict, exists := automountVolumeNames[volume.Name]; exists {
-			return &FatalError{fmt.Errorf("DevWorkspace volume '%s' conflicts with automounted volume from %s",
-				volume.Name, formatVolumeDescription(conflict))}
+			return &AutoMountError{
+				IsFatal: true,
+				Err:     fmt.Errorf("DevWorkspace volume '%s' conflicts with automounted volume from %s", volume.Name, formatVolumeDescription(conflict)),
+			}
 		}
 	}
 
@@ -115,8 +122,11 @@ func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, auto
 	automountVolumeMountsByMountPath := map[string]corev1.VolumeMount{}
 	for _, vm := range automount.VolumeMounts {
 		if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
-			return &FatalError{fmt.Errorf("auto-mounted volumes from %s and %s have the same mount path",
-				getVolumeDescriptionFromVolumeMount(vm, automount.Volumes), getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes))}
+			return &AutoMountError{
+				IsFatal: true,
+				Err: fmt.Errorf("auto-mounted volumes from %s and %s have the same mount path",
+					getVolumeDescriptionFromVolumeMount(vm, automount.Volumes), getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes)),
+			}
 		}
 		automountVolumeMountsByMountPath[vm.MountPath] = vm
 	}
@@ -125,25 +135,15 @@ func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, auto
 	for _, container := range podAdditions.Containers {
 		for _, vm := range container.VolumeMounts {
 			if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
-				return &FatalError{fmt.Errorf("DevWorkspace volume %s in container %s has same mountpath as auto-mounted volume from %s",
-					getVolumeDescriptionFromVolumeMount(vm, podAdditions.Volumes), container.Name, getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes))}
+				return &AutoMountError{
+					IsFatal: true,
+					Err: fmt.Errorf("DevWorkspace volume %s in container %s has same mountpath as auto-mounted volume from %s",
+						getVolumeDescriptionFromVolumeMount(vm, podAdditions.Volumes), container.Name, getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes)),
+				}
 			}
 		}
 	}
 	return nil
-}
-
-func mergeAutomountResources(resources ...*automountResources) *automountResources {
-	result := &automountResources{}
-	for _, resource := range resources {
-		if resource == nil {
-			continue
-		}
-		result.Volumes = append(result.Volumes, resource.Volumes...)
-		result.VolumeMounts = append(result.VolumeMounts, resource.VolumeMounts...)
-		result.EnvFromSource = append(result.EnvFromSource, resource.EnvFromSource...)
-	}
-	return result
 }
 
 // getVolumeDescriptionFromAutoVolumeMount takes a volumeMount and list of volumes and returns a formatted description of
@@ -168,4 +168,28 @@ func formatVolumeDescription(vol corev1.Volume) string {
 		return fmt.Sprintf("configmap '%s'", vol.ConfigMap.Name)
 	}
 	return fmt.Sprintf("'%s'", vol.Name)
+}
+
+func mergeAutomountResources(resources ...*Resources) *Resources {
+	result := &Resources{}
+	for _, resource := range resources {
+		if resource == nil {
+			continue
+		}
+		result.Volumes = append(result.Volumes, resource.Volumes...)
+		result.VolumeMounts = append(result.VolumeMounts, resource.VolumeMounts...)
+		result.EnvFromSource = append(result.EnvFromSource, resource.EnvFromSource...)
+	}
+	return result
+}
+
+func flattenAutomountResources(resources []Resources) Resources {
+	flattened := Resources{}
+	for _, resource := range resources {
+		flattened.Volumes = append(flattened.Volumes, resource.Volumes...)
+		flattened.VolumeMounts = append(flattened.VolumeMounts, resource.VolumeMounts...)
+		flattened.EnvFromSource = append(flattened.EnvFromSource, resource.EnvFromSource...)
+	}
+	return flattened
+
 }

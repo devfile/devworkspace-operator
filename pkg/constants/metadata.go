@@ -75,6 +75,15 @@ const (
 	// If mountAs is not provided, the default behaviour will be to mount as a file.
 	DevWorkspaceMountAsAnnotation = "controller.devfile.io/mount-as"
 
+	// DevWorkspaceMountAsEnv is the annotation value for DevWorkspaceMountAsAnnotation to mount the resource as environment variables
+	// via envFrom
+	DevWorkspaceMountAsEnv = "env"
+	// DevWorkspaceMountAsFile is the annotation value for DevWorkspaceMountAsAnnotation to mount the resource as files
+	DevWorkspaceMountAsFile = "file"
+	// DevWorkspaceMountAsSubpath is the annotation value for DevWorkspaceMountAsAnnotation to mount the resource as files using subpath
+	// mounts
+	DevWorkspaceMountAsSubpath = "subpath"
+
 	// DevWorkspaceMountReadyOnlyAnnotation is an annotation to configure whether a mounted volume is as read-write or
 	// as read-only. If "true", the volume is mounted as read-only. PersistentVolumeClaims are by default mounted
 	// read-write. Automounted configmaps and secrets are always mounted read-only and this annotation is ignored.

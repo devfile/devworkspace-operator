@@ -136,6 +136,8 @@ func printDiff(specObj, clusterObj crclient.Object, log logr.Logger) {
 			diffOpts = deploymentDiffOpts
 		case *corev1.ConfigMap:
 			diffOpts = configmapDiffOpts
+		case *corev1.Secret:
+			diffOpts = secretDiffOpts
 		case *v1alpha1.DevWorkspaceRouting:
 			diffOpts = routingDiffOpts
 		case *networkingv1.Ingress:

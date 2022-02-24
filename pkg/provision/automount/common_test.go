@@ -190,8 +190,8 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 		return pa
 	}
 
-	convertToAutomountResources := func(descs ...volumeDesc) *automountResources {
-		resources := &automountResources{}
+	convertToAutomountResources := func(descs ...volumeDesc) *Resources {
+		resources := &Resources{}
 		for _, desc := range descs {
 			volume, volumeMount, _ := convertDescToVolume(desc)
 			if volume != nil {

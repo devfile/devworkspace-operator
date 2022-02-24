@@ -26,36 +26,38 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, error) {
-	secrets := &corev1.SecretList{}
-	if err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resources, error) {
+	configmaps := &corev1.ConfigMapList{}
+	if err := api.Client.List(api.Ctx, configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, err
 	}
 	var allAutoMountResouces []Resources
-	for _, secret := range secrets.Items {
-		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
-		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
+	for _, configmap := range configmaps.Items {
+		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
+		mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {
-			mountPath = path.Join("/etc/", "secret/", secret.Name)
+			mountPath = path.Join("/etc/config/", configmap.Name)
 		}
-		allAutoMountResouces = append(allAutoMountResouces, getAutomountSecret(mountPath, mountAs, &secret))
+		allAutoMountResouces = append(allAutoMountResouces, getAutomountConfigmap(mountPath, mountAs, &configmap))
 	}
 	automountResources := flattenAutomountResources(allAutoMountResouces)
 	return &automountResources, nil
 }
 
-// getAutomountSecret defines the volumes, volumeMounts, and envFromSource that is required to mount
-// a given secret. Parameter mountAs defines how the secret should be mounted (file, subpath, or as env vars).
+// getAutomountConfigmap defines the volumes, volumeMounts, and envFromSource that is required to mount
+// a given configmap. Parameter mountAs defines how the secret should be mounted (file, subpath, or as env vars).
 // Parameter mountPath is ignored when mounting as environment variables
-func getAutomountSecret(mountPath, mountAs string, secret *corev1.Secret) Resources {
+func getAutomountConfigmap(mountPath, mountAs string, configmap *corev1.ConfigMap) Resources {
 	// Define volume to be used when mountAs is "file" or "subpath"
 	volume := corev1.Volume{
-		Name: common.AutoMountSecretVolumeName(secret.Name),
+		Name: common.AutoMountConfigMapVolumeName(configmap.Name),
 		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName:  secret.Name,
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: configmap.Name,
+				},
 				DefaultMode: &modeReadOnly,
 			},
 		},
@@ -65,18 +67,18 @@ func getAutomountSecret(mountPath, mountAs string, secret *corev1.Secret) Resour
 	switch mountAs {
 	case constants.DevWorkspaceMountAsEnv:
 		envFromSource := corev1.EnvFromSource{
-			SecretRef: &corev1.SecretEnvSource{
+			ConfigMapRef: &corev1.ConfigMapEnvSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: secret.Name,
+					Name: configmap.Name,
 				},
 			},
 		}
 		automount.EnvFromSource = []corev1.EnvFromSource{envFromSource}
 	case constants.DevWorkspaceMountAsSubpath:
 		var volumeMounts []corev1.VolumeMount
-		for secretKey := range secret.Data {
+		for secretKey := range configmap.Data {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      common.AutoMountSecretVolumeName(secret.Name),
+				Name:      common.AutoMountConfigMapVolumeName(configmap.Name),
 				ReadOnly:  true,
 				MountPath: path.Join(mountPath, secretKey),
 				SubPath:   secretKey,
@@ -86,7 +88,7 @@ func getAutomountSecret(mountPath, mountAs string, secret *corev1.Secret) Resour
 		automount.VolumeMounts = volumeMounts
 	case "", constants.DevWorkspaceMountAsFile:
 		volumeMount := corev1.VolumeMount{
-			Name:      common.AutoMountSecretVolumeName(secret.Name),
+			Name:      common.AutoMountConfigMapVolumeName(configmap.Name),
 			ReadOnly:  true,
 			MountPath: mountPath,
 		}

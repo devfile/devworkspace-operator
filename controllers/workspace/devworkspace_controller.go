@@ -294,9 +294,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Add automount resources into devfile containers
 	if err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace); err != nil {
-		var fatalErr *automount.FatalError
-		if errors.As(err, &fatalErr) {
-			return r.failWorkspace(workspace, fmt.Sprintf("Failed to process automount resources: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		var autoMountErr *automount.AutoMountError
+		if errors.As(err, &autoMountErr) {
+			if autoMountErr.IsFatal {
+				return r.failWorkspace(workspace, fmt.Sprintf("Failed to process automount resources: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			}
+			reqLogger.Info(autoMountErr.Error())
+			return reconcile.Result{Requeue: true}, nil
 		} else {
 			return reconcile.Result{}, err
 		}

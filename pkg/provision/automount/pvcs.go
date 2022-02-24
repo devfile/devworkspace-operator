@@ -26,7 +26,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*automountResources, error) {
+func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error) {
 	pvcs := &corev1.PersistentVolumeClaimList{}
 	if err := api.Client.List(api.Ctx, pvcs, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -64,7 +64,7 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*automountResource
 			MountPath: mountPath,
 		})
 	}
-	return &automountResources{
+	return &Resources{
 		Volumes:      volumes,
 		VolumeMounts: volumeMounts,
 	}, nil

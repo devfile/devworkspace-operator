@@ -19,6 +19,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -29,7 +31,9 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 		return nil, err
 	}
 	if len(credentialsSecrets) == 0 && len(tlsConfigMaps) == 0 {
-		return nil, nil
+		// Remove any existing git configuration
+		err := cleanupGitConfig(api, namespace)
+		return nil, err
 	}
 
 	mergedCredentialsSecret, err := mergeGitCredentials(namespace, credentialsSecrets)
@@ -70,7 +74,6 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 	default:
 		return nil, &AutoMountError{IsFatal: false, Err: err}
 	}
-
 	resources := flattenAutomountResources([]Resources{
 		getAutomountSecret(credentialsMountPath, constants.DevWorkspaceMountAsSubpath, mergedCredentialsSecret),
 		getAutomountConfigmap("/etc/", constants.DevWorkspaceMountAsSubpath, gitConfigMap),
@@ -106,4 +109,44 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 	}
 
 	return secrets, configmaps, nil
+}
+
+func cleanupGitConfig(api sync.ClusterAPI, namespace string) error {
+	secretNN := types.NamespacedName{
+		Name:      gitCredentialsSecretName,
+		Namespace: namespace,
+	}
+	tlsSecret := &corev1.Secret{}
+	err := api.Client.Get(api.Ctx, secretNN, tlsSecret)
+	switch {
+	case err == nil:
+		err := api.Client.Delete(api.Ctx, tlsSecret)
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return err
+		}
+	case k8sErrors.IsNotFound(err):
+		break
+	default:
+		return err
+	}
+
+	configmapNN := types.NamespacedName{
+		Name:      gitCredentialsConfigMapName,
+		Namespace: namespace,
+	}
+	credentialsConfigMap := &corev1.ConfigMap{}
+	err = api.Client.Get(api.Ctx, configmapNN, credentialsConfigMap)
+	switch {
+	case err == nil:
+		err := api.Client.Delete(api.Ctx, credentialsConfigMap)
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return err
+		}
+	case k8sErrors.IsNotFound(err):
+		break
+	default:
+		return err
+	}
+
+	return nil
 }

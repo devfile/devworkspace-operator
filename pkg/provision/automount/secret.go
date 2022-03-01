@@ -16,6 +16,7 @@
 package automount
 
 import (
+	"errors"
 	"path"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -35,6 +36,9 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 	}
 	var allAutoMountResouces []Resources
 	for _, secret := range secrets.Items {
+		if msg := checkAutomountVolumeForPotentialError(&secret); msg != "" {
+			return nil, &AutoMountError{Err: errors.New(msg), IsFatal: true}
+		}
 		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {

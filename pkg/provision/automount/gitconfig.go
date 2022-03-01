@@ -35,6 +35,10 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 		err := cleanupGitConfig(api, namespace)
 		return nil, err
 	}
+	baseGitConfig, err := findGitconfigAutomount(api, namespace)
+	if err != nil {
+		return nil, err
+	}
 
 	mergedCredentialsSecret, err := mergeGitCredentials(namespace, credentialsSecrets)
 	if err != nil {
@@ -46,7 +50,7 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 		return nil, &AutoMountError{IsFatal: true, Err: err}
 	}
 
-	gitConfigMap, err := constructGitConfig(namespace, credentialsMountPath, tlsConfigMaps)
+	gitConfigMap, err := constructGitConfig(namespace, credentialsMountPath, tlsConfigMaps, baseGitConfig)
 	if err != nil {
 		return nil, &AutoMountError{IsFatal: true, Err: err}
 	}

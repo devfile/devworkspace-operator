@@ -45,10 +45,14 @@ const defaultGitServerTemplate = `[http]
     sslCAInfo = %s
 `
 
-func constructGitConfig(namespace, credentialMountPath string, certificatesConfigMaps []corev1.ConfigMap) (*corev1.ConfigMap, error) {
+func constructGitConfig(namespace, credentialMountPath string, certificatesConfigMaps []corev1.ConfigMap, baseGitConfig *string) (*corev1.ConfigMap, error) {
 	var configSettings []string
 	if credentialMountPath != "" {
 		configSettings = append(configSettings, fmt.Sprintf(credentialTemplate, path.Join(credentialMountPath, gitCredentialsSecretKey)))
+	}
+
+	if baseGitConfig != nil {
+		configSettings = append(configSettings, *baseGitConfig)
 	}
 
 	defaultTLSFound := false

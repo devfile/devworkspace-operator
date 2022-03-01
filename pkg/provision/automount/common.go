@@ -17,6 +17,10 @@ package automount
 
 import (
 	"fmt"
+	"path"
+
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -91,6 +95,11 @@ func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, e
 	secretAutoMountResources, err := getDevWorkspaceSecrets(namespace, api)
 	if err != nil {
 		return nil, err
+	}
+
+	if gitCMAutoMountResources != nil && len(gitCMAutoMountResources.Volumes) > 0 {
+		filterGitconfigAutomountVolume(cmAutoMountResources)
+		filterGitconfigAutomountVolume(secretAutoMountResources)
 	}
 
 	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api)
@@ -191,5 +200,77 @@ func flattenAutomountResources(resources []Resources) Resources {
 		flattened.EnvFromSource = append(flattened.EnvFromSource, resource.EnvFromSource...)
 	}
 	return flattened
+}
 
+// findGitconfigAutomount searches a namespace for a automount resource (configmap or secret) that contains
+// a system-wide gitconfig (i.e. the mountpath is `/etc/gitconfig`). Only objects with mount type "subpath"
+// are considered. If a suitable object is found, the contents of the gitconfig defined there is returned.
+func findGitconfigAutomount(api sync.ClusterAPI, namespace string) (gitconfig *string, err error) {
+	configmapList := &corev1.ConfigMapList{}
+	if err := api.Client.List(api.Ctx, configmapList, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+		constants.DevWorkspaceMountLabel: "true",
+	}); err != nil {
+		return nil, err
+	}
+	for _, cm := range configmapList.Items {
+		if cm.Annotations[constants.DevWorkspaceMountAsAnnotation] != constants.DevWorkspaceMountAsSubpath {
+			continue
+		}
+		mountPath := cm.Annotations[constants.DevWorkspaceMountPathAnnotation]
+		for key, value := range cm.Data {
+			if path.Join(mountPath, key) == "/etc/gitconfig" {
+				if gitconfig != nil {
+					return nil, fmt.Errorf("duplicate automount keys on path /etc/gitconfig")
+				}
+				gitconfig = &value
+			}
+		}
+	}
+
+	secretList := &corev1.SecretList{}
+	if err := api.Client.List(api.Ctx, secretList, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+		constants.DevWorkspaceMountLabel: "true",
+	}); err != nil {
+		return nil, err
+	}
+	for _, secret := range secretList.Items {
+		if secret.Annotations[constants.DevWorkspaceMountAsAnnotation] != constants.DevWorkspaceMountAsSubpath {
+			continue
+		}
+		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
+		for key, value := range secret.Data {
+			if path.Join(mountPath, key) == "/etc/gitconfig" {
+				if gitconfig != nil {
+					return nil, fmt.Errorf("duplicate automount keys on path /etc/gitconfig")
+				}
+				strValue := string(value)
+				gitconfig = &strValue
+			}
+		}
+	}
+	return gitconfig, nil
+}
+
+func filterGitconfigAutomountVolume(resources *Resources) {
+	var filteredVolumeMounts []corev1.VolumeMount
+	var filteredVolumes []corev1.Volume
+	var gitConfigVolumeName string
+	volumeMountCounts := map[string]int{}
+	for _, vm := range resources.VolumeMounts {
+		if vm.MountPath == "/etc/gitconfig" {
+			gitConfigVolumeName = vm.Name
+			continue
+		}
+		filteredVolumeMounts = append(filteredVolumeMounts, vm)
+		volumeMountCounts[vm.Name] += 1
+	}
+	removeGitconfigVolume := volumeMountCounts[gitConfigVolumeName] == 0
+	for _, volume := range resources.Volumes {
+		if volume.Name == gitConfigVolumeName && removeGitconfigVolume {
+			continue
+		}
+		filteredVolumes = append(filteredVolumes, volume)
+	}
+	resources.VolumeMounts = filteredVolumeMounts
+	resources.Volumes = filteredVolumes
 }

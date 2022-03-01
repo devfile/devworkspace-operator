@@ -18,6 +18,7 @@ package automount
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -273,4 +274,38 @@ func filterGitconfigAutomountVolume(resources *Resources) {
 	}
 	resources.VolumeMounts = filteredVolumeMounts
 	resources.Volumes = filteredVolumes
+}
+
+// checkAutomountVolumeForPotentialError checks the configuration of an automount volume for potential errors
+// that can be caught early and returned to more clearly warn the user. If no issues are found, returns empty string
+func checkAutomountVolumeForPotentialError(obj k8sclient.Object) string {
+	var objDesc string
+	switch obj.(type) {
+	case *corev1.Secret:
+		objDesc = fmt.Sprintf("secret %s", obj.GetName())
+	case *corev1.ConfigMap:
+		objDesc = fmt.Sprintf("configmap %s", obj.GetName())
+	}
+
+	mountAs := obj.GetAnnotations()[constants.DevWorkspaceMountAsAnnotation]
+	mountPath := obj.GetAnnotations()[constants.DevWorkspaceMountPathAnnotation]
+
+	switch mountAs {
+	case constants.DevWorkspaceMountAsEnv:
+		if mountPath != "" {
+			return fmt.Sprintf("automatically mounted %s should not define a mount path if it is mounted as environment variables", objDesc)
+		}
+	case constants.DevWorkspaceMountAsFile:
+		if !strings.HasSuffix(mountPath, "/") {
+			mountPath = mountPath + "/"
+		}
+		if strings.Contains(mountPath, ":") {
+			return fmt.Sprintf("automatically mounted %s mount path cannot contain ':'", objDesc)
+		}
+		if mountPath == "/etc/" || mountPath == "/usr/" || mountPath == "/lib/" || mountPath == "/tmp/" {
+			return fmt.Sprintf("automatically mounted %s is mounted as files but collides with system path %s -- mount as subpath instead", objDesc, mountPath)
+		}
+	}
+
+	return ""
 }

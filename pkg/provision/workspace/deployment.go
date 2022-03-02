@@ -284,6 +284,12 @@ func getSpecDeployment(
 	if nodeSelector != nil && len(nodeSelector) > 0 {
 		deployment.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
+	if workspace.Spec.Template.Attributes.Exists(constants.RuntimeClassNameAttribute) {
+		runtimeClassName := workspace.Spec.Template.Attributes.GetString(constants.RuntimeClassNameAttribute, nil)
+		if runtimeClassName != "" {
+			deployment.Spec.Template.Spec.RuntimeClassName = &runtimeClassName
+		}
+	}
 
 	if needPVC, pvcName := needsPVCWorkaround(podAdditions); needPVC {
 		// Kubernetes creates directories in a PVC to support subpaths such that only the leaf directory has g+rwx permissions.

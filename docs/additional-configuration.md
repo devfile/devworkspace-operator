@@ -124,3 +124,18 @@ Note: As for automatically mounting secrets, it is necessary to apply the `contr
 
 ## Debugging a failing workspace
 Normally, when a workspace fails to start, the deployment will be scaled down and the workspace will be stopped in a `Failed` state. This can make it difficult to debug misconfiguration errors, so the annotation `controller.devfile.io/debug-start: "true"` can be applied to DevWorkspaces to leave resources for failed workspaces on the cluster. This allows viewing logs from workspace containers.
+
+## Setting RuntimeClass for workspace pods
+To run a DevWorkspace with a specific RuntimeClass, the attribute `controller.devfile.io/runtime-class` can be set on the DevWorkspace with the name of the RuntimeClass to be used. If the specified RuntimeClass does not exist, the workspace will fail to start. For example, to run a DevWorkspace using the [kata containers](https://github.com/kata-containers/kata-containers) runtime in clusters where this is enabled, the DevWorkspace can be specified:
+```yaml
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: my-workspace
+spec:
+  template:
+    attributes:
+      controller.devfile.io/runtime-class: kata
+```
+
+For documentation on Runtime Classes, see https://kubernetes.io/docs/concepts/containers/runtime-class/

@@ -27,6 +27,10 @@ const (
 	//                stopped.
 	DevWorkspaceStorageTypeAttribute = "controller.devfile.io/storage-type"
 
+	// RuntimeClassNameAttribute is an attribute added to a DevWorkspace to specify a runtimeClassName for container
+	// components in the DevWorkspace (pod.spec.runtimeClassName). If empty, no runtimeClassName is added.
+	RuntimeClassNameAttribute = "controller.devfile.io/runtime-class"
+
 	// WorkspaceEnvAttribute is an attribute that specifies a set of environment variables provided by a component
 	// that should be added to all workspace containers. The structure of the attribute value should be a list of
 	// Devfile 2.0 EnvVar, e.g.

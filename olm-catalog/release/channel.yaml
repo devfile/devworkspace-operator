@@ -13,3 +13,6 @@ entries:
     replaces: devworkspace-operator.v0.12.1
   - name: devworkspace-operator.v0.12.3
     replaces: devworkspace-operator.v0.12.2
+  - name: devworkspace-operator.v0.13.0
+    replaces: devworkspace-operator.v0.12.3
+    skipRange: '>=0.12.0 <0.12.3'

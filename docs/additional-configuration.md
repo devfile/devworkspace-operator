@@ -122,6 +122,24 @@ data:
 
 Note: As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to git credentials secrets
 
+## Applying labels and annotations to the workspace deployment
+In some cases, it is useful to apply additional labels or annotations to the deployment that is created for a DevWorkspace. This is supported by setting attributes `controller.devfile.io/deployment-labels` and `controller.devfile.io/deployment-annotations` in the DevWorkspace's attributes field. The value of these attributes should be specified as a string map, as it is for regular metadata labels and annotations. For example:
+```
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: my-workspace
+spec:
+  template:
+    attributes:
+      controller.devfile.io/deployment-labels:
+        my-label: foo
+        my-other-label: bar
+      controller.devfile.io/deployment-annotations:
+        my-attribute: foo
+        my-other-attribute: bar
+```
+
 ## Debugging a failing workspace
 Normally, when a workspace fails to start, the deployment will be scaled down and the workspace will be stopped in a `Failed` state. This can make it difficult to debug misconfiguration errors, so the annotation `controller.devfile.io/debug-start: "true"` can be applied to DevWorkspaces to leave resources for failed workspaces on the cluster. This allows viewing logs from workspace containers.
 

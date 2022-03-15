@@ -235,14 +235,19 @@ func getSpecDeployment(
 		podAdditions.InitContainers[idx].VolumeMounts = append(podAdditions.InitContainers[idx].VolumeMounts, podAdditions.VolumeMounts...)
 	}
 
+	labels, annotations, err := getAdditionalLabelsAndAttributes(workspace)
+	if err != nil {
+		return nil, err
+	}
+	labels[constants.DevWorkspaceIDLabel] = workspace.Status.DevWorkspaceId
+	labels[constants.DevWorkspaceNameLabel] = workspace.Name
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
-			Namespace: workspace.Namespace,
-			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
-				constants.DevWorkspaceNameLabel: workspace.Name,
-			},
+			Name:        common.DeploymentName(workspace.Status.DevWorkspaceId),
+			Namespace:   workspace.Namespace,
+			Labels:      labels,
+			Annotations: annotations,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -500,4 +505,23 @@ func checkIfUnrecoverableEventIgnored(reason string) (ignored bool) {
 		}
 	}
 	return false
+}
+
+// getAdditionalLabelsAndAttributes reads attributes on the DevWorkspace and returns the additional labels and
+// attributes that should be applied to the DevWorkspace. Returns an error if attributes cannot be deserialized
+// into a map[string]string. If attributes are not defined, returns an empty map.
+func getAdditionalLabelsAndAttributes(workspace *dw.DevWorkspace) (labels, annotations map[string]string, err error) {
+	labels = map[string]string{}
+	annotations = map[string]string{}
+	if workspace.Spec.Template.Attributes.Exists(constants.DeployLabelsAttribute) {
+		if err := workspace.Spec.Template.Attributes.GetInto(constants.DeployLabelsAttribute, &labels); err != nil {
+			return nil, nil, fmt.Errorf("failed to process %s attribute: %w", constants.DeployLabelsAttribute, err)
+		}
+	}
+	if workspace.Spec.Template.Attributes.Exists(constants.DeployAnnotationsAttribute) {
+		if err := workspace.Spec.Template.Attributes.GetInto(constants.DeployAnnotationsAttribute, &annotations); err != nil {
+			return nil, nil, fmt.Errorf("failed to process %s attribute: %w", constants.DeployAnnotationsAttribute, err)
+		}
+	}
+	return labels, annotations, nil
 }

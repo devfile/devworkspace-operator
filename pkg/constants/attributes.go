@@ -65,6 +65,14 @@ const (
 	//               will not be cloned into the workspace on start.
 	ProjectCloneAttribute = "controller.devfile.io/project-clone"
 
+	// DeployLabelsAttribute is an DevWorkspace attribute used in .spec.attributes that defines additional labels
+	// that should be applied to the workspace deployment. Value should be a map[string]string
+	DeployLabelsAttribute = "controller.devfile.io/deployment-labels"
+
+	// DeployAnnotationsAttribute is an DevWorkspace attribute used in .spec.attributes that defines additional annotations
+	// that should be applied to the workspace deployment. Value should be a map[string]string
+	DeployAnnotationsAttribute = "controller.devfile.io/deployment-annotations"
+
 	// PluginSourceAttribute is an attribute added to components, commands, and projects in a flattened
 	// DevWorkspace representation to signify where the respective component came from (i.e. which plugin
 	// or parent imported it)

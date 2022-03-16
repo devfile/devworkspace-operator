@@ -221,7 +221,7 @@ func resolveElementByKubernetesImport(
 	}
 
 	if !canImportDWT(tools.WorkspaceNamespace, &dwTemplate) {
-		return nil, fmt.Errorf("could not find DevWorkspaceTemplate")
+		return nil, fmt.Errorf("plugin for component %s not found", name)
 	}
 
 	return &dwTemplate.Spec, nil

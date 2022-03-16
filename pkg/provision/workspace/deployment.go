@@ -51,12 +51,16 @@ var containerFailureStateReasons = []string{
 	"RunContainerError",
 }
 
-var unrecoverablePodEventReasons = []string{
-	"FailedPostStartHook",
-	"FailedMount",
-	"FailedScheduling",
-	"FailedCreate",
-	"ReplicaSetCreateError",
+// unrecoverablePodEventReasons contains Kubernetes events that should fail workspace startup
+// if they occur related to a workspace pod. Events are stored as a map with event names as keys
+// and values representing the threshold of how many times we can see an event before it is considered
+// unrecoverable.
+var unrecoverablePodEventReasons = map[string]int32{
+	"FailedPostStartHook":   1,
+	"FailedMount":           3,
+	"FailedScheduling":      1,
+	"FailedCreate":          1,
+	"ReplicaSetCreateError": 1,
 }
 
 var unrecoverableDeploymentConditionReasons = []string{
@@ -473,9 +477,15 @@ func checkPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.Cluster
 			continue
 		}
 
-		for _, fatalEv := range unrecoverablePodEventReasons {
-			if ev.Reason == fatalEv && !checkIfUnrecoverableEventIgnored(ev.Reason) {
-				return fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, ev.Message), nil
+		if maxCount, isUnrecoverableEvent := unrecoverablePodEventReasons[ev.Reason]; isUnrecoverableEvent {
+			if !checkIfUnrecoverableEventIgnored(ev.Reason) && ev.Count >= maxCount {
+				var msg string
+				if ev.Count > 1 {
+					msg = fmt.Sprintf("Detected unrecoverable event %s %d times: %s", ev.Reason, ev.Count, ev.Message)
+				} else {
+					msg = fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, ev.Message)
+				}
+				return msg, nil
 			}
 		}
 	}

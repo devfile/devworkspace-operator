@@ -3953,7 +3953,8 @@ spec:
                         unless the component has its `dedicatedPod` field set to `true`.
                         \n When no `apply` command exist for a given component, it
                         is assumed the component will be applied at devworkspace start
-                        by default."
+                        by default, unless `deployByDefault` for that component is
+                        set to false."
                       properties:
                         component:
                           description: Describes component that will be applied
@@ -4199,6 +4200,21 @@ spec:
                       description: Allows adding and configuring devworkspace-related
                         containers
                       properties:
+                        annotation:
+                          description: Annotations that should be added to specific
+                            resources for this container
+                          properties:
+                            deployment:
+                              additionalProperties:
+                                type: string
+                              description: Annotations to be added to deployment
+                              type: object
+                            service:
+                              additionalProperties:
+                                type: string
+                              description: Annotations to be added to service
+                              type: object
+                          type: object
                         args:
                           description: "The arguments to supply to the command running
                             the dockerimage component. The arguments are supplied
@@ -4228,6 +4244,12 @@ spec:
                         endpoints:
                           items:
                             properties:
+                              annotation:
+                                additionalProperties:
+                                  type: string
+                                description: Annotations to be added to Kubernetes
+                                  Ingress or Openshift Route
+                                type: object
                               attributes:
                                 description: "Map of implementation-dependant string-based
                                   free-form attributes. \n Examples of Che-specific
@@ -4294,6 +4316,7 @@ spec:
                                   `wss`.
                                 type: boolean
                               targetPort:
+                                description: The port number should be unique.
                                 type: integer
                             required:
                             - name
@@ -4390,6 +4413,10 @@ spec:
                       - required:
                         - dockerfile
                       properties:
+                        autoBuild:
+                          description: "Defines if the image should be built during
+                            startup. \n Default value is `false`"
+                          type: boolean
                         dockerfile:
                           description: Allows specifying dockerfile type build
                           oneOf:
@@ -4408,7 +4435,7 @@ spec:
                               type: array
                             buildContext:
                               description: Path of source directory to establish build
-                                context. Defaults to ${PROJECT_ROOT} in the container
+                                context. Defaults to ${PROJECT_SOURCE} in the container
                               type: string
                             devfileRegistry:
                               description: Dockerfile's Devfile Registry source
@@ -4507,9 +4534,19 @@ spec:
                       - required:
                         - inlined
                       properties:
+                        deployByDefault:
+                          description: "Defines if the component should be deployed
+                            during startup. \n Default value is `false`"
+                          type: boolean
                         endpoints:
                           items:
                             properties:
+                              annotation:
+                                additionalProperties:
+                                  type: string
+                                description: Annotations to be added to Kubernetes
+                                  Ingress or Openshift Route
+                                type: object
                               attributes:
                                 description: "Map of implementation-dependant string-based
                                   free-form attributes. \n Examples of Che-specific
@@ -4576,6 +4613,7 @@ spec:
                                   `wss`.
                                 type: boolean
                               targetPort:
+                                description: The port number should be unique.
                                 type: integer
                             required:
                             - name
@@ -4614,9 +4652,19 @@ spec:
                       - required:
                         - inlined
                       properties:
+                        deployByDefault:
+                          description: "Defines if the component should be deployed
+                            during startup. \n Default value is `false`"
+                          type: boolean
                         endpoints:
                           items:
                             properties:
+                              annotation:
+                                additionalProperties:
+                                  type: string
+                                description: Annotations to be added to Kubernetes
+                                  Ingress or Openshift Route
+                                type: object
                               attributes:
                                 description: "Map of implementation-dependant string-based
                                   free-form attributes. \n Examples of Che-specific
@@ -4683,6 +4731,7 @@ spec:
                                   `wss`.
                                 type: boolean
                               targetPort:
+                                description: The port number should be unique.
                                 type: integer
                             required:
                             - name
@@ -4739,7 +4788,9 @@ spec:
                                   unless the component has its `dedicatedPod` field
                                   set to `true`. \n When no `apply` command exist
                                   for a given component, it is assumed the component
-                                  will be applied at devworkspace start by default."
+                                  will be applied at devworkspace start by default,
+                                  unless `deployByDefault` for that component is set
+                                  to false."
                                 properties:
                                   component:
                                     description: Describes component that will be
@@ -4941,6 +4992,21 @@ spec:
                                 description: Allows adding and configuring devworkspace-related
                                   containers
                                 properties:
+                                  annotation:
+                                    description: Annotations that should be added
+                                      to specific resources for this container
+                                    properties:
+                                      deployment:
+                                        additionalProperties:
+                                          type: string
+                                        description: Annotations to be added to deployment
+                                        type: object
+                                      service:
+                                        additionalProperties:
+                                          type: string
+                                        description: Annotations to be added to service
+                                        type: object
+                                    type: object
                                   args:
                                     description: "The arguments to supply to the command
                                       running the dockerimage component. The arguments
@@ -4972,6 +5038,12 @@ spec:
                                   endpoints:
                                     items:
                                       properties:
+                                        annotation:
+                                          additionalProperties:
+                                            type: string
+                                          description: Annotations to be added to
+                                            Kubernetes Ingress or Openshift Route
+                                          type: object
                                         attributes:
                                           description: "Map of implementation-dependant
                                             string-based free-form attributes. \n
@@ -5044,6 +5116,7 @@ spec:
                                             a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
+                                          description: The port number should be unique.
                                           type: integer
                                       required:
                                       - name
@@ -5118,7 +5191,13 @@ spec:
                                 oneOf:
                                 - required:
                                   - dockerfile
+                                - required:
+                                  - autoBuild
                                 properties:
+                                  autoBuild:
+                                    description: "Defines if the image should be built
+                                      during startup. \n Default value is `false`"
+                                    type: boolean
                                   dockerfile:
                                     description: Allows specifying dockerfile type
                                       build
@@ -5138,7 +5217,7 @@ spec:
                                         type: array
                                       buildContext:
                                         description: Path of source directory to establish
-                                          build context. Defaults to ${PROJECT_ROOT}
+                                          build context. Defaults to ${PROJECT_SOURCE}
                                           in the container
                                         type: string
                                       devfileRegistry:
@@ -5224,6 +5303,7 @@ spec:
                                     description: Type of image
                                     enum:
                                     - Dockerfile
+                                    - AutoBuild
                                     type: string
                                 type: object
                               kubernetes:
@@ -5237,9 +5317,20 @@ spec:
                                 - required:
                                   - inlined
                                 properties:
+                                  deployByDefault:
+                                    description: "Defines if the component should
+                                      be deployed during startup. \n Default value
+                                      is `false`"
+                                    type: boolean
                                   endpoints:
                                     items:
                                       properties:
+                                        annotation:
+                                          additionalProperties:
+                                            type: string
+                                          description: Annotations to be added to
+                                            Kubernetes Ingress or Openshift Route
+                                          type: object
                                         attributes:
                                           description: "Map of implementation-dependant
                                             string-based free-form attributes. \n
@@ -5312,6 +5403,7 @@ spec:
                                             a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
+                                          description: The port number should be unique.
                                           type: integer
                                       required:
                                       - name
@@ -5350,9 +5442,20 @@ spec:
                                 - required:
                                   - inlined
                                 properties:
+                                  deployByDefault:
+                                    description: "Defines if the component should
+                                      be deployed during startup. \n Default value
+                                      is `false`"
+                                    type: boolean
                                   endpoints:
                                     items:
                                       properties:
+                                        annotation:
+                                          additionalProperties:
+                                            type: string
+                                          description: Annotations to be added to
+                                            Kubernetes Ingress or Openshift Route
+                                          type: object
                                         attributes:
                                           description: "Map of implementation-dependant
                                             string-based free-form attributes. \n
@@ -5425,6 +5528,7 @@ spec:
                                             a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
+                                          description: The port number should be unique.
                                           type: integer
                                       required:
                                       - name
@@ -5493,6 +5597,15 @@ spec:
                           description: URI Reference of a parent devfile YAML file.
                             It can be a full URL or a relative URI with the current
                             devfile as the base URI.
+                          type: string
+                        version:
+                          description: Specific stack/sample version to pull the parent
+                            devfile from, when using id in the parent reference. To
+                            specify `version`, `id` must be defined and used as the
+                            import reference source. `version` can be either a specific
+                            stack version, or `latest`. If no `version` specified,
+                            default version will be used.
+                          pattern: ^(latest)|(([1-9])\.([0-9]+)\.([0-9]+)(\-[0-9a-z-]+(\.[0-9a-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?)$
                           type: string
                       type: object
                     volume:
@@ -5583,7 +5696,8 @@ spec:
                             the devworkspace POD, unless the component has its `dedicatedPod`
                             field set to `true`. \n When no `apply` command exist
                             for a given component, it is assumed the component will
-                            be applied at devworkspace start by default."
+                            be applied at devworkspace start by default, unless `deployByDefault`
+                            for that component is set to false."
                           properties:
                             component:
                               description: Describes component that will be applied
@@ -5779,6 +5893,21 @@ spec:
                           description: Allows adding and configuring devworkspace-related
                             containers
                           properties:
+                            annotation:
+                              description: Annotations that should be added to specific
+                                resources for this container
+                              properties:
+                                deployment:
+                                  additionalProperties:
+                                    type: string
+                                  description: Annotations to be added to deployment
+                                  type: object
+                                service:
+                                  additionalProperties:
+                                    type: string
+                                  description: Annotations to be added to service
+                                  type: object
+                              type: object
                             args:
                               description: "The arguments to supply to the command
                                 running the dockerimage component. The arguments are
@@ -5810,6 +5939,12 @@ spec:
                             endpoints:
                               items:
                                 properties:
+                                  annotation:
+                                    additionalProperties:
+                                      type: string
+                                    description: Annotations to be added to Kubernetes
+                                      Ingress or Openshift Route
+                                    type: object
                                   attributes:
                                     description: "Map of implementation-dependant
                                       string-based free-form attributes. \n Examples
@@ -5878,6 +6013,7 @@ spec:
                                       or `wss`.
                                     type: boolean
                                   targetPort:
+                                    description: The port number should be unique.
                                     type: integer
                                 required:
                                 - name
@@ -5948,7 +6084,13 @@ spec:
                           oneOf:
                           - required:
                             - dockerfile
+                          - required:
+                            - autoBuild
                           properties:
+                            autoBuild:
+                              description: "Defines if the image should be built during
+                                startup. \n Default value is `false`"
+                              type: boolean
                             dockerfile:
                               description: Allows specifying dockerfile type build
                               oneOf:
@@ -5967,7 +6109,7 @@ spec:
                                   type: array
                                 buildContext:
                                   description: Path of source directory to establish
-                                    build context. Defaults to ${PROJECT_ROOT} in
+                                    build context. Defaults to ${PROJECT_SOURCE} in
                                     the container
                                   type: string
                                 devfileRegistry:
@@ -6048,6 +6190,7 @@ spec:
                               description: Type of image
                               enum:
                               - Dockerfile
+                              - AutoBuild
                               type: string
                           type: object
                         kubernetes:
@@ -6061,9 +6204,19 @@ spec:
                           - required:
                             - inlined
                           properties:
+                            deployByDefault:
+                              description: "Defines if the component should be deployed
+                                during startup. \n Default value is `false`"
+                              type: boolean
                             endpoints:
                               items:
                                 properties:
+                                  annotation:
+                                    additionalProperties:
+                                      type: string
+                                    description: Annotations to be added to Kubernetes
+                                      Ingress or Openshift Route
+                                    type: object
                                   attributes:
                                     description: "Map of implementation-dependant
                                       string-based free-form attributes. \n Examples
@@ -6132,6 +6285,7 @@ spec:
                                       or `wss`.
                                     type: boolean
                                   targetPort:
+                                    description: The port number should be unique.
                                     type: integer
                                 required:
                                 - name
@@ -6169,9 +6323,19 @@ spec:
                           - required:
                             - inlined
                           properties:
+                            deployByDefault:
+                              description: "Defines if the component should be deployed
+                                during startup. \n Default value is `false`"
+                              type: boolean
                             endpoints:
                               items:
                                 properties:
+                                  annotation:
+                                    additionalProperties:
+                                      type: string
+                                    description: Annotations to be added to Kubernetes
+                                      Ingress or Openshift Route
+                                    type: object
                                   attributes:
                                     description: "Map of implementation-dependant
                                       string-based free-form attributes. \n Examples
@@ -6240,6 +6404,7 @@ spec:
                                       or `wss`.
                                     type: boolean
                                   targetPort:
+                                    description: The port number should be unique.
                                     type: integer
                                 required:
                                 - name
@@ -6296,7 +6461,9 @@ spec:
                                       has its `dedicatedPod` field set to `true`.
                                       \n When no `apply` command exist for a given
                                       component, it is assumed the component will
-                                      be applied at devworkspace start by default."
+                                      be applied at devworkspace start by default,
+                                      unless `deployByDefault` for that component
+                                      is set to false."
                                     properties:
                                       component:
                                         description: Describes component that will
@@ -6500,6 +6667,23 @@ spec:
                                     description: Allows adding and configuring devworkspace-related
                                       containers
                                     properties:
+                                      annotation:
+                                        description: Annotations that should be added
+                                          to specific resources for this container
+                                        properties:
+                                          deployment:
+                                            additionalProperties:
+                                              type: string
+                                            description: Annotations to be added to
+                                              deployment
+                                            type: object
+                                          service:
+                                            additionalProperties:
+                                              type: string
+                                            description: Annotations to be added to
+                                              service
+                                            type: object
+                                        type: object
                                       args:
                                         description: "The arguments to supply to the
                                           command running the dockerimage component.
@@ -6532,6 +6716,13 @@ spec:
                                       endpoints:
                                         items:
                                           properties:
+                                            annotation:
+                                              additionalProperties:
+                                                type: string
+                                              description: Annotations to be added
+                                                to Kubernetes Ingress or Openshift
+                                                Route
+                                              type: object
                                             attributes:
                                               description: "Map of implementation-dependant
                                                 string-based free-form attributes.
@@ -6610,6 +6801,8 @@ spec:
                                                 `wss`.
                                               type: boolean
                                             targetPort:
+                                              description: The port number should
+                                                be unique.
                                               type: integer
                                           required:
                                           - name
@@ -6684,7 +6877,14 @@ spec:
                                     oneOf:
                                     - required:
                                       - dockerfile
+                                    - required:
+                                      - autoBuild
                                     properties:
+                                      autoBuild:
+                                        description: "Defines if the image should
+                                          be built during startup. \n Default value
+                                          is `false`"
+                                        type: boolean
                                       dockerfile:
                                         description: Allows specifying dockerfile
                                           type build
@@ -6705,7 +6905,7 @@ spec:
                                           buildContext:
                                             description: Path of source directory
                                               to establish build context. Defaults
-                                              to ${PROJECT_ROOT} in the container
+                                              to ${PROJECT_SOURCE} in the container
                                             type: string
                                           devfileRegistry:
                                             description: Dockerfile's Devfile Registry
@@ -6796,6 +6996,7 @@ spec:
                                         description: Type of image
                                         enum:
                                         - Dockerfile
+                                        - AutoBuild
                                         type: string
                                     type: object
                                   kubernetes:
@@ -6810,9 +7011,21 @@ spec:
                                     - required:
                                       - inlined
                                     properties:
+                                      deployByDefault:
+                                        description: "Defines if the component should
+                                          be deployed during startup. \n Default value
+                                          is `false`"
+                                        type: boolean
                                       endpoints:
                                         items:
                                           properties:
+                                            annotation:
+                                              additionalProperties:
+                                                type: string
+                                              description: Annotations to be added
+                                                to Kubernetes Ingress or Openshift
+                                                Route
+                                              type: object
                                             attributes:
                                               description: "Map of implementation-dependant
                                                 string-based free-form attributes.
@@ -6891,6 +7104,8 @@ spec:
                                                 `wss`.
                                               type: boolean
                                             targetPort:
+                                              description: The port number should
+                                                be unique.
                                               type: integer
                                           required:
                                           - name
@@ -6930,9 +7145,21 @@ spec:
                                     - required:
                                       - inlined
                                     properties:
+                                      deployByDefault:
+                                        description: "Defines if the component should
+                                          be deployed during startup. \n Default value
+                                          is `false`"
+                                        type: boolean
                                       endpoints:
                                         items:
                                           properties:
+                                            annotation:
+                                              additionalProperties:
+                                                type: string
+                                              description: Annotations to be added
+                                                to Kubernetes Ingress or Openshift
+                                                Route
+                                              type: object
                                             attributes:
                                               description: "Map of implementation-dependant
                                                 string-based free-form attributes.
@@ -7011,6 +7238,8 @@ spec:
                                                 `wss`.
                                               type: boolean
                                             targetPort:
+                                              description: The port number should
+                                                be unique.
                                               type: integer
                                           required:
                                           - name
@@ -7078,6 +7307,15 @@ spec:
                               description: URI Reference of a parent devfile YAML
                                 file. It can be a full URL or a relative URI with
                                 the current devfile as the base URI.
+                              type: string
+                            version:
+                              description: Specific stack/sample version to pull the
+                                parent devfile from, when using id in the parent reference.
+                                To specify `version`, `id` must be defined and used
+                                as the import reference source. `version` can be either
+                                a specific stack version, or `latest`. If no `version`
+                                specified, default version will be used.
+                              pattern: ^(latest)|(([1-9])\.([0-9]+)\.([0-9]+)(\-[0-9a-z-]+(\.[0-9a-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?)$
                               type: string
                           type: object
                         volume:
@@ -7285,6 +7523,15 @@ spec:
                       Overriding is done according to K8S strategic merge patch standard
                       rules.
                     type: object
+                  version:
+                    description: Specific stack/sample version to pull the parent
+                      devfile from, when using id in the parent reference. To specify
+                      `version`, `id` must be defined and used as the import reference
+                      source. `version` can be either a specific stack version, or
+                      `latest`. If no `version` specified, default version will be
+                      used.
+                    pattern: ^(latest)|(([1-9])\.([0-9]+)\.([0-9]+)(\-[0-9a-z-]+(\.[0-9a-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?)$
+                    type: string
                 type: object
               projects:
                 description: Projects worked on in the devworkspace, containing names

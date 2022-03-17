@@ -239,12 +239,11 @@ func getSpecDeployment(
 		podAdditions.InitContainers[idx].VolumeMounts = append(podAdditions.InitContainers[idx].VolumeMounts, podAdditions.VolumeMounts...)
 	}
 
-	labels, annotations, err := getAdditionalLabelsAndAttributes(workspace)
-	if err != nil {
-		return nil, err
-	}
+	labels := map[string]string{}
 	labels[constants.DevWorkspaceIDLabel] = workspace.Status.DevWorkspaceId
 	labels[constants.DevWorkspaceNameLabel] = workspace.Name
+
+	annotations, err := getAdditionalAnnotations(workspace)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -460,6 +459,24 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) (needs bool, pvcNam
 	return false, ""
 }
 
+func getAdditionalAnnotations(workspace *dw.DevWorkspace) (map[string]string, error) {
+	annotations := map[string]string{}
+
+	for _, component := range workspace.Spec.Template.Components {
+		if component.Container == nil || component.Container.Annotation == nil || component.Container.Annotation.Deployment == nil {
+			continue
+		}
+		for k, v := range component.Container.Annotation.Deployment {
+			if currValue, exists := annotations[k]; exists && v != currValue {
+				return nil, fmt.Errorf("conflicting annotations found on container components for key %s", k)
+			}
+			annotations[k] = v
+		}
+	}
+
+	return annotations, nil
+}
+
 func checkPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.ClusterAPI) (msg string, err error) {
 	evs := &corev1.EventList{}
 	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
@@ -515,23 +532,4 @@ func checkIfUnrecoverableEventIgnored(reason string) (ignored bool) {
 		}
 	}
 	return false
-}
-
-// getAdditionalLabelsAndAttributes reads attributes on the DevWorkspace and returns the additional labels and
-// attributes that should be applied to the DevWorkspace. Returns an error if attributes cannot be deserialized
-// into a map[string]string. If attributes are not defined, returns an empty map.
-func getAdditionalLabelsAndAttributes(workspace *dw.DevWorkspace) (labels, annotations map[string]string, err error) {
-	labels = map[string]string{}
-	annotations = map[string]string{}
-	if workspace.Spec.Template.Attributes.Exists(constants.DeployLabelsAttribute) {
-		if err := workspace.Spec.Template.Attributes.GetInto(constants.DeployLabelsAttribute, &labels); err != nil {
-			return nil, nil, fmt.Errorf("failed to process %s attribute: %w", constants.DeployLabelsAttribute, err)
-		}
-	}
-	if workspace.Spec.Template.Attributes.Exists(constants.DeployAnnotationsAttribute) {
-		if err := workspace.Spec.Template.Attributes.GetInto(constants.DeployAnnotationsAttribute, &annotations); err != nil {
-			return nil, nil, fmt.Errorf("failed to process %s attribute: %w", constants.DeployAnnotationsAttribute, err)
-		}
-	}
-	return labels, annotations, nil
 }

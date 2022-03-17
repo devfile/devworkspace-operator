@@ -24,4 +24,4 @@ input:
               image: test-img
 
 output:
-  errRegexp: "could not find DevWorkspaceTemplate"
+  errRegexp: "plugin for component plugin-a not found"

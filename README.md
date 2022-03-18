@@ -23,7 +23,7 @@ metadata:
     controller.devfile.io/restricted-access: true
 ```
 ## Prerequisites
-- go
+- go 1.16 or later
 - git
 - sed
 - jq
@@ -127,7 +127,7 @@ make run
 When running locally, only a single namespace is watched; as a result, all devworkspaces have to be deployed to `${NAMESPACE}`
 
 ### Run controller locally and debug
-Debugging the controller depends on `delve` being installed (`go get -u github.com/go-delve/delve/cmd/dlv`). Note that at the time of writing, executing `go get` in this repo's directory will update go.mod; these changes should be dropped before committing.
+Debugging the controller depends on [delve](https://github.com/go-delve/delve) being installed (`go install github.com/go-delve/delve/cmd/dlv@latest`). Note that `$GOPATH/bin` or `$GOBIN` must be added to `$PATH` in order for `make debug` to run correctly.
 
 ```bash
 make install

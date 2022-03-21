@@ -104,7 +104,6 @@ Some of the rules supported by the makefile:
 | docker | build and push docker image |
 | install | install controller to cluster |
 | restart | restart cluster controller deployment |
-| install_crds | update CRDs on cluster |
 | install_cert_manager | installs the cert-manager to the cluster (only required for Kubernetes) |
 | uninstall | delete controller namespace `devworkspace-controller` and remove CRDs from cluster |
 | help | print all rules and variables |

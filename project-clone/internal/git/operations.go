@@ -118,6 +118,11 @@ func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath st
 		return fmt.Errorf("failed to read remote %s: %s", defaultRemoteName, err)
 	}
 
+	branch, err := repo.Branch(checkoutFrom.Revision)
+	if err == nil {
+		return checkoutLocalBranch(projectPath, branch.Name, defaultRemoteName)
+	}
+
 	for _, ref := range refs {
 		if ref.Name().Short() != checkoutFrom.Revision {
 			continue
@@ -134,6 +139,20 @@ func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath st
 		return fmt.Errorf("failed to resolve commit %s: %s", checkoutFrom.Revision, err)
 	}
 	return checkoutCommit(projectPath, checkoutFrom.Revision)
+}
+
+func checkoutLocalBranch(projectPath, branchName, remote string) error {
+	log.Printf("Checking out local branch %s", branchName)
+	if err := shell.GitCheckoutBranchLocal(projectPath, branchName); err != nil {
+		return fmt.Errorf("failed to checkout branch %s: %s", branchName, err)
+	}
+
+	log.Printf("Setting tracking remote for branch %s to %s", branchName, remote)
+	if err := shell.GitSetTrackingRemoteBranch(projectPath, branchName, remote); err != nil {
+		return fmt.Errorf("failed to set tracking for branch %s: %w", branchName, err)
+	}
+
+	return nil
 }
 
 func checkoutRemoteBranch(projectPath string, remote string, branchRef *plumbing.Reference) error {

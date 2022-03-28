@@ -135,10 +135,11 @@ func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath st
 	}
 
 	log.Printf("No tag or branch named %s found on remote %s; attempting to resolve commit", checkoutFrom.Revision, defaultRemoteName)
-	if _, err := repo.ResolveRevision(plumbing.Revision(checkoutFrom.Revision)); err != nil {
-		return fmt.Errorf("failed to resolve commit %s: %s", checkoutFrom.Revision, err)
+	if _, err := repo.ResolveRevision(plumbing.Revision(checkoutFrom.Revision)); err == nil {
+		return checkoutCommit(projectPath, checkoutFrom.Revision)
 	}
-	return checkoutCommit(projectPath, checkoutFrom.Revision)
+	log.Printf("Could not find revision %s in repository, using default branch", checkoutFrom.Revision)
+	return nil
 }
 
 func checkoutLocalBranch(projectPath, branchName, remote string) error {

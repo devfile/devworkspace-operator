@@ -16,6 +16,8 @@ The action will create the dedicated release branch e.g. `0.13.x` and the prelea
 
 > :warning: If necessary, cherry-pick any additional fixes to the release branch.
 
+Build the image from the `0.13.x` branch and run manually a test with DevWorkspace startup against this version of the operator. If the workspace is started without errors you can proceed with the release.
+
 2. Trigger the release by running the same action using the workflow from the branch that was created during the previous step e.g. `0.13.x`. Provide the version in format `v0.y.z` e.g. `v0.13.0` and set `false` for the prelease field:
 
 ![Release](release.png?raw=true "Release")

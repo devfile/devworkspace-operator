@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -253,13 +252,14 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(conditions.DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")
 
 	// Verify that the devworkspace components are valid after flattening
-	components := workspace.Spec.Template.Components
-	if components != nil {
-		eventErrors := devfilevalidation.ValidateComponents(components)
-		if eventErrors != nil {
-			return r.failWorkspace(workspace, eventErrors.Error(), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
-		}
-	}
+	// TODO: Disable validation until https://github.com/devfile/api/issues/821 is resolved and pulled into this repo
+	// components := workspace.Spec.Template.Components
+	// if components != nil {
+	// 	eventErrors := devfilevalidation.ValidateComponents(components)
+	// 	if eventErrors != nil {
+	// 		return r.failWorkspace(workspace, eventErrors.Error(), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+	// 	}
+	// }
 
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {

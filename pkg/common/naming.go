@@ -90,6 +90,10 @@ func PVCCleanupJobName(workspaceId string) string {
 	return fmt.Sprintf("cleanup-%s", workspaceId)
 }
 
+func PerWorkspacePVCName(workspaceId string) string {
+	return fmt.Sprintf("storage-%s", workspaceId)
+}
+
 func MetadataConfigMapName(workspaceId string) string {
 	return fmt.Sprintf("%s-metadata", workspaceId)
 }

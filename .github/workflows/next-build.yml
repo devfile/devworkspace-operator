@@ -138,6 +138,36 @@ jobs:
           export DEFAULT_DWO_IMG="quay.io/devfile/devworkspace-controller:$TAG"
           export PROJECT_CLONE_IMG="quay.io/devfile/project-clone:$TAG"
 
+          # Next builds are not rolled out unless the version is incremented. We want to use semver
+          # prerelease tags to make sure each new build increments on the previous one, e.g.
+          # v0.15.0-dev.1, v0.15.0-dev.2, etc.
+          CURR_VERSION=$(yq -r '.spec.version' deploy/templates/components/csv/clusterserviceversion.yaml)
+          PREV_VERSION=$(opm render ${DWO_INDEX_IMG} |\
+            jq -r 'select(.schema == "olm.channel") | .entries[0].name | ltrimstr("devworkspace-operator.v")')
+          # Strip the static version number and build identifier to get the previous build number, e.g.
+          #   v0.15.0-dev.1+41e8ccb8 -> 1
+          # If previous version does not have build number/identifier, result is the full version (e.g. v0.15.0-dev)
+          PREV_ID=${PREV_VERSION##*-dev.}
+          PREV_ID=${PREV_ID%%+*}
+
+          if [ "$PREV_ID" == "$CURR_VERSION" ]; then
+            # no build number set, start at 0
+            NEXT_ID="0"
+          elif [ "${PREV_VERSION%%-*}" != "${CURR_VERSION%%-*}" ]; then
+            # minor version bump, moving from e.g. v0.14.0-dev.8 -> v0.15.0-dev.0
+            NEXT_ID="0"
+          else
+            NEXT_ID=$((PREV_ID+1))
+          fi
+
+          NEW_VERSION="${CURR_VERSION}.${NEXT_ID}+${{ needs.build-next-imgs.outputs.git-sha }}"
+          NEW_NAME="devworkspace-operator.v${CURR_VERSION}.${NEXT_ID}"
+          echo "Updating version for this build to $NEW_VERSION"
+          yq -Yi --arg NEW_VERSION "$NEW_VERSION" \
+            --arg NEW_NAME "$NEW_NAME" \
+            '.spec.version=$NEW_VERSION | .metadata.name=$NEW_NAME' \
+            deploy/templates/components/csv/clusterserviceversion.yaml
+
           ./build/scripts/build_index_image.sh \
             --bundle-repo ${DWO_BUNDLE_REPO} \
             --bundle-tag ${DWO_BUNDLE_TAG} \

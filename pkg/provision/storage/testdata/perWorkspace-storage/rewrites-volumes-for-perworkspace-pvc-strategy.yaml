@@ -1,0 +1,59 @@
+name: "Rewrites volumeMounts according to perworkspace PVC strategy"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects-mountpath"
+          - name: "my-defined-volume"
+            mountPath: "/test-1"
+    initContainers:
+      - name: testing-initContainer-1
+        image: testing-image
+        volumeMounts:
+          - name: "plugins"
+            mountPath: "/plugins"
+          - name: "my-defined-volume"
+            mountPath: "/test-3"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          sourceMapping: "/plugins-mountpath"
+      - name: my-defined-volume
+        volume: {}
+      - name: plugins
+        volume: {}
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: storage-test-workspaceid
+            subPath: "projects"
+            mountPath: "/projects-mountpath"
+          - name: storage-test-workspaceid
+            subPath: "my-defined-volume"
+            mountPath: "/test-1"
+    initContainers:
+      - name: testing-initContainer-1
+        image: testing-image
+        volumeMounts:
+          - name: storage-test-workspaceid
+            subPath: "plugins"
+            mountPath: "/plugins"
+          - name: storage-test-workspaceid
+            subPath: "my-defined-volume"
+            mountPath: "/test-3"
+    volumes:
+      - name: storage-test-workspaceid
+        persistentVolumeClaim:
+          claimName: storage-test-workspaceid

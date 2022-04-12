@@ -73,6 +73,9 @@ const (
 	// EphemeralStorageClassType defines the 'ephemeral' storage policy: all volumes are allocated as emptyDir volumes and
 	// so do not require cleanup. When a DevWorkspace is stopped, all local changes are lost.
 	EphemeralStorageClassType = "ephemeral"
+	// PerWorkspaceStorageClassType defines the 'per-workspace' storage policy: a PVC is provisioned for each workspace within the namespace.
+	// All of the workspace's storage (volume mounts) are mounted on subpaths within the workspace's PVC.
+	PerWorkspaceStorageClassType = "per-workspace"
 
 	// CheCommonPVCName is the name of the common PVC equivalent used by Che. If present in the namespace, this PVC is mounted instead
 	// of the default PVC when the 'common' or 'async' storage classes are used.

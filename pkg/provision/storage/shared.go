@@ -35,7 +35,7 @@ import (
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
 
-func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
+func getPVCSpec(name, namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
 	pvcStorageQuantity, err := resource.ParseQuantity(size)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func getCommonPVCSpec(namespace string, size string) (*corev1.PersistentVolumeCl
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      config.Workspace.PVCName,
+			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
@@ -98,7 +98,7 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 		pvcSize = namespacedConfig.CommonPVCSize
 	}
 
-	pvc, err := getCommonPVCSpec(namespace, pvcSize)
+	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, pvcSize)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +221,8 @@ func processProjectsVolume(workspace *dw.DevWorkspaceTemplateSpec) (projectsComp
 
 // checkForExistingCommonPVC checks the current namespace for existing PVCs that may be used for workspace storage. If
 // such a PVC is found, its name is returned and should be used in place of the configured common PVC. If no suitable
-// PVC is found,
+// PVC is found, the returned PVC name is an empty string and a nil error is returned. If an error occurs during the lookup,
+// then an empty string is returned as well as the error.
 func checkForExistingCommonPVC(namespace string, api sync.ClusterAPI) (string, error) {
 	existingPVC := &corev1.PersistentVolumeClaim{}
 	namespacedName := types.NamespacedName{Name: constants.CheCommonPVCName, Namespace: namespace}

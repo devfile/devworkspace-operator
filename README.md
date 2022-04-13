@@ -6,7 +6,7 @@ Dev Workspace operator repository that contains the controller for the DevWorksp
 
 ### Additional configuration
 
-DevWorkspaces can be configured through DevWorkspace attributes and Kubernetes labels/annotations. For a list of all options available, see [additional documentation](docs/additional-configuration.md).
+DevWorkspaces can be configured through DevWorkspace attributes and Kubernetes labels/annotations. For a list of all options available, see [additional documentation](docs/additional-configuration.adoc).
 
 #### Restricted Access
 

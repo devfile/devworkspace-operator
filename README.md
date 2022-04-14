@@ -147,6 +147,19 @@ when you are done debugging you have to manually uninstall the telepresence agen
 make disconnect-debug-webhook-server
 ```
 
+### Updating devfile API
+
+[devfile API](https://github.com/devfile/api) is the Kube-native API for cloud development workspaces specification and the core dependency of the devworkspace-operator that should be regularly updated to the latest version. In order to do the update:
+
+1. update `DEVWORKSPACE_API_VERSION` variable in the `Makefile` and `generate-deployment.sh`. The variable should correspond to the commit SHA from the [devfile API](https://github.com/devfile/api) repository
+2. run the following scripts and the open pull request
+
+```bash
+make update_devworkspace_api update_devworkspace_crds # first commit
+make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml # second commit
+```
+Example of the devfile API udpate [PR](https://github.com/devfile/devworkspace-operator/pull/797)
+
 ### Controller configuration
 
 Controller behavior can be configured using the `DevWorkspaceOperatorConfig` custom resource (`dwoc` for short). To configure the controller, create a `DevWorkspaceOperatorConfig` named `devworkspace-operator-config` in the same namespace as the controller. If using the Makefile to deploy the DevWorkspaceOperator, a pre-filled config is created automatically (see `deploy/default-config.yaml`).

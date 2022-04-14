@@ -158,7 +158,7 @@ make disconnect-debug-webhook-server
 make update_devworkspace_api update_devworkspace_crds # first commit
 make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml # second commit
 ```
-Example of the devfile API udpate [PR](https://github.com/devfile/devworkspace-operator/pull/797)
+Example of the devfile API update [PR](https://github.com/devfile/devworkspace-operator/pull/797)
 
 ### Controller configuration
 

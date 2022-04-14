@@ -4316,7 +4316,9 @@ spec:
                                   `wss`.
                                 type: boolean
                               targetPort:
-                                description: The port number should be unique.
+                                description: Port number to be used within the container
+                                  component. The same port cannot be used by two different
+                                  container components.
                                 type: integer
                             required:
                             - name
@@ -4613,7 +4615,9 @@ spec:
                                   `wss`.
                                 type: boolean
                               targetPort:
-                                description: The port number should be unique.
+                                description: Port number to be used within the container
+                                  component. The same port cannot be used by two different
+                                  container components.
                                 type: integer
                             required:
                             - name
@@ -4731,7 +4735,9 @@ spec:
                                   `wss`.
                                 type: boolean
                               targetPort:
-                                description: The port number should be unique.
+                                description: Port number to be used within the container
+                                  component. The same port cannot be used by two different
+                                  container components.
                                 type: integer
                             required:
                             - name
@@ -5116,7 +5122,10 @@ spec:
                                             a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
-                                          description: The port number should be unique.
+                                          description: Port number to be used within
+                                            the container component. The same port
+                                            cannot be used by two different container
+                                            components.
                                           type: integer
                                       required:
                                       - name
@@ -5403,7 +5412,10 @@ spec:
                                             a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
-                                          description: The port number should be unique.
+                                          description: Port number to be used within
+                                            the container component. The same port
+                                            cannot be used by two different container
+                                            components.
                                           type: integer
                                       required:
                                       - name
@@ -5528,7 +5540,10 @@ spec:
                                             a protocol of `https` or `wss`.
                                           type: boolean
                                         targetPort:
-                                          description: The port number should be unique.
+                                          description: Port number to be used within
+                                            the container component. The same port
+                                            cannot be used by two different container
+                                            components.
                                           type: integer
                                       required:
                                       - name
@@ -6013,7 +6028,9 @@ spec:
                                       or `wss`.
                                     type: boolean
                                   targetPort:
-                                    description: The port number should be unique.
+                                    description: Port number to be used within the
+                                      container component. The same port cannot be
+                                      used by two different container components.
                                     type: integer
                                 required:
                                 - name
@@ -6285,7 +6302,9 @@ spec:
                                       or `wss`.
                                     type: boolean
                                   targetPort:
-                                    description: The port number should be unique.
+                                    description: Port number to be used within the
+                                      container component. The same port cannot be
+                                      used by two different container components.
                                     type: integer
                                 required:
                                 - name
@@ -6404,7 +6423,9 @@ spec:
                                       or `wss`.
                                     type: boolean
                                   targetPort:
-                                    description: The port number should be unique.
+                                    description: Port number to be used within the
+                                      container component. The same port cannot be
+                                      used by two different container components.
                                     type: integer
                                 required:
                                 - name
@@ -6801,8 +6822,10 @@ spec:
                                                 `wss`.
                                               type: boolean
                                             targetPort:
-                                              description: The port number should
-                                                be unique.
+                                              description: Port number to be used
+                                                within the container component. The
+                                                same port cannot be used by two different
+                                                container components.
                                               type: integer
                                           required:
                                           - name
@@ -7104,8 +7127,10 @@ spec:
                                                 `wss`.
                                               type: boolean
                                             targetPort:
-                                              description: The port number should
-                                                be unique.
+                                              description: Port number to be used
+                                                within the container component. The
+                                                same port cannot be used by two different
+                                                container components.
                                               type: integer
                                           required:
                                           - name
@@ -7238,8 +7263,10 @@ spec:
                                                 `wss`.
                                               type: boolean
                                             targetPort:
-                                              description: The port number should
-                                                be unique.
+                                              description: Port number to be used
+                                                within the container component. The
+                                                same port cannot be used by two different
+                                                container components.
                                               type: integer
                                           required:
                                           - name

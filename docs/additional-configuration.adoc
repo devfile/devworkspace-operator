@@ -143,15 +143,16 @@ apiVersion: v1
 metadata:
   name: git-credentials-secret
   annotations:
-    controller.devfile.io/mount-path: /home/theia/.git-credentials/
+    controller.devfile.io/mount-path: /tmp/.git-credentials/
   labels:
     controller.devfile.io/git-credential: 'true'
 type: Opaque
 data:
   credentials: https://{USERNAME}:{PERSONAL_ACCESS_TOKEN}@{GIT_WEBSITE}
 ----
-
 Note: As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to git credentials secrets
+
+This will mount a file `/tmp/.git-credentials/credentials` in all workspace containers, and construct a git config to use this file as a credentials store. The mount path specified by the `controller.devfile.io/mount-path` annotation can by omitted, in which case `/` is used (mounting a file `/credentials`).
 
 ## Debugging a failing workspace
 Normally, when a workspace fails to start, the deployment will be scaled down and the workspace will be stopped in a `Failed` state. This can make it difficult to debug misconfiguration errors, so the annotation `controller.devfile.io/debug-start: "true"` can be applied to DevWorkspaces to leave resources for failed workspaces on the cluster. This allows viewing logs from workspace containers.

@@ -28,6 +28,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -106,7 +107,7 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", "10Gi")
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"))
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}

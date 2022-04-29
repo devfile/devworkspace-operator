@@ -98,16 +98,19 @@ func MetadataConfigMapName(workspaceId string) string {
 	return fmt.Sprintf("%s-metadata", workspaceId)
 }
 
+// We can't add prefixes to automount volume names, as adding any characters
+// can potentially push the name over the 63 character limit (if the original
+// object has a long name)
 func AutoMountConfigMapVolumeName(volumeName string) string {
-	return fmt.Sprintf("automount-configmap-%s", volumeName)
+	return fmt.Sprintf("%s", volumeName)
 }
 
 func AutoMountSecretVolumeName(volumeName string) string {
-	return fmt.Sprintf("automount-secret-%s", volumeName)
+	return fmt.Sprintf("%s", volumeName)
 }
 
 func AutoMountPVCVolumeName(pvcName string) string {
-	return fmt.Sprintf("automount-pvc-%s", pvcName)
+	return fmt.Sprintf("%s", pvcName)
 }
 
 func WorkspaceRoleName() string {

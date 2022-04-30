@@ -34,7 +34,7 @@ RUN make compile-devworkspace-controller
 RUN make compile-webhook-server
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8-minimal
-FROM registry.access.redhat.com/ubi8-minimal:8.5-240.1648458092
+FROM registry.access.redhat.com/ubi8-minimal:8.5-243.1651231653
 RUN microdnf -y update && microdnf clean all && rm -rf /var/cache/yum && echo "Installed Packages" && rpm -qa | sort -V && echo "End Of Installed Packages"
 WORKDIR /
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller

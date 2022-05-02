@@ -106,6 +106,13 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 		return admission.Denied("DevWorkspace ID cannot be changed once it is set")
 	}
 
+	oldStorageClass := oldWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	newStorageClass := newWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+
+	if oldStorageClass != newStorageClass {
+		return admission.Denied("DevWorkspace storage-type attribute cannot be changed once the workspace has been created.")
+	}
+
 	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp, req.UserInfo.UID)
 	if !allowed {
 		return admission.Denied(msg)

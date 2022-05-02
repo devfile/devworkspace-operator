@@ -41,9 +41,6 @@ type Provisioner interface {
 
 // GetProvisioner returns the storage provisioner that should be used for the current workspace
 func GetProvisioner(workspace *dw.DevWorkspace) (Provisioner, error) {
-	// TODO: Figure out what to do if a workspace changes the storage type after its been created
-	// e.g. common -> async so as to not leave files on PVCs after removal. Maybe block changes to
-	// this label via webhook?
 	storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
 	if storageClass == "" {
 		return &CommonStorageProvisioner{}, nil

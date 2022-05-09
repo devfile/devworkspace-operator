@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -234,4 +235,22 @@ func checkForExistingCommonPVC(namespace string, api sync.ClusterAPI) (string, e
 		return "", err
 	}
 	return existingPVC.Name, nil
+}
+
+// getSharedPVCWorkspaceCount returns the total number of workspaces which are using a shared PVC
+// (i.e the workspaces storage-class attribute is set to "common", "async", or unset which defaults to "common")
+func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total int, err error) {
+	workspaces := &dw.DevWorkspaceList{}
+	err = api.Client.List(api.Ctx, workspaces, &client.ListOptions{Namespace: namespace})
+	if err != nil {
+		return 0, err
+	}
+	for _, workspace := range workspaces.Items {
+		storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+		// Note, if the storageClass attribute isin't set (ie. storageClass == ""), then the storage class being used is "common"
+		if storageClass == constants.AsyncStorageClassType || storageClass == constants.CommonStorageClassType || storageClass == "" {
+			total++
+		}
+	}
+	return total, nil
 }

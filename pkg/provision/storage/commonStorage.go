@@ -19,9 +19,12 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -71,8 +74,35 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	return nil
 }
 
-func (*CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
-	return runCommonPVCCleanupJob(workspace, clusterAPI)
+func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+	totalWorkspaces, err := getSharedPVCWorkspaceCount(workspace.Namespace, clusterAPI)
+	if err != nil {
+		return err
+	}
+
+	// If the number of common + async workspaces that exist (started or stopped) is zero,
+	// delete common PVC instead of running cleanup job
+	if totalWorkspaces > 1 {
+		return runCommonPVCCleanupJob(workspace, clusterAPI)
+	} else {
+		sharedPVC := &corev1.PersistentVolumeClaim{}
+		namespacedName := types.NamespacedName{Name: config.Workspace.PVCName, Namespace: workspace.Namespace}
+		err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, sharedPVC)
+
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+
+		err = clusterAPI.Client.Delete(clusterAPI.Ctx, sharedPVC)
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // rewriteContainerVolumeMounts rewrites the VolumeMounts in a set of PodAdditions according to the 'common' PVC strategy

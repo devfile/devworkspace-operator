@@ -30,11 +30,13 @@ import (
 )
 
 const (
-	commonPVCSizeKey = "commonPVCSize"
+	commonPVCSizeKey       = "commonPVCSize"
+	perWorkspacePVCSizeKey = "perWorkspacePVCSize"
 )
 
 type NamespacedConfig struct {
-	CommonPVCSize string
+	CommonPVCSize       string
+	PerWorkspacePVCSize string
 }
 
 // ReadNamespacedConfig reads the per-namespace DevWorkspace configmap and returns it as a struct. If there are
@@ -71,7 +73,8 @@ func ReadNamespacedConfig(namespace string, api sync.ClusterAPI) (*NamespacedCon
 	}
 
 	return &NamespacedConfig{
-		CommonPVCSize: cm.Data[commonPVCSizeKey],
+		CommonPVCSize:       cm.Data[commonPVCSizeKey],
+		PerWorkspacePVCSize: cm.Data[perWorkspacePVCSizeKey],
 	}, nil
 }
 

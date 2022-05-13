@@ -158,8 +158,8 @@ func syncPerWorkspacePVC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI)
 	// TODO: Determine the storage size that is needed by iterating through workspace volumes,
 	// adding the sizes specified and figuring out overrides/defaults
 	pvcSize := constants.PVCStorageSize
-	if namespacedConfig != nil && namespacedConfig.CommonPVCSize != "" {
-		pvcSize = namespacedConfig.CommonPVCSize
+	if namespacedConfig != nil && namespacedConfig.PerWorkspacePVCSize != "" {
+		pvcSize = namespacedConfig.PerWorkspacePVCSize
 	}
 
 	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, pvcSize)

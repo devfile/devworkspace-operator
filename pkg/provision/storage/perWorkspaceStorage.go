@@ -25,8 +25,10 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -148,11 +150,18 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 }
 
 func syncPerWorkspacePVC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+	namespacedConfig, err := nsconfig.ReadNamespacedConfig(workspace.Namespace, clusterAPI)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
+	}
 	// TODO: Determine the storage size that is needed by iterating through workspace volumes,
 	// adding the sizes specified and figuring out overrides/defaults
 	pvcSize := *config.Workspace.DefaultStorageSize.PerWorkspace
 	if namespacedConfig != nil && namespacedConfig.PerWorkspacePVCSize != "" {
-		pvcSize = namespacedConfig.PerWorkspacePVCSize
+		pvcSize, err = resource.ParseQuantity(namespacedConfig.PerWorkspacePVCSize)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, pvcSize)

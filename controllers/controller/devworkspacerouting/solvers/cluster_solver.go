@@ -126,3 +126,7 @@ func getHostnameFromService(service corev1.Service, port int32) string {
 	}
 	return fmt.Sprintf("%s://%s.%s.svc:%d", scheme, service.Name, service.Namespace, port)
 }
+
+func (s *ClusterSolver) WorkspaceStopped(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) error {
+	return nil
+}

@@ -80,3 +80,7 @@ func (s *BasicSolver) GetExposedEndpoints(
 	routingObj RoutingObjects) (exposedEndpoints map[string]controllerv1alpha1.ExposedEndpointList, ready bool, err error) {
 	return getExposedEndpoints(endpoints, routingObj)
 }
+
+func (s *BasicSolver) WorkspaceStopped(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) error {
+	return nil
+}

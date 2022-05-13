@@ -107,8 +107,15 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, r.finalize(solver, instance)
 	}
 
-	if instance.Annotations != nil && instance.Annotations[constants.DevWorkspaceStartedStatusAnnotation] == "false" {
-		return reconcile.Result{}, nil
+	workspaceMeta := solvers.DevWorkspaceMetadata{
+		DevWorkspaceId: instance.Spec.DevWorkspaceId,
+		Namespace:      instance.Namespace,
+		PodSelector:    instance.Spec.PodSelector,
+	}
+
+	if instance.IsWorkspaceStopped() {
+		err := solver.WorkspaceStopped(instance, workspaceMeta)
+		return reconcile.Result{}, err
 	}
 
 	if instance.Status.Phase == controllerv1alpha1.RoutingFailed {
@@ -118,12 +125,6 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	// Add finalizer for this CR if not already present
 	if err := r.setFinalizer(reqLogger, solver, instance); err != nil {
 		return reconcile.Result{}, err
-	}
-
-	workspaceMeta := solvers.DevWorkspaceMetadata{
-		DevWorkspaceId: instance.Spec.DevWorkspaceId,
-		Namespace:      instance.Namespace,
-		PodSelector:    instance.Spec.PodSelector,
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]

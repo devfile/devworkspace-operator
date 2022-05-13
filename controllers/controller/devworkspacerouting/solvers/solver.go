@@ -59,6 +59,9 @@ type RoutingSolver interface {
 	// Return value "ready" specifies if all endpoints are resolved on the cluster; if false it is necessary to retry, as
 	// URLs will be undefined.
 	GetExposedEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, routingObj RoutingObjects) (exposedEndpoints map[string]controllerv1alpha1.ExposedEndpointList, ready bool, err error)
+
+	// WorkspaceStopped is called when the DevWorkspace for the current routing has .spec.started set to false
+	WorkspaceStopped(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) error
 }
 
 type RoutingSolverGetter interface {

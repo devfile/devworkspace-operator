@@ -17,6 +17,7 @@ package env
 
 import (
 	"fmt"
+	"os"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -96,8 +97,10 @@ func getProxyEnvVars() []corev1.EnvVar {
 		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: config.Routing.ProxyConfig.HttpsProxy})
 	}
 	if config.Routing.ProxyConfig.NoProxy != "" {
-		env = append(env, v1.EnvVar{Name: "no_proxy", Value: config.Routing.ProxyConfig.NoProxy})
-		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: config.Routing.ProxyConfig.NoProxy})
+		// Adding 'KUBERNETES_SERVICE_HOST' env var to the 'no_proxy / NO_PROXY' list. Hot Fix for https://issues.redhat.com/browse/CRW-2820
+		kubernetesServiceHost := os.Getenv("KUBERNETES_SERVICE_HOST")
+		env = append(env, v1.EnvVar{Name: "no_proxy", Value: config.Routing.ProxyConfig.NoProxy + "," + kubernetesServiceHost})
+		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: config.Routing.ProxyConfig.NoProxy + "," + kubernetesServiceHost})
 	}
 
 	return env

@@ -24,7 +24,7 @@ spec:
               name: PS1
       - name: web-terminal
         container:
-          image: quay.io/eclipse/che-machine-exec:nightly
+          image: quay.io/eclipse/che-machine-exec:next
           mountSources: false
           command: ["/go/bin/che-machine-exec",
                     "--authenticated-user-id", "$(DEVWORKSPACE_CREATOR)",

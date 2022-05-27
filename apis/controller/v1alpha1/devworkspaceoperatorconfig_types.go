@@ -17,6 +17,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -67,6 +68,16 @@ type Proxy struct {
 	NoProxy string `json:"noProxy,omitempty"`
 }
 
+type StorageSizes struct {
+	// The default Persistent Volume Claim size for the "common" storage class.
+	// Note that the "async" storage class also uses the PVC size set for the "common" storage class.
+	// If not specified, the "common" and "async" Persistent Volume Claim sizes are set to 10Gi
+	Common *resource.Quantity `json:"common,omitempty"`
+	// The default Persistent Volume Claim size for the "per-workspace" storage class.
+	// If not specified, the "per-workspace" Persistent Volume Claim size is set to 5Gi
+	PerWorkspace *resource.Quantity `json:"perWorkspace,omitempty"`
+}
+
 type WorkspaceConfig struct {
 	// ImagePullPolicy defines the imagePullPolicy used for containers in a DevWorkspace
 	// For additional information, see Kubernetes documentation for imagePullPolicy. If
@@ -83,9 +94,12 @@ type WorkspaceConfig struct {
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 	// +kubebuilder:validation:MaxLength=63
 	PVCName string `json:"pvcName,omitempty"`
-	// StorageClassName defines and optional storageClass to use for persistent
+	// StorageClassName defines an optional storageClass to use for persistent
 	// volume claims created to support DevWorkspaces
 	StorageClassName *string `json:"storageClassName,omitempty"`
+	// DefaultStorageSize defines an optional struct with fields to specify the sizes of Persistent Volume Claims for storage
+	// classes used by DevWorkspaces.
+	DefaultStorageSize *StorageSizes `json:"defaultStorageSize,omitempty"`
 	// IdleTimeout determines how long a workspace should sit idle before being
 	// automatically scaled down. Proper functionality of this configuration property
 	// requires support in the workspace being started. If not specified, the default

@@ -18,6 +18,7 @@ package config
 import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // defaultConfig represents the default configuration for the DevWorkspace Operator.
@@ -29,6 +30,10 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 	Workspace: &v1alpha1.WorkspaceConfig{
 		ImagePullPolicy: "Always",
 		PVCName:         "claim-devworkspace",
+		DefaultStorageSize: &v1alpha1.StorageSizes{
+			Common:       &commonStorageSize,
+			PerWorkspace: &perWorkspaceStorageSize,
+		},
 		IdleTimeout:     "15m",
 		ProgressTimeout: "5m",
 		CleanupOnStop:   &boolFalse,
@@ -43,8 +48,10 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 
 // Necessary variables for setting pointer values
 var (
-	boolTrue  = true
-	boolFalse = false
-	int64UID  = int64(1234)
-	int64GID  = int64(0)
+	boolTrue                = true
+	boolFalse               = false
+	int64UID                = int64(1234)
+	int64GID                = int64(0)
+	commonStorageSize       = resource.MustParse("10Gi")
+	perWorkspaceStorageSize = resource.MustParse("5Gi")
 )

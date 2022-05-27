@@ -36,11 +36,7 @@ import (
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
 
-func getPVCSpec(name, namespace string, size string) (*corev1.PersistentVolumeClaim, error) {
-	pvcStorageQuantity, err := resource.ParseQuantity(size)
-	if err != nil {
-		return nil, err
-	}
+func getPVCSpec(name, namespace string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -53,7 +49,7 @@ func getPVCSpec(name, namespace string, size string) (*corev1.PersistentVolumeCl
 			},
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
-					"storage": pvcStorageQuantity,
+					"storage": size,
 				},
 			},
 			StorageClassName: config.Workspace.StorageClassName,
@@ -94,9 +90,12 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
 	}
-	pvcSize := constants.PVCStorageSize
+	pvcSize := *config.Workspace.DefaultStorageSize.Common
 	if namespacedConfig != nil && namespacedConfig.CommonPVCSize != "" {
-		pvcSize = namespacedConfig.CommonPVCSize
+		pvcSize, err = resource.ParseQuantity(namespacedConfig.CommonPVCSize)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, pvcSize)

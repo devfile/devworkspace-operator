@@ -242,6 +242,19 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.PodSecurityContext != nil {
 			to.Workspace.PodSecurityContext = from.Workspace.PodSecurityContext
 		}
+		if from.Workspace.DefaultStorageSize != nil {
+			if to.Workspace.DefaultStorageSize == nil {
+				to.Workspace.DefaultStorageSize = &controller.StorageSizes{}
+			}
+			if from.Workspace.DefaultStorageSize.Common != nil {
+				commonSizeCopy := from.Workspace.DefaultStorageSize.Common.DeepCopy()
+				to.Workspace.DefaultStorageSize.Common = &commonSizeCopy
+			}
+			if from.Workspace.DefaultStorageSize.PerWorkspace != nil {
+				perWorkspaceSizeCopy := from.Workspace.DefaultStorageSize.PerWorkspace.DeepCopy()
+				to.Workspace.DefaultStorageSize.PerWorkspace = &perWorkspaceSizeCopy
+			}
+		}
 	}
 }
 
@@ -275,6 +288,14 @@ func logCurrentConfig() {
 		if Workspace.IgnoredUnrecoverableEvents != nil {
 			config = append(config, fmt.Sprintf("workspace.ignoredUnrecoverableEvents=%s",
 				strings.Join(Workspace.IgnoredUnrecoverableEvents, ";")))
+		}
+		if Workspace.DefaultStorageSize != nil {
+			if Workspace.DefaultStorageSize.Common != nil {
+				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.common=%s", Workspace.DefaultStorageSize.Common.String()))
+			}
+			if Workspace.DefaultStorageSize.PerWorkspace != nil {
+				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.perWorkspace=%s", Workspace.DefaultStorageSize.PerWorkspace.String()))
+			}
 		}
 	}
 	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {

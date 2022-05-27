@@ -97,6 +97,32 @@ spec:
                       down (e.g. deployments but the objects will be left on the cluster).
                       The default value is false.
                     type: boolean
+                  defaultStorageSize:
+                    description: DefaultStorageSize defines an optional struct with
+                      fields to specify the sizes of Persistent Volume Claims for
+                      storage classes used by DevWorkspaces.
+                    properties:
+                      common:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: The default Persistent Volume Claim size for
+                          the "common" storage class. Note that the "async" storage
+                          class also uses the PVC size set for the "common" storage
+                          class. If not specified, the "common" and "async" Persistent
+                          Volume Claim sizes are set to 10Gi
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      perWorkspace:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        description: The default Persistent Volume Claim size for
+                          the "per-workspace" storage class. If not specified, the
+                          "per-workspace" Persistent Volume Claim size is set to 5Gi
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                    type: object
                   idleTimeout:
                     description: IdleTimeout determines how long a workspace should
                       sit idle before being automatically scaled down. Proper functionality
@@ -296,7 +322,7 @@ spec:
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                     type: string
                   storageClassName:
-                    description: StorageClassName defines and optional storageClass
+                    description: StorageClassName defines an optional storageClass
                       to use for persistent volume claims created to support DevWorkspaces
                     type: string
                 type: object

@@ -13,14 +13,13 @@
 // limitations under the License.
 //
 
-package check
+package status
 
 import (
 	"context"
 	"fmt"
 	"strings"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
@@ -29,7 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var containerFailureStateReasons = []string{
@@ -76,25 +74,27 @@ func CheckDeploymentConditions(deployment *appsv1.Deployment) (healthy bool, err
 // matching unrecoverablePodEventReasons) has the pod as the involved object.
 // Returns optional message with detected unrecoverable state details
 //         error if any happens during check
-func CheckPodsState(workspace *dw.DevWorkspace, namespace string, labelSelector k8sclient.MatchingLabels,
+func CheckPodsState(workspaceID string, namespace string, labelSelector k8sclient.MatchingLabels,
 	clusterAPI sync.ClusterAPI) (stateMsg string, checkFailure error) {
-	podList, err := GetPods(namespace, labelSelector, clusterAPI.Client)
-	if err != nil {
+	podList := &corev1.PodList{}
+	if err := clusterAPI.Client.List(context.TODO(), podList, k8sclient.InNamespace(namespace), labelSelector); err != nil {
 		return "", err
 	}
 
 	for _, pod := range podList.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if !CheckContainerStatusForFailure(&containerStatus) {
-				return fmt.Sprintf("Container %s has state %s", containerStatus.Name, containerStatus.State.Waiting.Reason), nil
+			ok, reason := CheckContainerStatusForFailure(&containerStatus)
+			if !ok {
+				return fmt.Sprintf("Container %s has state %s", containerStatus.Name, reason), nil
 			}
 		}
 		for _, initContainerStatus := range pod.Status.InitContainerStatuses {
-			if !CheckContainerStatusForFailure(&initContainerStatus) {
-				return fmt.Sprintf("Init Container %s has state %s", initContainerStatus.Name, initContainerStatus.State.Waiting.Reason), nil
+			ok, reason := CheckContainerStatusForFailure(&initContainerStatus)
+			if !ok {
+				return fmt.Sprintf("Init Container %s has state %s", initContainerStatus.Name, reason), nil
 			}
 		}
-		if msg, err := CheckPodEvents(&pod, workspace.Status.DevWorkspaceId, clusterAPI); err != nil || msg != "" {
+		if msg, err := CheckPodEvents(&pod, workspaceID, clusterAPI); err != nil || msg != "" {
 			return msg, err
 		}
 	}
@@ -138,24 +138,23 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.Cluster
 	return "", nil
 }
 
-func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok bool) {
+func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok bool, reason string) {
 	if containerStatus.State.Waiting != nil {
 		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Waiting.Reason == failureReason {
-				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason)
+				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason), containerStatus.State.Waiting.Reason
 			}
 		}
 	}
-	return true
-}
 
-// TODO: Remove this function?
-func GetPods(namespace string, labelSelector k8sclient.MatchingLabels, client runtimeClient.Client) (*corev1.PodList, error) {
-	pods := &corev1.PodList{}
-	if err := client.List(context.TODO(), pods, k8sclient.InNamespace(namespace), labelSelector); err != nil {
-		return nil, err
+	if containerStatus.State.Terminated != nil {
+		for _, failureReason := range containerFailureStateReasons {
+			if containerStatus.State.Terminated.Reason == failureReason {
+				return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason), containerStatus.State.Terminated.Reason
+			}
+		}
 	}
-	return pods, nil
+	return true, ""
 }
 
 func checkIfUnrecoverableEventIgnored(reason string) (ignored bool) {

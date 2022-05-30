@@ -20,7 +20,7 @@ import (
 	"errors"
 	"fmt"
 
-	check "github.com/devfile/devworkspace-operator/pkg/library/status"
+	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
@@ -97,7 +97,7 @@ func SyncDeploymentToCluster(
 	}
 	clusterDeployment := clusterObj.(*appsv1.Deployment)
 
-	deploymentReady := check.CheckDeploymentStatus(clusterDeployment)
+	deploymentReady := status.CheckDeploymentStatus(clusterDeployment)
 	if deploymentReady {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -106,7 +106,7 @@ func SyncDeploymentToCluster(
 		}
 	}
 
-	deploymentHealthy, deploymentErrMsg := check.CheckDeploymentConditions(clusterDeployment)
+	deploymentHealthy, deploymentErrMsg := status.CheckDeploymentConditions(clusterDeployment)
 	if !deploymentHealthy {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -116,7 +116,7 @@ func SyncDeploymentToCluster(
 		}
 	}
 
-	failureMsg, checkErr := check.CheckPodsState(workspace, workspace.Namespace, k8sclient.MatchingLabels{
+	failureMsg, checkErr := status.CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, k8sclient.MatchingLabels{
 		constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 	}, clusterAPI)
 	if checkErr != nil {

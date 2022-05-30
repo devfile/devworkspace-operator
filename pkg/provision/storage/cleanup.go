@@ -21,6 +21,7 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	batchv1 "k8s.io/api/batch/v1"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -91,6 +93,21 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 			}
 		}
 	}
+
+	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}, clusterAPI)
+	if err != nil {
+		return &ProvisioningError{
+			Err: err,
+		}
+	}
+
+	if msg != "" {
+		errMsg := fmt.Sprintf("DevWorkspace common PVC cleanup job failed: see logs for job %q for details. Additional information: %s", clusterJob.Name, msg)
+		return &ProvisioningError{
+			Message: errMsg,
+		}
+	}
+
 	// Requeue at least each 10 seconds to check if PVC is not removed by someone else
 	return &NotReadyError{
 		Message:      "Cleanup job is not in completed state",
@@ -110,7 +127,9 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 	}
 
 	jobLabels := map[string]string{
-		constants.DevWorkspaceIDLabel: workspaceId,
+		constants.DevWorkspaceIDLabel:      workspaceId,
+		constants.DevWorkspaceNameLabel:    workspace.Name,
+		constants.DevWorkspaceCreatorLabel: workspace.Labels[constants.DevWorkspaceCreatorLabel],
 	}
 	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
 		jobLabels[constants.DevWorkspaceRestrictedAccessAnnotation] = restrictedAccess
@@ -126,6 +145,9 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 			Completions:  &cleanupJobCompletions,
 			BackoffLimit: &cleanupJobBackoffLimit,
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: jobLabels,
+				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:   "Never",
 					SecurityContext: wsprovision.GetDevWorkspaceSecurityContext(),

@@ -19,11 +19,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
+	check "github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	"k8s.io/apimachinery/pkg/fields"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -43,29 +42,6 @@ import (
 	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
-
-var containerFailureStateReasons = []string{
-	"CrashLoopBackOff",
-	"ImagePullBackOff",
-	"CreateContainerError",
-	"RunContainerError",
-}
-
-// unrecoverablePodEventReasons contains Kubernetes events that should fail workspace startup
-// if they occur related to a workspace pod. Events are stored as a map with event names as keys
-// and values representing the threshold of how many times we can see an event before it is considered
-// unrecoverable.
-var unrecoverablePodEventReasons = map[string]int32{
-	"FailedPostStartHook":   1,
-	"FailedMount":           3,
-	"FailedScheduling":      1,
-	"FailedCreate":          1,
-	"ReplicaSetCreateError": 1,
-}
-
-var unrecoverableDeploymentConditionReasons = []string{
-	"FailedCreate",
-}
 
 type DeploymentProvisioningStatus struct {
 	ProvisioningStatus
@@ -121,7 +97,7 @@ func SyncDeploymentToCluster(
 	}
 	clusterDeployment := clusterObj.(*appsv1.Deployment)
 
-	deploymentReady := checkDeploymentStatus(clusterDeployment)
+	deploymentReady := check.CheckDeploymentStatus(clusterDeployment)
 	if deploymentReady {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -130,7 +106,7 @@ func SyncDeploymentToCluster(
 		}
 	}
 
-	deploymentHealthy, deploymentErrMsg := checkDeploymentConditions(clusterDeployment)
+	deploymentHealthy, deploymentErrMsg := check.CheckDeploymentConditions(clusterDeployment)
 	if !deploymentHealthy {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -140,7 +116,9 @@ func SyncDeploymentToCluster(
 		}
 	}
 
-	failureMsg, checkErr := checkPodsState(workspace, clusterAPI)
+	failureMsg, checkErr := check.CheckPodsState(workspace, workspace.Namespace, k8sclient.MatchingLabels{
+		constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
+	}, clusterAPI)
 	if checkErr != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -199,22 +177,6 @@ func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
 		return &corev1.PodSecurityContext{}
 	}
 	return config.Workspace.PodSecurityContext
-}
-
-func checkDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
-	return deployment.Status.ReadyReplicas > 0
-}
-
-func checkDeploymentConditions(deployment *appsv1.Deployment) (healthy bool, errorMsg string) {
-	conditions := deployment.Status.Conditions
-	for _, condition := range conditions {
-		for _, unrecoverableReason := range unrecoverableDeploymentConditionReasons {
-			if condition.Reason == unrecoverableReason {
-				return false, fmt.Sprintf("Detected unrecoverable deployment condition: %s %s", condition.Reason, condition.Message)
-			}
-		}
-	}
-	return true, ""
 }
 
 func getSpecDeployment(
@@ -337,46 +299,6 @@ func getSpecDeployment(
 	return deployment, nil
 }
 
-func getPods(workspace *dw.DevWorkspace, client runtimeClient.Client) (*corev1.PodList, error) {
-	pods := &corev1.PodList{}
-	if err := client.List(context.TODO(), pods, k8sclient.InNamespace(workspace.Namespace), k8sclient.MatchingLabels{
-		constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
-	}); err != nil {
-		return nil, err
-	}
-	return pods, nil
-}
-
-// checkPodsState checks if workspace-related pods are in an unrecoverable state. A pod is considered to be unrecoverable
-// if it has a container with one of the containerStateFailureReasons states, or if an unrecoverable event (with reason
-// matching unrecoverablePodEventReasons) has the pod as the involved object.
-// Returns optional message with detected unrecoverable state details
-//         error if any happens during check
-func checkPodsState(workspace *dw.DevWorkspace,
-	clusterAPI sync.ClusterAPI) (stateMsg string, checkFailure error) {
-	podList, err := getPods(workspace, clusterAPI.Client)
-	if err != nil {
-		return "", err
-	}
-
-	for _, pod := range podList.Items {
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if !checkContainerStatusForFailure(&containerStatus) {
-				return fmt.Sprintf("Container %s has state %s", containerStatus.Name, containerStatus.State.Waiting.Reason), nil
-			}
-		}
-		for _, initContainerStatus := range pod.Status.InitContainerStatuses {
-			if !checkContainerStatusForFailure(&initContainerStatus) {
-				return fmt.Sprintf("Init Container %s has state %s", initContainerStatus.Name, initContainerStatus.State.Waiting.Reason), nil
-			}
-		}
-		if msg, err := checkPodEvents(&pod, workspace.Status.DevWorkspaceId, clusterAPI); err != nil || msg != "" {
-			return msg, err
-		}
-	}
-	return "", nil
-}
-
 func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions, error) {
 	podAdditions := &v1alpha1.PodAdditions{}
 
@@ -475,61 +397,4 @@ func getAdditionalAnnotations(workspace *dw.DevWorkspace) (map[string]string, er
 	}
 
 	return annotations, nil
-}
-
-func checkPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.ClusterAPI) (msg string, err error) {
-	evs := &corev1.EventList{}
-	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
-	if err != nil {
-		return "", fmt.Errorf("failed to parse field selector: %s", err)
-	}
-	if err := clusterAPI.Client.List(clusterAPI.Ctx, evs, k8sclient.InNamespace(pod.Namespace), k8sclient.MatchingFieldsSelector{Selector: selector}); err != nil {
-		return "", fmt.Errorf("failed to list events in namespace %s: %w", pod.Namespace, err)
-	}
-	for _, ev := range evs.Items {
-		if ev.InvolvedObject.Kind != "Pod" {
-			continue
-		}
-
-		// On OpenShift, it's possible see "FailedMount" events when using a routingClass that depends on the service-ca
-		// operator. To avoid this, we always ignore FailedMount events if the message refers to the DWO-provisioned volume
-		if infrastructure.IsOpenShift() &&
-			ev.Reason == "FailedMount" &&
-			strings.Contains(ev.Message, common.ServingCertVolumeName(common.ServiceName(workspaceID))) {
-			continue
-		}
-
-		if maxCount, isUnrecoverableEvent := unrecoverablePodEventReasons[ev.Reason]; isUnrecoverableEvent {
-			if !checkIfUnrecoverableEventIgnored(ev.Reason) && ev.Count >= maxCount {
-				var msg string
-				if ev.Count > 1 {
-					msg = fmt.Sprintf("Detected unrecoverable event %s %d times: %s", ev.Reason, ev.Count, ev.Message)
-				} else {
-					msg = fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, ev.Message)
-				}
-				return msg, nil
-			}
-		}
-	}
-	return "", nil
-}
-
-func checkContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok bool) {
-	if containerStatus.State.Waiting != nil {
-		for _, failureReason := range containerFailureStateReasons {
-			if containerStatus.State.Waiting.Reason == failureReason {
-				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason)
-			}
-		}
-	}
-	return true
-}
-
-func checkIfUnrecoverableEventIgnored(reason string) (ignored bool) {
-	for _, ignoredReason := range config.Workspace.IgnoredUnrecoverableEvents {
-		if ignoredReason == reason {
-			return true
-		}
-	}
-	return false
 }

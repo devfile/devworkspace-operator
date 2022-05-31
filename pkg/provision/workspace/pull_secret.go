@@ -18,6 +18,7 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"k8s.io/apimachinery/pkg/types"
@@ -28,6 +29,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	pullSecretCreationTimeout time.Duration = 5_000_000_000 // 5 seconds
 )
 
 type PullSecretsProvisioningStatus struct {
@@ -66,6 +71,15 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 		return PullSecretsProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
 				Err: err,
+			},
+		}
+	}
+
+	if len(serviceAccount.ImagePullSecrets) == 0 && serviceAccount.CreationTimestamp.Add(pullSecretCreationTimeout).After(time.Now()) {
+		return PullSecretsProvisioningStatus{
+			ProvisioningStatus: ProvisioningStatus{
+				Requeue: true,
+				Message: "Waiting for image pull secrets",
 			},
 		}
 	}

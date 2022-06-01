@@ -50,6 +50,9 @@ var deploymentDiffOpts = cmp.Options{
 	cmpopts.SortSlices(func(a, b corev1.VolumeMount) bool {
 		return strings.Compare(a.Name, b.Name) > 0
 	}),
+	cmpopts.SortSlices(func(a, b corev1.EnvFromSource) bool {
+		return strings.Compare(getNameFromEnvFrom(a), getNameFromEnvFrom(b)) > 0
+	}),
 }
 
 var configmapDiffOpts = cmp.Options{
@@ -73,4 +76,15 @@ var routeDiffOpts = cmp.Options{
 var ingressDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(networkingv1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
 	cmpopts.IgnoreFields(networkingv1.HTTPIngressPath{}, "PathType"),
+}
+
+func getNameFromEnvFrom(source corev1.EnvFromSource) string {
+	switch {
+	case source.ConfigMapRef != nil:
+		return source.ConfigMapRef.Name
+	case source.SecretRef != nil:
+		return source.SecretRef.Name
+	default:
+		return ""
+	}
 }

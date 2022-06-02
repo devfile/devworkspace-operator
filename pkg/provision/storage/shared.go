@@ -238,6 +238,7 @@ func checkForExistingCommonPVC(namespace string, api sync.ClusterAPI) (string, e
 
 // getSharedPVCWorkspaceCount returns the total number of workspaces which are using a shared PVC
 // (i.e the workspaces storage-class attribute is set to "common", "async", or unset which defaults to "common")
+// Note that workspaces that are have been deleted (i.e. have a deletion timestamp) are not counted.
 func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total int, err error) {
 	workspaces := &dw.DevWorkspaceList{}
 	err = api.Client.List(api.Ctx, workspaces, &client.ListOptions{Namespace: namespace})
@@ -245,8 +246,12 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 		return 0, err
 	}
 	for _, workspace := range workspaces.Items {
+		if workspace.DeletionTimestamp != nil {
+			// Ignore terminating workspaces
+			continue
+		}
 		storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-		// Note, if the storageClass attribute isin't set (ie. storageClass == ""), then the storage class being used is "common"
+		// Note, if the storageClass attribute isn't set (ie. storageClass == ""), then the storage class being used is "common"
 		if storageClass == constants.AsyncStorageClassType || storageClass == constants.CommonStorageClassType || storageClass == "" {
 			total++
 		}

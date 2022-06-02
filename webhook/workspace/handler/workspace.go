@@ -25,6 +25,7 @@ import (
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
@@ -106,11 +107,22 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 		return admission.Denied("DevWorkspace ID cannot be changed once it is set")
 	}
 
-	oldStorageClass := oldWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-	newStorageClass := newWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	oldStorageType := oldWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	newStorageType := newWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
 
-	if oldStorageClass != newStorageClass {
-		return admission.Denied("DevWorkspace storage-type attribute cannot be changed once the workspace has been created.")
+	// Prevent switching storage type when it could risk orphaning data in a PVC (e.g. switching from common to ephemeral)
+	if oldStorageType != newStorageType {
+		switch {
+		case oldStorageType == constants.EphemeralStorageClassType:
+			// Allow switching from ephemeral to a persistent storage type
+			break
+		case !hasFinalizer(oldWksp, constants.StorageCleanupFinalizer) && !hasFinalizer(newWksp, constants.StorageCleanupFinalizer):
+			// If finalizer is not set, the workspace does not use storage yet and so can safely switch (e.g. a workspace was created
+			// with `started: false` and then edited)
+			break
+		default:
+			return admission.Denied("DevWorkspace storage-type attribute cannot be changed once the workspace has been created.")
+		}
 	}
 
 	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp, req.UserInfo.UID)
@@ -141,4 +153,13 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 	}
 
 	return admission.Allowed("new workspace has the same devworkspace as old one")
+}
+
+func hasFinalizer(obj client.Object, finalizer string) bool {
+	for _, f := range obj.GetFinalizers() {
+		if f == finalizer {
+			return true
+		}
+	}
+	return false
 }

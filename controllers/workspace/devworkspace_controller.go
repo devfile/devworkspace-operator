@@ -269,7 +269,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
 	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) {
-		coputil.AddFinalizer(clusterWorkspace, storageCleanupFinalizer)
+		coputil.AddFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer)
 		if err := r.Update(ctx, clusterWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -399,7 +399,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}
 	if wsprovision.NeedsServiceAccountFinalizer(&workspace.Spec.Template) {
-		coputil.AddFinalizer(clusterWorkspace, serviceAccountCleanupFinalizer)
+		coputil.AddFinalizer(clusterWorkspace, constants.ServiceAccountCleanupFinalizer)
 		if err := r.Update(ctx, clusterWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}

@@ -18,6 +18,8 @@ package controllers
 import (
 	"context"
 
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
@@ -32,17 +34,12 @@ import (
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
-const (
-	storageCleanupFinalizer        = "storage.controller.devfile.io"
-	serviceAccountCleanupFinalizer = "serviceaccount.controller.devfile.io"
-)
-
 func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *dw.DevWorkspace) bool {
 	for _, finalizer := range workspace.Finalizers {
-		if finalizer == storageCleanupFinalizer {
+		if finalizer == constants.StorageCleanupFinalizer {
 			return true
 		}
-		if finalizer == serviceAccountCleanupFinalizer {
+		if finalizer == constants.ServiceAccountCleanupFinalizer {
 			return true
 		}
 	}
@@ -60,9 +57,9 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 
 		for _, finalizer := range workspace.Finalizers {
 			switch finalizer {
-			case storageCleanupFinalizer:
+			case constants.StorageCleanupFinalizer:
 				return r.finalizeStorage(ctx, log, workspace)
-			case serviceAccountCleanupFinalizer:
+			case constants.ServiceAccountCleanupFinalizer:
 				return r.finalizeServiceAccount(ctx, log, workspace)
 			}
 		}
@@ -86,7 +83,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	} else if terminating {
 		// Namespace is terminating, it's redundant to clean PVC files since it's going to be removed
 		log.Info("Namespace is terminating; clearing storage finalizer")
-		coputil.RemoveFinalizer(workspace, storageCleanupFinalizer)
+		coputil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
 		return reconcile.Result{}, r.Update(ctx, workspace)
 	}
 
@@ -118,7 +115,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 		}
 	}
 	log.Info("PVC clean up successful; clearing finalizer")
-	coputil.RemoveFinalizer(workspace, storageCleanupFinalizer)
+	coputil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
 	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 
@@ -134,7 +131,7 @@ func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log
 		return reconcile.Result{Requeue: true}, nil
 	}
 	log.Info("ServiceAccount clean up successful; clearing finalizer")
-	coputil.RemoveFinalizer(workspace, serviceAccountCleanupFinalizer)
+	coputil.RemoveFinalizer(workspace, constants.ServiceAccountCleanupFinalizer)
 	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 

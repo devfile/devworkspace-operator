@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	pullSecretCreationTimeout time.Duration = 5_000_000_000 // 5 seconds
+	pullSecretCreationTimeout time.Duration = 5 * time.Second
 )
 
 type PullSecretsProvisioningStatus struct {

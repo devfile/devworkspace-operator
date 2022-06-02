@@ -92,6 +92,17 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	if err != nil {
 		return err
 	}
+
+	pvcTerminating, err := checkPVCTerminating(pvcName, workspace.Namespace, clusterAPI)
+	if err != nil {
+		return err
+	} else if pvcTerminating {
+		return &NotReadyError{
+			Message:      "Shared PVC is in terminating state",
+			RequeueAfter: 2 * time.Second,
+		}
+	}
+
 	if pvcName != "" {
 		// Create common PVC if needed
 		clusterPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)

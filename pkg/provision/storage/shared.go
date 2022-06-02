@@ -112,7 +112,7 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 		}
 	case *sync.UnrecoverableSyncError:
 		return nil, &ProvisioningError{
-			Message: "failed to sync PVC to cluster",
+			Message: "Failed to sync PVC to cluster",
 			Err:     t.Cause,
 		}
 	default:
@@ -257,4 +257,20 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 		}
 	}
 	return total, nil
+}
+
+func checkPVCTerminating(name, namespace string, api sync.ClusterAPI) (bool, error) {
+	if name == "" {
+		name = config.Workspace.PVCName
+	}
+	pvc := &corev1.PersistentVolumeClaim{}
+	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}
+	err := api.Client.Get(api.Ctx, namespacedName, pvc)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return pvc.DeletionTimestamp != nil, nil
 }

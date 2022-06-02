@@ -17,6 +17,7 @@ package storage
 
 import (
 	"fmt"
+	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config"
@@ -56,6 +57,17 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	if err != nil {
 		return err
 	}
+
+	pvcTerminating, err := checkPVCTerminating(pvcName, workspace.Namespace, clusterAPI)
+	if err != nil {
+		return err
+	} else if pvcTerminating {
+		return &NotReadyError{
+			Message:      "Shared PVC is in terminating state",
+			RequeueAfter: 2 * time.Second,
+		}
+	}
+
 	if pvcName == "" {
 		commonPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
 		if err != nil {

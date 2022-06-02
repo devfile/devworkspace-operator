@@ -25,6 +25,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/google/go-cmp/cmp"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -103,7 +104,7 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 	return tests
 }
 
-func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
+func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
@@ -138,6 +139,34 @@ func TestRewriteContainerVolumeMountsForCommonStorageClass(t *testing.T) {
 					"PodAdditions should match expected output: Diff: %s", cmp.Diff(tt.Output.PodAdditions, tt.Input.PodAdditions))
 			}
 		})
+	}
+}
+
+func TestTerminatingPVC(t *testing.T) {
+	setupControllerCfg()
+	commonStorage := CommonStorageProvisioner{}
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"))
+	if err != nil {
+		t.Fatalf("Failure during setup: %s", err)
+	}
+	testTime := metav1.Now()
+	commonPVC.SetDeletionTimestamp(&testTime)
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
+		Logger: zap.New(),
+	}
+	testCase := loadTestCaseOrPanic(t, "testdata/common-storage/rewrites-volumes-for-common-pvc-strategy.yaml")
+	assert.NotNil(t, testCase.Input.Workspace, "Input does not define workspace")
+	workspace := &dw.DevWorkspace{}
+	workspace.Spec.Template = *testCase.Input.Workspace
+	workspace.Status.DevWorkspaceId = testCase.Input.DevWorkspaceID
+	workspace.Namespace = "test-namespace"
+	err = commonStorage.ProvisionStorage(&testCase.Input.PodAdditions, workspace, clusterAPI)
+	if assert.Error(t, err, "Should return error when PVC is terminating") {
+		_, ok := err.(*NotReadyError)
+		assert.True(t, ok, "Expect NotReadyError when PVC is terminating")
+		assert.Equal(t, "Shared PVC is in terminating state", err.Error(), "Expect message that existing PVC is terminating")
 	}
 }
 

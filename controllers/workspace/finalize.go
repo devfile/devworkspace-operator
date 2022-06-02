@@ -50,19 +50,21 @@ func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *dw.DevWorkspa
 }
 
 func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
-	workspace.Status.Message = "Cleaning up resources for deletion"
-	workspace.Status.Phase = devworkspacePhaseTerminating
-	err := r.Client.Status().Update(ctx, workspace)
-	if err != nil && !k8sErrors.IsConflict(err) {
-		return reconcile.Result{}, err
-	}
+	if workspace.Status.Phase != dw.DevWorkspaceStatusError {
+		workspace.Status.Message = "Cleaning up resources for deletion"
+		workspace.Status.Phase = devworkspacePhaseTerminating
+		err := r.Client.Status().Update(ctx, workspace)
+		if err != nil && !k8sErrors.IsConflict(err) {
+			return reconcile.Result{}, err
+		}
 
-	for _, finalizer := range workspace.Finalizers {
-		switch finalizer {
-		case storageCleanupFinalizer:
-			return r.finalizeStorage(ctx, log, workspace)
-		case serviceAccountCleanupFinalizer:
-			return r.finalizeServiceAccount(ctx, log, workspace)
+		for _, finalizer := range workspace.Finalizers {
+			switch finalizer {
+			case storageCleanupFinalizer:
+				return r.finalizeStorage(ctx, log, workspace)
+			case serviceAccountCleanupFinalizer:
+				return r.finalizeServiceAccount(ctx, log, workspace)
+			}
 		}
 	}
 	return reconcile.Result{}, nil

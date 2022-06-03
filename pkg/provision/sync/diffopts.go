@@ -48,7 +48,17 @@ var deploymentDiffOpts = cmp.Options{
 		return strings.Compare(a.Name, b.Name) > 0
 	}),
 	cmpopts.SortSlices(func(a, b corev1.VolumeMount) bool {
-		return strings.Compare(a.Name, b.Name) > 0
+		switch {
+		case a.Name != b.Name:
+			return strings.Compare(a.Name, b.Name) > 0
+		case a.MountPath != b.MountPath:
+			return strings.Compare(a.MountPath, b.MountPath) > 0
+		case a.SubPath != b.SubPath:
+			return strings.Compare(a.SubPath, b.SubPath) > 0
+		default:
+			// If mountPath + subPath match, the deployment is invalid, so this cannot happen.
+			return false
+		}
 	}),
 	cmpopts.SortSlices(func(a, b corev1.EnvFromSource) bool {
 		return strings.Compare(getNameFromEnvFrom(a), getNameFromEnvFrom(b)) > 0

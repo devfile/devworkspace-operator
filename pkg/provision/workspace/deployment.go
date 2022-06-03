@@ -246,6 +246,14 @@ func getSpecDeployment(
 		},
 	}
 
+	if needsPodSpecOverrides(workspace) {
+		patchedDeployment, err := applyPodSpecOverrides(deployment, workspace)
+		if err != nil {
+			return nil, err
+		}
+		deployment = patchedDeployment
+	}
+
 	if podTolerations != nil && len(podTolerations) > 0 {
 		deployment.Spec.Template.Spec.Tolerations = podTolerations
 	}

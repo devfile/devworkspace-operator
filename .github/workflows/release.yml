@@ -110,7 +110,7 @@ jobs:
         run: |
           # Need to grab goimports otherwise formatting after this step will fail
           # PR checks.
-          go install golang.org/x/tools/cmd/goimports
+          go install golang.org/x/tools/cmd/goimports@latest
 
           git config --global user.name "Angel Misevski"
           git config --global user.email "amisevsk@redhat.com"

@@ -43,6 +43,7 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 			RunAsNonRoot: &boolTrue,
 			FSGroup:      &int64UID,
 		},
+		DefaultTemplate: nil,
 	},
 }
 

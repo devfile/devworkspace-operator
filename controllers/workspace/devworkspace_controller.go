@@ -59,6 +59,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	wsDefaults "github.com/devfile/devworkspace-operator/pkg/library/defaults"
 )
 
 const (
@@ -238,6 +239,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		Context:            ctx,
 		K8sClient:          r.Client,
 		HttpClient:         httpClient,
+	}
+
+	if wsDefaults.NeedsDefaultTemplate(workspace) {
+		wsDefaults.ApplyDefaultTemplate(workspace)
 	}
 
 	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, flattenHelpers)

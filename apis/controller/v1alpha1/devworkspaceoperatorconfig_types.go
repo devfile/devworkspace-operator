@@ -16,6 +16,7 @@
 package v1alpha1
 
 import (
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -127,6 +128,10 @@ type WorkspaceConfig struct {
 	// configuration option is ignored. If set, the entire pod security context is overridden;
 	// values are not merged.
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	// DefaultTemplate defines an optional DevWorkspace Spec Template which gets applied to the workspace
+	// if the workspace's Template Spec Components are not defined. The DefaultTemplate will overwrite the existing
+	// Template Spec, with the exception of Projects (if any are defined).
+	DefaultTemplate *dw.DevWorkspaceTemplateSpecContent `json:"defaultTemplate,omitempty"`
 }
 
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API

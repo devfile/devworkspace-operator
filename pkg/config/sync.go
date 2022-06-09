@@ -91,9 +91,7 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	defaultConfig.Routing.ProxyConfig = clusterProxy
-	if internalConfig.Routing.ProxyConfig == nil {
-		internalConfig.Routing.ProxyConfig = clusterProxy
-	}
+	internalConfig.Routing.ProxyConfig = proxy.MergeProxyConfigs(clusterProxy, internalConfig.Routing.ProxyConfig)
 
 	updatePublicConfig()
 	return nil

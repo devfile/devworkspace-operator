@@ -253,6 +253,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.DefaultStorageSize.PerWorkspace = &perWorkspaceSizeCopy
 			}
 		}
+		if from.Workspace.DefaultTemplate != nil {
+			templateSpecContentCopy := from.Workspace.DefaultTemplate.DeepCopy()
+			to.Workspace.DefaultTemplate = templateSpecContentCopy
+		}
 	}
 }
 
@@ -294,6 +298,9 @@ func logCurrentConfig() {
 			if Workspace.DefaultStorageSize.PerWorkspace != nil {
 				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.perWorkspace=%s", Workspace.DefaultStorageSize.PerWorkspace.String()))
 			}
+		}
+		if Workspace.DefaultTemplate != nil {
+			config = append(config, fmt.Sprintf("workspace.defaultTemplate is set"))
 		}
 	}
 	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {

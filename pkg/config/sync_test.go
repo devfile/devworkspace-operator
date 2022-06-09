@@ -24,6 +24,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -234,7 +235,9 @@ func TestSyncConfigDoesNotEraseClusterRoutingSuffix(t *testing.T) {
 }
 
 func TestMergeConfigLooksAtAllFields(t *testing.T) {
-	f := fuzz.New().NilChance(0)
+	f := fuzz.New().NilChance(0).Funcs(
+		func(embeddedResource *runtime.RawExtension, c fuzz.Continue) {},
+	)
 	expectedConfig := &v1alpha1.OperatorConfiguration{}
 	actualConfig := &v1alpha1.OperatorConfiguration{}
 	f.Fuzz(expectedConfig)

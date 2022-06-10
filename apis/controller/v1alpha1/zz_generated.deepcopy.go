@@ -20,6 +20,7 @@
 package v1alpha1
 
 import (
+	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -528,6 +529,11 @@ func (in *WorkspaceConfig) DeepCopyInto(out *WorkspaceConfig) {
 	if in.PodSecurityContext != nil {
 		in, out := &in.PodSecurityContext, &out.PodSecurityContext
 		*out = new(v1.PodSecurityContext)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.DefaultTemplate != nil {
+		in, out := &in.DefaultTemplate, &out.DefaultTemplate
+		*out = new(v1alpha2.DevWorkspaceTemplateSpecContent)
 		(*in).DeepCopyInto(*out)
 	}
 }

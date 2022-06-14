@@ -25,7 +25,7 @@ The DevWorkspace Operator makes use of finalizers on DevWorkspace resources and 
 
 	```
 	kubectl delete deployment/devworkspace-webhook-server -n openshift-operators
-  kubectl delete mutatingwebhookconfigurations controller.devfile.io
+	kubectl delete mutatingwebhookconfigurations controller.devfile.io
 	kubectl delete validatingwebhookconfigurations controller.devfile.io
 	```
 

@@ -94,7 +94,7 @@ func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWork
 
 	// If the number of common + async workspaces that exist (started or stopped) is zero,
 	// delete common PVC instead of running cleanup job
-	if totalWorkspaces > 1 {
+	if totalWorkspaces > 0 {
 		return runCommonPVCCleanupJob(workspace, clusterAPI)
 	} else {
 		sharedPVC := &corev1.PersistentVolumeClaim{}

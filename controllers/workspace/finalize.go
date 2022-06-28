@@ -56,14 +56,12 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		return r.updateWorkspaceStatus(workspace, log, finalizeStatus, finalizeResult, finalizeErr)
 	}()
 
-	if workspace.Status.Phase != dw.DevWorkspaceStatusError {
-		for _, finalizer := range workspace.Finalizers {
-			switch finalizer {
-			case constants.StorageCleanupFinalizer:
-				return r.finalizeStorage(ctx, log, workspace, finalizeStatus)
-			case constants.ServiceAccountCleanupFinalizer:
-				return r.finalizeServiceAccount(ctx, log, workspace, finalizeStatus)
-			}
+	for _, finalizer := range workspace.Finalizers {
+		switch finalizer {
+		case constants.StorageCleanupFinalizer:
+			return r.finalizeStorage(ctx, log, workspace, finalizeStatus)
+		case constants.ServiceAccountCleanupFinalizer:
+			return r.finalizeServiceAccount(ctx, log, workspace, finalizeStatus)
 		}
 	}
 	return reconcile.Result{}, nil

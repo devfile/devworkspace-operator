@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 
+	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -26,7 +27,6 @@ import (
 	"github.com/go-logr/logr"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
-	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -46,28 +46,30 @@ func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *dw.DevWorkspa
 	return false
 }
 
-func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
-	if workspace.Status.Phase != dw.DevWorkspaceStatusError {
-		workspace.Status.Message = "Cleaning up resources for deletion"
-		workspace.Status.Phase = devworkspacePhaseTerminating
-		err := r.Client.Status().Update(ctx, workspace)
-		if err != nil && !k8sErrors.IsConflict(err) {
-			return reconcile.Result{}, err
-		}
+func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (finalizeResult reconcile.Result, finalizeErr error) {
+	// Tracked state for the finalize process; we update the workspace status in a deferred function (and pass the
+	// named return value for finalize()) to update the workspace's status with whatever is in finalizeStatus
+	// when this function returns.
+	finalizeStatus := &currentStatus{phase: devworkspacePhaseTerminating}
+	finalizeStatus.setConditionTrue(conditions.Started, "Cleaning up resources for deletion")
+	defer func() (reconcile.Result, error) {
+		return r.updateWorkspaceStatus(workspace, log, finalizeStatus, finalizeResult, finalizeErr)
+	}()
 
+	if workspace.Status.Phase != dw.DevWorkspaceStatusError {
 		for _, finalizer := range workspace.Finalizers {
 			switch finalizer {
 			case constants.StorageCleanupFinalizer:
-				return r.finalizeStorage(ctx, log, workspace)
+				return r.finalizeStorage(ctx, log, workspace, finalizeStatus)
 			case constants.ServiceAccountCleanupFinalizer:
-				return r.finalizeServiceAccount(ctx, log, workspace)
+				return r.finalizeServiceAccount(ctx, log, workspace, finalizeStatus)
 			}
 		}
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace, finalizeStatus *currentStatus) (reconcile.Result, error) {
 	// Need to make sure Deployment is cleaned up before starting job to avoid mounting issues for RWO PVCs
 	wait, err := wsprovision.DeleteWorkspaceDeployment(ctx, workspace, r.Client)
 	if err != nil {
@@ -90,9 +92,9 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
 		log.Error(err, "Failed to clean up DevWorkspace storage")
-		failedStatus := currentStatus{phase: dw.DevWorkspaceStatusError}
-		failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
-		return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
+		finalizeStatus.phase = dw.DevWorkspaceStatusError
+		finalizeStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
+		return reconcile.Result{}, nil
 	}
 	err = storageProvisioner.CleanupWorkspaceStorage(workspace, sync.ClusterAPI{
 		Ctx:    ctx,
@@ -107,9 +109,9 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 			return reconcile.Result{RequeueAfter: storageErr.RequeueAfter}, nil
 		case *storage.ProvisioningError:
 			log.Error(storageErr, "Failed to clean up DevWorkspace storage")
-			failedStatus := currentStatus{phase: dw.DevWorkspaceStatusError}
-			failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
-			return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
+			finalizeStatus.phase = dw.DevWorkspaceStatusError
+			finalizeStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
+			return reconcile.Result{}, nil
 		default:
 			return reconcile.Result{}, storageErr
 		}
@@ -119,13 +121,13 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 
-func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace, finalizeStatus *currentStatus) (reconcile.Result, error) {
 	retry, err := wsprovision.FinalizeServiceAccount(workspace, ctx, r.NonCachingClient)
 	if err != nil {
 		log.Error(err, "Failed to finalize workspace ServiceAccount")
-		failedStatus := currentStatus{phase: dw.DevWorkspaceStatusError}
-		failedStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
-		return r.updateWorkspaceStatus(workspace, r.Log, &failedStatus, reconcile.Result{}, nil)
+		finalizeStatus.phase = dw.DevWorkspaceStatusError
+		finalizeStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
+		return reconcile.Result{}, nil
 	}
 	if retry {
 		return reconcile.Result{Requeue: true}, nil

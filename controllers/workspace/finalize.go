@@ -53,6 +53,13 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	finalizeStatus := &currentStatus{phase: devworkspacePhaseTerminating}
 	finalizeStatus.setConditionTrue(conditions.Started, "Cleaning up resources for deletion")
 	defer func() (reconcile.Result, error) {
+		if len(workspace.Finalizers) == 0 {
+			// If there are no finalizers on the workspace, the workspace may be garbage collected before we get to update
+			// its status. This avoids potentially logging a confusing error due to trying to set the status on a deleted
+			// workspace. This check has to be in the deferred function since updateWorkspaceStatus will be called after the
+			// client.Update() call that removes the last finalizer.
+			return finalizeResult, finalizeErr
+		}
 		return r.updateWorkspaceStatus(workspace, log, finalizeStatus, finalizeResult, finalizeErr)
 	}()
 

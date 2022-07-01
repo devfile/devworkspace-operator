@@ -653,6 +653,22 @@ func dwRelatedPodsHandler(obj client.Object) []reconcile.Request {
 }
 
 func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Request {
+	// Check if PVC is owned by a DevWorkspace (per-workspace storage case)
+	for _, ownerref := range obj.GetOwnerReferences() {
+		if ownerref.Kind != "DevWorkspace" {
+			continue
+		}
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Name:      ownerref.Name,
+					Namespace: obj.GetNamespace(),
+				},
+			},
+		}
+	}
+
+	// Otherwise, check if common PVC is deleted to make sure all DevWorkspaces see it happen
 	if obj.GetName() != config.Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
 		// We're looking for a deleted common PVC
 		return []reconcile.Request{}

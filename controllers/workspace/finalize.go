@@ -113,7 +113,10 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 			log.Info(storageErr.Message)
 			return reconcile.Result{RequeueAfter: storageErr.RequeueAfter}, nil
 		case *storage.ProvisioningError:
-			log.Error(storageErr, "Failed to clean up DevWorkspace storage")
+			if workspace.Status.Phase != dw.DevWorkspaceStatusError {
+				// Avoid repeatedly logging error unless it's relevant
+				log.Error(storageErr, "Failed to clean up DevWorkspace storage")
+			}
 			finalizeStatus.phase = dw.DevWorkspaceStatusError
 			finalizeStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
 			return reconcile.Result{}, nil

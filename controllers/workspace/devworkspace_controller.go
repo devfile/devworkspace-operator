@@ -636,28 +636,49 @@ func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *
 }
 
 // Mapping the pod to the devworkspace
-func dwRelatedPodsHandler() handler.EventHandler {
-	podToDW := func(obj client.Object) []reconcile.Request {
-		labels := obj.GetLabels()
-		if _, ok := labels[constants.DevWorkspaceNameLabel]; !ok {
-			return nil
-		}
+func dwRelatedPodsHandler(obj client.Object) []reconcile.Request {
+	labels := obj.GetLabels()
+	if _, ok := labels[constants.DevWorkspaceNameLabel]; !ok {
+		return []reconcile.Request{}
+	}
 
-		//If the dewworkspace label does not exist, do no reconcile
-		if _, ok := labels[constants.DevWorkspaceIDLabel]; !ok {
-			return nil
-		}
+	//If the dewworkspace label does not exist, do no reconcile
+	if _, ok := labels[constants.DevWorkspaceIDLabel]; !ok {
+		return []reconcile.Request{}
+	}
 
-		return []reconcile.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Name:      labels[constants.DevWorkspaceNameLabel],
-					Namespace: obj.GetNamespace(),
-				},
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      labels[constants.DevWorkspaceNameLabel],
+				Namespace: obj.GetNamespace(),
 			},
+		},
+	}
+}
+
+func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Request {
+	if obj.GetName() != config.Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
+		// We're looking for a deleted common PVC
+		return []reconcile.Request{}
+	}
+	dwList := &dw.DevWorkspaceList{}
+	if err := r.Client.List(context.Background(), dwList); err != nil {
+		return []reconcile.Request{}
+	}
+	var reconciles []reconcile.Request
+	for _, workspace := range dwList.Items {
+		storageType := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+		if storageType == constants.CommonStorageClassType || storageType == "" {
+			reconciles = append(reconciles, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      workspace.GetName(),
+					Namespace: workspace.GetNamespace(),
+				},
+			})
 		}
 	}
-	return handler.EnqueueRequestsFromMapFunc(podToDW)
+	return reconciles
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -688,7 +709,8 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, dwRelatedPodsHandler()).
+		Watches(&source.Kind{Type: &corev1.Pod{}}, handler.EnqueueRequestsFromMapFunc(dwRelatedPodsHandler)).
+		Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, handler.EnqueueRequestsFromMapFunc(r.dwPVCHandler)).
 		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configWatcher).
 		WithEventFilter(predicates).
 		WithEventFilter(podPredicates).

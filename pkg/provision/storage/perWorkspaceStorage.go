@@ -63,6 +63,13 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 	}
 	pvcName := perWorkspacePVC.Name
 
+	// If PVC is being deleted, we need to fail workspace startup as a running pod will block deletion.
+	if perWorkspacePVC.DeletionTimestamp != nil {
+		return &ProvisioningError{
+			Message: "DevWorkspace PVC is being deleted",
+		}
+	}
+
 	// Rewrite container volume mounts
 	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, pvcName, podAdditions, &workspace.Spec.Template); err != nil {
 		return &ProvisioningError{

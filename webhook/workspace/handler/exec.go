@@ -22,6 +22,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -37,12 +38,15 @@ func (h *WebhookHandler) ValidateExecOnConnect(ctx context.Context, req admissio
 	}, &p)
 
 	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return admission.Allowed("Not restricted-access DevWorkspace pod")
+		}
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	_, ok := p.Labels[constants.DevWorkspaceIDLabel]
 	if !ok {
-		return admission.Allowed("It's not devworkspace related pod")
+		return admission.Allowed("Not a devworkspace related pod")
 	}
 
 	creator, ok := p.Labels[constants.DevWorkspaceCreatorLabel]

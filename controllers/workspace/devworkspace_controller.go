@@ -477,6 +477,9 @@ func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *d
 			status.setConditionFalse(conditions.Started, "Workspace is stopped")
 		}
 	}
+	if stoppedBy, ok := workspace.Annotations[constants.DevWorkspaceStopReasonAnnotation]; ok {
+		logger.Info("Workspace stopped with reason", "stopped-by", stoppedBy)
+	}
 	return r.updateWorkspaceStatus(workspace, logger, &status, reconcile.Result{}, nil)
 }
 

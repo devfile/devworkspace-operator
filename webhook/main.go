@@ -26,6 +26,7 @@ import (
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/cache"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/version"
@@ -89,6 +90,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	cacheFunc, err := cache.GetWebhooksCacheFunc()
+	if err != nil {
+		log.Error(err, "failed to set up objects cache")
+		os.Exit(1)
+	}
+
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Namespace:              namespace,
@@ -96,6 +103,7 @@ func main() {
 		MetricsBindAddress:     metricsAddr,
 		HealthProbeBindAddress: ":6789",
 		CertDir:                server.WebhookServerCertDir,
+		NewCache:               cacheFunc,
 	})
 	if err != nil {
 		log.Error(err, "Failed to create manager")

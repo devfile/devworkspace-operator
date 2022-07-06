@@ -21,6 +21,7 @@ import (
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
@@ -128,6 +129,43 @@ func (h *WebhookHandler) handleImmutableObj(oldObj, newObj runtime.Object, uid s
 		return true, ""
 	}
 	return changePermitted(oldObj, newObj)
+}
+
+func (h *WebhookHandler) handleImmutablePod(oldObj, newObj *corev1.Pod, uid string) (allowed bool, msg string) {
+	if uid == h.ControllerUID {
+		return true, ""
+	}
+	oldAnnotations := oldObj.GetObjectMeta().GetAnnotations()
+	if oldAnnotations[constants.DevWorkspaceRestrictedAccessAnnotation] != "true" {
+		return true, ""
+	}
+	oldLabels := oldObj.GetObjectMeta().GetLabels()
+	if oldLabels[constants.DevWorkspaceCreatorLabel] == uid {
+		return true, ""
+	}
+
+	// Edge case -- it's possible to update images in a Pod and this is seemingly not reverted by the ReplicaSet (tested on OpenShift 4.10)
+	newContainerImages := map[string]string{}
+	for _, container := range newObj.Spec.Containers {
+		newContainerImages[container.Name] = container.Image
+	}
+	for _, oldContainer := range oldObj.Spec.Containers {
+		if newContainerImages[oldContainer.Name] != oldContainer.Image {
+			return false, "Not permitted to update container images for restricted-access pod"
+		}
+	}
+
+	newInitContainerImages := map[string]string{}
+	for _, initContainer := range newObj.Spec.InitContainers {
+		newInitContainerImages[initContainer.Name] = initContainer.Image
+	}
+	for _, oldInitContainer := range oldObj.Spec.InitContainers {
+		if newContainerImages[oldInitContainer.Name] != oldInitContainer.Image {
+			return false, "Not permitted to update init container images for restricted-access pod"
+		}
+	}
+
+	return true, ""
 }
 
 func (h *WebhookHandler) handleImmutableRoute(oldObj, newObj runtime.Object, username string) (allowed bool, msg string) {

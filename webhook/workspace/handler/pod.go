@@ -48,8 +48,11 @@ func (h *WebhookHandler) MutatePodOnUpdate(_ context.Context, req admission.Requ
 		return admission.Denied(err.Error())
 	}
 
-	ok, msg := h.handleImmutableObj(oldP, newP, req.UserInfo.UID)
-	if !ok {
+	if ok, msg := h.handleImmutableObj(oldP, newP, req.UserInfo.UID); !ok {
+		return admission.Denied(msg)
+	}
+
+	if ok, msg := h.handleImmutablePod(oldP, newP, req.UserInfo.UID); !ok {
 		return admission.Denied(msg)
 	}
 

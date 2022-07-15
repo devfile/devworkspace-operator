@@ -74,7 +74,8 @@ spec:
 
 where `<storage-type>` is one of
 
-* `common`: Use one PVC for all workspace volumes, mounting Devfile volumes in subpaths within the common PVC
+* `per-user`: Use one PVC for all workspace volumes, mounting Devfile volumes in subpaths within the shared PVC
+* `common`: An alias of the `per-user` storage-type, which behaves the same way as the `per-user` storage-type. Exists for legacy compatibility reasons.
 * `per-workspace`: Every workspace is given its own PVC. Each Devfile volume is mounted as a subpath within the workspace PVC.
 * `ephemeral`: Replace all volumes with `emptyDir` volumes. This storage type is non-persistent; any local changes will be lost when the workspace is stopped. This is the equivalent of marking all volumes in the Devfile as `ephemeral: true`
 * `async`: Use `emptyDir` volumes for workspace volumes, but include a sidecar that synchronises local changes to a persistent volume as in the `common` strategy. This can potentially avoid issues where mounting volumes to a workspace on startup takes a long time.

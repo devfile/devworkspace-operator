@@ -116,6 +116,9 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 		case oldStorageType == constants.EphemeralStorageClassType:
 			// Allow switching from ephemeral to a persistent storage type
 			break
+		case (oldStorageType == constants.CommonStorageClassType && newStorageType == constants.PerUserStorageClassType) || (oldStorageType == constants.PerUserStorageClassType && newStorageType == constants.CommonStorageClassType):
+			// Allow switching between common and per-user persistent storage type for legacy compatibility
+			break
 		case !hasFinalizer(oldWksp, constants.StorageCleanupFinalizer) && !hasFinalizer(newWksp, constants.StorageCleanupFinalizer):
 			// If finalizer is not set, the workspace does not use storage yet and so can safely switch (e.g. a workspace was created
 			// with `started: false` and then edited)

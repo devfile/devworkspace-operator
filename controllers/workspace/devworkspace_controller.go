@@ -685,7 +685,7 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 	var reconciles []reconcile.Request
 	for _, workspace := range dwList.Items {
 		storageType := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-		if storageType == constants.CommonStorageClassType || storageType == "" {
+		if storageType == constants.CommonStorageClassType || storageType == constants.PerUserStorageClassType || storageType == "" {
 			reconciles = append(reconciles, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      workspace.GetName(),

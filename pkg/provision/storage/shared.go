@@ -252,7 +252,7 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 		}
 		storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
 		// Note, if the storageClass attribute isn't set (ie. storageClass == ""), then the storage class being used is "common"
-		if storageClass == constants.AsyncStorageClassType || storageClass == constants.CommonStorageClassType || storageClass == "" {
+		if storageClass == constants.AsyncStorageClassType || storageClass == constants.CommonStorageClassType || storageClass == constants.PerUserStorageClassType || storageClass == "" {
 			total++
 		}
 	}

@@ -104,6 +104,23 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 	return tests
 }
 
+func TestUseCommonStorageProvisionerForPerUserStorageClass(t *testing.T) {
+	test := loadTestCaseOrPanic(t, "testdata/common-storage/per-user-alias.yaml")
+
+	t.Run(test.Name, func(t *testing.T) {
+		// sanity check that file is read correctly.
+		assert.NotNil(t, test.Input.Workspace, "Input does not define workspace")
+		workspace := &dw.DevWorkspace{}
+		workspace.Spec.Template = *test.Input.Workspace
+		storageProvisioner, err := GetProvisioner(workspace)
+
+		if !assert.NoError(t, err, "Should not return error") {
+			return
+		}
+		assert.Equal(t, &CommonStorageProvisioner{}, storageProvisioner, "Per-user storage class should use the common storage provisioner")
+	})
+}
+
 func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	setupControllerCfg()

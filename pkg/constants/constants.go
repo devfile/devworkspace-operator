@@ -64,9 +64,12 @@ const (
 
 	// Constants describing storage classes supported by the controller
 
-	// CommonStorageClassType defines the 'common' storage policy -- one PVC is provisioned per namespace and all devworkspace storage
-	// is mounted in it on subpaths according to devworkspace ID.
+	// CommonStorageClassType defines the 'common' storage policy, which is an alias of the 'per-user' storage policy, and operates in the same fashion as the 'per-user' storage policy.
+	// The 'common' storage policy exists only for legacy compatibility.
 	CommonStorageClassType = "common"
+	// PerUserStorageClassType defines the 'per-user' storage policy -- one PVC is provisioned per namespace and all devworkspace storage
+	// is mounted in it on subpaths according to devworkspace ID.
+	PerUserStorageClassType = "per-user"
 	// AsyncStorageClassType defines the 'asynchronous' storage policy. An rsync sidecar is added to devworkspaces that uses SSH to connect
 	// to a storage deployment that mounts a common PVC for the namespace.
 	AsyncStorageClassType = "async"

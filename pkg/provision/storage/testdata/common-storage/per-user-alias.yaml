@@ -1,0 +1,8 @@
+name: "per-user storage class can be used as an alias for common storage class"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  workspace:
+    attributes:
+      controller.devfile.io/storage-type: per-user
+

@@ -1,17 +1,21 @@
-kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
 metadata:
   name: web-terminal
-  annotations:
-    controller.devfile.io/restricted-access: "true"
   labels:
-    # it's a label OpenShift console uses a flag to mark terminal's workspaces
-    console.openshift.io/terminal: "true"
+    console.openshift.io/terminal: 'true'
+  annotations:
+    controller.devfile.io/restricted-access: 'true'
 spec:
+  routingClass: web-terminal
   started: true
-  routingClass: 'web-terminal'
   template:
     components:
-      - name: web-terminal
+      - name: web-terminal-tooling
         plugin:
-          id: redhat-developer/web-terminal/latest
+          kubernetes:
+            name: web-terminal-tooling
+      - name: web-terminal-exec
+        plugin:
+          kubernetes:
+            name: web-terminal-exec

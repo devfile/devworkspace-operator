@@ -1,12 +1,12 @@
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
-  name: theia
+  name: theia-next
 spec:
   started: true
   template:
     attributes:
-      controller.devfile.io/storage-type: async
+        controller.devfile.io/storage-type: ephemeral
     projects:
       - name: web-nodejs-sample
         git:
@@ -15,17 +15,16 @@ spec:
     components:
       - name: theia
         plugin:
-          kubernetes:
-            name: theia-next
-            namespace: devworkspace-plugins
-      - name: terminal
-        plugin:
-          kubernetes:
-            name: machine-exec
-            namespace: devworkspace-plugins
+          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/next/devfile.yaml
+          components:
+            - name: theia-ide
+              container:
+                env:
+                  - name: THEIA_HOST
+                    value: 0.0.0.0
     commands:
       - id: say-hello
         exec:
-          component: theia
+          component: theia-ide
           commandLine: echo "Hello from $(pwd)"
           workingDir: ${PROJECTS_ROOT}/project/app

@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
-  name: theia-latest
+  name: git-clone-sample-devworkspace
 spec:
   started: true
   template:
@@ -10,10 +10,18 @@ spec:
         git:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
+      - name: devworkspace-operator
+        git:
+          checkoutFrom:
+            remote: amisevsk
+            revision: clone-projects-on-start
+          remotes:
+            origin: "https://github.com/devfile/devworkspace-operator.git"
+            amisevsk: "https://github.com/amisevsk/devworkspace-operator.git"
     components:
       - name: theia
         plugin:
-          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/latest/devfile.yaml
+          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/next/devfile.yaml
           components:
             - name: theia-ide
               container:

@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"reflect"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
@@ -66,4 +69,101 @@ func formatImportCycle(end *resolutionContextTree) string {
 		cycle = fmt.Sprintf("%s -> %s", end.componentName, cycle)
 	}
 	return cycle
+}
+
+func parseResourcesFromComponent(component *dw.Component) (*corev1.ResourceRequirements, error) {
+	if component.Container == nil {
+		return nil, fmt.Errorf("attemped to parse resource requirements from a non-container component")
+	}
+	memLimitStr := component.Container.MemoryLimit
+	if memLimitStr == "" {
+		memLimitStr = "0Mi"
+	}
+	memRequestStr := component.Container.MemoryRequest
+	if memRequestStr == "" {
+		memRequestStr = "0Mi"
+	}
+	cpuLimitStr := component.Container.CpuLimit
+	if cpuLimitStr == "" {
+		cpuLimitStr = "0m"
+	}
+	cpuRequestStr := component.Container.CpuRequest
+	if cpuRequestStr == "" {
+		cpuRequestStr = "0m"
+	}
+
+	memoryLimit, err := resource.ParseQuantity(memLimitStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse memory limit for container component %s: %w", component.Name, err)
+	}
+	memoryRequest, err := resource.ParseQuantity(memRequestStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse memory request for container component %s: %w", component.Name, err)
+	}
+	cpuLimit, err := resource.ParseQuantity(cpuLimitStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CPU limit for container component %s: %w", component.Name, err)
+	}
+	cpuRequest, err := resource.ParseQuantity(cpuRequestStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse CPU request for container component %s: %w", component.Name, err)
+	}
+
+	return &corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceMemory: memoryLimit,
+			corev1.ResourceCPU:    cpuLimit,
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceMemory: memoryRequest,
+			corev1.ResourceCPU:    cpuRequest,
+		},
+	}, nil
+}
+
+func addResourceRequirements(resources *corev1.ResourceRequirements, toAdd *dw.Component) error {
+	componentResources, err := parseResourcesFromComponent(toAdd)
+	if err != nil {
+		return err
+	}
+
+	memoryLimit := resources.Limits[corev1.ResourceMemory]
+	memoryLimit.Add(componentResources.Limits[corev1.ResourceMemory])
+	resources.Limits[corev1.ResourceMemory] = memoryLimit
+
+	cpuLimit := resources.Limits[corev1.ResourceCPU]
+	cpuLimit.Add(componentResources.Limits[corev1.ResourceCPU])
+	resources.Limits[corev1.ResourceCPU] = cpuLimit
+
+	memoryRequest := resources.Requests[corev1.ResourceMemory]
+	memoryRequest.Add(componentResources.Requests[corev1.ResourceMemory])
+	resources.Requests[corev1.ResourceMemory] = memoryRequest
+
+	cpuRequest := resources.Requests[corev1.ResourceCPU]
+	cpuRequest.Add(componentResources.Requests[corev1.ResourceCPU])
+	resources.Requests[corev1.ResourceCPU] = cpuRequest
+
+	return nil
+}
+
+func applyResourceRequirementsToComponent(container *dw.ContainerComponent, resources *corev1.ResourceRequirements) {
+	memLimit := resources.Limits[corev1.ResourceMemory]
+	if !memLimit.IsZero() {
+		container.MemoryLimit = memLimit.String()
+	}
+
+	cpuLimit := resources.Limits[corev1.ResourceCPU]
+	if !cpuLimit.IsZero() {
+		container.CpuLimit = cpuLimit.String()
+	}
+
+	memRequest := resources.Requests[corev1.ResourceMemory]
+	if !memRequest.IsZero() {
+		container.MemoryRequest = memRequest.String()
+	}
+
+	cpuRequest := resources.Requests[corev1.ResourceCPU]
+	if !cpuRequest.IsZero() {
+		container.CpuRequest = cpuRequest.String()
+	}
 }

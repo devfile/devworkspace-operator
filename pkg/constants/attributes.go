@@ -89,4 +89,14 @@ const (
 	// EndpointURLAttribute is an attribute added to endpoints to denote the endpoint on the cluster that
 	// was created to route to this endpoint
 	EndpointURLAttribute = "controller.devfile.io/endpoint-url"
+
+	// ContainerContributionAttribute defines a container component as a container contribution that should be merged
+	// into an existing container in the devfile if possible. If no suitable container exists, this component
+	// is treated as a regular container component
+	ContainerContributionAttribute = "controller.devfile.io/container-contribution"
+
+	// MergeContributionAttribute defines a container component as a target for merging a container contribution. If
+	// present on a container component, any container contributions will be merged into that container. If multiple
+	// container components have the merge-contribution attribute, the first one will be used and all others ignored.
+	MergeContributionAttribute = "controller.devfile.io/merge-contribution"
 )

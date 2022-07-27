@@ -16,10 +16,12 @@
 package flatten
 
 import (
+	"encoding/json"
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
@@ -117,4 +119,119 @@ func mergeVolume(into, from *dw.VolumeComponent) error {
 		into.Size = from.Size
 	}
 	return nil
+}
+
+func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec) bool {
+	hasContribution, hasTarget := false, false
+	for _, component := range flattenedSpec.Components {
+		if component.Container == nil {
+			// Ignore attribute on non-container components as it's not clear what this would mean
+			continue
+		}
+		if component.Attributes.GetBoolean(constants.ContainerContributionAttribute, nil) {
+			hasContribution = true
+		}
+		if component.Attributes.GetBoolean(constants.MergeContributionAttribute, nil) {
+			hasTarget = true
+		}
+	}
+	return hasContribution && hasTarget
+}
+
+func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) error {
+	var contributions []dw.Component
+	for _, component := range flattenedSpec.Components {
+		if component.Container != nil && component.Attributes.GetBoolean(constants.ContainerContributionAttribute, nil) {
+			contributions = append(contributions, component)
+		}
+	}
+
+	var newComponents []dw.Component
+	mergeDone := false
+	for _, component := range flattenedSpec.Components {
+		if component.Container == nil {
+			newComponents = append(newComponents, component)
+			continue
+		}
+		if component.Attributes.GetBoolean(constants.ContainerContributionAttribute, nil) {
+			// drop contributions from updated list as they will be merged
+			continue
+		} else if component.Attributes.GetBoolean(constants.MergeContributionAttribute, nil) && !mergeDone {
+			mergedComponent, err := mergeContributionsInto(&component, contributions)
+			if err != nil {
+				return fmt.Errorf("failed to merge container contributions: %w", err)
+			}
+			delete(mergedComponent.Attributes, constants.ContainerContributionAttribute)
+			newComponents = append(newComponents, *mergedComponent)
+			mergeDone = true
+		} else {
+			newComponents = append(newComponents, component)
+		}
+	}
+
+	if mergeDone {
+		flattenedSpec.Components = newComponents
+	}
+
+	return nil
+}
+
+func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Component) (*dw.Component, error) {
+	if mergeInto == nil || mergeInto.Container == nil {
+		return nil, fmt.Errorf("attempting to merge container contributions into a non-container component")
+	}
+	totalResources, err := parseResourcesFromComponent(mergeInto)
+	if err != nil {
+		return nil, err
+	}
+
+	// We don't want to reimplement the complexity of a strategic merge here, so we set up a fake plugin override
+	// and use devfile/api overriding functionality. For specific fields that have to be handled specifically (memory
+	// and cpu limits, we compute the value separately and set it at the end
+	var toMerge []dw.ComponentPluginOverride
+	for _, component := range contributions {
+		if component.Container == nil {
+			return nil, fmt.Errorf("attempting to merge container contribution from a non-container component")
+		}
+		// Set name to match target component so that devfile/api override functionality will apply it correctly
+		component.Name = mergeInto.Name
+		// Unset image to avoid overriding the default image
+		component.Container.Image = ""
+		if err := addResourceRequirements(totalResources, &component); err != nil {
+			return nil, err
+		}
+		component.Container.MemoryLimit = ""
+		component.Container.MemoryRequest = ""
+		component.Container.CpuLimit = ""
+		component.Container.CpuRequest = ""
+		// Workaround to convert dw.Component into dw.ComponentPluginOverride: marshal to json, and unmarshal to a different type
+		// This works since plugin overrides are generated from components, with the difference being that all fields are optional
+		componentPluginOverride := dw.ComponentPluginOverride{}
+		tempJSONBytes, err := json.Marshal(component)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(tempJSONBytes, &componentPluginOverride); err != nil {
+			return nil, err
+		}
+		toMerge = append(toMerge, componentPluginOverride)
+	}
+
+	tempSpecContent := &dw.DevWorkspaceTemplateSpecContent{
+		Components: []dw.Component{
+			*mergeInto,
+		},
+	}
+
+	mergedSpecContent, err := overriding.OverrideDevWorkspaceTemplateSpec(tempSpecContent, dw.PluginOverrides{
+		Components: toMerge,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	mergedComponent := mergedSpecContent.Components[0]
+	applyResourceRequirementsToComponent(mergedComponent.Container, totalResources)
+
+	return &mergedComponent, nil
 }

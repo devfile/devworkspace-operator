@@ -52,7 +52,10 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 	}
 
 	secrets := corev1.SecretList{}
-	err = clusterAPI.Client.List(context.TODO(), &secrets, &client.ListOptions{LabelSelector: labelSelector})
+	err = clusterAPI.Client.List(context.TODO(), &secrets, &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labelSelector,
+	})
 	if err != nil {
 		return PullSecretsProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{

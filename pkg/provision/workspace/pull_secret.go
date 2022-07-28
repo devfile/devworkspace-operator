@@ -18,6 +18,8 @@ package workspace
 import (
 	"context"
 	"fmt"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -93,6 +95,10 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 			dockerCfgs = append(dockerCfgs, corev1.LocalObjectReference{Name: s.Name})
 		}
 	}
+
+	sort.Slice(dockerCfgs, func(i, j int) bool {
+		return strings.Compare(dockerCfgs[i].Name, dockerCfgs[j].Name) < 0
+	})
 
 	return PullSecretsProvisioningStatus{
 		ProvisioningStatus: ProvisioningStatus{

@@ -682,7 +682,7 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 		return []reconcile.Request{}
 	}
 	dwList := &dw.DevWorkspaceList{}
-	if err := r.Client.List(context.Background(), dwList); err != nil {
+	if err := r.Client.List(context.Background(), dwList, &client.ListOptions{Namespace: obj.GetNamespace()}); err != nil {
 		return []reconcile.Request{}
 	}
 	var reconciles []reconcile.Request

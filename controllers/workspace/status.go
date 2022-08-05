@@ -27,6 +27,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeclock "k8s.io/apimachinery/pkg/util/clock"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -78,9 +79,13 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 
 	err := r.Status().Update(context.TODO(), workspace)
 	if err != nil {
-		logger.Info(fmt.Sprintf("Error updating workspace status: %s", err))
-		if reconcileError == nil {
-			reconcileError = err
+		if k8sErrors.IsConflict(err) {
+			logger.Info("Failed to update workspace status due to conflict; retrying")
+		} else {
+			logger.Info(fmt.Sprintf("Error updating workspace status: %s", err))
+			if reconcileError == nil {
+				reconcileError = err
+			}
 		}
 	} else {
 		updateMetricsForPhase(workspace, oldPhase, status.phase, logger)

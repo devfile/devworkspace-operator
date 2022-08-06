@@ -14,7 +14,7 @@
 #
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8/go-toolset
-FROM registry.access.redhat.com/ubi8/go-toolset:1.17.10-4 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.17.12-3 as builder
 ENV GOPATH=/go/
 USER root
 WORKDIR /devworkspace-operator

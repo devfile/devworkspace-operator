@@ -79,7 +79,7 @@ In order to build a custom bundle, the following env vars should be set:
 
 To build the index image and register its catalogsource to the cluster, run
 ```
-make generate_olm_bundle_yaml build_bundle_image build_index_image register_catalogsource
+make generate_olm_bundle_yaml build_bundle_and_index register_catalogsource
 ```
 
 Note that setting `DEFAULT_DWO_IMG` while generating sources will result in local changes to the repo which should be `git restored` before committing. This can also be done by unsetting the `DEFAULT_DWO_IMG` env var and re-running `make generate_olm_bundle_yaml`

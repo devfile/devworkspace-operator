@@ -140,4 +140,8 @@ const (
 	// NamespaceNodeSelectorAnnotation is an annotation applied to a namespace to configure the node selector for all workspaces
 	// in that namespace. Value should be json-encoded map[string]string
 	NamespaceNodeSelectorAnnotation = "controller.devfile.io/node-selector"
+
+	// TODO: Document these
+	ExternalDWOCNameAnnotationSuffix      = "external-config-name"
+	ExternalDWOCNamespaceAnnotationSuffix = "external-config-namespace"
 )

@@ -20,6 +20,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var routeAnnotations = func(endpointName string) map[string]string {

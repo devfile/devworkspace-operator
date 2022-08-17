@@ -68,3 +68,13 @@ func buildConfig(config *v1alpha1.OperatorConfiguration) *v1alpha1.DevWorkspaceO
 		Config: config,
 	}
 }
+
+func buildExternalConfig(config *v1alpha1.OperatorConfiguration) *v1alpha1.DevWorkspaceOperatorConfig {
+	return &v1alpha1.DevWorkspaceOperatorConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ExternalConfigName,
+			Namespace: ExternalConfigNamespace,
+		},
+		Config: config,
+	}
+}

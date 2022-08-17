@@ -246,6 +246,20 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		wsDefaults.ApplyDefaultTemplate(workspaceWithConfig)
 	}
 
+	// Apply devworkspace routing annotation for external DWOC
+	// TODO: Cleanup
+	err = addExternalDWOCAnnotations(*workspaceWithConfig)
+	if err != nil {
+		reqLogger.Error(err, "Unable to apply annotations used by Devworkspace Router for external DevWorkspace-Operator configuration")
+	}
+
+	// Merge workspace's DWOC with an external, one if it exists
+	// TODO: Rework
+	err = config.ApplyExternalDWOCConfig(&workspaceWithConfig.DevWorkspace, clusterAPI.Client)
+	if err != nil {
+		reqLogger.Error(err, "Unable to apply external DevWorkspace-Operator configuration")
+	}
+
 	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspaceWithConfig.Spec.Template, flattenHelpers)
 	if err != nil {
 		return r.failWorkspace(&workspaceWithConfig.DevWorkspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
@@ -456,6 +470,34 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceReady, "")
 	reconcileStatus.phase = dw.DevWorkspaceStatusRunning
 	return reconcile.Result{}, nil
+}
+
+// TODO: Clean up/polish this function
+func addExternalDWOCAnnotations(workspaceWithConfig common.DevWorkspaceWithConfig) error {
+	if !workspaceWithConfig.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
+		return nil
+	}
+
+	ExternalDWOCMeta := &types.NamespacedName{}
+
+	err := workspaceWithConfig.Spec.Template.Attributes.GetInto(constants.ExternalDevWorkspaceConfiguration, &ExternalDWOCMeta)
+	if err != nil {
+		return fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.ExternalDevWorkspaceConfiguration, err)
+	}
+
+	if ExternalDWOCMeta.Name == "" {
+		return fmt.Errorf("'name' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	if ExternalDWOCMeta.Namespace == "" {
+		return fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	annotationPrefix := string(workspaceWithConfig.Spec.RoutingClass) + constants.RoutingAnnotationInfix
+	workspaceWithConfig.Annotations[annotationPrefix+constants.ExternalDWOCNameAnnotationSuffix] = ExternalDWOCMeta.Name
+	workspaceWithConfig.Annotations[annotationPrefix+constants.ExternalDWOCNamespaceAnnotationSuffix] = ExternalDWOCMeta.Namespace
+	return nil
+
 }
 
 func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *common.DevWorkspaceWithConfig, logger logr.Logger) (reconcile.Result, error) {

@@ -18,24 +18,30 @@ package config
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sort"
 	"strings"
 	"sync"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config/proxy"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	routeV1 "github.com/openshift/api/route/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
-
-	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
 const (
-	OperatorConfigName     = "devworkspace-operator-config"
-	openShiftTestRouteName = "devworkspace-controller-test-route"
+	OperatorConfigName      = "devworkspace-operator-config"
+	openShiftTestRouteName  = "devworkspace-controller-test-route"
+	ExternalConfigName      = "external-config-name"
+	ExternalConfigNamespace = "external-config-namespace"
 )
 
 var (
@@ -53,6 +59,53 @@ func SetConfigForTesting(config *controller.OperatorConfiguration) {
 	defer configMutex.Unlock()
 	InternalConfig = defaultConfig.DeepCopy()
 	mergeConfig(config, InternalConfig)
+	updatePublicConfig()
+}
+
+func ApplyExternalDWOCConfig(workspace *dw.DevWorkspace, client crclient.Client) (err error) {
+
+	if !workspace.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
+		return nil
+	}
+
+	ExternalDWOCMeta := v1alpha1.ExternalConfig{}
+
+	err = workspace.Spec.Template.Attributes.GetInto(constants.ExternalDevWorkspaceConfiguration, &ExternalDWOCMeta)
+	if err != nil {
+		return fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.ExternalDevWorkspaceConfiguration, err)
+	}
+
+	if ExternalDWOCMeta.Name == "" {
+		return fmt.Errorf("'name' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	if ExternalDWOCMeta.Namespace == "" {
+		return fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	externalDWOC := &controller.DevWorkspaceOperatorConfig{}
+	namespacedName := types.NamespacedName{
+		Name:      ExternalDWOCMeta.Name,
+		Namespace: ExternalDWOCMeta.Namespace,
+	}
+
+	err = client.Get(context.TODO(), namespacedName, externalDWOC)
+	if err != nil {
+		return fmt.Errorf("could not fetch external DWOC with name '%s' in namespace '%s': %w", ExternalDWOCMeta.Name, ExternalDWOCMeta.Namespace, err)
+	}
+
+	// TODO: It might be better to just always merge rather than suffering performance hit in configsAlreadyMerged() (or maintaing configsAlreadyMerged if we don't use reflect.DeepEqual)
+	if !configsAlreadyMerged(externalDWOC.Config, InternalConfig) {
+		mergeInteralConfigWithExternal(externalDWOC.Config)
+	}
+
+	return nil
+}
+
+func mergeInteralConfigWithExternal(externalConfig *controller.OperatorConfiguration) {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+	mergeConfig(externalConfig, InternalConfig)
 	updatePublicConfig()
 }
 
@@ -184,6 +237,147 @@ func discoverRouteSuffix(client crclient.Client) (string, error) {
 	prefixToRemove := fmt.Sprintf("%s-%s.", openShiftTestRouteName, configNamespace)
 	host = strings.TrimPrefix(host, prefixToRemove)
 	return host, nil
+}
+
+// TODO: Improve variable names?
+// Returns true if 'from' has already been merged with 'to'.
+// The two configs are considered merged if all fields that are set in 'from' have the same value in 'to'
+func configsAlreadyMerged(from, to *controller.OperatorConfiguration) bool {
+	if from == nil {
+		return true
+	}
+	if from.EnableExperimentalFeatures != nil {
+
+		if to.EnableExperimentalFeatures == nil {
+			return false
+		}
+
+		if *to.EnableExperimentalFeatures != *from.EnableExperimentalFeatures {
+			return false
+		}
+	}
+	if from.Routing != nil {
+		if to.Routing == nil {
+			return false
+		}
+		if from.Routing.DefaultRoutingClass != "" && to.Routing.DefaultRoutingClass != from.Routing.DefaultRoutingClass {
+			return false
+		}
+		if from.Routing.ClusterHostSuffix != "" && to.Routing.ClusterHostSuffix != from.Routing.ClusterHostSuffix {
+			return false
+		}
+		if from.Routing.ProxyConfig != nil {
+			if to.Routing.ProxyConfig == nil {
+				return false
+			}
+
+			if from.Routing.ProxyConfig.HttpProxy != "" && to.Routing.ProxyConfig.HttpProxy != from.Routing.ProxyConfig.HttpProxy {
+				return false
+			}
+
+			if from.Routing.ProxyConfig.HttpsProxy != "" && to.Routing.ProxyConfig.HttpsProxy != from.Routing.ProxyConfig.HttpsProxy {
+				return false
+			}
+
+			if from.Routing.ProxyConfig.NoProxy != "" && to.Routing.ProxyConfig.NoProxy != from.Routing.ProxyConfig.NoProxy {
+				return false
+			}
+		}
+	}
+	if from.Workspace != nil {
+		if to.Workspace == nil {
+			return false
+		}
+		if from.Workspace.StorageClassName != nil {
+			if to.Workspace.StorageClassName == nil {
+				return false
+			}
+
+			if *to.Workspace.StorageClassName != *from.Workspace.StorageClassName {
+				return false
+			}
+		}
+		if from.Workspace.PVCName != "" && to.Workspace.PVCName != from.Workspace.PVCName {
+			return false
+		}
+		if from.Workspace.ImagePullPolicy != "" && to.Workspace.ImagePullPolicy != from.Workspace.ImagePullPolicy {
+			return false
+		}
+		if from.Workspace.IdleTimeout != "" && to.Workspace.IdleTimeout != from.Workspace.IdleTimeout {
+			return false
+		}
+		if from.Workspace.ProgressTimeout != "" && to.Workspace.ProgressTimeout != from.Workspace.ProgressTimeout {
+			return false
+		}
+		if from.Workspace.IgnoredUnrecoverableEvents != nil && to.Workspace.IgnoredUnrecoverableEvents != nil {
+
+			if len(from.Workspace.IgnoredUnrecoverableEvents) != len(to.Workspace.IgnoredUnrecoverableEvents) {
+				return false
+			}
+
+			sort.Strings(to.Workspace.IgnoredUnrecoverableEvents)
+			sort.Strings(from.Workspace.IgnoredUnrecoverableEvents)
+
+			for i := range from.Workspace.IgnoredUnrecoverableEvents {
+				if from.Workspace.IgnoredUnrecoverableEvents[i] != to.Workspace.IgnoredUnrecoverableEvents[i] {
+					return false
+				}
+			}
+		}
+		if from.Workspace.CleanupOnStop != nil {
+			if to.Workspace.CleanupOnStop == nil {
+				return false
+			}
+
+			if *to.Workspace.CleanupOnStop != *from.Workspace.CleanupOnStop {
+				return false
+			}
+		}
+		if from.Workspace.PodSecurityContext != nil {
+			if to.Workspace.PodSecurityContext == nil {
+				return false
+			}
+
+			// TODO: Using reflect.DeepEqual could potentially really degrade performance
+			if !reflect.DeepEqual(from.Workspace.PodSecurityContext, to.Workspace.PodSecurityContext) {
+				return false
+			}
+		}
+		if from.Workspace.DefaultStorageSize != nil {
+			if to.Workspace.DefaultStorageSize == nil {
+				return false
+			}
+			if from.Workspace.DefaultStorageSize.Common != nil {
+				if to.Workspace.DefaultStorageSize.Common == nil {
+					return false
+				}
+				if from.Workspace.DefaultStorageSize.Common.Cmp(*to.Workspace.DefaultStorageSize.Common) != 0 {
+					return false
+				}
+
+			}
+			if from.Workspace.DefaultStorageSize.PerWorkspace != nil {
+				if to.Workspace.DefaultStorageSize.PerWorkspace == nil {
+					return false
+				}
+				if from.Workspace.DefaultStorageSize.PerWorkspace.Cmp(*to.Workspace.DefaultStorageSize.PerWorkspace) != 0 {
+					return false
+				}
+			}
+
+		}
+		if from.Workspace.DefaultTemplate != nil {
+			if to.Workspace.DefaultTemplate == nil {
+				return false
+			}
+
+			// TODO: Using reflect.DeepEqual could potentially really degrade performance
+			if !reflect.DeepEqual(from.Workspace.DefaultTemplate, to.Workspace.DefaultTemplate) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 func mergeConfig(from, to *controller.OperatorConfiguration) {

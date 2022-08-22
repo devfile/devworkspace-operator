@@ -10,4 +10,4 @@ spec:
   displayName: DevWorkspace Operator Catalog
   updateStrategy:
     registryPoll:
-      interval: 1d
+      interval: 5m

@@ -16,23 +16,22 @@
 package defaults
 
 import (
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 )
 
 // Overwrites the content of the workspace's Template Spec with the workspace config's Template Spec,
 // with the exception of the workspace's projects.
 // If the workspace's Template Spec defined any projects, they are preserved.
-func ApplyDefaultTemplate(workspace *dw.DevWorkspace) {
-	if config.Workspace.DefaultTemplate == nil {
+func ApplyDefaultTemplate(workspaceWithConfig *common.DevWorkspaceWithConfig) {
+	if workspaceWithConfig.Config.Workspace.DefaultTemplate == nil {
 		return
 	}
-	defaultCopy := config.Workspace.DefaultTemplate.DeepCopy()
-	originalProjects := workspace.Spec.Template.Projects
-	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = *defaultCopy
-	workspace.Spec.Template.Projects = append(workspace.Spec.Template.Projects, originalProjects...)
+	defaultCopy := workspaceWithConfig.Config.Workspace.DefaultTemplate.DeepCopy()
+	originalProjects := workspaceWithConfig.Spec.Template.Projects
+	workspaceWithConfig.Spec.Template.DevWorkspaceTemplateSpecContent = *defaultCopy
+	workspaceWithConfig.Spec.Template.Projects = append(workspaceWithConfig.Spec.Template.Projects, originalProjects...)
 }
 
-func NeedsDefaultTemplate(workspace *dw.DevWorkspace) bool {
-	return len(workspace.Spec.Template.Components) == 0 && config.Workspace.DefaultTemplate != nil
+func NeedsDefaultTemplate(workspaceWithConfig *common.DevWorkspaceWithConfig) bool {
+	return len(workspaceWithConfig.Spec.Template.Components) == 0 && workspaceWithConfig.Config.Workspace.DefaultTemplate != nil
 }

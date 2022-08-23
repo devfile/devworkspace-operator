@@ -23,8 +23,8 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,9 +33,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 const (
@@ -241,7 +241,7 @@ func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.Dev
 // startup timeout. This is determined by checking to see if the last condition transition time is more
 // than [timeout] duration ago. Workspaces that are not in the "Starting" phase cannot timeout. Returns
 // an error with message when timeout is reached.
-func checkForStartTimeout(workspace *dw.DevWorkspace) error {
+func checkForStartTimeout(workspace *dw.DevWorkspace, config controllerv1alpha1.OperatorConfiguration) error {
 	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting {
 		return nil
 	}
@@ -267,17 +267,17 @@ func checkForStartTimeout(workspace *dw.DevWorkspace) error {
 // configured progress timeout. If the workspace is not in the Failing state or does not have a DevWorkspaceFailed
 // condition set, returns false. Otherwise, returns true if the workspace has timed out. Returns an error if
 // timeout is configured with an unparsable duration.
-func checkForFailingTimeout(workspace *dw.DevWorkspace) (isTimedOut bool, err error) {
-	if workspace.Status.Phase != devworkspacePhaseFailing {
+func checkForFailingTimeout(workspaceWithConfig *common.DevWorkspaceWithConfig) (isTimedOut bool, err error) {
+	if workspaceWithConfig.Status.Phase != devworkspacePhaseFailing {
 		return false, nil
 	}
-	timeout, err := time.ParseDuration(config.Workspace.ProgressTimeout)
+	timeout, err := time.ParseDuration(workspaceWithConfig.Config.Workspace.ProgressTimeout)
 	if err != nil {
 		return false, fmt.Errorf("invalid duration specified for timeout: %w", err)
 	}
 	currTime := clock.Now()
 	failedTime := time.Time{}
-	for _, condition := range workspace.Status.Conditions {
+	for _, condition := range workspaceWithConfig.Status.Conditions {
 		if condition.Type == dw.DevWorkspaceFailedStart {
 			failedTime = condition.LastTransitionTime.Time
 		}

@@ -88,7 +88,7 @@ func TestGetKubeContainersFromDevfile(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.True(t, len(tt.Input.Components) > 0, "Input defines no components")
-			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input)
+			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input, *testControllerCfg)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

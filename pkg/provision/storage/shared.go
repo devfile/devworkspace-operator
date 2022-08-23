@@ -29,14 +29,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
 
-func getPVCSpec(name, namespace string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
+// TODO: Maybe just pass in *string storageClassName?
+func getPVCSpec(name, namespace string, size resource.Quantity, config v1alpha1.OperatorConfiguration) (*corev1.PersistentVolumeClaim, error) {
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -85,7 +85,7 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return containerlib.AnyMountSources(workspace.Components)
 }
 
-func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI, config v1alpha1.OperatorConfiguration) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
@@ -98,7 +98,7 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 		}
 	}
 
-	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, pvcSize)
+	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, pvcSize, config)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +259,7 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 	return total, nil
 }
 
-func checkPVCTerminating(name, namespace string, api sync.ClusterAPI) (bool, error) {
+func checkPVCTerminating(name, namespace string, api sync.ClusterAPI, config v1alpha1.OperatorConfiguration) (bool, error) {
 	if name == "" {
 		name = config.Workspace.PVCName
 	}

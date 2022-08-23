@@ -18,10 +18,10 @@ package controllers
 import (
 	"context"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/go-logr/logr"
@@ -46,7 +46,7 @@ func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *dw.DevWorkspa
 	return false
 }
 
-func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (finalizeResult reconcile.Result, finalizeErr error) {
+func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *common.DevWorkspaceWithConfig) (finalizeResult reconcile.Result, finalizeErr error) {
 	// Tracked state for the finalize process; we update the workspace status in a deferred function (and pass the
 	// named return value for finalize()) to update the workspace's status with whatever is in finalizeStatus
 	// when this function returns.
@@ -60,7 +60,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			// client.Update() call that removes the last finalizer.
 			return finalizeResult, finalizeErr
 		}
-		return r.updateWorkspaceStatus(workspace, log, finalizeStatus, finalizeResult, finalizeErr)
+		return r.updateWorkspaceStatus(&workspace.DevWorkspace, log, finalizeStatus, finalizeResult, finalizeErr)
 	}()
 
 	for _, finalizer := range workspace.Finalizers {
@@ -68,15 +68,15 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 		case constants.StorageCleanupFinalizer:
 			return r.finalizeStorage(ctx, log, workspace, finalizeStatus)
 		case constants.ServiceAccountCleanupFinalizer:
-			return r.finalizeServiceAccount(ctx, log, workspace, finalizeStatus)
+			return r.finalizeServiceAccount(ctx, log, &workspace.DevWorkspace, finalizeStatus)
 		}
 	}
 	return reconcile.Result{}, nil
 }
 
-func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace, finalizeStatus *currentStatus) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.Logger, workspace *common.DevWorkspaceWithConfig, finalizeStatus *currentStatus) (reconcile.Result, error) {
 	// Need to make sure Deployment is cleaned up before starting job to avoid mounting issues for RWO PVCs
-	wait, err := wsprovision.DeleteWorkspaceDeployment(ctx, workspace, r.Client)
+	wait, err := wsprovision.DeleteWorkspaceDeployment(ctx, &workspace.DevWorkspace, r.Client)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -94,7 +94,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 		return reconcile.Result{}, r.Update(ctx, workspace)
 	}
 
-	storageProvisioner, err := storage.GetProvisioner(workspace)
+	storageProvisioner, err := storage.GetProvisioner(&workspace.DevWorkspace)
 	if err != nil {
 		log.Error(err, "Failed to clean up DevWorkspace storage")
 		finalizeStatus.phase = dw.DevWorkspaceStatusError

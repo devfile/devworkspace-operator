@@ -43,7 +43,7 @@ import (
 // rewritten as Volumes are added to PodAdditions, in order to support e.g. using one PVC to hold all volumes
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
-func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec) (*v1alpha1.PodAdditions, error) {
+func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, config v1alpha1.OperatorConfiguration) (*v1alpha1.PodAdditions, error) {
 	if !flatten.DevWorkspaceIsFlattened(workspace) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}
@@ -58,7 +58,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec) (*v1al
 		if component.Container == nil {
 			continue
 		}
-		k8sContainer, err := convertContainerToK8s(component)
+		k8sContainer, err := convertContainerToK8s(component, config)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +71,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec) (*v1al
 	}
 
 	for _, container := range initContainers {
-		k8sContainer, err := convertContainerToK8s(container)
+		k8sContainer, err := convertContainerToK8s(container, config)
 		if err != nil {
 			return nil, err
 		}

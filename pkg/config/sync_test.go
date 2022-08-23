@@ -38,7 +38,7 @@ func TestSetupControllerConfigUsesDefault(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, defaultConfig, internalConfig, "Config used should be the default")
+	assert.Equal(t, defaultConfig, InternalConfig, "Config used should be the default")
 }
 
 func TestSetupControllerDefaultsAreExported(t *testing.T) {
@@ -63,7 +63,7 @@ func TestSetupControllerConfigFailsWhenAlreadySetup(t *testing.T) {
 	if !assert.Error(t, err, "Should return error when config is already setup") {
 		return
 	}
-	assert.Equal(t, defaultConfig, internalConfig, "Config used should be the default")
+	assert.Equal(t, defaultConfig, InternalConfig, "Config used should be the default")
 }
 
 func TestSetupControllerMergesClusterConfig(t *testing.T) {
@@ -91,9 +91,9 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, expectedConfig, internalConfig, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(internalConfig, expectedConfig)))
-	assert.Equal(t, internalConfig.Routing, Routing, fmt.Sprintf("Changes to config should be propagated to exported fields"))
-	assert.Equal(t, internalConfig.Workspace, Workspace, fmt.Sprintf("Changes to config should be propagated to exported fields"))
+	assert.Equal(t, expectedConfig, InternalConfig, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(InternalConfig, expectedConfig)))
+	assert.Equal(t, InternalConfig.Routing, Routing, fmt.Sprintf("Changes to config should be propagated to exported fields"))
+	assert.Equal(t, InternalConfig.Workspace, Workspace, fmt.Sprintf("Changes to config should be propagated to exported fields"))
 }
 
 func TestSetupControllerAlwaysSetsDefaultClusterRoutingSuffix(t *testing.T) {
@@ -139,12 +139,12 @@ func TestDetectsOpenShiftRouteSuffix(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, "test-host", internalConfig.Routing.ClusterHostSuffix, "Should determine host suffix with route on OpenShift")
+	assert.Equal(t, "test-host", InternalConfig.Routing.ClusterHostSuffix, "Should determine host suffix with route on OpenShift")
 }
 
 func TestSyncConfigFromIgnoresOtherConfigInOtherNamespaces(t *testing.T) {
 	setupForTest(t)
-	internalConfig = defaultConfig.DeepCopy()
+	InternalConfig = defaultConfig.DeepCopy()
 	config := buildConfig(&v1alpha1.OperatorConfiguration{
 		Workspace: &v1alpha1.WorkspaceConfig{
 			ImagePullPolicy: "IfNotPresent",
@@ -152,12 +152,12 @@ func TestSyncConfigFromIgnoresOtherConfigInOtherNamespaces(t *testing.T) {
 	})
 	config.Namespace = "not-test-namespace"
 	syncConfigFrom(config)
-	assert.Equal(t, defaultConfig, internalConfig)
+	assert.Equal(t, defaultConfig, InternalConfig)
 }
 
 func TestSyncConfigFromIgnoresOtherConfigWithOtherName(t *testing.T) {
 	setupForTest(t)
-	internalConfig = defaultConfig.DeepCopy()
+	InternalConfig = defaultConfig.DeepCopy()
 	config := buildConfig(&v1alpha1.OperatorConfiguration{
 		Workspace: &v1alpha1.WorkspaceConfig{
 			ImagePullPolicy: "IfNotPresent",
@@ -165,13 +165,13 @@ func TestSyncConfigFromIgnoresOtherConfigWithOtherName(t *testing.T) {
 	})
 	config.Name = "testing-name"
 	syncConfigFrom(config)
-	assert.Equal(t, defaultConfig, internalConfig)
+	assert.Equal(t, defaultConfig, InternalConfig)
 }
 
 func TestSyncConfigDoesNotChangeDefaults(t *testing.T) {
 	setupForTest(t)
 	oldDefaultConfig := defaultConfig.DeepCopy()
-	internalConfig = defaultConfig.DeepCopy()
+	InternalConfig = defaultConfig.DeepCopy()
 	config := buildConfig(&v1alpha1.OperatorConfiguration{
 		Routing: &v1alpha1.RoutingConfig{
 			DefaultRoutingClass: "test-routingClass",
@@ -183,7 +183,7 @@ func TestSyncConfigDoesNotChangeDefaults(t *testing.T) {
 		EnableExperimentalFeatures: &trueBool,
 	})
 	syncConfigFrom(config)
-	internalConfig.Routing.DefaultRoutingClass = "Changed after the fact"
+	InternalConfig.Routing.DefaultRoutingClass = "Changed after the fact"
 	assert.Equal(t, defaultConfig, oldDefaultConfig)
 }
 

@@ -28,10 +28,10 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,7 +51,7 @@ func SyncDeploymentToCluster(
 	workspace *dw.DevWorkspace,
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
-	clusterAPI sync.ClusterAPI) DeploymentProvisioningStatus {
+	clusterAPI sync.ClusterAPI, config *controllerv1alpha1.OperatorConfiguration) DeploymentProvisioningStatus {
 
 	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
 	if err != nil {
@@ -66,7 +66,7 @@ func SyncDeploymentToCluster(
 
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
-	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, podTolerations, nodeSelector, clusterAPI.Scheme)
+	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, podTolerations, nodeSelector, clusterAPI.Scheme, *config)
 	if err != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus{
@@ -118,7 +118,7 @@ func SyncDeploymentToCluster(
 
 	failureMsg, checkErr := status.CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, k8sclient.MatchingLabels{
 		constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
-	}, clusterAPI)
+	}, clusterAPI, config)
 	if checkErr != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -172,7 +172,7 @@ func ScaleDeploymentToZero(ctx context.Context, workspace *dw.DevWorkspace, clie
 	return nil
 }
 
-func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
+func GetDevWorkspaceSecurityContext(config controllerv1alpha1.OperatorConfiguration) *corev1.PodSecurityContext {
 	if infrastructure.IsOpenShift() {
 		return &corev1.PodSecurityContext{}
 	}
@@ -185,7 +185,7 @@ func getSpecDeployment(
 	saName string,
 	podTolerations []corev1.Toleration,
 	nodeSelector map[string]string,
-	scheme *runtime.Scheme) (*appsv1.Deployment, error) {
+	scheme *runtime.Scheme, config controllerv1alpha1.OperatorConfiguration) (*appsv1.Deployment, error) {
 	replicas := int32(1)
 	terminationGracePeriod := int64(10)
 
@@ -240,7 +240,7 @@ func getSpecDeployment(
 					Volumes:                       podAdditions.Volumes,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					SecurityContext:               GetDevWorkspaceSecurityContext(),
+					SecurityContext:               GetDevWorkspaceSecurityContext(config),
 					ServiceAccountName:            saName,
 					AutomountServiceAccountToken:  nil,
 				},
@@ -261,7 +261,7 @@ func getSpecDeployment(
 		}
 	}
 
-	if needPVC, pvcName := needsPVCWorkaround(podAdditions); needPVC {
+	if needPVC, pvcName := needsPVCWorkaround(podAdditions, config); needPVC {
 		// Kubernetes creates directories in a PVC to support subpaths such that only the leaf directory has g+rwx permissions.
 		// This means that mounting the subpath e.g. <workspace-id>/plugins will result in the <workspace-id> directory being
 		// created with 755 permissions, requiring the root UID to remove it.
@@ -368,7 +368,7 @@ func getWorkspaceSubpathVolumeMount(workspaceId, pvcName string) corev1.VolumeMo
 	return workspaceVolumeMount
 }
 
-func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) (needs bool, pvcName string) {
+func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions, config controllerv1alpha1.OperatorConfiguration) (needs bool, pvcName string) {
 	commonPVCName := config.Workspace.PVCName
 	for _, vol := range podAdditions.Volumes {
 		if vol.Name == commonPVCName {

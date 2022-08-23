@@ -52,7 +52,8 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
-			workspace := &dw.DevWorkspace{}
+			workspace := &common.DevWorkspaceWithConfig{}
+			workspace.Config = *config.InternalConfig
 			workspace.Spec.Template = *tt.Input.Workspace
 			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"

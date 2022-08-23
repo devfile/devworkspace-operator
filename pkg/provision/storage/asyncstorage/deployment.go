@@ -16,6 +16,7 @@
 package asyncstorage
 
 import (
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/images"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -27,13 +28,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, pvcName string, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
+func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, pvcName string, clusterAPI sync.ClusterAPI, config controllerv1alpha1.OperatorConfiguration) (*appsv1.Deployment, error) {
 	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
 
-	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, pvcName, podTolerations, nodeSelector)
+	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, pvcName, podTolerations, nodeSelector, config)
 	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
 	switch err.(type) {
 	case nil:
@@ -58,7 +59,7 @@ func getWorkspaceSyncDeploymentSpec(
 	sshConfigMap *corev1.ConfigMap,
 	pvcName string,
 	tolerations []corev1.Toleration,
-	nodeSelector map[string]string) *appsv1.Deployment {
+	nodeSelector map[string]string, config controllerv1alpha1.OperatorConfiguration) *appsv1.Deployment {
 
 	replicas := int32(1)
 	terminationGracePeriod := int64(1)
@@ -147,7 +148,7 @@ func getWorkspaceSyncDeploymentSpec(
 						},
 					},
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					SecurityContext:               wsprovision.GetDevWorkspaceSecurityContext(),
+					SecurityContext:               wsprovision.GetDevWorkspaceSecurityContext(config),
 					AutomountServiceAccountToken:  nil,
 				},
 			},

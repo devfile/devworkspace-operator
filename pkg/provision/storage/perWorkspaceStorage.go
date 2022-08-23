@@ -22,7 +22,6 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
@@ -45,19 +44,19 @@ func (*PerWorkspaceStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTe
 	return false
 }
 
-func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// Add ephemeral volumes
-	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
+	if err := addEphemeralVolumesFromWorkspace(&workspaceWithConfig.DevWorkspace, podAdditions); err != nil {
 		return err
 	}
 
 	// If persistent storage is not needed, we're done
-	if !needsStorage(&workspace.Spec.Template) {
+	if !needsStorage(&workspaceWithConfig.Spec.Template) {
 		return nil
 	}
 
 	// Get perWorkspace PVC spec and sync it with cluster
-	perWorkspacePVC, err := syncPerWorkspacePVC(workspace, clusterAPI)
+	perWorkspacePVC, err := syncPerWorkspacePVC(workspaceWithConfig, clusterAPI)
 	if err != nil {
 		return err
 	}
@@ -71,7 +70,7 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 	}
 
 	// Rewrite container volume mounts
-	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, pvcName, podAdditions, &workspace.Spec.Template); err != nil {
+	if err := p.rewriteContainerVolumeMounts(workspaceWithConfig.Status.DevWorkspaceId, pvcName, podAdditions, &workspaceWithConfig.Spec.Template); err != nil {
 		return &ProvisioningError{
 			Err:     err,
 			Message: "Could not rewrite container volume mounts",
@@ -82,7 +81,7 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 }
 
 // We rely on Kubernetes to use the owner reference to automatically delete the PVC once the workspace is set for deletion.
-func (*PerWorkspaceStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (*PerWorkspaceStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	return nil
 }
 
@@ -156,14 +155,14 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	return nil
 }
 
-func syncPerWorkspacePVC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
-	namespacedConfig, err := nsconfig.ReadNamespacedConfig(workspace.Namespace, clusterAPI)
+func syncPerWorkspacePVC(workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+	namespacedConfig, err := nsconfig.ReadNamespacedConfig(workspaceWithConfig.Namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
 	}
 	// TODO: Determine the storage size that is needed by iterating through workspace volumes,
 	// adding the sizes specified and figuring out overrides/defaults
-	pvcSize := *config.Workspace.DefaultStorageSize.PerWorkspace
+	pvcSize := *workspaceWithConfig.Config.Workspace.DefaultStorageSize.PerWorkspace
 	if namespacedConfig != nil && namespacedConfig.PerWorkspacePVCSize != "" {
 		pvcSize, err = resource.ParseQuantity(namespacedConfig.PerWorkspacePVCSize)
 		if err != nil {
@@ -171,12 +170,12 @@ func syncPerWorkspacePVC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI)
 		}
 	}
 
-	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, pvcSize)
+	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspaceWithConfig.Status.DevWorkspaceId), workspaceWithConfig.Namespace, pvcSize, workspaceWithConfig.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := controllerutil.SetControllerReference(workspace, pvc, clusterAPI.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(&workspaceWithConfig.DevWorkspace, pvc, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 

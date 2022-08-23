@@ -41,25 +41,26 @@ const (
 var (
 	Routing         *controller.RoutingConfig
 	Workspace       *controller.WorkspaceConfig
-	internalConfig  *controller.OperatorConfiguration
+	InternalConfig  *controller.OperatorConfiguration // TODO: Make this unexported again
 	configMutex     sync.Mutex
 	configNamespace string
 	log             = ctrl.Log.WithName("operator-configuration")
 )
 
+// TODO: Refactor this to return the modified config, so test classes don't acces the InternalConfig
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = defaultConfig.DeepCopy()
-	mergeConfig(config, internalConfig)
+	InternalConfig = defaultConfig.DeepCopy()
+	mergeConfig(config, InternalConfig)
 	updatePublicConfig()
 }
 
 func SetupControllerConfig(client crclient.Client) error {
-	if internalConfig != nil {
+	if InternalConfig != nil {
 		return fmt.Errorf("internal controller configuration is already set up")
 	}
-	internalConfig = &controller.OperatorConfiguration{}
+	InternalConfig = &controller.OperatorConfiguration{}
 
 	namespace, err := infrastructure.GetNamespace()
 	if err != nil {
@@ -72,7 +73,7 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	if config == nil {
-		internalConfig = defaultConfig.DeepCopy()
+		InternalConfig = defaultConfig.DeepCopy()
 	} else {
 		syncConfigFrom(config)
 	}
@@ -82,8 +83,8 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	defaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
-	if internalConfig.Routing.ClusterHostSuffix == "" {
-		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
+	if InternalConfig.Routing.ClusterHostSuffix == "" {
+		InternalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 	}
 
 	clusterProxy, err := proxy.GetClusterProxyConfig(client)
@@ -91,21 +92,21 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	defaultConfig.Routing.ProxyConfig = clusterProxy
-	internalConfig.Routing.ProxyConfig = proxy.MergeProxyConfigs(clusterProxy, internalConfig.Routing.ProxyConfig)
+	InternalConfig.Routing.ProxyConfig = proxy.MergeProxyConfigs(clusterProxy, InternalConfig.Routing.ProxyConfig)
 
 	updatePublicConfig()
 	return nil
 }
 
 func IsSetUp() bool {
-	return internalConfig != nil
+	return InternalConfig != nil
 }
 
 func ExperimentalFeaturesEnabled() bool {
-	if internalConfig == nil || internalConfig.EnableExperimentalFeatures == nil {
+	if InternalConfig == nil || InternalConfig.EnableExperimentalFeatures == nil {
 		return false
 	}
-	return *internalConfig.EnableExperimentalFeatures
+	return *InternalConfig.EnableExperimentalFeatures
 }
 
 func getClusterConfig(namespace string, client crclient.Client) (*controller.DevWorkspaceOperatorConfig, error) {
@@ -125,21 +126,21 @@ func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {
 	}
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = defaultConfig.DeepCopy()
-	mergeConfig(newConfig.Config, internalConfig)
+	InternalConfig = defaultConfig.DeepCopy()
+	mergeConfig(newConfig.Config, InternalConfig)
 	updatePublicConfig()
 }
 
 func restoreDefaultConfig() {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = defaultConfig.DeepCopy()
+	InternalConfig = defaultConfig.DeepCopy()
 	updatePublicConfig()
 }
 
 func updatePublicConfig() {
-	Routing = internalConfig.Routing.DeepCopy()
-	Workspace = internalConfig.Workspace.DeepCopy()
+	Routing = InternalConfig.Routing.DeepCopy()
+	Workspace = InternalConfig.Workspace.DeepCopy()
 	logCurrentConfig()
 }
 
@@ -262,7 +263,7 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 
 // logCurrentConfig formats the current operator configuration as a plain string
 func logCurrentConfig() {
-	if internalConfig == nil {
+	if InternalConfig == nil {
 		return
 	}
 	var config []string
@@ -303,7 +304,7 @@ func logCurrentConfig() {
 			config = append(config, fmt.Sprintf("workspace.defaultTemplate is set"))
 		}
 	}
-	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {
+	if InternalConfig.EnableExperimentalFeatures != nil && *InternalConfig.EnableExperimentalFeatures {
 		config = append(config, "enableExperimentalFeatures=true")
 	}
 
@@ -313,7 +314,7 @@ func logCurrentConfig() {
 		log.Info(fmt.Sprintf("Updated config to [%s]", strings.Join(config, ",")))
 	}
 
-	if internalConfig.Routing.ProxyConfig != nil {
-		log.Info("Resolved proxy configuration", "proxy", internalConfig.Routing.ProxyConfig)
+	if InternalConfig.Routing.ProxyConfig != nil {
+		log.Info("Resolved proxy configuration", "proxy", InternalConfig.Routing.ProxyConfig)
 	}
 }

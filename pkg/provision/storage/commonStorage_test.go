@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -125,7 +126,7 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"))
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"), *testControllerCfg)
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}
@@ -139,7 +140,8 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
-			workspace := &dw.DevWorkspace{}
+			workspace := &common.DevWorkspaceWithConfig{}
+			workspace.Config = *config.InternalConfig
 			workspace.Spec.Template = *tt.Input.Workspace
 			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"
@@ -162,7 +164,7 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 func TestTerminatingPVC(t *testing.T) {
 	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"))
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"), *testControllerCfg)
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}
@@ -175,7 +177,8 @@ func TestTerminatingPVC(t *testing.T) {
 	}
 	testCase := loadTestCaseOrPanic(t, "testdata/common-storage/rewrites-volumes-for-common-pvc-strategy.yaml")
 	assert.NotNil(t, testCase.Input.Workspace, "Input does not define workspace")
-	workspace := &dw.DevWorkspace{}
+	workspace := &common.DevWorkspaceWithConfig{}
+	workspace.Config = *config.InternalConfig
 	workspace.Spec.Template = *testCase.Input.Workspace
 	workspace.Status.DevWorkspaceId = testCase.Input.DevWorkspaceID
 	workspace.Namespace = "test-namespace"

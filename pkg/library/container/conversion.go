@@ -19,16 +19,16 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func convertContainerToK8s(devfileComponent dw.Component) (*v1.Container, error) {
+func convertContainerToK8s(devfileComponent dw.Component, config controllerv1alpha1.OperatorConfiguration) (*v1.Container, error) {
 	if devfileComponent.Container == nil {
 		return nil, fmt.Errorf("cannot get k8s container from non-container component")
 	}

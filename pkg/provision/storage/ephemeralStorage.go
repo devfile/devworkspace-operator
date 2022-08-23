@@ -17,10 +17,10 @@ package storage
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/library/container"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
 // The EphemeralStorageProvisioner provisions all workspace storage as emptyDir volumes.
@@ -35,8 +35,8 @@ func (e EphemeralStorageProvisioner) NeedsStorage(_ *dw.DevWorkspaceTemplateSpec
 	return false
 }
 
-func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, _ sync.ClusterAPI) error {
-	persistent, ephemeral, projects := getWorkspaceVolumes(workspace)
+func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspaceWithConfig *common.DevWorkspaceWithConfig, _ sync.ClusterAPI) error {
+	persistent, ephemeral, projects := getWorkspaceVolumes(&workspaceWithConfig.DevWorkspace)
 	if _, err := addEphemeralVolumesToPodAdditions(podAdditions, persistent); err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.Pod
 			return err
 		}
 	} else {
-		if container.AnyMountSources(workspace.Spec.Template.Components) {
+		if container.AnyMountSources(workspaceWithConfig.Spec.Template.Components) {
 			projectsComponent := dw.Component{Name: "projects"}
 			projectsComponent.Volume = &dw.VolumeComponent{}
 			if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{projectsComponent}); err != nil {
@@ -59,6 +59,6 @@ func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.Pod
 	return nil
 }
 
-func (e EphemeralStorageProvisioner) CleanupWorkspaceStorage(_ *dw.DevWorkspace, _ sync.ClusterAPI) error {
+func (e EphemeralStorageProvisioner) CleanupWorkspaceStorage(_ *common.DevWorkspaceWithConfig, _ sync.ClusterAPI) error {
 	return nil
 }

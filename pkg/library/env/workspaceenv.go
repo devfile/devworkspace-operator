@@ -21,6 +21,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
@@ -30,8 +31,8 @@ import (
 
 // AddCommonEnvironmentVariables adds environment variables to each container in podAdditions. Environment variables added include common
 // info environment variables and environment variables defined by a workspaceEnv attribute in the devfile itself
-func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterDW *dw.DevWorkspace, flattenedDW *dw.DevWorkspaceTemplateSpec) error {
-	commonEnv := commonEnvironmentVariables(clusterDW.Name, clusterDW.Status.DevWorkspaceId, clusterDW.Namespace, clusterDW.Labels[constants.DevWorkspaceCreatorLabel])
+func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterDW *dw.DevWorkspace, flattenedDW *dw.DevWorkspaceTemplateSpec, config controllerv1alpha1.OperatorConfiguration) error {
+	commonEnv := commonEnvironmentVariables(clusterDW.Name, clusterDW.Status.DevWorkspaceId, clusterDW.Namespace, clusterDW.Labels[constants.DevWorkspaceCreatorLabel], config)
 	workspaceEnv, err := collectWorkspaceEnv(flattenedDW)
 	if err != nil {
 		return err
@@ -47,7 +48,7 @@ func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterD
 	return nil
 }
 
-func commonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
+func commonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string, config controllerv1alpha1.OperatorConfiguration) []corev1.EnvVar {
 	envvars := []corev1.EnvVar{
 		{
 			Name:  constants.DevWorkspaceNamespace,

@@ -20,7 +20,6 @@ import (
 	"path"
 	"time"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -35,7 +34,6 @@ import (
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
@@ -54,7 +52,7 @@ var (
 	pvcCleanupPodCPURequest    = resource.MustParse(constants.PVCCleanupPodCPURequest)
 )
 
-func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	PVCexists, err := commonPVCExists(workspace, clusterAPI)
 	if err != nil {
 		return err
@@ -94,7 +92,7 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 		}
 	}
 
-	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}, clusterAPI)
+	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}, clusterAPI, &workspace.Config)
 	if err != nil {
 		return &ProvisioningError{
 			Err: err,
@@ -115,30 +113,30 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 	}
 }
 
-func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
-	workspaceId := workspace.Status.DevWorkspaceId
+func getSpecCommonPVCCleanupJob(workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
+	workspaceId := workspaceWithConfig.Status.DevWorkspaceId
 
-	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	pvcName, err := checkForExistingCommonPVC(workspaceWithConfig.Namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
 	if pvcName == "" {
-		pvcName = config.Workspace.PVCName
+		pvcName = workspaceWithConfig.Config.Workspace.PVCName
 	}
 
 	jobLabels := map[string]string{
 		constants.DevWorkspaceIDLabel:      workspaceId,
-		constants.DevWorkspaceNameLabel:    workspace.Name,
-		constants.DevWorkspaceCreatorLabel: workspace.Labels[constants.DevWorkspaceCreatorLabel],
+		constants.DevWorkspaceNameLabel:    workspaceWithConfig.Name,
+		constants.DevWorkspaceCreatorLabel: workspaceWithConfig.Labels[constants.DevWorkspaceCreatorLabel],
 	}
-	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
+	if restrictedAccess, needsRestrictedAccess := workspaceWithConfig.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
 		jobLabels[constants.DevWorkspaceRestrictedAccessAnnotation] = restrictedAccess
 	}
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.PVCCleanupJobName(workspaceId),
-			Namespace: workspace.Namespace,
+			Namespace: workspaceWithConfig.Namespace,
 			Labels:    jobLabels,
 		},
 		Spec: batchv1.JobSpec{
@@ -150,7 +148,7 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:   "Never",
-					SecurityContext: wsprovision.GetDevWorkspaceSecurityContext(),
+					SecurityContext: wsprovision.GetDevWorkspaceSecurityContext(workspaceWithConfig.Config),
 					Volumes: []corev1.Volume{
 						{
 							Name: pvcName,
@@ -193,7 +191,7 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 		},
 	}
 
-	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
+	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspaceWithConfig.Namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
@@ -204,16 +202,16 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 		job.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 
-	if err := controllerutil.SetControllerReference(workspace, job, clusterAPI.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(workspaceWithConfig, job, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 	return job, nil
 }
 
-func commonPVCExists(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (bool, error) {
+func commonPVCExists(workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (bool, error) {
 	namespacedName := types.NamespacedName{
-		Name:      config.Workspace.PVCName,
-		Namespace: workspace.Namespace,
+		Name:      workspaceWithConfig.Config.Workspace.PVCName,
+		Namespace: workspaceWithConfig.Namespace,
 	}
 	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, &corev1.PersistentVolumeClaim{})
 	if err != nil {

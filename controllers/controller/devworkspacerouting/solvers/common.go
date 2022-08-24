@@ -138,6 +138,16 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 }
 
+func AddDWOCRoutingAnnotations(workspaceWithConfig common.DevWorkspaceWithConfig) {
+	routingClass := workspaceWithConfig.Spec.RoutingClass
+	if routingClass == "" {
+		routingClass = workspaceWithConfig.Config.Routing.DefaultRoutingClass
+	}
+	routingAnnotationPrefix := routingClass + constants.RoutingAnnotationInfix
+	// TODO: We could also just pass the entire Routing config
+	workspaceWithConfig.Annotations[routingAnnotationPrefix+constants.ClusterHostSuffixAnnotationSuffix] = workspaceWithConfig.Config.Routing.ClusterHostSuffix
+}
+
 func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []corev1.Service {
 	if len(endpoints) == 0 {
 		return nil

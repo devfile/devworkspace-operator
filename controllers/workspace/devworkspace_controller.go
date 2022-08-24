@@ -24,6 +24,7 @@ import (
 
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
@@ -111,7 +112,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Fetch the Workspace instance
 	workspaceWithConfig := &common.DevWorkspaceWithConfig{}
 	workspaceWithConfig.Config = *config.InternalConfig
-	err = r.Get(ctx, req.NamespacedName, workspaceWithConfig)
+	err = r.Get(ctx, req.NamespacedName, &workspaceWithConfig.DevWorkspace)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -138,10 +139,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err != nil {
 			workspaceWithConfig.Status.Phase = dw.DevWorkspaceStatusFailed
 			workspaceWithConfig.Status.Message = fmt.Sprintf("Failed to set DevWorkspace ID: %s", err.Error())
-			return reconcile.Result{}, r.Status().Update(ctx, workspaceWithConfig)
+			return reconcile.Result{}, r.Status().Update(ctx, &workspaceWithConfig.DevWorkspace)
 		}
 		workspaceWithConfig.Status.DevWorkspaceId = workspaceId
-		err = r.Status().Update(ctx, workspaceWithConfig)
+		err = r.Status().Update(ctx, &workspaceWithConfig.DevWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}
 
@@ -158,7 +159,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		patch := []byte(`{"spec":{"started": false}}`)
-		err := r.Client.Patch(context.Background(), workspaceWithConfig, client.RawPatch(types.MergePatchType, patch))
+		err := r.Client.Patch(context.Background(), &workspaceWithConfig.DevWorkspace, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -189,7 +190,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Message:            "DevWorkspace is starting",
 			},
 		}
-		err = r.Status().Update(ctx, workspaceWithConfig)
+		err = r.Status().Update(ctx, &workspaceWithConfig.DevWorkspace)
 		if err == nil {
 			metrics.WorkspaceStarted(&workspaceWithConfig.DevWorkspace, reqLogger)
 		}
@@ -246,12 +247,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		wsDefaults.ApplyDefaultTemplate(workspaceWithConfig)
 	}
 
-	// Apply devworkspace routing annotation for external DWOC
-	// TODO: Cleanup
-	err = addExternalDWOCAnnotations(*workspaceWithConfig)
-	if err != nil {
-		reqLogger.Error(err, "Unable to apply annotations used by Devworkspace Router for external DevWorkspace-Operator configuration")
-	}
+	// Apply devworkspace routing annotation(s) to pass DWOC routing settings to DWR
+	solvers.AddDWOCRoutingAnnotations(*workspaceWithConfig)
 
 	// Merge workspace's DWOC with an external, one if it exists
 	// TODO: Rework
@@ -470,34 +467,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceReady, "")
 	reconcileStatus.phase = dw.DevWorkspaceStatusRunning
 	return reconcile.Result{}, nil
-}
-
-// TODO: Clean up/polish this function
-func addExternalDWOCAnnotations(workspaceWithConfig common.DevWorkspaceWithConfig) error {
-	if !workspaceWithConfig.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
-		return nil
-	}
-
-	ExternalDWOCMeta := &types.NamespacedName{}
-
-	err := workspaceWithConfig.Spec.Template.Attributes.GetInto(constants.ExternalDevWorkspaceConfiguration, &ExternalDWOCMeta)
-	if err != nil {
-		return fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.ExternalDevWorkspaceConfiguration, err)
-	}
-
-	if ExternalDWOCMeta.Name == "" {
-		return fmt.Errorf("'name' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
-	}
-
-	if ExternalDWOCMeta.Namespace == "" {
-		return fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
-	}
-
-	annotationPrefix := string(workspaceWithConfig.Spec.RoutingClass) + constants.RoutingAnnotationInfix
-	workspaceWithConfig.Annotations[annotationPrefix+constants.ExternalDWOCNameAnnotationSuffix] = ExternalDWOCMeta.Name
-	workspaceWithConfig.Annotations[annotationPrefix+constants.ExternalDWOCNamespaceAnnotationSuffix] = ExternalDWOCMeta.Namespace
-	return nil
-
 }
 
 func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *common.DevWorkspaceWithConfig, logger logr.Logger) (reconcile.Result, error) {

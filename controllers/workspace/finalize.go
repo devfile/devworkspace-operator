@@ -91,7 +91,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 		// Namespace is terminating, it's redundant to clean PVC files since it's going to be removed
 		log.Info("Namespace is terminating; clearing storage finalizer")
 		coputil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
-		return reconcile.Result{}, r.Update(ctx, workspace)
+		return reconcile.Result{}, r.Update(ctx, &workspace.DevWorkspace)
 	}
 
 	storageProvisioner, err := storage.GetProvisioner(&workspace.DevWorkspace)
@@ -126,7 +126,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	}
 	log.Info("PVC clean up successful; clearing finalizer")
 	coputil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
-	return reconcile.Result{}, r.Update(ctx, workspace)
+	return reconcile.Result{}, r.Update(ctx, &workspace.DevWorkspace)
 }
 
 func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace, finalizeStatus *currentStatus) (reconcile.Result, error) {

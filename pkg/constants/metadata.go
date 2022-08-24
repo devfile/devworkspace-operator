@@ -117,6 +117,11 @@ const (
 	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
 	RoutingAnnotationInfix = ".routing.controller.devfile.io/"
 
+	// ClusterHostSuffixAnnotationSuffix is an annotation suffix used in conjunction with RoutingAnnotationInfix.
+	// It is applied as an annotation to DevWorkspaceRouting objects to pass them the cluster host suffix from the DevWorkspace-Operator configuration.
+	// The suffix is intended to be used in the following manner: <routingClass>.routing.controller.devfile.io/cluster-host-suffix = <cluster-host-suffix>
+	ClusterHostSuffixAnnotationSuffix = "cluster-host-suffix"
+
 	// DevWorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
 	DevWorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"
 
@@ -140,8 +145,4 @@ const (
 	// NamespaceNodeSelectorAnnotation is an annotation applied to a namespace to configure the node selector for all workspaces
 	// in that namespace. Value should be json-encoded map[string]string
 	NamespaceNodeSelectorAnnotation = "controller.devfile.io/node-selector"
-
-	// TODO: Document these
-	ExternalDWOCNameAnnotationSuffix      = "external-config-name"
-	ExternalDWOCNamespaceAnnotationSuffix = "external-config-namespace"
 )

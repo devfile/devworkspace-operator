@@ -77,7 +77,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 		workspace.Status.Message = infoMessage
 	}
 
-	err := r.Status().Update(context.TODO(), workspace)
+	err := r.Status().Update(context.TODO(), &workspaceWithConfig.DevWorkspace)
 	if err != nil {
 		if k8sErrors.IsConflict(err) {
 			logger.Info("Failed to update workspace status due to conflict; retrying")

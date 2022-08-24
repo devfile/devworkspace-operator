@@ -14,9 +14,8 @@
 package common
 
 import (
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
 //TODO: Rename?

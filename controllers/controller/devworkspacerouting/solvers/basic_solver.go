@@ -17,10 +17,8 @@ package solvers
 
 import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 var routeAnnotations = func(endpointName string) map[string]string {
@@ -58,7 +56,12 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
-	routingSuffix := config.Routing.ClusterHostSuffix
+	routingAnnotationPrefix := string(routing.Spec.RoutingClass) + constants.RoutingAnnotationInfix
+	if _, set := routing.Annotations[routingAnnotationPrefix+constants.ClusterHostSuffixAnnotationSuffix]; !set {
+		return routingObjects, &RoutingInvalid{"basic routing requires .config.routing.clusterHostSuffix to be set in operator config"}
+	}
+
+	routingSuffix := routing.Annotations[routingAnnotationPrefix+constants.ClusterHostSuffixAnnotationSuffix]
 	if routingSuffix == "" {
 		return routingObjects, &RoutingInvalid{"basic routing requires .config.routing.clusterHostSuffix to be set in operator config"}
 	}

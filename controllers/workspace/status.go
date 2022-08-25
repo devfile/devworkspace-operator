@@ -64,17 +64,17 @@ var clock kubeclock.Clock = &kubeclock.RealClock{}
 // updateWorkspaceStatus updates the current workspace's status field with conditions and phase from the passed in status.
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
-func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
-	syncConditions(&workspace.Status, status)
-	oldPhase := workspace.Status.Phase
-	workspace.Status.Phase = status.phase
+func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspaceWithConfig *common.DevWorkspaceWithConfig, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+	syncConditions(&workspaceWithConfig.Status, status)
+	oldPhase := workspaceWithConfig.Status.Phase
+	workspaceWithConfig.Status.Phase = status.phase
 
-	infoMessage := getInfoMessage(workspace, status)
-	if warn := conditions.GetConditionByType(workspace.Status.Conditions, conditions.DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
+	infoMessage := getInfoMessage(&workspaceWithConfig.DevWorkspace, status)
+	if warn := conditions.GetConditionByType(workspaceWithConfig.Status.Conditions, conditions.DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
 		infoMessage = fmt.Sprintf("%s %s", warningPresentInfoMessage, infoMessage)
 	}
-	if workspace.Status.Message != infoMessage {
-		workspace.Status.Message = infoMessage
+	if workspaceWithConfig.Status.Message != infoMessage {
+		workspaceWithConfig.Status.Message = infoMessage
 	}
 
 	err := r.Status().Update(context.TODO(), &workspaceWithConfig.DevWorkspace)
@@ -88,7 +88,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspac
 			}
 		}
 	} else {
-		updateMetricsForPhase(workspace, oldPhase, status.phase, logger)
+		updateMetricsForPhase(workspaceWithConfig, oldPhase, status.phase, logger)
 	}
 
 	return reconcileResult, reconcileError
@@ -225,15 +225,15 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 // updateMetricsForPhase increments DevWorkspace startup metrics based on phase transitions in a DevWorkspace. It avoids
 // incrementing the underlying metrics where possible (e.g. reconciling an already running workspace) by only incrementing
 // counters when the new phase is different from the current on in the DevWorkspace.
-func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
+func updateMetricsForPhase(workspaceWithConfig *common.DevWorkspaceWithConfig, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
 	if oldPhase == newPhase {
 		return
 	}
 	switch newPhase {
 	case dw.DevWorkspaceStatusRunning:
-		metrics.WorkspaceRunning(workspace, logger)
+		metrics.WorkspaceRunning(workspaceWithConfig, logger)
 	case dw.DevWorkspaceStatusFailed:
-		metrics.WorkspaceFailed(workspace, logger)
+		metrics.WorkspaceFailed(&workspaceWithConfig.DevWorkspace, logger)
 	}
 }
 

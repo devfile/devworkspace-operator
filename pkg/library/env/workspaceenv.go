@@ -25,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
@@ -72,12 +71,12 @@ func commonEnvironmentVariables(workspaceName, workspaceId, namespace, creator s
 		},
 	}
 
-	envvars = append(envvars, getProxyEnvVars()...)
+	envvars = append(envvars, getProxyEnvVars(config)...)
 
 	return envvars
 }
 
-func getProxyEnvVars() []corev1.EnvVar {
+func getProxyEnvVars(config controllerv1alpha1.OperatorConfiguration) []corev1.EnvVar {
 	if config.Routing.ProxyConfig == nil {
 		return nil
 	}

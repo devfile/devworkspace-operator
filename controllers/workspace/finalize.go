@@ -60,7 +60,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			// client.Update() call that removes the last finalizer.
 			return finalizeResult, finalizeErr
 		}
-		return r.updateWorkspaceStatus(&workspace.DevWorkspace, log, finalizeStatus, finalizeResult, finalizeErr)
+		return r.updateWorkspaceStatus(workspace, log, finalizeStatus, finalizeResult, finalizeErr)
 	}()
 
 	for _, finalizer := range workspace.Finalizers {

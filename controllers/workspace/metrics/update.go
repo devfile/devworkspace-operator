@@ -20,28 +20,28 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // WorkspaceStarted updates metrics for workspaces entering the 'Starting' phase, given a workspace. If an error is
 // encountered, the provided logger is used to log the error.
-func WorkspaceStarted(wksp *dw.DevWorkspace, log logr.Logger) {
-	_, ok := wksp.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
+func WorkspaceStarted(workspaceWithConfig *common.DevWorkspaceWithConfig, log logr.Logger) {
+	_, ok := workspaceWithConfig.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
 	if !ok {
-		incrementMetricForWorkspace(workspaceTotal, wksp, log)
+		incrementMetricForWorkspace(workspaceTotal, workspaceWithConfig, log)
 	}
 }
 
 // WorkspaceRunning updates metrics for workspaces entering the 'Running' phase, given a workspace. If an error is
 // encountered, the provided logger is used to log the error. This function assumes the provided workspace has
 // fully-synced conditions (i.e. the WorkspaceReady condition is present).
-func WorkspaceRunning(wksp *dw.DevWorkspace, log logr.Logger) {
-	_, ok := wksp.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
+func WorkspaceRunning(workspaceWithConfig *common.DevWorkspaceWithConfig, log logr.Logger) {
+	_, ok := workspaceWithConfig.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
 	if !ok {
-		incrementMetricForWorkspace(workspaceStarts, wksp, log)
-		incrementStartTimeBucketForWorkspace(wksp, log)
+		incrementMetricForWorkspace(workspaceStarts, workspaceWithConfig, log)
+		incrementStartTimeBucketForWorkspace(workspaceWithConfig, log)
 	}
 }
 
@@ -51,14 +51,14 @@ func WorkspaceFailed(wksp *dw.DevWorkspace, log logr.Logger) {
 	incrementMetricForWorkspaceFailure(workspaceFailures, wksp, log)
 }
 
-func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementMetricForWorkspace(metric *prometheus.CounterVec, workspaceWithConfig *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspaceWithConfig.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	routingClass := wksp.Spec.RoutingClass
+	routingClass := workspaceWithConfig.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspaceWithConfig.Config.Routing.DefaultRoutingClass
 	}
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
@@ -80,24 +80,24 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 	ctr.Inc()
 }
 
-func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementStartTimeBucketForWorkspace(workspaceWithConfig *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspaceWithConfig.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	routingClass := wksp.Spec.RoutingClass
+	routingClass := workspaceWithConfig.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspaceWithConfig.Config.Routing.DefaultRoutingClass
 	}
 	hist, err := workspaceStartupTimesHist.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
 		log.Error(err, "Failed to update metric")
 	}
-	readyCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceReady)
+	readyCondition := conditions.GetConditionByType(workspaceWithConfig.Status.Conditions, dw.DevWorkspaceReady)
 	if readyCondition == nil {
 		return
 	}
-	startedCondition := conditions.GetConditionByType(wksp.Status.Conditions, conditions.Started)
+	startedCondition := conditions.GetConditionByType(workspaceWithConfig.Status.Conditions, conditions.Started)
 	if startedCondition == nil {
 		return
 	}

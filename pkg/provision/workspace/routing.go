@@ -18,14 +18,12 @@ package workspace
 import (
 	"strings"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/conversion"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,10 +38,10 @@ type RoutingProvisioningStatus struct {
 }
 
 func SyncRoutingToCluster(
-	workspace *dw.DevWorkspace,
+	workspaceWithConfig *common.DevWorkspaceWithConfig,
 	clusterAPI sync.ClusterAPI) RoutingProvisioningStatus {
 
-	specRouting, err := getSpecRouting(workspace, clusterAPI.Scheme)
+	specRouting, err := getSpecRouting(workspaceWithConfig, clusterAPI.Scheme)
 	if err != nil {
 		return RoutingProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{Err: err},
@@ -88,11 +86,11 @@ func SyncRoutingToCluster(
 }
 
 func getSpecRouting(
-	workspace *dw.DevWorkspace,
+	workspaceWithConfig *common.DevWorkspaceWithConfig,
 	scheme *runtime.Scheme) (*v1alpha1.DevWorkspaceRouting, error) {
 
 	endpoints := map[string]v1alpha1.EndpointList{}
-	for _, component := range workspace.Spec.Template.Components {
+	for _, component := range workspaceWithConfig.Spec.Template.Components {
 		if component.Container == nil {
 			continue
 		}
@@ -103,22 +101,22 @@ func getSpecRouting(
 	}
 
 	var annotations map[string]string
-	if val, ok := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; ok {
+	if val, ok := workspaceWithConfig.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; ok {
 		annotations = maputils.Append(annotations, constants.DevWorkspaceRestrictedAccessAnnotation, val)
 	}
 	annotations = maputils.Append(annotations, constants.DevWorkspaceStartedStatusAnnotation, "true")
 
 	// TODO: Remove this comment
 	// I had to move this before the annotations get applied, as otherwise, if the routing class wasn't set in the spec, the annotation would start with a '.' which isin't allowed
-	routingClass := workspace.Spec.RoutingClass
+	routingClass := workspaceWithConfig.Spec.RoutingClass
 	if routingClass == "" {
 		// TODO: Just set workspace.Spec.RoutingClass = config.Routing.DefaultRoutingClass ?
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspaceWithConfig.Config.Routing.DefaultRoutingClass
 	}
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
 	expectedAnnotationPrefix := routingClass + constants.RoutingAnnotationInfix
-	for k, v := range workspace.GetAnnotations() {
+	for k, v := range workspaceWithConfig.GetAnnotations() {
 		if strings.HasPrefix(k, expectedAnnotationPrefix) {
 			annotations = maputils.Append(annotations, k, v)
 		}
@@ -126,19 +124,19 @@ func getSpecRouting(
 
 	routing := &v1alpha1.DevWorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
-			Namespace: workspace.Namespace,
+			Name:      common.DevWorkspaceRoutingName(workspaceWithConfig.Status.DevWorkspaceId),
+			Namespace: workspaceWithConfig.Namespace,
 			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
+				constants.DevWorkspaceIDLabel: workspaceWithConfig.Status.DevWorkspaceId,
 			},
 			Annotations: annotations,
 		},
 		Spec: v1alpha1.DevWorkspaceRoutingSpec{
-			DevWorkspaceId: workspace.Status.DevWorkspaceId,
+			DevWorkspaceId: workspaceWithConfig.Status.DevWorkspaceId,
 			RoutingClass:   v1alpha1.DevWorkspaceRoutingClass(routingClass),
 			Endpoints:      endpoints,
 			PodSelector: map[string]string{
-				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
+				constants.DevWorkspaceIDLabel: workspaceWithConfig.Status.DevWorkspaceId,
 			},
 		},
 	}

@@ -192,7 +192,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		err = r.Status().Update(ctx, &workspaceWithConfig.DevWorkspace)
 		if err == nil {
-			metrics.WorkspaceStarted(&workspaceWithConfig.DevWorkspace, reqLogger)
+			metrics.WorkspaceStarted(workspaceWithConfig, reqLogger)
 		}
 		return reconcile.Result{}, err
 	}
@@ -201,25 +201,29 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus := currentStatus{phase: dw.DevWorkspaceStatusStarting}
 	reconcileStatus.setConditionTrue(conditions.Started, "DevWorkspace is starting")
 	clusterWorkspace := workspaceWithConfig.DevWorkspace.DeepCopy()
+	clusterWorkspaceWithConfig := &common.DevWorkspaceWithConfig{
+		DevWorkspace: *workspaceWithConfig.DevWorkspace.DeepCopy(),
+		Config:       *workspaceWithConfig.Config.DeepCopy(),
+	}
 	timingInfo := map[string]string{}
 	timing.SetTime(timingInfo, timing.DevWorkspaceStarted)
 
 	defer func() (reconcile.Result, error) {
-		r.syncTimingToCluster(ctx, clusterWorkspace, timingInfo, reqLogger)
+		r.syncTimingToCluster(ctx, &clusterWorkspaceWithConfig.DevWorkspace, timingInfo, reqLogger)
 
 		// Don't accidentally suppress errors by overwriting here; only check for timeout when no error
 		// encountered in main reconcile loop.
 		if err == nil {
-			if timeoutErr := checkForStartTimeout(clusterWorkspace, workspaceWithConfig.Config); timeoutErr != nil {
+			if timeoutErr := checkForStartTimeout(&clusterWorkspaceWithConfig.DevWorkspace, workspaceWithConfig.Config); timeoutErr != nil {
 				reconcileResult, err = r.failWorkspace(&workspaceWithConfig.DevWorkspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 			}
 		}
 		if reconcileStatus.phase == dw.DevWorkspaceStatusRunning {
-			metrics.WorkspaceRunning(&workspaceWithConfig.DevWorkspace, reqLogger)
-			r.syncStartedAtToCluster(ctx, clusterWorkspace, reqLogger)
+			metrics.WorkspaceRunning(workspaceWithConfig, reqLogger)
+			r.syncStartedAtToCluster(ctx, &clusterWorkspaceWithConfig.DevWorkspace, reqLogger)
 		}
 
-		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
+		return r.updateWorkspaceStatus(clusterWorkspaceWithConfig, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
 	if workspaceWithConfig.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true" {
@@ -347,7 +351,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Step two: Create routing, and wait for routing to be ready
 	timing.SetTime(timingInfo, timing.RoutingCreated)
-	routingStatus := wsprovision.SyncRoutingToCluster(&workspaceWithConfig.DevWorkspace, clusterAPI)
+	routingStatus := wsprovision.SyncRoutingToCluster(workspaceWithConfig, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
 			return r.failWorkspace(&workspaceWithConfig.DevWorkspace, routingStatus.Message, metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
@@ -497,7 +501,7 @@ func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *c
 	if stoppedBy, ok := workspace.Annotations[constants.DevWorkspaceStopReasonAnnotation]; ok {
 		logger.Info("Workspace stopped with reason", "stopped-by", stoppedBy)
 	}
-	return r.updateWorkspaceStatus(&workspace.DevWorkspace, logger, &status, reconcile.Result{}, nil)
+	return r.updateWorkspaceStatus(workspace, logger, &status, reconcile.Result{}, nil)
 }
 
 func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspaceWithConfig *common.DevWorkspaceWithConfig, logger logr.Logger) (stopped bool, err error) {

@@ -54,7 +54,7 @@ func setupForTest(t *testing.T) {
 	configNamespace = testNamespace
 	originalDefaultConfig := defaultConfig.DeepCopy()
 	t.Cleanup(func() {
-		InternalConfig = nil
+		internalConfig = nil
 		defaultConfig = originalDefaultConfig
 	})
 }

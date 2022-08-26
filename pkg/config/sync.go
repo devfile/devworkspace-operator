@@ -18,13 +18,10 @@ package config
 import (
 	"context"
 	"fmt"
-	"reflect"
-	"sort"
 	"strings"
 	"sync"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config/proxy"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -47,73 +44,59 @@ const (
 var (
 	Routing         *controller.RoutingConfig
 	Workspace       *controller.WorkspaceConfig
-	InternalConfig  *controller.OperatorConfiguration // TODO: Make this unexported again
+	internalConfig  *controller.OperatorConfiguration
 	configMutex     sync.Mutex
 	configNamespace string
 	log             = ctrl.Log.WithName("operator-configuration")
 )
 
-// TODO: Refactor this to return the modified config, so test classes don't acces the InternalConfig
-func SetConfigForTesting(config *controller.OperatorConfiguration) {
+func SetConfigForTesting(config *controller.OperatorConfiguration) *controller.OperatorConfiguration {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	InternalConfig = defaultConfig.DeepCopy()
-	mergeConfig(config, InternalConfig)
+	internalConfig = defaultConfig.DeepCopy()
+	mergeConfig(config, internalConfig)
 	updatePublicConfig()
+	return internalConfig
 }
 
-func ApplyExternalDWOCConfig(workspace *dw.DevWorkspace, client crclient.Client) (err error) {
+// Checks for a external DevWorkspace-Operator configuration specified by the optional workspace attribute "controller.devfile.io/devworkspace-config"
+// If the external DWOC is found, it is merged with the internal/global DWOC and returned.
+// If the exteranl DWOC is not found, or the "controller.devfile.io/devworkspace-config" attribute is not set, then the internal/global DWOC is returned.
+func ResolveConfigForWorkspace(workspace *dw.DevWorkspace, client crclient.Client) (*controller.OperatorConfiguration, error) {
+	internalConfigCopy := internalConfig.DeepCopy()
+	if workspace.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
+		namespacedName := types.NamespacedName{}
 
-	if !workspace.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
-		return nil
+		err := workspace.Spec.Template.Attributes.GetInto(constants.ExternalDevWorkspaceConfiguration, &namespacedName)
+		if err != nil {
+			return internalConfigCopy, fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.ExternalDevWorkspaceConfiguration, err)
+		}
+
+		if namespacedName.Name == "" {
+			return internalConfigCopy, fmt.Errorf("'name' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+		}
+
+		if namespacedName.Namespace == "" {
+			return internalConfigCopy, fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+		}
+
+		externalDWOC := &controller.DevWorkspaceOperatorConfig{}
+		err = client.Get(context.TODO(), namespacedName, externalDWOC)
+		if err != nil {
+			return internalConfigCopy, fmt.Errorf("could not fetch external DWOC with name '%s' in namespace '%s': %w", namespacedName.Name, namespacedName.Namespace, err)
+		}
+		// TODO: Do we need to lock the internal config?
+		return getMergedConfig(externalDWOC.Config, internalConfig), nil
 	}
 
-	ExternalDWOCMeta := v1alpha1.ExternalConfig{}
-
-	err = workspace.Spec.Template.Attributes.GetInto(constants.ExternalDevWorkspaceConfiguration, &ExternalDWOCMeta)
-	if err != nil {
-		return fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.ExternalDevWorkspaceConfiguration, err)
-	}
-
-	if ExternalDWOCMeta.Name == "" {
-		return fmt.Errorf("'name' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
-	}
-
-	if ExternalDWOCMeta.Namespace == "" {
-		return fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
-	}
-
-	externalDWOC := &controller.DevWorkspaceOperatorConfig{}
-	namespacedName := types.NamespacedName{
-		Name:      ExternalDWOCMeta.Name,
-		Namespace: ExternalDWOCMeta.Namespace,
-	}
-
-	err = client.Get(context.TODO(), namespacedName, externalDWOC)
-	if err != nil {
-		return fmt.Errorf("could not fetch external DWOC with name '%s' in namespace '%s': %w", ExternalDWOCMeta.Name, ExternalDWOCMeta.Namespace, err)
-	}
-
-	// TODO: It might be better to just always merge rather than suffering performance hit in configsAlreadyMerged() (or maintaing configsAlreadyMerged if we don't use reflect.DeepEqual)
-	if !configsAlreadyMerged(externalDWOC.Config, InternalConfig) {
-		mergeInteralConfigWithExternal(externalDWOC.Config)
-	}
-
-	return nil
-}
-
-func mergeInteralConfigWithExternal(externalConfig *controller.OperatorConfiguration) {
-	configMutex.Lock()
-	defer configMutex.Unlock()
-	mergeConfig(externalConfig, InternalConfig)
-	updatePublicConfig()
+	return internalConfigCopy, nil
 }
 
 func SetupControllerConfig(client crclient.Client) error {
-	if InternalConfig != nil {
+	if internalConfig != nil {
 		return fmt.Errorf("internal controller configuration is already set up")
 	}
-	InternalConfig = &controller.OperatorConfiguration{}
+	internalConfig = &controller.OperatorConfiguration{}
 
 	namespace, err := infrastructure.GetNamespace()
 	if err != nil {
@@ -126,7 +109,7 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	if config == nil {
-		InternalConfig = defaultConfig.DeepCopy()
+		internalConfig = defaultConfig.DeepCopy()
 	} else {
 		syncConfigFrom(config)
 	}
@@ -136,8 +119,8 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	defaultConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
-	if InternalConfig.Routing.ClusterHostSuffix == "" {
-		InternalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
+	if internalConfig.Routing.ClusterHostSuffix == "" {
+		internalConfig.Routing.ClusterHostSuffix = defaultRoutingSuffix
 	}
 
 	clusterProxy, err := proxy.GetClusterProxyConfig(client)
@@ -145,21 +128,21 @@ func SetupControllerConfig(client crclient.Client) error {
 		return err
 	}
 	defaultConfig.Routing.ProxyConfig = clusterProxy
-	InternalConfig.Routing.ProxyConfig = proxy.MergeProxyConfigs(clusterProxy, InternalConfig.Routing.ProxyConfig)
+	internalConfig.Routing.ProxyConfig = proxy.MergeProxyConfigs(clusterProxy, internalConfig.Routing.ProxyConfig)
 
 	updatePublicConfig()
 	return nil
 }
 
 func IsSetUp() bool {
-	return InternalConfig != nil
+	return internalConfig != nil
 }
 
 func ExperimentalFeaturesEnabled() bool {
-	if InternalConfig == nil || InternalConfig.EnableExperimentalFeatures == nil {
+	if internalConfig == nil || internalConfig.EnableExperimentalFeatures == nil {
 		return false
 	}
-	return *InternalConfig.EnableExperimentalFeatures
+	return *internalConfig.EnableExperimentalFeatures
 }
 
 func getClusterConfig(namespace string, client crclient.Client) (*controller.DevWorkspaceOperatorConfig, error) {
@@ -179,21 +162,29 @@ func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {
 	}
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	InternalConfig = defaultConfig.DeepCopy()
-	mergeConfig(newConfig.Config, InternalConfig)
+	internalConfig = defaultConfig.DeepCopy()
+	mergeConfig(newConfig.Config, internalConfig)
 	updatePublicConfig()
+}
+
+func getMergedConfig(from, to *controller.OperatorConfiguration) *controller.OperatorConfiguration {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+	mergedConfig := to.DeepCopy()
+	mergeConfig(from, mergedConfig)
+	return mergedConfig
 }
 
 func restoreDefaultConfig() {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	InternalConfig = defaultConfig.DeepCopy()
+	internalConfig = defaultConfig.DeepCopy()
 	updatePublicConfig()
 }
 
 func updatePublicConfig() {
-	Routing = InternalConfig.Routing.DeepCopy()
-	Workspace = InternalConfig.Workspace.DeepCopy()
+	Routing = internalConfig.Routing.DeepCopy()
+	Workspace = internalConfig.Workspace.DeepCopy()
 	logCurrentConfig()
 }
 
@@ -237,147 +228,6 @@ func discoverRouteSuffix(client crclient.Client) (string, error) {
 	prefixToRemove := fmt.Sprintf("%s-%s.", openShiftTestRouteName, configNamespace)
 	host = strings.TrimPrefix(host, prefixToRemove)
 	return host, nil
-}
-
-// TODO: Improve variable names?
-// Returns true if 'from' has already been merged with 'to'.
-// The two configs are considered merged if all fields that are set in 'from' have the same value in 'to'
-func configsAlreadyMerged(from, to *controller.OperatorConfiguration) bool {
-	if from == nil {
-		return true
-	}
-	if from.EnableExperimentalFeatures != nil {
-
-		if to.EnableExperimentalFeatures == nil {
-			return false
-		}
-
-		if *to.EnableExperimentalFeatures != *from.EnableExperimentalFeatures {
-			return false
-		}
-	}
-	if from.Routing != nil {
-		if to.Routing == nil {
-			return false
-		}
-		if from.Routing.DefaultRoutingClass != "" && to.Routing.DefaultRoutingClass != from.Routing.DefaultRoutingClass {
-			return false
-		}
-		if from.Routing.ClusterHostSuffix != "" && to.Routing.ClusterHostSuffix != from.Routing.ClusterHostSuffix {
-			return false
-		}
-		if from.Routing.ProxyConfig != nil {
-			if to.Routing.ProxyConfig == nil {
-				return false
-			}
-
-			if from.Routing.ProxyConfig.HttpProxy != "" && to.Routing.ProxyConfig.HttpProxy != from.Routing.ProxyConfig.HttpProxy {
-				return false
-			}
-
-			if from.Routing.ProxyConfig.HttpsProxy != "" && to.Routing.ProxyConfig.HttpsProxy != from.Routing.ProxyConfig.HttpsProxy {
-				return false
-			}
-
-			if from.Routing.ProxyConfig.NoProxy != "" && to.Routing.ProxyConfig.NoProxy != from.Routing.ProxyConfig.NoProxy {
-				return false
-			}
-		}
-	}
-	if from.Workspace != nil {
-		if to.Workspace == nil {
-			return false
-		}
-		if from.Workspace.StorageClassName != nil {
-			if to.Workspace.StorageClassName == nil {
-				return false
-			}
-
-			if *to.Workspace.StorageClassName != *from.Workspace.StorageClassName {
-				return false
-			}
-		}
-		if from.Workspace.PVCName != "" && to.Workspace.PVCName != from.Workspace.PVCName {
-			return false
-		}
-		if from.Workspace.ImagePullPolicy != "" && to.Workspace.ImagePullPolicy != from.Workspace.ImagePullPolicy {
-			return false
-		}
-		if from.Workspace.IdleTimeout != "" && to.Workspace.IdleTimeout != from.Workspace.IdleTimeout {
-			return false
-		}
-		if from.Workspace.ProgressTimeout != "" && to.Workspace.ProgressTimeout != from.Workspace.ProgressTimeout {
-			return false
-		}
-		if from.Workspace.IgnoredUnrecoverableEvents != nil && to.Workspace.IgnoredUnrecoverableEvents != nil {
-
-			if len(from.Workspace.IgnoredUnrecoverableEvents) != len(to.Workspace.IgnoredUnrecoverableEvents) {
-				return false
-			}
-
-			sort.Strings(to.Workspace.IgnoredUnrecoverableEvents)
-			sort.Strings(from.Workspace.IgnoredUnrecoverableEvents)
-
-			for i := range from.Workspace.IgnoredUnrecoverableEvents {
-				if from.Workspace.IgnoredUnrecoverableEvents[i] != to.Workspace.IgnoredUnrecoverableEvents[i] {
-					return false
-				}
-			}
-		}
-		if from.Workspace.CleanupOnStop != nil {
-			if to.Workspace.CleanupOnStop == nil {
-				return false
-			}
-
-			if *to.Workspace.CleanupOnStop != *from.Workspace.CleanupOnStop {
-				return false
-			}
-		}
-		if from.Workspace.PodSecurityContext != nil {
-			if to.Workspace.PodSecurityContext == nil {
-				return false
-			}
-
-			// TODO: Using reflect.DeepEqual could potentially really degrade performance
-			if !reflect.DeepEqual(from.Workspace.PodSecurityContext, to.Workspace.PodSecurityContext) {
-				return false
-			}
-		}
-		if from.Workspace.DefaultStorageSize != nil {
-			if to.Workspace.DefaultStorageSize == nil {
-				return false
-			}
-			if from.Workspace.DefaultStorageSize.Common != nil {
-				if to.Workspace.DefaultStorageSize.Common == nil {
-					return false
-				}
-				if from.Workspace.DefaultStorageSize.Common.Cmp(*to.Workspace.DefaultStorageSize.Common) != 0 {
-					return false
-				}
-
-			}
-			if from.Workspace.DefaultStorageSize.PerWorkspace != nil {
-				if to.Workspace.DefaultStorageSize.PerWorkspace == nil {
-					return false
-				}
-				if from.Workspace.DefaultStorageSize.PerWorkspace.Cmp(*to.Workspace.DefaultStorageSize.PerWorkspace) != 0 {
-					return false
-				}
-			}
-
-		}
-		if from.Workspace.DefaultTemplate != nil {
-			if to.Workspace.DefaultTemplate == nil {
-				return false
-			}
-
-			// TODO: Using reflect.DeepEqual could potentially really degrade performance
-			if !reflect.DeepEqual(from.Workspace.DefaultTemplate, to.Workspace.DefaultTemplate) {
-				return false
-			}
-		}
-	}
-	return true
 }
 
 func mergeConfig(from, to *controller.OperatorConfiguration) {
@@ -457,7 +307,7 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 
 // logCurrentConfig formats the current operator configuration as a plain string
 func logCurrentConfig() {
-	if InternalConfig == nil {
+	if internalConfig == nil {
 		return
 	}
 	var config []string
@@ -498,7 +348,7 @@ func logCurrentConfig() {
 			config = append(config, fmt.Sprintf("workspace.defaultTemplate is set"))
 		}
 	}
-	if InternalConfig.EnableExperimentalFeatures != nil && *InternalConfig.EnableExperimentalFeatures {
+	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {
 		config = append(config, "enableExperimentalFeatures=true")
 	}
 
@@ -508,7 +358,7 @@ func logCurrentConfig() {
 		log.Info(fmt.Sprintf("Updated config to [%s]", strings.Join(config, ",")))
 	}
 
-	if InternalConfig.Routing.ProxyConfig != nil {
-		log.Info("Resolved proxy configuration", "proxy", InternalConfig.Routing.ProxyConfig)
+	if internalConfig.Routing.ProxyConfig != nil {
+		log.Info("Resolved proxy configuration", "proxy", internalConfig.Routing.ProxyConfig)
 	}
 }

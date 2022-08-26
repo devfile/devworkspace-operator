@@ -111,7 +111,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Fetch the Workspace instance
 	workspaceWithConfig := &common.DevWorkspaceWithConfig{}
-	workspaceWithConfig.Config = *config.InternalConfig
 	err = r.Get(ctx, req.NamespacedName, &workspaceWithConfig.DevWorkspace)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
@@ -123,6 +122,14 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	// Get the config for the workspace
+	resolvedConfig, err := config.ResolveConfigForWorkspace(&workspaceWithConfig.DevWorkspace, clusterAPI.Client)
+	workspaceWithConfig.Config = *resolvedConfig
+	if err != nil {
+		reqLogger.Error(err, "Unable to apply external DevWorkspace-Operator configuration")
+	}
+
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspaceWithConfig.Status.DevWorkspaceId)
 	reqLogger.Info("Reconciling Workspace")
 
@@ -253,13 +260,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Apply devworkspace routing annotation(s) to pass DWOC routing settings to DWR
 	solvers.AddDWOCRoutingAnnotations(*workspaceWithConfig)
-
-	// Merge workspace's DWOC with an external, one if it exists
-	// TODO: Rework
-	err = config.ApplyExternalDWOCConfig(&workspaceWithConfig.DevWorkspace, clusterAPI.Client)
-	if err != nil {
-		reqLogger.Error(err, "Unable to apply external DevWorkspace-Operator configuration")
-	}
 
 	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspaceWithConfig.Spec.Template, flattenHelpers)
 	if err != nil {

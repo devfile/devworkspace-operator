@@ -75,7 +75,7 @@ var testControllerCfg = &v1alpha1.OperatorConfiguration{
 }
 
 func setupControllerCfg() {
-	config.SetConfigForTesting(testControllerCfg)
+	testControllerCfg = config.SetConfigForTesting(testControllerCfg)
 }
 
 func loadTestCaseOrPanic(t *testing.T, testFilepath string) testCase {
@@ -141,7 +141,7 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
 			workspace := &common.DevWorkspaceWithConfig{}
-			workspace.Config = *config.InternalConfig
+			workspace.Config = *testControllerCfg
 			workspace.Spec.Template = *tt.Input.Workspace
 			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"
@@ -178,7 +178,7 @@ func TestTerminatingPVC(t *testing.T) {
 	testCase := loadTestCaseOrPanic(t, "testdata/common-storage/rewrites-volumes-for-common-pvc-strategy.yaml")
 	assert.NotNil(t, testCase.Input.Workspace, "Input does not define workspace")
 	workspace := &common.DevWorkspaceWithConfig{}
-	workspace.Config = *config.InternalConfig
+	workspace.Config = *testControllerCfg
 	workspace.Spec.Template = *testCase.Input.Workspace
 	workspace.Status.DevWorkspaceId = testCase.Input.DevWorkspaceID
 	workspace.Namespace = "test-namespace"

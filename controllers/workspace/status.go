@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 )
@@ -241,7 +240,7 @@ func updateMetricsForPhase(workspaceWithConfig *common.DevWorkspaceWithConfig, o
 // startup timeout. This is determined by checking to see if the last condition transition time is more
 // than [timeout] duration ago. Workspaces that are not in the "Starting" phase cannot timeout. Returns
 // an error with message when timeout is reached.
-func checkForStartTimeout(workspace *dw.DevWorkspace, config controllerv1alpha1.OperatorConfiguration) error {
+func checkForStartTimeout(workspace *dw.DevWorkspace, config v1alpha1.OperatorConfiguration) error {
 	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting {
 		return nil
 	}

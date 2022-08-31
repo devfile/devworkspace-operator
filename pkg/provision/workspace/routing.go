@@ -106,11 +106,8 @@ func getSpecRouting(
 	}
 	annotations = maputils.Append(annotations, constants.DevWorkspaceStartedStatusAnnotation, "true")
 
-	// TODO: Remove this comment
-	// I had to move this before the annotations get applied, as otherwise, if the routing class wasn't set in the spec, the annotation would start with a '.' which isin't allowed
 	routingClass := workspaceWithConfig.Spec.RoutingClass
 	if routingClass == "" {
-		// TODO: Just set workspace.Spec.RoutingClass = config.Routing.DefaultRoutingClass ?
 		routingClass = workspaceWithConfig.Config.Routing.DefaultRoutingClass
 	}
 
@@ -120,6 +117,10 @@ func getSpecRouting(
 		if strings.HasPrefix(k, expectedAnnotationPrefix) {
 			annotations = maputils.Append(annotations, k, v)
 		}
+	}
+
+	if v1alpha1.DevWorkspaceRoutingClass(routingClass) == v1alpha1.DevWorkspaceRoutingBasic {
+		annotations = maputils.Append(annotations, constants.ClusterHostSuffixAnnotation, workspaceWithConfig.Config.Routing.ClusterHostSuffix)
 	}
 
 	routing := &v1alpha1.DevWorkspaceRouting{

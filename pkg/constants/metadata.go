@@ -117,10 +117,8 @@ const (
 	// The full annotation name is supposed to be "<routingClass>.routing.controller.devfile.io/<anything>"
 	RoutingAnnotationInfix = ".routing.controller.devfile.io/"
 
-	// ClusterHostSuffixAnnotationSuffix is an annotation suffix used in conjunction with RoutingAnnotationInfix.
-	// It is applied as an annotation to DevWorkspaceRouting objects to pass them the cluster host suffix from the DevWorkspace-Operator configuration.
-	// The suffix is intended to be used in the following manner: <routingClass>.routing.controller.devfile.io/cluster-host-suffix = <cluster-host-suffix>
-	ClusterHostSuffixAnnotationSuffix = "cluster-host-suffix"
+	// ClusterHostSuffixAnnotation is an annotation key for storing the value of the cluster host suffix to be used by the Basic DevWorkspace Routing Class.
+	ClusterHostSuffixAnnotation = "basic.routing.controller.devfile.io/cluster-host-suffix"
 
 	// DevWorkspaceEndpointNameAnnotation is the annotation key for storing an endpoint's name from the devfile representation
 	DevWorkspaceEndpointNameAnnotation = "controller.devfile.io/endpoint_name"

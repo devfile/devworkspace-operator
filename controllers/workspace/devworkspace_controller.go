@@ -24,7 +24,6 @@ import (
 
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
@@ -257,9 +256,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if wsDefaults.NeedsDefaultTemplate(workspaceWithConfig) {
 		wsDefaults.ApplyDefaultTemplate(workspaceWithConfig)
 	}
-
-	// Apply devworkspace routing annotation(s) to pass DWOC routing settings to DWR
-	solvers.AddDWOCRoutingAnnotations(*workspaceWithConfig)
 
 	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspaceWithConfig.Spec.Template, flattenHelpers)
 	if err != nil {

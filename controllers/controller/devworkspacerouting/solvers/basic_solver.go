@@ -56,12 +56,7 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
-	routingAnnotationPrefix := string(routing.Spec.RoutingClass) + constants.RoutingAnnotationInfix
-	if _, set := routing.Annotations[routingAnnotationPrefix+constants.ClusterHostSuffixAnnotationSuffix]; !set {
-		return routingObjects, &RoutingInvalid{"basic routing requires .config.routing.clusterHostSuffix to be set in operator config"}
-	}
-
-	routingSuffix := routing.Annotations[routingAnnotationPrefix+constants.ClusterHostSuffixAnnotationSuffix]
+	routingSuffix := routing.Annotations[constants.ClusterHostSuffixAnnotation]
 	if routingSuffix == "" {
 		return routingObjects, &RoutingInvalid{"basic routing requires .config.routing.clusterHostSuffix to be set in operator config"}
 	}

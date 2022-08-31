@@ -34,13 +34,15 @@ func setupHttpClients() {
 		InsecureSkipVerify: true,
 	}
 
+	routingConfig := config.GetGlobalConfig().Routing
+
 	// Note: per-workspace routing settings (that have been set with an external DWOC)
 	// are ignored for the HTTP Clients
-	if config.Routing != nil && config.Routing.ProxyConfig != nil {
+	if routingConfig != nil && routingConfig.ProxyConfig != nil {
 		proxyConf := httpproxy.Config{
-			HTTPProxy:  config.Routing.ProxyConfig.HttpProxy,
-			HTTPSProxy: config.Routing.ProxyConfig.HttpsProxy,
-			NoProxy:    config.Routing.ProxyConfig.NoProxy,
+			HTTPProxy:  routingConfig.ProxyConfig.HttpProxy,
+			HTTPSProxy: routingConfig.ProxyConfig.HttpsProxy,
+			NoProxy:    routingConfig.ProxyConfig.NoProxy,
 		}
 		proxyFunc := func(req *http.Request) (*url.URL, error) {
 			return proxyConf.ProxyFunc()(req.URL)

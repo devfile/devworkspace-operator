@@ -694,7 +694,7 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 
 	// TODO: Address this usage of global config. It'd be better to check if the PVC had a DWO-specific annotation that we can use to filter for
 	// Otherwise, check if common PVC is deleted to make sure all DevWorkspaces see it happen
-	if obj.GetName() != config.Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
+	if obj.GetName() != config.GetGlobalConfig().Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
 		// We're looking for a deleted common PVC
 		return []reconcile.Request{}
 	}

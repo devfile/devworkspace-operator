@@ -85,7 +85,7 @@ func ResolveConfigForWorkspace(workspace *dw.DevWorkspace, client crclient.Clien
 		if err != nil {
 			return internalConfigCopy, fmt.Errorf("could not fetch external DWOC with name '%s' in namespace '%s': %w", namespacedName.Name, namespacedName.Namespace, err)
 		}
-		// TODO: Do we need to lock the internal config?
+
 		return getMergedConfig(externalDWOC.Config, internalConfig), nil
 	}
 
@@ -168,10 +168,10 @@ func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {
 }
 
 func getMergedConfig(from, to *controller.OperatorConfiguration) *controller.OperatorConfiguration {
-	configMutex.Lock()
-	defer configMutex.Unlock()
 	mergedConfig := to.DeepCopy()
-	mergeConfig(from, mergedConfig)
+	// TODO: Remove this comment: technically we don't need to deepCopy 'from', but we may use this function elsewhere in the future, so just incase..
+	fromCopy := from.DeepCopy()
+	mergeConfig(fromCopy, mergedConfig)
 	return mergedConfig
 }
 

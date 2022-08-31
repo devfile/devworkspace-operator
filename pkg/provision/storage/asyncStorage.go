@@ -46,39 +46,39 @@ func (*AsyncStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateS
 	return needsStorage(workspace)
 }
 
-func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	if err := checkConfigured(); err != nil {
 		return &ProvisioningError{
 			Message: fmt.Sprintf("%s. Contact an administrator to resolve this issue.", err.Error()),
 		}
 	}
 
-	numWorkspaces, _, err := p.getAsyncWorkspaceCount(workspaceWithConfig.Namespace, clusterAPI)
+	numWorkspaces, _, err := p.getAsyncWorkspaceCount(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
 	// If there is more than one started workspace using async storage, then we fail starting additional ones
 	// Note we need to check phase so as to not accidentally fail an already-running workspace when a second one
 	// is created.
-	if numWorkspaces > 1 && workspaceWithConfig.Status.Phase != dw.DevWorkspaceStatusRunning {
+	if numWorkspaces > 1 && workspace.Status.Phase != dw.DevWorkspaceStatusRunning {
 		return &ProvisioningError{
-			Message: fmt.Sprintf("cannot provision storage for workspace %s", workspaceWithConfig.Name),
+			Message: fmt.Sprintf("cannot provision storage for workspace %s", workspace.Name),
 			Err:     fmt.Errorf("at most one workspace using async storage can be running in a namespace"),
 		}
 	}
 
 	// Add ephemeral volumes
-	if err := addEphemeralVolumesFromWorkspace(&workspaceWithConfig.DevWorkspace, podAdditions); err != nil {
+	if err := addEphemeralVolumesFromWorkspace(&workspace.DevWorkspace, podAdditions); err != nil {
 		return err
 	}
 
 	// If persistent storage is not needed, we're done
-	if !p.NeedsStorage(&workspaceWithConfig.Spec.Template) {
+	if !p.NeedsStorage(&workspace.Spec.Template) {
 		return nil
 	}
 
 	// Sync SSH keypair to cluster
-	secret, configmap, err := asyncstorage.GetOrCreateSSHConfig(&workspaceWithConfig.DevWorkspace, clusterAPI)
+	secret, configmap, err := asyncstorage.GetOrCreateSSHConfig(&workspace.DevWorkspace, clusterAPI)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
 			return &NotReadyError{
@@ -89,12 +89,12 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		return err
 	}
 
-	pvcName, err := checkForExistingCommonPVC(workspaceWithConfig.Namespace, clusterAPI)
+	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
 
-	pvcTerminating, err := checkPVCTerminating(pvcName, workspaceWithConfig.Namespace, clusterAPI, workspaceWithConfig.Config)
+	pvcTerminating, err := checkPVCTerminating(pvcName, workspace.Namespace, clusterAPI, workspace.Config)
 	if err != nil {
 		return err
 	} else if pvcTerminating {
@@ -106,7 +106,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 
 	if pvcName != "" {
 		// Create common PVC if needed
-		clusterPVC, err := syncCommonPVC(workspaceWithConfig.Namespace, clusterAPI, workspaceWithConfig.Config)
+		clusterPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI, workspace.Config)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	}
 
 	// Create async server deployment
-	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspaceWithConfig.Namespace, configmap, pvcName, clusterAPI, workspaceWithConfig.Config)
+	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace.Namespace, configmap, pvcName, clusterAPI, workspace.Config)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
 			return &NotReadyError{
@@ -157,32 +157,32 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		return err
 	}
 
-	volumes, err := p.addVolumesForAsyncStorage(podAdditions, &workspaceWithConfig.DevWorkspace)
+	volumes, err := p.addVolumesForAsyncStorage(podAdditions, &workspace.DevWorkspace)
 	if err != nil {
 		return err
 	}
 
 	sshSecretVolume := asyncstorage.GetVolumeFromSecret(secret)
-	asyncSidecar := asyncstorage.GetAsyncSidecar(workspaceWithConfig.Status.DevWorkspaceId, sshSecretVolume.Name, volumes)
+	asyncSidecar := asyncstorage.GetAsyncSidecar(workspace.Status.DevWorkspaceId, sshSecretVolume.Name, volumes)
 	podAdditions.Containers = append(podAdditions.Containers, *asyncSidecar)
 	podAdditions.Volumes = append(podAdditions.Volumes, *sshSecretVolume)
 
 	return nil
 }
 
-func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// TODO: This approach relies on there being a maximum of one workspace running per namespace.
-	asyncDeploy, err := asyncstorage.GetWorkspaceSyncDeploymentCluster(workspaceWithConfig.Namespace, clusterAPI)
+	asyncDeploy, err := asyncstorage.GetWorkspaceSyncDeploymentCluster(workspace.Namespace, clusterAPI)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return runCommonPVCCleanupJob(workspaceWithConfig, clusterAPI)
+			return runCommonPVCCleanupJob(workspace, clusterAPI)
 		} else {
 			return err
 		}
 	}
 
 	// Check if another workspace is currently using the async server
-	numWorkspaces, totalWorkspaces, err := p.getAsyncWorkspaceCount(workspaceWithConfig.Namespace, clusterAPI)
+	numWorkspaces, totalWorkspaces, err := p.getAsyncWorkspaceCount(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
@@ -190,7 +190,7 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspaceWithConfig *c
 	case 0:
 		// no problem
 	case 1:
-		if workspaceWithConfig.Spec.Started {
+		if workspace.Spec.Started {
 			// This is the only workspace using the async server, we can safely stop it
 			break
 		}
@@ -219,12 +219,12 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspaceWithConfig *c
 	}
 
 	// Clean up PVC using usual job
-	err = runCommonPVCCleanupJob(workspaceWithConfig, clusterAPI)
+	err = runCommonPVCCleanupJob(workspace, clusterAPI)
 	if err != nil {
 		return err
 	}
 
-	retry, err := asyncstorage.RemoveAuthorizedKeyFromConfigMap(&workspaceWithConfig.DevWorkspace, clusterAPI)
+	retry, err := asyncstorage.RemoveAuthorizedKeyFromConfigMap(&workspace.DevWorkspace, clusterAPI)
 	if err != nil {
 		return &ProvisioningError{
 			Message: "Failed to remove authorized key from async storage configmap",

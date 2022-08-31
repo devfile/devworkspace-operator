@@ -63,20 +63,20 @@ var clock kubeclock.Clock = &kubeclock.RealClock{}
 // updateWorkspaceStatus updates the current workspace's status field with conditions and phase from the passed in status.
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
-func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspaceWithConfig *common.DevWorkspaceWithConfig, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
-	syncConditions(&workspaceWithConfig.Status, status)
-	oldPhase := workspaceWithConfig.Status.Phase
-	workspaceWithConfig.Status.Phase = status.phase
+func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *common.DevWorkspaceWithConfig, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+	syncConditions(&workspace.Status, status)
+	oldPhase := workspace.Status.Phase
+	workspace.Status.Phase = status.phase
 
-	infoMessage := getInfoMessage(&workspaceWithConfig.DevWorkspace, status)
-	if warn := conditions.GetConditionByType(workspaceWithConfig.Status.Conditions, conditions.DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
+	infoMessage := getInfoMessage(&workspace.DevWorkspace, status)
+	if warn := conditions.GetConditionByType(workspace.Status.Conditions, conditions.DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
 		infoMessage = fmt.Sprintf("%s %s", warningPresentInfoMessage, infoMessage)
 	}
-	if workspaceWithConfig.Status.Message != infoMessage {
-		workspaceWithConfig.Status.Message = infoMessage
+	if workspace.Status.Message != infoMessage {
+		workspace.Status.Message = infoMessage
 	}
 
-	err := r.Status().Update(context.TODO(), &workspaceWithConfig.DevWorkspace)
+	err := r.Status().Update(context.TODO(), &workspace.DevWorkspace)
 	if err != nil {
 		if k8sErrors.IsConflict(err) {
 			logger.Info("Failed to update workspace status due to conflict; retrying")
@@ -87,7 +87,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspaceWithConfig *comm
 			}
 		}
 	} else {
-		updateMetricsForPhase(workspaceWithConfig, oldPhase, status.phase, logger)
+		updateMetricsForPhase(workspace, oldPhase, status.phase, logger)
 	}
 
 	return reconcileResult, reconcileError
@@ -224,15 +224,15 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 // updateMetricsForPhase increments DevWorkspace startup metrics based on phase transitions in a DevWorkspace. It avoids
 // incrementing the underlying metrics where possible (e.g. reconciling an already running workspace) by only incrementing
 // counters when the new phase is different from the current on in the DevWorkspace.
-func updateMetricsForPhase(workspaceWithConfig *common.DevWorkspaceWithConfig, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
+func updateMetricsForPhase(workspace *common.DevWorkspaceWithConfig, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
 	if oldPhase == newPhase {
 		return
 	}
 	switch newPhase {
 	case dw.DevWorkspaceStatusRunning:
-		metrics.WorkspaceRunning(workspaceWithConfig, logger)
+		metrics.WorkspaceRunning(workspace, logger)
 	case dw.DevWorkspaceStatusFailed:
-		metrics.WorkspaceFailed(&workspaceWithConfig.DevWorkspace, logger)
+		metrics.WorkspaceFailed(&workspace.DevWorkspace, logger)
 	}
 }
 
@@ -266,17 +266,17 @@ func checkForStartTimeout(workspace *dw.DevWorkspace, config v1alpha1.OperatorCo
 // configured progress timeout. If the workspace is not in the Failing state or does not have a DevWorkspaceFailed
 // condition set, returns false. Otherwise, returns true if the workspace has timed out. Returns an error if
 // timeout is configured with an unparsable duration.
-func checkForFailingTimeout(workspaceWithConfig *common.DevWorkspaceWithConfig) (isTimedOut bool, err error) {
-	if workspaceWithConfig.Status.Phase != devworkspacePhaseFailing {
+func checkForFailingTimeout(workspace *common.DevWorkspaceWithConfig) (isTimedOut bool, err error) {
+	if workspace.Status.Phase != devworkspacePhaseFailing {
 		return false, nil
 	}
-	timeout, err := time.ParseDuration(workspaceWithConfig.Config.Workspace.ProgressTimeout)
+	timeout, err := time.ParseDuration(workspace.Config.Workspace.ProgressTimeout)
 	if err != nil {
 		return false, fmt.Errorf("invalid duration specified for timeout: %w", err)
 	}
 	currTime := clock.Now()
 	failedTime := time.Time{}
-	for _, condition := range workspaceWithConfig.Status.Conditions {
+	for _, condition := range workspace.Status.Conditions {
 		if condition.Type == dw.DevWorkspaceFailedStart {
 			failedTime = condition.LastTransitionTime.Time
 		}

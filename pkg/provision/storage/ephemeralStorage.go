@@ -35,8 +35,8 @@ func (e EphemeralStorageProvisioner) NeedsStorage(_ *dw.DevWorkspaceTemplateSpec
 	return false
 }
 
-func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspaceWithConfig *common.DevWorkspaceWithConfig, _ sync.ClusterAPI) error {
-	persistent, ephemeral, projects := getWorkspaceVolumes(&workspaceWithConfig.DevWorkspace)
+func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, _ sync.ClusterAPI) error {
+	persistent, ephemeral, projects := getWorkspaceVolumes(&workspace.DevWorkspace)
 	if _, err := addEphemeralVolumesToPodAdditions(podAdditions, persistent); err != nil {
 		return err
 	}
@@ -48,7 +48,7 @@ func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.Pod
 			return err
 		}
 	} else {
-		if container.AnyMountSources(workspaceWithConfig.Spec.Template.Components) {
+		if container.AnyMountSources(workspace.Spec.Template.Components) {
 			projectsComponent := dw.Component{Name: "projects"}
 			projectsComponent.Volume = &dw.VolumeComponent{}
 			if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{projectsComponent}); err != nil {

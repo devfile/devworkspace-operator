@@ -109,8 +109,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Fetch the Workspace instance
-	workspaceWithConfig := &common.DevWorkspaceWithConfig{}
-	err = r.Get(ctx, req.NamespacedName, &workspaceWithConfig.DevWorkspace)
+	workspace := &common.DevWorkspaceWithConfig{}
+	err = r.Get(ctx, req.NamespacedName, &workspace.DevWorkspace)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -123,41 +123,41 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Get the config for the workspace
-	resolvedConfig, err := config.ResolveConfigForWorkspace(&workspaceWithConfig.DevWorkspace, clusterAPI.Client)
-	workspaceWithConfig.Config = *resolvedConfig
+	resolvedConfig, err := config.ResolveConfigForWorkspace(&workspace.DevWorkspace, clusterAPI.Client)
+	workspace.Config = *resolvedConfig
 	if err != nil {
 		reqLogger.Error(err, "Unable to apply external DevWorkspace-Operator configuration")
 	}
 
-	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspaceWithConfig.Status.DevWorkspaceId)
+	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspace.Status.DevWorkspaceId)
 	reqLogger.Info("Reconciling Workspace")
 
 	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
-	if workspaceWithConfig.GetDeletionTimestamp() != nil {
+	if workspace.GetDeletionTimestamp() != nil {
 		reqLogger.Info("Finalizing DevWorkspace")
-		return r.finalize(ctx, reqLogger, workspaceWithConfig)
+		return r.finalize(ctx, reqLogger, workspace)
 	}
 
 	// Ensure workspaceID is set.
-	if workspaceWithConfig.Status.DevWorkspaceId == "" {
-		workspaceId, err := r.getWorkspaceId(ctx, &workspaceWithConfig.DevWorkspace)
+	if workspace.Status.DevWorkspaceId == "" {
+		workspaceId, err := r.getWorkspaceId(ctx, &workspace.DevWorkspace)
 		if err != nil {
-			workspaceWithConfig.Status.Phase = dw.DevWorkspaceStatusFailed
-			workspaceWithConfig.Status.Message = fmt.Sprintf("Failed to set DevWorkspace ID: %s", err.Error())
-			return reconcile.Result{}, r.Status().Update(ctx, &workspaceWithConfig.DevWorkspace)
+			workspace.Status.Phase = dw.DevWorkspaceStatusFailed
+			workspace.Status.Message = fmt.Sprintf("Failed to set DevWorkspace ID: %s", err.Error())
+			return reconcile.Result{}, r.Status().Update(ctx, &workspace.DevWorkspace)
 		}
-		workspaceWithConfig.Status.DevWorkspaceId = workspaceId
-		err = r.Status().Update(ctx, &workspaceWithConfig.DevWorkspace)
+		workspace.Status.DevWorkspaceId = workspaceId
+		err = r.Status().Update(ctx, &workspace.DevWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}
 
 	// Stop failed workspaces
-	if workspaceWithConfig.Status.Phase == devworkspacePhaseFailing && workspaceWithConfig.Spec.Started {
+	if workspace.Status.Phase == devworkspacePhaseFailing && workspace.Spec.Started {
 		// If debug annotation is present, leave the deployment in place to let users
 		// view logs.
-		if workspaceWithConfig.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true" {
-			if isTimeout, err := checkForFailingTimeout(workspaceWithConfig); err != nil {
+		if workspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true" {
+			if isTimeout, err := checkForFailingTimeout(workspace); err != nil {
 				return reconcile.Result{}, err
 			} else if !isTimeout {
 				return reconcile.Result{}, nil
@@ -165,7 +165,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		patch := []byte(`{"spec":{"started": false}}`)
-		err := r.Client.Patch(context.Background(), &workspaceWithConfig.DevWorkspace, client.RawPatch(types.MergePatchType, patch))
+		err := r.Client.Patch(context.Background(), &workspace.DevWorkspace, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -175,20 +175,20 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Handle stopped workspaces
-	if !workspaceWithConfig.Spec.Started {
-		timing.ClearAnnotations(&workspaceWithConfig.DevWorkspace)
-		r.removeStartedAtFromCluster(ctx, &workspaceWithConfig.DevWorkspace, reqLogger)
-		r.syncTimingToCluster(ctx, &workspaceWithConfig.DevWorkspace, map[string]string{}, reqLogger)
-		return r.stopWorkspace(ctx, workspaceWithConfig, reqLogger)
+	if !workspace.Spec.Started {
+		timing.ClearAnnotations(&workspace.DevWorkspace)
+		r.removeStartedAtFromCluster(ctx, &workspace.DevWorkspace, reqLogger)
+		r.syncTimingToCluster(ctx, &workspace.DevWorkspace, map[string]string{}, reqLogger)
+		return r.stopWorkspace(ctx, workspace, reqLogger)
 	}
 
 	// If this is the first reconcile for a starting workspace, mark it as starting now. This is done outside the regular
 	// updateWorkspaceStatus function to ensure it gets set immediately
-	if workspaceWithConfig.Status.Phase != dw.DevWorkspaceStatusStarting && workspaceWithConfig.Status.Phase != dw.DevWorkspaceStatusRunning {
+	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting && workspace.Status.Phase != dw.DevWorkspaceStatusRunning {
 		// Set 'Started' condition as early as possible to get accurate timing metrics
-		workspaceWithConfig.Status.Phase = dw.DevWorkspaceStatusStarting
-		workspaceWithConfig.Status.Message = "Initializing DevWorkspace"
-		workspaceWithConfig.Status.Conditions = []dw.DevWorkspaceCondition{
+		workspace.Status.Phase = dw.DevWorkspaceStatusStarting
+		workspace.Status.Message = "Initializing DevWorkspace"
+		workspace.Status.Conditions = []dw.DevWorkspaceCondition{
 			{
 				Type:               conditions.Started,
 				Status:             corev1.ConditionTrue,
@@ -196,9 +196,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Message:            "DevWorkspace is starting",
 			},
 		}
-		err = r.Status().Update(ctx, &workspaceWithConfig.DevWorkspace)
+		err = r.Status().Update(ctx, &workspace.DevWorkspace)
 		if err == nil {
-			metrics.WorkspaceStarted(workspaceWithConfig, reqLogger)
+			metrics.WorkspaceStarted(workspace, reqLogger)
 		}
 		return reconcile.Result{}, err
 	}
@@ -206,115 +206,114 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Prepare handling workspace status and condition
 	reconcileStatus := currentStatus{phase: dw.DevWorkspaceStatusStarting}
 	reconcileStatus.setConditionTrue(conditions.Started, "DevWorkspace is starting")
-	clusterWorkspace := workspaceWithConfig.DevWorkspace.DeepCopy()
-	clusterWorkspaceWithConfig := &common.DevWorkspaceWithConfig{
-		DevWorkspace: *workspaceWithConfig.DevWorkspace.DeepCopy(),
-		Config:       *workspaceWithConfig.Config.DeepCopy(),
+	clusterWorkspace := &common.DevWorkspaceWithConfig{
+		DevWorkspace: *workspace.DevWorkspace.DeepCopy(),
+		Config:       *workspace.Config.DeepCopy(),
 	}
 	timingInfo := map[string]string{}
 	timing.SetTime(timingInfo, timing.DevWorkspaceStarted)
 
 	defer func() (reconcile.Result, error) {
-		r.syncTimingToCluster(ctx, &clusterWorkspaceWithConfig.DevWorkspace, timingInfo, reqLogger)
+		r.syncTimingToCluster(ctx, &clusterWorkspace.DevWorkspace, timingInfo, reqLogger)
 
 		// Don't accidentally suppress errors by overwriting here; only check for timeout when no error
 		// encountered in main reconcile loop.
 		if err == nil {
-			if timeoutErr := checkForStartTimeout(&clusterWorkspaceWithConfig.DevWorkspace, workspaceWithConfig.Config); timeoutErr != nil {
-				reconcileResult, err = r.failWorkspace(workspaceWithConfig, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+			if timeoutErr := checkForStartTimeout(&clusterWorkspace.DevWorkspace, clusterWorkspace.Config); timeoutErr != nil {
+				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 			}
 		}
 		if reconcileStatus.phase == dw.DevWorkspaceStatusRunning {
-			metrics.WorkspaceRunning(workspaceWithConfig, reqLogger)
-			r.syncStartedAtToCluster(ctx, &clusterWorkspaceWithConfig.DevWorkspace, reqLogger)
+			metrics.WorkspaceRunning(clusterWorkspace, reqLogger)
+			r.syncStartedAtToCluster(ctx, &clusterWorkspace.DevWorkspace, reqLogger)
 		}
 
-		return r.updateWorkspaceStatus(clusterWorkspaceWithConfig, reqLogger, &reconcileStatus, reconcileResult, err)
+		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)
 	}()
 
-	if workspaceWithConfig.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true" {
-		msg, err := r.validateCreatorLabel(clusterWorkspace)
+	if workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true" {
+		msg, err := r.validateCreatorLabel(&clusterWorkspace.DevWorkspace)
 		if err != nil {
-			return r.failWorkspace(workspaceWithConfig, msg, metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, msg, metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus)
 		}
 	}
 
 	if _, ok := clusterWorkspace.Annotations[constants.DevWorkspaceStopReasonAnnotation]; ok {
 		delete(clusterWorkspace.Annotations, constants.DevWorkspaceStopReasonAnnotation)
-		err = r.Update(context.TODO(), clusterWorkspace)
+		err = r.Update(context.TODO(), &clusterWorkspace.DevWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}
 
 	timing.SetTime(timingInfo, timing.ComponentsCreated)
 	flattenHelpers := flatten.ResolverTools{
-		WorkspaceNamespace: workspaceWithConfig.Namespace,
+		WorkspaceNamespace: workspace.Namespace,
 		Context:            ctx,
 		K8sClient:          r.Client,
 		HttpClient:         httpClient,
 	}
 
-	if wsDefaults.NeedsDefaultTemplate(workspaceWithConfig) {
-		wsDefaults.ApplyDefaultTemplate(workspaceWithConfig)
+	if wsDefaults.NeedsDefaultTemplate(workspace) {
+		wsDefaults.ApplyDefaultTemplate(workspace)
 	}
 
-	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspaceWithConfig.Spec.Template, flattenHelpers)
+	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, flattenHelpers)
 	if err != nil {
-		return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
 	if warnings != nil {
 		reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, flatten.FormatVariablesWarning(warnings))
 	} else {
 		reconcileStatus.setConditionFalse(conditions.DevWorkspaceWarning, "No warnings in processing DevWorkspace")
 	}
-	workspaceWithConfig.Spec.Template = *flattenedWorkspace
+	workspace.Spec.Template = *flattenedWorkspace
 	reconcileStatus.setConditionTrue(conditions.DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")
 
 	// Verify that the devworkspace components are valid after flattening
-	components := workspaceWithConfig.Spec.Template.Components
+	components := workspace.Spec.Template.Components
 	if components != nil {
 		eventErrors := devfilevalidation.ValidateComponents(components)
 		if eventErrors != nil {
-			return r.failWorkspace(workspaceWithConfig, eventErrors.Error(), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, eventErrors.Error(), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 		}
 	}
 
-	storageProvisioner, err := storage.GetProvisioner(&workspaceWithConfig.DevWorkspace)
+	storageProvisioner, err := storage.GetProvisioner(&workspace.DevWorkspace)
 	if err != nil {
-		return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Error provisioning storage: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning storage: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
 
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
-	if storageProvisioner.NeedsStorage(&workspaceWithConfig.Spec.Template) {
-		coputil.AddFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer)
-		if err := r.Update(ctx, clusterWorkspace); err != nil {
+	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) {
+		coputil.AddFinalizer(&clusterWorkspace.DevWorkspace, constants.StorageCleanupFinalizer)
+		if err := r.Update(ctx, &clusterWorkspace.DevWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
 
-	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspaceWithConfig.Spec.Template, workspaceWithConfig.Config)
+	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspace.Spec.Template, workspace.Config)
 	if err != nil {
-		return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
 
 	// Add common environment variables and env vars defined via workspaceEnv attribute
-	if err := env.AddCommonEnvironmentVariables(devfilePodAdditions, clusterWorkspace, &workspaceWithConfig.Spec.Template, workspaceWithConfig.Config); err != nil {
-		return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Failed to process workspace environment variables: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+	if err := env.AddCommonEnvironmentVariables(devfilePodAdditions, &clusterWorkspace.DevWorkspace, &workspace.Spec.Template, clusterWorkspace.Config); err != nil {
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to process workspace environment variables: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
 
 	// Add init container to clone projects
-	if projectClone, err := projects.GetProjectCloneInitContainer(workspaceWithConfig); err != nil {
-		return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+	if projectClone, err := projects.GetProjectCloneInitContainer(workspace); err != nil {
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 	} else if projectClone != nil {
 		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)
 	}
 
 	// Add automount resources into devfile containers
-	if err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspaceWithConfig.Namespace); err != nil {
+	if err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace); err != nil {
 		var autoMountErr *automount.AutoMountError
 		if errors.As(err, &autoMountErr) {
 			if autoMountErr.IsFatal {
-				return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Failed to process automount resources: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+				return r.failWorkspace(workspace, fmt.Sprintf("Failed to process automount resources: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 			}
 			reqLogger.Info(autoMountErr.Error())
 			return reconcile.Result{Requeue: true}, nil
@@ -323,7 +322,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
-	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspaceWithConfig, clusterAPI)
+	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspace, clusterAPI)
 	if err != nil {
 		switch storageErr := err.(type) {
 		case *storage.NotReadyError:
@@ -331,7 +330,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			reconcileStatus.setConditionFalse(conditions.StorageReady, fmt.Sprintf("Provisioning storage: %s", storageErr.Message))
 			return reconcile.Result{Requeue: true, RequeueAfter: storageErr.RequeueAfter}, nil
 		case *storage.ProvisioningError:
-			return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Error provisioning storage: %s", storageErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning storage: %s", storageErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 		default:
 			return reconcile.Result{}, storageErr
 		}
@@ -340,17 +339,17 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 
-	rbacStatus := wsprovision.SyncRBAC(&workspaceWithConfig.DevWorkspace, clusterAPI)
+	rbacStatus := wsprovision.SyncRBAC(&workspace.DevWorkspace, clusterAPI)
 	if rbacStatus.Err != nil || !rbacStatus.Continue {
 		return reconcile.Result{Requeue: true}, rbacStatus.Err
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
 	timing.SetTime(timingInfo, timing.RoutingCreated)
-	routingStatus := wsprovision.SyncRoutingToCluster(workspaceWithConfig, clusterAPI)
+	routingStatus := wsprovision.SyncRoutingToCluster(workspace, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
-			return r.failWorkspace(workspaceWithConfig, routingStatus.Message, metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, routingStatus.Message, metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on routing to be ready")
 		message := "Preparing networking"
@@ -366,7 +365,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "Networking ready")
 	timing.SetTime(timingInfo, timing.RoutingReady)
 
-	statusOk, err := syncWorkspaceMainURL(clusterWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
+	statusOk, err := syncWorkspaceMainURL(&clusterWorkspace.DevWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -375,17 +374,17 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{Requeue: true}, nil
 	}
 
-	annotate.AddURLAttributesToEndpoints(&workspaceWithConfig.Spec.Template, routingStatus.ExposedEndpoints)
+	annotate.AddURLAttributesToEndpoints(&workspace.Spec.Template, routingStatus.ExposedEndpoints)
 
 	// Step three: provision a configmap on the cluster to mount the flattened devfile in deployment containers
-	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, &workspaceWithConfig.DevWorkspace, clusterAPI)
+	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, &clusterWorkspace.DevWorkspace, &workspace.DevWorkspace, clusterAPI)
 	if err != nil {
 		switch provisionErr := err.(type) {
 		case *metadata.NotReadyError:
 			reqLogger.Info(provisionErr.Message)
 			return reconcile.Result{Requeue: true, RequeueAfter: provisionErr.RequeueAfter}, nil
 		case *metadata.ProvisioningError:
-			return r.failWorkspace(workspaceWithConfig, fmt.Sprintf("Error provisioning metadata configmap: %s", provisionErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning metadata configmap: %s", provisionErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 		default:
 			return reconcile.Result{}, provisionErr
 		}
@@ -403,10 +402,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if routingPodAdditions != nil {
 		saAnnotations = routingPodAdditions.ServiceAccountAnnotations
 	}
-	serviceAcctStatus := wsprovision.SyncServiceAccount(&workspaceWithConfig.DevWorkspace, saAnnotations, clusterAPI)
+	serviceAcctStatus := wsprovision.SyncServiceAccount(&workspace.DevWorkspace, saAnnotations, clusterAPI)
 	if !serviceAcctStatus.Continue {
 		if serviceAcctStatus.FailStartup {
-			return r.failWorkspace(workspaceWithConfig, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting for workspace ServiceAccount")
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
@@ -415,9 +414,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 	}
-	if wsprovision.NeedsServiceAccountFinalizer(&workspaceWithConfig.Spec.Template) {
-		coputil.AddFinalizer(clusterWorkspace, constants.ServiceAccountCleanupFinalizer)
-		if err := r.Update(ctx, clusterWorkspace); err != nil {
+	if wsprovision.NeedsServiceAccountFinalizer(&workspace.Spec.Template) {
+		coputil.AddFinalizer(&clusterWorkspace.DevWorkspace, constants.ServiceAccountCleanupFinalizer)
+		if err := r.Update(ctx, &clusterWorkspace.DevWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -425,7 +424,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	serviceAcctName := serviceAcctStatus.ServiceAccountName
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 
-	pullSecretStatus := wsprovision.PullSecrets(clusterAPI, serviceAcctName, workspaceWithConfig.GetNamespace())
+	pullSecretStatus := wsprovision.PullSecrets(clusterAPI, serviceAcctName, workspace.GetNamespace())
 	if !pullSecretStatus.Continue {
 		reconcileStatus.setConditionFalse(conditions.PullSecretsReady, "Waiting for DevWorkspace pull secrets")
 		if !pullSecretStatus.Requeue && pullSecretStatus.Err == nil {
@@ -438,11 +437,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Step six: Create deployment and wait for it to be ready
 	timing.SetTime(timingInfo, timing.DeploymentCreated)
-	deploymentStatus := wsprovision.SyncDeploymentToCluster(&workspaceWithConfig.DevWorkspace, allPodAdditions, serviceAcctName, clusterAPI, &workspaceWithConfig.Config)
+	deploymentStatus := wsprovision.SyncDeploymentToCluster(&workspace.DevWorkspace, allPodAdditions, serviceAcctName, clusterAPI, &workspace.Config)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			failureReason := metrics.DetermineProvisioningFailureReason(deploymentStatus)
-			return r.failWorkspace(workspaceWithConfig, deploymentStatus.Info(), failureReason, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, deploymentStatus.Info(), failureReason, reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on deployment to be ready")
 		reconcileStatus.setConditionFalse(conditions.DeploymentReady, "Waiting for workspace deployment")
@@ -454,7 +453,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(conditions.DeploymentReady, "DevWorkspace deployment ready")
 	timing.SetTime(timingInfo, timing.DeploymentReady)
 
-	serverReady, err := checkServerStatus(clusterWorkspace)
+	serverReady, err := checkServerStatus(&clusterWorkspace.DevWorkspace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -463,7 +462,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 	timing.SetTime(timingInfo, timing.DevWorkspaceReady)
-	timing.SummarizeStartup(clusterWorkspace)
+	timing.SummarizeStartup(&clusterWorkspace.DevWorkspace)
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceReady, "")
 	reconcileStatus.phase = dw.DevWorkspaceStatusRunning
 	return reconcile.Result{}, nil
@@ -500,11 +499,11 @@ func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *c
 	return r.updateWorkspaceStatus(workspace, logger, &status, reconcile.Result{}, nil)
 }
 
-func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspaceWithConfig *common.DevWorkspaceWithConfig, logger logr.Logger) (stopped bool, err error) {
+func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *common.DevWorkspaceWithConfig, logger logr.Logger) (stopped bool, err error) {
 	workspaceDeployment := &appsv1.Deployment{}
 	namespaceName := types.NamespacedName{
-		Name:      common.DeploymentName(workspaceWithConfig.Status.DevWorkspaceId),
-		Namespace: workspaceWithConfig.Namespace,
+		Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
+		Namespace: workspace.Namespace,
 	}
 	err = r.Get(ctx, namespaceName, workspaceDeployment)
 	if err != nil {
@@ -517,8 +516,8 @@ func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspaceWithConfig
 	// Update DevWorkspaceRouting to have `devworkspace-started` annotation "false"
 	routing := &controllerv1alpha1.DevWorkspaceRouting{}
 	routingRef := types.NamespacedName{
-		Name:      common.DevWorkspaceRoutingName(workspaceWithConfig.Status.DevWorkspaceId),
-		Namespace: workspaceWithConfig.Namespace,
+		Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
+		Namespace: workspace.Namespace,
 	}
 	err = r.Get(ctx, routingRef, routing)
 	if err != nil {
@@ -537,11 +536,11 @@ func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspaceWithConfig
 	}
 
 	// CleanupOnStop should never be nil as a default is always set
-	if workspaceWithConfig.Config.Workspace.CleanupOnStop == nil || !*workspaceWithConfig.Config.Workspace.CleanupOnStop {
+	if workspace.Config.Workspace.CleanupOnStop == nil || !*workspace.Config.Workspace.CleanupOnStop {
 		replicas := workspaceDeployment.Spec.Replicas
 		if replicas == nil || *replicas > 0 {
 			logger.Info("Stopping workspace")
-			err = wsprovision.ScaleDeploymentToZero(ctx, &workspaceWithConfig.DevWorkspace, r.Client)
+			err = wsprovision.ScaleDeploymentToZero(ctx, &workspace.DevWorkspace, r.Client)
 			if err != nil && !k8sErrors.IsConflict(err) {
 				return false, err
 			}
@@ -551,7 +550,7 @@ func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspaceWithConfig
 		return workspaceDeployment.Status.Replicas == 0, nil
 	} else {
 		logger.Info("Cleaning up workspace-owned objects")
-		requeue, err := r.deleteWorkspaceOwnedObjects(ctx, &workspaceWithConfig.DevWorkspace)
+		requeue, err := r.deleteWorkspaceOwnedObjects(ctx, &workspace.DevWorkspace)
 		return !requeue, err
 	}
 }

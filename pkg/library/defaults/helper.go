@@ -22,16 +22,16 @@ import (
 // Overwrites the content of the workspace's Template Spec with the workspace config's Template Spec,
 // with the exception of the workspace's projects.
 // If the workspace's Template Spec defined any projects, they are preserved.
-func ApplyDefaultTemplate(workspaceWithConfig *common.DevWorkspaceWithConfig) {
-	if workspaceWithConfig.Config.Workspace.DefaultTemplate == nil {
+func ApplyDefaultTemplate(workspace *common.DevWorkspaceWithConfig) {
+	if workspace.Config.Workspace.DefaultTemplate == nil {
 		return
 	}
-	defaultCopy := workspaceWithConfig.Config.Workspace.DefaultTemplate.DeepCopy()
-	originalProjects := workspaceWithConfig.Spec.Template.Projects
-	workspaceWithConfig.Spec.Template.DevWorkspaceTemplateSpecContent = *defaultCopy
-	workspaceWithConfig.Spec.Template.Projects = append(workspaceWithConfig.Spec.Template.Projects, originalProjects...)
+	defaultCopy := workspace.Config.Workspace.DefaultTemplate.DeepCopy()
+	originalProjects := workspace.Spec.Template.Projects
+	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = *defaultCopy
+	workspace.Spec.Template.Projects = append(workspace.Spec.Template.Projects, originalProjects...)
 }
 
-func NeedsDefaultTemplate(workspaceWithConfig *common.DevWorkspaceWithConfig) bool {
-	return len(workspaceWithConfig.Spec.Template.Components) == 0 && workspaceWithConfig.Config.Workspace.DefaultTemplate != nil
+func NeedsDefaultTemplate(workspace *common.DevWorkspaceWithConfig) bool {
+	return len(workspace.Spec.Template.Components) == 0 && workspace.Config.Workspace.DefaultTemplate != nil
 }

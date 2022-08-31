@@ -38,10 +38,10 @@ type RoutingProvisioningStatus struct {
 }
 
 func SyncRoutingToCluster(
-	workspaceWithConfig *common.DevWorkspaceWithConfig,
+	workspace *common.DevWorkspaceWithConfig,
 	clusterAPI sync.ClusterAPI) RoutingProvisioningStatus {
 
-	specRouting, err := getSpecRouting(workspaceWithConfig, clusterAPI.Scheme)
+	specRouting, err := getSpecRouting(workspace, clusterAPI.Scheme)
 	if err != nil {
 		return RoutingProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{Err: err},
@@ -86,11 +86,11 @@ func SyncRoutingToCluster(
 }
 
 func getSpecRouting(
-	workspaceWithConfig *common.DevWorkspaceWithConfig,
+	workspace *common.DevWorkspaceWithConfig,
 	scheme *runtime.Scheme) (*v1alpha1.DevWorkspaceRouting, error) {
 
 	endpoints := map[string]v1alpha1.EndpointList{}
-	for _, component := range workspaceWithConfig.Spec.Template.Components {
+	for _, component := range workspace.Spec.Template.Components {
 		if component.Container == nil {
 			continue
 		}
@@ -101,47 +101,47 @@ func getSpecRouting(
 	}
 
 	var annotations map[string]string
-	if val, ok := workspaceWithConfig.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; ok {
+	if val, ok := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; ok {
 		annotations = maputils.Append(annotations, constants.DevWorkspaceRestrictedAccessAnnotation, val)
 	}
 	annotations = maputils.Append(annotations, constants.DevWorkspaceStartedStatusAnnotation, "true")
 
-	routingClass := workspaceWithConfig.Spec.RoutingClass
+	routingClass := workspace.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = workspaceWithConfig.Config.Routing.DefaultRoutingClass
+		routingClass = workspace.Config.Routing.DefaultRoutingClass
 	}
 
 	// copy the annotations for the specific routingClass from the workspace object to the routing
 	expectedAnnotationPrefix := routingClass + constants.RoutingAnnotationInfix
-	for k, v := range workspaceWithConfig.GetAnnotations() {
+	for k, v := range workspace.GetAnnotations() {
 		if strings.HasPrefix(k, expectedAnnotationPrefix) {
 			annotations = maputils.Append(annotations, k, v)
 		}
 	}
 
 	if v1alpha1.DevWorkspaceRoutingClass(routingClass) == v1alpha1.DevWorkspaceRoutingBasic {
-		annotations = maputils.Append(annotations, constants.ClusterHostSuffixAnnotation, workspaceWithConfig.Config.Routing.ClusterHostSuffix)
+		annotations = maputils.Append(annotations, constants.ClusterHostSuffixAnnotation, workspace.Config.Routing.ClusterHostSuffix)
 	}
 
 	routing := &v1alpha1.DevWorkspaceRouting{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.DevWorkspaceRoutingName(workspaceWithConfig.Status.DevWorkspaceId),
-			Namespace: workspaceWithConfig.Namespace,
+			Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
+			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel: workspaceWithConfig.Status.DevWorkspaceId,
+				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 			},
 			Annotations: annotations,
 		},
 		Spec: v1alpha1.DevWorkspaceRoutingSpec{
-			DevWorkspaceId: workspaceWithConfig.Status.DevWorkspaceId,
+			DevWorkspaceId: workspace.Status.DevWorkspaceId,
 			RoutingClass:   v1alpha1.DevWorkspaceRoutingClass(routingClass),
 			Endpoints:      endpoints,
 			PodSelector: map[string]string{
-				constants.DevWorkspaceIDLabel: workspaceWithConfig.Status.DevWorkspaceId,
+				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 			},
 		},
 	}
-	err := controllerutil.SetControllerReference(&workspaceWithConfig.DevWorkspace, routing, scheme)
+	err := controllerutil.SetControllerReference(&workspace.DevWorkspace, routing, scheme)
 	if err != nil {
 		return nil, err
 	}

@@ -32,16 +32,15 @@ const (
 	projectClonerContainerName = "project-clone"
 )
 
-func GetProjectCloneInitContainer(workspaceWithConfig *common.DevWorkspaceWithConfig) (*corev1.Container, error) {
+func GetProjectCloneInitContainer(workspace *common.DevWorkspaceWithConfig) (*corev1.Container, error) {
 
-	workspace := workspaceWithConfig.Spec.Template
-	if len(workspace.Projects) == 0 {
+	if len(workspace.Spec.Template.Projects) == 0 {
 		return nil, nil
 	}
-	if workspace.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {
+	if workspace.Spec.Template.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {
 		return nil, nil
 	}
-	if !hasContainerComponents(&workspace) {
+	if !hasContainerComponents(&workspace.Spec.Template) {
 		// Avoid adding project-clone init container when DevWorkspace does not define any containers
 		return nil, nil
 	}
@@ -94,7 +93,7 @@ func GetProjectCloneInitContainer(workspaceWithConfig *common.DevWorkspaceWithCo
 				MountPath: constants.DefaultProjectsSourcesRoot,
 			},
 		},
-		ImagePullPolicy: corev1.PullPolicy(workspaceWithConfig.Config.Workspace.ImagePullPolicy),
+		ImagePullPolicy: corev1.PullPolicy(workspace.Config.Workspace.ImagePullPolicy),
 	}, nil
 }
 

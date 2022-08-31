@@ -113,30 +113,30 @@ func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI
 	}
 }
 
-func getSpecCommonPVCCleanupJob(workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
-	workspaceId := workspaceWithConfig.Status.DevWorkspaceId
+func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
+	workspaceId := workspace.Status.DevWorkspaceId
 
-	pvcName, err := checkForExistingCommonPVC(workspaceWithConfig.Namespace, clusterAPI)
+	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
 	if pvcName == "" {
-		pvcName = workspaceWithConfig.Config.Workspace.PVCName
+		pvcName = workspace.Config.Workspace.PVCName
 	}
 
 	jobLabels := map[string]string{
 		constants.DevWorkspaceIDLabel:      workspaceId,
-		constants.DevWorkspaceNameLabel:    workspaceWithConfig.Name,
-		constants.DevWorkspaceCreatorLabel: workspaceWithConfig.Labels[constants.DevWorkspaceCreatorLabel],
+		constants.DevWorkspaceNameLabel:    workspace.Name,
+		constants.DevWorkspaceCreatorLabel: workspace.Labels[constants.DevWorkspaceCreatorLabel],
 	}
-	if restrictedAccess, needsRestrictedAccess := workspaceWithConfig.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
+	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
 		jobLabels[constants.DevWorkspaceRestrictedAccessAnnotation] = restrictedAccess
 	}
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.PVCCleanupJobName(workspaceId),
-			Namespace: workspaceWithConfig.Namespace,
+			Namespace: workspace.Namespace,
 			Labels:    jobLabels,
 		},
 		Spec: batchv1.JobSpec{
@@ -148,7 +148,7 @@ func getSpecCommonPVCCleanupJob(workspaceWithConfig *common.DevWorkspaceWithConf
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:   "Never",
-					SecurityContext: wsprovision.GetDevWorkspaceSecurityContext(workspaceWithConfig.Config),
+					SecurityContext: wsprovision.GetDevWorkspaceSecurityContext(workspace.Config),
 					Volumes: []corev1.Volume{
 						{
 							Name: pvcName,
@@ -191,7 +191,7 @@ func getSpecCommonPVCCleanupJob(workspaceWithConfig *common.DevWorkspaceWithConf
 		},
 	}
 
-	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspaceWithConfig.Namespace, clusterAPI)
+	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
@@ -202,16 +202,16 @@ func getSpecCommonPVCCleanupJob(workspaceWithConfig *common.DevWorkspaceWithConf
 		job.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 
-	if err := controllerutil.SetControllerReference(workspaceWithConfig, job, clusterAPI.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(workspace, job, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 	return job, nil
 }
 
-func commonPVCExists(workspaceWithConfig *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (bool, error) {
+func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (bool, error) {
 	namespacedName := types.NamespacedName{
-		Name:      workspaceWithConfig.Config.Workspace.PVCName,
-		Namespace: workspaceWithConfig.Namespace,
+		Name:      workspace.Config.Workspace.PVCName,
+		Namespace: workspace.Namespace,
 	}
 	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, &corev1.PersistentVolumeClaim{})
 	if err != nil {

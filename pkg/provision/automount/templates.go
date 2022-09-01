@@ -125,27 +125,3 @@ func mergeGitCredentials(namespace string, credentialSecrets []corev1.Secret) (*
 	}
 	return mergedCredentials, nil
 }
-
-// getCredentialsMountPath returns the mount path to be used by all git credentials secrets. If no secrets define a mountPath,
-// the root path ('/credentials') is used. If secrets define conflicting mountPaths, an error is returned and represents an invalid
-// configuration. If any secret defines a mountPath, that mountPath overrides the mountPath for all secrets that do not
-// define a mountPath. If there are no credentials secrets, the empty string is returned
-func getCredentialsMountPath(secrets []corev1.Secret) (string, error) {
-	if len(secrets) == 0 {
-		return "", nil
-	}
-	mountPath := ""
-	for _, secret := range secrets {
-		secretMountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
-		if secretMountPath != "" {
-			if mountPath != "" && secretMountPath != mountPath {
-				return "", fmt.Errorf("auto-mounted git credentials have conflicting mountPaths: %s, %s", mountPath, secretMountPath)
-			}
-			mountPath = secretMountPath
-		}
-	}
-	if mountPath == "" {
-		mountPath = "/"
-	}
-	return mountPath, nil
-}

@@ -24,6 +24,8 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const mergedGitCredentialsMountPath = "/.git-credentials/"
+
 // ProvisionGitConfiguration takes care of mounting git credentials and a gitconfig into a devworkspace.
 func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resources, error) {
 	credentialsSecrets, tlsConfigMaps, err := getGitResources(api, namespace)
@@ -45,12 +47,7 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 		return nil, &AutoMountError{IsFatal: true, Err: err}
 	}
 
-	credentialsMountPath, err := getCredentialsMountPath(credentialsSecrets)
-	if err != nil {
-		return nil, &AutoMountError{IsFatal: true, Err: err}
-	}
-
-	gitConfigMap, err := constructGitConfig(namespace, credentialsMountPath, tlsConfigMaps, baseGitConfig)
+	gitConfigMap, err := constructGitConfig(namespace, mergedGitCredentialsMountPath, tlsConfigMaps, baseGitConfig)
 	if err != nil {
 		return nil, &AutoMountError{IsFatal: true, Err: err}
 	}
@@ -79,7 +76,7 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 		return nil, &AutoMountError{IsFatal: false, Err: err}
 	}
 	resources := flattenAutomountResources([]Resources{
-		getAutomountSecret(credentialsMountPath, constants.DevWorkspaceMountAsSubpath, mergedCredentialsSecret),
+		getAutomountSecret(mergedGitCredentialsMountPath, constants.DevWorkspaceMountAsFile, mergedCredentialsSecret),
 		getAutomountConfigmap("/etc/", constants.DevWorkspaceMountAsSubpath, gitConfigMap),
 	})
 

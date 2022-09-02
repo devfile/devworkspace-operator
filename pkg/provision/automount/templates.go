@@ -33,6 +33,16 @@ const gitCredentialsConfigMapName = "devworkspace-gitconfig"
 const gitCredentialsSecretKey = "credentials"
 const gitCredentialsSecretName = "devworkspace-merged-git-credentials"
 
+// gitLFSConfig is the default configuration that gets provisioned when git-lfs
+// is installed. It needs to be included in the overridden gitconfig to avoid
+// disabling git-lfs in repos that require a gitconfig.
+const gitLFSConfig = `[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
+`
+
 const credentialTemplate = `[credential]
     helper = store --file %s
 `
@@ -47,6 +57,8 @@ const defaultGitServerTemplate = `[http]
 
 func constructGitConfig(namespace, credentialMountPath string, certificatesConfigMaps []corev1.ConfigMap, baseGitConfig *string) (*corev1.ConfigMap, error) {
 	var configSettings []string
+	configSettings = append(configSettings, gitLFSConfig)
+
 	if credentialMountPath != "" {
 		configSettings = append(configSettings, fmt.Sprintf(credentialTemplate, path.Join(credentialMountPath, gitCredentialsSecretKey)))
 	}

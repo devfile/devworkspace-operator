@@ -25,7 +25,6 @@ import (
 
 func TestRewriteContainerVolumeMountsForEphemeralStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/ephemeral-storage")
-	setupControllerCfg()
 	commonStorage := EphemeralStorageProvisioner{}
 
 	for _, tt := range tests {
@@ -36,7 +35,7 @@ func TestRewriteContainerVolumeMountsForEphemeralStorageClass(t *testing.T) {
 			workspace.Spec.Template = *tt.Input.Workspace
 			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"
-			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, sync.ClusterAPI{})
+			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), sync.ClusterAPI{})
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

@@ -49,12 +49,12 @@ func GetGlobalConfig() *controller.OperatorConfiguration {
 	return internalConfig.DeepCopy()
 }
 
-func SetConfigForTesting(config *controller.OperatorConfiguration) {
+func GetConfigForTesting(customConfig *controller.OperatorConfiguration) *controller.OperatorConfiguration {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = defaultConfig.DeepCopy()
-	mergeConfig(config, internalConfig)
-	logCurrentConfig()
+	testConfig := defaultConfig.DeepCopy()
+	mergeConfig(customConfig, testConfig)
+	return testConfig
 }
 
 func SetupControllerConfig(client crclient.Client) error {

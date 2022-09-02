@@ -182,7 +182,8 @@ func TestTwoConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, gitconfig.Data[gitConfigName], "[http \"github.com\"]\n    sslCAInfo = /folder1/certificate\n\n[http \"github.com\"]\n    sslCAInfo = /folder2/certificate\n")
+	expectedGitConfig := fmt.Sprintf("%s\n[http \"github.com\"]\n    sslCAInfo = /folder1/certificate\n\n[http \"github.com\"]\n    sslCAInfo = /folder2/certificate\n", gitLFSConfig)
+	assert.Equal(t, gitconfig.Data[gitConfigName], expectedGitConfig)
 }
 
 func TestTwoConfigMapWithOneDefaultTLSAndOtherGithubTLS(t *testing.T) {
@@ -200,7 +201,8 @@ func TestTwoConfigMapWithOneDefaultTLSAndOtherGithubTLS(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, gitconfig.Data[gitConfigName], "[http]\n    sslCAInfo = /folder1/certificate\n\n[http \"github.com\"]\n    sslCAInfo = /folder2/certificate\n")
+	expectedGitConfig := fmt.Sprintf("%s\n[http]\n    sslCAInfo = /folder1/certificate\n\n[http \"github.com\"]\n    sslCAInfo = /folder2/certificate\n", gitLFSConfig)
+	assert.Equal(t, gitconfig.Data[gitConfigName], expectedGitConfig)
 }
 
 func TestTwoConfigMapWithBothMissingHost(t *testing.T) {

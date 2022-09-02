@@ -21,7 +21,6 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	corev1 "k8s.io/api/core/v1"
@@ -99,7 +98,7 @@ func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *common.Dev
 		return runCommonPVCCleanupJob(workspace, clusterAPI)
 	} else {
 		sharedPVC := &corev1.PersistentVolumeClaim{}
-		namespacedName := types.NamespacedName{Name: config.Workspace.PVCName, Namespace: workspace.Namespace}
+		namespacedName := types.NamespacedName{Name: workspace.Config.Workspace.PVCName, Namespace: workspace.Namespace}
 		err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, sharedPVC)
 
 		if err != nil {

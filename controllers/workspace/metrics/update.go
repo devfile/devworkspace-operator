@@ -22,7 +22,6 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
@@ -52,14 +51,14 @@ func WorkspaceFailed(wksp *common.DevWorkspaceWithConfig, log logr.Logger) {
 	incrementMetricForWorkspaceFailure(workspaceFailures, wksp, log)
 }
 
-func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *common.DevWorkspaceWithConfig, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementMetricForWorkspace(metric *prometheus.CounterVec, workspace *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspace.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	routingClass := wksp.Spec.RoutingClass
+	routingClass := workspace.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspace.Config.Routing.DefaultRoutingClass
 	}
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
@@ -68,12 +67,12 @@ func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *common.Dev
 	ctr.Inc()
 }
 
-func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *common.DevWorkspaceWithConfig, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, workspace *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspace.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	reason := GetFailureReason(wksp)
+	reason := GetFailureReason(workspace)
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: string(reason)})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
@@ -81,24 +80,24 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *com
 	ctr.Inc()
 }
 
-func incrementStartTimeBucketForWorkspace(wksp *common.DevWorkspaceWithConfig, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementStartTimeBucketForWorkspace(workspace *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspace.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	routingClass := wksp.Spec.RoutingClass
+	routingClass := workspace.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspace.Config.Routing.DefaultRoutingClass
 	}
 	hist, err := workspaceStartupTimesHist.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
 		log.Error(err, "Failed to update metric")
 	}
-	readyCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceReady)
+	readyCondition := conditions.GetConditionByType(workspace.Status.Conditions, dw.DevWorkspaceReady)
 	if readyCondition == nil {
 		return
 	}
-	startedCondition := conditions.GetConditionByType(wksp.Status.Conditions, conditions.Started)
+	startedCondition := conditions.GetConditionByType(workspace.Status.Conditions, conditions.Started)
 	if startedCondition == nil {
 		return
 	}

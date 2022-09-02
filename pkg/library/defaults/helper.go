@@ -17,22 +17,21 @@ package defaults
 
 import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 // Overwrites the content of the workspace's Template Spec with the workspace config's Template Spec,
 // with the exception of the workspace's projects.
 // If the workspace's Template Spec defined any projects, they are preserved.
 func ApplyDefaultTemplate(workspace *common.DevWorkspaceWithConfig) {
-	if config.Workspace.DefaultTemplate == nil {
+	if workspace.Config.Workspace.DefaultTemplate == nil {
 		return
 	}
-	defaultCopy := config.Workspace.DefaultTemplate.DeepCopy()
+	defaultCopy := workspace.Config.Workspace.DefaultTemplate.DeepCopy()
 	originalProjects := workspace.Spec.Template.Projects
 	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = *defaultCopy
 	workspace.Spec.Template.Projects = append(workspace.Spec.Template.Projects, originalProjects...)
 }
 
 func NeedsDefaultTemplate(workspace *common.DevWorkspaceWithConfig) bool {
-	return len(workspace.Spec.Template.Components) == 0 && config.Workspace.DefaultTemplate != nil
+	return len(workspace.Spec.Template.Components) == 0 && workspace.Config.Workspace.DefaultTemplate != nil
 }

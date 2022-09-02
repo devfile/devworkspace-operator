@@ -36,7 +36,6 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 const (
@@ -246,7 +245,7 @@ func checkForStartTimeout(workspace *common.DevWorkspaceWithConfig) error {
 	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting {
 		return nil
 	}
-	timeout, err := time.ParseDuration(config.Workspace.ProgressTimeout)
+	timeout, err := time.ParseDuration(workspace.Config.Workspace.ProgressTimeout)
 	if err != nil {
 		return fmt.Errorf("invalid duration specified for timeout: %w", err)
 	}
@@ -259,7 +258,7 @@ func checkForStartTimeout(workspace *common.DevWorkspaceWithConfig) error {
 	}
 	if !lastUpdateTime.IsZero() && lastUpdateTime.Add(timeout).Before(currTime) {
 		return fmt.Errorf("devworkspace failed to progress past phase '%s' for longer than timeout (%s)",
-			workspace.Status.Phase, config.Workspace.ProgressTimeout)
+			workspace.Status.Phase, workspace.Config.Workspace.ProgressTimeout)
 	}
 	return nil
 }
@@ -272,7 +271,7 @@ func checkForFailingTimeout(workspace *common.DevWorkspaceWithConfig) (isTimedOu
 	if workspace.Status.Phase != devworkspacePhaseFailing {
 		return false, nil
 	}
-	timeout, err := time.ParseDuration(config.Workspace.ProgressTimeout)
+	timeout, err := time.ParseDuration(workspace.Config.Workspace.ProgressTimeout)
 	if err != nil {
 		return false, fmt.Errorf("invalid duration specified for timeout: %w", err)
 	}

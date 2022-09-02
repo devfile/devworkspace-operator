@@ -535,7 +535,7 @@ func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *common.D
 	}
 
 	// CleanupOnStop should never be nil as a default is always set
-	if config.Workspace.CleanupOnStop == nil || !*config.Workspace.CleanupOnStop {
+	if workspace.Config.Workspace.CleanupOnStop == nil || !*workspace.Config.Workspace.CleanupOnStop {
 		replicas := workspaceDeployment.Spec.Replicas
 		if replicas == nil || *replicas > 0 {
 			logger.Info("Stopping workspace")
@@ -686,8 +686,9 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 		}
 	}
 
+	// TODO: Label PVCs used for workspace storage so that they can be cleaned up if non-default name is used.
 	// Otherwise, check if common PVC is deleted to make sure all DevWorkspaces see it happen
-	if obj.GetName() != config.Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
+	if obj.GetName() != config.GetGlobalConfig().Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
 		// We're looking for a deleted common PVC
 		return []reconcile.Request{}
 	}

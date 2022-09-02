@@ -20,7 +20,6 @@ import (
 	"path"
 	"time"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -54,7 +53,7 @@ var (
 	pvcCleanupPodCPURequest    = resource.MustParse(constants.PVCCleanupPodCPURequest)
 )
 
-func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	PVCexists, err := commonPVCExists(workspace, clusterAPI)
 	if err != nil {
 		return err
@@ -115,7 +114,7 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 	}
 }
 
-func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
+func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.DevWorkspaceId
 
 	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
@@ -210,7 +209,7 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 	return job, nil
 }
 
-func commonPVCExists(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (bool, error) {
+func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (bool, error) {
 	namespacedName := types.NamespacedName{
 		Name:      config.Workspace.PVCName,
 		Namespace: workspace.Namespace,

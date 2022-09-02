@@ -18,7 +18,6 @@ package workspace
 import (
 	"strings"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/conversion"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
@@ -40,7 +39,7 @@ type RoutingProvisioningStatus struct {
 }
 
 func SyncRoutingToCluster(
-	workspace *dw.DevWorkspace,
+	workspace *common.DevWorkspaceWithConfig,
 	clusterAPI sync.ClusterAPI) RoutingProvisioningStatus {
 
 	specRouting, err := getSpecRouting(workspace, clusterAPI.Scheme)
@@ -88,7 +87,7 @@ func SyncRoutingToCluster(
 }
 
 func getSpecRouting(
-	workspace *dw.DevWorkspace,
+	workspace *common.DevWorkspaceWithConfig,
 	scheme *runtime.Scheme) (*v1alpha1.DevWorkspaceRouting, error) {
 
 	endpoints := map[string]v1alpha1.EndpointList{}

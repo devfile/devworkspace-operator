@@ -24,7 +24,6 @@ import (
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -48,7 +47,7 @@ type DeploymentProvisioningStatus struct {
 }
 
 func SyncDeploymentToCluster(
-	workspace *dw.DevWorkspace,
+	workspace *common.DevWorkspaceWithConfig,
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
 	clusterAPI sync.ClusterAPI) DeploymentProvisioningStatus {
@@ -139,7 +138,7 @@ func SyncDeploymentToCluster(
 }
 
 // DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace
-func DeleteWorkspaceDeployment(ctx context.Context, workspace *dw.DevWorkspace, client runtimeClient.Client) (wait bool, err error) {
+func DeleteWorkspaceDeployment(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client runtimeClient.Client) (wait bool, err error) {
 	err = client.Delete(ctx, &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: workspace.Namespace,
@@ -156,7 +155,7 @@ func DeleteWorkspaceDeployment(ctx context.Context, workspace *dw.DevWorkspace, 
 }
 
 // ScaleDeploymentToZero scales the cluster deployment to zero
-func ScaleDeploymentToZero(ctx context.Context, workspace *dw.DevWorkspace, client runtimeClient.Client) error {
+func ScaleDeploymentToZero(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client runtimeClient.Client) error {
 	patch := []byte(`{"spec":{"replicas": 0}}`)
 	err := client.Patch(ctx, &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -180,7 +179,7 @@ func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
 }
 
 func getSpecDeployment(
-	workspace *dw.DevWorkspace,
+	workspace *common.DevWorkspaceWithConfig,
 	podAdditionsList []v1alpha1.PodAdditions,
 	saName string,
 	podTolerations []corev1.Toleration,
@@ -381,7 +380,7 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) (needs bool, pvcNam
 	return false, ""
 }
 
-func getAdditionalAnnotations(workspace *dw.DevWorkspace) (map[string]string, error) {
+func getAdditionalAnnotations(workspace *common.DevWorkspaceWithConfig) (map[string]string, error) {
 	annotations := map[string]string{}
 
 	for _, component := range workspace.Spec.Template.Components {

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
@@ -42,7 +43,7 @@ func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplate
 	return needsStorage(workspace)
 }
 
-func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// Add ephemeral volumes
 	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
 		return err
@@ -86,7 +87,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	return nil
 }
 
-func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	totalWorkspaces, err := getSharedPVCWorkspaceCount(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err

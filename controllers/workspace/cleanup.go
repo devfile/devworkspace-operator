@@ -17,8 +17,8 @@ import (
 	"context"
 	"fmt"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *DevWorkspaceReconciler) deleteWorkspaceOwnedObjects(ctx context.Context, workspace *dw.DevWorkspace) (requeue bool, err error) {
+func (r *DevWorkspaceReconciler) deleteWorkspaceOwnedObjects(ctx context.Context, workspace *common.DevWorkspaceWithConfig) (requeue bool, err error) {
 	idLabelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, workspace.Status.DevWorkspaceId))
 	if err != nil {
 		return false, err

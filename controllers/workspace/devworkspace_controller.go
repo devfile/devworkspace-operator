@@ -467,7 +467,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	return reconcile.Result{}, nil
 }
 
-func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *dw.DevWorkspace, logger logr.Logger) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *common.DevWorkspaceWithConfig, logger logr.Logger) (reconcile.Result, error) {
 	status := currentStatus{phase: dw.DevWorkspaceStatusStopping}
 	if workspace.Status.Phase == devworkspacePhaseFailing || workspace.Status.Phase == dw.DevWorkspaceStatusFailed {
 		status.phase = workspace.Status.Phase
@@ -498,7 +498,7 @@ func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *d
 	return r.updateWorkspaceStatus(workspace, logger, &status, reconcile.Result{}, nil)
 }
 
-func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *dw.DevWorkspace, logger logr.Logger) (stopped bool, err error) {
+func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *common.DevWorkspaceWithConfig, logger logr.Logger) (stopped bool, err error) {
 	workspaceDeployment := &appsv1.Deployment{}
 	namespaceName := types.NamespacedName{
 		Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
@@ -557,7 +557,7 @@ func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *dw.DevWo
 // failWorkspace marks a workspace as failed by setting relevant fields in the status struct.
 // These changes are not synced to cluster immediately, and are intended to be synced to the cluster via a deferred function
 // in the main reconcile loop. If needed, changes can be flushed to the cluster immediately via `updateWorkspaceStatus()`
-func (r *DevWorkspaceReconciler) failWorkspace(workspace *dw.DevWorkspace, msg string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) failWorkspace(workspace *common.DevWorkspaceWithConfig, msg string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
 	logger.Info("DevWorkspace failed to start: " + msg)
 	status.phase = devworkspacePhaseFailing
 	status.setConditionTrueWithReason(dw.DevWorkspaceFailedStart, msg, string(reason))
@@ -568,7 +568,7 @@ func (r *DevWorkspaceReconciler) failWorkspace(workspace *dw.DevWorkspace, msg s
 }
 
 func (r *DevWorkspaceReconciler) syncTimingToCluster(
-	ctx context.Context, workspace *dw.DevWorkspace, timingInfo map[string]string, reqLogger logr.Logger) {
+	ctx context.Context, workspace *common.DevWorkspaceWithConfig, timingInfo map[string]string, reqLogger logr.Logger) {
 	if timing.IsEnabled() {
 		if workspace.Annotations == nil {
 			workspace.Annotations = map[string]string{}
@@ -589,7 +589,7 @@ func (r *DevWorkspaceReconciler) syncTimingToCluster(
 }
 
 func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
-	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
+	ctx context.Context, workspace *common.DevWorkspaceWithConfig, reqLogger logr.Logger) {
 
 	if workspace.Annotations == nil {
 		workspace.Annotations = map[string]string{}
@@ -610,7 +610,7 @@ func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
 }
 
 func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
-	ctx context.Context, workspace *dw.DevWorkspace, reqLogger logr.Logger) {
+	ctx context.Context, workspace *common.DevWorkspaceWithConfig, reqLogger logr.Logger) {
 	if workspace.Annotations == nil {
 		workspace.Annotations = map[string]string{}
 	}
@@ -624,7 +624,7 @@ func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
 	}
 }
 
-func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *dw.DevWorkspace) (string, error) {
+func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *common.DevWorkspaceWithConfig) (string, error) {
 	if idOverride := workspace.Annotations[constants.WorkspaceIdOverrideAnnotation]; idOverride != "" {
 		if len(idOverride) > 25 {
 			return "", fmt.Errorf("maximum length for DevWorkspace ID override is 25 characters")

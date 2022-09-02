@@ -18,7 +18,7 @@ package timing
 import (
 	"strconv"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 )
 
 const (
@@ -59,7 +59,7 @@ type workspaceTimes struct {
 	serversReady      int64
 }
 
-func getTimestamps(workspace *dw.DevWorkspace) (*workspaceTimes, error) {
+func getTimestamps(workspace *common.DevWorkspaceWithConfig) (*workspaceTimes, error) {
 	times := &workspaceTimes{}
 	// Will return an error if the annotation is unset
 	t, err := strconv.ParseInt(workspace.Annotations[DevWorkspaceStarted], 10, 0)

@@ -28,6 +28,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
@@ -109,8 +110,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Fetch the Workspace instance
-	workspace := &dw.DevWorkspace{}
-	err = r.Get(ctx, req.NamespacedName, workspace)
+	rawWorkspace := &dw.DevWorkspace{}
+	err = r.Get(ctx, req.NamespacedName, rawWorkspace)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -121,8 +122,15 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	config := wkspConfig.GetGlobalConfig()
+	configString := wkspConfig.GetCurrentConfigString()
+	workspace := &common.DevWorkspaceWithConfig{}
+	workspace.DevWorkspace = rawWorkspace
+	workspace.Config = config
+
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspace.Status.DevWorkspaceId)
-	reqLogger.Info("Reconciling Workspace")
+	reqLogger.Info("Reconciling Workspace", "resolvedConfig", configString)
 
 	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
@@ -198,7 +206,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Prepare handling workspace status and condition
 	reconcileStatus := currentStatus{phase: dw.DevWorkspaceStatusStarting}
 	reconcileStatus.setConditionTrue(conditions.Started, "DevWorkspace is starting")
-	clusterWorkspace := workspace.DeepCopy()
+	clusterWorkspace := &common.DevWorkspaceWithConfig{}
+	clusterWorkspace.DevWorkspace = workspace.DevWorkspace.DeepCopy()
+	clusterWorkspace.Config = workspace.Config
 	timingInfo := map[string]string{}
 	timing.SetTime(timingInfo, timing.DevWorkspaceStarted)
 

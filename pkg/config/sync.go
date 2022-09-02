@@ -47,6 +47,10 @@ var (
 	log             = ctrl.Log.WithName("operator-configuration")
 )
 
+func GetGlobalConfig() *controller.OperatorConfiguration {
+	return internalConfig.DeepCopy()
+}
+
 func SetConfigForTesting(config *controller.OperatorConfiguration) {
 	configMutex.Lock()
 	defer configMutex.Unlock()
@@ -260,10 +264,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 	}
 }
 
-// logCurrentConfig formats the current operator configuration as a plain string
-func logCurrentConfig() {
+func GetCurrentConfigString() string {
 	if internalConfig == nil {
-		return
+		return ""
 	}
 	var config []string
 	if Routing != nil {
@@ -306,11 +309,20 @@ func logCurrentConfig() {
 	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {
 		config = append(config, "enableExperimentalFeatures=true")
 	}
-
 	if len(config) == 0 {
+		return ""
+	} else {
+		return strings.Join(config, ",")
+	}
+}
+
+// logCurrentConfig formats the current operator configuration as a plain string
+func logCurrentConfig() {
+	currConfig := GetCurrentConfigString()
+	if len(currConfig) == 0 {
 		log.Info("Updated config to [(default config)]")
 	} else {
-		log.Info(fmt.Sprintf("Updated config to [%s]", strings.Join(config, ",")))
+		log.Info(fmt.Sprintf("Updated config to [%s]", currConfig))
 	}
 
 	if internalConfig.Routing.ProxyConfig != nil {

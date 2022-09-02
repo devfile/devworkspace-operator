@@ -16,18 +16,24 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	attributes "github.com/devfile/api/v2/pkg/attributes"
 	"github.com/google/go-cmp/cmp"
 	fuzz "github.com/google/gofuzz"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
@@ -81,6 +87,96 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 		return
 	}
 	assert.Equal(t, expectedConfig, internalConfig, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(internalConfig, expectedConfig)))
+}
+
+func TestCatchesNonExistentExternalDWOC(t *testing.T) {
+	setupForTest(t)
+
+	workspace := &dw.DevWorkspace{}
+	attributes := attributes.Attributes{}
+	namespacedName := types.NamespacedName{
+		Name:      "external-config-name",
+		Namespace: "external-config-namespace",
+	}
+	attributes.Put(constants.ExternalDevWorkspaceConfiguration, namespacedName, nil)
+	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = dw.DevWorkspaceTemplateSpecContent{
+		Attributes: attributes,
+	}
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	resolvedConfig, err := ResolveConfigForWorkspace(workspace, client)
+	if !assert.Error(t, err, "Error should be given if external DWOC specified in workspace spec does not exist") {
+		return
+	}
+	assert.Equal(t, resolvedConfig, internalConfig, "Internal/Global DWOC should be used as fallback if external DWOC could not be resolved")
+}
+
+func TestMergeExternalConfig(t *testing.T) {
+	setupForTest(t)
+
+	workspace := &dw.DevWorkspace{}
+	attributes := attributes.Attributes{}
+	namespacedName := types.NamespacedName{
+		Name:      externalConfigName,
+		Namespace: externalConfigNamespace,
+	}
+	attributes.Put(constants.ExternalDevWorkspaceConfiguration, namespacedName, nil)
+	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = dw.DevWorkspaceTemplateSpecContent{
+		Attributes: attributes,
+	}
+
+	// External config is based off of the default/internal config, with just a few changes made
+	// So when the internal config is merged with the external one, they will become identical
+	externalConfig := buildExternalConfig(defaultConfig.DeepCopy())
+	externalConfig.Config.Workspace.ImagePullPolicy = "Always"
+	externalConfig.Config.Workspace.PVCName = "test-PVC-name"
+	storageSize := resource.MustParse("15Gi")
+	externalConfig.Config.Workspace.DefaultStorageSize = &v1alpha1.StorageSizes{
+		Common:       &storageSize,
+		PerWorkspace: &storageSize,
+	}
+
+	clusterConfig := buildConfig(defaultConfig.DeepCopy())
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig, externalConfig).Build()
+	err := SetupControllerConfig(client)
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+
+	// Sanity check
+	if !cmp.Equal(clusterConfig.Config, internalConfig) {
+		t.Error("Internal config should be same as cluster config before starting:", cmp.Diff(clusterConfig.Config, internalConfig))
+	}
+
+	resolvedConfig, err := ResolveConfigForWorkspace(workspace, client)
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+
+	// Compare the resolved config and external config
+	if !cmp.Equal(resolvedConfig, externalConfig.Config) {
+		t.Error("Resolved config and external config should match after merge:", cmp.Diff(resolvedConfig, externalConfig.Config))
+	}
+
+	// Ensure the internal config was not affected by merge
+	if !cmp.Equal(clusterConfig.Config, internalConfig) {
+		t.Error("Internal config should remain the same after merge:", cmp.Diff(clusterConfig.Config, internalConfig))
+	}
+
+	// Get the global config off cluster and ensure it hasn't changed
+	retrievedClusterConfig := &v1alpha1.DevWorkspaceOperatorConfig{}
+	namespacedName = types.NamespacedName{
+		Name:      OperatorConfigName,
+		Namespace: testNamespace,
+	}
+	err = client.Get(context.TODO(), namespacedName, retrievedClusterConfig)
+	if !assert.NoError(t, err, "Should not return error when fetching config from cluster") {
+		return
+	}
+
+	if !cmp.Equal(retrievedClusterConfig.Config, clusterConfig.Config) {
+		t.Error("Config on cluster and global config should match after merge; global config should not have been modified from merge:", cmp.Diff(retrievedClusterConfig, clusterConfig.Config))
+	}
 }
 
 func TestSetupControllerAlwaysSetsDefaultClusterRoutingSuffix(t *testing.T) {

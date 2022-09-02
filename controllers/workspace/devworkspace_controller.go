@@ -123,7 +123,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{}, err
 	}
 
-	config := wkspConfig.GetGlobalConfig()
+	config, err := wkspConfig.ResolveConfigForWorkspace(rawWorkspace, clusterAPI.Client)
+	if err != nil {
+		reqLogger.Error(err, "Error applying external DevWorkspace-Operator configuration")
+		config = wkspConfig.GetGlobalConfig()
+	}
 	configString := wkspConfig.GetCurrentConfigString()
 	workspace := &common.DevWorkspaceWithConfig{}
 	workspace.DevWorkspace = rawWorkspace

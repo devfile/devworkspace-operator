@@ -21,7 +21,6 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	v1 "k8s.io/api/core/v1"
@@ -48,7 +47,7 @@ func convertContainerToK8s(devfileComponent dw.Component) (*v1.Container, error)
 		Ports:           devfileEndpointsToContainerPorts(devfileContainer.Endpoints),
 		Env:             devfileEnvToContainerEnv(devfileComponent.Name, devfileContainer.Env),
 		VolumeMounts:    devfileVolumeMountsToContainerVolumeMounts(devfileContainer.VolumeMounts),
-		ImagePullPolicy: v1.PullPolicy(config.Workspace.ImagePullPolicy),
+		ImagePullPolicy: v1.PullPolicy(workspace.Config.Workspace.ImagePullPolicy),
 	}
 
 	return container, nil

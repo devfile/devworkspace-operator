@@ -22,7 +22,6 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
@@ -163,7 +162,7 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 	}
 	// TODO: Determine the storage size that is needed by iterating through workspace volumes,
 	// adding the sizes specified and figuring out overrides/defaults
-	pvcSize := *config.Workspace.DefaultStorageSize.PerWorkspace
+	pvcSize := *workspace.Config.Workspace.DefaultStorageSize.PerWorkspace
 	if namespacedConfig != nil && namespacedConfig.PerWorkspacePVCSize != "" {
 		pvcSize, err = resource.ParseQuantity(namespacedConfig.PerWorkspacePVCSize)
 		if err != nil {

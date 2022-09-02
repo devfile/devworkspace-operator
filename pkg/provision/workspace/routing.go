@@ -24,7 +24,6 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,7 +116,7 @@ func getSpecRouting(
 
 	routingClass := workspace.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspace.Config.Routing.DefaultRoutingClass
 	}
 
 	routing := &v1alpha1.DevWorkspaceRouting{

@@ -34,7 +34,6 @@ import (
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
@@ -122,7 +121,7 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 		return nil, err
 	}
 	if pvcName == "" {
-		pvcName = config.Workspace.PVCName
+		pvcName = workspace.Config.Workspace.PVCName
 	}
 
 	jobLabels := map[string]string{
@@ -211,7 +210,7 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 
 func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (bool, error) {
 	namespacedName := types.NamespacedName{
-		Name:      config.Workspace.PVCName,
+		Name:      workspace.Config.Workspace.PVCName,
 		Namespace: workspace.Namespace,
 	}
 	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, &corev1.PersistentVolumeClaim{})

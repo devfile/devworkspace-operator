@@ -21,6 +21,7 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -45,7 +46,7 @@ func (*AsyncStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateS
 	return needsStorage(workspace)
 }
 
-func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	if err := checkConfigured(); err != nil {
 		return &ProvisioningError{
 			Message: fmt.Sprintf("%s. Contact an administrator to resolve this issue.", err.Error()),
@@ -169,7 +170,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	return nil
 }
 
-func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// TODO: This approach relies on there being a maximum of one workspace running per namespace.
 	asyncDeploy, err := asyncstorage.GetWorkspaceSyncDeploymentCluster(workspace.Namespace, clusterAPI)
 	if err != nil {
@@ -244,7 +245,7 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorks
 	return nil
 }
 
-func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace) (volumes []corev1.Volume, err error) {
+func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig) (volumes []corev1.Volume, err error) {
 	persistentVolumes, _, _ := getWorkspaceVolumes(workspace)
 
 	addedVolumes, err := addEphemeralVolumesToPodAdditions(podAdditions, persistentVolumes)

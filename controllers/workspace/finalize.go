@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
@@ -34,7 +35,7 @@ import (
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
-func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *dw.DevWorkspace) bool {
+func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *common.DevWorkspaceWithConfig) bool {
 	for _, finalizer := range workspace.Finalizers {
 		if finalizer == constants.StorageCleanupFinalizer {
 			return true
@@ -46,7 +47,7 @@ func (r *DevWorkspaceReconciler) workspaceNeedsFinalize(workspace *dw.DevWorkspa
 	return false
 }
 
-func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace) (finalizeResult reconcile.Result, finalizeErr error) {
+func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, workspace *common.DevWorkspaceWithConfig) (finalizeResult reconcile.Result, finalizeErr error) {
 	// Tracked state for the finalize process; we update the workspace status in a deferred function (and pass the
 	// named return value for finalize()) to update the workspace's status with whatever is in finalizeStatus
 	// when this function returns.
@@ -74,7 +75,7 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 	return reconcile.Result{}, nil
 }
 
-func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace, finalizeStatus *currentStatus) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.Logger, workspace *common.DevWorkspaceWithConfig, finalizeStatus *currentStatus) (reconcile.Result, error) {
 	// Need to make sure Deployment is cleaned up before starting job to avoid mounting issues for RWO PVCs
 	wait, err := wsprovision.DeleteWorkspaceDeployment(ctx, workspace, r.Client)
 	if err != nil {
@@ -129,7 +130,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	return reconcile.Result{}, r.Update(ctx, workspace)
 }
 
-func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log logr.Logger, workspace *dw.DevWorkspace, finalizeStatus *currentStatus) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log logr.Logger, workspace *common.DevWorkspaceWithConfig, finalizeStatus *currentStatus) (reconcile.Result, error) {
 	retry, err := wsprovision.FinalizeServiceAccount(workspace, ctx, r.NonCachingClient)
 	if err != nil {
 		log.Error(err, "Failed to finalize workspace ServiceAccount")

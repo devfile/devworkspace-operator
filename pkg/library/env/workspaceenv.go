@@ -24,13 +24,14 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // AddCommonEnvironmentVariables adds environment variables to each container in podAdditions. Environment variables added include common
 // info environment variables and environment variables defined by a workspaceEnv attribute in the devfile itself
-func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterDW *dw.DevWorkspace, flattenedDW *dw.DevWorkspaceTemplateSpec) error {
+func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterDW *common.DevWorkspaceWithConfig, flattenedDW *dw.DevWorkspaceTemplateSpec) error {
 	commonEnv := commonEnvironmentVariables(clusterDW.Name, clusterDW.Status.DevWorkspaceId, clusterDW.Namespace, clusterDW.Labels[constants.DevWorkspaceCreatorLabel])
 	workspaceEnv, err := collectWorkspaceEnv(flattenedDW)
 	if err != nil {

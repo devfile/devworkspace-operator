@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -135,7 +136,7 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 // addEphemeralVolumesFromWorkspace adds emptyDir volumes for all ephemeral volume components required for a devworkspace.
 // This includes any volume components marked with the ephemeral field, including projects.
 // Returns a ProvisioningError if any ephemeral volume cannot be parsed (e.g. cannot parse size for kubernetes)
-func addEphemeralVolumesFromWorkspace(workspace *dw.DevWorkspace, podAdditions *v1alpha1.PodAdditions) error {
+func addEphemeralVolumesFromWorkspace(workspace *common.DevWorkspaceWithConfig, podAdditions *v1alpha1.PodAdditions) error {
 	_, ephemeralVolumes, projectsVolume := getWorkspaceVolumes(workspace)
 	_, err := addEphemeralVolumesToPodAdditions(podAdditions, ephemeralVolumes)
 	if err != nil {
@@ -179,7 +180,7 @@ func addEphemeralVolumesToPodAdditions(podAdditions *v1alpha1.PodAdditions, work
 // getWorkspaceVolumes returns all volumes defined in the DevWorkspace, separated out into persistent volumes, ephemeral
 // volumes, and the projects volume, which must be handled specially. If the workspace does not define a projects volume,
 // the returned value is nil.
-func getWorkspaceVolumes(workspace *dw.DevWorkspace) (persistent, ephemeral []dw.Component, projects *dw.Component) {
+func getWorkspaceVolumes(workspace *common.DevWorkspaceWithConfig) (persistent, ephemeral []dw.Component, projects *dw.Component) {
 	for idx, component := range workspace.Spec.Template.Components {
 		if component.Volume == nil {
 			continue

@@ -17,6 +17,7 @@ package storage
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -35,7 +36,7 @@ func (e EphemeralStorageProvisioner) NeedsStorage(_ *dw.DevWorkspaceTemplateSpec
 	return false
 }
 
-func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, _ sync.ClusterAPI) error {
+func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, _ sync.ClusterAPI) error {
 	persistent, ephemeral, projects := getWorkspaceVolumes(workspace)
 	if _, err := addEphemeralVolumesToPodAdditions(podAdditions, persistent); err != nil {
 		return err
@@ -59,6 +60,6 @@ func (e EphemeralStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.Pod
 	return nil
 }
 
-func (e EphemeralStorageProvisioner) CleanupWorkspaceStorage(_ *dw.DevWorkspace, _ sync.ClusterAPI) error {
+func (e EphemeralStorageProvisioner) CleanupWorkspaceStorage(_ *common.DevWorkspaceWithConfig, _ sync.ClusterAPI) error {
 	return nil
 }

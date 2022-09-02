@@ -45,7 +45,7 @@ func (*PerWorkspaceStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTe
 	return false
 }
 
-func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// Add ephemeral volumes
 	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
 		return err
@@ -82,7 +82,7 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 }
 
 // We rely on Kubernetes to use the owner reference to automatically delete the PVC once the workspace is set for deletion.
-func (*PerWorkspaceStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (*PerWorkspaceStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	return nil
 }
 
@@ -156,7 +156,7 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	return nil
 }
 
-func syncPerWorkspacePVC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)

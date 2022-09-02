@@ -16,7 +16,6 @@
 package workspace
 
 import (
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
@@ -26,7 +25,7 @@ import (
 )
 
 // SyncRBAC generates RBAC and synchronizes the runtime objects
-func SyncRBAC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) ProvisioningStatus {
+func SyncRBAC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) ProvisioningStatus {
 	rbacs := generateRBAC(workspace.Namespace)
 	requeue := false
 	for _, rbac := range rbacs {

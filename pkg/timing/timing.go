@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"time"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
@@ -52,7 +52,7 @@ func CurrentTime() string {
 // SummarizeStartup applies aggregate annotations based off event annotations set by
 // SetTime(). No-op if timing is disabled or if not all event annotations are present
 // on the devworkspace.
-func SummarizeStartup(workspace *dw.DevWorkspace) {
+func SummarizeStartup(workspace *common.DevWorkspaceWithConfig) {
 	if !IsEnabled() {
 		return
 	}
@@ -75,7 +75,7 @@ func SummarizeStartup(workspace *dw.DevWorkspace) {
 // ClearAnnotations removes all timing-related annotations from a DevWorkspace.
 // It's necessary to call this before setting new times via SetTime(), as SetTime()
 // does not overwrite existing annotations.
-func ClearAnnotations(workspace *dw.DevWorkspace) {
+func ClearAnnotations(workspace *common.DevWorkspaceWithConfig) {
 	if !IsEnabled() {
 		return
 	}

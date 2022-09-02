@@ -14,7 +14,7 @@
 package asyncstorage
 
 import (
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,7 +22,7 @@ import (
 
 // RemoveAuthorizedKeyFromConfigMap removes the ssh key used by a given workspace from the common async storage
 // authorized keys configmap.
-func RemoveAuthorizedKeyFromConfigMap(workspace *dw.DevWorkspace, api sync.ClusterAPI) (retry bool, err error) {
+func RemoveAuthorizedKeyFromConfigMap(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) (retry bool, err error) {
 	sshSecret, err := getSSHSidecarSecretCluster(workspace, api)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {

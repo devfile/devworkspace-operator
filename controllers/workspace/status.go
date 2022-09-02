@@ -23,6 +23,7 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/go-logr/logr"
@@ -64,7 +65,7 @@ var clock kubeclock.Clock = &kubeclock.RealClock{}
 // updateWorkspaceStatus updates the current workspace's status field with conditions and phase from the passed in status.
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
-func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *dw.DevWorkspace, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *common.DevWorkspaceWithConfig, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
 	syncConditions(&workspace.Status, status)
 	oldPhase := workspace.Status.Phase
 	workspace.Status.Phase = status.phase
@@ -144,7 +145,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 	})
 }
 
-func syncWorkspaceMainURL(workspace *dw.DevWorkspace, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI sync.ClusterAPI) (ok bool, err error) {
+func syncWorkspaceMainURL(workspace *common.DevWorkspaceWithConfig, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI sync.ClusterAPI) (ok bool, err error) {
 	mainUrl := getMainUrl(exposedEndpoints)
 
 	if workspace.Status.MainUrl == mainUrl {
@@ -155,7 +156,7 @@ func syncWorkspaceMainURL(workspace *dw.DevWorkspace, exposedEndpoints map[strin
 	return false, err
 }
 
-func checkServerStatus(workspace *dw.DevWorkspace) (ok bool, err error) {
+func checkServerStatus(workspace *common.DevWorkspaceWithConfig) (ok bool, err error) {
 	mainUrl := workspace.Status.MainUrl
 	if mainUrl == "" {
 		// Support DevWorkspaces that do not specify an mainUrl
@@ -190,7 +191,7 @@ func getMainUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string
 	return ""
 }
 
-func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
+func getInfoMessage(workspace *common.DevWorkspaceWithConfig, status *currentStatus) string {
 	// Check for errors and failure
 	if cond, ok := status.conditions[dw.DevWorkspaceError]; ok {
 		return cond.Message
@@ -225,7 +226,7 @@ func getInfoMessage(workspace *dw.DevWorkspace, status *currentStatus) string {
 // updateMetricsForPhase increments DevWorkspace startup metrics based on phase transitions in a DevWorkspace. It avoids
 // incrementing the underlying metrics where possible (e.g. reconciling an already running workspace) by only incrementing
 // counters when the new phase is different from the current on in the DevWorkspace.
-func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
+func updateMetricsForPhase(workspace *common.DevWorkspaceWithConfig, oldPhase, newPhase dw.DevWorkspacePhase, logger logr.Logger) {
 	if oldPhase == newPhase {
 		return
 	}
@@ -241,7 +242,7 @@ func updateMetricsForPhase(workspace *dw.DevWorkspace, oldPhase, newPhase dw.Dev
 // startup timeout. This is determined by checking to see if the last condition transition time is more
 // than [timeout] duration ago. Workspaces that are not in the "Starting" phase cannot timeout. Returns
 // an error with message when timeout is reached.
-func checkForStartTimeout(workspace *dw.DevWorkspace) error {
+func checkForStartTimeout(workspace *common.DevWorkspaceWithConfig) error {
 	if workspace.Status.Phase != dw.DevWorkspaceStatusStarting {
 		return nil
 	}
@@ -267,7 +268,7 @@ func checkForStartTimeout(workspace *dw.DevWorkspace) error {
 // configured progress timeout. If the workspace is not in the Failing state or does not have a DevWorkspaceFailed
 // condition set, returns false. Otherwise, returns true if the workspace has timed out. Returns an error if
 // timeout is configured with an unparsable duration.
-func checkForFailingTimeout(workspace *dw.DevWorkspace) (isTimedOut bool, err error) {
+func checkForFailingTimeout(workspace *common.DevWorkspaceWithConfig) (isTimedOut bool, err error) {
 	if workspace.Status.Phase != devworkspacePhaseFailing {
 		return false, nil
 	}

@@ -31,7 +31,11 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
-const testNamespace = "test-namespace"
+const (
+	testNamespace           = "test-namespace"
+	externalConfigName      = "external-config-name"
+	externalConfigNamespace = "external-config-namespace"
+)
 
 var (
 	scheme   = runtime.NewScheme()
@@ -64,6 +68,16 @@ func buildConfig(config *v1alpha1.OperatorConfiguration) *v1alpha1.DevWorkspaceO
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      OperatorConfigName,
 			Namespace: testNamespace,
+		},
+		Config: config,
+	}
+}
+
+func buildExternalConfig(config *v1alpha1.OperatorConfiguration) *v1alpha1.DevWorkspaceOperatorConfig {
+	return &v1alpha1.DevWorkspaceOperatorConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      externalConfigName,
+			Namespace: externalConfigNamespace,
 		},
 		Config: config,
 	}

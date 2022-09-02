@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config/proxy"
 	routeV1 "github.com/openshift/api/route/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -30,6 +31,7 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
@@ -47,6 +49,38 @@ var (
 
 func GetGlobalConfig() *controller.OperatorConfiguration {
 	return internalConfig.DeepCopy()
+}
+
+// ResolveConfigForWorkspace returns the resulting config from merging the global DevWorkspaceOperatorConfig with the
+// DevWorkspaceOperatorConfig specified by the optional workspace attribute `controller.devfile.io/devworkspace-config`.
+// If the `controller.devfile.io/devworkspace-config` is not set, the global DevWorkspaceOperatorConfig is returned.
+// If the `controller.devfile.io/devworkspace-config` attribute is incorrectly set, or the specified DevWorkspaceOperatorConfig
+// does not exist on the cluster, an error is returned.
+func ResolveConfigForWorkspace(workspace *dw.DevWorkspace, client crclient.Client) (*controller.OperatorConfiguration, error) {
+	if !workspace.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
+		return GetGlobalConfig(), nil
+	}
+
+	namespacedName := types.NamespacedName{}
+	err := workspace.Spec.Template.Attributes.GetInto(constants.ExternalDevWorkspaceConfiguration, &namespacedName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.ExternalDevWorkspaceConfiguration, err)
+	}
+
+	if namespacedName.Name == "" {
+		return nil, fmt.Errorf("'name' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	if namespacedName.Namespace == "" {
+		return nil, fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	externalDWOC := &controller.DevWorkspaceOperatorConfig{}
+	err = client.Get(context.TODO(), namespacedName, externalDWOC)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch external DWOC with name %s in namespace %s: %w", namespacedName.Name, namespacedName.Namespace, err)
+	}
+	return getMergedConfig(externalDWOC.Config, internalConfig), nil
 }
 
 func GetConfigForTesting(customConfig *controller.OperatorConfiguration) *controller.OperatorConfiguration {
@@ -119,6 +153,13 @@ func getClusterConfig(namespace string, client crclient.Client) (*controller.Dev
 		return nil, err
 	}
 	return clusterConfig, nil
+}
+
+func getMergedConfig(from, to *controller.OperatorConfiguration) *controller.OperatorConfiguration {
+	mergedConfig := to.DeepCopy()
+	fromCopy := from.DeepCopy()
+	mergeConfig(fromCopy, mergedConfig)
+	return mergedConfig
 }
 
 func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {

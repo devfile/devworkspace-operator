@@ -28,6 +28,21 @@ const (
 	//                    stopped.
 	DevWorkspaceStorageTypeAttribute = "controller.devfile.io/storage-type"
 
+	// ExternalDevWorkspaceConfiguration is an attribute that allows for specifying an (optional) external DevWorkspaceOperatorConfig
+	// which will merged with the internal/global DevWorkspaceOperatorConfig. The DevWorkspaceOperatorConfig resulting from the merge will be used for the workspace.
+	// The fields which are set in the external DevWorkspaceOperatorConfig will overwrite those existing in the
+	// internal/global DevWorkspaceOperatorConfig during the merge.
+	// The structure of the attribute value should contain two strings: name and namespace.
+	// 'name' specifies the metadata.name of the external operator configuration.
+	// 'namespace' specifies the metadata.namespace of the external operator configuration                                                                           .
+	// For example:
+	//
+	//   attributes:
+	//     controller.devfile.io/devworkspace-config:
+	//         name: external-dwoc-name
+	//         namespace: some-namespace
+	ExternalDevWorkspaceConfiguration = "controller.devfile.io/devworkspace-config"
+
 	// RuntimeClassNameAttribute is an attribute added to a DevWorkspace to specify a runtimeClassName for container
 	// components in the DevWorkspace (pod.spec.runtimeClassName). If empty, no runtimeClassName is added.
 	RuntimeClassNameAttribute = "controller.devfile.io/runtime-class"

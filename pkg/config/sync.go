@@ -295,15 +295,15 @@ func GetCurrentConfigString() string {
 				strings.Join(Workspace.IgnoredUnrecoverableEvents, ";")))
 		}
 		if Workspace.DefaultStorageSize != nil {
-			if Workspace.DefaultStorageSize.Common != nil {
+			if Workspace.DefaultStorageSize.Common != nil && Workspace.DefaultStorageSize.Common.String() != defaultConfig.Workspace.DefaultStorageSize.Common.String() {
 				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.common=%s", Workspace.DefaultStorageSize.Common.String()))
 			}
-			if Workspace.DefaultStorageSize.PerWorkspace != nil {
+			if Workspace.DefaultStorageSize.PerWorkspace != nil && Workspace.DefaultStorageSize.PerWorkspace.String() != defaultConfig.Workspace.DefaultStorageSize.PerWorkspace.String() {
 				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.perWorkspace=%s", Workspace.DefaultStorageSize.PerWorkspace.String()))
 			}
 		}
 		if Workspace.DefaultTemplate != nil {
-			config = append(config, fmt.Sprintf("workspace.defaultTemplate is set"))
+			config = append(config, "workspace.defaultTemplate is set")
 		}
 	}
 	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {

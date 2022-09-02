@@ -49,7 +49,7 @@ func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, f
 	if err != nil {
 		return err
 	}
-	err = controllerutil.SetControllerReference(original, cm, api.Scheme)
+	err = controllerutil.SetControllerReference(original.DevWorkspace, cm, api.Scheme)
 	if err != nil {
 		return err
 	}

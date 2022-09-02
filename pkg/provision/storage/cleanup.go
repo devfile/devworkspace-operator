@@ -203,7 +203,7 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 		job.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 
-	if err := controllerutil.SetControllerReference(workspace, job, clusterAPI.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(workspace.DevWorkspace, job, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 	return job, nil

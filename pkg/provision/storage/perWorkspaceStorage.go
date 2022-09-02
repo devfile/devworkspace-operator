@@ -176,7 +176,7 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 		return nil, err
 	}
 
-	if err := controllerutil.SetControllerReference(workspace, pvc, clusterAPI.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(workspace.DevWorkspace, pvc, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 

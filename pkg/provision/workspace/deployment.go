@@ -290,7 +290,7 @@ func getSpecDeployment(
 		deployment.Spec.Template.Annotations = maputils.Append(deployment.Spec.Template.Annotations, constants.DevWorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
-	err = controllerutil.SetControllerReference(workspace, deployment, scheme)
+	err = controllerutil.SetControllerReference(workspace.DevWorkspace, deployment, scheme)
 	if err != nil {
 		return nil, err
 	}

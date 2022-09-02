@@ -25,14 +25,13 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // AddCommonEnvironmentVariables adds environment variables to each container in podAdditions. Environment variables added include common
 // info environment variables and environment variables defined by a workspaceEnv attribute in the devfile itself
 func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterDW *common.DevWorkspaceWithConfig, flattenedDW *dw.DevWorkspaceTemplateSpec) error {
-	commonEnv := commonEnvironmentVariables(clusterDW.Name, clusterDW.Status.DevWorkspaceId, clusterDW.Namespace, clusterDW.Labels[constants.DevWorkspaceCreatorLabel])
+	commonEnv := commonEnvironmentVariables(clusterDW)
 	workspaceEnv, err := collectWorkspaceEnv(flattenedDW)
 	if err != nil {
 		return err
@@ -48,60 +47,60 @@ func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterD
 	return nil
 }
 
-func commonEnvironmentVariables(workspaceName, workspaceId, namespace, creator string) []corev1.EnvVar {
+func commonEnvironmentVariables(workspaceWithConfig *common.DevWorkspaceWithConfig) []corev1.EnvVar {
 	envvars := []corev1.EnvVar{
 		{
 			Name:  constants.DevWorkspaceNamespace,
-			Value: namespace,
+			Value: workspaceWithConfig.Namespace,
 		},
 		{
 			Name:  constants.DevWorkspaceName,
-			Value: workspaceName,
+			Value: workspaceWithConfig.Name,
 		},
 		{
 			Name:  constants.DevWorkspaceId,
-			Value: workspaceId,
+			Value: workspaceWithConfig.Status.DevWorkspaceId,
 		},
 		{
 			Name:  constants.DevWorkspaceCreator,
-			Value: creator,
+			Value: workspaceWithConfig.Labels[constants.DevWorkspaceCreatorLabel],
 		},
 		{
 			Name:  constants.DevWorkspaceIdleTimeout,
-			Value: config.Workspace.IdleTimeout,
+			Value: workspaceWithConfig.Config.Workspace.IdleTimeout,
 		},
 	}
 
-	envvars = append(envvars, getProxyEnvVars()...)
+	envvars = append(envvars, getProxyEnvVars(workspaceWithConfig.Config.Routing.ProxyConfig)...)
 
 	return envvars
 }
 
-func getProxyEnvVars() []corev1.EnvVar {
-	if config.Routing.ProxyConfig == nil {
+func getProxyEnvVars(proxyConfig *v1alpha1.Proxy) []corev1.EnvVar {
+	if proxyConfig == nil {
 		return nil
 	}
 
-	if config.Routing.ProxyConfig.HttpProxy == "" && config.Routing.ProxyConfig.HttpsProxy == "" {
+	if proxyConfig.HttpProxy == "" && proxyConfig.HttpsProxy == "" {
 		return nil
 	}
 
 	// Proxy env vars are defined by consensus rather than standard; most tools use the lower-snake-case version
 	// but some may only look at the upper-snake-case version, so we add both.
 	var env []v1.EnvVar
-	if config.Routing.ProxyConfig.HttpProxy != "" {
-		env = append(env, v1.EnvVar{Name: "http_proxy", Value: config.Routing.ProxyConfig.HttpProxy})
-		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: config.Routing.ProxyConfig.HttpProxy})
+	if proxyConfig.HttpProxy != "" {
+		env = append(env, v1.EnvVar{Name: "http_proxy", Value: proxyConfig.HttpProxy})
+		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: proxyConfig.HttpProxy})
 	}
-	if config.Routing.ProxyConfig.HttpsProxy != "" {
-		env = append(env, v1.EnvVar{Name: "https_proxy", Value: config.Routing.ProxyConfig.HttpsProxy})
-		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: config.Routing.ProxyConfig.HttpsProxy})
+	if proxyConfig.HttpsProxy != "" {
+		env = append(env, v1.EnvVar{Name: "https_proxy", Value: proxyConfig.HttpsProxy})
+		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: proxyConfig.HttpsProxy})
 	}
-	if config.Routing.ProxyConfig.NoProxy != "" {
+	if proxyConfig.NoProxy != "" {
 		// Adding 'KUBERNETES_SERVICE_HOST' env var to the 'no_proxy / NO_PROXY' list. Hot Fix for https://issues.redhat.com/browse/CRW-2820
 		kubernetesServiceHost := os.Getenv("KUBERNETES_SERVICE_HOST")
-		env = append(env, v1.EnvVar{Name: "no_proxy", Value: config.Routing.ProxyConfig.NoProxy + "," + kubernetesServiceHost})
-		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: config.Routing.ProxyConfig.NoProxy + "," + kubernetesServiceHost})
+		env = append(env, v1.EnvVar{Name: "no_proxy", Value: proxyConfig.NoProxy + "," + kubernetesServiceHost})
+		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: proxyConfig.NoProxy + "," + kubernetesServiceHost})
 	}
 
 	return env

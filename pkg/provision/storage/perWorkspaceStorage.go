@@ -170,7 +170,8 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 		}
 	}
 
-	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, pvcSize)
+	storageClass := workspace.Config.Workspace.StorageClassName
+	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, storageClass, pvcSize)
 	if err != nil {
 		return nil, err
 	}

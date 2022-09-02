@@ -58,6 +58,9 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		return err
 	}
 
+	if pvcName == "" {
+		pvcName = workspace.Config.Workspace.PVCName
+	}
 	pvcTerminating, err := checkPVCTerminating(pvcName, workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
@@ -69,7 +72,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	}
 
 	if pvcName == "" {
-		commonPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
+		commonPVC, err := syncCommonPVC(workspace.Namespace, workspace.Config, clusterAPI)
 		if err != nil {
 			return err
 		}

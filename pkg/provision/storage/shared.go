@@ -30,14 +30,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
 
-func getPVCSpec(name, namespace string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
+func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -53,7 +52,7 @@ func getPVCSpec(name, namespace string, size resource.Quantity) (*corev1.Persist
 					"storage": size,
 				},
 			},
-			StorageClassName: config.Workspace.StorageClassName,
+			StorageClassName: storageClass,
 		},
 	}, nil
 }
@@ -86,7 +85,7 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return containerlib.AnyMountSources(workspace.Components)
 }
 
-func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
@@ -99,7 +98,7 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 		}
 	}
 
-	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, pvcSize)
+	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, config.Workspace.StorageClassName, pvcSize)
 	if err != nil {
 		return nil, err
 	}
@@ -262,7 +261,8 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 
 func checkPVCTerminating(name, namespace string, api sync.ClusterAPI) (bool, error) {
 	if name == "" {
-		name = config.Workspace.PVCName
+		// Should not happen
+		return false, fmt.Errorf("attempted to read deletion status of PVC with empty name")
 	}
 	pvc := &corev1.PersistentVolumeClaim{}
 	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}

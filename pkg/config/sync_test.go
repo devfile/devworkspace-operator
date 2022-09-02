@@ -41,17 +41,6 @@ func TestSetupControllerConfigUsesDefault(t *testing.T) {
 	assert.Equal(t, defaultConfig, internalConfig, "Config used should be the default")
 }
 
-func TestSetupControllerDefaultsAreExported(t *testing.T) {
-	setupForTest(t)
-	client := fake.NewClientBuilder().WithScheme(scheme).Build()
-	err := SetupControllerConfig(client)
-	if !assert.NoError(t, err, "Should not return error") {
-		return
-	}
-	assert.Equal(t, defaultConfig.Routing, Routing, "Configuration should be exported")
-	assert.Equal(t, defaultConfig.Workspace, Workspace, "Configuration should be exported")
-}
-
 func TestSetupControllerConfigFailsWhenAlreadySetup(t *testing.T) {
 	setupForTest(t)
 	client := fake.NewClientBuilder().WithScheme(scheme).Build()
@@ -92,8 +81,6 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 		return
 	}
 	assert.Equal(t, expectedConfig, internalConfig, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(internalConfig, expectedConfig)))
-	assert.Equal(t, internalConfig.Routing, Routing, fmt.Sprintf("Changes to config should be propagated to exported fields"))
-	assert.Equal(t, internalConfig.Workspace, Workspace, fmt.Sprintf("Changes to config should be propagated to exported fields"))
 }
 
 func TestSetupControllerAlwaysSetsDefaultClusterRoutingSuffix(t *testing.T) {
@@ -119,7 +106,7 @@ func TestSetupControllerAlwaysSetsDefaultClusterRoutingSuffix(t *testing.T) {
 		return
 	}
 	assert.Equal(t, "test-host", defaultConfig.Routing.ClusterHostSuffix, "Should set default clusterRoutingSuffix even if config overrides it initially")
-	assert.Equal(t, "192.168.0.1.nip.io", Routing.ClusterHostSuffix, "Should use value from config for clusterRoutingSuffix")
+	assert.Equal(t, "192.168.0.1.nip.io", internalConfig.Routing.ClusterHostSuffix, "Should use value from config for clusterRoutingSuffix")
 }
 
 func TestDetectsOpenShiftRouteSuffix(t *testing.T) {
@@ -196,10 +183,10 @@ func TestSyncConfigRestoresClusterRoutingSuffix(t *testing.T) {
 		},
 	})
 	syncConfigFrom(config)
-	assert.Equal(t, "192.168.0.1.nip.io", Routing.ClusterHostSuffix, "Should update clusterRoutingSuffix from config")
+	assert.Equal(t, "192.168.0.1.nip.io", internalConfig.Routing.ClusterHostSuffix, "Should update clusterRoutingSuffix from config")
 	config.Config.Routing.ClusterHostSuffix = ""
 	syncConfigFrom(config)
-	assert.Equal(t, "default.routing.suffix", Routing.ClusterHostSuffix, "Should restore default clusterRoutingSuffix if it is available")
+	assert.Equal(t, "default.routing.suffix", internalConfig.Routing.ClusterHostSuffix, "Should restore default clusterRoutingSuffix if it is available")
 }
 
 func TestSyncConfigDoesNotEraseClusterRoutingSuffix(t *testing.T) {
@@ -219,7 +206,7 @@ func TestSyncConfigDoesNotEraseClusterRoutingSuffix(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, "test-host", Routing.ClusterHostSuffix, "Should get clusterHostSuffix from route on OpenShift")
+	assert.Equal(t, "test-host", internalConfig.Routing.ClusterHostSuffix, "Should get clusterHostSuffix from route on OpenShift")
 	syncConfigFrom(buildConfig(&v1alpha1.OperatorConfiguration{
 		Routing: &v1alpha1.RoutingConfig{
 			DefaultRoutingClass: "test-routingClass",
@@ -231,7 +218,7 @@ func TestSyncConfigDoesNotEraseClusterRoutingSuffix(t *testing.T) {
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
-	assert.Equal(t, "test-host", Routing.ClusterHostSuffix, "clusterHostSuffix should persist after an update")
+	assert.Equal(t, "test-host", internalConfig.Routing.ClusterHostSuffix, "clusterHostSuffix should persist after an update")
 }
 
 func TestMergeConfigLooksAtAllFields(t *testing.T) {

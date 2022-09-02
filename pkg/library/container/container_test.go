@@ -16,7 +16,6 @@
 package container
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -27,7 +26,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 type testCase struct {
@@ -41,15 +39,7 @@ type testOutput struct {
 	ErrRegexp    *string                `json:"errRegexp,omitempty"`
 }
 
-var testControllerCfg = &v1alpha1.OperatorConfiguration{
-	Workspace: &v1alpha1.WorkspaceConfig{
-		ImagePullPolicy: "Always",
-	},
-}
-
-func setupControllerCfg() {
-	config.SetConfigForTesting(testControllerCfg)
-}
+const testImagePullPolicy = "Always"
 
 func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 	files, err := os.ReadDir(fromDir)
@@ -76,19 +66,18 @@ func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
-	t.Log(fmt.Sprintf("Read file:\n%+v\n\n", test))
+	t.Logf("Read file:\n%+v\n\n", test)
 	return test
 }
 
 func TestGetKubeContainersFromDevfile(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "./testdata")
-	setupControllerCfg()
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.True(t, len(tt.Input.Components) > 0, "Input defines no components")
-			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input)
+			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input, testImagePullPolicy)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

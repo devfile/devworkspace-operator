@@ -33,19 +33,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 )
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dw.AddToScheme(scheme))
-	config.SetConfigForTesting(nil)
 }
 
 func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/perWorkspace-storage")
-	setupControllerCfg()
 	perWorkspaceStorage := PerWorkspaceStorageProvisioner{}
 
 	for _, tt := range tests {
@@ -64,7 +61,7 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 			}
 
 			if needsStorage(&workspace.Spec.Template) {
-				err := perWorkspaceStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, clusterAPI)
+				err := perWorkspaceStorage.ProvisionStorage(&tt.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
 				if !assert.Error(t, err, "Should get a NotReady error when creating PVC") {
 					return
 				}
@@ -87,7 +84,7 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 				assert.Equal(t, retrievedPVC.ObjectMeta.OwnerReferences[0].Kind, "DevWorkspace")
 			}
 
-			err := perWorkspaceStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, clusterAPI)
+			err := perWorkspaceStorage.ProvisionStorage(&tt.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
 
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")

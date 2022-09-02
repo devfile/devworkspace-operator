@@ -145,10 +145,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if err != nil {
 			workspace.Status.Phase = dw.DevWorkspaceStatusFailed
 			workspace.Status.Message = fmt.Sprintf("Failed to set DevWorkspace ID: %s", err.Error())
-			return reconcile.Result{}, r.Status().Update(ctx, workspace)
+			return reconcile.Result{}, r.Status().Update(ctx, workspace.DevWorkspace)
 		}
 		workspace.Status.DevWorkspaceId = workspaceId
-		err = r.Status().Update(ctx, workspace)
+		err = r.Status().Update(ctx, workspace.DevWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}
 
@@ -165,7 +165,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 
 		patch := []byte(`{"spec":{"started": false}}`)
-		err := r.Client.Patch(context.Background(), workspace, client.RawPatch(types.MergePatchType, patch))
+		err := r.Client.Patch(context.Background(), workspace.DevWorkspace, client.RawPatch(types.MergePatchType, patch))
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -196,7 +196,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Message:            "DevWorkspace is starting",
 			},
 		}
-		err = r.Status().Update(ctx, workspace)
+		err = r.Status().Update(ctx, workspace.DevWorkspace)
 		if err == nil {
 			metrics.WorkspaceStarted(workspace, reqLogger)
 		}
@@ -239,7 +239,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	if _, ok := clusterWorkspace.Annotations[constants.DevWorkspaceStopReasonAnnotation]; ok {
 		delete(clusterWorkspace.Annotations, constants.DevWorkspaceStopReasonAnnotation)
-		err = r.Update(context.TODO(), clusterWorkspace)
+		err = r.Update(context.TODO(), clusterWorkspace.DevWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}
 
@@ -285,7 +285,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
 	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) {
 		coputil.AddFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer)
-		if err := r.Update(ctx, clusterWorkspace); err != nil {
+		if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -415,7 +415,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	if wsprovision.NeedsServiceAccountFinalizer(&workspace.Spec.Template) {
 		coputil.AddFinalizer(clusterWorkspace, constants.ServiceAccountCleanupFinalizer)
-		if err := r.Update(ctx, clusterWorkspace); err != nil {
+		if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -578,7 +578,7 @@ func (r *DevWorkspaceReconciler) syncTimingToCluster(
 				workspace.Annotations[timingEvent] = timestamp
 			}
 		}
-		if err := r.Update(ctx, workspace); err != nil {
+		if err := r.Update(ctx, workspace.DevWorkspace); err != nil {
 			if k8sErrors.IsConflict(err) {
 				reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")
 			} else {
@@ -600,7 +600,7 @@ func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
 	}
 
 	workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation] = timing.CurrentTime()
-	if err := r.Update(ctx, workspace); err != nil {
+	if err := r.Update(ctx, workspace.DevWorkspace); err != nil {
 		if k8sErrors.IsConflict(err) {
 			reqLogger.Info("Got conflict when trying to apply started-at annotations to workspace")
 		} else {
@@ -615,7 +615,7 @@ func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
 		workspace.Annotations = map[string]string{}
 	}
 	delete(workspace.Annotations, constants.DevWorkspaceStartedAtAnnotation)
-	if err := r.Update(ctx, workspace); err != nil {
+	if err := r.Update(ctx, workspace.DevWorkspace); err != nil {
 		if k8sErrors.IsConflict(err) {
 			reqLogger.Info("Got conflict when trying to apply timing annotations to workspace")
 		} else {

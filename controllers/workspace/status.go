@@ -78,7 +78,7 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *common.DevWork
 		workspace.Status.Message = infoMessage
 	}
 
-	err := r.Status().Update(context.TODO(), workspace)
+	err := r.Status().Update(context.TODO(), workspace.DevWorkspace)
 	if err != nil {
 		if k8sErrors.IsConflict(err) {
 			logger.Info("Failed to update workspace status due to conflict; retrying")
@@ -152,7 +152,7 @@ func syncWorkspaceMainURL(workspace *common.DevWorkspaceWithConfig, exposedEndpo
 		return true, nil
 	}
 	workspace.Status.MainUrl = mainUrl
-	err = clusterAPI.Client.Status().Update(context.TODO(), workspace)
+	err = clusterAPI.Client.Status().Update(context.TODO(), workspace.DevWorkspace)
 	return false, err
 }
 

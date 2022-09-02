@@ -138,7 +138,7 @@ func getSpecRouting(
 			},
 		},
 	}
-	err := controllerutil.SetControllerReference(workspace, routing, scheme)
+	err := controllerutil.SetControllerReference(workspace.DevWorkspace, routing, scheme)
 	if err != nil {
 		return nil, err
 	}

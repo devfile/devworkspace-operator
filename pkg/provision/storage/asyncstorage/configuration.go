@@ -50,7 +50,7 @@ func GetOrCreateSSHConfig(workspace *common.DevWorkspaceWithConfig, clusterAPI s
 			return nil, nil, err
 		}
 		specSecret := getSSHSidecarSecretSpec(workspace, privateKey)
-		err := controllerutil.SetControllerReference(workspace, specSecret, clusterAPI.Scheme)
+		err := controllerutil.SetControllerReference(workspace.DevWorkspace, specSecret, clusterAPI.Scheme)
 		if err != nil {
 			return nil, nil, err
 		}

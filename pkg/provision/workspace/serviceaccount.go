@@ -65,7 +65,7 @@ func SyncServiceAccount(
 		}
 	}
 
-	err := controllerutil.SetControllerReference(workspace, specSA, clusterAPI.Scheme)
+	err := controllerutil.SetControllerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme)
 	if err != nil {
 		return ServiceAcctProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{

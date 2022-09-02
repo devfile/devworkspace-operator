@@ -17,9 +17,10 @@ package asyncstorage
 
 import (
 	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -27,13 +28,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1.ConfigMap, pvcName string, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
-	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(namespace, clusterAPI)
+func SyncWorkspaceSyncDeploymentToCluster(workspace *common.DevWorkspaceWithConfig, sshConfigMap *corev1.ConfigMap, pvcName string, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
+	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
 
-	specDeployment := getWorkspaceSyncDeploymentSpec(namespace, sshConfigMap, pvcName, podTolerations, nodeSelector)
+	specDeployment := getWorkspaceSyncDeploymentSpec(workspace, sshConfigMap, pvcName, podTolerations, nodeSelector)
 	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
 	switch err.(type) {
 	case nil:
@@ -54,7 +55,7 @@ func SyncWorkspaceSyncDeploymentToCluster(namespace string, sshConfigMap *corev1
 }
 
 func getWorkspaceSyncDeploymentSpec(
-	namespace string,
+	workspace *common.DevWorkspaceWithConfig,
 	sshConfigMap *corev1.ConfigMap,
 	pvcName string,
 	tolerations []corev1.Toleration,
@@ -64,10 +65,17 @@ func getWorkspaceSyncDeploymentSpec(
 	terminationGracePeriod := int64(1)
 	modeReadOnly := int32(0640)
 
+	var securityContext *corev1.PodSecurityContext
+	if infrastructure.IsOpenShift() {
+		securityContext = &corev1.PodSecurityContext{}
+	} else {
+		securityContext = workspace.Config.Workspace.PodSecurityContext
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      asyncServerDeploymentName,
-			Namespace: namespace,
+			Namespace: workspace.Namespace,
 			Labels:    asyncServerLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -81,7 +89,7 @@ func getWorkspaceSyncDeploymentSpec(
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "async-storage-server",
-					Namespace: namespace,
+					Namespace: workspace.Namespace,
 					Labels:    asyncServerLabels,
 				},
 				Spec: corev1.PodSpec{
@@ -147,7 +155,7 @@ func getWorkspaceSyncDeploymentSpec(
 						},
 					},
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					SecurityContext:               wsprovision.GetDevWorkspaceSecurityContext(),
+					SecurityContext:               securityContext,
 					AutomountServiceAccountToken:  nil,
 				},
 			},

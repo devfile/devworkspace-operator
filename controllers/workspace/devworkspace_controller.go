@@ -290,7 +290,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
-	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspace.Spec.Template)
+	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(&workspace.Spec.Template, workspace.Config.Workspace.ImagePullPolicy)
 	if err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 	}
@@ -301,7 +301,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Add init container to clone projects
-	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template); err != nil {
+	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, workspace.Config.Workspace.ImagePullPolicy); err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 	} else if projectClone != nil {
 		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)

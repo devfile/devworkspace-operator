@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func convertContainerToK8s(devfileComponent dw.Component) (*v1.Container, error) {
+func convertContainerToK8s(devfileComponent dw.Component, pullPolicy string) (*v1.Container, error) {
 	if devfileComponent.Container == nil {
 		return nil, fmt.Errorf("cannot get k8s container from non-container component")
 	}
@@ -47,7 +47,7 @@ func convertContainerToK8s(devfileComponent dw.Component) (*v1.Container, error)
 		Ports:           devfileEndpointsToContainerPorts(devfileContainer.Endpoints),
 		Env:             devfileEnvToContainerEnv(devfileComponent.Name, devfileContainer.Env),
 		VolumeMounts:    devfileVolumeMountsToContainerVolumeMounts(devfileContainer.VolumeMounts),
-		ImagePullPolicy: v1.PullPolicy(workspace.Config.Workspace.ImagePullPolicy),
+		ImagePullPolicy: v1.PullPolicy(pullPolicy),
 	}
 
 	return container, nil

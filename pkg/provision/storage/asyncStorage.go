@@ -94,6 +94,9 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		return err
 	}
 
+	if pvcName == "" {
+		pvcName = workspace.Config.Workspace.PVCName
+	}
 	pvcTerminating, err := checkPVCTerminating(pvcName, workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
@@ -106,7 +109,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 
 	if pvcName != "" {
 		// Create common PVC if needed
-		clusterPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
+		clusterPVC, err := syncCommonPVC(workspace.Namespace, workspace.Config, clusterAPI)
 		if err != nil {
 			return err
 		}
@@ -114,7 +117,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	}
 
 	// Create async server deployment
-	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace.Namespace, configmap, pvcName, clusterAPI)
+	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace, configmap, pvcName, clusterAPI)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
 			return &NotReadyError{

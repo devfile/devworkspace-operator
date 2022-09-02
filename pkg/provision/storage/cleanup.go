@@ -20,6 +20,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -35,7 +36,6 @@ import (
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -92,7 +92,8 @@ func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI
 		}
 	}
 
-	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}, clusterAPI)
+	jobLabels := k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}
+	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, jobLabels, workspace.Config.Workspace.IgnoredUnrecoverableEvents, clusterAPI)
 	if err != nil {
 		return &ProvisioningError{
 			Err: err,
@@ -133,6 +134,13 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 		jobLabels[constants.DevWorkspaceRestrictedAccessAnnotation] = restrictedAccess
 	}
 
+	var securityContext *corev1.PodSecurityContext
+	if infrastructure.IsOpenShift() {
+		securityContext = &corev1.PodSecurityContext{}
+	} else {
+		securityContext = workspace.Config.Workspace.PodSecurityContext
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.PVCCleanupJobName(workspaceId),
@@ -148,7 +156,7 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:   "Never",
-					SecurityContext: wsprovision.GetDevWorkspaceSecurityContext(),
+					SecurityContext: securityContext,
 					Volumes: []corev1.Volume{
 						{
 							Name: pvcName,

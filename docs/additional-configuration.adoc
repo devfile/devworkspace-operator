@@ -156,6 +156,33 @@ Note: As for automatically mounting secrets, it is necessary to apply the `contr
 
 This will mount a file `/tmp/.git-credentials/credentials` in all workspace containers, and construct a git config to use this file as a credentials store. The mount path specified by the `controller.devfile.io/mount-path` annotation can by omitted, in which case `/` is used (mounting a file `/credentials`).
 
+## Setting an alternate configuration for a workspace
+It is possible to configure a workspace to use an alternate DevWorkspaceOperatorConfig.
+In order to do so, the alternate DevWorkspaceOperatorConfig must exist on the cluster, and the `controller.devfile.io/devworkspace-config` workspace attribute must be set.
+The `controller.devfile.io/devworkspace-config` attribute takes two string fields: `name` and `namespace`.
+
+* `name`: the `metadata.name` of the alternate DevWorkspaceOperatorConfig.
+* `namespace`: the `metadata.namespace` of the alternate DevWorkspaceOperatorConfig.
+
+[source,yaml]
+----
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: my-workspace
+spec:
+  template:
+    attributes:
+      controller.devfile.io/devworkspace-config:
+        name: <string>
+        namespace: <string>
+----
+
+*Note:* the alternate DevWorkspaceOperatorConfig will be 
+merged with the default DevWorkspaceOperatorConfig, overriding 
+fields in the default configuration. Fields unset in the overridden 
+configuration will use the global values.
+
 ## Debugging a failing workspace
 Normally, when a workspace fails to start, the deployment will be scaled down and the workspace will be stopped in a `Failed` state. This can make it difficult to debug misconfiguration errors, so the annotation `controller.devfile.io/debug-start: "true"` can be applied to DevWorkspaces to leave resources for failed workspaces on the cluster. This allows viewing logs from workspace containers.
 

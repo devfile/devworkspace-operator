@@ -32,13 +32,15 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 	if err != nil {
 		return nil, err
 	}
-	if len(credentialsSecrets) == 0 && len(tlsConfigMaps) == 0 {
-		// Remove any existing git configuration
-		err := cleanupGitConfig(api, namespace)
-		return nil, err
-	}
+
 	baseGitConfig, err := findGitconfigAutomount(api, namespace)
 	if err != nil {
+		return nil, err
+	}
+
+	if len(credentialsSecrets) == 0 && len(tlsConfigMaps) == 0 && baseGitConfig == nil {
+		// Remove any existing git configuration
+		err := cleanupGitConfig(api, namespace)
 		return nil, err
 	}
 

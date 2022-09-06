@@ -297,12 +297,12 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 	}
 }
 
-func GetCurrentConfigString() string {
-	if internalConfig == nil {
+func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string {
+	if currConfig == nil {
 		return ""
 	}
 
-	routing := internalConfig.Routing
+	routing := currConfig.Routing
 	var config []string
 	if routing != nil {
 		if routing.ClusterHostSuffix != "" && routing.ClusterHostSuffix != defaultConfig.Routing.ClusterHostSuffix {
@@ -312,7 +312,7 @@ func GetCurrentConfigString() string {
 			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", routing.DefaultRoutingClass))
 		}
 	}
-	workspace := internalConfig.Workspace
+	workspace := currConfig.Workspace
 	if workspace != nil {
 		if workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
 			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", workspace.ImagePullPolicy))
@@ -342,7 +342,7 @@ func GetCurrentConfigString() string {
 			config = append(config, "workspace.defaultTemplate is set")
 		}
 	}
-	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {
+	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {
 		config = append(config, "enableExperimentalFeatures=true")
 	}
 	if len(config) == 0 {
@@ -354,7 +354,7 @@ func GetCurrentConfigString() string {
 
 // logCurrentConfig formats the current operator configuration as a plain string
 func logCurrentConfig() {
-	currConfig := GetCurrentConfigString()
+	currConfig := GetCurrentConfigString(internalConfig)
 	if len(currConfig) == 0 {
 		log.Info("Updated config to [(default config)]")
 	} else {

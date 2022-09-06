@@ -128,7 +128,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		reqLogger.Error(err, "Error applying external DevWorkspace-Operator configuration")
 		config = wkspConfig.GetGlobalConfig()
 	}
-	configString := wkspConfig.GetCurrentConfigString()
+	configString := wkspConfig.GetCurrentConfigString(config)
 	workspace := &common.DevWorkspaceWithConfig{}
 	workspace.DevWorkspace = rawWorkspace
 	workspace.Config = config

@@ -53,7 +53,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		return nil
 	}
 
-	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	usingAlternatePVC, pvcName, err := checkForAlternatePVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		}
 	}
 
-	if pvcName == "" {
+	if !usingAlternatePVC {
 		commonPVC, err := syncCommonPVC(workspace.Namespace, workspace.Config, clusterAPI)
 		if err != nil {
 			return err

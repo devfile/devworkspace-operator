@@ -117,7 +117,7 @@ func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI
 func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.DevWorkspaceId
 
-	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	_, pvcName, err := checkForAlternatePVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}

@@ -219,21 +219,22 @@ func processProjectsVolume(workspace *dw.DevWorkspaceTemplateSpec) (projectsComp
 	return
 }
 
-// checkForExistingCommonPVC checks the current namespace for existing PVCs that may be used for workspace storage. If
+// checkForAlternatePVC checks the current namespace for existing PVCs that may be used for workspace storage. If
 // such a PVC is found, its name is returned and should be used in place of the configured common PVC. If no suitable
 // PVC is found, the returned PVC name is an empty string and a nil error is returned. If an error occurs during the lookup,
 // then an empty string is returned as well as the error.
-func checkForExistingCommonPVC(namespace string, api sync.ClusterAPI) (string, error) {
+// Currently, the only alternate PVC that can be used is named `claim-che-workspace`.
+func checkForAlternatePVC(namespace string, api sync.ClusterAPI) (exists bool, name string, err error) {
 	existingPVC := &corev1.PersistentVolumeClaim{}
 	namespacedName := types.NamespacedName{Name: constants.CheCommonPVCName, Namespace: namespace}
-	err := api.Client.Get(api.Ctx, namespacedName, existingPVC)
+	err = api.Client.Get(api.Ctx, namespacedName, existingPVC)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return "", nil
+			return false, "", nil
 		}
-		return "", err
+		return false, "", err
 	}
-	return existingPVC.Name, nil
+	return true, existingPVC.Name, nil
 }
 
 // getSharedPVCWorkspaceCount returns the total number of workspaces which are using a shared PVC

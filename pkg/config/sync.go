@@ -314,6 +314,7 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 	}
 	workspace := currConfig.Workspace
 	if workspace != nil {
+		// Don't include PodSecurityContext for now as it's less easy to compare
 		if workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
 			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", workspace.ImagePullPolicy))
 		}
@@ -326,9 +327,15 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		if workspace.IdleTimeout != defaultConfig.Workspace.IdleTimeout {
 			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", workspace.IdleTimeout))
 		}
+		if workspace.ProgressTimeout != "" && workspace.ProgressTimeout != defaultConfig.Workspace.ProgressTimeout {
+			config = append(config, fmt.Sprintf("workspace.progressTimeout=%s", workspace.ProgressTimeout))
+		}
 		if workspace.IgnoredUnrecoverableEvents != nil {
 			config = append(config, fmt.Sprintf("workspace.ignoredUnrecoverableEvents=%s",
 				strings.Join(workspace.IgnoredUnrecoverableEvents, ";")))
+		}
+		if workspace.CleanupOnStop != nil && *workspace.CleanupOnStop != *defaultConfig.Workspace.CleanupOnStop {
+			config = append(config, fmt.Sprintf("workspace.cleanupOnStop=%t", *workspace.CleanupOnStop))
 		}
 		if workspace.DefaultStorageSize != nil {
 			if workspace.DefaultStorageSize.Common != nil && workspace.DefaultStorageSize.Common.String() != defaultConfig.Workspace.DefaultStorageSize.Common.String() {

@@ -123,9 +123,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{}, err
 	}
 
+	reconcileStatus := currentStatus{}
 	config, err := wkspConfig.ResolveConfigForWorkspace(rawWorkspace, clusterAPI.Client)
 	if err != nil {
-		reqLogger.Error(err, "Error applying external DevWorkspace-Operator configuration")
+		reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, fmt.Sprint("Error applying external DevWorkspace-Operator configuration: ", err.Error()))
 		config = wkspConfig.GetGlobalConfig()
 	}
 	configString := wkspConfig.GetCurrentConfigString(config)
@@ -208,7 +209,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Prepare handling workspace status and condition
-	reconcileStatus := currentStatus{phase: dw.DevWorkspaceStatusStarting}
+	reconcileStatus.phase = dw.DevWorkspaceStatusStarting
 	reconcileStatus.setConditionTrue(conditions.Started, "DevWorkspace is starting")
 	clusterWorkspace := &common.DevWorkspaceWithConfig{}
 	clusterWorkspace.DevWorkspace = workspace.DevWorkspace.DeepCopy()
@@ -265,8 +266,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	if warnings != nil {
 		reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, flatten.FormatVariablesWarning(warnings))
-	} else {
-		reconcileStatus.setConditionFalse(conditions.DevWorkspaceWarning, "No warnings in processing DevWorkspace")
 	}
 	workspace.Spec.Template = *flattenedWorkspace
 	reconcileStatus.setConditionTrue(conditions.DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")

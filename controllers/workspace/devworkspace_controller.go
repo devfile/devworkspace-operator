@@ -27,7 +27,6 @@ import (
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
@@ -691,7 +690,7 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 
 	// TODO: Label PVCs used for workspace storage so that they can be cleaned up if non-default name is used.
 	// Otherwise, check if common PVC is deleted to make sure all DevWorkspaces see it happen
-	if obj.GetName() != config.GetGlobalConfig().Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
+	if obj.GetName() != wkspConfig.GetGlobalConfig().Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
 		// We're looking for a deleted common PVC
 		return []reconcile.Request{}
 	}
@@ -717,7 +716,7 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	setupHttpClients()
 
-	maxConcurrentReconciles, err := config.GetMaxConcurrentReconciles()
+	maxConcurrentReconciles, err := wkspConfig.GetMaxConcurrentReconciles()
 	if err != nil {
 		return err
 	}
@@ -726,7 +725,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return []reconcile.Request{}
 	}
 
-	var configWatcher builder.WatchesOption = builder.WithPredicates(config.Predicates())
+	var configWatcher builder.WatchesOption = builder.WithPredicates(wkspConfig.Predicates())
 
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
 	return ctrl.NewControllerManagedBy(mgr).

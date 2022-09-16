@@ -117,7 +117,10 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 			// Allow switching from ephemeral to a persistent storage type
 			break
 		case oldStorageType == "" && (newStorageType == constants.CommonStorageClassType || newStorageType == constants.PerUserStorageClassType):
-			// Allow switching to per-user or common persistent storage type if the oldStorageType is empty (if empty, the common PVC strategy is used by design)
+			// Allow switching to per-user or common persistent storage type if the oldStorageType is empty (if empty, the common / per-user PVC strategy is used by design)
+			break
+		case newStorageType == "" && (oldStorageType == constants.CommonStorageClassType || oldStorageType == constants.PerUserStorageClassType):
+			// Allow removing storage type attribute if the oldStorageType is per-user or common (if empty, the common / per-user PVC strategy is used by design)
 			break
 		case (oldStorageType == constants.CommonStorageClassType && newStorageType == constants.PerUserStorageClassType) || (oldStorageType == constants.PerUserStorageClassType && newStorageType == constants.CommonStorageClassType):
 			// Allow switching between common and per-user persistent storage type for legacy compatibility

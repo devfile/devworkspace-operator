@@ -107,32 +107,33 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 		return admission.Denied("DevWorkspace ID cannot be changed once it is set")
 	}
 
-	oldStorageType := oldWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-	newStorageType := newWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	// TODO: re-enable webhooks for storageClass once handling is improved.
+	// oldStorageType := oldWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	// newStorageType := newWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
 
-	// Prevent switching storage type when it could risk orphaning data in a PVC (e.g. switching from common to ephemeral)
-	if oldStorageType != newStorageType {
-		switch {
-		case oldStorageType == constants.EphemeralStorageClassType:
-			// Allow switching from ephemeral to a persistent storage type
-			break
-		case oldStorageType == "" && (newStorageType == constants.CommonStorageClassType || newStorageType == constants.PerUserStorageClassType):
-			// Allow switching to per-user or common persistent storage type if the oldStorageType is empty (if empty, the common / per-user PVC strategy is used by design)
-			break
-		case newStorageType == "" && (oldStorageType == constants.CommonStorageClassType || oldStorageType == constants.PerUserStorageClassType):
-			// Allow removing storage type attribute if the oldStorageType is per-user or common (if empty, the common / per-user PVC strategy is used by design)
-			break
-		case (oldStorageType == constants.CommonStorageClassType && newStorageType == constants.PerUserStorageClassType) || (oldStorageType == constants.PerUserStorageClassType && newStorageType == constants.CommonStorageClassType):
-			// Allow switching between common and per-user persistent storage type for legacy compatibility
-			break
-		case !hasFinalizer(oldWksp, constants.StorageCleanupFinalizer) && !hasFinalizer(newWksp, constants.StorageCleanupFinalizer):
-			// If finalizer is not set, the workspace does not use storage yet and so can safely switch (e.g. a workspace was created
-			// with `started: false` and then edited)
-			break
-		default:
-			return admission.Denied("DevWorkspace storage-type attribute cannot be changed once the workspace has been created.")
-		}
-	}
+	// // Prevent switching storage type when it could risk orphaning data in a PVC (e.g. switching from common to ephemeral)
+	// if oldStorageType != newStorageType {
+	// 	switch {
+	// 	case oldStorageType == constants.EphemeralStorageClassType:
+	// 		// Allow switching from ephemeral to a persistent storage type
+	// 		break
+	// 	case oldStorageType == "" && (newStorageType == constants.CommonStorageClassType || newStorageType == constants.PerUserStorageClassType):
+	// 		// Allow switching to per-user or common persistent storage type if the oldStorageType is empty (if empty, the common / per-user PVC strategy is used by design)
+	// 		break
+	// 	case newStorageType == "" && (oldStorageType == constants.CommonStorageClassType || oldStorageType == constants.PerUserStorageClassType):
+	// 		// Allow removing storage type attribute if the oldStorageType is per-user or common (if empty, the common / per-user PVC strategy is used by design)
+	// 		break
+	// 	case (oldStorageType == constants.CommonStorageClassType && newStorageType == constants.PerUserStorageClassType) || (oldStorageType == constants.PerUserStorageClassType && newStorageType == constants.CommonStorageClassType):
+	// 		// Allow switching between common and per-user persistent storage type for legacy compatibility
+	// 		break
+	// 	case !hasFinalizer(oldWksp, constants.StorageCleanupFinalizer) && !hasFinalizer(newWksp, constants.StorageCleanupFinalizer):
+	// 		// If finalizer is not set, the workspace does not use storage yet and so can safely switch (e.g. a workspace was created
+	// 		// with `started: false` and then edited)
+	// 		break
+	// 	default:
+	// 		return admission.Denied("DevWorkspace storage-type attribute cannot be changed once the workspace has been created.")
+	// 	}
+	// }
 
 	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha2(oldWksp, newWksp, req.UserInfo.UID)
 	if !allowed {

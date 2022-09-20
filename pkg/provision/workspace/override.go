@@ -14,18 +14,18 @@
 package workspace
 
 import (
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
-func needsPodSpecOverrides(workspace *dw.DevWorkspace) bool {
+func needsPodSpecOverrides(workspace *common.DevWorkspaceWithConfig) bool {
 	return workspace.Spec.PodSpecOverrides != nil
 }
 
-func applyPodSpecOverrides(deployment *appsv1.Deployment, workspace *dw.DevWorkspace) (*appsv1.Deployment, error) {
+func applyPodSpecOverrides(deployment *appsv1.Deployment, workspace *common.DevWorkspaceWithConfig) (*appsv1.Deployment, error) {
 	patched := deployment.DeepCopy()
 
 	originalBytes, err := json.Marshal(patched.Spec.Template)

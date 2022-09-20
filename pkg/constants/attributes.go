@@ -99,4 +99,8 @@ const (
 	// present on a container component, any container contributions will be merged into that container. If multiple
 	// container components have the merge-contribution attribute, the first one will be used and all others ignored.
 	MergeContributionAttribute = "controller.devfile.io/merge-contribution"
+
+	// MergedContributionsAttribute is applied as an attribute onto a component to list the components from the unflattened
+	// DevWorkspace that have been merged into the current component. The contributions are listed in a comma-separated list.
+	MergedContributionsAttribute = "controller.devfile.io/merged-contributions"
 )

@@ -77,9 +77,9 @@ _check_controller_running:
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _check_cert_manager _init_devworkspace_crds _create_namespace generate_deployment
   ifeq ($(PLATFORM),kubernetes)
-	  $(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml
+	  $(K8S_CLI) apply -f deploy/current/kubernetes/combined.yaml --server-side=true --force-conflicts
   else
-	  $(K8S_CLI) apply -f deploy/current/openshift/combined.yaml
+	  $(K8S_CLI) apply -f deploy/current/openshift/combined.yaml --server-side=true --force-conflicts
   endif
   # Can't pipe into $(K8S_CLI) as stdin is closed.
 	cat deploy/default-config.yaml | envsubst > deploy/default-config.temp.yaml

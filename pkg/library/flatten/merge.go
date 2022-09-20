@@ -18,8 +18,10 @@ package flatten
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/attributes"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -161,7 +163,6 @@ func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) err
 			if err != nil {
 				return fmt.Errorf("failed to merge container contributions: %w", err)
 			}
-			delete(mergedComponent.Attributes, constants.ContainerContributionAttribute)
 			newComponents = append(newComponents, *mergedComponent)
 			mergeDone = true
 		} else {
@@ -186,9 +187,11 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 	}
 
 	// We don't want to reimplement the complexity of a strategic merge here, so we set up a fake plugin override
-	// and use devfile/api overriding functionality. For specific fields that have to be handled specifically (memory
+	// and use devfile/api overriding functionality. For specific fields that have to be handled specially (memory
 	// and cpu limits, we compute the value separately and set it at the end
 	var toMerge []dw.ComponentPluginOverride
+	// Store names of original plugins to allow us to generate the merged-contributions attribute
+	var mergedComponentNames []string
 	for _, component := range contributions {
 		if component.Container == nil {
 			return nil, fmt.Errorf("attempting to merge container contribution from a non-container component")
@@ -197,6 +200,11 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 		component.Name = mergeInto.Name
 		// Unset image to avoid overriding the default image
 		component.Container.Image = ""
+		// Store original source attribute's value and remove from component
+		if component.Attributes.Exists(constants.PluginSourceAttribute) {
+			mergedComponentNames = append(mergedComponentNames, component.Attributes.GetString(constants.PluginSourceAttribute, nil))
+			delete(component.Attributes, constants.PluginSourceAttribute)
+		}
 		if err := addResourceRequirements(totalResources, &component); err != nil {
 			return nil, err
 		}
@@ -232,6 +240,13 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 
 	mergedComponent := mergedSpecContent.Components[0]
 	applyResourceRequirementsToComponent(mergedComponent.Container, totalResources)
+
+	if mergedComponent.Attributes == nil {
+		mergedComponent.Attributes = attributes.Attributes{}
+	}
+	mergedComponent.Attributes.PutString(constants.MergedContributionsAttribute, strings.Join(mergedComponentNames, ","))
+	delete(mergedComponent.Attributes, constants.MergeContributionAttribute)
+	delete(mergedComponent.Attributes, constants.ContainerContributionAttribute)
 
 	return &mergedComponent, nil
 }

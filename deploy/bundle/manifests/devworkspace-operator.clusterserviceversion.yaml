@@ -489,6 +489,7 @@ spec:
     name: async_storage_server
   - image: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
     name: async_storage_sidecar
+  replaces: devworkspace-operator.v0.15.3
   version: 0.16.0
   webhookdefinitions:
   - admissionReviewVersions:

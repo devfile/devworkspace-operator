@@ -54,6 +54,10 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnCreate(ctx context.Context, re
 		return admission.Denied(err.Error())
 	}
 
+	if err := h.validateKubernetesObjectPermissionsOnCreate(ctx, req, wksp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
 	if warnings := checkUnsupportedFeatures(wksp.Spec.Template); unsupportedWarningsPresent(warnings) {
 		return h.returnPatched(req, wksp).WithWarnings(formatUnsupportedFeaturesWarning(warnings))
 	}
@@ -151,6 +155,10 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 	}
 
 	if err := h.validateUserPermissions(ctx, req, newWksp, oldWksp); err != nil {
+		return admission.Denied(err.Error())
+	}
+
+	if err := h.validateKubernetesObjectPermissionsOnUpdate(ctx, req, newWksp, oldWksp); err != nil {
 		return admission.Denied(err.Error())
 	}
 

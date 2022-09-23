@@ -123,21 +123,37 @@ func mergeVolume(into, from *dw.VolumeComponent) error {
 	return nil
 }
 
-func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec) bool {
+// needsContainerContributionMerge returns whether merging container contributions is necessary for this workspace. Merging
+// is necessary if at least one component has the merge-contribution: true attribute and at least one component has the
+// container-contribution: true attribute. If either attribute is present but cannot be parsed as a bool, an error is returned.
+func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec) (bool, error) {
 	hasContribution, hasTarget := false, false
+	var errHolder error
 	for _, component := range flattenedSpec.Components {
 		if component.Container == nil {
 			// Ignore attribute on non-container components as it's not clear what this would mean
 			continue
 		}
-		if component.Attributes.GetBoolean(constants.ContainerContributionAttribute, nil) {
-			hasContribution = true
+		// Need to check existence before value to avoid potential KeyNotFoundError
+		if component.Attributes.Exists(constants.ContainerContributionAttribute) {
+			if component.Attributes.GetBoolean(constants.ContainerContributionAttribute, &errHolder) {
+				hasContribution = true
+			}
+			if errHolder != nil {
+				// Don't include error in message as it will be propagated to user and is not very clear (references Go unmarshalling)
+				return false, fmt.Errorf("failed to parse %s attribute on component %s as true or false", constants.ContainerContributionAttribute, component.Name)
+			}
 		}
-		if component.Attributes.GetBoolean(constants.MergeContributionAttribute, nil) {
-			hasTarget = true
+		if component.Attributes.Exists(constants.MergeContributionAttribute) {
+			if component.Attributes.GetBoolean(constants.MergeContributionAttribute, &errHolder) {
+				hasTarget = true
+			}
+			if errHolder != nil {
+				return false, fmt.Errorf("failed to parse %s attribute on component %s as true or false", constants.MergeContributionAttribute, component.Name)
+			}
 		}
 	}
-	return hasContribution && hasTarget
+	return hasContribution && hasTarget, nil
 }
 
 func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) error {

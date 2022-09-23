@@ -64,10 +64,12 @@ func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling Resolve
 		return resolvedDW, &warnings, nil
 	}
 
-	if needsContainerContributionMerge(resolvedDW) {
+	if needsMerge, err := needsContainerContributionMerge(resolvedDW); needsMerge {
 		if err := mergeContainerContributions(resolvedDW); err != nil {
 			return nil, nil, err
 		}
+	} else if err != nil {
+		return nil, nil, err
 	}
 
 	return resolvedDW, nil, nil

@@ -82,6 +82,8 @@ func createObjectGeneric(specObj crclient.Object, api ClusterAPI) error {
 		// Need to try to update the object to address an edge case where removing a labelselector
 		// results in the object not being tracked by the controller's cache.
 		return updateObjectGeneric(specObj, nil, api)
+	case k8sErrors.IsForbidden(err):
+		fallthrough
 	case k8sErrors.IsInvalid(err):
 		return &UnrecoverableSyncError{err}
 	default:
@@ -108,6 +110,8 @@ func updateObjectGeneric(specObj, clusterObj crclient.Object, api ClusterAPI) er
 	case k8sErrors.IsConflict(err), k8sErrors.IsNotFound(err):
 		// Need to catch IsNotFound here because we attempt to update when creation fails with AlreadyExists
 		return NewNotInSync(specObj, NeedRetryReason)
+	case k8sErrors.IsForbidden(err):
+		fallthrough
 	case k8sErrors.IsInvalid(err):
 		return &UnrecoverableSyncError{err}
 	default:

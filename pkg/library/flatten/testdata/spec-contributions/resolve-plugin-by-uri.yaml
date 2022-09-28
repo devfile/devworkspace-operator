@@ -1,0 +1,26 @@
+name: "DevWorkspace references plugin by URI"
+
+input:
+  contributions:
+    - name: test-plugin
+      uri: "https://my-plugin.io/test"
+  devfileResources:
+    "https://my-plugin.io/test":
+      schemaVersion: 2.0.0
+      metadata:
+        name: "plugin-a"
+      components:
+        - name: plugin-a
+          container:
+            name: test-container
+            image: test-image
+
+output:
+  devworkspace:
+    components:
+      - name: plugin-a
+        attributes:
+          controller.devfile.io/imported-by: "test-plugin"
+        container:
+          name: test-container
+          image: test-image

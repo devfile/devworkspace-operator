@@ -1,0 +1,12 @@
+name: "Plugin not found in at URI"
+
+input:
+  contributions:
+    - name: test-plugin
+      uri: "https://test-registry.io/notfound"
+  errors:
+    "https://test-registry.io/notfound":
+      statusCode: 404
+
+output:
+  errRegexp: "could not fetch file from.*got status 404"

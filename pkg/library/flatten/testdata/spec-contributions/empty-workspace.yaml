@@ -1,0 +1,7 @@
+name: "Workspace that defines no contributions or components"
+
+input:
+  devworkspace: {}
+
+output:
+  devworkspace: {}

@@ -1,0 +1,27 @@
+name: "Component conflicts with plugin component"
+
+input:
+  devworkspace:
+    components:
+      - name: my-component
+        container:
+          image: test-image
+  contributions:
+    - name: "component-conflict"
+      kubernetes:
+        name: test-plugin
+
+  devworkspaceResources:
+    test-plugin:
+      metadata:
+        name: test-plugin
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
+      spec:
+        components:
+          - name: my-component
+            container:
+              image: test-image
+
+output:
+  errRegexp: "Some Components are already defined in plugin '.*': my-component.*"

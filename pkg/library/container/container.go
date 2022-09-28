@@ -44,7 +44,7 @@ import (
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
 func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, pullPolicy string) (*v1alpha1.PodAdditions, error) {
-	if !flatten.DevWorkspaceIsFlattened(workspace) {
+	if !flatten.DevWorkspaceIsFlattened(workspace, nil) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}
 	podAdditions := &v1alpha1.PodAdditions{}

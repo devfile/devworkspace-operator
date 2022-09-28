@@ -17,14 +17,24 @@ package flatten
 
 import dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
-func DevWorkspaceIsFlattened(devworkspace *dw.DevWorkspaceTemplateSpec) bool {
+func DevWorkspaceIsFlattened(devworkspace *dw.DevWorkspaceTemplateSpec, contributions []dw.ComponentContribution) bool {
+	if devworkspace == nil {
+		return len(contributions) == 0
+	}
+
 	if devworkspace.Parent != nil {
 		return false
 	}
+
+	if len(contributions) > 0 {
+		return false
+	}
+
 	for _, component := range devworkspace.Components {
 		if component.Plugin != nil {
 			return false
 		}
 	}
+
 	return true
 }

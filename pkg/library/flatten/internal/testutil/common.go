@@ -54,7 +54,10 @@ type TestCase struct {
 }
 
 type TestInput struct {
+	// DevWorkspace is the .spec.template field of a DevWorkspace
 	DevWorkspace *dw.DevWorkspaceTemplateSpec `json:"devworkspace,omitempty"`
+	// Contributions is the .spec.containerContributions field of a DevWorkspace
+	Contributions []dw.ComponentContribution `json:"contributions,omitempty"`
 	// DevWorkspaceResources is a map of string keys to devworkspace templates
 	DevWorkspaceResources map[string]dw.DevWorkspaceTemplate `json:"devworkspaceResources,omitempty"`
 	// DevfileResources is a map of string keys to devfile resources

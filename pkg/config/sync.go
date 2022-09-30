@@ -96,6 +96,13 @@ func GetConfigForTesting(customConfig *controller.OperatorConfiguration) *contro
 	return testConfig
 }
 
+func SetGlobalConfigForTesting(testConfig *controller.OperatorConfiguration) {
+	configMutex.Lock()
+	defer configMutex.Unlock()
+	internalConfig = defaultConfig.DeepCopy()
+	mergeConfig(testConfig, internalConfig)
+}
+
 func SetupControllerConfig(client crclient.Client) error {
 	if internalConfig != nil {
 		return fmt.Errorf("internal controller configuration is already set up")

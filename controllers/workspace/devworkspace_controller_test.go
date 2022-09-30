@@ -351,7 +351,6 @@ var _ = Describe("DevWorkspace Controller", func() {
 			gitCredentialsSecretName := "test-git-credentials"
 			gitCredentials := generateSecret(gitCredentialsSecretName, corev1.SecretTypeOpaque)
 			gitCredentials.Labels[constants.DevWorkspaceGitCredentialLabel] = "true"
-			gitCredentials.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/test/path"
 			gitCredentials.Data["credentials"] = []byte("https://username:pat@github.com")
 
 			createObject(gitCredentials)
@@ -382,7 +381,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			}
 			gitConfigVolumeMount := corev1.VolumeMount{
 				Name:      gitconfigVolumeName,
-				ReadOnly:  false,
+				ReadOnly:  true,
 				MountPath: "/etc/gitconfig",
 				SubPath:   "gitconfig",
 			}
@@ -399,8 +398,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			gitCredentialsVolumeMount := corev1.VolumeMount{
 				Name:      gitCredentialsVolumeName,
 				ReadOnly:  true,
-				MountPath: "/test/path/credentials",
-				SubPath:   "credentials",
+				MountPath: "/.git-credentials/",
 			}
 
 			volumes := deploy.Spec.Template.Spec.Volumes

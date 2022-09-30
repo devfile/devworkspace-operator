@@ -85,6 +85,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "deploy", "templates", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
+		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s", "1.24.2-linux-amd64"),
 	}
 
 	cfg, err := testEnv.Start()
@@ -114,8 +115,6 @@ var _ = BeforeSuite(func() {
 		NewCache: cacheFunc,
 	})
 	Expect(err).NotTo(HaveOccurred())
-	// Use default config
-	config.SetConfigForTesting(testControllerCfg)
 
 	nonCachingClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
@@ -125,6 +124,8 @@ var _ = BeforeSuite(func() {
 		return []string{ev.InvolvedObject.Name}
 	})
 	Expect(err).NotTo(HaveOccurred())
+
+	config.SetGlobalConfigForTesting(testControllerCfg)
 
 	// Don't set up DevWorkspaceRouting Reconciler so that we can manage routings
 

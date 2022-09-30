@@ -234,7 +234,7 @@ $(LOCALBIN):
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CONTROLLER_GEN_VERSION = v0.6.1
 ENVTEST ?= $(LOCALBIN)/setup-envtest
-ENVTEST_K8S_VERSION = 1.21.2
+ENVTEST_K8S_VERSION = 1.24.2
 
 ### controller-gen: Finds or downloads controller-gen
 # download controller-gen if necessary

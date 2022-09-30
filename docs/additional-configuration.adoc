@@ -156,6 +156,61 @@ Note: As for automatically mounting secrets, it is necessary to apply the `contr
 
 This will mount a file `/tmp/.git-credentials/credentials` in all workspace containers, and construct a git config to use this file as a credentials store. The mount path specified by the `controller.devfile.io/mount-path` annotation can by omitted, in which case `/` is used (mounting a file `/credentials`).
 
+## Configuring DevWorkspaces to use SSH keys for Git operations
+Git SSH keys can be configured for DevWorkspaces by mounting secrets to workspaces.
+
+Prerequisites:
+
+* An SSH keypair with _no passphrase_, with the public key uploaded to the Git provider that stores your repository.
+** The steps below assume the following environment variables are set:
+*** `$SSH_KEY`: path on disk to private key for SSH keypair (e.g. `~/.ssh/id_ed25519`)
+*** `$SSH_PUB_KEY`: path on disk to public key for SSH keypair (e.g. `~/.ssh/id_ed25519.pub`)
+*** `$NAMESPACE`: namespace where workspaces using the SSH keypair will be started.
+
+Process:
+
+1. Create a `ssh_config` file that will be mounted to `/etc/ssh/ssh_config` in workspaces to configure SSH to use the mounted keys:
++
+[source,bash]
+----
+cat <<EOF > /tmp/ssh_config
+host *
+  IdentityFile /etc/ssh/dwo_ssh_key
+  StrictHostKeyChecking = no
+EOF
+----
+
+2. Create a secret in the namespace where DevWorkspaces will be started that stores the SSH keypair and configuration
++
+[source,bash]
+----
+kubectl create secret -n "$NAMESPACE" generic git-ssh-key \
+  --from-file=dwo_ssh_key="$SSH_KEY" \
+  --from-file=dwo_ssh_key.pub="$SSH_PUB_KEY" \
+  --from-file=ssh_config=/tmp/ssh_config
+----
+
+3. Annotate the secret to configure automatic mounting to DevWorkspaces
++
+[source,bash]
+----
+kubectl patch secret -n "$NAMESPACE" git-ssh-key --type merge -p \
+  '{
+    "metadata": {
+      "labels": {
+        "controller.devfile.io/mount-to-devworkspace": "true",
+        "controller.devfile.io/watch-secret": "true"
+      },
+      "annotations": {
+        "controller.devfile.io/mount-path": "/etc/ssh/",
+        "controller.devfile.io/mount-as": "subpath"
+      }
+    }
+  }'
+----
++
+This will mount the files in the `git-ssh-key` secret to `/etc/ssh/`, creating files `/etc/ssh/dwo_ssh_key`, `/etc/ssh/dwo_ssh_key.pub` and overwrite file `/etc/ssh/ssh_config` with the file created in step 1.
+
 ## Setting an alternate configuration for a workspace
 It is possible to configure a workspace to use an alternate DevWorkspaceOperatorConfig.
 In order to do so, the alternate DevWorkspaceOperatorConfig must exist on the cluster, and the `controller.devfile.io/devworkspace-config` workspace attribute must be set.
@@ -178,9 +233,9 @@ spec:
         namespace: <string>
 ----
 
-*Note:* the alternate DevWorkspaceOperatorConfig will be 
-merged with the default DevWorkspaceOperatorConfig, overriding 
-fields in the default configuration. Fields unset in the overridden 
+*Note:* the alternate DevWorkspaceOperatorConfig will be
+merged with the default DevWorkspaceOperatorConfig, overriding
+fields in the default configuration. Fields unset in the overridden
 configuration will use the global values.
 
 ## Debugging a failing workspace

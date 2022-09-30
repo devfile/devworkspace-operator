@@ -89,8 +89,8 @@ spec:
   maintainers:
     - email: amisevsk@redhat.com
       name: Angel Misevski
-    - email: jpinkney@redhat.com
-      name: Josh Pinkney
+    - email: ibuziuk@redhat.com
+      name: Ilya Buziuk
   maturity: alpha
   provider:
     name: Devfile

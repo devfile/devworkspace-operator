@@ -50,9 +50,6 @@ endif
 OPERATOR_SDK_VERSION = v1.8.0
 OPM_VERSION = v1.19.5
 
-CONTROLLER_GEN_VERSION = v0.6.1
-CONTROLLER_GEN=$(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)
-
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true"
 
@@ -98,11 +95,8 @@ update_devworkspace_crds:
 ###### End rules for dealing with devfile/api
 
 ### test: Runs tests
-ENVTEST_ASSETS_DIR = $(shell pwd)/bin/testbin
-test: generate fmt vet manifests
-	mkdir -p $(ENVTEST_ASSETS_DIR)
-	test -f $(ENVTEST_ASSETS_DIR)/setup-envtest.sh || curl -sSLo $(ENVTEST_ASSETS_DIR)/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.6.3/hack/setup-envtest.sh
-	source $(ENVTEST_ASSETS_DIR)/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out
+test: generate fmt vet manifests envtest
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out
 
 ### test_e2e: Runs e2e test on the cluster set in context. DevWorkspace Operator must be already deployed
 test_e2e:
@@ -195,24 +189,6 @@ docker-push:
   endif
 	$(DOCKER) push ${DWO_IMG}
 
-### controller-gen: Finds or downloads controller-gen
-# download controller-gen if necessary
-controller-gen:
-  ifeq (, $(shell which controller-gen-$(CONTROLLER_GEN_VERSION) 2>/dev/null))
-	  @echo "Installing controller gen as $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
-	  @{ \
-	  set -e ;\
-	  CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	  cd $$CONTROLLER_GEN_TMP_DIR ;\
-	  go mod init tmp ;\
-	  go get -d -v sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
-	  go build -o $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION) sigs.k8s.io/controller-tools/cmd/controller-gen
-	  rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	  }
-  else
-	  @echo "Using installed $(GOBIN)/controller-gen-$(CONTROLLER_GEN_VERSION)"
-  endif
-
 ### compile-devworkspace-controller: Compiles the devworkspace-controller binary
 .PHONY: compile-devworkspace-controller
 compile-devworkspace-controller:
@@ -249,3 +225,25 @@ help: Makefile
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'
 	@echo '    PULL_POLICY                - Image pull policy for controller'
 	@echo '    DEVWORKSPACE_API_VERSION   - Branch or tag of the github.com/devfile/api to depend on. Defaults to master'
+
+# Automatic setup of required binaries: controller-gen, envtest
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+## Tool Binaries
+CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+CONTROLLER_GEN_VERSION = v0.6.1
+ENVTEST ?= $(LOCALBIN)/setup-envtest
+ENVTEST_K8S_VERSION = 1.21.2
+
+### controller-gen: Finds or downloads controller-gen
+# download controller-gen if necessary
+.PHONY: controller-gen
+controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary.
+$(CONTROLLER_GEN): $(LOCALBIN)
+	test -s $(LOCALBIN)/controller-gen || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_GEN_VERSION)
+
+.PHONY: envtest
+envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
+$(ENVTEST): $(LOCALBIN)
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest

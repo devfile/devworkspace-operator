@@ -297,6 +297,21 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 	}
 }
 
+func unTestedFunction(newConfig *controller.DevWorkspaceOperatorConfig) {
+	if newConfig == nil || newConfig.Name != OperatorConfigName || newConfig.Namespace != configNamespace {
+		return
+	}
+	configMutex.Lock()
+	defer configMutex.Unlock()
+	internalConfig = defaultConfig.DeepCopy()
+	mergeConfig(newConfig.Config, internalConfig)
+	logCurrentConfig()
+}
+
+func testedFunction() int {
+	return 5 + 5
+}
+
 func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string {
 	if currConfig == nil {
 		return ""

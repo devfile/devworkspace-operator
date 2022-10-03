@@ -89,6 +89,12 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 	assert.Equal(t, expectedConfig, internalConfig, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(internalConfig, expectedConfig)))
 }
 
+func testCodeCoverageWorks(t *testing.T) {
+	setupForTest(t)
+	i := testedFunction()
+	fmt.Printf("number is %d", i)
+}
+
 func TestCatchesNonExistentExternalDWOC(t *testing.T) {
 	setupForTest(t)
 

@@ -103,4 +103,29 @@ const (
 	// MergedContributionsAttribute is applied as an attribute onto a component to list the components from the unflattened
 	// DevWorkspace that have been merged into the current component. The contributions are listed in a comma-separated list.
 	MergedContributionsAttribute = "controller.devfile.io/merged-contributions"
+
+	// PodOverridesAttribute is an attribute applied to a container component or in global attributes to specify overrides
+	// for the pod spec used in the main workspace deployment. The format of the field is the same as the Kubernetes
+	// PodSpec API. Overrides are applied over the default pod template spec used via strategic merge patch.
+	//
+	// If this attribute is used multiple times, all overrides are applied in the order they are defined in the DevWorkspace,
+	// with later values overriding previous ones. Overrides defined in the top-level attributes field are applied last and
+	// override any overrides from container components.
+	//
+	// Example:
+	//   kind: DevWorkspace
+	//   apiVersion: workspace.devfile.io/v1alpha2
+	//   spec:
+	//     template:
+	//       attributes:
+	//         pod-overrides:
+	//           metadata:
+	//             annotations:
+	//               io.openshift.userns: "true"
+	//               io.kubernetes.cri-o.userns-mode: "auto:size=65536;map-to-root=true"  # <-- user namespace
+	//               openshift.io/scc: container-build
+	//           spec:
+	//             runtimeClassName: kata
+	//             schedulerName: stork
+	PodOverridesAttribute = "pod-overrides"
 )

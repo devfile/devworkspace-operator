@@ -1,0 +1,47 @@
+name: "Overrides take precedence in order of appearance"
+
+input:
+  workspace:
+    attributes:
+      pod-overrides:
+        metadata:
+          labels:
+            global-label: global-label
+    components:
+      - name: test-component-1
+        attributes:
+          pod-overrides:
+            metadata:
+              labels:
+                test-label: component-1-label
+        container:
+          image: test-image
+      - name: test-component-2
+        attributes:
+          pod-overrides:
+            metadata:
+              labels:
+                test-label: component-2-label
+        container:
+          image: test-image
+
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+
+output:
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+        global-label: global-label
+        test-label: component-2-label
+    spec:
+      containers:
+      - name: test-component
+        image: test-image

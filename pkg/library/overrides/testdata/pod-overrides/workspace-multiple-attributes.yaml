@@ -1,0 +1,38 @@
+name: "Workspace global attributes overrides component attributes"
+
+input:
+  workspace:
+    attributes:
+      pod-overrides:
+        metadata:
+          labels:
+            test-label: global-label
+    components:
+      - name: test-component
+        attributes:
+          pod-overrides:
+            metadata:
+              labels:
+                test-label: component-label
+        container:
+          image: test-image
+
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+
+output:
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+        test-label: global-label
+    spec:
+      containers:
+      - name: test-component
+        image: test-image

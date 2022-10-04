@@ -1,0 +1,41 @@
+name: "Test various overridden fields defined in json"
+
+input:
+  workspace:
+    attributes:
+      pod-overrides: {"metadata":{"annotations":{"io.openshift.userns":"true","io.kubernetes.cri-o.userns-mode":"auto:size=65536;map-to-root=true","openshift.io/scc":"container-build"}},"spec":{"runtimeClassName":"kata","schedulerName":"stork"}}
+    components:
+      - name: test-component
+        attributes:
+          pod-overrides:
+            metadata:
+              labels:
+                test-label: component-label
+        container:
+          image: test-image
+
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+
+output:
+  podTemplateSpec:
+    metadata:
+      annotations:
+        io.openshift.userns: "true"
+        io.kubernetes.cri-o.userns-mode: "auto:size=65536;map-to-root=true"  # <-- user namespace
+        openshift.io/scc: container-build
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+        test-label: component-label
+    spec:
+      runtimeClassName: kata
+      schedulerName: stork
+      containers:
+      - name: test-component
+        image: test-image

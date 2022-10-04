@@ -1,0 +1,50 @@
+name: Code Coverage Report
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  coverage-report:
+    name: Check Code Coverage
+    runs-on: ubuntu-20.04
+    steps:
+    -
+      name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.16.6
+    -
+      name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    -
+      name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+    -
+      name: Cache go modules
+      id: cache-mod
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    -
+      name: Download dependencies
+      run: go mod download
+      if: steps.cache-mod.outputs.cache-hit != 'true'
+    -
+      name: Run Go Tests
+      run: |
+        python -m pip install --upgrade pip yq
+        make test
+    - 
+      name: Build Codecov report
+      uses: codecov/codecov-action@v1
+      with:
+        files: cover.out

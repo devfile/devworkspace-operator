@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
+
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
@@ -244,6 +246,14 @@ func getSpecDeployment(
 				},
 			},
 		},
+	}
+
+	if overrides.NeedsPodOverrides(workspace) {
+		patchedDeployment, err := overrides.ApplyPodOverrides(workspace, deployment)
+		if err != nil {
+			return nil, err
+		}
+		deployment = patchedDeployment
 	}
 
 	if podTolerations != nil && len(podTolerations) > 0 {

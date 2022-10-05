@@ -128,4 +128,17 @@ const (
 	//             runtimeClassName: kata
 	//             schedulerName: stork
 	PodOverridesAttribute = "pod-overrides"
+
+	// ContainerOverridesAttribute is an attribute applied to a container component to specify arbitrary fields in that
+	// container. This attribute should only be used to set fields that are not configurable in the container component
+	// itself. Any values specified in the overrides attribute overwrite fields on the container.
+	//
+	// Example:
+	//   components:
+	//     - name: go
+	//       attributes:
+	//         container-overrides: {"resources":{"limits":{"nvidia.com/gpu": "1"}}}
+	//       container:
+	//         image: ...
+	ContainerOverridesAttribute = "container-overrides"
 )

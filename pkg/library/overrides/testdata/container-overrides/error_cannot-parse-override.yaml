@@ -1,0 +1,15 @@
+name: "Returns an error when container-override attribute cannot be parsed"
+
+input:
+  component:
+    name: test-component
+    attributes:
+      container-overrides: 123
+    container:
+      image: test-image
+  container:
+    name: test-component
+    image: test-image
+
+output:
+  errRegexp: "failed to parse .* attribute on component test-component.*"

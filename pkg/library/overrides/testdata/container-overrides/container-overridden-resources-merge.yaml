@@ -1,0 +1,42 @@
+name: "Resources from overrides are merged with container-defined resources"
+
+input:
+  component:
+    name: test-component
+    attributes:
+      container-overrides:
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+          requests:
+            nvidia.com/gpu: "1"
+    container:
+      image: test-image
+      memoryLimit: 1Gi
+      memoryRequest: 256Mi
+      cpuLimit: 1000m
+      cpuRequest: 500m
+  container:
+    name: test-component
+    image: test-image
+    resources:
+      limits:
+        memory: 1Gi
+        cpu: 1000m
+      requests:
+        memory: 256Mi
+        cpu: 500m
+
+output:
+  container:
+    name: test-component
+    image: test-image
+    resources:
+      limits:
+        nvidia.com/gpu: "1"
+        memory: 1Gi
+        cpu: 1000m
+      requests:
+        nvidia.com/gpu: "1"
+        memory: 256Mi
+        cpu: 500m

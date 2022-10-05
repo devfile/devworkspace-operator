@@ -32,7 +32,7 @@ import (
 )
 
 func TestApplyPodOverrides(t *testing.T) {
-	tests := loadAllTestCasesOrPanic(t, "testdata")
+	tests := loadAllPodTestCasesOrPanic(t, "testdata/pod-overrides")
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.originalFilename), func(t *testing.T) {
 			workspace := &common.DevWorkspaceWithConfig{}
@@ -55,7 +55,7 @@ func TestApplyPodOverrides(t *testing.T) {
 	}
 }
 
-func TestNeedsOverride(t *testing.T) {
+func TestNeedsPodOverride(t *testing.T) {
 	jsonPodOverrides := apiext.JSON{
 		Raw: []byte(`{"spec":{"runtimeClassName":"kata"}}`),
 	}
@@ -173,45 +173,45 @@ func TestNeedsOverride(t *testing.T) {
 	}
 }
 
-type testCase struct {
-	Name             string      `json:"name,omitempty"`
-	Input            *testInput  `json:"input,omitempty"`
-	Output           *testOutput `json:"output,omitempty"`
+type podTestCase struct {
+	Name             string         `json:"name,omitempty"`
+	Input            *podTestInput  `json:"input,omitempty"`
+	Output           *podTestOutput `json:"output,omitempty"`
 	originalFilename string
 }
 
-type testInput struct {
+type podTestInput struct {
 	Workspace       *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
 	PodTemplateSpec *corev1.PodTemplateSpec      `json:"podTemplateSpec,omitempty"`
 }
 
-type testOutput struct {
+type podTestOutput struct {
 	PodTemplateSpec *corev1.PodTemplateSpec `json:"podTemplateSpec,omitempty"`
 	ErrRegexp       *string                 `json:"errRegexp,omitempty"`
 }
 
-func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
+func loadAllPodTestCasesOrPanic(t *testing.T, fromDir string) []podTestCase {
 	files, err := os.ReadDir(fromDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var tests []testCase
+	var tests []podTestCase
 	for _, file := range files {
 		if file.IsDir() {
-			tests = append(tests, loadAllTestCasesOrPanic(t, filepath.Join(fromDir, file.Name()))...)
+			tests = append(tests, loadAllPodTestCasesOrPanic(t, filepath.Join(fromDir, file.Name()))...)
 		} else {
-			tests = append(tests, loadTestCaseOrPanic(t, filepath.Join(fromDir, file.Name())))
+			tests = append(tests, loadPodTestCaseOrPanic(t, filepath.Join(fromDir, file.Name())))
 		}
 	}
 	return tests
 }
 
-func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
+func loadPodTestCaseOrPanic(t *testing.T, testPath string) podTestCase {
 	bytes, err := os.ReadFile(testPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var test testCase
+	var test podTestCase
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}

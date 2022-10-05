@@ -17,15 +17,17 @@
 // components
 //
 // TODO:
-// - Devfile API spec is unclear on how mountSources should be handled -- mountPath is assumed to be /projects
-//   and volume name is assumed to be "projects"
-//   see issues:
-//     - https://github.com/devfile/api/issues/290
-//     - https://github.com/devfile/api/issues/291
+//   - Devfile API spec is unclear on how mountSources should be handled -- mountPath is assumed to be /projects
+//     and volume name is assumed to be "projects"
+//     see issues:
+//   - https://github.com/devfile/api/issues/290
+//   - https://github.com/devfile/api/issues/291
 package container
 
 import (
 	"fmt"
+
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -49,7 +51,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, pullPo
 	}
 	podAdditions := &v1alpha1.PodAdditions{}
 
-	initContainers, mainComponents, err := lifecycle.GetInitContainers(workspace.DevWorkspaceTemplateSpecContent)
+	initComponents, mainComponents, err := lifecycle.GetInitContainers(workspace.DevWorkspaceTemplateSpecContent)
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +65,13 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, pullPo
 			return nil, err
 		}
 		handleMountSources(k8sContainer, component.Container, workspace.Projects)
+		if overrides.NeedsContainerOverride(&component) {
+			patchedContainer, err := overrides.ApplyContainerOverrides(&component, k8sContainer)
+			if err != nil {
+				return nil, err
+			}
+			k8sContainer = patchedContainer
+		}
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)
 	}
 
@@ -70,12 +79,19 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, pullPo
 		return nil, err
 	}
 
-	for _, container := range initContainers {
-		k8sContainer, err := convertContainerToK8s(container, pullPolicy)
+	for _, initComponent := range initComponents {
+		k8sContainer, err := convertContainerToK8s(initComponent, pullPolicy)
 		if err != nil {
 			return nil, err
 		}
-		handleMountSources(k8sContainer, container.Container, workspace.Projects)
+		handleMountSources(k8sContainer, initComponent.Container, workspace.Projects)
+		if overrides.NeedsContainerOverride(&initComponent) {
+			patchedContainer, err := overrides.ApplyContainerOverrides(&initComponent, k8sContainer)
+			if err != nil {
+				return nil, err
+			}
+			k8sContainer = patchedContainer
+		}
 		podAdditions.InitContainers = append(podAdditions.InitContainers, *k8sContainer)
 	}
 

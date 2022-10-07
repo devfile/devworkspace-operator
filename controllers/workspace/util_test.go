@@ -50,7 +50,7 @@ func createDevWorkspace(fromFile string) {
 	Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
 	createdDW := &dw.DevWorkspace{}
 	Eventually(func() bool {
-		if err := k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, createdDW); err != nil {
+		if err := k8sClient.Get(ctx, namespacedName(devWorkspaceName, testNamespace), createdDW); err != nil {
 			return false
 		}
 		return createdDW.Status.DevWorkspaceId != ""
@@ -70,11 +70,7 @@ func createStartedDevWorkspace(fromFile string) {
 
 	currDW := &dw.DevWorkspace{}
 	Eventually(func() (dw.DevWorkspacePhase, error) {
-		err := k8sClient.Get(ctx, types.NamespacedName{
-			Name:      devworkspace.Name,
-			Namespace: devworkspace.Namespace,
-		}, currDW)
-		if err != nil {
+		if err := k8sClient.Get(ctx, namespacedName(devworkspace.Name, devworkspace.Namespace), currDW); err != nil {
 			return "", err
 		}
 		GinkgoWriter.Printf("Waiting for DevWorkspace to enter running phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)
@@ -85,7 +81,7 @@ func createStartedDevWorkspace(fromFile string) {
 func getExistingDevWorkspace() *dw.DevWorkspace {
 	By("Getting existing DevWorkspace")
 	devworkspace := &dw.DevWorkspace{}
-	dwNN := types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}
+	dwNN := namespacedName(devWorkspaceName, testNamespace)
 	Expect(k8sClient.Get(ctx, dwNN, devworkspace)).Should(Succeed())
 	workspaceID := devworkspace.Status.DevWorkspaceId
 	Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
@@ -94,7 +90,7 @@ func getExistingDevWorkspace() *dw.DevWorkspace {
 
 // deleteDevWorkspace forces a DevWorkspace to be deleted by removing all finalizers
 func deleteDevWorkspace(name string) {
-	dwNN := types.NamespacedName{Name: name, Namespace: testNamespace}
+	dwNN := namespacedName(name, testNamespace)
 	dw := &dw.DevWorkspace{}
 	dw.Name = name
 	dw.Namespace = testNamespace
@@ -131,23 +127,20 @@ func deleteDevWorkspace(name string) {
 func createObject(obj crclient.Object) {
 	Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 	Eventually(func() error {
-		return k8sClient.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
+		return k8sClient.Get(ctx, namespacedName(obj.GetName(), obj.GetNamespace()), obj)
 	}, 10*time.Second, 250*time.Millisecond).Should(Succeed(), "Creating %s with name %s", obj.GetObjectKind(), obj.GetName())
 }
 
 func deleteObject(obj crclient.Object) {
 	Expect(k8sClient.Delete(ctx, obj)).Should(Succeed())
 	Eventually(func() bool {
-		err := k8sClient.Get(ctx, types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
+		err := k8sClient.Get(ctx, namespacedName(obj.GetName(), obj.GetNamespace()), obj)
 		return k8sErrors.IsNotFound(err)
 	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue(), "Deleting %s with name %s", obj.GetObjectKind(), obj.GetName())
 }
 
 func markRoutingReady(mainUrl, routingName string) {
-	namespacedName := types.NamespacedName{
-		Name:      routingName,
-		Namespace: testNamespace,
-	}
+	namespacedName := namespacedName(routingName, testNamespace)
 	routing := &controllerv1alpha1.DevWorkspaceRouting{}
 	Eventually(func() error {
 		err := k8sClient.Get(ctx, namespacedName, routing)
@@ -172,10 +165,7 @@ func markRoutingReady(mainUrl, routingName string) {
 }
 
 func markDeploymentReady(deploymentName string) {
-	namespacedName := types.NamespacedName{
-		Name:      deploymentName,
-		Namespace: testNamespace,
-	}
+	namespacedName := namespacedName(deploymentName, testNamespace)
 	deploy := &appsv1.Deployment{}
 	Eventually(func() error {
 		err := k8sClient.Get(ctx, namespacedName, deploy)
@@ -191,10 +181,7 @@ func markDeploymentReady(deploymentName string) {
 }
 
 func scaleDeploymentToZero(deploymentName string) {
-	namespacedName := types.NamespacedName{
-		Name:      deploymentName,
-		Namespace: testNamespace,
-	}
+	namespacedName := namespacedName(deploymentName, testNamespace)
 	deploy := &appsv1.Deployment{}
 	Eventually(func() error {
 		err := k8sClient.Get(ctx, namespacedName, deploy)
@@ -297,5 +284,12 @@ func volumeMountFromConfigMap(cm *corev1.ConfigMap, mountPath, subPath string) c
 		ReadOnly:  true,
 		MountPath: mountPath,
 		SubPath:   subPath,
+	}
+}
+
+func namespacedName(name, namespace string) types.NamespacedName {
+	return types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
 	}
 }

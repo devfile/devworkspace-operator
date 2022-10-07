@@ -35,7 +35,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -66,10 +65,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Creating a new DevWorkspace")
 			Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
-			dwNamespacedName := types.NamespacedName{
-				Namespace: testNamespace,
-				Name:      devWorkspaceName,
-			}
+			dwNamespacedName := namespacedName(devWorkspaceName, testNamespace)
 			defer deleteDevWorkspace(devWorkspaceName)
 
 			createdDW := &dw.DevWorkspace{}
@@ -112,10 +108,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Creating a new DevWorkspace")
 			Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
-			dwNamespacedName := types.NamespacedName{
-				Namespace: testNamespace,
-				Name:      devWorkspaceName,
-			}
+			dwNamespacedName := namespacedName(devWorkspaceName, testNamespace)
 			defer deleteDevWorkspace(devWorkspaceName)
 
 			createdDW := &dw.DevWorkspace{}
@@ -150,10 +143,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Creating a new DevWorkspace")
 			Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
-			dwNamespacedName := types.NamespacedName{
-				Namespace: testNamespace,
-				Name:      devWorkspaceName,
-			}
+			dwNamespacedName := namespacedName(devWorkspaceName, testNamespace)
 			defer deleteDevWorkspace(devWorkspaceName)
 
 			createdDW := &dw.DevWorkspace{}
@@ -169,10 +159,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			By("Checking that duplicate DevWorkspace enters failed Phase")
 			createdDW2 := &dw.DevWorkspace{}
 			Eventually(func() (phase dw.DevWorkspacePhase, err error) {
-				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      devworkspace2.Name,
-					Namespace: testNamespace,
-				}, createdDW2); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(devworkspace2.Name, testNamespace), createdDW2); err != nil {
 					return "", err
 				}
 				return createdDW2.Status.Phase, nil
@@ -195,7 +182,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			By("Checking that common role is created")
 			dwRole := &rbacv1.Role{}
 			Eventually(func() bool {
-				if err := k8sClient.Get(ctx, types.NamespacedName{Name: common.WorkspaceRoleName(), Namespace: testNamespace}, dwRole); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(common.WorkspaceRoleName(), testNamespace), dwRole); err != nil {
 					return false
 				}
 				return true
@@ -204,7 +191,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			By("Checking that common rolebinding is created")
 			dwRoleBinding := &rbacv1.RoleBinding{}
 			Eventually(func() bool {
-				if err := k8sClient.Get(ctx, types.NamespacedName{Name: common.WorkspaceRolebindingName(), Namespace: testNamespace}, dwRoleBinding); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(common.WorkspaceRolebindingName(), testNamespace), dwRoleBinding); err != nil {
 					return false
 				}
 				return true
@@ -226,7 +213,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			dwr := &controllerv1alpha1.DevWorkspaceRouting{}
 			dwrName := common.DevWorkspaceRoutingName(workspaceID)
 			Eventually(func() error {
-				return k8sClient.Get(ctx, types.NamespacedName{Name: dwrName, Namespace: testNamespace}, dwr)
+				return k8sClient.Get(ctx, namespacedName(dwrName, testNamespace), dwr)
 			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting is present on cluster")
 
 			Expect(string(dwr.Spec.RoutingClass)).Should(Equal(devworkspace.Spec.RoutingClass), "RoutingClass should be propagated to DevWorkspaceRouting")
@@ -243,7 +230,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
 
 			Eventually(func() (string, error) {
-				if err := k8sClient.Get(ctx, types.NamespacedName{Name: devWorkspaceName, Namespace: testNamespace}, devworkspace); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(devWorkspaceName, testNamespace), devworkspace); err != nil {
 					return "", err
 				}
 				return devworkspace.Status.MainUrl, nil
@@ -260,10 +247,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			metadataCM := &corev1.ConfigMap{}
 			Eventually(func() error {
-				cmNN := types.NamespacedName{
-					Name:      common.MetadataConfigMapName(workspaceID),
-					Namespace: testNamespace,
-				}
+				cmNN := namespacedName(common.MetadataConfigMapName(workspaceID), testNamespace)
 				return k8sClient.Get(ctx, cmNN, metadataCM)
 			}, timeout, interval).Should(Succeed(), "Should create workspace metadata configmap")
 
@@ -290,10 +274,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			sa := &corev1.ServiceAccount{}
 			Eventually(func() error {
-				saNN := types.NamespacedName{
-					Name:      common.ServiceAccountName(workspaceID),
-					Namespace: testNamespace,
-				}
+				saNN := namespacedName(common.ServiceAccountName(workspaceID), testNamespace)
 				return k8sClient.Get(ctx, saNN, sa)
 			}, timeout, interval).Should(Succeed(), "Should create DevWorkspace ServiceAccount")
 
@@ -312,10 +293,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			deploy := &appsv1.Deployment{}
 			Eventually(func() error {
-				deployNN := types.NamespacedName{
-					Name:      common.DeploymentName(workspaceID),
-					Namespace: testNamespace,
-				}
+				deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
 				return k8sClient.Get(ctx, deployNN, deploy)
 			}, timeout, interval).Should(Succeed(), "Should create DevWorkspace Deployment")
 
@@ -346,10 +324,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			currDW := &dw.DevWorkspace{}
 			Eventually(func() (dw.DevWorkspacePhase, error) {
-				err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      devworkspace.Name,
-					Namespace: devworkspace.Namespace,
-				}, currDW)
+				err := k8sClient.Get(ctx, namespacedName(devworkspace.Name, devworkspace.Namespace), currDW)
 				if err != nil {
 					return "", err
 				}
@@ -410,10 +385,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
 
 			deploy := &appsv1.Deployment{}
-			deployNN := types.NamespacedName{
-				Name:      common.DeploymentName(workspaceID),
-				Namespace: testNamespace,
-			}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
 			Eventually(func() error {
 				return k8sClient.Get(ctx, deployNN, deploy)
 			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
@@ -439,10 +411,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
 
 			deploy := &appsv1.Deployment{}
-			deployNN := types.NamespacedName{
-				Name:      common.DeploymentName(workspaceID),
-				Namespace: testNamespace,
-			}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
 			Eventually(func() error {
 				return k8sClient.Get(ctx, deployNN, deploy)
 			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
@@ -525,10 +494,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
 
 			deploy := &appsv1.Deployment{}
-			deployNN := types.NamespacedName{
-				Name:      common.DeploymentName(workspaceID),
-				Namespace: testNamespace,
-			}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
 			Eventually(func() error {
 				return k8sClient.Get(ctx, deployNN, deploy)
 			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
@@ -572,10 +538,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			By("Manually making Routing ready to continue")
 			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
 			deploy := &appsv1.Deployment{}
-			deployNN := types.NamespacedName{
-				Name:      common.DeploymentName(workspaceID),
-				Namespace: testNamespace,
-			}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
 			Eventually(func() error {
 				return k8sClient.Get(ctx, deployNN, deploy)
 			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
@@ -632,10 +595,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			By("Adds devworkspace-started annotation to false on DevWorkspaceRouting")
 			Eventually(func() (string, error) {
 				dwr := &controllerv1alpha1.DevWorkspaceRouting{}
-				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      common.DevWorkspaceRoutingName(devworkspace.Status.DevWorkspaceId),
-					Namespace: testNamespace,
-				}, dwr); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(common.DevWorkspaceRoutingName(devworkspace.Status.DevWorkspaceId), testNamespace), dwr); err != nil {
 					return "", err
 				}
 				annotation, ok := dwr.Annotations[constants.DevWorkspaceStartedStatusAnnotation]
@@ -648,10 +608,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			By("Checking that workspace deployment is scaled to zero")
 			Eventually(func() (replicas int32, err error) {
 				deploy := &appsv1.Deployment{}
-				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      common.DeploymentName(devworkspace.Status.DevWorkspaceId),
-					Namespace: testNamespace,
-				}, deploy); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(common.DeploymentName(devworkspace.Status.DevWorkspaceId), testNamespace), deploy); err != nil {
 					return -1, err
 				}
 				return *deploy.Spec.Replicas, nil
@@ -662,10 +619,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			currDW := &dw.DevWorkspace{}
 			Eventually(func() (dw.DevWorkspacePhase, error) {
-				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      devworkspace.Name,
-					Namespace: devworkspace.Namespace,
-				}, currDW); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(devworkspace.Name, devworkspace.Namespace), currDW); err != nil {
 					return "", err
 				}
 				GinkgoWriter.Printf("Waiting for DevWorkspace to enter Stopped phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)
@@ -705,10 +659,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			}
 			for _, obj := range objects {
 				Eventually(func() error {
-					err := k8sClient.Get(ctx, types.NamespacedName{
-						Name:      obj.GetName(),
-						Namespace: testNamespace,
-					}, obj)
+					err := k8sClient.Get(ctx, namespacedName(obj.GetName(), testNamespace), obj)
 					switch {
 					case err == nil:
 						return fmt.Errorf("Object exists")
@@ -722,10 +673,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			currDW := &dw.DevWorkspace{}
 			Eventually(func() (dw.DevWorkspacePhase, error) {
-				if err := k8sClient.Get(ctx, types.NamespacedName{
-					Name:      devworkspace.Name,
-					Namespace: devworkspace.Namespace,
-				}, currDW); err != nil {
+				if err := k8sClient.Get(ctx, namespacedName(devworkspace.Name, devworkspace.Namespace), currDW); err != nil {
 					return "", err
 				}
 				GinkgoWriter.Printf("Waiting for DevWorkspace to enter Stopped phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)

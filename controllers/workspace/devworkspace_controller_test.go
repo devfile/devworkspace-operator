@@ -18,7 +18,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -53,11 +52,6 @@ func loadObjectFromFile(objName string, obj client.Object, filename string) erro
 }
 
 var _ = Describe("DevWorkspace Controller", func() {
-	const (
-		timeout  = 10 * time.Second
-		interval = 250 * time.Millisecond
-	)
-
 	Context("Basic DevWorkspace Tests", func() {
 		It("Sets DevWorkspace ID and Starting status", func() {
 			By("Reading DevWorkspace from testdata file")
@@ -98,6 +92,86 @@ var _ = Describe("DevWorkspace Controller", func() {
 			startingCondition := conditions.GetConditionByType(createdDW.Status.Conditions, conditions.Started)
 			Expect(startingCondition).ShouldNot(BeNil(), "Should have 'Starting' condition")
 			Expect(startingCondition.Status).Should(Equal(corev1.ConditionTrue), "Starting condition should be 'true'")
+		})
+
+		It("Allows overriding the DevWorkspace ID", func() {
+			By("Reading DevWorkspace from testdata file")
+			devworkspace := &dw.DevWorkspace{}
+			err := loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")
+			Expect(err).NotTo(HaveOccurred())
+
+			if devworkspace.Annotations == nil {
+				devworkspace.Annotations = map[string]string{}
+			}
+			devworkspace.Annotations[constants.WorkspaceIdOverrideAnnotation] = "test-workspace-id"
+
+			By("Creating a new DevWorkspace")
+			Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
+			dwNamespacedName := types.NamespacedName{
+				Namespace: testNamespace,
+				Name:      devWorkspaceName,
+			}
+			defer deleteDevWorkspace(devWorkspaceName)
+
+			createdDW := &dw.DevWorkspace{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, dwNamespacedName, createdDW)
+				return err == nil
+			}, timeout, interval).Should(BeTrue(), "DevWorkspace should exist in cluster")
+
+			By("Checking DevWorkspace ID has been set")
+			Eventually(func() (devworkspaceID string, err error) {
+				if err := k8sClient.Get(ctx, dwNamespacedName, createdDW); err != nil {
+					return "", err
+				}
+				return createdDW.Status.DevWorkspaceId, nil
+			}, timeout, interval).Should(Not(Equal("")), "Should set DevWorkspace ID after creation")
+			Expect(createdDW.Status.DevWorkspaceId).Should(Equal("test-workspace-id"), "DevWorkspace ID should be set from override annotation")
+		})
+
+		It("Forbids duplicate workspace IDs from override", func() {
+			By("Reading DevWorkspace from testdata file")
+			devworkspace := &dw.DevWorkspace{}
+			err := loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")
+			Expect(err).NotTo(HaveOccurred())
+
+			if devworkspace.Annotations == nil {
+				devworkspace.Annotations = map[string]string{}
+			}
+			devworkspace.Annotations[constants.WorkspaceIdOverrideAnnotation] = "test-workspace-id"
+
+			devworkspace2 := devworkspace.DeepCopy()
+			devworkspace2.Name = fmt.Sprintf("%s-dupe", devworkspace2.Name)
+
+			By("Creating a new DevWorkspace")
+			Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
+			dwNamespacedName := types.NamespacedName{
+				Namespace: testNamespace,
+				Name:      devWorkspaceName,
+			}
+			defer deleteDevWorkspace(devWorkspaceName)
+
+			createdDW := &dw.DevWorkspace{}
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, dwNamespacedName, createdDW)
+				return err == nil
+			}, timeout, interval).Should(BeTrue(), "DevWorkspace should exist in cluster")
+
+			By("Creating a DevWorkspace that duplicates the workspace ID of the first")
+			Expect(k8sClient.Create(ctx, devworkspace2)).Should(Succeed())
+			defer deleteDevWorkspace(devworkspace2.Name)
+
+			By("Checking that duplicate DevWorkspace enters failed Phase")
+			createdDW2 := &dw.DevWorkspace{}
+			Eventually(func() (phase dw.DevWorkspacePhase, err error) {
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      devworkspace2.Name,
+					Namespace: testNamespace,
+				}, createdDW2); err != nil {
+					return "", err
+				}
+				return createdDW2.Status.Phase, nil
+			}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusFailed), "DevWorkspace with duplicate ID should fail to start")
 		})
 	})
 

@@ -32,6 +32,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+const (
+	timeout  = 10 * time.Second
+	interval = 250 * time.Millisecond
+)
+
 func createDevWorkspace(fromFile string) {
 	By("Loading DevWorkspace from test file")
 	devworkspace := &dw.DevWorkspace{}

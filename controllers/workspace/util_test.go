@@ -30,12 +30,15 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kubeclock "k8s.io/apimachinery/pkg/util/clock"
 )
 
 const (
 	timeout  = 10 * time.Second
 	interval = 250 * time.Millisecond
 )
+
+var clock kubeclock.Clock = &kubeclock.RealClock{}
 
 func createDevWorkspace(fromFile string) {
 	By("Loading DevWorkspace from test file")
@@ -52,6 +55,31 @@ func createDevWorkspace(fromFile string) {
 		}
 		return createdDW.Status.DevWorkspaceId != ""
 	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue())
+}
+
+func createStartedDevWorkspace(fromFile string) {
+	createDevWorkspace(fromFile)
+	devworkspace := getExistingDevWorkspace()
+	workspaceID := devworkspace.Status.DevWorkspaceId
+
+	By("Manually making Routing ready to continue")
+	markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
+
+	By("Setting the deployment to have 1 ready replica")
+	markDeploymentReady(common.DeploymentName(workspaceID))
+
+	currDW := &dw.DevWorkspace{}
+	Eventually(func() (dw.DevWorkspacePhase, error) {
+		err := k8sClient.Get(ctx, types.NamespacedName{
+			Name:      devworkspace.Name,
+			Namespace: devworkspace.Namespace,
+		}, currDW)
+		if err != nil {
+			return "", err
+		}
+		GinkgoWriter.Printf("Waiting for DevWorkspace to enter running phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)
+		return currDW.Status.Phase, nil
+	}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusRunning), "Workspace did not enter Running phase before timeout")
 }
 
 func getExistingDevWorkspace() *dw.DevWorkspace {
@@ -158,6 +186,25 @@ func markDeploymentReady(deploymentName string) {
 		deploy.Status.Replicas = 1
 		deploy.Status.AvailableReplicas = 1
 		deploy.Status.UpdatedReplicas = 1
+		return k8sClient.Status().Update(ctx, deploy)
+	}, 30*time.Second, 250*time.Millisecond).Should(Succeed(), "Update Deployment to have 1 ready replica")
+}
+
+func scaleDeploymentToZero(deploymentName string) {
+	namespacedName := types.NamespacedName{
+		Name:      deploymentName,
+		Namespace: testNamespace,
+	}
+	deploy := &appsv1.Deployment{}
+	Eventually(func() error {
+		err := k8sClient.Get(ctx, namespacedName, deploy)
+		if err != nil {
+			return err
+		}
+		deploy.Status.ReadyReplicas = 0
+		deploy.Status.Replicas = 0
+		deploy.Status.AvailableReplicas = 0
+		deploy.Status.UpdatedReplicas = 0
 		return k8sClient.Status().Update(ctx, deploy)
 	}, 30*time.Second, 250*time.Millisecond).Should(Succeed(), "Update Deployment to have 1 ready replica")
 }

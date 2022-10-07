@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -25,11 +26,15 @@ import (
 	"github.com/devfile/devworkspace-operator/controllers/workspace/internal/testutil"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -593,4 +598,208 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 	})
 
+	Context("Stopping DevWorkspaces", func() {
+		const testURL = "test-url"
+
+		BeforeEach(func() {
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						fmt.Sprintf("%s/healthz", testURL): {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+			createStartedDevWorkspace("test-devworkspace.yaml")
+		})
+
+		AfterEach(func() {
+			deleteDevWorkspace(devWorkspaceName)
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+		})
+
+		It("Stops workspaces and scales deployment to zero", func() {
+			devworkspace := &dw.DevWorkspace{}
+
+			By("Setting DevWorkspace's .spec.started to false")
+			Eventually(func() error {
+				devworkspace = getExistingDevWorkspace()
+				devworkspace.Spec.Started = false
+				return k8sClient.Update(ctx, devworkspace)
+			}, timeout, interval).Should(Succeed(), "Update DevWorkspace to have .spec.started = false")
+
+			By("Adds devworkspace-started annotation to false on DevWorkspaceRouting")
+			Eventually(func() (string, error) {
+				dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      common.DevWorkspaceRoutingName(devworkspace.Status.DevWorkspaceId),
+					Namespace: testNamespace,
+				}, dwr); err != nil {
+					return "", err
+				}
+				annotation, ok := dwr.Annotations[constants.DevWorkspaceStartedStatusAnnotation]
+				if !ok {
+					return "", fmt.Errorf("%s annotation not present", constants.DevWorkspaceStartedStatusAnnotation)
+				}
+				return annotation, nil
+			}, timeout, interval).Should(Equal("false"), "DevWorkspace Routing should get `devworkspace-started: false` annotation")
+
+			By("Checking that workspace deployment is scaled to zero")
+			Eventually(func() (replicas int32, err error) {
+				deploy := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      common.DeploymentName(devworkspace.Status.DevWorkspaceId),
+					Namespace: testNamespace,
+				}, deploy); err != nil {
+					return -1, err
+				}
+				return *deploy.Spec.Replicas, nil
+			}, timeout, interval).Should(Equal(int32(0)), "Workspace deployment was not scaled to zero")
+
+			By("Setting DevWorkspace's deployment replicas to zero")
+			scaleDeploymentToZero(common.DeploymentName(devworkspace.Status.DevWorkspaceId))
+
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (dw.DevWorkspacePhase, error) {
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      devworkspace.Name,
+					Namespace: devworkspace.Namespace,
+				}, currDW); err != nil {
+					return "", err
+				}
+				GinkgoWriter.Printf("Waiting for DevWorkspace to enter Stopped phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)
+				return currDW.Status.Phase, nil
+			}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusStopped), "Workspace did not enter Stopped phase before timeout")
+
+			Expect(currDW.Status.Message).Should(Equal("Stopped"))
+			startedCondition := conditions.GetConditionByType(currDW.Status.Conditions, conditions.Started)
+			Expect(startedCondition).Should(Not(BeNil()), "Workspace should have Started condition")
+			Expect(startedCondition.Status).Should(Equal(corev1.ConditionFalse), "Workspace Started condition should have status=false")
+			Expect(startedCondition.Message).Should(Equal("Workspace is stopped"))
+		})
+
+		It("Stops workspaces and deletes resources when cleanup option is enabled", func() {
+			boolTrue := true
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					CleanupOnStop: &boolTrue,
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+			devworkspace := &dw.DevWorkspace{}
+
+			By("Setting DevWorkspace's .spec.started to false")
+			Eventually(func() error {
+				devworkspace = getExistingDevWorkspace()
+				devworkspace.Spec.Started = false
+				return k8sClient.Update(ctx, devworkspace)
+			}, timeout, interval).Should(Succeed(), "Update DevWorkspace to have .spec.started = false")
+			workspaceId := devworkspace.Status.DevWorkspaceId
+
+			By("Checking that workspace owned objects are deleted")
+			objects := []client.Object{
+				&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: common.DeploymentName(workspaceId)}},
+				&corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: common.MetadataConfigMapName(workspaceId)}},
+				&controllerv1alpha1.DevWorkspaceRouting{ObjectMeta: metav1.ObjectMeta{Name: common.DevWorkspaceRoutingName(workspaceId)}},
+			}
+			for _, obj := range objects {
+				Eventually(func() error {
+					err := k8sClient.Get(ctx, types.NamespacedName{
+						Name:      obj.GetName(),
+						Namespace: testNamespace,
+					}, obj)
+					switch {
+					case err == nil:
+						return fmt.Errorf("Object exists")
+					case k8sErrors.IsNotFound(err):
+						return nil
+					default:
+						return err
+					}
+				}, timeout, interval).Should(Succeed(), "DevWorkspace-owned %s should be deleted", obj.GetObjectKind().GroupVersionKind().Kind)
+			}
+
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (dw.DevWorkspacePhase, error) {
+				if err := k8sClient.Get(ctx, types.NamespacedName{
+					Name:      devworkspace.Name,
+					Namespace: devworkspace.Namespace,
+				}, currDW); err != nil {
+					return "", err
+				}
+				GinkgoWriter.Printf("Waiting for DevWorkspace to enter Stopped phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)
+				return currDW.Status.Phase, nil
+			}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusStopped), "Workspace did not enter Stopped phase before timeout")
+
+			Expect(currDW.Status.Message).Should(Equal("Stopped"))
+			startedCondition := conditions.GetConditionByType(currDW.Status.Conditions, conditions.Started)
+			Expect(startedCondition).Should(Not(BeNil()), "Workspace should have Started condition")
+			Expect(startedCondition.Status).Should(Equal(corev1.ConditionFalse), "Workspace Started condition should have status=false")
+			Expect(startedCondition.Message).Should(Equal("Workspace is stopped"))
+		})
+
+		It("Stops failing workspaces with debug annotation after timeout", func() {
+			devworkspace := &dw.DevWorkspace{}
+			failTime := metav1.Time{Time: clock.Now().Add(-20 * time.Second)}
+
+			By("Set debug start annotation on DevWorkspace")
+			Eventually(func() error {
+				devworkspace = getExistingDevWorkspace()
+				if devworkspace.Annotations == nil {
+					devworkspace.Annotations = map[string]string{}
+				}
+				devworkspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] = "true"
+				return k8sClient.Update(ctx, devworkspace)
+			}, timeout, interval).Should(Succeed(), "Should be able to set failing status on DevWorkspace")
+
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					ProgressTimeout: "1s",
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+
+			By("Setting failing phase on workspace directly")
+			Eventually(func() error {
+				devworkspace = getExistingDevWorkspace()
+				devworkspace.Status.Phase = "Failing"
+				devworkspace.Status.Conditions = append(devworkspace.Status.Conditions, dw.DevWorkspaceCondition{
+					Type:               dw.DevWorkspaceFailedStart,
+					LastTransitionTime: failTime,
+					Status:             corev1.ConditionTrue,
+					Message:            "testing failed condition",
+				})
+				return k8sClient.Status().Update(ctx, devworkspace)
+			}, timeout, interval).Should(Succeed(), "Should be able to set failing status on DevWorkspace")
+
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (started bool, err error) {
+				if err := k8sClient.Get(ctx, namespacedName(devworkspace.Name, devworkspace.Namespace), currDW); err != nil {
+					return false, err
+				}
+				return currDW.Spec.Started, nil
+			}, timeout, interval).Should(BeFalse(), "DevWorkspace should have spec.started = false")
+		})
+
+		It("Stops failing workspaces", func() {
+			devworkspace := &dw.DevWorkspace{}
+
+			By("Setting failing phase on workspace directly")
+			Eventually(func() error {
+				devworkspace = getExistingDevWorkspace()
+				devworkspace.Status.Phase = "Failing"
+				return k8sClient.Status().Update(ctx, devworkspace)
+			}, timeout, interval).Should(Succeed(), "Should be able to set failing status on DevWorkspace")
+
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (started bool, err error) {
+				if err := k8sClient.Get(ctx, namespacedName(devworkspace.Name, devworkspace.Namespace), currDW); err != nil {
+					return false, err
+				}
+				return currDW.Spec.Started, nil
+			}, timeout, interval).Should(BeFalse(), "DevWorkspace should have spec.started = false")
+		})
+
+	})
 })

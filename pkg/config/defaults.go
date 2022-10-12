@@ -41,11 +41,12 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 			Common:       &commonStorageSize,
 			PerWorkspace: &perWorkspaceStorageSize,
 		},
-		IdleTimeout:        "15m",
-		ProgressTimeout:    "5m",
-		CleanupOnStop:      pointer.BoolPtr(false),
-		PodSecurityContext: nil,
-		DefaultTemplate:    nil,
+		IdleTimeout:              "15m",
+		ProgressTimeout:          "5m",
+		CleanupOnStop:            pointer.BoolPtr(false),
+		PodSecurityContext:       nil,
+		ContainerSecurityContext: &corev1.SecurityContext{},
+		DefaultTemplate:          nil,
 	},
 }
 

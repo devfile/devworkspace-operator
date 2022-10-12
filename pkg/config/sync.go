@@ -293,6 +293,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.PodSecurityContext != nil {
 			to.Workspace.PodSecurityContext = from.Workspace.PodSecurityContext
 		}
+		if from.Workspace.ContainerSecurityContext != nil {
+			to.Workspace.ContainerSecurityContext = from.Workspace.ContainerSecurityContext
+		}
 		if from.Workspace.DefaultStorageSize != nil {
 			if to.Workspace.DefaultStorageSize == nil {
 				to.Workspace.DefaultStorageSize = &controller.StorageSizes{}
@@ -330,7 +333,7 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 	}
 	workspace := currConfig.Workspace
 	if workspace != nil {
-		// Don't include PodSecurityContext for now as it's less easy to compare
+		// Don't include PodSecurityContext or ContainerSecurityContext for now as it's less easy to compare
 		if workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
 			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", workspace.ImagePullPolicy))
 		}

@@ -23,11 +23,11 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func convertContainerToK8s(devfileComponent dw.Component, pullPolicy string) (*v1.Container, error) {
+func convertContainerToK8s(devfileComponent dw.Component, securityContext *corev1.SecurityContext, pullPolicy string) (*corev1.Container, error) {
 	if devfileComponent.Container == nil {
 		return nil, fmt.Errorf("cannot get k8s container from non-container component")
 	}
@@ -38,7 +38,7 @@ func convertContainerToK8s(devfileComponent dw.Component, pullPolicy string) (*v
 		return nil, fmt.Errorf("failed to get resources for container %s: %s", devfileComponent.Name, err)
 	}
 
-	container := &v1.Container{
+	container := &corev1.Container{
 		Name:            devfileComponent.Name,
 		Image:           devfileContainer.Image,
 		Command:         devfileContainer.Command,
@@ -47,33 +47,34 @@ func convertContainerToK8s(devfileComponent dw.Component, pullPolicy string) (*v
 		Ports:           devfileEndpointsToContainerPorts(devfileContainer.Endpoints),
 		Env:             devfileEnvToContainerEnv(devfileComponent.Name, devfileContainer.Env),
 		VolumeMounts:    devfileVolumeMountsToContainerVolumeMounts(devfileContainer.VolumeMounts),
-		ImagePullPolicy: v1.PullPolicy(pullPolicy),
+		ImagePullPolicy: corev1.PullPolicy(pullPolicy),
+		SecurityContext: securityContext,
 	}
 
 	return container, nil
 }
 
-func devfileEndpointsToContainerPorts(endpoints []dw.Endpoint) []v1.ContainerPort {
-	var containerPorts []v1.ContainerPort
+func devfileEndpointsToContainerPorts(endpoints []dw.Endpoint) []corev1.ContainerPort {
+	var containerPorts []corev1.ContainerPort
 	exposedPorts := map[int]bool{}
 	for _, endpoint := range endpoints {
 		if exposedPorts[endpoint.TargetPort] {
 			continue
 		}
-		containerPorts = append(containerPorts, v1.ContainerPort{
+		containerPorts = append(containerPorts, corev1.ContainerPort{
 			// Use meaningless name for port since endpoint.Name does not match requirements for ContainerPort name
 			Name:          common.PortName(endpoint),
 			ContainerPort: int32(endpoint.TargetPort),
-			Protocol:      v1.ProtocolTCP,
+			Protocol:      corev1.ProtocolTCP,
 		})
 		exposedPorts[endpoint.TargetPort] = true
 	}
 	return containerPorts
 }
 
-func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponent) (*v1.ResourceRequirements, error) {
-	limits := v1.ResourceList{}
-	requests := v1.ResourceList{}
+func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponent) (*corev1.ResourceRequirements, error) {
+	limits := corev1.ResourceList{}
+	requests := corev1.ResourceList{}
 
 	memLimit := devfileContainer.MemoryLimit
 	if memLimit == "" {
@@ -83,7 +84,7 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse memory limit %q: %w", memLimit, err)
 	}
-	limits[v1.ResourceMemory] = memLimitQuantity
+	limits[corev1.ResourceMemory] = memLimitQuantity
 
 	memReq := devfileContainer.MemoryRequest
 	if memReq == "" {
@@ -93,14 +94,14 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse memory request %q: %w", memReq, err)
 	}
-	requests[v1.ResourceMemory] = memReqQuantity
+	requests[corev1.ResourceMemory] = memReqQuantity
 
 	if memLimitQuantity.Cmp(memReqQuantity) < 0 {
 		if devfileContainer.MemoryRequest != "" {
 			return nil, fmt.Errorf("container resources are invalid: memory limit (%s) is less than request (%s)", memLimit, devfileContainer.MemoryRequest)
 		} else {
 			// No value was supplied; the issue is that the default value is greater than supplied limit. To resolve this, reuse limit as request
-			requests[v1.ResourceMemory] = memLimitQuantity
+			requests[corev1.ResourceMemory] = memLimitQuantity
 		}
 	}
 
@@ -113,7 +114,7 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse cpu limit %q: %w", cpuLimit, err)
 		}
-		limits[v1.ResourceCPU] = cpuLimitQuantity
+		limits[corev1.ResourceCPU] = cpuLimitQuantity
 	}
 
 	cpuReq := devfileContainer.CpuRequest
@@ -125,32 +126,32 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse cpu request %q: %w", cpuReq, err)
 		}
-		requests[v1.ResourceCPU] = cpuReqQuantity
+		requests[corev1.ResourceCPU] = cpuReqQuantity
 	}
 
-	if parsedCPULimit, ok := limits[v1.ResourceCPU]; ok {
-		if parsedCPUReq, ok := requests[v1.ResourceCPU]; ok {
+	if parsedCPULimit, ok := limits[corev1.ResourceCPU]; ok {
+		if parsedCPUReq, ok := requests[corev1.ResourceCPU]; ok {
 			if parsedCPULimit.Cmp(parsedCPUReq) < 0 {
 				return nil, fmt.Errorf("container resources are invalid: CPU limit (%s) is less than request (%s)", cpuLimit, cpuReq)
 			}
 		}
 	}
 
-	return &v1.ResourceRequirements{
+	return &corev1.ResourceRequirements{
 		Limits:   limits,
 		Requests: requests,
 	}, nil
 }
 
-func devfileVolumeMountsToContainerVolumeMounts(devfileVolumeMounts []dw.VolumeMount) []v1.VolumeMount {
-	var volumeMounts []v1.VolumeMount
+func devfileVolumeMountsToContainerVolumeMounts(devfileVolumeMounts []dw.VolumeMount) []corev1.VolumeMount {
+	var volumeMounts []corev1.VolumeMount
 	for _, vm := range devfileVolumeMounts {
 		path := vm.Path
 		if path == "" {
 			// Devfile API spec: if path is unspecified, default is to use volume name
 			path = fmt.Sprintf("/%s", vm.Name)
 		}
-		volumeMounts = append(volumeMounts, v1.VolumeMount{
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      vm.Name,
 			MountPath: path,
 		})
@@ -158,8 +159,8 @@ func devfileVolumeMountsToContainerVolumeMounts(devfileVolumeMounts []dw.VolumeM
 	return volumeMounts
 }
 
-func devfileEnvToContainerEnv(componentName string, devfileEnvVars []dw.EnvVar) []v1.EnvVar {
-	var env = []v1.EnvVar{
+func devfileEnvToContainerEnv(componentName string, devfileEnvVars []dw.EnvVar) []corev1.EnvVar {
+	var env = []corev1.EnvVar{
 		{
 			Name:  constants.DevWorkspaceComponentName,
 			Value: componentName,
@@ -167,7 +168,7 @@ func devfileEnvToContainerEnv(componentName string, devfileEnvVars []dw.EnvVar) 
 	}
 
 	for _, devfileEnv := range devfileEnvVars {
-		env = append(env, v1.EnvVar{
+		env = append(env, corev1.EnvVar{
 			Name:  devfileEnv.Name,
 			Value: devfileEnv.Value,
 		})

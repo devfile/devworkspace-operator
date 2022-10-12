@@ -54,6 +54,7 @@ func setupForTest(t *testing.T) {
 		t.Fatalf("failed to set up for test: %s", err)
 	}
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+	setDefaultPodSecurityContext()
 	configNamespace = testNamespace
 	originalDefaultConfig := defaultConfig.DeepCopy()
 	t.Cleanup(func() {

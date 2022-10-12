@@ -145,6 +145,10 @@ type WorkspaceConfig struct {
 	// pods created by the DevWorkspace Operator. If set, the entire pod security context is
 	// overridden; values are not merged.
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	// ContainerSecurityContext overrides the default ContainerSecurityContext used for all
+	// workspace-related containers created by the DevWorkspace Operator. If set, the entire
+	// container security context is overridden; values are not merged.
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 	// DefaultTemplate defines an optional DevWorkspace Spec Template which gets applied to the workspace
 	// if the workspace's Template Spec Components are not defined. The DefaultTemplate will overwrite the existing
 	// Template Spec, with the exception of Projects (if any are defined).

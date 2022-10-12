@@ -96,6 +96,10 @@ func SetupControllerConfig(client crclient.Client) error {
 	if internalConfig != nil {
 		return fmt.Errorf("internal controller configuration is already set up")
 	}
+	if err := setDefaultPodSecurityContext(); err != nil {
+		return err
+	}
+
 	internalConfig = &controller.OperatorConfiguration{}
 
 	namespace, err := infrastructure.GetNamespace()

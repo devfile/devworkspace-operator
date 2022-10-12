@@ -60,6 +60,10 @@ func InitializeForTesting(currentInfrastructure Type) {
 	initialized = true
 }
 
+func IsInitialized() bool {
+	return initialized
+}
+
 // IsOpenShift returns true if the current cluster is an OpenShift (v4.x) cluster.
 func IsOpenShift() bool {
 	if !initialized {

@@ -21,8 +21,6 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
-
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -199,12 +197,8 @@ func getSpecDeployment(
 	labels[constants.DevWorkspaceNameLabel] = workspace.Name
 
 	annotations, err := getAdditionalAnnotations(workspace)
-
-	var securityContext *corev1.PodSecurityContext
-	if infrastructure.IsOpenShift() {
-		securityContext = &corev1.PodSecurityContext{}
-	} else {
-		securityContext = workspace.Config.Workspace.PodSecurityContext
+	if err != nil {
+		return nil, err
 	}
 
 	deployment := &appsv1.Deployment{
@@ -240,7 +234,7 @@ func getSpecDeployment(
 					Volumes:                       podAdditions.Volumes,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					SecurityContext:               securityContext,
+					SecurityContext:               workspace.Config.Workspace.PodSecurityContext,
 					ServiceAccountName:            saName,
 					AutomountServiceAccountToken:  nil,
 				},
@@ -256,10 +250,10 @@ func getSpecDeployment(
 		deployment = patchedDeployment
 	}
 
-	if podTolerations != nil && len(podTolerations) > 0 {
+	if len(podTolerations) > 0 {
 		deployment.Spec.Template.Spec.Tolerations = podTolerations
 	}
-	if nodeSelector != nil && len(nodeSelector) > 0 {
+	if len(nodeSelector) > 0 {
 		deployment.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 	if workspace.Spec.Template.Attributes.Exists(constants.RuntimeClassNameAttribute) {

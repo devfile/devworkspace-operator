@@ -556,6 +556,11 @@ func (in *WorkspaceConfig) DeepCopyInto(out *WorkspaceConfig) {
 		*out = new(v1.PodSecurityContext)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ContainerSecurityContext != nil {
+		in, out := &in.ContainerSecurityContext, &out.ContainerSecurityContext
+		*out = new(v1.SecurityContext)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.DefaultTemplate != nil {
 		in, out := &in.DefaultTemplate, &out.DefaultTemplate
 		*out = new(v1alpha2.DevWorkspaceTemplateSpecContent)

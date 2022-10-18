@@ -130,6 +130,22 @@ func AutoMountPVCVolumeName(pvcName string) string {
 	return pvcName
 }
 
+func WorkspaceRoleName() string {
+	return "devworkspace-default-role"
+}
+
+func WorkspaceRolebindingName() string {
+	return "devworkspace-default-rolebinding"
+}
+
+func WorkspaceSCCRoleName(sccName string) string {
+	return fmt.Sprintf("devworkspace-use-%s", sccName)
+}
+
+func WorkspaceSCCRolebindingName(sccName string) string {
+	return fmt.Sprintf("devworkspace-use-%s", sccName)
+}
+
 func OldWorkspaceRoleName() string {
 	return "workspace"
 }

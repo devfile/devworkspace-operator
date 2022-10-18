@@ -119,21 +119,21 @@ func MetadataConfigMapName(workspaceId string) string {
 // can potentially push the name over the 63 character limit (if the original
 // object has a long name)
 func AutoMountConfigMapVolumeName(volumeName string) string {
-	return fmt.Sprintf("%s", volumeName)
+	return volumeName
 }
 
 func AutoMountSecretVolumeName(volumeName string) string {
-	return fmt.Sprintf("%s", volumeName)
+	return volumeName
 }
 
 func AutoMountPVCVolumeName(pvcName string) string {
-	return fmt.Sprintf("%s", pvcName)
+	return pvcName
 }
 
-func WorkspaceRoleName() string {
+func OldWorkspaceRoleName() string {
 	return "workspace"
 }
 
-func WorkspaceRolebindingName() string {
+func OldWorkspaceRolebindingName() string {
 	return constants.ServiceAccount + "dw"
 }

@@ -90,6 +90,31 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 	assert.Equal(t, expectedConfig, internalConfig, fmt.Sprintf("Processed config should merge settings from cluster: %s", cmp.Diff(internalConfig, expectedConfig)))
 }
 
+func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
+	setupForTest(t)
+	f := fuzz.New().NilChance(0).Funcs(
+		func(_ *v1alpha1.StorageSizes, c fuzz.Continue) {},
+		func(_ *dw.DevWorkspaceTemplateSpecContent, c fuzz.Continue) {},
+		// Ensure no empty strings are generated as they cause default values to be used
+		func(s *string, c fuzz.Continue) { *s = "a" + c.RandString() },
+	)
+	for i := 0; i < 100; i++ {
+		fuzzedConfig := &v1alpha1.OperatorConfiguration{}
+		f.Fuzz(fuzzedConfig)
+		// Skip checking these two fields as they're interface fields and hard to fuzz.
+		fuzzedConfig.Workspace.DefaultStorageSize = defaultConfig.Workspace.DefaultStorageSize.DeepCopy()
+		fuzzedConfig.Workspace.PodSecurityContext = defaultConfig.Workspace.PodSecurityContext.DeepCopy()
+		clusterConfig := buildConfig(fuzzedConfig)
+		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig).Build()
+		err := SetupControllerConfig(client)
+		if !assert.NoError(t, err, "Should not return error") {
+			return
+		}
+		assert.Equal(t, fuzzedConfig, internalConfig, fmt.Sprintf("Processed config should merge all fields: %s", cmp.Diff(internalConfig, fuzzedConfig)))
+		internalConfig = nil
+	}
+}
+
 func TestCatchesNonExistentExternalDWOC(t *testing.T) {
 	setupForTest(t)
 

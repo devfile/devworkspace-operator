@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 
@@ -384,7 +385,6 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 	}
 	workspace := currConfig.Workspace
 	if workspace != nil {
-		// Don't include PodSecurityContext or ContainerSecurityContext for now as it's less easy to compare
 		if workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
 			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", workspace.ImagePullPolicy))
 		}
@@ -422,6 +422,12 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			if workspace.DefaultStorageSize.PerWorkspace != nil && workspace.DefaultStorageSize.PerWorkspace.String() != defaultConfig.Workspace.DefaultStorageSize.PerWorkspace.String() {
 				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.perWorkspace=%s", workspace.DefaultStorageSize.PerWorkspace.String()))
 			}
+		}
+		if !reflect.DeepEqual(workspace.PodSecurityContext, defaultConfig.Workspace.PodSecurityContext) {
+			config = append(config, "workspace.podSecurityContext is set")
+		}
+		if !reflect.DeepEqual(workspace.ContainerSecurityContext, defaultConfig.Workspace.ContainerSecurityContext) {
+			config = append(config, "workspace.containerSecurityContext is set")
 		}
 		if workspace.DefaultTemplate != nil {
 			config = append(config, "workspace.defaultTemplate is set")

@@ -17,6 +17,7 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -24,9 +25,11 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config/proxy"
 	routeV1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -291,10 +294,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			to.Workspace.CleanupOnStop = from.Workspace.CleanupOnStop
 		}
 		if from.Workspace.PodSecurityContext != nil {
-			to.Workspace.PodSecurityContext = from.Workspace.PodSecurityContext
+			to.Workspace.PodSecurityContext = mergePodSecurityContext(to.Workspace.PodSecurityContext, from.Workspace.PodSecurityContext)
 		}
 		if from.Workspace.ContainerSecurityContext != nil {
-			to.Workspace.ContainerSecurityContext = from.Workspace.ContainerSecurityContext
+			to.Workspace.ContainerSecurityContext = mergeContainerSecurityContext(to.Workspace.ContainerSecurityContext, from.Workspace.ContainerSecurityContext)
 		}
 		if from.Workspace.DefaultStorageSize != nil {
 			if to.Workspace.DefaultStorageSize == nil {
@@ -314,6 +317,54 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			to.Workspace.DefaultTemplate = templateSpecContentCopy
 		}
 	}
+}
+
+func mergePodSecurityContext(base, patch *corev1.PodSecurityContext) *corev1.PodSecurityContext {
+	baseBytes, err := json.Marshal(base)
+	if err != nil {
+		log.Info("Failed to serialize base pod security context: %s", err)
+		return base
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		log.Info("Failed to serialize configured pod security context: %s", err)
+		return base
+	}
+	patchedBytes, err := strategicpatch.StrategicMergePatch(baseBytes, patchBytes, &corev1.PodSecurityContext{})
+	if err != nil {
+		log.Info("Failed to merge configured pod security context: %s", err)
+		return base
+	}
+	patched := &corev1.PodSecurityContext{}
+	if err := json.Unmarshal(patchedBytes, patched); err != nil {
+		log.Info("Failed to deserialize patched pod security context: %s", patched)
+		return base
+	}
+	return patched
+}
+
+func mergeContainerSecurityContext(base, patch *corev1.SecurityContext) *corev1.SecurityContext {
+	baseBytes, err := json.Marshal(base)
+	if err != nil {
+		log.Info("Failed to serialize base container security context: %s", err)
+		return base
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		log.Info("Failed to serialize configured container security context: %s", err)
+		return base
+	}
+	patchedBytes, err := strategicpatch.StrategicMergePatch(baseBytes, patchBytes, &corev1.SecurityContext{})
+	if err != nil {
+		log.Info("Failed to merge configured container security context: %s", err)
+		return base
+	}
+	patched := &corev1.SecurityContext{}
+	if err := json.Unmarshal(patchedBytes, patched); err != nil {
+		log.Info("Failed to deserialize patched container security context: %s", patched)
+		return base
+	}
+	return patched
 }
 
 func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string {

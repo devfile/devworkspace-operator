@@ -100,8 +100,8 @@ spec:
                   containerSecurityContext:
                     description: ContainerSecurityContext overrides the default ContainerSecurityContext
                       used for all workspace-related containers created by the DevWorkspace
-                      Operator. If set, the entire container security context is overridden;
-                      values are not merged.
+                      Operator. If set, defined values are merged into the default
+                      configuration
                     properties:
                       allowPrivilegeEscalation:
                         description: 'AllowPrivilegeEscalation controls whether a
@@ -2283,8 +2283,8 @@ spec:
                   podSecurityContext:
                     description: PodSecurityContext overrides the default PodSecurityContext
                       used for all workspace-related pods created by the DevWorkspace
-                      Operator. If set, the entire pod security context is overridden;
-                      values are not merged.
+                      Operator. If set, defined values are merged into the default
+                      configuration
                     properties:
                       fsGroup:
                         description: "A special supplemental group that applies to

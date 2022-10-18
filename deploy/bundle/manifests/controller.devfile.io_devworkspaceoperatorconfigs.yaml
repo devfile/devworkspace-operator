@@ -63,7 +63,7 @@ spec:
                     description: CleanupOnStop governs how the Operator handles stopped DevWorkspaces. If set to true, additional resources associated with a DevWorkspace (e.g. services, deployments, configmaps, etc.) will be removed from the cluster when a DevWorkspace has .spec.started = false. If set to false, resources will be scaled down (e.g. deployments but the objects will be left on the cluster). The default value is false.
                     type: boolean
                   containerSecurityContext:
-                    description: ContainerSecurityContext overrides the default ContainerSecurityContext used for all workspace-related containers created by the DevWorkspace Operator. If set, the entire container security context is overridden; values are not merged.
+                    description: ContainerSecurityContext overrides the default ContainerSecurityContext used for all workspace-related containers created by the DevWorkspace Operator. If set, defined values are merged into the default configuration
                     properties:
                       allowPrivilegeEscalation:
                         description: 'AllowPrivilegeEscalation controls whether a process can gain more privileges than its parent process. This bool directly controls if the no_new_privs flag will be set on the container process. AllowPrivilegeEscalation is true always when the container is: 1) run as Privileged 2) has CAP_SYS_ADMIN'
@@ -1452,7 +1452,7 @@ spec:
                     - Never
                     type: string
                   podSecurityContext:
-                    description: PodSecurityContext overrides the default PodSecurityContext used for all workspace-related pods created by the DevWorkspace Operator. If set, the entire pod security context is overridden; values are not merged.
+                    description: PodSecurityContext overrides the default PodSecurityContext used for all workspace-related pods created by the DevWorkspace Operator. If set, defined values are merged into the default configuration
                     properties:
                       fsGroup:
                         description: "A special supplemental group that applies to all containers in a pod. Some volume types allow the Kubelet to change the ownership of that volume to be owned by the pod: \n 1. The owning GID will be the FSGroup 2. The setgid bit is set (new files created in the volume will be owned by FSGroup) 3. The permission bits are OR'd with rw-rw---- \n If unset, the Kubelet will not modify the ownership and permissions of any volume."

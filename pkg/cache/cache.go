@@ -75,10 +75,10 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 			Label: secretObjectSelector,
 		},
 		&rbacv1.Role{}: {
-			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.WorkspaceRoleName()}),
+			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.OldWorkspaceRoleName()}),
 		},
 		&rbacv1.RoleBinding{}: {
-			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.WorkspaceRolebindingName()}),
+			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.OldWorkspaceRolebindingName()}),
 		},
 	}
 

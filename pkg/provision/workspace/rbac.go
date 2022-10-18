@@ -51,7 +51,7 @@ func generateRBAC(namespace string) []client.Object {
 	return []client.Object{
 		&rbacv1.Role{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.WorkspaceRoleName(),
+				Name:      common.OldWorkspaceRoleName(),
 				Namespace: namespace,
 			},
 			Rules: []rbacv1.PolicyRule{
@@ -106,7 +106,7 @@ func generateRBAC(namespace string) []client.Object {
 		},
 		&rbacv1.RoleBinding{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.WorkspaceRolebindingName(),
+				Name:      common.OldWorkspaceRolebindingName(),
 				Namespace: namespace,
 			},
 			RoleRef: rbacv1.RoleRef{

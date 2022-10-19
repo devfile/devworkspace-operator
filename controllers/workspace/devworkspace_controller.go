@@ -447,12 +447,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 		}
-		if wsprovision.NeedsServiceAccountFinalizer(&workspace.Spec.Template) {
-			coputil.AddFinalizer(clusterWorkspace, constants.ServiceAccountCleanupFinalizer)
-			if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
-				return reconcile.Result{}, err
-			}
-		}
 		serviceAcctName = serviceAcctStatus.ServiceAccountName
 		reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 	}

@@ -146,10 +146,18 @@ func WorkspaceSCCRolebindingName(sccName string) string {
 	return fmt.Sprintf("devworkspace-use-%s", sccName)
 }
 
+// OldWorkspaceRoleName returns the name used for the workspace serviceaccount role
+//
+// Deprecated: use WorkspaceRoleName() instead.
+// TODO: remove for DevWorkspace Operator v0.19
 func OldWorkspaceRoleName() string {
 	return "workspace"
 }
 
+// OldWorkspaceRolebindingName returns the name used for the workspace serviceaccount rolebinding
+//
+// Deprecated: use WorkspaceRoleBindingName() instead.
+// TODO: remove for DevWorkspace Operator v0.19
 func OldWorkspaceRolebindingName() string {
 	return constants.ServiceAccount + "dw"
 }

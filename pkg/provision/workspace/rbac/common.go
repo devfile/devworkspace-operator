@@ -46,6 +46,9 @@ func wrapSyncError(err error) error {
 }
 
 func SyncRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
+	if err := cleanupDeprecatedRBAC(workspace.Namespace, api); err != nil {
+		return err
+	}
 	if err := syncRoles(workspace, api); err != nil {
 		return err
 	}

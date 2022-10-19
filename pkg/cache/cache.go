@@ -16,7 +16,6 @@ package cache
 import (
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	routev1 "github.com/openshift/api/route/v1"
@@ -25,7 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
@@ -45,6 +43,10 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		return nil, err
 	}
 	configmapObjectSelector, err := labels.Parse(fmt.Sprintf("%s=true", constants.DevWorkspaceWatchConfigMapLabel))
+	if err != nil {
+		return nil, err
+	}
+	rbacObjectSelector, err := labels.Parse("controller.devfile.io/workspace-rbac=true")
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +77,10 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 			Label: secretObjectSelector,
 		},
 		&rbacv1.Role{}: {
-			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.OldWorkspaceRoleName()}),
+			Label: rbacObjectSelector,
 		},
 		&rbacv1.RoleBinding{}: {
-			Field: fields.SelectorFromSet(fields.Set{"metadata.name": common.OldWorkspaceRolebindingName()}),
+			Label: rbacObjectSelector,
 		},
 	}
 

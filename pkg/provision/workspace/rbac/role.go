@@ -68,10 +68,7 @@ func generateDefaultRole(namespace string) *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.WorkspaceRoleName(),
 			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":    "devworkspace-workspaces",
-				"app.kubernetes.io/part-of": "devworkspace-operator",
-			},
+			Labels:    rbacLabels,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
@@ -130,10 +127,7 @@ func generateUseRoleForSCC(namespace, sccName string) *rbacv1.Role {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      common.WorkspaceSCCRoleName(sccName),
 			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":    "devworkspace-workspaces",
-				"app.kubernetes.io/part-of": "devworkspace-operator",
-			},
+			Labels:    rbacLabels,
 		},
 		Rules: []rbacv1.PolicyRule{
 			{

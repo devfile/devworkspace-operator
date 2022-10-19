@@ -136,10 +136,7 @@ func generateDefaultRolebinding(name, namespace, roleName string) *rbacv1.RoleBi
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name":    "devworkspace-workspaces",
-				"app.kubernetes.io/part-of": "devworkspace-operator",
-			},
+			Labels:    rbacLabels,
 		},
 		RoleRef: rbacv1.RoleRef{
 			Kind: "Role",

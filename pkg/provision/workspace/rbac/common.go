@@ -18,6 +18,12 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
+var rbacLabels = map[string]string{
+	"app.kubernetes.io/name":               "devworkspace-workspaces",
+	"app.kubernetes.io/part-of":            "devworkspace-operator",
+	"controller.devfile.io/workspace-rbac": "true",
+}
+
 type RetryError struct {
 	Err error
 }

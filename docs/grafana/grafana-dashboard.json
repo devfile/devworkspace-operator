@@ -74,7 +74,7 @@
       },
       "id": 31,
       "panels": [],
-      "title": "DevWorkspace-specific metrics",
+      "title": "DevWorkspace Metrics",
       "type": "row"
     },
     {
@@ -526,7 +526,7 @@
           "refId": "B"
         }
       ],
-      "title": "DevWorkspace successes/failures",
+      "title": "DevWorkspace Successes/Failures",
       "type": "timeseries"
     },
     {
@@ -586,7 +586,7 @@
           "refId": "A"
         }
       ],
-      "title": "DevWorkspace failure rate",
+      "title": "DevWorkspace Failure Rate",
       "type": "stat"
     },
     {
@@ -715,7 +715,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Webhooks in flight",
+      "title": "Webhooks in Flight",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -862,7 +862,7 @@
           "refId": "A"
         }
       ],
-      "title": "Webhooks latency (/mutate)",
+      "title": "Webhooks Latency (/mutate)",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -928,7 +928,7 @@
           "refId": "A"
         }
       ],
-      "title": "Reconcile time",
+      "title": "Reconcile Time",
       "tooltip": {
         "show": true,
         "showHistogram": false
@@ -993,7 +993,7 @@
           "refId": "A"
         }
       ],
-      "title": "Webhooks latency (/convert)",
+      "title": "Webhooks Latency (/convert)",
       "tooltip": {
         "show": true,
         "showHistogram": false

@@ -21,4 +21,9 @@ const (
 	// necessary to clean up additional non-workspace roles added to the workspace
 	// serviceaccount
 	ServiceAccountCleanupFinalizer = "serviceaccount.controller.devfile.io"
+	// RBACCleanupFinalizer is used to block DevWorkspace deletion in order to ensure
+	// the workspace role and rolebinding are cleaned up correctly. Since each workspace
+	// serviceaccount is added to the workspace rolebinding, it is necessary to remove it
+	// when a workspace is deleted
+	RBACCleanupFinalizer = "rbac.controller.devfile.io"
 )

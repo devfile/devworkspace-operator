@@ -39,6 +39,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/rbac"
 	"github.com/devfile/devworkspace-operator/pkg/timing"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -285,7 +286,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
-	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) {
+	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) && !coputil.HasFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer) {
 		coputil.AddFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer)
 		if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
 			return reconcile.Result{}, err
@@ -343,9 +344,24 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	timing.SetTime(timingInfo, timing.ComponentsReady)
 
-	rbacStatus := wsprovision.SyncRBAC(workspace, clusterAPI)
-	if rbacStatus.Err != nil || !rbacStatus.Continue {
-		return reconcile.Result{Requeue: true}, rbacStatus.Err
+	// Add finalizer to ensure workspace rolebinding gets cleaned up when workspace
+	// is deleted.
+	if !coputil.HasFinalizer(clusterWorkspace, constants.RBACCleanupFinalizer) {
+		coputil.AddFinalizer(clusterWorkspace, constants.RBACCleanupFinalizer)
+		if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+	if err := rbac.SyncRBAC(workspace, clusterAPI); err != nil {
+		switch rbacErr := err.(type) {
+		case *rbac.RetryError:
+			reqLogger.Info(rbacErr.Error())
+			return reconcile.Result{Requeue: true}, nil
+		case *rbac.FailError:
+			return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning rbac: %s", rbacErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+		default:
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Step two: Create routing, and wait for routing to be ready

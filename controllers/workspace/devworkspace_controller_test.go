@@ -31,6 +31,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -748,6 +749,144 @@ var _ = Describe("DevWorkspace Controller", func() {
 				return currDW.Spec.Started, nil
 			}, timeout, interval).Should(BeFalse(), "DevWorkspace should have spec.started = false")
 		})
+	})
 
+	Context("Deleting DevWorkspaces", func() {
+		const testURL = "test-url"
+		const altDevWorkspaceName = "test-devworkspace-2"
+
+		BeforeEach(func() {
+			By("Setting up HTTP client")
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						fmt.Sprintf("%s/healthz", testURL): {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+		})
+
+		AfterEach(func() {
+			By("Deleting DevWorkspaces from test")
+			deleteDevWorkspace(devWorkspaceName)
+			deleteDevWorkspace(altDevWorkspaceName)
+			cleanupPVC("claim-devworkspace")
+			By("Resetting HTTP client")
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+		})
+
+		It("Cleans up workspace PVC storage when other workspaces exist", func() {
+			By("Creating multiple DevWorkspaces")
+			createStartedDevWorkspace(devWorkspaceName, "common-pvc-test-devworkspace.yaml")
+			createStartedDevWorkspace(altDevWorkspaceName, "common-pvc-test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			Expect(devworkspace.Finalizers).Should(ContainElement(constants.StorageCleanupFinalizer), "DevWorkspace should get storage cleanup finalizer")
+
+			By("Deleting existing workspace")
+			Expect(k8sClient.Delete(ctx, devworkspace)).Should(Succeed())
+
+			By("Check that cleanup job is created")
+			cleanupJob := &batchv1.Job{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName(common.PVCCleanupJobName(devworkspace.Status.DevWorkspaceId), testNamespace), cleanupJob)
+			}, timeout, interval).Should(Succeed(), "Cleanup job should be created when workspace is deleted")
+			expectedOwnerReference := devworkspaceOwnerRef(devworkspace)
+			Expect(cleanupJob.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Routing should be owned by DevWorkspace")
+			Expect(cleanupJob.Labels[constants.DevWorkspaceIDLabel]).Should(Equal(devworkspace.Status.DevWorkspaceId), "Object should be labelled with DevWorkspace ID")
+
+			By("Marking Job as successfully completed")
+			cleanupJob.Status.Succeeded = 1
+			cleanupJob.Status.Conditions = []batchv1.JobCondition{
+				{
+					Type:   batchv1.JobComplete,
+					Status: corev1.ConditionTrue,
+				},
+			}
+			Expect(k8sClient.Status().Update(ctx, cleanupJob)).Should(Succeed(), "Failed to update cleanup job")
+
+			By("Checking that workspace is deleted")
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (exists bool) {
+				err := k8sClient.Get(ctx, namespacedName(devWorkspaceName, testNamespace), currDW)
+				return err != nil && k8sErrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue(), "Finalizer should be cleared and workspace should be deleted")
+		})
+
+		It("Marks workspace as Errored when cleanup Job fails", func() {
+			By("Creating multiple DevWorkspaces")
+			createStartedDevWorkspace(devWorkspaceName, "common-pvc-test-devworkspace.yaml")
+			createStartedDevWorkspace(altDevWorkspaceName, "common-pvc-test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			Expect(devworkspace.Finalizers).Should(ContainElement(constants.StorageCleanupFinalizer), "DevWorkspace should get storage cleanup finalizer")
+
+			By("Deleting existing workspace")
+			Expect(k8sClient.Delete(ctx, devworkspace)).Should(Succeed())
+
+			By("Check that cleanup job is created")
+			cleanupJob := &batchv1.Job{}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName(common.PVCCleanupJobName(devworkspace.Status.DevWorkspaceId), testNamespace), cleanupJob)
+			}, timeout, interval).Should(Succeed(), "Cleanup job should be created when workspace is deleted")
+			expectedOwnerReference := devworkspaceOwnerRef(devworkspace)
+			Expect(cleanupJob.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Routing should be owned by DevWorkspace")
+			Expect(cleanupJob.Labels[constants.DevWorkspaceIDLabel]).Should(Equal(devworkspace.Status.DevWorkspaceId), "Object should be labelled with DevWorkspace ID")
+
+			By("Marking Job as failed")
+			cleanupJob.Status.Conditions = []batchv1.JobCondition{
+				{
+					Type:   batchv1.JobFailed,
+					Status: corev1.ConditionTrue,
+				},
+			}
+			Expect(k8sClient.Status().Update(ctx, cleanupJob)).Should(Succeed(), "Failed to update cleanup job")
+
+			By("Checking that workspace is not deleted and ends up in error state")
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (dw.DevWorkspacePhase, error) {
+				if err := k8sClient.Get(ctx, namespacedName(devWorkspaceName, testNamespace), currDW); err != nil {
+					return "", err
+				}
+				return currDW.Status.Phase, nil
+			}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusError), "DevWorkspace should enter error phase")
+			Expect(currDW.Finalizers).Should(ContainElement(constants.StorageCleanupFinalizer))
+		})
+
+		It("Deletes shared PVC and clears finalizers when all workspaces are deleted", func() {
+			By("Creating DevWorkspaces")
+			createStartedDevWorkspace(devWorkspaceName, "common-pvc-test-devworkspace.yaml")
+			devworkspace1 := getExistingDevWorkspace(devWorkspaceName)
+			Expect(devworkspace1.Finalizers).Should(ContainElement(constants.StorageCleanupFinalizer), "DevWorkspace should get storage cleanup finalizer")
+
+			createStartedDevWorkspace(altDevWorkspaceName, "common-pvc-test-devworkspace.yaml")
+			devworkspace2 := getExistingDevWorkspace(altDevWorkspaceName)
+			Expect(devworkspace2.Finalizers).Should(ContainElement(constants.StorageCleanupFinalizer), "DevWorkspace should get storage cleanup finalizer")
+
+			By("Deleting existing workspaces")
+			Expect(k8sClient.Delete(ctx, devworkspace1)).Should(Succeed())
+			Expect(k8sClient.Delete(ctx, devworkspace2)).Should(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{}
+			Eventually(func() (deleted bool, err error) {
+				if err := k8sClient.Get(ctx, namespacedName("claim-devworkspace", testNamespace), pvc); err != nil {
+					return false, err
+				}
+				return pvc.DeletionTimestamp != nil, nil
+			}, timeout, interval).Should(BeTrue(), "Shared PVC should be deleted")
+
+			By(fmt.Sprintf("Checking that devworkspace %s is deleted", devWorkspaceName))
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (exists bool) {
+				err := k8sClient.Get(ctx, namespacedName(devWorkspaceName, testNamespace), currDW)
+				return err != nil && k8sErrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue(), "Finalizer should be cleared and workspace should be deleted")
+
+			By(fmt.Sprintf("Checking that devworkspace %s is deleted", altDevWorkspaceName))
+			Eventually(func() (exists bool) {
+				err := k8sClient.Get(ctx, namespacedName(altDevWorkspaceName, testNamespace), currDW)
+				return err != nil && k8sErrors.IsNotFound(err)
+			}, timeout, interval).Should(BeTrue(), "Finalizer should be cleared and workspace should be deleted")
+		})
 	})
 })

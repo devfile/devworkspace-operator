@@ -14,6 +14,7 @@
 package controllers_test
 
 import (
+	"fmt"
 	"path"
 	"time"
 
@@ -40,10 +41,10 @@ const (
 
 var clock kubeclock.Clock = &kubeclock.RealClock{}
 
-func createDevWorkspace(fromFile string) {
+func createDevWorkspace(name, fromFile string) {
 	By("Loading DevWorkspace from test file")
 	devworkspace := &dw.DevWorkspace{}
-	err := loadObjectFromFile(devWorkspaceName, devworkspace, fromFile)
+	err := loadObjectFromFile(name, devworkspace, fromFile)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("Creating DevWorkspace on cluster")
@@ -57,9 +58,9 @@ func createDevWorkspace(fromFile string) {
 	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue())
 }
 
-func createStartedDevWorkspace(fromFile string) {
-	createDevWorkspace(fromFile)
-	devworkspace := getExistingDevWorkspace()
+func createStartedDevWorkspace(name, fromFile string) {
+	createDevWorkspace(name, fromFile)
+	devworkspace := getExistingDevWorkspace(name)
 	workspaceID := devworkspace.Status.DevWorkspaceId
 
 	By("Manually making Routing ready to continue")
@@ -78,13 +79,16 @@ func createStartedDevWorkspace(fromFile string) {
 	}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusRunning), "Workspace did not enter Running phase before timeout")
 }
 
-func getExistingDevWorkspace() *dw.DevWorkspace {
-	By("Getting existing DevWorkspace")
+func getExistingDevWorkspace(name string) *dw.DevWorkspace {
+	By(fmt.Sprintf("Getting existing DevWorkspace %s", name))
 	devworkspace := &dw.DevWorkspace{}
-	dwNN := namespacedName(devWorkspaceName, testNamespace)
-	Expect(k8sClient.Get(ctx, dwNN, devworkspace)).Should(Succeed())
-	workspaceID := devworkspace.Status.DevWorkspaceId
-	Expect(workspaceID).ShouldNot(BeEmpty(), "DevWorkspaceID not set")
+	dwNN := namespacedName(name, testNamespace)
+	Eventually(func() (string, error) {
+		if err := k8sClient.Get(ctx, dwNN, devworkspace); err != nil {
+			return "", err
+		}
+		return devworkspace.Status.DevWorkspaceId, nil
+	}, timeout, interval).Should(Not(BeEmpty()))
 	return devworkspace
 }
 
@@ -94,8 +98,13 @@ func deleteDevWorkspace(name string) {
 	dw := &dw.DevWorkspace{}
 	dw.Name = name
 	dw.Namespace = testNamespace
-	Expect(k8sClient.Delete(ctx, dw)).Should(Succeed())
-	err := k8sClient.Get(ctx, dwNN, dw)
+	// Do nothing if already deleted
+	err := k8sClient.Delete(ctx, dw)
+	if k8sErrors.IsNotFound(err) {
+		return
+	}
+	Expect(err).Should(BeNil())
+	err = k8sClient.Get(ctx, dwNN, dw)
 	if err != nil {
 		Expect(k8sErrors.IsNotFound(err)).Should(BeTrue(), "Unexpected error when deleting DevWorkspace: %s", err)
 		return
@@ -121,7 +130,7 @@ func deleteDevWorkspace(name string) {
 	Eventually(func() bool {
 		err := k8sClient.Get(ctx, dwNN, dw)
 		return err != nil && k8sErrors.IsNotFound(err)
-	}).Should(BeTrue(), "DevWorkspace not deleted after timeout")
+	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue(), "DevWorkspace not deleted after timeout")
 }
 
 func createObject(obj crclient.Object) {

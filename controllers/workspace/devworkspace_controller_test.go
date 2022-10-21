@@ -170,7 +170,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 	Context("Workspace Objects creation", func() {
 
 		BeforeEach(func() {
-			createDevWorkspace("test-devworkspace.yaml")
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 		})
 
 		AfterEach(func() {
@@ -206,7 +206,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Creates DevWorkspaceRouting", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Checking that DevWorkspaceRouting is created")
@@ -223,7 +223,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Syncs Routing mainURL to DevWorkspace", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Manually making Routing ready to continue")
@@ -239,7 +239,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Creates workspace metadata configmap", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Manually making Routing ready to continue")
@@ -266,7 +266,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Syncs the DevWorkspace ServiceAccount", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Manually making Routing ready to continue")
@@ -285,7 +285,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Syncs DevWorkspace Deployment", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Manually making Routing ready to continue")
@@ -304,7 +304,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Marks DevWorkspace as Running", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
@@ -354,7 +354,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 					},
 				},
 			})
-			createDevWorkspace("test-devworkspace.yaml")
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 		})
 
 		AfterEach(func() {
@@ -363,7 +363,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Mounts image pull secrets to the DevWorkspace Deployment", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Creating secrets for docker configs")
@@ -395,7 +395,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Manages git credentials for DevWorkspace", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Creating a secret for git credentials")
@@ -457,7 +457,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Automounts secrets and configmaps volumes", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Creating a automount secrets and configmaps")
@@ -519,7 +519,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Automounts secrets and configmaps env vars", func() {
-			devworkspace := getExistingDevWorkspace()
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
 			By("Creating a automount secrets and configmaps")
@@ -574,7 +574,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 					},
 				},
 			})
-			createStartedDevWorkspace("test-devworkspace.yaml")
+			createStartedDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 		})
 
 		AfterEach(func() {
@@ -587,7 +587,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Setting DevWorkspace's .spec.started to false")
 			Eventually(func() error {
-				devworkspace = getExistingDevWorkspace()
+				devworkspace = getExistingDevWorkspace(devWorkspaceName)
 				devworkspace.Spec.Started = false
 				return k8sClient.Update(ctx, devworkspace)
 			}, timeout, interval).Should(Succeed(), "Update DevWorkspace to have .spec.started = false")
@@ -645,7 +645,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Setting DevWorkspace's .spec.started to false")
 			Eventually(func() error {
-				devworkspace = getExistingDevWorkspace()
+				devworkspace = getExistingDevWorkspace(devWorkspaceName)
 				devworkspace.Spec.Started = false
 				return k8sClient.Update(ctx, devworkspace)
 			}, timeout, interval).Should(Succeed(), "Update DevWorkspace to have .spec.started = false")
@@ -693,7 +693,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Set debug start annotation on DevWorkspace")
 			Eventually(func() error {
-				devworkspace = getExistingDevWorkspace()
+				devworkspace = getExistingDevWorkspace(devWorkspaceName)
 				if devworkspace.Annotations == nil {
 					devworkspace.Annotations = map[string]string{}
 				}
@@ -710,7 +710,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Setting failing phase on workspace directly")
 			Eventually(func() error {
-				devworkspace = getExistingDevWorkspace()
+				devworkspace = getExistingDevWorkspace(devWorkspaceName)
 				devworkspace.Status.Phase = "Failing"
 				devworkspace.Status.Conditions = append(devworkspace.Status.Conditions, dw.DevWorkspaceCondition{
 					Type:               dw.DevWorkspaceFailedStart,
@@ -735,7 +735,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			By("Setting failing phase on workspace directly")
 			Eventually(func() error {
-				devworkspace = getExistingDevWorkspace()
+				devworkspace = getExistingDevWorkspace(devWorkspaceName)
 				devworkspace.Status.Phase = "Failing"
 				return k8sClient.Status().Update(ctx, devworkspace)
 			}, timeout, interval).Should(Succeed(), "Should be able to set failing status on DevWorkspace")

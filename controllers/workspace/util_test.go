@@ -133,6 +133,25 @@ func deleteDevWorkspace(name string) {
 	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue(), "DevWorkspace not deleted after timeout")
 }
 
+func cleanupPVC(name string) {
+	By("Cleaning up shared PVC")
+	pvc := &corev1.PersistentVolumeClaim{}
+	pvcNN := namespacedName(name, testNamespace)
+	Eventually(func() error {
+		err := k8sClient.Get(ctx, pvcNN, pvc)
+		if k8sErrors.IsNotFound(err) {
+			return nil
+		}
+		// Need to clear finalizers to allow PVC to be cleaned up
+		pvc.Finalizers = nil
+		err = k8sClient.Update(ctx, pvc)
+		if err == nil {
+			return err
+		}
+		return fmt.Errorf("PVC not deleted yet")
+	}, timeout, interval).Should(Succeed(), "PVC should be deleted")
+}
+
 func createObject(obj crclient.Object) {
 	Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 	Eventually(func() error {

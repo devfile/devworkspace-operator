@@ -66,7 +66,6 @@ func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Read file:\n%+v\n\n", test)
 	return test
 }
 

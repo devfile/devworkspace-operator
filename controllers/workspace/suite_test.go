@@ -64,9 +64,9 @@ var (
 )
 
 func TestAPIs(t *testing.T) {
-	// if os.Getenv("TEST_CONTROLLER") != "true" {
-	// 	t.Skip()
-	// }
+	if os.Getenv("SKIP_CONTROLLER_TESTS") == "true" {
+		t.Skip()
+	}
 
 	RegisterFailHandler(Fail)
 

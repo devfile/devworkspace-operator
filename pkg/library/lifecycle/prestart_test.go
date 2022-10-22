@@ -16,7 +16,6 @@
 package lifecycle
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -48,7 +47,6 @@ func loadPreStartTestCaseOrPanic(t *testing.T, testFilename string) preStartTest
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
-	t.Log(fmt.Sprintf("Read file:\n%+v\n\n", test))
 	return test
 }
 

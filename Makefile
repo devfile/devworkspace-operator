@@ -96,7 +96,14 @@ update_devworkspace_crds:
 
 ### test: Runs tests
 test: generate fmt vet manifests envtest
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out
+  ifneq ($(shell command -v ginkgo 2> /dev/null),)
+	  go test $(shell go list ./... | grep -v test/e2e | grep -v controllers/workspace) -coverprofile cover.out
+	  KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+	    ginkgo run --timeout 5m --randomize-all -coverprofile controller.cover.out controllers/workspace
+  else
+	  KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
+	    go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out
+  endif
 
 ### test_e2e: Runs e2e test on the cluster set in context. DevWorkspace Operator must be already deployed
 test_e2e:

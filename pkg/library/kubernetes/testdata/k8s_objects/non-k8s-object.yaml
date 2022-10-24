@@ -1,0 +1,6 @@
+random: ymal
+that: does
+not:
+  satisfy:
+    - typeMeta
+    - objectMeta

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Plod
+metadata:
+  name: test-pod
+  labels:
+    testLabel: testPod
+spec:
+  containers:
+  - name: test-container
+    image: test-image
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    ports:
+      - containerPort: 8080

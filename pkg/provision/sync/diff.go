@@ -20,6 +20,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -137,10 +138,11 @@ func serviceDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	}
 	sort.Slice(specCopy.Spec.Ports, servicePortSorter(specCopy.Spec.Ports))
 	sort.Slice(clusterCopy.Spec.Ports, servicePortSorter(clusterCopy.Spec.Ports))
-	if !cmp.Equal(specCopy.Spec.Ports, clusterCopy.Spec.Ports) {
+	if !cmp.Equal(specCopy.Spec.Ports, clusterCopy.Spec.Ports, cmp.Options{cmpopts.IgnoreFields(corev1.ServicePort{}, "Protocol")}) {
 		return false, true
 	}
-	return false, specCopy.Spec.Type != clusterCopy.Spec.Type
+	typeMatches := specCopy.Spec.Type == "" || specCopy.Spec.Type == clusterCopy.Spec.Type
+	return false, !typeMatches
 }
 
 func unrecognizedObjectDiffFunc(spec, cluster crclient.Object) (delete, update bool) {

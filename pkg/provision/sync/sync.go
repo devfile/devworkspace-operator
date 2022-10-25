@@ -31,6 +31,15 @@ import (
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// IsRecognizedObject returns whether the provided object kind is recognized by the sync package to support updating
+// existing objects on the cluster. If the object is not recognized, passing it to SyncObjectWithCluster will fail.
+// Instead, SyncUnrecognizedObjectWithCluster should be used.
+func IsRecognizedObject(specObj crclient.Object) bool {
+	objType := reflect.TypeOf(specObj).Elem()
+	_, ok := diffFuncs[objType]
+	return ok
+}
+
 // SyncObjectWithCluster synchronises the state of specObj to the cluster, creating or updating the cluster object
 // as required. If specObj is in sync with the cluster, returns the object as it exists on the cluster. Returns a
 // NotInSyncError if an update is required, UnrecoverableSyncError if object provided is invalid, or generic error
@@ -70,6 +79,59 @@ func SyncObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Ob
 		return nil, updateObjectGeneric(specObj, clusterObj, api)
 	}
 	return clusterObj, nil
+}
+
+// SyncUnrecognizedObjectWithCluster allows syncing objects not supported by SyncObjectWithCluster. As there is
+// no generic way of deciding if an object needs to be updated, a WarningError is returned if the object exists
+// on the cluster. The only object updating performed by this function is to ensure labels/annotations and
+// ownerReferences in specObj are synced to the cluster.
+// The reason arbitrary updates are not supported is 1) certain objects have defaulted fields that can always
+// trigger naive diff checks (causing reconciles to get stuck), and 2) it's unknown which fields are unmodifiable,
+// (e.g. services must keep ClusterIP once set; pod fields cannot be changed after creation)
+func SyncUnrecognizedObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Object, error) {
+	objType := reflect.TypeOf(specObj).Elem()
+	clusterObj := reflect.New(objType).Interface().(crclient.Object)
+
+	err := api.Client.Get(api.Ctx, types.NamespacedName{Name: specObj.GetName(), Namespace: specObj.GetNamespace()}, clusterObj)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return nil, createObjectGeneric(specObj, api)
+		}
+		return nil, err
+	}
+	update, delete := unrecognizedObjectDiffFunc(specObj, clusterObj)
+	if update {
+		toUpdate, err := unrecognizedObjectUpdateFunc(specObj, clusterObj)
+		if err != nil {
+			return nil, &UnrecoverableSyncError{err}
+		}
+		err = api.Client.Update(api.Ctx, toUpdate)
+		switch {
+		case err == nil:
+			api.Logger.Info("Updated object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())
+			return nil, NewNotInSync(specObj, UpdatedObjectReason)
+		case k8sErrors.IsConflict(err):
+			return nil, NewNotInSync(specObj, NeedRetryReason)
+		case k8sErrors.IsInvalid(err), k8sErrors.IsForbidden(err):
+			return nil, &UnrecoverableSyncError{err}
+		default:
+			return nil, err
+		}
+	}
+	if delete {
+		if err := api.Client.Delete(api.Ctx, clusterObj); err != nil {
+			if k8sErrors.IsForbidden(err) {
+				return nil, &UnrecoverableSyncError{fmt.Errorf("failed to delete object %s: %w", clusterObj.GetName(), err)}
+			}
+			return nil, err
+		}
+		api.Logger.Info("Deleted object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())
+		return nil, NewNotInSync(specObj, DeletedObjectReason)
+	}
+	kind := specObj.GetObjectKind().GroupVersionKind().GroupKind().String()
+	return clusterObj, &WarningError{
+		Message: fmt.Sprintf("Unrecognized object kind %s. Object will not be updated on cluster", kind),
+	}
 }
 
 func createObjectGeneric(specObj crclient.Object, api ClusterAPI) error {

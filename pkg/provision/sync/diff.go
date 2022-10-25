@@ -36,17 +36,17 @@ import (
 type diffFunc func(spec crclient.Object, cluster crclient.Object) (delete, update bool)
 
 var diffFuncs = map[reflect.Type]diffFunc{
-	reflect.TypeOf(rbacv1.Role{}):                  allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(roleDiffOpts)),
-	reflect.TypeOf(rbacv1.RoleBinding{}):           allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(rolebindingDiffOpts)),
-	reflect.TypeOf(corev1.ServiceAccount{}):        allDiffFuncs(labelsAndAnnotationsDiffFunc, ownerrefsDiffFunc),
-	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, labelsAndAnnotationsDiffFunc, basicDiffFunc(deploymentDiffOpts)),
-	reflect.TypeOf(corev1.ConfigMap{}):             allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(configmapDiffOpts)),
-	reflect.TypeOf(corev1.Secret{}):                allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(secretDiffOpts)),
-	reflect.TypeOf(v1alpha1.DevWorkspaceRouting{}): allDiffFuncs(routingDiffFunc, labelsAndAnnotationsDiffFunc, basicDiffFunc(routingDiffOpts)),
-	reflect.TypeOf(batchv1.Job{}):                  allDiffFuncs(labelsAndAnnotationsDiffFunc, jobDiffFunc),
-	reflect.TypeOf(corev1.Service{}):               allDiffFuncs(labelsAndAnnotationsDiffFunc, serviceDiffFunc),
-	reflect.TypeOf(networkingv1.Ingress{}):         allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(ingressDiffOpts)),
-	reflect.TypeOf(routev1.Route{}):                allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(routeDiffOpts)),
+	reflect.TypeOf(rbacv1.Role{}):                  allDiffFuncs(metadataDiffFunc, basicDiffFunc(roleDiffOpts)),
+	reflect.TypeOf(rbacv1.RoleBinding{}):           allDiffFuncs(metadataDiffFunc, basicDiffFunc(rolebindingDiffOpts)),
+	reflect.TypeOf(corev1.ServiceAccount{}):        metadataDiffFunc,
+	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, metadataDiffFunc, basicDiffFunc(deploymentDiffOpts)),
+	reflect.TypeOf(corev1.ConfigMap{}):             allDiffFuncs(metadataDiffFunc, basicDiffFunc(configmapDiffOpts)),
+	reflect.TypeOf(corev1.Secret{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(secretDiffOpts)),
+	reflect.TypeOf(v1alpha1.DevWorkspaceRouting{}): allDiffFuncs(routingDiffFunc, metadataDiffFunc, basicDiffFunc(routingDiffOpts)),
+	reflect.TypeOf(batchv1.Job{}):                  allDiffFuncs(metadataDiffFunc, jobDiffFunc),
+	reflect.TypeOf(corev1.Service{}):               allDiffFuncs(metadataDiffFunc, serviceDiffFunc),
+	reflect.TypeOf(networkingv1.Ingress{}):         allDiffFuncs(metadataDiffFunc, basicDiffFunc(ingressDiffOpts)),
+	reflect.TypeOf(routev1.Route{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(routeDiffOpts)),
 }
 
 // basicDiffFunc returns a diffFunc that specifies an object needs an update if cmp.Equal fails
@@ -56,9 +56,9 @@ func basicDiffFunc(diffOpt cmp.Options) diffFunc {
 	}
 }
 
-// labelsAndAnnotationsDiffFunc requires an object to be updated if any label or annotation present in the spec
+// metadataDiffFunc requires an object to be updated if any label or annotation present in the spec
 // object is not present in the cluster object.
-func labelsAndAnnotationsDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
+func metadataDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	clusterAnnotations := cluster.GetAnnotations()
 	for k, v := range spec.GetAnnotations() {
 		if clusterAnnotations[k] != v {
@@ -71,10 +71,6 @@ func labelsAndAnnotationsDiffFunc(spec, cluster crclient.Object) (delete, update
 			return false, true
 		}
 	}
-	return false, false
-}
-
-func ownerrefsDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	clusterRefs := cluster.GetOwnerReferences()
 	for _, ownerref := range spec.GetOwnerReferences() {
 		if !containsOwnerRef(ownerref, clusterRefs) {
@@ -145,6 +141,10 @@ func serviceDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 		return false, true
 	}
 	return false, specCopy.Spec.Type != clusterCopy.Spec.Type
+}
+
+func unrecognizedObjectDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
+	return metadataDiffFunc(spec, cluster)
 }
 
 func containsOwnerRef(toCheck metav1.OwnerReference, listRefs []metav1.OwnerReference) bool {

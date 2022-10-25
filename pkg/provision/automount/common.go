@@ -28,10 +28,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-var (
-	modeReadOnly = int32(0640)
-)
-
 type Resources struct {
 	Volumes       []corev1.Volume
 	VolumeMounts  []corev1.VolumeMount

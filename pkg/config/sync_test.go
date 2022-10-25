@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -72,7 +73,7 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 		Workspace: &v1alpha1.WorkspaceConfig{
 			ImagePullPolicy: "IfNotPresent",
 		},
-		EnableExperimentalFeatures: &trueBool,
+		EnableExperimentalFeatures: pointer.Bool(true),
 	})
 	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig).Build()
 
@@ -80,7 +81,7 @@ func TestSetupControllerMergesClusterConfig(t *testing.T) {
 	expectedConfig.Routing.DefaultRoutingClass = "test-routingClass"
 	expectedConfig.Routing.ClusterHostSuffix = "192.168.0.1.nip.io"
 	expectedConfig.Workspace.ImagePullPolicy = "IfNotPresent"
-	expectedConfig.EnableExperimentalFeatures = &trueBool
+	expectedConfig.EnableExperimentalFeatures = pointer.Bool(true)
 
 	err := SetupControllerConfig(client)
 	if !assert.NoError(t, err, "Should not return error") {
@@ -263,7 +264,7 @@ func TestSyncConfigDoesNotChangeDefaults(t *testing.T) {
 		Workspace: &v1alpha1.WorkspaceConfig{
 			ImagePullPolicy: "IfNotPresent",
 		},
-		EnableExperimentalFeatures: &trueBool,
+		EnableExperimentalFeatures: pointer.Bool(true),
 	})
 	syncConfigFrom(config)
 	internalConfig.Routing.DefaultRoutingClass = "Changed after the fact"

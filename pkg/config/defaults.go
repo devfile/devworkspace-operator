@@ -19,6 +19,7 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 )
 
 // defaultConfig represents the default configuration for the DevWorkspace Operator.
@@ -36,12 +37,12 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 		},
 		IdleTimeout:     "15m",
 		ProgressTimeout: "5m",
-		CleanupOnStop:   &boolFalse,
+		CleanupOnStop:   pointer.Bool(false),
 		PodSecurityContext: &corev1.PodSecurityContext{
-			RunAsUser:    &int64UID,
-			RunAsGroup:   &int64GID,
-			RunAsNonRoot: &boolTrue,
-			FSGroup:      &int64UID,
+			RunAsUser:    pointer.Int64(1234),
+			RunAsGroup:   pointer.Int64(0),
+			RunAsNonRoot: pointer.Bool(true),
+			FSGroup:      pointer.Int64(1234),
 		},
 		DefaultTemplate: nil,
 	},
@@ -49,10 +50,6 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 
 // Necessary variables for setting pointer values
 var (
-	boolTrue                = true
-	boolFalse               = false
-	int64UID                = int64(1234)
-	int64GID                = int64(0)
 	commonStorageSize       = resource.MustParse("10Gi")
 	perWorkspaceStorageSize = resource.MustParse("5Gi")
 )

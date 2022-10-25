@@ -22,6 +22,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -60,7 +61,7 @@ func getAutomountSecret(mountPath, mountAs string, secret *corev1.Secret) Resour
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secret.Name,
-				DefaultMode: &modeReadOnly,
+				DefaultMode: pointer.Int32(0640),
 			},
 		},
 	}

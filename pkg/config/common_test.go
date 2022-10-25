@@ -38,8 +38,7 @@ const (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	trueBool = true
+	scheme = runtime.NewScheme()
 )
 
 func init() {

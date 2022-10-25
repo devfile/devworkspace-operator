@@ -15,16 +15,18 @@
 
 package asyncstorage
 
-import corev1 "k8s.io/api/core/v1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
+)
 
 func GetVolumeFromSecret(secret *corev1.Secret) *corev1.Volume {
-	readOnlyPermissions := int32(416) // 0640 (octal) in base-10
 	return &corev1.Volume{
 		Name: asyncSecretVolumeName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secret.Name,
-				DefaultMode: &readOnlyPermissions,
+				DefaultMode: pointer.Int32(0640),
 			},
 		},
 	}

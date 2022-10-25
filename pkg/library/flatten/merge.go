@@ -25,6 +25,7 @@ import (
 	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 )
 
 // mergeDevWorkspaceElements merges elements that are duplicated between the DevWorkspace, its parent, and its plugins
@@ -95,11 +96,10 @@ func mergeVolumeComponents(main, parent *dw.DevWorkspaceTemplateSpecContent, plu
 
 func mergeVolume(into, from *dw.VolumeComponent) error {
 	// If the new volume is persistent, make the original persistent
-	boolFalse := false
 	if from.Ephemeral == nil {
 		into.Ephemeral = nil
 	} else if !*from.Ephemeral {
-		into.Ephemeral = &boolFalse
+		into.Ephemeral = pointer.Bool(false)
 	}
 	intoSize := into.Size
 	if intoSize == "" {

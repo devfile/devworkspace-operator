@@ -21,6 +21,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 
@@ -112,8 +113,6 @@ func getSpecMetadataConfigMap(original, flattened *common.DevWorkspaceWithConfig
 }
 
 func getVolumeFromConfigMap(cm *corev1.ConfigMap) *corev1.Volume {
-	boolTrue := true
-	defaultMode := int32(0644)
 	return &corev1.Volume{
 		Name: "workspace-metadata",
 		VolumeSource: corev1.VolumeSource{
@@ -121,8 +120,8 @@ func getVolumeFromConfigMap(cm *corev1.ConfigMap) *corev1.Volume {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: cm.Name,
 				},
-				Optional:    &boolTrue,
-				DefaultMode: &defaultMode,
+				Optional:    pointer.Bool(true),
+				DefaultMode: pointer.Int32(0644),
 			},
 		},
 	}

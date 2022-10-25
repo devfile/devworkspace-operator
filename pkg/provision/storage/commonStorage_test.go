@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/yaml"
@@ -189,7 +190,6 @@ func TestTerminatingPVC(t *testing.T) {
 }
 
 func TestNeedsStorage(t *testing.T) {
-	boolTrue := true
 	tests := []struct {
 		Name         string
 		Explanation  string
@@ -217,7 +217,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: &boolTrue,
+								Ephemeral: pointer.Bool(true),
 							},
 						},
 					},
@@ -233,7 +233,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Container: &dw.ContainerComponent{
 							Container: dw.Container{
-								MountSources: &boolTrue,
+								MountSources: pointer.Bool(true),
 							},
 						},
 					},
@@ -249,7 +249,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Container: &dw.ContainerComponent{
 							Container: dw.Container{
-								MountSources: &boolTrue,
+								MountSources: pointer.Bool(true),
 							},
 						},
 					},
@@ -259,7 +259,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: &boolTrue,
+								Ephemeral: pointer.Bool(true),
 							},
 						},
 					},

@@ -25,6 +25,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -212,8 +213,7 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevW
 	// Scale async deployment to zero to free up common PVC
 	currReplicas := asyncDeploy.Spec.Replicas
 	if currReplicas == nil || *currReplicas != 0 {
-		intzero := int32(0)
-		asyncDeploy.Spec.Replicas = &intzero
+		asyncDeploy.Spec.Replicas = pointer.Int32(0)
 		err := clusterAPI.Client.Update(clusterAPI.Ctx, asyncDeploy)
 		if err != nil && !k8sErrors.IsConflict(err) {
 			return err

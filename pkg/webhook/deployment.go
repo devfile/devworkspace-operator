@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,13 +67,9 @@ func CreateWebhookServerDeployment(
 }
 
 func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment, error) {
-	replicas := int32(1)
-	terminationGracePeriod := int64(1)
-	trueBool := true
 	var user *int64
 	if !infrastructure.IsOpenShift() {
-		uID := int64(1234)
-		user = &uID
+		user = pointer.Int64(1234)
 	}
 
 	resources, err := getWebhooksServerResources()
@@ -92,7 +89,7 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 			Labels:    server.WebhookServerAppLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			Replicas: pointer.Int32(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: server.WebhookServerAppLabels(),
 			},
@@ -197,13 +194,13 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 						},
 					},
 					RestartPolicy:                 "Always",
-					TerminationGracePeriodSeconds: &terminationGracePeriod,
+					TerminationGracePeriodSeconds: pointer.Int64(1),
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser: user,
 						FSGroup:   user,
 					},
 					ServiceAccountName:           server.WebhookServerSAName,
-					AutomountServiceAccountToken: &trueBool,
+					AutomountServiceAccountToken: pointer.Bool(true),
 					Volumes: []corev1.Volume{
 						{
 							Name: server.WebhookServerCertsVolumeName,

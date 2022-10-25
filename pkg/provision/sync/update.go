@@ -18,6 +18,7 @@ import (
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -76,4 +77,41 @@ func getUpdateFunc(obj crclient.Object) updateFunc {
 	default:
 		return defaultUpdateFunc
 	}
+}
+
+func unrecognizedObjectUpdateFunc(spec, cluster crclient.Object) (crclient.Object, error) {
+	if cluster == nil {
+		return nil, errors.New("updating unrecognized object requires the cluster instance")
+	}
+	clusterCopy := cluster.DeepCopyObject().(client.Object)
+	newLabels := clusterCopy.GetLabels()
+	for k, v := range spec.GetLabels() {
+		newLabels[k] = v
+	}
+	clusterCopy.SetLabels(newLabels)
+
+	newAnnotations := clusterCopy.GetAnnotations()
+	for k, v := range spec.GetAnnotations() {
+		newAnnotations[k] = v
+	}
+	clusterCopy.SetAnnotations(newAnnotations)
+
+	newOwnerrefs := clusterCopy.GetOwnerReferences()
+	for _, specOwnerref := range spec.GetOwnerReferences() {
+		found := false
+		for _, ownerref := range cluster.GetOwnerReferences() {
+			if specOwnerref.Kind == ownerref.Kind &&
+				specOwnerref.Name == ownerref.Name &&
+				specOwnerref.UID == ownerref.UID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			newOwnerrefs = append(newOwnerrefs, specOwnerref)
+		}
+	}
+	clusterCopy.SetOwnerReferences(newOwnerrefs)
+
+	return clusterCopy, nil
 }

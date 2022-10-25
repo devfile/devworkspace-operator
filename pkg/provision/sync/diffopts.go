@@ -65,6 +65,10 @@ var deploymentDiffOpts = cmp.Options{
 	}),
 }
 
+var podDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(corev1.Pod{}, "TypeMeta", "ObjectMeta", "Status"),
+}
+
 var configmapDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(corev1.ConfigMap{}, "TypeMeta", "ObjectMeta"),
 }

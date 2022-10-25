@@ -41,6 +41,7 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(rbacv1.RoleBinding{}):           allDiffFuncs(metadataDiffFunc, basicDiffFunc(rolebindingDiffOpts)),
 	reflect.TypeOf(corev1.ServiceAccount{}):        metadataDiffFunc,
 	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, metadataDiffFunc, basicDiffFunc(deploymentDiffOpts)),
+	reflect.TypeOf(corev1.Pod{}):                   allDiffFuncs(podDiffFunc, metadataDiffFunc),
 	reflect.TypeOf(corev1.ConfigMap{}):             allDiffFuncs(metadataDiffFunc, basicDiffFunc(configmapDiffOpts)),
 	reflect.TypeOf(corev1.Secret{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(secretDiffOpts)),
 	reflect.TypeOf(v1alpha1.DevWorkspaceRouting{}): allDiffFuncs(routingDiffFunc, metadataDiffFunc, basicDiffFunc(routingDiffOpts)),
@@ -101,6 +102,107 @@ func deploymentDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	clusterDeploy := cluster.(*appsv1.Deployment)
 	if !cmp.Equal(specDeploy.Spec.Selector, clusterDeploy.Spec.Selector) {
 		return true, false
+	}
+	return false, false
+}
+
+func podDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
+	specPod := spec.(*corev1.Pod)
+	clusterPod := cluster.(*corev1.Pod)
+	// Check immutable podSpecFields -- unset fields we don't want to check
+	specCopy := specPod.DeepCopy()
+	clusterCopy := clusterPod.DeepCopy()
+	for _, specVolume := range specCopy.Spec.Volumes {
+		found := false
+		for _, clusterVolume := range clusterCopy.Spec.Volumes {
+			if equality.Semantic.DeepDerivative(specVolume, clusterVolume) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return true, false
+		}
+	}
+	specCopy.Spec.ActiveDeadlineSeconds = clusterCopy.Spec.ActiveDeadlineSeconds
+	specCopy.Spec.TerminationGracePeriodSeconds = clusterCopy.Spec.TerminationGracePeriodSeconds
+	specCopy.Spec.Tolerations = clusterCopy.Spec.Tolerations
+	specCopy.Spec.Containers = nil
+	specCopy.Spec.InitContainers = nil
+	specCopy.Spec.Volumes = nil
+	if !equality.Semantic.DeepDerivative(specCopy.Spec, clusterCopy.Spec) {
+		return true, false
+	}
+
+	// Check mutable pod fields
+	if specPod.Spec.ActiveDeadlineSeconds != nil &&
+		specPod.Spec.ActiveDeadlineSeconds != clusterPod.Spec.ActiveDeadlineSeconds {
+		return false, true
+	}
+	if specPod.Spec.TerminationGracePeriodSeconds != nil &&
+		specPod.Spec.TerminationGracePeriodSeconds != clusterPod.Spec.TerminationGracePeriodSeconds {
+		negOne := int64(-1)
+		if clusterPod.Spec.TerminationGracePeriodSeconds == &negOne {
+			return false, true
+		} else {
+			return true, false
+		}
+	}
+	if len(specPod.Spec.Tolerations) > 0 {
+		// Technically, it's safe to add tolerations. However, this would require including any default tolerations
+		// in the object we're applying, so instead we delete the pod and re-create it if tolerations are changed.
+		for _, specToleration := range clusterPod.Spec.Tolerations {
+			found := false
+			for _, clusterToleration := range clusterPod.Spec.Tolerations {
+				if cmp.Equal(specToleration, clusterToleration) {
+					found = true
+				}
+			}
+			if !found {
+				return true, false
+			}
+		}
+	}
+
+	shouldDelete, shouldUpdate := containersDiffFunc(specPod.Spec.Containers, clusterPod.Spec.Containers)
+	if shouldDelete || shouldUpdate {
+		return shouldDelete, shouldUpdate
+	}
+	shouldDelete, shouldUpdate = containersDiffFunc(specPod.Spec.InitContainers, clusterPod.Spec.InitContainers)
+	if shouldDelete || shouldUpdate {
+		return shouldDelete, shouldUpdate
+	}
+
+	return false, false
+}
+
+// containersDiffFunc compares a pods containers/initContainers and returns whether
+// the pod should be re-created or updated. Only the image field in containers is
+// updatable.
+func containersDiffFunc(spec, cluster []corev1.Container) (delete, update bool) {
+	findContainer := func(name string, containers []corev1.Container) (corev1.Container, bool) {
+		for _, container := range containers {
+			if container.Name == name {
+				return container, true
+			}
+		}
+		return corev1.Container{}, false
+	}
+	for _, clusterContainer := range cluster {
+		specContainer, ok := findContainer(clusterContainer.Name, spec)
+		if !ok {
+			return true, false
+		}
+		specImage := specContainer.Image
+		clusterImage := clusterContainer.Image
+		// Images can be updated, so we want to ignore changes when checking for immutable fields
+		specContainer.Image = clusterImage
+		if !equality.Semantic.DeepDerivative(specContainer, clusterContainer) {
+			return true, false
+		}
+		if specImage != clusterImage {
+			return false, true
+		}
 	}
 	return false, false
 }

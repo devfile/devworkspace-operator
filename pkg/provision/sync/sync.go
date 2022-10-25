@@ -196,6 +196,8 @@ func printDiff(specObj, clusterObj crclient.Object, log logr.Logger) {
 			diffOpts = rolebindingDiffOpts
 		case *appsv1.Deployment:
 			diffOpts = deploymentDiffOpts
+		case *corev1.Pod:
+			diffOpts = podDiffOpts
 		case *corev1.ConfigMap:
 			diffOpts = configmapDiffOpts
 		case *corev1.Secret:

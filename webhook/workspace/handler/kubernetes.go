@@ -70,8 +70,12 @@ func (h *WebhookHandler) validatePermissionsOnObject(ctx context.Context, req ad
 	if err := yaml.Unmarshal([]byte(component), typeMeta); err != nil {
 		return fmt.Errorf("failed to read content for component %s", componentName)
 	}
-	if typeMeta.Kind == "List" {
+	kind := typeMeta.Kind
+	if kind == "List" {
 		return fmt.Errorf("lists are not supported in Kubernetes or OpenShift components")
+	}
+	if kind == "Role" || kind == "Rolebinding" || kind == "ClusterRole" || kind == "ClusterRoleBinding" {
+		return fmt.Errorf("kubernetes RBAC objects are not permitted within DevWorkspace components")
 	}
 
 	// Workaround to get the correct resource type for a given kind -- probably fragile

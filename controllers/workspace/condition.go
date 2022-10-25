@@ -29,6 +29,7 @@ var conditionOrder = []dw.DevWorkspaceConditionType{
 	dw.DevWorkspaceRoutingReady,
 	dw.DevWorkspaceServiceAccountReady,
 	conditions.PullSecretsReady,
+	conditions.KubeComponentsReady,
 	conditions.DeploymentReady,
 	dw.DevWorkspaceReady,
 }

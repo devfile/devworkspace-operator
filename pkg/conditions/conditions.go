@@ -22,6 +22,7 @@ const (
 	PullSecretsReady     dw.DevWorkspaceConditionType = "PullSecretsReady"
 	DevWorkspaceResolved dw.DevWorkspaceConditionType = "DevWorkspaceResolved"
 	StorageReady         dw.DevWorkspaceConditionType = "StorageReady"
+	KubeComponentsReady  dw.DevWorkspaceConditionType = "KubernetesComponentsProvisioned"
 	DeploymentReady      dw.DevWorkspaceConditionType = "DeploymentReady"
 	DevWorkspaceWarning  dw.DevWorkspaceConditionType = "DevWorkspaceWarning"
 )

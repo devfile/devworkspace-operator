@@ -33,6 +33,7 @@ import (
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
+	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
@@ -466,6 +467,24 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	allPodAdditions = append(allPodAdditions, pullSecretStatus.PodAdditions)
 	reconcileStatus.setConditionTrue(conditions.PullSecretsReady, "DevWorkspace secrets ready")
+
+	if kubesync.HasKubelikeComponent(workspace) {
+		if err := kubesync.HandleKubernetesComponents(workspace, clusterAPI); err != nil {
+			switch syncErr := err.(type) {
+			case *kubesync.RetryError:
+				reqLogger.Info(syncErr.Error())
+				reconcileStatus.setConditionFalse(conditions.KubeComponentsReady, "Waiting for DevWorkspace Kubernetes components to be created on cluster")
+				return reconcile.Result{Requeue: true}, nil
+			case *kubesync.FailError:
+				return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning workspace Kubernetes components: %s", syncErr), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			case *kubesync.WarningError:
+				reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, fmt.Sprintf("Warning in Kubernetes components: %s", syncErr))
+			default:
+				return reconcile.Result{}, err
+			}
+		}
+		reconcileStatus.setConditionTrue(conditions.KubeComponentsReady, "Kubernetes components ready")
+	}
 
 	// Step six: Create deployment and wait for it to be ready
 	timing.SetTime(timingInfo, timing.DeploymentCreated)

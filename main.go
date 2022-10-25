@@ -27,6 +27,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/cache"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"github.com/devfile/devworkspace-operator/version"
 
@@ -104,6 +105,10 @@ func main() {
 	setupLog.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	setupLog.Info(fmt.Sprintf("Commit: %s", version.Commit))
 	setupLog.Info(fmt.Sprintf("BuildTime: %s", version.BuildTime))
+
+	if err := kubesync.InitializeDeserializer(scheme); err != nil {
+		setupLog.Error(err, "failed to initialized Kubernetes objects decoder")
+	}
 
 	cacheFunc, err := cache.GetCacheFunc()
 	if err != nil {

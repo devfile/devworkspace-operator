@@ -17,8 +17,18 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func HasKubelikeComponent(workspace *common.DevWorkspaceWithConfig) bool {
+	for _, component := range workspace.Spec.Template.Components {
+		if component.Kubernetes != nil || component.Openshift != nil {
+			return true
+		}
+	}
+	return false
+}
 
 func filterForKubeLikeComponents(components []dw.Component) ([]dw.Component, error) {
 	var k8sLikeComponents []dw.Component

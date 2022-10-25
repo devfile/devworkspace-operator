@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -160,6 +161,67 @@ func getKubeComponentsFromWorkspace(wksp *dwv2.DevWorkspace) map[string]dwv2.K8s
 // component defined by a general DevWorkspace Component. If the component does
 // not specify the Kubernetes or OpenShift field, an error is returned.
 func getKubeLikeComponent(component *dwv2.Component) (*dwv2.K8sLikeComponent, error) {
+	if component.Kubernetes != nil {
+		return &component.Kubernetes.K8sLikeComponent, nil
+	}
+	if component.Openshift != nil {
+		return &component.Openshift.K8sLikeComponent, nil
+	}
+	return nil, fmt.Errorf("component does not specify kubernetes or openshift fields")
+}
+
+func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate_v1alpha1(ctx context.Context, req admission.Request, wksp *dwv1.DevWorkspace) error {
+	kubeComponents := getKubeComponentsFromWorkspace_v1alpha1(wksp)
+	for componentName, component := range kubeComponents {
+		if component.Uri != "" {
+			return fmt.Errorf("kubenetes components specified via URI are unsupported")
+		}
+		if component.Inlined == "" {
+			return fmt.Errorf("kubernetes component does not define inlined content")
+		}
+		if err := h.validatePermissionsOnObject(ctx, req, componentName, component.Inlined); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv1.DevWorkspace) error {
+	newKubeComponents := getKubeComponentsFromWorkspace_v1alpha1(newWksp)
+	oldKubeComponents := getKubeComponentsFromWorkspace_v1alpha1(oldWksp)
+
+	for componentName, newComponent := range newKubeComponents {
+		if newComponent.Uri != "" {
+			return fmt.Errorf("kubenetes components specified via URI are unsupported")
+		}
+		if newComponent.Inlined == "" {
+			return fmt.Errorf("kubernetes component does not define inlined content")
+		}
+
+		oldComponent, ok := oldKubeComponents[componentName]
+		if !ok || oldComponent.Inlined != newComponent.Inlined {
+			// Review new components
+			if err := h.validatePermissionsOnObject(ctx, req, componentName, newComponent.Inlined); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func getKubeComponentsFromWorkspace_v1alpha1(wksp *dwv1.DevWorkspace) map[string]dwv1.K8sLikeComponent {
+	kubeComponents := map[string]dwv1.K8sLikeComponent{}
+	for _, component := range wksp.Spec.Template.Components {
+		kubeComponent, err := getKubeLikeComponent_v1alpha1(&component)
+		if err != nil {
+			continue
+		}
+		kubeComponents[kubeComponent.Name] = *kubeComponent
+	}
+	return kubeComponents
+}
+
+func getKubeLikeComponent_v1alpha1(component *dwv1.Component) (*dwv1.K8sLikeComponent, error) {
 	if component.Kubernetes != nil {
 		return &component.Kubernetes.K8sLikeComponent, nil
 	}

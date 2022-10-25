@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-func (h *WebhookHandler) MutateWorkspaceV1alpha1OnCreate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) MutateWorkspaceV1alpha1OnCreate(ctx context.Context, req admission.Request) admission.Response {
 	wksp := &dwv1.DevWorkspace{}
 	err := h.Decoder.Decode(req, wksp)
 	if err != nil {
@@ -37,6 +37,10 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnCreate(_ context.Context, req 
 	}
 
 	wksp.Labels = maputils.Append(wksp.Labels, constants.DevWorkspaceCreatorLabel, req.UserInfo.UID)
+
+	if err := h.validateKubernetesObjectPermissionsOnCreate_v1alpha1(ctx, req, wksp); err != nil {
+		return admission.Denied(err.Error())
+	}
 
 	return h.returnPatched(req, wksp)
 }
@@ -65,7 +69,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnCreate(ctx context.Context, re
 	return h.returnPatched(req, wksp)
 }
 
-func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req admission.Request) admission.Response {
+func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(ctx context.Context, req admission.Request) admission.Response {
 	newWksp := &dwv1.DevWorkspace{}
 	oldWksp := &dwv1.DevWorkspace{}
 	err := h.parse(req, oldWksp, newWksp)
@@ -80,6 +84,10 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(_ context.Context, req 
 	allowed, msg := h.checkRestrictedAccessWorkspaceV1alpha1(oldWksp, newWksp, req.UserInfo.UID)
 	if !allowed {
 		return admission.Denied(msg)
+	}
+
+	if err := h.validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ctx, req, newWksp, oldWksp); err != nil {
+		return admission.Denied(err.Error())
 	}
 
 	oldCreator, found := oldWksp.Labels[constants.DevWorkspaceCreatorLabel]

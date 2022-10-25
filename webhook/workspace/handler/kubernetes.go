@@ -109,9 +109,34 @@ func (h *WebhookHandler) validatePermissionsOnObject(ctx context.Context, req ad
 	if username == "" {
 		username = req.UserInfo.UID
 	}
-
 	if !sar.Status.Allowed {
 		return fmt.Errorf("user %s does not have permissions to work with objects of kind %s defined in component %s", username, typeMeta.GroupVersionKind().String(), componentName)
+	}
+
+	ssar := &authv1.LocalSubjectAccessReview{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: req.Namespace,
+		},
+		Spec: authv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &authv1.ResourceAttributes{
+				Namespace: req.Namespace,
+				Verb:      "*",
+				Group:     typeMeta.GroupVersionKind().Group,
+				Version:   typeMeta.GroupVersionKind().Version,
+				Resource:  resourceType,
+			},
+			User: h.ControllerSAName,
+			UID:  h.ControllerUID,
+		},
+	}
+	if err := h.Client.Create(ctx, ssar); err != nil {
+		return fmt.Errorf("failed to create subjectaccessreview for request: %w", err)
+	}
+
+	if !ssar.Status.Allowed {
+		return fmt.Errorf("devworkspace controller serviceaccount does not have permissions to manage "+
+			"kind %s defined in component %s -- an administrator needs to grant the devworkspace operator "+
+			"permissions ('*') %s to use this DevWorkspace", kind, componentName, typeMeta.GroupVersionKind().String())
 	}
 
 	return nil

@@ -38,7 +38,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnCreate(ctx context.Context, re
 
 	wksp.Labels = maputils.Append(wksp.Labels, constants.DevWorkspaceCreatorLabel, req.UserInfo.UID)
 
-	if err := h.validateKubernetesObjectPermissionsOnCreate_v1alpha1(ctx, req, wksp); err != nil {
+	if err := h.validateKubernetesObjectPermissionsOnCreate_v1alpha1(ctx, req, &wksp.Spec.Template); err != nil {
 		return admission.Denied(err.Error())
 	}
 
@@ -58,7 +58,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnCreate(ctx context.Context, re
 		return admission.Denied(err.Error())
 	}
 
-	if err := h.validateKubernetesObjectPermissionsOnCreate(ctx, req, wksp); err != nil {
+	if err := h.validateKubernetesObjectPermissionsOnCreate(ctx, req, &wksp.Spec.Template); err != nil {
 		return admission.Denied(err.Error())
 	}
 
@@ -86,7 +86,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha1OnUpdate(ctx context.Context, re
 		return admission.Denied(msg)
 	}
 
-	if err := h.validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ctx, req, newWksp, oldWksp); err != nil {
+	if err := h.validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ctx, req, &newWksp.Spec.Template, &oldWksp.Spec.Template); err != nil {
 		return admission.Denied(err.Error())
 	}
 
@@ -166,7 +166,7 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 		return admission.Denied(err.Error())
 	}
 
-	if err := h.validateKubernetesObjectPermissionsOnUpdate(ctx, req, newWksp, oldWksp); err != nil {
+	if err := h.validateKubernetesObjectPermissionsOnUpdate(ctx, req, &newWksp.Spec.Template, &oldWksp.Spec.Template); err != nil {
 		return admission.Denied(err.Error())
 	}
 

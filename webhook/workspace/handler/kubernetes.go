@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context.Context, req admission.Request, wksp *dwv2.DevWorkspace) error {
+func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context.Context, req admission.Request, wksp *dwv2.DevWorkspaceTemplateSpec) error {
 	kubeComponents := getKubeComponentsFromWorkspace(wksp)
 	for componentName, component := range kubeComponents {
 		if component.Uri != "" {
@@ -42,7 +42,7 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context
 	return nil
 }
 
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv2.DevWorkspace) error {
+func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv2.DevWorkspaceTemplateSpec) error {
 	newKubeComponents := getKubeComponentsFromWorkspace(newWksp)
 	oldKubeComponents := getKubeComponentsFromWorkspace(oldWksp)
 
@@ -145,9 +145,9 @@ func (h *WebhookHandler) validatePermissionsOnObject(ctx context.Context, req ad
 
 // getKubeComponentsFromWorkspace returns the Kubernetes (and OpenShift) components in a workspace
 // in a map with component names as keys.
-func getKubeComponentsFromWorkspace(wksp *dwv2.DevWorkspace) map[string]dwv2.K8sLikeComponent {
+func getKubeComponentsFromWorkspace(wksp *dwv2.DevWorkspaceTemplateSpec) map[string]dwv2.K8sLikeComponent {
 	kubeComponents := map[string]dwv2.K8sLikeComponent{}
-	for _, component := range wksp.Spec.Template.Components {
+	for _, component := range wksp.Components {
 		kubeComponent, err := getKubeLikeComponent(&component)
 		if err != nil {
 			continue
@@ -170,7 +170,7 @@ func getKubeLikeComponent(component *dwv2.Component) (*dwv2.K8sLikeComponent, er
 	return nil, fmt.Errorf("component does not specify kubernetes or openshift fields")
 }
 
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate_v1alpha1(ctx context.Context, req admission.Request, wksp *dwv1.DevWorkspace) error {
+func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate_v1alpha1(ctx context.Context, req admission.Request, wksp *dwv1.DevWorkspaceTemplateSpec) error {
 	kubeComponents := getKubeComponentsFromWorkspace_v1alpha1(wksp)
 	for componentName, component := range kubeComponents {
 		if component.Uri != "" {
@@ -186,7 +186,7 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate_v1alpha1(ct
 	return nil
 }
 
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv1.DevWorkspace) error {
+func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv1.DevWorkspaceTemplateSpec) error {
 	newKubeComponents := getKubeComponentsFromWorkspace_v1alpha1(newWksp)
 	oldKubeComponents := getKubeComponentsFromWorkspace_v1alpha1(oldWksp)
 
@@ -209,9 +209,9 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ct
 	return nil
 }
 
-func getKubeComponentsFromWorkspace_v1alpha1(wksp *dwv1.DevWorkspace) map[string]dwv1.K8sLikeComponent {
+func getKubeComponentsFromWorkspace_v1alpha1(wksp *dwv1.DevWorkspaceTemplateSpec) map[string]dwv1.K8sLikeComponent {
 	kubeComponents := map[string]dwv1.K8sLikeComponent{}
-	for _, component := range wksp.Spec.Template.Components {
+	for _, component := range wksp.Components {
 		kubeComponent, err := getKubeLikeComponent_v1alpha1(&component)
 		if err != nil {
 			continue

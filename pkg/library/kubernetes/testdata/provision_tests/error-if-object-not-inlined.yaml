@@ -1,0 +1,28 @@
+name: "Error if Kuberenetes component is not inlined"
+
+input:
+  components:
+    - name: "container-component"
+      container:
+        image: "test-image"
+    - name: "test-pod"
+      kubernetes:
+        deployByDefault: true
+        uri: test-uri
+    - name: "test-service"
+      openshift:
+        deployByDefault: true
+        inlined: |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: test-service
+          spec:
+            selector:
+              test: test-app
+            ports:
+            - port: 8080
+              targetPort: 8081
+
+output:
+  errRegexp: "components that define a URI are unsupported"

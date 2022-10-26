@@ -1,0 +1,72 @@
+name: "Creates Kubernetes objects when specified in DevWorkspace"
+
+input:
+  components:
+    - name: "container-component"
+      container:
+        image: "test-image"
+    - name: "test-pod"
+      kubernetes:
+        deployByDefault: true
+        inlined: |
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-pod
+            labels:
+              testLabel: testPod
+          spec:
+            containers:
+            - name: test-container
+              image: test-image
+              resources:
+                limits:
+                  memory: "128Mi"
+                  cpu: "500m"
+              ports:
+                - containerPort: 8080
+    - name: "test-service"
+      openshift:
+        deployByDefault: true
+        inlined: |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: test-service
+          spec:
+            selector:
+              test: test-app
+            ports:
+            - port: 8080
+              targetPort: 8081
+
+output:
+  expectedObjects:
+    services:
+      - apiVersion: v1
+        kind: Service
+        metadata:
+          name: test-service
+        spec:
+          selector:
+            test: test-app
+          ports:
+          - port: 8080
+            targetPort: 8081
+    pods:
+      - apiVersion: v1
+        kind: Pod
+        metadata:
+          name: test-pod
+          labels:
+            testLabel: testPod
+        spec:
+          containers:
+          - name: test-container
+            image: test-image
+            resources:
+              limits:
+                memory: "128Mi"
+                cpu: "500m"
+            ports:
+              - containerPort: 8080

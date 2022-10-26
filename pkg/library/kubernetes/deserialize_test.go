@@ -18,34 +18,17 @@ import (
 	"os"
 	"testing"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
 
-var (
-	scheme = runtime.NewScheme()
-	api    = sync.ClusterAPI{
-		Scheme: scheme,
-	}
-)
-
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(v1alpha1.AddToScheme(scheme))
-	utilruntime.Must(dw.AddToScheme(scheme))
-}
-
 func TestDeserializeObject(t *testing.T) {
-	InitializeDeserializer(scheme)
+	if err := InitializeDeserializer(testScheme); err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
 	defer func() {
 		decoder = nil
 	}()
@@ -89,7 +72,7 @@ func TestDeserializeObject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.name, tt.filePath), func(t *testing.T) {
 			jsonBytes := readBytesFromFile(t, tt.filePath)
-			actualObj, err := deserializeToObject(jsonBytes, api)
+			actualObj, err := deserializeToObject(jsonBytes, testAPI)
 			if tt.expectedErrRegexp != "" {
 				if !assert.Error(t, err, "Expect error to be returned") {
 					return
@@ -108,7 +91,7 @@ func TestDeserializeObject(t *testing.T) {
 }
 
 func TestErrorIfDeserializerNotInitialized(t *testing.T) {
-	_, err := deserializeToObject([]byte(""), api)
+	_, err := deserializeToObject([]byte(""), testAPI)
 	assert.Error(t, err)
 	assert.Equal(t, "kubernetes object deserializer is not initialized", err.Error())
 }

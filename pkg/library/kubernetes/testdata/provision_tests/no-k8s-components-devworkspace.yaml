@@ -1,0 +1,9 @@
+name: "Does nothing if DevWorkspace defines no Kubernetes/OpenShift components"
+
+input:
+  components:
+    - name: "container-component"
+      container:
+        image: "test-image"
+
+output: {}

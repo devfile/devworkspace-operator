@@ -29,6 +29,11 @@ import (
 func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context.Context, req admission.Request, wksp *dwv2.DevWorkspaceTemplateSpec) error {
 	kubeComponents := getKubeComponentsFromWorkspace(wksp)
 	for componentName, component := range kubeComponents {
+		if !component.GetDeployByDefault() {
+			// Intended to be applied later, will not be handled by DWO. It's up to whoever applies it to make
+			// sure that's safe to do (e.g. by using the user's token to apply the yaml)
+			continue
+		}
 		if component.Uri != "" {
 			return fmt.Errorf("kubenetes components specified via URI are unsupported")
 		}
@@ -47,6 +52,12 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate(ctx context
 	oldKubeComponents := getKubeComponentsFromWorkspace(oldWksp)
 
 	for componentName, newComponent := range newKubeComponents {
+		if !newComponent.GetDeployByDefault() {
+			// Intended to be applied later, will not be handled by DWO. It's up to whoever applies it to make
+			// sure that's safe to do (e.g. by using the user's token to apply the yaml)
+			continue
+		}
+
 		if newComponent.Uri != "" {
 			return fmt.Errorf("kubenetes components specified via URI are unsupported")
 		}
@@ -179,6 +190,9 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate_v1alpha1(ct
 		if component.Inlined == "" {
 			return fmt.Errorf("kubernetes component does not define inlined content")
 		}
+		// v1alpha1 DevWorkspace/DevWorkspaceTemplates do not have a deployByDefault field, and the default
+		// value in v1alpha2 is false (i.e. do not deploy at start time); however, for safety we check permissions
+		// even if the object will not be deployed (v1alpha1 should not be used, in general)
 		if err := h.validatePermissionsOnObject(ctx, req, componentName, component.Inlined); err != nil {
 			return err
 		}
@@ -198,6 +212,9 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ct
 			return fmt.Errorf("kubernetes component does not define inlined content")
 		}
 
+		// v1alpha1 DevWorkspace/DevWorkspaceTemplates do not have a deployByDefault field, and the default
+		// value in v1alpha2 is false (i.e. do not deploy at start time); however, for safety we check permissions
+		// even if the object will not be deployed (v1alpha1 should not be used, in general)
 		oldComponent, ok := oldKubeComponents[componentName]
 		if !ok || oldComponent.Inlined != newComponent.Inlined {
 			// Review new components

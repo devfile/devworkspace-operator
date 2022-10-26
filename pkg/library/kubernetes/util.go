@@ -43,7 +43,9 @@ func filterForKubeLikeComponents(components []dw.Component) ([]dw.Component, err
 		if k8sLikeComponent.Inlined == "" {
 			continue
 		}
-		k8sLikeComponents = append(k8sLikeComponents, component)
+		if k8sLikeComponent.GetDeployByDefault() {
+			k8sLikeComponents = append(k8sLikeComponents, component)
+		}
 	}
 	return k8sLikeComponents, nil
 }

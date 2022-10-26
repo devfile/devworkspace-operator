@@ -1,0 +1,62 @@
+name: "Returns an error if the object already exists in the cluster and is not owned by DevWorkspace"
+
+input:
+  components:
+    - name: "container-component"
+      container:
+        image: "test-image"
+    - name: "test-pod"
+      kubernetes:
+        deployByDefault: true
+        inlined: |
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: test-pod
+            labels:
+              testLabel: testPod
+          spec:
+            containers:
+            - name: test-container
+              image: test-image
+              resources:
+                limits:
+                  memory: "128Mi"
+                  cpu: "500m"
+              ports:
+                - containerPort: 8080
+    - name: "test-service"
+      openshift:
+        deployByDefault: true
+        inlined: |
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: test-service
+          spec:
+            selector:
+              test: test-app
+            ports:
+            - port: 8080
+              targetPort: 8081
+  existingObjects:
+    pods:
+      - apiVersion: v1
+        kind: Pod
+        metadata:
+          name: test-pod
+          labels:
+            testLabel: testPod
+        spec:
+          containers:
+          - name: test-container
+            image: test-image
+            resources:
+              limits:
+                memory: "128Mi"
+                cpu: "500m"
+            ports:
+              - containerPort: 8080
+
+output:
+  errRegexp: "object .* exists and is not owned by this workspace"

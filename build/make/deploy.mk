@@ -131,9 +131,15 @@ _check_cert_manager:
   endif
 
 _login_with_devworkspace_sa:
-	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' | base64 --decode ))
-	echo "Logging as controller's SA in $(NAMESPACE)"
-	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
+  # Kubernetes 1.23 and below: get SA token from service-account-token secret; Kubernetes 1.24 and above, use `kubectl create token`
+	SA_TOKEN=$$($(K8S_CLI) get secrets -o=json -n $(NAMESPACE) \
+	  | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' \
+	  | base64 --decode ); \
+	if [[ "$$SA_TOKEN" == $$(echo 'null' | base64 -d) ]]; then \
+	  SA_TOKEN=$$($(K8S_CLI) create token -n "$(NAMESPACE)" "$(DEVWORKSPACE_CTRL_SA)"); \
+	fi; \
+	echo "Logging as controller's SA in $(NAMESPACE)"; \
+	oc login --token="$$SA_TOKEN" --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### install_cert_manager: Installs Cert Mananger v1.5.4 on the cluster
 install_cert_manager:

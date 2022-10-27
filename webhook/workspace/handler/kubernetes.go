@@ -89,6 +89,9 @@ func (h *WebhookHandler) validatePermissionsOnObject(ctx context.Context, req ad
 	if kind == "Role" || kind == "Rolebinding" || kind == "ClusterRole" || kind == "ClusterRoleBinding" {
 		return fmt.Errorf("kubernetes RBAC objects are not permitted within DevWorkspace components")
 	}
+	if kind == "DevWorkspace" || kind == "DevWorkspaceTemplate" {
+		return fmt.Errorf("DevWorkspace objects are not permitted within DevWorkspace components")
+	}
 
 	// Workaround to get the correct resource type for a given kind -- probably fragile
 	// Convert e.g. Pod -> pods, Deployment -> deployments

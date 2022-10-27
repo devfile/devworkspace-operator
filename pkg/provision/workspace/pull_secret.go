@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -80,12 +81,14 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 		}
 	}
 
-	if len(serviceAccount.ImagePullSecrets) == 0 && serviceAccount.CreationTimestamp.Add(pullSecretCreationTimeout).After(time.Now()) {
-		return PullSecretsProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Requeue: true,
-				Message: "Waiting for image pull secrets",
-			},
+	if infrastructure.IsOpenShift() {
+		if len(serviceAccount.ImagePullSecrets) == 0 && serviceAccount.CreationTimestamp.Add(pullSecretCreationTimeout).After(time.Now()) {
+			return PullSecretsProvisioningStatus{
+				ProvisioningStatus: ProvisioningStatus{
+					Requeue: true,
+					Message: "Waiting for image pull secrets",
+				},
+			}
 		}
 	}
 

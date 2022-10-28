@@ -24,6 +24,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -74,6 +75,14 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 	}
 	err = clusterAPI.Client.Get(context.TODO(), namespacedName, serviceAccount)
 	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			// ServiceAccount does not exist, no pull secrets to extract
+			return PullSecretsProvisioningStatus{
+				ProvisioningStatus: ProvisioningStatus{
+					Continue: true,
+				},
+			}
+		}
 		return PullSecretsProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
 				Err: err,

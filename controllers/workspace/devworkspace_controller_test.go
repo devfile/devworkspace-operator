@@ -61,8 +61,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		It("Sets DevWorkspace ID and Starting status", func() {
 			By("Reading DevWorkspace from testdata file")
 			devworkspace := &dw.DevWorkspace{}
-			err := loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")
-			Expect(err).NotTo(HaveOccurred())
+			Expect(loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")).Should(Succeed())
 
 			By("Creating a new DevWorkspace")
 			Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())
@@ -99,8 +98,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		It("Allows overriding the DevWorkspace ID", func() {
 			By("Reading DevWorkspace from testdata file")
 			devworkspace := &dw.DevWorkspace{}
-			err := loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")
-			Expect(err).NotTo(HaveOccurred())
+			Expect(loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")).Should(Succeed())
 
 			if devworkspace.Annotations == nil {
 				devworkspace.Annotations = map[string]string{}
@@ -131,8 +129,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		It("Forbids duplicate workspace IDs from override", func() {
 			By("Reading DevWorkspace from testdata file")
 			devworkspace := &dw.DevWorkspace{}
-			err := loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")
-			Expect(err).NotTo(HaveOccurred())
+			Expect(loadObjectFromFile(devWorkspaceName, devworkspace, "test-devworkspace.yaml")).Should(Succeed())
 
 			if devworkspace.Annotations == nil {
 				devworkspace.Annotations = map[string]string{}

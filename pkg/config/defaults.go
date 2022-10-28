@@ -31,6 +31,9 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 	Workspace: &v1alpha1.WorkspaceConfig{
 		ImagePullPolicy: "Always",
 		PVCName:         "claim-devworkspace",
+		ServiceAccount: &v1alpha1.ServiceAccountConfig{
+			DisableCreation: pointer.Bool(false),
+		},
 		DefaultStorageSize: &v1alpha1.StorageSizes{
 			Common:       &commonStorageSize,
 			PerWorkspace: &perWorkspaceStorageSize,

@@ -27,6 +27,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -259,6 +260,17 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.PVCName != "" {
 			to.Workspace.PVCName = from.Workspace.PVCName
 		}
+		if from.Workspace.ServiceAccount != nil {
+			if to.Workspace.ServiceAccount == nil {
+				to.Workspace.ServiceAccount = &controller.ServiceAccountConfig{}
+			}
+			if from.Workspace.ServiceAccount.ServiceAccountName != "" {
+				to.Workspace.ServiceAccount.ServiceAccountName = from.Workspace.ServiceAccount.ServiceAccountName
+			}
+			if from.Workspace.ServiceAccount.DisableCreation != nil {
+				to.Workspace.ServiceAccount.DisableCreation = pointer.BoolPtr(*from.Workspace.ServiceAccount.DisableCreation)
+			}
+		}
 		if from.Workspace.ImagePullPolicy != "" {
 			to.Workspace.ImagePullPolicy = from.Workspace.ImagePullPolicy
 		}
@@ -320,6 +332,14 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.PVCName != defaultConfig.Workspace.PVCName {
 			config = append(config, fmt.Sprintf("workspace.pvcName=%s", workspace.PVCName))
+		}
+		if workspace.ServiceAccount != nil {
+			if workspace.ServiceAccount.ServiceAccountName != defaultConfig.Workspace.ServiceAccount.ServiceAccountName {
+				config = append(config, fmt.Sprintf("workspace.serviceAccount.serviceAccountName=%s", workspace.ServiceAccount.ServiceAccountName))
+			}
+			if workspace.ServiceAccount.DisableCreation != nil && *workspace.ServiceAccount.DisableCreation != *defaultConfig.Workspace.ServiceAccount.DisableCreation {
+				config = append(config, fmt.Sprintf("workspace.serviceAccount.disableCreation=%t", *workspace.ServiceAccount.DisableCreation))
+			}
 		}
 		if workspace.StorageClassName != nil && workspace.StorageClassName != defaultConfig.Workspace.StorageClassName {
 			config = append(config, fmt.Sprintf("workspace.storageClassName=%s", *workspace.StorageClassName))

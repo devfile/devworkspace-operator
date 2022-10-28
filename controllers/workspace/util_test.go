@@ -44,8 +44,7 @@ var clock kubeclock.Clock = &kubeclock.RealClock{}
 func createDevWorkspace(name, fromFile string) {
 	By("Loading DevWorkspace from test file")
 	devworkspace := &dw.DevWorkspace{}
-	err := loadObjectFromFile(name, devworkspace, fromFile)
-	Expect(err).NotTo(HaveOccurred())
+	Expect(loadObjectFromFile(name, devworkspace, fromFile)).Should(Succeed())
 
 	By("Creating DevWorkspace on cluster")
 	Expect(k8sClient.Create(ctx, devworkspace)).Should(Succeed())

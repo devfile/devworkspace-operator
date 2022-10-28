@@ -79,6 +79,21 @@ type StorageSizes struct {
 	PerWorkspace *resource.Quantity `json:"perWorkspace,omitempty"`
 }
 
+type ServiceAccountConfig struct {
+	// ServiceAccountName defines a fixed name to be used for all DevWorkspaces. If set, the DevWorkspace
+	// Operator will not generate a separate ServiceAccount for each DevWorkspace, and will instead create
+	// a ServiceAccount with the specified name in each namespace where DevWorkspaces are created. If specified,
+	// the created ServiceAccount will not be removed when DevWorkspaces are deleted and must be cleaned up manually.
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+	// +kubebuilder:validation:MaxLength=63
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	// Disable creation of DevWorkspace ServiceAccounts by the DevWorkspace Operator. If set to true, the serviceAccountName
+	// field must also be set. If ServiceAccount creation is disabled, it is assumed that the specified ServiceAccount already
+	// exists in any namespace where a workspace is created. If a suitable ServiceAccount does not exist, starting DevWorkspaces
+	// will fail.
+	DisableCreation *bool `json:"disableCreation,omitempty"`
+}
+
 type WorkspaceConfig struct {
 	// ImagePullPolicy defines the imagePullPolicy used for containers in a DevWorkspace
 	// For additional information, see Kubernetes documentation for imagePullPolicy. If
@@ -95,6 +110,9 @@ type WorkspaceConfig struct {
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
 	// +kubebuilder:validation:MaxLength=63
 	PVCName string `json:"pvcName,omitempty"`
+	// ServiceAccount defines configuration options for the ServiceAccount used for
+	// DevWorkspaces.
+	ServiceAccount *ServiceAccountConfig `json:"serviceAccount,omitempty"`
 	// StorageClassName defines an optional storageClass to use for persistent
 	// volume claims created to support DevWorkspaces
 	StorageClassName *string `json:"storageClassName,omitempty"`

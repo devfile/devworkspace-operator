@@ -402,7 +402,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	var serviceAcctName string
 	if *workspace.Config.Workspace.ServiceAccount.DisableCreation {
 		if workspace.Config.Workspace.ServiceAccount.ServiceAccountName == "" {
-			r.failWorkspace(workspace, "Configured ServiceAccount name is required when ServiceAccount creation is disabled", metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, "Configured ServiceAccount name is required when ServiceAccount creation is disabled", metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		}
+		if routingPodAdditions != nil && routingPodAdditions.Annotations != nil {
+			// This routingClass defines annotations to be applied to the workspace SA, which we cannot do since
+			// we are not managing the SA. This feature is not used in DWO anymore and was previously used to support
+			// the openshift-oauth routingClass.
+			return r.failWorkspace(workspace, fmt.Sprintf("Disabling ServiceAccount creation is incompatible with workspace routingClass %s", workspace.Spec.RoutingClass), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 		}
 		// We have to assume the ServiceAccount exists as even if it does exist we generally can't access it -- DWO only caches
 		// ServiceAccounts with the devworkspace ID label.

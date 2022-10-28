@@ -44,7 +44,7 @@ func SyncServiceAccount(
 	clusterAPI sync.ClusterAPI) ServiceAcctProvisioningStatus {
 	// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
 	autoMountServiceAccount := true
-	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+	saName := common.ServiceAccountName(workspace)
 
 	specSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -116,7 +116,7 @@ func NeedsServiceAccountFinalizer(workspace *dw.DevWorkspaceTemplateSpec) bool {
 }
 
 func FinalizeServiceAccount(workspace *common.DevWorkspaceWithConfig, ctx context.Context, nonCachingClient crclient.Client) (retry bool, err error) {
-	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+	saName := common.ServiceAccountName(workspace)
 	namespace := workspace.Namespace
 	if !workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
 		return false, nil

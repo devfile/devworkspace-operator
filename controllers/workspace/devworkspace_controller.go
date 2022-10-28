@@ -399,31 +399,41 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Step five: Prepare workspace ServiceAccount
-	saAnnotations := map[string]string{}
-	if routingPodAdditions != nil {
-		saAnnotations = routingPodAdditions.ServiceAccountAnnotations
-	}
-	serviceAcctStatus := wsprovision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
-	if !serviceAcctStatus.Continue {
-		if serviceAcctStatus.FailStartup {
-			return r.failWorkspace(workspace, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+	var serviceAcctName string
+	if *workspace.Config.Workspace.ServiceAccount.DisableCreation {
+		if workspace.Config.Workspace.ServiceAccount.ServiceAccountName == "" {
+			r.failWorkspace(workspace, "Configured ServiceAccount name is required when ServiceAccount creation is disabled", metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
 		}
-		reqLogger.Info("Waiting for workspace ServiceAccount")
-		reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
-		if !serviceAcctStatus.Requeue && serviceAcctStatus.Err == nil {
-			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
+		// We have to assume the ServiceAccount exists as even if it does exist we generally can't access it -- DWO only caches
+		// ServiceAccounts with the devworkspace ID label.
+		serviceAcctName = workspace.Config.Workspace.ServiceAccount.ServiceAccountName
+		reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, fmt.Sprintf("Using existing ServiceAccount %s", serviceAcctName))
+	} else {
+		saAnnotations := map[string]string{}
+		if routingPodAdditions != nil {
+			saAnnotations = routingPodAdditions.ServiceAccountAnnotations
 		}
-		return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
-	}
-	if wsprovision.NeedsServiceAccountFinalizer(&workspace.Spec.Template) {
-		coputil.AddFinalizer(clusterWorkspace, constants.ServiceAccountCleanupFinalizer)
-		if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
-			return reconcile.Result{}, err
+		serviceAcctStatus := wsprovision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
+		if !serviceAcctStatus.Continue {
+			if serviceAcctStatus.FailStartup {
+				return r.failWorkspace(workspace, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			}
+			reqLogger.Info("Waiting for workspace ServiceAccount")
+			reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
+			if !serviceAcctStatus.Requeue && serviceAcctStatus.Err == nil {
+				return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
+			}
+			return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
 		}
+		if wsprovision.NeedsServiceAccountFinalizer(&workspace.Spec.Template) {
+			coputil.AddFinalizer(clusterWorkspace, constants.ServiceAccountCleanupFinalizer)
+			if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+		serviceAcctName = serviceAcctStatus.ServiceAccountName
+		reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 	}
-
-	serviceAcctName := serviceAcctStatus.ServiceAccountName
-	reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 
 	pullSecretStatus := wsprovision.PullSecrets(clusterAPI, serviceAcctName, workspace.GetNamespace())
 	if !pullSecretStatus.Continue {

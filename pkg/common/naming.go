@@ -48,8 +48,11 @@ func ServiceName(workspaceId string) string {
 	return fmt.Sprintf("%s-%s", workspaceId, "service")
 }
 
-func ServiceAccountName(workspaceId string) string {
-	return fmt.Sprintf("%s-%s", workspaceId, "sa")
+func ServiceAccountName(workspace *DevWorkspaceWithConfig) string {
+	if workspace.Config.Workspace.ServiceAccount.ServiceAccountName != "" {
+		return workspace.Config.Workspace.ServiceAccount.ServiceAccountName
+	}
+	return fmt.Sprintf("%s-%s", workspace.Status.DevWorkspaceId, "sa")
 }
 
 func EndpointHostname(routingSuffix, workspaceId, endpointName string, endpointPort int) string {

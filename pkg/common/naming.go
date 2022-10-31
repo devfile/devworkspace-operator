@@ -55,6 +55,20 @@ func ServiceAccountName(workspace *DevWorkspaceWithConfig) string {
 	return fmt.Sprintf("%s-%s", workspace.Status.DevWorkspaceId, "sa")
 }
 
+func ServiceAccountLabels(workspace *DevWorkspaceWithConfig) map[string]string {
+	if workspace.Config.Workspace.ServiceAccount.ServiceAccountName != "" {
+		// One SA used for multiple workspaces; do not add specific DevWorkspace ID. We still need the
+		// devworkspace ID label in order to cache the ServiceAccount.
+		return map[string]string{
+			constants.DevWorkspaceIDLabel: "",
+		}
+	}
+	return map[string]string{
+		constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
+		constants.DevWorkspaceNameLabel: workspace.Name,
+	}
+}
+
 func EndpointHostname(routingSuffix, workspaceId, endpointName string, endpointPort int) string {
 	hostname := fmt.Sprintf("%s-%s-%d", workspaceId, endpointName, endpointPort)
 	if len(hostname) > 63 {

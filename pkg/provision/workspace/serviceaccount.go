@@ -27,6 +27,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -42,20 +43,16 @@ func SyncServiceAccount(
 	workspace *common.DevWorkspaceWithConfig,
 	additionalAnnotations map[string]string,
 	clusterAPI sync.ClusterAPI) ServiceAcctProvisioningStatus {
-	// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
-	autoMountServiceAccount := true
 	saName := common.ServiceAccountName(workspace)
 
 	specSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: workspace.Namespace,
-			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
-				constants.DevWorkspaceNameLabel: workspace.Name,
-			},
+			Labels:    common.ServiceAccountLabels(workspace),
 		},
-		AutomountServiceAccountToken: &autoMountServiceAccount,
+		// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
+		AutomountServiceAccountToken: pointer.BoolPtr(true),
 	}
 
 	if len(additionalAnnotations) > 0 {

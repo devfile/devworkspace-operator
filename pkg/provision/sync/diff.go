@@ -27,6 +27,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,7 +38,7 @@ type diffFunc func(spec crclient.Object, cluster crclient.Object) (delete, updat
 var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(rbacv1.Role{}):                  allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(roleDiffOpts)),
 	reflect.TypeOf(rbacv1.RoleBinding{}):           allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(rolebindingDiffOpts)),
-	reflect.TypeOf(corev1.ServiceAccount{}):        labelsAndAnnotationsDiffFunc,
+	reflect.TypeOf(corev1.ServiceAccount{}):        allDiffFuncs(labelsAndAnnotationsDiffFunc, ownerrefsDiffFunc),
 	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, labelsAndAnnotationsDiffFunc, basicDiffFunc(deploymentDiffOpts)),
 	reflect.TypeOf(corev1.ConfigMap{}):             allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(configmapDiffOpts)),
 	reflect.TypeOf(corev1.Secret{}):                allDiffFuncs(labelsAndAnnotationsDiffFunc, basicDiffFunc(secretDiffOpts)),
@@ -67,6 +68,16 @@ func labelsAndAnnotationsDiffFunc(spec, cluster crclient.Object) (delete, update
 	clusterLabels := cluster.GetLabels()
 	for k, v := range spec.GetLabels() {
 		if clusterLabels[k] != v {
+			return false, true
+		}
+	}
+	return false, false
+}
+
+func ownerrefsDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
+	clusterRefs := cluster.GetOwnerReferences()
+	for _, ownerref := range spec.GetOwnerReferences() {
+		if !containsOwnerRef(ownerref, clusterRefs) {
 			return false, true
 		}
 	}
@@ -134,4 +145,27 @@ func serviceDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 		return false, true
 	}
 	return false, specCopy.Spec.Type != clusterCopy.Spec.Type
+}
+
+func containsOwnerRef(toCheck metav1.OwnerReference, listRefs []metav1.OwnerReference) bool {
+	boolPtrsEqual := func(a, b *bool) bool {
+		// If either is nil, assume check other is nil or false; otherwise, compare actual values
+		switch {
+		case a == nil:
+			return b == nil || !*b
+		case b == nil:
+			return a == nil || !*a
+		default:
+			return *a == *b
+		}
+	}
+	for _, ref := range listRefs {
+		if toCheck.Kind == ref.Kind &&
+			toCheck.Name == ref.Name &&
+			toCheck.UID == ref.UID &&
+			boolPtrsEqual(toCheck.Controller, ref.Controller) {
+			return true
+		}
+	}
+	return false
 }

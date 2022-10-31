@@ -62,16 +62,27 @@ func SyncServiceAccount(
 		}
 	}
 
-	err := controllerutil.SetControllerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme)
-	if err != nil {
-		return ServiceAcctProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Err: err,
-			},
+	if workspace.Config.Workspace.ServiceAccount.ServiceAccountName != "" {
+		// Add ownerref for the current workspace. The object may have existing owner references
+		if err := controllerutil.SetOwnerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme); err != nil {
+			return ServiceAcctProvisioningStatus{
+				ProvisioningStatus: ProvisioningStatus{
+					Err: err,
+				},
+			}
+		}
+	} else {
+		// Only add controller reference if shared ServiceAccount is not being used.
+		if err := controllerutil.SetControllerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme); err != nil {
+			return ServiceAcctProvisioningStatus{
+				ProvisioningStatus: ProvisioningStatus{
+					Err: err,
+				},
+			}
 		}
 	}
 
-	_, err = sync.SyncObjectWithCluster(specSA, clusterAPI)
+	_, err := sync.SyncObjectWithCluster(specSA, clusterAPI)
 	switch t := err.(type) {
 	case nil:
 		break

@@ -104,8 +104,8 @@ var (
 func TestSyncRBAC(t *testing.T) {
 	testdw1 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw2 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace2", constants.WorkspaceSCCAttribute, testSCCName)
-	testdw1SAName := common.ServiceAccountName(testdw1.Status.DevWorkspaceId)
-	testdw2SAName := common.ServiceAccountName(testdw2.Status.DevWorkspaceId)
+	testdw1SAName := common.ServiceAccountName(testdw1)
+	testdw2SAName := common.ServiceAccountName(testdw2)
 	api := getTestClusterAPI(t, testdw1.DevWorkspace, testdw2.DevWorkspace, oldRole, oldRolebinding)
 	// Keep calling SyncRBAC until error returned is nil, to account for multiple steps
 	iterCount := 0

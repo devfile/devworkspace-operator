@@ -76,8 +76,8 @@ func TestShouldRemoveWorkspaceSAFromRolebindingWhenDeleted(t *testing.T) {
 	testdw := getTestDevWorkspace("test-devworkspace")
 	testdw2 := getTestDevWorkspace("test-devworkspace2")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-	testdwSAName := common.ServiceAccountName(testdw.Status.DevWorkspaceId)
-	testdw2SAName := common.ServiceAccountName(testdw2.Status.DevWorkspaceId)
+	testdwSAName := common.ServiceAccountName(testdw)
+	testdw2SAName := common.ServiceAccountName(testdw2)
 	testrb := newRolebinding.DeepCopy()
 	testrb.Subjects = append(testrb.Subjects,
 		rbacv1.Subject{
@@ -176,8 +176,8 @@ func TestShouldRemoveWorkspaceSAFromSCCRolebindingWhenDeleted(t *testing.T) {
 	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw2 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace2", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-	testdwSAName := common.ServiceAccountName(testdw.Status.DevWorkspaceId)
-	testdw2SAName := common.ServiceAccountName(testdw2.Status.DevWorkspaceId)
+	testdwSAName := common.ServiceAccountName(testdw)
+	testdw2SAName := common.ServiceAccountName(testdw2)
 	testrb := newSCCRolebinding.DeepCopy()
 	testrb.Subjects = append(testrb.Subjects,
 		rbacv1.Subject{

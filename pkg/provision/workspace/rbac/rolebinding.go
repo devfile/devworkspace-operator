@@ -27,7 +27,7 @@ import (
 )
 
 func syncRolebindings(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
-	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+	saName := common.ServiceAccountName(workspace)
 	defaultRoleName := common.WorkspaceRoleName()
 	defaultRolebindingName := common.WorkspaceRolebindingName()
 	if err := addServiceAccountToRolebinding(saName, workspace.Namespace, defaultRoleName, defaultRolebindingName, api); err != nil {

@@ -22,6 +22,7 @@ import (
 	"github.com/devfile/api/v2/pkg/attributes"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	testlog "github.com/go-logr/logr/testing"
@@ -190,6 +191,7 @@ func getTestDevWorkspace(id string) *common.DevWorkspaceWithConfig {
 				DevWorkspaceId: id,
 			},
 		},
+		Config: config.GetConfigForTesting(nil),
 	}
 }
 
@@ -202,6 +204,7 @@ func getTestDevWorkspaceWithAttributes(t *testing.T, id string, keysAndValues ..
 		attr.PutString(keysAndValues[i], keysAndValues[i+1])
 	}
 	return &common.DevWorkspaceWithConfig{
+		Config: config.GetConfigForTesting(nil),
 		DevWorkspace: &dw.DevWorkspace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      id,

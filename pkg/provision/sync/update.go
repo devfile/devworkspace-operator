@@ -51,9 +51,11 @@ func serviceUpdateFunc(spec, cluster crclient.Object) (crclient.Object, error) {
 }
 
 func serviceAccountUpdateFunc(spec, cluster crclient.Object) (crclient.Object, error) {
-	if cluster != nil {
-		spec.SetResourceVersion(cluster.GetResourceVersion())
+	if cluster == nil {
+		// May occur if ServiceAccount is not cached by the operator
+		return spec, nil
 	}
+	spec.SetResourceVersion(cluster.GetResourceVersion())
 	ownerrefs := spec.GetOwnerReferences()
 	for _, clusterOwnerref := range cluster.GetOwnerReferences() {
 		if !containsOwnerRef(clusterOwnerref, ownerrefs) {

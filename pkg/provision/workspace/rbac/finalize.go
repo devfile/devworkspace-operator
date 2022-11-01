@@ -28,7 +28,7 @@ func FinalizeRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI)
 			return err
 		}
 	}
-	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+	saName := common.ServiceAccountName(workspace)
 	roleName := common.WorkspaceRoleName()
 	rolebindingName := common.WorkspaceRolebindingName()
 	numWorkspaces, err := countNonDeletedWorkspaces(workspace.Namespace, api)
@@ -52,7 +52,7 @@ func FinalizeRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI)
 
 func finalizeSCCRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
 	sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
-	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+	saName := common.ServiceAccountName(workspace)
 	roleName := common.WorkspaceSCCRoleName(sccName)
 	rolebindingName := common.WorkspaceSCCRolebindingName(sccName)
 	numWorkspaces, err := countNonDeletedWorkspacesUsingSCC(sccName, workspace.Namespace, api)

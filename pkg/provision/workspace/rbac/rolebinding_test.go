@@ -42,7 +42,7 @@ func TestCreatesRolebindingIfNotExists(t *testing.T) {
 	}, actualRB)
 	assert.NoError(t, err, "Rolebinding should be created")
 	assert.Equal(t, common.WorkspaceRoleName(), actualRB.RoleRef.Name, "Rolebinding shold reference default role")
-	expectedSAName := common.ServiceAccountName(testdw.Status.DevWorkspaceId)
+	expectedSAName := common.ServiceAccountName(testdw)
 	assert.True(t, testHasSubject(expectedSAName, testNamespace, actualRB), "Created rolebinding should have workspace SA as subject")
 }
 
@@ -72,9 +72,9 @@ func TestAddsMultipleSubjectsToRolebinding(t *testing.T) {
 	}, actualRB)
 	assert.NoError(t, err, "Rolebinding should be created")
 	assert.Equal(t, common.WorkspaceRoleName(), actualRB.RoleRef.Name, "Rolebinding shold reference default role")
-	expectedSAName := common.ServiceAccountName(testdw.Status.DevWorkspaceId)
+	expectedSAName := common.ServiceAccountName(testdw)
 	assert.True(t, testHasSubject(expectedSAName, testNamespace, actualRB), "Created rolebinding should have both workspace SAs as subjects")
-	expectedSAName2 := common.ServiceAccountName(testdw2.Status.DevWorkspaceId)
+	expectedSAName2 := common.ServiceAccountName(testdw2)
 	assert.True(t, testHasSubject(expectedSAName2, testNamespace, actualRB), "Created rolebinding should have both workspace SAs as subjects")
 }
 
@@ -100,7 +100,7 @@ func TestCreatesSCCRolebindingIfNotExists(t *testing.T) {
 	}, actualRB)
 	assert.NoError(t, err, "Rolebinding should be created")
 	assert.Equal(t, common.WorkspaceSCCRoleName(testSCCName), actualRB.RoleRef.Name, "Rolebinding shold reference default role")
-	expectedSAName := common.ServiceAccountName(testdw.Status.DevWorkspaceId)
+	expectedSAName := common.ServiceAccountName(testdw)
 	assert.True(t, testHasSubject(expectedSAName, testNamespace, actualRB), "Created rolebinding should have workspace SA as subject")
 }
 
@@ -138,9 +138,9 @@ func TestAddsMultipleSubjectsToSCCRolebinding(t *testing.T) {
 	}, actualRB)
 	assert.NoError(t, err, "Rolebinding should be created")
 	assert.Equal(t, common.WorkspaceSCCRoleName(testSCCName), actualRB.RoleRef.Name, "Rolebinding shold reference default role")
-	expectedSAName := common.ServiceAccountName(testdw.Status.DevWorkspaceId)
+	expectedSAName := common.ServiceAccountName(testdw)
 	assert.True(t, testHasSubject(expectedSAName, testNamespace, actualRB), "Created SCC rolebinding should have both workspace SAs as subjects")
-	expectedSAName2 := common.ServiceAccountName(testdw2.Status.DevWorkspaceId)
+	expectedSAName2 := common.ServiceAccountName(testdw2)
 	assert.True(t, testHasSubject(expectedSAName2, testNamespace, actualRB), "Created SCC rolebinding should have both workspace SAs as subjects")
 }
 

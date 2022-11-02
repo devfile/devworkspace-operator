@@ -238,6 +238,71 @@ merged with the default DevWorkspaceOperatorConfig, overriding
 fields in the default configuration. Fields unset in the overridden
 configuration will use the global values.
 
+## Fine-grained configuration of workspace pods and containers
+The attributes `pod-overrides` and `container-overrides` can be applied to DevWorkspaces in order to configure fields on the Kubernetes objects that are not normally exposed through the Kubernetes API.
+
+The format for overrides is the same as the object being overridden -- a pod template in the case of pod-overrides and a container in the case of container-overrides. The value of the attribute is applied via Kubernetes _strategic merge_ to patch the default configuration according to predefined merge rules.
+
+The value of attributes can be specified as yaml or json. In other words, both
+[source,yaml]
+----
+pod-overrides:
+  metadata:
+    labels:
+      my-label: my value
+----
+and
+[source,yaml]
+----
+pod-overrides: {"metadata": {"labels": {"my-label": "my value"}}}
+----
+are valid.
+
+### Pod overrides
+The `pod-overrides` attribute can be applied to either the top-level attributes field or the attributes field on an individual container component in order to override fields in the workspace deployment's Pod spec. The value for this attribute should be specified as a Pod template as used in a Kubernetes Deployment (see `kubectl explain deployment.spec.template` for details). For example, the pod-overrides field below adds the label `my-label: my-value` to the workspace pod and configures the pod security context
+[source,yaml]
+----
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: example-devworkspace
+spec:
+  started: true
+  template:
+    attributes:
+      pod-overrides:
+        metadata:
+          labels:
+            my-label: my value
+        spec:
+          securityContext:
+            runAsUser: 1234
+----
+Note that the pod-overrides field does not allow configuring `containers`, `initContainers`, and `volumes`. In order to configure these elements, use existing DevWorkspace fields (container components, volume components)
+
+In the case that the `pod-overrides` attribute is defined multiple times in a DevWorkspace, each override will be applied in sequence (with later overrides potentially rewriting previous ones) in the following order:
+
+. Any overrides specified on container-type components, in the order they appear in the DevWorkspace
+. Overrides specified in the top-level attributes field on the DevWorkspace.
+
+### Container overrides
+The `container-overrides` attribute can be applied to container-type components in a DevWorkspace to override fields in that individual container. The value for this attribute should be specified as a Kubernetes Container (see `kubectl explain pods.spec.containers` for details). For example, the container-overrides field below configures resource limit for the `nvidia.com/gpu` extended cluster resource:
+[source,yaml]
+----
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: example-devworkspace
+spec:
+  started: true
+  template:
+    components:
+      - name: web-terminal
+        attributes:
+          container-overrides: {"resources":{"limits":{"nvidia.com/gpu":"1"}}}
+----
+Note that the container-overrides field does not allow configuring fields that are available through the regular DevWorkspace API. In particular, workspaces will fail to start if the container-overrides attribute attempts to override `name`, `image`, `command`, `args`, `ports`, `volumeMounts`, or `env`.
+
 ## Debugging a failing workspace
 Normally, when a workspace fails to start, the deployment will be scaled down and the workspace will be stopped in a `Failed` state. This can make it difficult to debug misconfiguration errors, so the annotation `controller.devfile.io/debug-start: "true"` can be applied to DevWorkspaces to leave resources for failed workspaces on the cluster. This allows viewing logs from workspace containers.
 

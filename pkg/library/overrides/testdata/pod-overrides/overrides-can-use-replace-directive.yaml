@@ -1,0 +1,40 @@
+name: "Pod overrides can use $patch: replace to overwrite fields rather than merging"
+
+input:
+  workspace:
+    attributes:
+      pod-overrides:
+        spec:
+          securityContext:
+            runAsUser: 1001
+            $patch: replace
+    components:
+      - name: test-component
+        container:
+          image: test-image
+
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+      securityContext:
+        fsGroup: 2000
+        runAsGroup: 3000
+        runAsUser: 1000
+
+
+output:
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+      securityContext:
+        runAsUser: 1001

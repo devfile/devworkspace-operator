@@ -36,17 +36,4 @@ input:
 
 
 output:
-  container:
-    name: test-component
-    image: test-image
-    command: ["original"]
-    args: ["original"]
-    ports:
-      - name: original-port
-        containerPort: 8080
-    volumeMounts:
-      - name: original-volume
-        mountPath: original-mountPath
-    env:
-      - name: original_env
-        value: original_val
+  errRegexp: "cannot use container-overrides to override container env"

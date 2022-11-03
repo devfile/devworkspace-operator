@@ -1,0 +1,24 @@
+name: "container overrides can use $patch: delete to delete fields rather than merging"
+
+input:
+  component:
+    name: test-component
+    attributes:
+      container-overrides:
+        securityContext:
+          $patch: delete
+    container:
+      image: test-image
+
+  container:
+    name: test-component
+    image: test-image
+    securityContext:
+      runAsUser: 1000
+      runAsGroup: 2000
+
+output:
+  container:
+    name: test-component
+    image: test-image
+    securityContext: {}

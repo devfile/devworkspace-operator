@@ -29,6 +29,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -141,8 +142,7 @@ func podDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	}
 	if specPod.Spec.TerminationGracePeriodSeconds != nil &&
 		specPod.Spec.TerminationGracePeriodSeconds != clusterPod.Spec.TerminationGracePeriodSeconds {
-		negOne := int64(-1)
-		if clusterPod.Spec.TerminationGracePeriodSeconds == &negOne {
+		if clusterPod.Spec.TerminationGracePeriodSeconds == pointer.Int64(-1) {
 			return false, true
 		} else {
 			return true, false

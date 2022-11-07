@@ -119,45 +119,21 @@ func MetadataConfigMapName(workspaceId string) string {
 // can potentially push the name over the 63 character limit (if the original
 // object has a long name)
 func AutoMountConfigMapVolumeName(volumeName string) string {
-	return volumeName
+	return fmt.Sprintf("%s", volumeName)
 }
 
 func AutoMountSecretVolumeName(volumeName string) string {
-	return volumeName
+	return fmt.Sprintf("%s", volumeName)
 }
 
 func AutoMountPVCVolumeName(pvcName string) string {
-	return pvcName
+	return fmt.Sprintf("%s", pvcName)
 }
 
 func WorkspaceRoleName() string {
-	return "devworkspace-default-role"
-}
-
-func WorkspaceRolebindingName() string {
-	return "devworkspace-default-rolebinding"
-}
-
-func WorkspaceSCCRoleName(sccName string) string {
-	return fmt.Sprintf("devworkspace-use-%s", sccName)
-}
-
-func WorkspaceSCCRolebindingName(sccName string) string {
-	return fmt.Sprintf("devworkspace-use-%s", sccName)
-}
-
-// OldWorkspaceRoleName returns the name used for the workspace serviceaccount role
-//
-// Deprecated: use WorkspaceRoleName() instead.
-// TODO: remove for DevWorkspace Operator v0.19
-func OldWorkspaceRoleName() string {
 	return "workspace"
 }
 
-// OldWorkspaceRolebindingName returns the name used for the workspace serviceaccount rolebinding
-//
-// Deprecated: use WorkspaceRoleBindingName() instead.
-// TODO: remove for DevWorkspace Operator v0.19
-func OldWorkspaceRolebindingName() string {
+func WorkspaceRolebindingName() string {
 	return constants.ServiceAccount + "dw"
 }

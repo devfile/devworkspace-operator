@@ -24,7 +24,6 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/rbac"
 
 	"github.com/go-logr/logr"
 	coputil "github.com/redhat-cop/operator-utils/pkg/util"
@@ -71,8 +70,6 @@ func (r *DevWorkspaceReconciler) finalize(ctx context.Context, log logr.Logger, 
 			return r.finalizeStorage(ctx, log, workspace, finalizeStatus)
 		case constants.ServiceAccountCleanupFinalizer:
 			return r.finalizeServiceAccount(ctx, log, workspace, finalizeStatus)
-		case constants.RBACCleanupFinalizer:
-			return r.finalizeRBAC(ctx, log, workspace, finalizeStatus)
 		}
 	}
 	return reconcile.Result{}, nil
@@ -133,46 +130,6 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
 }
 
-func (r *DevWorkspaceReconciler) finalizeRBAC(ctx context.Context, log logr.Logger, workspace *common.DevWorkspaceWithConfig, finalizeStatus *currentStatus) (reconcile.Result, error) {
-	terminating, err := r.namespaceIsTerminating(ctx, workspace.Namespace)
-	if err != nil {
-		return reconcile.Result{}, err
-	} else if terminating {
-		// Namespace is terminating, it's redundant to update roles/rolebindings since they will be removed with the workspace
-		log.Info("Namespace is terminating; clearing storage finalizer")
-		coputil.RemoveFinalizer(workspace, constants.RBACCleanupFinalizer)
-		return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
-	}
-
-	if err := rbac.FinalizeRBAC(workspace, sync.ClusterAPI{
-		Ctx:    ctx,
-		Client: r.Client,
-		Scheme: r.Scheme,
-		Logger: log,
-	}); err != nil {
-		switch rbacErr := err.(type) {
-		case *rbac.RetryError:
-			log.Info(rbacErr.Error())
-			return reconcile.Result{Requeue: true}, nil
-		case *rbac.FailError:
-			if workspace.Status.Phase != dw.DevWorkspaceStatusError {
-				// Avoid repeatedly logging error unless it's relevant
-				log.Error(rbacErr, "Failed to finalize workspace RBAC")
-			}
-			finalizeStatus.phase = dw.DevWorkspaceStatusError
-			finalizeStatus.setConditionTrue(dw.DevWorkspaceError, err.Error())
-			return reconcile.Result{}, nil
-		default:
-			return reconcile.Result{}, err
-		}
-	}
-	log.Info("RBAC cleanup successful; clearing finalizer")
-	coputil.RemoveFinalizer(workspace, constants.RBACCleanupFinalizer)
-	return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
-}
-
-// Deprecated: Only required to support old workspaces that use the service account finalizer. The service account finalizer should
-// not be added to new workspaces.
 func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log logr.Logger, workspace *common.DevWorkspaceWithConfig, finalizeStatus *currentStatus) (reconcile.Result, error) {
 	retry, err := wsprovision.FinalizeServiceAccount(workspace, ctx, r.NonCachingClient)
 	if err != nil {

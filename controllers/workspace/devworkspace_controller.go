@@ -227,8 +227,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 		}
 		if reconcileStatus.phase == dw.DevWorkspaceStatusRunning {
-			metrics.WorkspaceRunning(clusterWorkspace, reqLogger)
-			r.syncStartedAtToCluster(ctx, clusterWorkspace, reqLogger)
+			// defer to set the startedAt annotation after the status and metrics are updated,
+			// since WorkspaceStarted and WorkspaceRunning metrics are not updated if this annotation exists
+			defer r.syncStartedAtToCluster(ctx, clusterWorkspace, reqLogger)
 		}
 
 		return r.updateWorkspaceStatus(clusterWorkspace, reqLogger, &reconcileStatus, reconcileResult, err)

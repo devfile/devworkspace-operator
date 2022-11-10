@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -94,17 +93,6 @@ func SyncServiceAccount(
 		return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
 	}
 
-	if workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
-		sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
-		retry, err := addSCCToServiceAccount(specSA.Name, specSA.Namespace, sccName, clusterAPI)
-		if err != nil {
-			return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{FailStartup: true, Message: err.Error()}}
-		}
-		if retry {
-			return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
-		}
-	}
-
 	return ServiceAcctProvisioningStatus{
 		ProvisioningStatus: ProvisioningStatus{
 			Continue: true,
@@ -113,16 +101,10 @@ func SyncServiceAccount(
 	}
 }
 
-func NeedsServiceAccountFinalizer(workspace *dw.DevWorkspaceTemplateSpec) bool {
-	if !workspace.Attributes.Exists(constants.WorkspaceSCCAttribute) {
-		return false
-	}
-	if workspace.Attributes.GetString(constants.WorkspaceSCCAttribute, nil) == "" {
-		return false
-	}
-	return true
-}
-
+// FinalizeServiceAccount removes the workspace service account from the SCC specified by the controller.devfile.io/scc attribute.
+//
+// Deprecated: This should no longer be needed as the serviceaccount finalizer is no longer added to workspaces (and workspaces
+// do not update SCCs) but is kept here in order to clear finalizers from existing workspaces on deletion.
 func FinalizeServiceAccount(workspace *common.DevWorkspaceWithConfig, ctx context.Context, nonCachingClient crclient.Client) (retry bool, err error) {
 	saName := common.ServiceAccountName(workspace)
 	namespace := workspace.Namespace
@@ -134,43 +116,8 @@ func FinalizeServiceAccount(workspace *common.DevWorkspaceWithConfig, ctx contex
 	return removeSCCFromServiceAccount(saName, namespace, sccName, ctx, nonCachingClient)
 }
 
-func addSCCToServiceAccount(saName, namespace, sccName string, clusterAPI sync.ClusterAPI) (retry bool, err error) {
-	serviceaccount := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
-
-	scc := &securityv1.SecurityContextConstraints{}
-	if err := clusterAPI.NonCachingClient.Get(clusterAPI.Ctx, types.NamespacedName{Name: sccName}, scc); err != nil {
-		switch {
-		case k8sErrors.IsForbidden(err):
-			return false, fmt.Errorf("operator does not have permissions to get the '%s' SecurityContextConstraints", sccName)
-		case k8sErrors.IsNotFound(err):
-			return false, fmt.Errorf("requested SecurityContextConstraints '%s' not found on cluster", sccName)
-		default:
-			return false, err
-		}
-	}
-
-	for _, user := range scc.Users {
-		if user == serviceaccount {
-			// This serviceaccount is already added to the SCC
-			return false, nil
-		}
-	}
-
-	scc.Users = append(scc.Users, serviceaccount)
-	if err := clusterAPI.NonCachingClient.Update(clusterAPI.Ctx, scc); err != nil {
-		switch {
-		case k8sErrors.IsForbidden(err):
-			return false, fmt.Errorf("operator does not have permissions to update the '%s' SecurityContextConstraints", sccName)
-		case k8sErrors.IsConflict(err):
-			return true, nil
-		default:
-			return false, err
-		}
-	}
-
-	return false, nil
-}
-
+// Deprecated: This function is left in place ot ensure changes to SCCs can be undone when a workspace is deleted. However,
+// the DevWorkspace Operator no longer updates SCCs, so this functionality is not required for new workspaces.
 func removeSCCFromServiceAccount(saName, namespace, sccName string, ctx context.Context, nonCachingClient crclient.Client) (retry bool, err error) {
 	serviceaccount := fmt.Sprintf("system:serviceaccount:%s:%s", namespace, saName)
 

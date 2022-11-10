@@ -32,7 +32,7 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -55,7 +55,7 @@ func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
 
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -78,7 +78,7 @@ func TestResolveDevWorkspacePluginURI(t *testing.T) {
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
 
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -101,7 +101,7 @@ func TestResolveDevWorkspaceParents(t *testing.T) {
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
 
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -127,7 +127,7 @@ func TestResolveDevWorkspaceMissingDefaults(t *testing.T) {
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "")
 
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -150,7 +150,7 @@ func TestResolveDevWorkspaceAnnotations(t *testing.T) {
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
 
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -173,7 +173,7 @@ func TestResolveDevWorkspaceTemplateNamespaceRestriction(t *testing.T) {
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-namespace")
 
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -196,7 +196,51 @@ func TestMergesDuplicateVolumeComponents(t *testing.T) {
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
 
-			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, testResolverTools)
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
+			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
+				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
+			} else {
+				if !assert.NoError(t, err, "Should not return error") {
+					return
+				}
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+			}
+		})
+	}
+}
+
+func TestMergeContainerContributions(t *testing.T) {
+	tests := testutil.LoadAllTestsOrPanic(t, "testdata/container-contributions")
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			// sanity check: input defines components
+			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
+			testResolverTools := getTestingTools(tt.Input, "test-ignored")
+
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, nil, testResolverTools)
+			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
+				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
+			} else {
+				if !assert.NoError(t, err, "Should not return error") {
+					return
+				}
+				assert.Truef(t, cmp.Equal(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts),
+					"DevWorkspace should match expected output:\n%s",
+					cmp.Diff(tt.Output.DevWorkspace, outputWorkspace, testutil.WorkspaceTemplateDiffOpts))
+			}
+		})
+	}
+}
+
+func TestMergeSpecContributions(t *testing.T) {
+	tests := testutil.LoadAllTestsOrPanic(t, "testdata/spec-contributions")
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			testResolverTools := getTestingTools(tt.Input, "test-namespace")
+
+			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, tt.Input.Contributions, testResolverTools)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

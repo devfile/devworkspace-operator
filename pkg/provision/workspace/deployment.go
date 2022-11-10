@@ -20,17 +20,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	maputils "github.com/devfile/devworkspace-operator/internal/map"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -48,7 +46,7 @@ type DeploymentProvisioningStatus struct {
 }
 
 func SyncDeploymentToCluster(
-	workspace *dw.DevWorkspace,
+	workspace *common.DevWorkspaceWithConfig,
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
 	clusterAPI sync.ClusterAPI) DeploymentProvisioningStatus {
@@ -116,9 +114,9 @@ func SyncDeploymentToCluster(
 		}
 	}
 
-	failureMsg, checkErr := status.CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, k8sclient.MatchingLabels{
-		constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
-	}, clusterAPI)
+	workspaceIDLabel := k8sclient.MatchingLabels{constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId}
+	ignoredEvents := workspace.Config.Workspace.IgnoredUnrecoverableEvents
+	failureMsg, checkErr := status.CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, workspaceIDLabel, ignoredEvents, clusterAPI)
 	if checkErr != nil {
 		return DeploymentProvisioningStatus{
 			ProvisioningStatus: ProvisioningStatus{
@@ -139,7 +137,7 @@ func SyncDeploymentToCluster(
 }
 
 // DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace
-func DeleteWorkspaceDeployment(ctx context.Context, workspace *dw.DevWorkspace, client runtimeClient.Client) (wait bool, err error) {
+func DeleteWorkspaceDeployment(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client runtimeClient.Client) (wait bool, err error) {
 	err = client.Delete(ctx, &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: workspace.Namespace,
@@ -156,7 +154,7 @@ func DeleteWorkspaceDeployment(ctx context.Context, workspace *dw.DevWorkspace, 
 }
 
 // ScaleDeploymentToZero scales the cluster deployment to zero
-func ScaleDeploymentToZero(ctx context.Context, workspace *dw.DevWorkspace, client runtimeClient.Client) error {
+func ScaleDeploymentToZero(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client runtimeClient.Client) error {
 	patch := []byte(`{"spec":{"replicas": 0}}`)
 	err := client.Patch(ctx, &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -172,15 +170,8 @@ func ScaleDeploymentToZero(ctx context.Context, workspace *dw.DevWorkspace, clie
 	return nil
 }
 
-func GetDevWorkspaceSecurityContext() *corev1.PodSecurityContext {
-	if infrastructure.IsOpenShift() {
-		return &corev1.PodSecurityContext{}
-	}
-	return config.Workspace.PodSecurityContext
-}
-
 func getSpecDeployment(
-	workspace *dw.DevWorkspace,
+	workspace *common.DevWorkspaceWithConfig,
 	podAdditionsList []v1alpha1.PodAdditions,
 	saName string,
 	podTolerations []corev1.Toleration,
@@ -206,6 +197,9 @@ func getSpecDeployment(
 	labels[constants.DevWorkspaceNameLabel] = workspace.Name
 
 	annotations, err := getAdditionalAnnotations(workspace)
+	if err != nil {
+		return nil, err
+	}
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -240,7 +234,7 @@ func getSpecDeployment(
 					Volumes:                       podAdditions.Volumes,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
-					SecurityContext:               GetDevWorkspaceSecurityContext(),
+					SecurityContext:               workspace.Config.Workspace.PodSecurityContext,
 					ServiceAccountName:            saName,
 					AutomountServiceAccountToken:  nil,
 				},
@@ -248,10 +242,18 @@ func getSpecDeployment(
 		},
 	}
 
-	if podTolerations != nil && len(podTolerations) > 0 {
+	if overrides.NeedsPodOverrides(workspace) {
+		patchedDeployment, err := overrides.ApplyPodOverrides(workspace, deployment)
+		if err != nil {
+			return nil, err
+		}
+		deployment = patchedDeployment
+	}
+
+	if len(podTolerations) > 0 {
 		deployment.Spec.Template.Spec.Tolerations = podTolerations
 	}
-	if nodeSelector != nil && len(nodeSelector) > 0 {
+	if len(nodeSelector) > 0 {
 		deployment.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 	if workspace.Spec.Template.Attributes.Exists(constants.RuntimeClassNameAttribute) {
@@ -261,7 +263,7 @@ func getSpecDeployment(
 		}
 	}
 
-	if needPVC, pvcName := needsPVCWorkaround(podAdditions); needPVC {
+	if needPVC, pvcName := needsPVCWorkaround(podAdditions, workspace.Config.Workspace.PVCName); needPVC {
 		// Kubernetes creates directories in a PVC to support subpaths such that only the leaf directory has g+rwx permissions.
 		// This means that mounting the subpath e.g. <workspace-id>/plugins will result in the <workspace-id> directory being
 		// created with 755 permissions, requiring the root UID to remove it.
@@ -291,7 +293,7 @@ func getSpecDeployment(
 		deployment.Spec.Template.Annotations = maputils.Append(deployment.Spec.Template.Annotations, constants.DevWorkspaceRestrictedAccessAnnotation, restrictedAccess)
 	}
 
-	err = controllerutil.SetControllerReference(workspace, deployment, scheme)
+	err = controllerutil.SetControllerReference(workspace.DevWorkspace, deployment, scheme)
 	if err != nil {
 		return nil, err
 	}
@@ -368,11 +370,10 @@ func getWorkspaceSubpathVolumeMount(workspaceId, pvcName string) corev1.VolumeMo
 	return workspaceVolumeMount
 }
 
-func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) (needs bool, pvcName string) {
-	commonPVCName := config.Workspace.PVCName
+func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions, pvcName string) (needs bool, workaroundPvcName string) {
 	for _, vol := range podAdditions.Volumes {
-		if vol.Name == commonPVCName {
-			return true, commonPVCName
+		if vol.Name == pvcName {
+			return true, pvcName
 		}
 		if vol.Name == constants.CheCommonPVCName {
 			return true, constants.CheCommonPVCName
@@ -381,7 +382,7 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions) (needs bool, pvcNam
 	return false, ""
 }
 
-func getAdditionalAnnotations(workspace *dw.DevWorkspace) (map[string]string, error) {
+func getAdditionalAnnotations(workspace *common.DevWorkspaceWithConfig) (map[string]string, error) {
 	annotations := map[string]string{}
 
 	for _, component := range workspace.Spec.Template.Components {

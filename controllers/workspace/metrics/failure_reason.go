@@ -17,6 +17,7 @@ package metrics
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 )
 
@@ -37,7 +38,7 @@ var devworkspaceFailureReasons = []FailureReason{
 }
 
 // GetFailureReason returns the FailureReason of the provided DevWorkspace
-func GetFailureReason(wksp *dw.DevWorkspace) FailureReason {
+func GetFailureReason(wksp *common.DevWorkspaceWithConfig) FailureReason {
 	failedCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceFailedStart)
 	if failedCondition != nil {
 		for _, reason := range devworkspaceFailureReasons {

@@ -67,6 +67,13 @@ _store_tls_cert:
 	  $(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
   endif
 
+_check_controller_running:
+	REPLICAS=$$($(K8S_CLI) get deploy devworkspace-controller-manager -n $(NAMESPACE) -o=json | jq -r '.spec.replicas')
+	if [ "$$REPLICAS" != "0" ]; then \
+	  echo "Controller is already running in cluster, cannot run locally. Scale controller to 0 first." ;\
+	  exit 1 ;\
+	fi
+
 ### install: Install controller in the configured Kubernetes cluster in ~/.kube/config
 install: _print_vars _check_cert_manager _init_devworkspace_crds _create_namespace generate_deployment
   ifeq ($(PLATFORM),kubernetes)
@@ -124,9 +131,15 @@ _check_cert_manager:
   endif
 
 _login_with_devworkspace_sa:
-	$(eval SA_TOKEN := $(shell $(K8S_CLI) get secrets -o=json -n $(NAMESPACE) | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' | base64 --decode ))
-	echo "Logging as controller's SA in $(NAMESPACE)"
-	oc login --token=$(SA_TOKEN) --kubeconfig=$(BUMPED_KUBECONFIG)
+  # Kubernetes 1.23 and below: get SA token from service-account-token secret; Kubernetes 1.24 and above, use `kubectl create token`
+	SA_TOKEN=$$($(K8S_CLI) get secrets -o=json -n $(NAMESPACE) \
+	  | jq -r '[.items[] | select (.type == "kubernetes.io/service-account-token" and .metadata.annotations."kubernetes.io/service-account.name" == "$(DEVWORKSPACE_CTRL_SA)")][0].data.token' \
+	  | base64 --decode ); \
+	if [[ "$$SA_TOKEN" == $$(echo 'null' | base64 -d) ]]; then \
+	  SA_TOKEN=$$($(K8S_CLI) create token -n "$(NAMESPACE)" "$(DEVWORKSPACE_CTRL_SA)"); \
+	fi; \
+	echo "Logging as controller's SA in $(NAMESPACE)"; \
+	oc login --token="$$SA_TOKEN" --kubeconfig=$(BUMPED_KUBECONFIG)
 
 ### install_cert_manager: Installs Cert Mananger v1.5.4 on the cluster
 install_cert_manager:
@@ -143,7 +156,7 @@ _bump_kubeconfig:
 	cp $(CONFIG_FILE) $(BUMPED_KUBECONFIG)
 
 ### run: Runs against the configured Kubernetes cluster in ~/.kube/config
-run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _store_tls_cert
+run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _store_tls_cert _check_controller_running
 	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \
@@ -151,7 +164,7 @@ run: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspac
 	  go run ./main.go
 
 ### debug: Runs the controller locally with debugging enabled, watching cluster defined in ~/.kube/config
-debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _store_tls_cert
+debug: _print_vars _gen_configuration_env _bump_kubeconfig _login_with_devworkspace_sa _store_tls_cert _check_controller_running
 	source $(CONTROLLER_ENV_FILE)
 	export KUBECONFIG=$(BUMPED_KUBECONFIG)
 	CONTROLLER_SERVICE_ACCOUNT_NAME=$(DEVWORKSPACE_CTRL_SA) \

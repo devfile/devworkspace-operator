@@ -21,9 +21,11 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -45,7 +47,7 @@ func (*AsyncStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateS
 	return needsStorage(workspace)
 }
 
-func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	if err := checkConfigured(); err != nil {
 		return &ProvisioningError{
 			Message: fmt.Sprintf("%s. Contact an administrator to resolve this issue.", err.Error()),
@@ -88,11 +90,14 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		return err
 	}
 
-	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	usingAlternatePVC, pvcName, err := checkForAlternatePVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
 
+	if pvcName == "" {
+		pvcName = workspace.Config.Workspace.PVCName
+	}
 	pvcTerminating, err := checkPVCTerminating(pvcName, workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
@@ -103,9 +108,9 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		}
 	}
 
-	if pvcName != "" {
+	if !usingAlternatePVC {
 		// Create common PVC if needed
-		clusterPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
+		clusterPVC, err := syncCommonPVC(workspace.Namespace, workspace.Config, clusterAPI)
 		if err != nil {
 			return err
 		}
@@ -113,7 +118,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	}
 
 	// Create async server deployment
-	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace.Namespace, configmap, pvcName, clusterAPI)
+	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace, configmap, pvcName, clusterAPI)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
 			return &NotReadyError{
@@ -169,7 +174,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	return nil
 }
 
-func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// TODO: This approach relies on there being a maximum of one workspace running per namespace.
 	asyncDeploy, err := asyncstorage.GetWorkspaceSyncDeploymentCluster(workspace.Namespace, clusterAPI)
 	if err != nil {
@@ -208,8 +213,7 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorks
 	// Scale async deployment to zero to free up common PVC
 	currReplicas := asyncDeploy.Spec.Replicas
 	if currReplicas == nil || *currReplicas != 0 {
-		intzero := int32(0)
-		asyncDeploy.Spec.Replicas = &intzero
+		asyncDeploy.Spec.Replicas = pointer.Int32(0)
 		err := clusterAPI.Client.Update(clusterAPI.Ctx, asyncDeploy)
 		if err != nil && !k8sErrors.IsConflict(err) {
 			return err
@@ -244,7 +248,7 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorks
 	return nil
 }
 
-func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace) (volumes []corev1.Volume, err error) {
+func (*AsyncStorageProvisioner) addVolumesForAsyncStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig) (volumes []corev1.Volume, err error) {
 	persistentVolumes, _, _ := getWorkspaceVolumes(workspace)
 
 	addedVolumes, err := addEphemeralVolumesToPodAdditions(podAdditions, persistentVolumes)

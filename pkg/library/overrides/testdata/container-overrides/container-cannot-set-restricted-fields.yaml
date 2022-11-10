@@ -1,0 +1,52 @@
+name: "Container overrides cannot override container component fields"
+
+input:
+  component:
+    name: test-component
+    attributes:
+      container-overrides:
+        image: override-image
+        command: ["test"]
+        args: ["test"]
+        ports:
+          - name: test-port
+            containerPort: 9999
+        volumeMounts:
+          - name: test-volume
+            mountPath: test-mountPath
+        env:
+          - name: test_env
+            value: test_val
+    container:
+      image: test-image
+  container:
+    name: test-component
+    image: test-image
+    command: ["original"]
+    args: ["original"]
+    ports:
+      - name: original-port
+        containerPort: 8080
+    volumeMounts:
+      - name: original-volume
+        mountPath: original-mountPath
+    env:
+      - name: original_env
+        value: original_val
+
+
+output:
+  container:
+    name: test-component
+    image: test-image
+    command: ["original"]
+    args: ["original"]
+    ports:
+      - name: original-port
+        containerPort: 8080
+    volumeMounts:
+      - name: original-volume
+        mountPath: original-mountPath
+    env:
+      - name: original_env
+        value: original_val

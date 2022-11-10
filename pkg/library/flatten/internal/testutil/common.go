@@ -37,6 +37,12 @@ var WorkspaceTemplateDiffOpts = cmp.Options{
 	cmpopts.SortSlices(func(a, b dw.EnvVar) bool {
 		return strings.Compare(a.Name, b.Name) > 0
 	}),
+	cmpopts.SortSlices(func(a, b dw.Endpoint) bool {
+		return strings.Compare(a.Name, b.Name) > 0
+	}),
+	cmpopts.SortSlices(func(a, b dw.VolumeMount) bool {
+		return strings.Compare(a.Name, b.Name) > 0
+	}),
 	// TODO: Devworkspace overriding results in empty []string instead of nil
 	cmpopts.IgnoreFields(dw.DevWorkspaceEvents{}, "PostStart", "PreStop", "PostStop"),
 }
@@ -48,7 +54,10 @@ type TestCase struct {
 }
 
 type TestInput struct {
+	// DevWorkspace is the .spec.template field of a DevWorkspace
 	DevWorkspace *dw.DevWorkspaceTemplateSpec `json:"devworkspace,omitempty"`
+	// Contributions is the .spec.containerContributions field of a DevWorkspace
+	Contributions []dw.ComponentContribution `json:"contributions,omitempty"`
 	// DevWorkspaceResources is a map of string keys to devworkspace templates
 	DevWorkspaceResources map[string]dw.DevWorkspaceTemplate `json:"devworkspaceResources,omitempty"`
 	// DevfileResources is a map of string keys to devfile resources

@@ -18,10 +18,10 @@ package metadata
 import (
 	"fmt"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/yaml"
 
@@ -45,12 +45,12 @@ const (
 // ProvisionWorkspaceMetadata creates a configmap on the cluster that stores metadata about the workspace and configures all
 // workspace containers to mount that configmap at /devworkspace-metadata. Each container has the environment
 // variable DEVWORKSPACE_METADATA set to the mount path for the configmap
-func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, flattened *dw.DevWorkspace, api sync.ClusterAPI) error {
+func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, flattened *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
 	cm, err := getSpecMetadataConfigMap(original, flattened)
 	if err != nil {
 		return err
 	}
-	err = controllerutil.SetControllerReference(original, cm, api.Scheme)
+	err = controllerutil.SetControllerReference(original.DevWorkspace, cm, api.Scheme)
 	if err != nil {
 		return err
 	}
@@ -83,7 +83,7 @@ func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, f
 	return nil
 }
 
-func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.ConfigMap, error) {
+func getSpecMetadataConfigMap(original, flattened *common.DevWorkspaceWithConfig) (*corev1.ConfigMap, error) {
 	originalYaml, err := yaml.Marshal(original.Spec.Template)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal original DevWorkspace yaml: %w", err)
@@ -113,8 +113,6 @@ func getSpecMetadataConfigMap(original, flattened *dw.DevWorkspace) (*corev1.Con
 }
 
 func getVolumeFromConfigMap(cm *corev1.ConfigMap) *corev1.Volume {
-	boolTrue := true
-	defaultMode := int32(0644)
 	return &corev1.Volume{
 		Name: "workspace-metadata",
 		VolumeSource: corev1.VolumeSource{
@@ -122,8 +120,8 @@ func getVolumeFromConfigMap(cm *corev1.ConfigMap) *corev1.Volume {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: cm.Name,
 				},
-				Optional:    &boolTrue,
-				DefaultMode: &defaultMode,
+				Optional:    pointer.Bool(true),
+				DefaultMode: pointer.Int32(0644),
 			},
 		},
 	}

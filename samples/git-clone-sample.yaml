@@ -1,0 +1,36 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: git-clone-sample-devworkspace
+spec:
+  started: true
+  template:
+    projects:
+      - name: web-nodejs-sample
+        git:
+          remotes:
+            origin: "https://github.com/che-samples/web-nodejs-sample.git"
+      - name: devworkspace-operator
+        git:
+          checkoutFrom:
+            remote: amisevsk
+            revision: clone-projects-on-start
+          remotes:
+            origin: "https://github.com/devfile/devworkspace-operator.git"
+            amisevsk: "https://github.com/amisevsk/devworkspace-operator.git"
+    components:
+      - name: theia
+        plugin:
+          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/next/devfile.yaml
+          components:
+            - name: theia-ide
+              container:
+                env:
+                  - name: THEIA_HOST
+                    value: 0.0.0.0
+    commands:
+      - id: say-hello
+        exec:
+          component: theia-ide
+          commandLine: echo "Hello from $(pwd)"
+          workingDir: ${PROJECTS_ROOT}/project/app

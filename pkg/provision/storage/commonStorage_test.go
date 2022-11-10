@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/yaml"
@@ -47,7 +49,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(v1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dw.AddToScheme(scheme))
-	config.SetConfigForTesting(nil)
 }
 
 type testCase struct {
@@ -67,14 +68,17 @@ type testOutput struct {
 	ErrRegexp    *string               `json:"errRegexp,omitempty"`
 }
 
-var testControllerCfg = &v1alpha1.OperatorConfiguration{
+var testControllerCfg = config.GetConfigForTesting(&v1alpha1.OperatorConfiguration{
 	Workspace: &v1alpha1.WorkspaceConfig{
 		ImagePullPolicy: "Always",
 	},
-}
+})
 
-func setupControllerCfg() {
-	config.SetConfigForTesting(testControllerCfg)
+func getDevWorkspaceWithConfig(workspace *dw.DevWorkspace) *common.DevWorkspaceWithConfig {
+	workspaceWithConfig := &common.DevWorkspaceWithConfig{}
+	workspaceWithConfig.DevWorkspace = workspace
+	workspaceWithConfig.Config = testControllerCfg
+	return workspaceWithConfig
 }
 
 func loadTestCaseOrPanic(t *testing.T, testFilepath string) testCase {
@@ -104,11 +108,27 @@ func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 	return tests
 }
 
+func TestUseCommonStorageProvisionerForPerUserStorageClass(t *testing.T) {
+	test := loadTestCaseOrPanic(t, "testdata/common-storage/per-user-alias.yaml")
+
+	t.Run(test.Name, func(t *testing.T) {
+		// sanity check that file is read correctly.
+		assert.NotNil(t, test.Input.Workspace, "Input does not define workspace")
+		workspace := &dw.DevWorkspace{}
+		workspace.Spec.Template = *test.Input.Workspace
+		storageProvisioner, err := GetProvisioner(getDevWorkspaceWithConfig(workspace))
+
+		if !assert.NoError(t, err, "Should not return error") {
+			return
+		}
+		assert.Equal(t, &CommonStorageProvisioner{}, storageProvisioner, "Per-user storage class should use the common storage provisioner")
+	})
+}
+
 func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
-	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"))
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}
@@ -126,7 +146,7 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 			workspace.Spec.Template = *tt.Input.Workspace
 			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"
-			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, workspace, clusterAPI)
+			err := commonStorage.ProvisionStorage(&tt.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -143,9 +163,8 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 }
 
 func TestTerminatingPVC(t *testing.T) {
-	setupControllerCfg()
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", resource.MustParse("10Gi"))
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}
@@ -162,7 +181,7 @@ func TestTerminatingPVC(t *testing.T) {
 	workspace.Spec.Template = *testCase.Input.Workspace
 	workspace.Status.DevWorkspaceId = testCase.Input.DevWorkspaceID
 	workspace.Namespace = "test-namespace"
-	err = commonStorage.ProvisionStorage(&testCase.Input.PodAdditions, workspace, clusterAPI)
+	err = commonStorage.ProvisionStorage(&testCase.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
 	if assert.Error(t, err, "Should return error when PVC is terminating") {
 		_, ok := err.(*NotReadyError)
 		assert.True(t, ok, "Expect NotReadyError when PVC is terminating")
@@ -171,7 +190,6 @@ func TestTerminatingPVC(t *testing.T) {
 }
 
 func TestNeedsStorage(t *testing.T) {
-	boolTrue := true
 	tests := []struct {
 		Name         string
 		Explanation  string
@@ -199,7 +217,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: &boolTrue,
+								Ephemeral: pointer.Bool(true),
 							},
 						},
 					},
@@ -215,7 +233,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Container: &dw.ContainerComponent{
 							Container: dw.Container{
-								MountSources: &boolTrue,
+								MountSources: pointer.Bool(true),
 							},
 						},
 					},
@@ -231,7 +249,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Container: &dw.ContainerComponent{
 							Container: dw.Container{
-								MountSources: &boolTrue,
+								MountSources: pointer.Bool(true),
 							},
 						},
 					},
@@ -241,7 +259,7 @@ func TestNeedsStorage(t *testing.T) {
 					ComponentUnion: dw.ComponentUnion{
 						Volume: &dw.VolumeComponent{
 							Volume: dw.Volume{
-								Ephemeral: &boolTrue,
+								Ephemeral: pointer.Bool(true),
 							},
 						},
 					},

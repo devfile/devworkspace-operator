@@ -57,7 +57,8 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
-	routingSuffix := config.Routing.ClusterHostSuffix
+	// TODO: Use workspace-scoped ClusterHostSuffix to allow overriding
+	routingSuffix := config.GetGlobalConfig().Routing.ClusterHostSuffix
 	if routingSuffix == "" {
 		return routingObjects, &RoutingInvalid{"basic routing requires .config.routing.clusterHostSuffix to be set in operator config"}
 	}

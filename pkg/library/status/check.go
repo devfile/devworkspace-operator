@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
@@ -74,7 +73,7 @@ func CheckDeploymentConditions(deployment *appsv1.Deployment) (healthy bool, err
 // matching unrecoverablePodEventReasons) has the pod as the involved object.
 // Returns optional message with detected unrecoverable state details
 //         error if any happens during check
-func CheckPodsState(workspaceID string, namespace string, labelSelector k8sclient.MatchingLabels,
+func CheckPodsState(workspaceID string, namespace string, labelSelector k8sclient.MatchingLabels, ignoredEvents []string,
 	clusterAPI sync.ClusterAPI) (stateMsg string, checkFailure error) {
 	podList := &corev1.PodList{}
 	if err := clusterAPI.Client.List(context.TODO(), podList, k8sclient.InNamespace(namespace), labelSelector); err != nil {
@@ -83,25 +82,25 @@ func CheckPodsState(workspaceID string, namespace string, labelSelector k8sclien
 
 	for _, pod := range podList.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			ok, reason := CheckContainerStatusForFailure(&containerStatus)
+			ok, reason := CheckContainerStatusForFailure(&containerStatus, ignoredEvents)
 			if !ok {
 				return fmt.Sprintf("Container %s has state %s", containerStatus.Name, reason), nil
 			}
 		}
 		for _, initContainerStatus := range pod.Status.InitContainerStatuses {
-			ok, reason := CheckContainerStatusForFailure(&initContainerStatus)
+			ok, reason := CheckContainerStatusForFailure(&initContainerStatus, ignoredEvents)
 			if !ok {
 				return fmt.Sprintf("Init Container %s has state %s", initContainerStatus.Name, reason), nil
 			}
 		}
-		if msg, err := CheckPodEvents(&pod, workspaceID, clusterAPI); err != nil || msg != "" {
+		if msg, err := CheckPodEvents(&pod, workspaceID, ignoredEvents, clusterAPI); err != nil || msg != "" {
 			return msg, err
 		}
 	}
 	return "", nil
 }
 
-func CheckPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.ClusterAPI) (msg string, err error) {
+func CheckPodEvents(pod *corev1.Pod, workspaceID string, ignoredEvents []string, clusterAPI sync.ClusterAPI) (msg string, err error) {
 	evs := &corev1.EventList{}
 	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pod.Name))
 	if err != nil {
@@ -124,7 +123,7 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.Cluster
 		}
 
 		if maxCount, isUnrecoverableEvent := unrecoverablePodEventReasons[ev.Reason]; isUnrecoverableEvent {
-			if !checkIfUnrecoverableEventIgnored(ev.Reason) && ev.Count >= maxCount {
+			if !checkIfUnrecoverableEventIgnored(ev.Reason, ignoredEvents) && ev.Count >= maxCount {
 				var msg string
 				if ev.Count > 1 {
 					msg = fmt.Sprintf("Detected unrecoverable event %s %d times: %s.", ev.Reason, ev.Count, ev.Message)
@@ -138,11 +137,11 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, clusterAPI sync.Cluster
 	return "", nil
 }
 
-func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok bool, reason string) {
+func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus, ignoredEvents []string) (ok bool, reason string) {
 	if containerStatus.State.Waiting != nil {
 		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Waiting.Reason == failureReason {
-				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason), containerStatus.State.Waiting.Reason
+				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason, ignoredEvents), containerStatus.State.Waiting.Reason
 			}
 		}
 	}
@@ -150,15 +149,15 @@ func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus) (ok
 	if containerStatus.State.Terminated != nil {
 		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Terminated.Reason == failureReason {
-				return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason), containerStatus.State.Terminated.Reason
+				return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason, ignoredEvents), containerStatus.State.Terminated.Reason
 			}
 		}
 	}
 	return true, ""
 }
 
-func checkIfUnrecoverableEventIgnored(reason string) (ignored bool) {
-	for _, ignoredReason := range config.Workspace.IgnoredUnrecoverableEvents {
+func checkIfUnrecoverableEventIgnored(reason string, ignoredEvents []string) (ignored bool) {
+	for _, ignoredReason := range ignoredEvents {
 		if ignoredReason == reason {
 			return true
 		}

@@ -22,7 +22,6 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
@@ -45,7 +44,7 @@ func (*PerWorkspaceStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTe
 	return false
 }
 
-func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// Add ephemeral volumes
 	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
 		return err
@@ -63,6 +62,13 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 	}
 	pvcName := perWorkspacePVC.Name
 
+	// If PVC is being deleted, we need to fail workspace startup as a running pod will block deletion.
+	if perWorkspacePVC.DeletionTimestamp != nil {
+		return &ProvisioningError{
+			Message: "DevWorkspace PVC is being deleted",
+		}
+	}
+
 	// Rewrite container volume mounts
 	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, pvcName, podAdditions, &workspace.Spec.Template); err != nil {
 		return &ProvisioningError{
@@ -75,7 +81,7 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 }
 
 // We rely on Kubernetes to use the owner reference to automatically delete the PVC once the workspace is set for deletion.
-func (*PerWorkspaceStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (*PerWorkspaceStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	return nil
 }
 
@@ -149,14 +155,14 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	return nil
 }
 
-func syncPerWorkspacePVC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
 	}
 	// TODO: Determine the storage size that is needed by iterating through workspace volumes,
 	// adding the sizes specified and figuring out overrides/defaults
-	pvcSize := *config.Workspace.DefaultStorageSize.PerWorkspace
+	pvcSize := *workspace.Config.Workspace.DefaultStorageSize.PerWorkspace
 	if namespacedConfig != nil && namespacedConfig.PerWorkspacePVCSize != "" {
 		pvcSize, err = resource.ParseQuantity(namespacedConfig.PerWorkspacePVCSize)
 		if err != nil {
@@ -164,12 +170,13 @@ func syncPerWorkspacePVC(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI)
 		}
 	}
 
-	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, pvcSize)
+	storageClass := workspace.Config.Workspace.StorageClassName
+	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, storageClass, pvcSize)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := controllerutil.SetControllerReference(workspace, pvc, clusterAPI.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(workspace.DevWorkspace, pvc, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 

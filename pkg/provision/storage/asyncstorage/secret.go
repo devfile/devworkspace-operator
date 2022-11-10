@@ -18,7 +18,7 @@ package asyncstorage
 import (
 	"fmt"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,7 +35,7 @@ func GetSSHSidecarSecretName(workspaceId string) string {
 	return fmt.Sprintf("%s-asyncsshkey", workspaceId)
 }
 
-func getSSHSidecarSecretSpec(workspace *dw.DevWorkspace, privateKey []byte) *corev1.Secret {
+func getSSHSidecarSecretSpec(workspace *common.DevWorkspaceWithConfig, privateKey []byte) *corev1.Secret {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      GetSSHSidecarSecretName(workspace.Status.DevWorkspaceId),
@@ -57,7 +57,7 @@ func getSSHSidecarSecretSpec(workspace *dw.DevWorkspace, privateKey []byte) *cor
 	return secret
 }
 
-func getSSHSidecarSecretCluster(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*corev1.Secret, error) {
+func getSSHSidecarSecretCluster(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	namespacedName := types.NamespacedName{
 		Name:      GetSSHSidecarSecretName(workspace.Status.DevWorkspaceId),

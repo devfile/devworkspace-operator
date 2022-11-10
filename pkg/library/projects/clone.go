@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,7 +31,7 @@ const (
 	projectClonerContainerName = "project-clone"
 )
 
-func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec) (*corev1.Container, error) {
+func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPolicy string) (*corev1.Container, error) {
 	if len(workspace.Projects) == 0 {
 		return nil, nil
 	}
@@ -92,7 +91,7 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec) (*core
 				MountPath: constants.DefaultProjectsSourcesRoot,
 			},
 		},
-		ImagePullPolicy: corev1.PullPolicy(config.Workspace.ImagePullPolicy),
+		ImagePullPolicy: corev1.PullPolicy(pullPolicy),
 	}, nil
 }
 

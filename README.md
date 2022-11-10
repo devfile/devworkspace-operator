@@ -1,5 +1,7 @@
 # Dev Workspace Operator
 
+[![codecov](https://codecov.io/gh/devfile/devworkspace-operator/branch/main/graph/badge.svg)](https://codecov.io/gh/devfile/devworkspace-operator)
+
 Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
 
 ## DevWorkspace CR
@@ -79,7 +81,7 @@ In order to build a custom bundle, the following env vars should be set:
 
 To build the index image and register its catalogsource to the cluster, run
 ```
-make generate_olm_bundle_yaml build_bundle_image build_index_image register_catalogsource
+make generate_olm_bundle_yaml build_bundle_and_index register_catalogsource
 ```
 
 Note that setting `DEFAULT_DWO_IMG` while generating sources will result in local changes to the repo which should be `git restored` before committing. This can also be done by unsetting the `DEFAULT_DWO_IMG` env var and re-running `make generate_olm_bundle_yaml`
@@ -180,3 +182,5 @@ This will delete all custom resource definitions created for the controller, as 
 #### GitHub actions
 
 - [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/main/.github/workflows/dockerimage-next.yml) action builds main branch and pushes it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
+
+- [Code Coverage Report](./.github/workflows/code-coverage.yml) action creates a code coverage report using [codecov.io](https://about.codecov.io/). 

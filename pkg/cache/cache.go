@@ -99,3 +99,25 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		SelectorsByObject: selectors,
 	}), nil
 }
+
+// GetWebhooksCacheFunc returns a new cache function that restricts the cluster items we store in the webhook
+// server's internal cache. This avoids issues where the webhook server's memory usage scales with the number
+// of objects on the cluster, potentially causing out of memory errors in large clusters.
+func GetWebhooksCacheFunc() (cache.NewCacheFunc, error) {
+	// The webhooks server needs to read pods to validate pods/exec requests. These pods must have the DevWorkspace ID and restricted
+	// access labels (other pods are automatically approved)
+	devworkspaceObjectSelector, err := labels.Parse(constants.DevWorkspaceIDLabel)
+	if err != nil {
+		return nil, err
+	}
+
+	selectors := cache.SelectorsByObject{
+		&corev1.Pod{}: {
+			Label: devworkspaceObjectSelector,
+		},
+	}
+
+	return cache.BuilderWithOptions(cache.Options{
+		SelectorsByObject: selectors,
+	}), nil
+}

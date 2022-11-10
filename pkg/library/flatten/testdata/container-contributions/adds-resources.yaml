@@ -1,0 +1,46 @@
+name: "Adds attributes from contribution"
+
+input:
+  devworkspace:
+    components:
+      - name: test-component
+        attributes:
+          controller.devfile.io/merge-contribution: true
+        container:
+          image: test-image
+          memoryLimit: 1Gi
+          memoryRequest: 1000Mi
+          cpuLimit: 1500m
+          cpuRequest: "1"
+      - name: test-contribution
+        plugin:
+          uri: test-contribution.yaml
+
+  devfileResources:
+    test-contribution.yaml:
+      schemaVersion: 2.1.0
+      metadata:
+        name: test-contribution
+      components:
+      - name: test-contribution
+        attributes:
+          controller.devfile.io/container-contribution: true
+        container:
+          image: contribution-image
+          memoryLimit: 512Mi
+          memoryRequest: 1.5G
+          cpuLimit: "0.5"
+          cpuRequest: 500m
+
+output:
+  devworkspace:
+    components:
+      - name: test-component
+        attributes:
+          controller.devfile.io/merged-contributions: "test-contribution"
+        container:
+          image: test-image
+          memoryLimit: 1536Mi
+          memoryRequest: "2548576000" # 1.5G + 1000Mi = 1.5*1000^3 + 1000*1024^2
+          cpuLimit: "2"
+          cpuRequest: 1500m

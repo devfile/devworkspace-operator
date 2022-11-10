@@ -27,6 +27,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -39,23 +40,19 @@ type ServiceAcctProvisioningStatus struct {
 }
 
 func SyncServiceAccount(
-	workspace *dw.DevWorkspace,
+	workspace *common.DevWorkspaceWithConfig,
 	additionalAnnotations map[string]string,
 	clusterAPI sync.ClusterAPI) ServiceAcctProvisioningStatus {
-	// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
-	autoMountServiceAccount := true
-	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+	saName := common.ServiceAccountName(workspace)
 
 	specSA := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      saName,
 			Namespace: workspace.Namespace,
-			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
-				constants.DevWorkspaceNameLabel: workspace.Name,
-			},
+			Labels:    common.ServiceAccountLabels(workspace),
 		},
-		AutomountServiceAccountToken: &autoMountServiceAccount,
+		// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
+		AutomountServiceAccountToken: pointer.BoolPtr(true),
 	}
 
 	if len(additionalAnnotations) > 0 {
@@ -65,16 +62,27 @@ func SyncServiceAccount(
 		}
 	}
 
-	err := controllerutil.SetControllerReference(workspace, specSA, clusterAPI.Scheme)
-	if err != nil {
-		return ServiceAcctProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Err: err,
-			},
+	if workspace.Config.Workspace.ServiceAccount.ServiceAccountName != "" {
+		// Add ownerref for the current workspace. The object may have existing owner references
+		if err := controllerutil.SetOwnerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme); err != nil {
+			return ServiceAcctProvisioningStatus{
+				ProvisioningStatus: ProvisioningStatus{
+					Err: err,
+				},
+			}
+		}
+	} else {
+		// Only add controller reference if shared ServiceAccount is not being used.
+		if err := controllerutil.SetControllerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme); err != nil {
+			return ServiceAcctProvisioningStatus{
+				ProvisioningStatus: ProvisioningStatus{
+					Err: err,
+				},
+			}
 		}
 	}
 
-	_, err = sync.SyncObjectWithCluster(specSA, clusterAPI)
+	_, err := sync.SyncObjectWithCluster(specSA, clusterAPI)
 	switch t := err.(type) {
 	case nil:
 		break
@@ -115,8 +123,8 @@ func NeedsServiceAccountFinalizer(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return true
 }
 
-func FinalizeServiceAccount(workspace *dw.DevWorkspace, ctx context.Context, nonCachingClient crclient.Client) (retry bool, err error) {
-	saName := common.ServiceAccountName(workspace.Status.DevWorkspaceId)
+func FinalizeServiceAccount(workspace *common.DevWorkspaceWithConfig, ctx context.Context, nonCachingClient crclient.Client) (retry bool, err error) {
+	saName := common.ServiceAccountName(workspace)
 	namespace := workspace.Namespace
 	if !workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
 		return false, nil

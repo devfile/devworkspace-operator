@@ -20,7 +20,7 @@ import (
 	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +42,7 @@ func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplate
 	return needsStorage(workspace)
 }
 
-func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	// Add ephemeral volumes
 	if err := addEphemeralVolumesFromWorkspace(workspace, podAdditions); err != nil {
 		return err
@@ -53,11 +53,14 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		return nil
 	}
 
-	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	usingAlternatePVC, pvcName, err := checkForAlternatePVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
 
+	if pvcName == "" {
+		pvcName = workspace.Config.Workspace.PVCName
+	}
 	pvcTerminating, err := checkPVCTerminating(pvcName, workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
@@ -68,8 +71,8 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 		}
 	}
 
-	if pvcName == "" {
-		commonPVC, err := syncCommonPVC(workspace.Namespace, clusterAPI)
+	if !usingAlternatePVC {
+		commonPVC, err := syncCommonPVC(workspace.Namespace, workspace.Config, clusterAPI)
 		if err != nil {
 			return err
 		}
@@ -86,7 +89,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	return nil
 }
 
-func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	totalWorkspaces, err := getSharedPVCWorkspaceCount(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return err
@@ -98,7 +101,7 @@ func (p *CommonStorageProvisioner) CleanupWorkspaceStorage(workspace *dw.DevWork
 		return runCommonPVCCleanupJob(workspace, clusterAPI)
 	} else {
 		sharedPVC := &corev1.PersistentVolumeClaim{}
-		namespacedName := types.NamespacedName{Name: config.Workspace.PVCName, Namespace: workspace.Namespace}
+		namespacedName := types.NamespacedName{Name: workspace.Config.Workspace.PVCName, Namespace: workspace.Namespace}
 		err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, sharedPVC)
 
 		if err != nil {

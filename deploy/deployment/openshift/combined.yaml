@@ -97,6 +97,154 @@ spec:
                       down (e.g. deployments but the objects will be left on the cluster).
                       The default value is false.
                     type: boolean
+                  containerSecurityContext:
+                    description: ContainerSecurityContext overrides the default ContainerSecurityContext
+                      used for all workspace-related containers created by the DevWorkspace
+                      Operator. If set, defined values are merged into the default
+                      configuration
+                    properties:
+                      allowPrivilegeEscalation:
+                        description: 'AllowPrivilegeEscalation controls whether a
+                          process can gain more privileges than its parent process.
+                          This bool directly controls if the no_new_privs flag will
+                          be set on the container process. AllowPrivilegeEscalation
+                          is true always when the container is: 1) run as Privileged
+                          2) has CAP_SYS_ADMIN'
+                        type: boolean
+                      capabilities:
+                        description: The capabilities to add/drop when running containers.
+                          Defaults to the default set of capabilities granted by the
+                          container runtime.
+                        properties:
+                          add:
+                            description: Added capabilities
+                            items:
+                              description: Capability represent POSIX capabilities
+                                type
+                              type: string
+                            type: array
+                          drop:
+                            description: Removed capabilities
+                            items:
+                              description: Capability represent POSIX capabilities
+                                type
+                              type: string
+                            type: array
+                        type: object
+                      privileged:
+                        description: Run container in privileged mode. Processes in
+                          privileged containers are essentially equivalent to root
+                          on the host. Defaults to false.
+                        type: boolean
+                      procMount:
+                        description: procMount denotes the type of proc mount to use
+                          for the containers. The default is DefaultProcMount which
+                          uses the container runtime defaults for readonly paths and
+                          masked paths. This requires the ProcMountType feature flag
+                          to be enabled.
+                        type: string
+                      readOnlyRootFilesystem:
+                        description: Whether this container has a read-only root filesystem.
+                          Default is false.
+                        type: boolean
+                      runAsGroup:
+                        description: The GID to run the entrypoint of the container
+                          process. Uses runtime default if unset. May also be set
+                          in PodSecurityContext.  If set in both SecurityContext and
+                          PodSecurityContext, the value specified in SecurityContext
+                          takes precedence.
+                        format: int64
+                        type: integer
+                      runAsNonRoot:
+                        description: Indicates that the container must run as a non-root
+                          user. If true, the Kubelet will validate the image at runtime
+                          to ensure that it does not run as UID 0 (root) and fail
+                          to start the container if it does. If unset or false, no
+                          such validation will be performed. May also be set in PodSecurityContext.  If
+                          set in both SecurityContext and PodSecurityContext, the
+                          value specified in SecurityContext takes precedence.
+                        type: boolean
+                      runAsUser:
+                        description: The UID to run the entrypoint of the container
+                          process. Defaults to user specified in image metadata if
+                          unspecified. May also be set in PodSecurityContext.  If
+                          set in both SecurityContext and PodSecurityContext, the
+                          value specified in SecurityContext takes precedence.
+                        format: int64
+                        type: integer
+                      seLinuxOptions:
+                        description: The SELinux context to be applied to the container.
+                          If unspecified, the container runtime will allocate a random
+                          SELinux context for each container.  May also be set in
+                          PodSecurityContext.  If set in both SecurityContext and
+                          PodSecurityContext, the value specified in SecurityContext
+                          takes precedence.
+                        properties:
+                          level:
+                            description: Level is SELinux level label that applies
+                              to the container.
+                            type: string
+                          role:
+                            description: Role is a SELinux role label that applies
+                              to the container.
+                            type: string
+                          type:
+                            description: Type is a SELinux type label that applies
+                              to the container.
+                            type: string
+                          user:
+                            description: User is a SELinux user label that applies
+                              to the container.
+                            type: string
+                        type: object
+                      seccompProfile:
+                        description: The seccomp options to use by this container.
+                          If seccomp options are provided at both the pod & container
+                          level, the container options override the pod options.
+                        properties:
+                          localhostProfile:
+                            description: localhostProfile indicates a profile defined
+                              in a file on the node should be used. The profile must
+                              be preconfigured on the node to work. Must be a descending
+                              path, relative to the kubelet's configured seccomp profile
+                              location. Must only be set if type is "Localhost".
+                            type: string
+                          type:
+                            description: "type indicates which kind of seccomp profile
+                              will be applied. Valid options are: \n Localhost - a
+                              profile defined in a file on the node should be used.
+                              RuntimeDefault - the container runtime default profile
+                              should be used. Unconfined - no profile should be applied."
+                            type: string
+                        required:
+                        - type
+                        type: object
+                      windowsOptions:
+                        description: The Windows specific settings applied to all
+                          containers. If unspecified, the options from the PodSecurityContext
+                          will be used. If set in both SecurityContext and PodSecurityContext,
+                          the value specified in SecurityContext takes precedence.
+                        properties:
+                          gmsaCredentialSpec:
+                            description: GMSACredentialSpec is where the GMSA admission
+                              webhook (https://github.com/kubernetes-sigs/windows-gmsa)
+                              inlines the contents of the GMSA credential spec named
+                              by the GMSACredentialSpecName field.
+                            type: string
+                          gmsaCredentialSpecName:
+                            description: GMSACredentialSpecName is the name of the
+                              GMSA credential spec to use.
+                            type: string
+                          runAsUserName:
+                            description: The UserName in Windows to run the entrypoint
+                              of the container process. Defaults to the user specified
+                              in image metadata if unspecified. May also be set in
+                              PodSecurityContext. If set in both SecurityContext and
+                              PodSecurityContext, the value specified in SecurityContext
+                              takes precedence.
+                            type: string
+                        type: object
+                    type: object
                   defaultStorageSize:
                     description: DefaultStorageSize defines an optional struct with
                       fields to specify the sizes of Persistent Volume Claims for
@@ -2135,9 +2283,8 @@ spec:
                   podSecurityContext:
                     description: PodSecurityContext overrides the default PodSecurityContext
                       used for all workspace-related pods created by the DevWorkspace
-                      Operator when running on Kubernetes. On OpenShift, this configuration
-                      option is ignored. If set, the entire pod security context is
-                      overridden; values are not merged.
+                      Operator. If set, defined values are merged into the default
+                      configuration
                     properties:
                       fsGroup:
                         description: "A special supplemental group that applies to
@@ -2303,6 +2450,31 @@ spec:
                     maxLength: 63
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                     type: string
+                  serviceAccount:
+                    description: ServiceAccount defines configuration options for
+                      the ServiceAccount used for DevWorkspaces.
+                    properties:
+                      disableCreation:
+                        description: Disable creation of DevWorkspace ServiceAccounts
+                          by the DevWorkspace Operator. If set to true, the serviceAccountName
+                          field must also be set. If ServiceAccount creation is disabled,
+                          it is assumed that the specified ServiceAccount already
+                          exists in any namespace where a workspace is created. If
+                          a suitable ServiceAccount does not exist, starting DevWorkspaces
+                          will fail.
+                        type: boolean
+                      serviceAccountName:
+                        description: ServiceAccountName defines a fixed name to be
+                          used for all DevWorkspaces. If set, the DevWorkspace Operator
+                          will not generate a separate ServiceAccount for each DevWorkspace,
+                          and will instead create a ServiceAccount with the specified
+                          name in each namespace where DevWorkspaces are created.
+                          If specified, the created ServiceAccount will not be removed
+                          when DevWorkspaces are deleted and must be cleaned up manually.
+                        maxLength: 63
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                        type: string
+                    type: object
                   storageClassName:
                     description: StorageClassName defines an optional storageClass
                       to use for persistent volume claims created to support DevWorkspaces
@@ -10545,6 +10717,857 @@ spec:
           spec:
             description: DevWorkspaceSpec defines the desired state of DevWorkspace
             properties:
+              contributions:
+                items:
+                  oneOf:
+                  - required:
+                    - uri
+                  - required:
+                    - id
+                  - required:
+                    - kubernetes
+                  properties:
+                    attributes:
+                      description: Map of implementation-dependant free-form YAML
+                        attributes.
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    commands:
+                      description: Overrides of commands encapsulated in a parent
+                        devfile or a plugin. Overriding is done according to K8S strategic
+                        merge patch standard rules.
+                      items:
+                        oneOf:
+                        - required:
+                          - exec
+                        - required:
+                          - apply
+                        - required:
+                          - composite
+                        properties:
+                          apply:
+                            description: "Command that consists in applying a given
+                              component definition, typically bound to a devworkspace
+                              event. \n For example, when an `apply` command is bound
+                              to a `preStart` event, and references a `container`
+                              component, it will start the container as a K8S initContainer
+                              in the devworkspace POD, unless the component has its
+                              `dedicatedPod` field set to `true`. \n When no `apply`
+                              command exist for a given component, it is assumed the
+                              component will be applied at devworkspace start by default,
+                              unless `deployByDefault` for that component is set to
+                              false."
+                            properties:
+                              component:
+                                description: Describes component that will be applied
+                                type: string
+                              group:
+                                description: Defines the group this command is part
+                                  of
+                                properties:
+                                  isDefault:
+                                    description: Identifies the default command for
+                                      a given group kind
+                                    type: boolean
+                                  kind:
+                                    description: Kind of group the command is part
+                                      of
+                                    enum:
+                                    - build
+                                    - run
+                                    - test
+                                    - debug
+                                    - deploy
+                                    type: string
+                                type: object
+                              label:
+                                description: Optional label that provides a label
+                                  for this command to be used in Editor UI menus for
+                                  example
+                                type: string
+                            type: object
+                          attributes:
+                            description: Map of implementation-dependant free-form
+                              YAML attributes.
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                          commandType:
+                            description: Type of devworkspace command
+                            enum:
+                            - Exec
+                            - Apply
+                            - Composite
+                            type: string
+                          composite:
+                            description: Composite command that allows executing several
+                              sub-commands either sequentially or concurrently
+                            properties:
+                              commands:
+                                description: The commands that comprise this composite
+                                  command
+                                items:
+                                  type: string
+                                type: array
+                              group:
+                                description: Defines the group this command is part
+                                  of
+                                properties:
+                                  isDefault:
+                                    description: Identifies the default command for
+                                      a given group kind
+                                    type: boolean
+                                  kind:
+                                    description: Kind of group the command is part
+                                      of
+                                    enum:
+                                    - build
+                                    - run
+                                    - test
+                                    - debug
+                                    - deploy
+                                    type: string
+                                type: object
+                              label:
+                                description: Optional label that provides a label
+                                  for this command to be used in Editor UI menus for
+                                  example
+                                type: string
+                              parallel:
+                                description: Indicates if the sub-commands should
+                                  be executed concurrently
+                                type: boolean
+                            type: object
+                          exec:
+                            description: CLI Command executed in an existing component
+                              container
+                            properties:
+                              commandLine:
+                                description: "The actual command-line string \n Special
+                                  variables that can be used: \n  - `$PROJECTS_ROOT`:
+                                  A path where projects sources are mounted as defined
+                                  by container component's sourceMapping. \n  - `$PROJECT_SOURCE`:
+                                  A path to a project source ($PROJECTS_ROOT/<project-name>).
+                                  If there are multiple projects, this will point
+                                  to the directory of the first one."
+                                type: string
+                              component:
+                                description: Describes component to which given action
+                                  relates
+                                type: string
+                              env:
+                                description: Optional list of environment variables
+                                  that have to be set before running the command
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    value:
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                              group:
+                                description: Defines the group this command is part
+                                  of
+                                properties:
+                                  isDefault:
+                                    description: Identifies the default command for
+                                      a given group kind
+                                    type: boolean
+                                  kind:
+                                    description: Kind of group the command is part
+                                      of
+                                    enum:
+                                    - build
+                                    - run
+                                    - test
+                                    - debug
+                                    - deploy
+                                    type: string
+                                type: object
+                              hotReloadCapable:
+                                description: "Whether the command is capable to reload
+                                  itself when source code changes. If set to `true`
+                                  the command won't be restarted and it is expected
+                                  to handle file changes on its own. \n Default value
+                                  is `false`"
+                                type: boolean
+                              label:
+                                description: Optional label that provides a label
+                                  for this command to be used in Editor UI menus for
+                                  example
+                                type: string
+                              workingDir:
+                                description: "Working directory where the command
+                                  should be executed \n Special variables that can
+                                  be used: \n  - `$PROJECTS_ROOT`: A path where projects
+                                  sources are mounted as defined by container component's
+                                  sourceMapping. \n  - `$PROJECT_SOURCE`: A path to
+                                  a project source ($PROJECTS_ROOT/<project-name>).
+                                  If there are multiple projects, this will point
+                                  to the directory of the first one."
+                                type: string
+                            type: object
+                          id:
+                            description: Mandatory identifier that allows referencing
+                              this command in composite commands, from a parent, or
+                              in events.
+                            maxLength: 63
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                        required:
+                        - id
+                        type: object
+                      type: array
+                    components:
+                      description: Overrides of components encapsulated in a parent
+                        devfile or a plugin. Overriding is done according to K8S strategic
+                        merge patch standard rules.
+                      items:
+                        oneOf:
+                        - required:
+                          - container
+                        - required:
+                          - kubernetes
+                        - required:
+                          - openshift
+                        - required:
+                          - volume
+                        - required:
+                          - image
+                        properties:
+                          attributes:
+                            description: Map of implementation-dependant free-form
+                              YAML attributes.
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                          componentType:
+                            description: Type of component
+                            enum:
+                            - Container
+                            - Kubernetes
+                            - Openshift
+                            - Volume
+                            - Image
+                            type: string
+                          container:
+                            description: Allows adding and configuring devworkspace-related
+                              containers
+                            properties:
+                              annotation:
+                                description: Annotations that should be added to specific
+                                  resources for this container
+                                properties:
+                                  deployment:
+                                    additionalProperties:
+                                      type: string
+                                    description: Annotations to be added to deployment
+                                    type: object
+                                  service:
+                                    additionalProperties:
+                                      type: string
+                                    description: Annotations to be added to service
+                                    type: object
+                                type: object
+                              args:
+                                description: "The arguments to supply to the command
+                                  running the dockerimage component. The arguments
+                                  are supplied either to the default command provided
+                                  in the image or to the overridden command. \n Defaults
+                                  to an empty array, meaning use whatever is defined
+                                  in the image."
+                                items:
+                                  type: string
+                                type: array
+                              command:
+                                description: "The command to run in the dockerimage
+                                  component instead of the default one provided in
+                                  the image. \n Defaults to an empty array, meaning
+                                  use whatever is defined in the image."
+                                items:
+                                  type: string
+                                type: array
+                              cpuLimit:
+                                type: string
+                              cpuRequest:
+                                type: string
+                              dedicatedPod:
+                                description: "Specify if a container should run in
+                                  its own separated pod, instead of running as part
+                                  of the main development environment pod. \n Default
+                                  value is `false`"
+                                type: boolean
+                              endpoints:
+                                items:
+                                  properties:
+                                    annotation:
+                                      additionalProperties:
+                                        type: string
+                                      description: Annotations to be added to Kubernetes
+                                        Ingress or Openshift Route
+                                      type: object
+                                    attributes:
+                                      description: "Map of implementation-dependant
+                                        string-based free-form attributes. \n Examples
+                                        of Che-specific attributes: \n - cookiesAuthEnabled:
+                                        \"true\" / \"false\", \n - type: \"terminal\"
+                                        / \"ide\" / \"ide-dev\","
+                                      type: object
+                                      x-kubernetes-preserve-unknown-fields: true
+                                    exposure:
+                                      description: "Describes how the endpoint should
+                                        be exposed on the network. \n - `public` means
+                                        that the endpoint will be exposed on the public
+                                        network, typically through a K8S ingress or
+                                        an OpenShift route. \n - `internal` means
+                                        that the endpoint will be exposed internally
+                                        outside of the main devworkspace POD, typically
+                                        by K8S services, to be consumed by other elements
+                                        running on the same cloud internal network.
+                                        \n - `none` means that the endpoint will not
+                                        be exposed and will only be accessible inside
+                                        the main devworkspace POD, on a local address.
+                                        \n Default value is `public`"
+                                      enum:
+                                      - public
+                                      - internal
+                                      - none
+                                      type: string
+                                    name:
+                                      maxLength: 63
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                      type: string
+                                    path:
+                                      description: Path of the endpoint URL
+                                      type: string
+                                    protocol:
+                                      description: "Describes the application and
+                                        transport protocols of the traffic that will
+                                        go through this endpoint. \n - `http`: Endpoint
+                                        will have `http` traffic, typically on a TCP
+                                        connection. It will be automaticaly promoted
+                                        to `https` when the `secure` field is set
+                                        to `true`. \n - `https`: Endpoint will have
+                                        `https` traffic, typically on a TCP connection.
+                                        \n - `ws`: Endpoint will have `ws` traffic,
+                                        typically on a TCP connection. It will be
+                                        automaticaly promoted to `wss` when the `secure`
+                                        field is set to `true`. \n - `wss`: Endpoint
+                                        will have `wss` traffic, typically on a TCP
+                                        connection. \n - `tcp`: Endpoint will have
+                                        traffic on a TCP connection, without specifying
+                                        an application protocol. \n - `udp`: Endpoint
+                                        will have traffic on an UDP connection, without
+                                        specifying an application protocol. \n Default
+                                        value is `http`"
+                                      enum:
+                                      - http
+                                      - https
+                                      - ws
+                                      - wss
+                                      - tcp
+                                      - udp
+                                      type: string
+                                    secure:
+                                      description: Describes whether the endpoint
+                                        should be secured and protected by some authentication
+                                        process. This requires a protocol of `https`
+                                        or `wss`.
+                                      type: boolean
+                                    targetPort:
+                                      description: Port number to be used within the
+                                        container component. The same port cannot
+                                        be used by two different container components.
+                                      type: integer
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                              env:
+                                description: "Environment variables used in this container.
+                                  \n The following variables are reserved and cannot
+                                  be overridden via env: \n  - `$PROJECTS_ROOT` \n
+                                  \ - `$PROJECT_SOURCE`"
+                                items:
+                                  properties:
+                                    name:
+                                      type: string
+                                    value:
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                              image:
+                                type: string
+                              memoryLimit:
+                                type: string
+                              memoryRequest:
+                                type: string
+                              mountSources:
+                                description: "Toggles whether or not the project source
+                                  code should be mounted in the component. \n Defaults
+                                  to true for all component types except plugins and
+                                  components that set `dedicatedPod` to true."
+                                type: boolean
+                              sourceMapping:
+                                description: Optional specification of the path in
+                                  the container where project sources should be transferred/mounted
+                                  when `mountSources` is `true`. When omitted, the
+                                  default value of /projects is used.
+                                type: string
+                              volumeMounts:
+                                description: List of volumes mounts that should be
+                                  mounted is this container.
+                                items:
+                                  description: Volume that should be mounted to a
+                                    component container
+                                  properties:
+                                    name:
+                                      description: The volume mount name is the name
+                                        of an existing `Volume` component. If several
+                                        containers mount the same volume name then
+                                        they will reuse the same volume and will be
+                                        able to access to the same files.
+                                      maxLength: 63
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                      type: string
+                                    path:
+                                      description: The path in the component container
+                                        where the volume should be mounted. If not
+                                        path is mentioned, default path is the is
+                                        `/<name>`.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                            type: object
+                          image:
+                            description: Allows specifying the definition of an image
+                              for outer loop builds
+                            oneOf:
+                            - required:
+                              - dockerfile
+                            - required:
+                              - autoBuild
+                            properties:
+                              autoBuild:
+                                description: "Defines if the image should be built
+                                  during startup. \n Default value is `false`"
+                                type: boolean
+                              dockerfile:
+                                description: Allows specifying dockerfile type build
+                                oneOf:
+                                - required:
+                                  - uri
+                                - required:
+                                  - devfileRegistry
+                                - required:
+                                  - git
+                                properties:
+                                  args:
+                                    description: The arguments to supply to the dockerfile
+                                      build.
+                                    items:
+                                      type: string
+                                    type: array
+                                  buildContext:
+                                    description: Path of source directory to establish
+                                      build context. Defaults to ${PROJECT_SOURCE}
+                                      in the container
+                                    type: string
+                                  devfileRegistry:
+                                    description: Dockerfile's Devfile Registry source
+                                    properties:
+                                      id:
+                                        description: Id in a devfile registry that
+                                          contains a Dockerfile. The src in the OCI
+                                          registry required for the Dockerfile build
+                                          will be downloaded for building the image.
+                                        type: string
+                                      registryUrl:
+                                        description: Devfile Registry URL to pull
+                                          the Dockerfile from when using the Devfile
+                                          Registry as Dockerfile src. To ensure the
+                                          Dockerfile gets resolved consistently in
+                                          different environments, it is recommended
+                                          to always specify the `devfileRegistryUrl`
+                                          when `Id` is used.
+                                        type: string
+                                    type: object
+                                  git:
+                                    description: Dockerfile's Git source
+                                    properties:
+                                      checkoutFrom:
+                                        description: Defines from what the project
+                                          should be checked out. Required if there
+                                          are more than one remote configured
+                                        properties:
+                                          remote:
+                                            description: The remote name should be
+                                              used as init. Required if there are
+                                              more than one remote configured
+                                            type: string
+                                          revision:
+                                            description: The revision to checkout
+                                              from. Should be branch name, tag or
+                                              commit id. Default branch is used if
+                                              missing or specified revision is not
+                                              found.
+                                            type: string
+                                        type: object
+                                      fileLocation:
+                                        description: Location of the Dockerfile in
+                                          the Git repository when using git as Dockerfile
+                                          src. Defaults to Dockerfile.
+                                        type: string
+                                      remotes:
+                                        additionalProperties:
+                                          type: string
+                                        description: The remotes map which should
+                                          be initialized in the git project. Projects
+                                          must have at least one remote configured
+                                          while StarterProjects & Image Component's
+                                          Git source can only have at most one remote
+                                          configured.
+                                        type: object
+                                    type: object
+                                  rootRequired:
+                                    description: "Specify if a privileged builder
+                                      pod is required. \n Default value is `false`"
+                                    type: boolean
+                                  srcType:
+                                    description: Type of Dockerfile src
+                                    enum:
+                                    - Uri
+                                    - DevfileRegistry
+                                    - Git
+                                    type: string
+                                  uri:
+                                    description: URI Reference of a Dockerfile. It
+                                      can be a full URL or a relative URI from the
+                                      current devfile as the base URI.
+                                    type: string
+                                type: object
+                              imageName:
+                                description: Name of the image for the resulting outerloop
+                                  build
+                                type: string
+                              imageType:
+                                description: Type of image
+                                enum:
+                                - Dockerfile
+                                - AutoBuild
+                                type: string
+                            type: object
+                          kubernetes:
+                            description: Allows importing into the devworkspace the
+                              Kubernetes resources defined in a given manifest. For
+                              example this allows reusing the Kubernetes definitions
+                              used to deploy some runtime components in production.
+                            oneOf:
+                            - required:
+                              - uri
+                            - required:
+                              - inlined
+                            properties:
+                              deployByDefault:
+                                description: "Defines if the component should be deployed
+                                  during startup. \n Default value is `false`"
+                                type: boolean
+                              endpoints:
+                                items:
+                                  properties:
+                                    annotation:
+                                      additionalProperties:
+                                        type: string
+                                      description: Annotations to be added to Kubernetes
+                                        Ingress or Openshift Route
+                                      type: object
+                                    attributes:
+                                      description: "Map of implementation-dependant
+                                        string-based free-form attributes. \n Examples
+                                        of Che-specific attributes: \n - cookiesAuthEnabled:
+                                        \"true\" / \"false\", \n - type: \"terminal\"
+                                        / \"ide\" / \"ide-dev\","
+                                      type: object
+                                      x-kubernetes-preserve-unknown-fields: true
+                                    exposure:
+                                      description: "Describes how the endpoint should
+                                        be exposed on the network. \n - `public` means
+                                        that the endpoint will be exposed on the public
+                                        network, typically through a K8S ingress or
+                                        an OpenShift route. \n - `internal` means
+                                        that the endpoint will be exposed internally
+                                        outside of the main devworkspace POD, typically
+                                        by K8S services, to be consumed by other elements
+                                        running on the same cloud internal network.
+                                        \n - `none` means that the endpoint will not
+                                        be exposed and will only be accessible inside
+                                        the main devworkspace POD, on a local address.
+                                        \n Default value is `public`"
+                                      enum:
+                                      - public
+                                      - internal
+                                      - none
+                                      type: string
+                                    name:
+                                      maxLength: 63
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                      type: string
+                                    path:
+                                      description: Path of the endpoint URL
+                                      type: string
+                                    protocol:
+                                      description: "Describes the application and
+                                        transport protocols of the traffic that will
+                                        go through this endpoint. \n - `http`: Endpoint
+                                        will have `http` traffic, typically on a TCP
+                                        connection. It will be automaticaly promoted
+                                        to `https` when the `secure` field is set
+                                        to `true`. \n - `https`: Endpoint will have
+                                        `https` traffic, typically on a TCP connection.
+                                        \n - `ws`: Endpoint will have `ws` traffic,
+                                        typically on a TCP connection. It will be
+                                        automaticaly promoted to `wss` when the `secure`
+                                        field is set to `true`. \n - `wss`: Endpoint
+                                        will have `wss` traffic, typically on a TCP
+                                        connection. \n - `tcp`: Endpoint will have
+                                        traffic on a TCP connection, without specifying
+                                        an application protocol. \n - `udp`: Endpoint
+                                        will have traffic on an UDP connection, without
+                                        specifying an application protocol. \n Default
+                                        value is `http`"
+                                      enum:
+                                      - http
+                                      - https
+                                      - ws
+                                      - wss
+                                      - tcp
+                                      - udp
+                                      type: string
+                                    secure:
+                                      description: Describes whether the endpoint
+                                        should be secured and protected by some authentication
+                                        process. This requires a protocol of `https`
+                                        or `wss`.
+                                      type: boolean
+                                    targetPort:
+                                      description: Port number to be used within the
+                                        container component. The same port cannot
+                                        be used by two different container components.
+                                      type: integer
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                              inlined:
+                                description: Inlined manifest
+                                type: string
+                              locationType:
+                                description: Type of Kubernetes-like location
+                                enum:
+                                - Uri
+                                - Inlined
+                                type: string
+                              uri:
+                                description: Location in a file fetched from a uri.
+                                type: string
+                            type: object
+                          name:
+                            description: Mandatory name that allows referencing the
+                              component from other elements (such as commands) or
+                              from an external devfile that may reference this component
+                              through a parent or a plugin.
+                            maxLength: 63
+                            pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                            type: string
+                          openshift:
+                            description: Allows importing into the devworkspace the
+                              OpenShift resources defined in a given manifest. For
+                              example this allows reusing the OpenShift definitions
+                              used to deploy some runtime components in production.
+                            oneOf:
+                            - required:
+                              - uri
+                            - required:
+                              - inlined
+                            properties:
+                              deployByDefault:
+                                description: "Defines if the component should be deployed
+                                  during startup. \n Default value is `false`"
+                                type: boolean
+                              endpoints:
+                                items:
+                                  properties:
+                                    annotation:
+                                      additionalProperties:
+                                        type: string
+                                      description: Annotations to be added to Kubernetes
+                                        Ingress or Openshift Route
+                                      type: object
+                                    attributes:
+                                      description: "Map of implementation-dependant
+                                        string-based free-form attributes. \n Examples
+                                        of Che-specific attributes: \n - cookiesAuthEnabled:
+                                        \"true\" / \"false\", \n - type: \"terminal\"
+                                        / \"ide\" / \"ide-dev\","
+                                      type: object
+                                      x-kubernetes-preserve-unknown-fields: true
+                                    exposure:
+                                      description: "Describes how the endpoint should
+                                        be exposed on the network. \n - `public` means
+                                        that the endpoint will be exposed on the public
+                                        network, typically through a K8S ingress or
+                                        an OpenShift route. \n - `internal` means
+                                        that the endpoint will be exposed internally
+                                        outside of the main devworkspace POD, typically
+                                        by K8S services, to be consumed by other elements
+                                        running on the same cloud internal network.
+                                        \n - `none` means that the endpoint will not
+                                        be exposed and will only be accessible inside
+                                        the main devworkspace POD, on a local address.
+                                        \n Default value is `public`"
+                                      enum:
+                                      - public
+                                      - internal
+                                      - none
+                                      type: string
+                                    name:
+                                      maxLength: 63
+                                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                      type: string
+                                    path:
+                                      description: Path of the endpoint URL
+                                      type: string
+                                    protocol:
+                                      description: "Describes the application and
+                                        transport protocols of the traffic that will
+                                        go through this endpoint. \n - `http`: Endpoint
+                                        will have `http` traffic, typically on a TCP
+                                        connection. It will be automaticaly promoted
+                                        to `https` when the `secure` field is set
+                                        to `true`. \n - `https`: Endpoint will have
+                                        `https` traffic, typically on a TCP connection.
+                                        \n - `ws`: Endpoint will have `ws` traffic,
+                                        typically on a TCP connection. It will be
+                                        automaticaly promoted to `wss` when the `secure`
+                                        field is set to `true`. \n - `wss`: Endpoint
+                                        will have `wss` traffic, typically on a TCP
+                                        connection. \n - `tcp`: Endpoint will have
+                                        traffic on a TCP connection, without specifying
+                                        an application protocol. \n - `udp`: Endpoint
+                                        will have traffic on an UDP connection, without
+                                        specifying an application protocol. \n Default
+                                        value is `http`"
+                                      enum:
+                                      - http
+                                      - https
+                                      - ws
+                                      - wss
+                                      - tcp
+                                      - udp
+                                      type: string
+                                    secure:
+                                      description: Describes whether the endpoint
+                                        should be secured and protected by some authentication
+                                        process. This requires a protocol of `https`
+                                        or `wss`.
+                                      type: boolean
+                                    targetPort:
+                                      description: Port number to be used within the
+                                        container component. The same port cannot
+                                        be used by two different container components.
+                                      type: integer
+                                  required:
+                                  - name
+                                  type: object
+                                type: array
+                              inlined:
+                                description: Inlined manifest
+                                type: string
+                              locationType:
+                                description: Type of Kubernetes-like location
+                                enum:
+                                - Uri
+                                - Inlined
+                                type: string
+                              uri:
+                                description: Location in a file fetched from a uri.
+                                type: string
+                            type: object
+                          volume:
+                            description: Allows specifying the definition of a volume
+                              shared by several other components
+                            properties:
+                              ephemeral:
+                                description: Ephemeral volumes are not stored persistently
+                                  across restarts. Defaults to false
+                                type: boolean
+                              size:
+                                description: Size of the volume
+                                type: string
+                            type: object
+                        required:
+                        - name
+                        type: object
+                      type: array
+                    id:
+                      description: Id in a registry that contains a Devfile yaml file
+                      type: string
+                    importReferenceType:
+                      description: type of location from where the referenced template
+                        structure should be retrieved
+                      enum:
+                      - Uri
+                      - Id
+                      - Kubernetes
+                      type: string
+                    kubernetes:
+                      description: Reference to a Kubernetes CRD of type DevWorkspaceTemplate
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    name:
+                      description: Mandatory name that allows referencing the component
+                        from other elements (such as commands) or from an external
+                        devfile that may reference this component through a parent
+                        or a plugin.
+                      maxLength: 63
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                    registryUrl:
+                      description: Registry URL to pull the parent devfile from when
+                        using id in the parent reference. To ensure the parent devfile
+                        gets resolved consistently in different environments, it is
+                        recommended to always specify the `registryUrl` when `id`
+                        is used.
+                      type: string
+                    uri:
+                      description: URI Reference of a parent devfile YAML file. It
+                        can be a full URL or a relative URI with the current devfile
+                        as the base URI.
+                      type: string
+                    version:
+                      description: Specific stack/sample version to pull the parent
+                        devfile from, when using id in the parent reference. To specify
+                        `version`, `id` must be defined and used as the import reference
+                        source. `version` can be either a specific stack version,
+                        or `latest`. If no `version` specified, default version will
+                        be used.
+                      pattern: ^(latest)|(([1-9])\.([0-9]+)\.([0-9]+)(\-[0-9a-z-]+(\.[0-9a-z-]+)*)?(\+[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?)$
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
               routingClass:
                 type: string
               started:

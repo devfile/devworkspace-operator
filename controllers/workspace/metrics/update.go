@@ -20,14 +20,14 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/prometheus/client_golang/prometheus"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // WorkspaceStarted updates metrics for workspaces entering the 'Starting' phase, given a workspace. If an error is
 // encountered, the provided logger is used to log the error.
-func WorkspaceStarted(wksp *dw.DevWorkspace, log logr.Logger) {
+func WorkspaceStarted(wksp *common.DevWorkspaceWithConfig, log logr.Logger) {
 	_, ok := wksp.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
 	if !ok {
 		incrementMetricForWorkspace(workspaceTotal, wksp, log)
@@ -37,7 +37,7 @@ func WorkspaceStarted(wksp *dw.DevWorkspace, log logr.Logger) {
 // WorkspaceRunning updates metrics for workspaces entering the 'Running' phase, given a workspace. If an error is
 // encountered, the provided logger is used to log the error. This function assumes the provided workspace has
 // fully-synced conditions (i.e. the WorkspaceReady condition is present).
-func WorkspaceRunning(wksp *dw.DevWorkspace, log logr.Logger) {
+func WorkspaceRunning(wksp *common.DevWorkspaceWithConfig, log logr.Logger) {
 	_, ok := wksp.GetAnnotations()[constants.DevWorkspaceStartedAtAnnotation]
 	if !ok {
 		incrementMetricForWorkspace(workspaceStarts, wksp, log)
@@ -47,18 +47,18 @@ func WorkspaceRunning(wksp *dw.DevWorkspace, log logr.Logger) {
 
 // WorkspaceFailed updates metrics for workspace entering the 'Failed' phase. If an error is encountered, the provided
 // logger is used to log the error.
-func WorkspaceFailed(wksp *dw.DevWorkspace, log logr.Logger) {
+func WorkspaceFailed(wksp *common.DevWorkspaceWithConfig, log logr.Logger) {
 	incrementMetricForWorkspaceFailure(workspaceFailures, wksp, log)
 }
 
-func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementMetricForWorkspace(metric *prometheus.CounterVec, workspace *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspace.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	routingClass := wksp.Spec.RoutingClass
+	routingClass := workspace.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspace.Config.Routing.DefaultRoutingClass
 	}
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
@@ -67,12 +67,12 @@ func incrementMetricForWorkspace(metric *prometheus.CounterVec, wksp *dw.DevWork
 	ctr.Inc()
 }
 
-func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.DevWorkspace, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, workspace *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspace.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	reason := GetFailureReason(wksp)
+	reason := GetFailureReason(workspace)
 	ctr, err := metric.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsReasonLabel: string(reason)})
 	if err != nil {
 		log.Error(err, "Failed to increment metric")
@@ -80,24 +80,24 @@ func incrementMetricForWorkspaceFailure(metric *prometheus.CounterVec, wksp *dw.
 	ctr.Inc()
 }
 
-func incrementStartTimeBucketForWorkspace(wksp *dw.DevWorkspace, log logr.Logger) {
-	sourceLabel := wksp.Labels[workspaceSourceLabel]
+func incrementStartTimeBucketForWorkspace(workspace *common.DevWorkspaceWithConfig, log logr.Logger) {
+	sourceLabel := workspace.Labels[workspaceSourceLabel]
 	if sourceLabel == "" {
 		sourceLabel = "unknown"
 	}
-	routingClass := wksp.Spec.RoutingClass
+	routingClass := workspace.Spec.RoutingClass
 	if routingClass == "" {
-		routingClass = config.Routing.DefaultRoutingClass
+		routingClass = workspace.Config.Routing.DefaultRoutingClass
 	}
 	hist, err := workspaceStartupTimesHist.GetMetricWith(map[string]string{metricSourceLabel: sourceLabel, metricsRoutingClassLabel: routingClass})
 	if err != nil {
 		log.Error(err, "Failed to update metric")
 	}
-	readyCondition := conditions.GetConditionByType(wksp.Status.Conditions, dw.DevWorkspaceReady)
+	readyCondition := conditions.GetConditionByType(workspace.Status.Conditions, dw.DevWorkspaceReady)
 	if readyCondition == nil {
 		return
 	}
-	startedCondition := conditions.GetConditionByType(wksp.Status.Conditions, conditions.Started)
+	startedCondition := conditions.GetConditionByType(workspace.Status.Conditions, conditions.Started)
 	if startedCondition == nil {
 		return
 	}

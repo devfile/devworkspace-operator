@@ -1,0 +1,59 @@
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
+metadata:
+  name: web-terminal
+  labels:
+    console.openshift.io/terminal: 'true'
+  annotations:
+    controller.devfile.io/restricted-access: 'true'
+spec:
+  routingClass: web-terminal
+  started: true
+  template:
+    components:
+    - name: web-terminal-tooling
+      attributes:
+        controller.devfile.io/imported-by: web-terminal-tooling
+      container:
+        image: quay.io/wto/web-terminal-tooling:next
+        args:
+        - tail
+        - -f
+        - /dev/null
+        cpuLimit: 400m
+        cpuRequest: 100m
+        memoryLimit: 256Mi
+        memoryRequest: 128Mi
+        mountSources: false
+        sourceMapping: /projects
+    - name: web-terminal-exec
+      attributes:
+        controller.devfile.io/imported-by: web-terminal-exec
+      container:
+        image: quay.io/wto/web-terminal-exec:next
+        command:
+        - /go/bin/che-machine-exec
+        - --authenticated-user-id
+        - $(DEVWORKSPACE_CREATOR)
+        - --idle-timeout
+        - $(WEB_TERMINAL_IDLE_TIMEOUT)
+        - --pod-selector
+        - controller.devfile.io/devworkspace_id=$(DEVWORKSPACE_ID)
+        - --use-tls
+        - --use-bearer-token
+        env:
+        - name: WEB_TERMINAL_IDLE_TIMEOUT
+          value: 15m
+        endpoints:
+        - attributes:
+            type: main
+          exposure: public
+          name: exec
+          protocol: http
+          targetPort: 4444
+        cpuLimit: 400m
+        cpuRequest: 100m
+        memoryLimit: 128Mi
+        memoryRequest: 128Mi
+        mountSources: false
+        sourceMapping: /projects

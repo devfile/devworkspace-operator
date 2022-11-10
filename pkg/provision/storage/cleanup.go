@@ -20,7 +20,7 @@ import (
 	"path"
 	"time"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -35,9 +35,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 )
 
 const (
@@ -54,7 +52,7 @@ var (
 	pvcCleanupPodCPURequest    = resource.MustParse(constants.PVCCleanupPodCPURequest)
 )
 
-func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
+func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	PVCexists, err := commonPVCExists(workspace, clusterAPI)
 	if err != nil {
 		return err
@@ -94,7 +92,8 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 		}
 	}
 
-	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}, clusterAPI)
+	jobLabels := k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}
+	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, jobLabels, workspace.Config.Workspace.IgnoredUnrecoverableEvents, clusterAPI)
 	if err != nil {
 		return &ProvisioningError{
 			Err: err,
@@ -115,15 +114,15 @@ func runCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterA
 	}
 }
 
-func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
+func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*batchv1.Job, error) {
 	workspaceId := workspace.Status.DevWorkspaceId
 
-	pvcName, err := checkForExistingCommonPVC(workspace.Namespace, clusterAPI)
+	_, pvcName, err := checkForAlternatePVC(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, err
 	}
 	if pvcName == "" {
-		pvcName = config.Workspace.PVCName
+		pvcName = workspace.Config.Workspace.PVCName
 	}
 
 	jobLabels := map[string]string{
@@ -133,6 +132,13 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 	}
 	if restrictedAccess, needsRestrictedAccess := workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]; needsRestrictedAccess {
 		jobLabels[constants.DevWorkspaceRestrictedAccessAnnotation] = restrictedAccess
+	}
+
+	var securityContext *corev1.PodSecurityContext
+	if infrastructure.IsOpenShift() {
+		securityContext = &corev1.PodSecurityContext{}
+	} else {
+		securityContext = workspace.Config.Workspace.PodSecurityContext
 	}
 
 	job := &batchv1.Job{
@@ -150,7 +156,7 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 				},
 				Spec: corev1.PodSpec{
 					RestartPolicy:   "Never",
-					SecurityContext: wsprovision.GetDevWorkspaceSecurityContext(),
+					SecurityContext: securityContext,
 					Volumes: []corev1.Volume{
 						{
 							Name: pvcName,
@@ -204,15 +210,15 @@ func getSpecCommonPVCCleanupJob(workspace *dw.DevWorkspace, clusterAPI sync.Clus
 		job.Spec.Template.Spec.NodeSelector = nodeSelector
 	}
 
-	if err := controllerutil.SetControllerReference(workspace, job, clusterAPI.Scheme); err != nil {
+	if err := controllerutil.SetControllerReference(workspace.DevWorkspace, job, clusterAPI.Scheme); err != nil {
 		return nil, err
 	}
 	return job, nil
 }
 
-func commonPVCExists(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) (bool, error) {
+func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (bool, error) {
 	namespacedName := types.NamespacedName{
-		Name:      config.Workspace.PVCName,
+		Name:      workspace.Config.Workspace.PVCName,
 		Namespace: workspace.Namespace,
 	}
 	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, &corev1.PersistentVolumeClaim{})

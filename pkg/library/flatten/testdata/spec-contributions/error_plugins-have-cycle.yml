@@ -1,0 +1,39 @@
+name: "Plugins have reference cycle"
+
+input:
+  contributions:
+    - name: "plugin-a"
+      kubernetes:
+        name: plugin-a
+  devworkspaceResources:
+    plugin-a:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-a
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
+      spec:
+        components:
+          - name: plugin-b
+            plugin:
+              kubernetes:
+                name: plugin-b
+                namespace: devworkspace-plugins
+    plugin-b:
+      kind: DevWorkspaceTemplate
+      apiVersion: workspace.devfile.io/v1alpha2
+      metadata:
+        name: plugin-b
+        annotations:
+          "controller.devfile.io/allow-import-from": "*"
+      spec:
+        components:
+          - name: plugin-a
+            plugin:
+              kubernetes:
+                name: plugin-a
+                namespace: devworkspace-plugins
+
+output:
+  errRegexp: "DevWorkspace has an cycle in references.*"

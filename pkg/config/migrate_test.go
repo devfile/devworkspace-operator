@@ -24,6 +24,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -126,7 +127,7 @@ func TestMigrateConfigCreatesCRFromConfigMap(t *testing.T) {
 			PVCName:         "testPVCName",
 			IdleTimeout:     "testIdleTimeout",
 		},
-		EnableExperimentalFeatures: &trueBool,
+		EnableExperimentalFeatures: pointer.Bool(true),
 	})
 
 	err := MigrateConfigFromConfigMap(client)
@@ -240,7 +241,7 @@ func TestConvertConfigMapGetsAllOldConfigValues(t *testing.T) {
 			StorageClassName: &testStorageClassName,
 			IdleTimeout:      "testIdleTimeout",
 		},
-		EnableExperimentalFeatures: &trueBool,
+		EnableExperimentalFeatures: pointer.Bool(true),
 	})
 
 	migratedConfig, err := convertConfigMapToConfigCRD(client)

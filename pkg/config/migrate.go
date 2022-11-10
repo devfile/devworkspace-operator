@@ -22,6 +22,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	dw "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -128,8 +129,7 @@ func convertConfigMapToConfigCRD(client crclient.Client) (*dw.DevWorkspaceOperat
 	var experimentalFeatures *bool
 	experimentalFeaturesStr := configmap.ControllerCfg.GetExperimentalFeaturesEnabled()
 	if experimentalFeaturesStr != nil && *experimentalFeaturesStr == "true" {
-		trueBool := true
-		experimentalFeatures = &trueBool
+		experimentalFeatures = pointer.Bool(true)
 	}
 
 	if !setRoutingConfig && !setWorkspaceConfig && experimentalFeatures == nil {

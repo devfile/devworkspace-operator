@@ -1,0 +1,20 @@
+name: "Applies overrides from container-overrides attribute as json"
+
+input:
+  component:
+    name: test-component
+    attributes:
+      container-overrides: {"resources":{"limits":{"nvidia.com/gpu":"1"}}}
+    container:
+      image: test-image
+  container:
+    name: test-component
+    image: test-image
+
+output:
+  container:
+    name: test-component
+    image: test-image
+    resources:
+      limits:
+        nvidia.com/gpu: "1"

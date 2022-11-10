@@ -22,6 +22,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -62,7 +63,7 @@ func getAutomountConfigmap(mountPath, mountAs string, configmap *corev1.ConfigMa
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: configmap.Name,
 				},
-				DefaultMode: &modeReadOnly,
+				DefaultMode: pointer.Int32(0640),
 			},
 		},
 	}

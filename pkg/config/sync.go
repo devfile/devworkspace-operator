@@ -17,19 +17,26 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/config/proxy"
 	routeV1 "github.com/openshift/api/route/v1"
+	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
@@ -39,26 +46,64 @@ const (
 )
 
 var (
-	Routing         *controller.RoutingConfig
-	Workspace       *controller.WorkspaceConfig
 	internalConfig  *controller.OperatorConfiguration
 	configMutex     sync.Mutex
 	configNamespace string
 	log             = ctrl.Log.WithName("operator-configuration")
 )
 
-func SetConfigForTesting(config *controller.OperatorConfiguration) {
+func GetGlobalConfig() *controller.OperatorConfiguration {
+	return internalConfig.DeepCopy()
+}
+
+// ResolveConfigForWorkspace returns the resulting config from merging the global DevWorkspaceOperatorConfig with the
+// DevWorkspaceOperatorConfig specified by the optional workspace attribute `controller.devfile.io/devworkspace-config`.
+// If the `controller.devfile.io/devworkspace-config` is not set, the global DevWorkspaceOperatorConfig is returned.
+// If the `controller.devfile.io/devworkspace-config` attribute is incorrectly set, or the specified DevWorkspaceOperatorConfig
+// does not exist on the cluster, an error is returned.
+func ResolveConfigForWorkspace(workspace *dw.DevWorkspace, client crclient.Client) (*controller.OperatorConfiguration, error) {
+	if !workspace.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
+		return GetGlobalConfig(), nil
+	}
+
+	namespacedName := types.NamespacedName{}
+	err := workspace.Spec.Template.Attributes.GetInto(constants.ExternalDevWorkspaceConfiguration, &namespacedName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read attribute %s in DevWorkspace attributes: %w", constants.ExternalDevWorkspaceConfiguration, err)
+	}
+
+	if namespacedName.Name == "" {
+		return nil, fmt.Errorf("'name' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	if namespacedName.Namespace == "" {
+		return nil, fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
+	}
+
+	externalDWOC := &controller.DevWorkspaceOperatorConfig{}
+	err = client.Get(context.TODO(), namespacedName, externalDWOC)
+	if err != nil {
+		return nil, fmt.Errorf("could not fetch external DWOC with name %s in namespace %s: %w", namespacedName.Name, namespacedName.Namespace, err)
+	}
+	return getMergedConfig(externalDWOC.Config, internalConfig), nil
+}
+
+func GetConfigForTesting(customConfig *controller.OperatorConfiguration) *controller.OperatorConfiguration {
 	configMutex.Lock()
 	defer configMutex.Unlock()
-	internalConfig = defaultConfig.DeepCopy()
-	mergeConfig(config, internalConfig)
-	updatePublicConfig()
+	testConfig := defaultConfig.DeepCopy()
+	mergeConfig(customConfig, testConfig)
+	return testConfig
 }
 
 func SetupControllerConfig(client crclient.Client) error {
 	if internalConfig != nil {
 		return fmt.Errorf("internal controller configuration is already set up")
 	}
+	if err := setDefaultPodSecurityContext(); err != nil {
+		return err
+	}
+
 	internalConfig = &controller.OperatorConfiguration{}
 
 	namespace, err := infrastructure.GetNamespace()
@@ -93,7 +138,7 @@ func SetupControllerConfig(client crclient.Client) error {
 	defaultConfig.Routing.ProxyConfig = clusterProxy
 	internalConfig.Routing.ProxyConfig = proxy.MergeProxyConfigs(clusterProxy, internalConfig.Routing.ProxyConfig)
 
-	updatePublicConfig()
+	logCurrentConfig()
 	return nil
 }
 
@@ -119,6 +164,13 @@ func getClusterConfig(namespace string, client crclient.Client) (*controller.Dev
 	return clusterConfig, nil
 }
 
+func getMergedConfig(from, to *controller.OperatorConfiguration) *controller.OperatorConfiguration {
+	mergedConfig := to.DeepCopy()
+	fromCopy := from.DeepCopy()
+	mergeConfig(fromCopy, mergedConfig)
+	return mergedConfig
+}
+
 func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {
 	if newConfig == nil || newConfig.Name != OperatorConfigName || newConfig.Namespace != configNamespace {
 		return
@@ -127,19 +179,13 @@ func syncConfigFrom(newConfig *controller.DevWorkspaceOperatorConfig) {
 	defer configMutex.Unlock()
 	internalConfig = defaultConfig.DeepCopy()
 	mergeConfig(newConfig.Config, internalConfig)
-	updatePublicConfig()
+	logCurrentConfig()
 }
 
 func restoreDefaultConfig() {
 	configMutex.Lock()
 	defer configMutex.Unlock()
 	internalConfig = defaultConfig.DeepCopy()
-	updatePublicConfig()
-}
-
-func updatePublicConfig() {
-	Routing = internalConfig.Routing.DeepCopy()
-	Workspace = internalConfig.Workspace.DeepCopy()
 	logCurrentConfig()
 }
 
@@ -222,6 +268,17 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.PVCName != "" {
 			to.Workspace.PVCName = from.Workspace.PVCName
 		}
+		if from.Workspace.ServiceAccount != nil {
+			if to.Workspace.ServiceAccount == nil {
+				to.Workspace.ServiceAccount = &controller.ServiceAccountConfig{}
+			}
+			if from.Workspace.ServiceAccount.ServiceAccountName != "" {
+				to.Workspace.ServiceAccount.ServiceAccountName = from.Workspace.ServiceAccount.ServiceAccountName
+			}
+			if from.Workspace.ServiceAccount.DisableCreation != nil {
+				to.Workspace.ServiceAccount.DisableCreation = pointer.BoolPtr(*from.Workspace.ServiceAccount.DisableCreation)
+			}
+		}
 		if from.Workspace.ImagePullPolicy != "" {
 			to.Workspace.ImagePullPolicy = from.Workspace.ImagePullPolicy
 		}
@@ -238,7 +295,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			to.Workspace.CleanupOnStop = from.Workspace.CleanupOnStop
 		}
 		if from.Workspace.PodSecurityContext != nil {
-			to.Workspace.PodSecurityContext = from.Workspace.PodSecurityContext
+			to.Workspace.PodSecurityContext = mergePodSecurityContext(to.Workspace.PodSecurityContext, from.Workspace.PodSecurityContext)
+		}
+		if from.Workspace.ContainerSecurityContext != nil {
+			to.Workspace.ContainerSecurityContext = mergeContainerSecurityContext(to.Workspace.ContainerSecurityContext, from.Workspace.ContainerSecurityContext)
 		}
 		if from.Workspace.DefaultStorageSize != nil {
 			if to.Workspace.DefaultStorageSize == nil {
@@ -260,57 +320,136 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 	}
 }
 
-// logCurrentConfig formats the current operator configuration as a plain string
-func logCurrentConfig() {
-	if internalConfig == nil {
-		return
+func mergePodSecurityContext(base, patch *corev1.PodSecurityContext) *corev1.PodSecurityContext {
+	baseBytes, err := json.Marshal(base)
+	if err != nil {
+		log.Info("Failed to serialize base pod security context: %s", err)
+		return base
 	}
-	var config []string
-	if Routing != nil {
-		if Routing.ClusterHostSuffix != "" && Routing.ClusterHostSuffix != defaultConfig.Routing.ClusterHostSuffix {
-			config = append(config, fmt.Sprintf("routing.clusterHostSuffix=%s", Routing.ClusterHostSuffix))
-		}
-		if Routing.DefaultRoutingClass != defaultConfig.Routing.DefaultRoutingClass {
-			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", Routing.DefaultRoutingClass))
-		}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		log.Info("Failed to serialize configured pod security context: %s", err)
+		return base
 	}
-	if Workspace != nil {
-		if Workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
-			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", Workspace.ImagePullPolicy))
-		}
-		if Workspace.PVCName != defaultConfig.Workspace.PVCName {
-			config = append(config, fmt.Sprintf("workspace.pvcName=%s", Workspace.PVCName))
-		}
-		if Workspace.StorageClassName != nil && Workspace.StorageClassName != defaultConfig.Workspace.StorageClassName {
-			config = append(config, fmt.Sprintf("workspace.storageClassName=%s", *Workspace.StorageClassName))
-		}
-		if Workspace.IdleTimeout != defaultConfig.Workspace.IdleTimeout {
-			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", Workspace.IdleTimeout))
-		}
-		if Workspace.IgnoredUnrecoverableEvents != nil {
-			config = append(config, fmt.Sprintf("workspace.ignoredUnrecoverableEvents=%s",
-				strings.Join(Workspace.IgnoredUnrecoverableEvents, ";")))
-		}
-		if Workspace.DefaultStorageSize != nil {
-			if Workspace.DefaultStorageSize.Common != nil {
-				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.common=%s", Workspace.DefaultStorageSize.Common.String()))
-			}
-			if Workspace.DefaultStorageSize.PerWorkspace != nil {
-				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.perWorkspace=%s", Workspace.DefaultStorageSize.PerWorkspace.String()))
-			}
-		}
-		if Workspace.DefaultTemplate != nil {
-			config = append(config, fmt.Sprintf("workspace.defaultTemplate is set"))
-		}
+	patchedBytes, err := strategicpatch.StrategicMergePatch(baseBytes, patchBytes, &corev1.PodSecurityContext{})
+	if err != nil {
+		log.Info("Failed to merge configured pod security context: %s", err)
+		return base
 	}
-	if internalConfig.EnableExperimentalFeatures != nil && *internalConfig.EnableExperimentalFeatures {
-		config = append(config, "enableExperimentalFeatures=true")
+	patched := &corev1.PodSecurityContext{}
+	if err := json.Unmarshal(patchedBytes, patched); err != nil {
+		log.Info("Failed to deserialize patched pod security context: %s", patched)
+		return base
+	}
+	return patched
+}
+
+func mergeContainerSecurityContext(base, patch *corev1.SecurityContext) *corev1.SecurityContext {
+	baseBytes, err := json.Marshal(base)
+	if err != nil {
+		log.Info("Failed to serialize base container security context: %s", err)
+		return base
+	}
+	patchBytes, err := json.Marshal(patch)
+	if err != nil {
+		log.Info("Failed to serialize configured container security context: %s", err)
+		return base
+	}
+	patchedBytes, err := strategicpatch.StrategicMergePatch(baseBytes, patchBytes, &corev1.SecurityContext{})
+	if err != nil {
+		log.Info("Failed to merge configured container security context: %s", err)
+		return base
+	}
+	patched := &corev1.SecurityContext{}
+	if err := json.Unmarshal(patchedBytes, patched); err != nil {
+		log.Info("Failed to deserialize patched container security context: %s", patched)
+		return base
+	}
+	return patched
+}
+
+func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string {
+	if currConfig == nil {
+		return ""
 	}
 
+	routing := currConfig.Routing
+	var config []string
+	if routing != nil {
+		if routing.ClusterHostSuffix != "" && routing.ClusterHostSuffix != defaultConfig.Routing.ClusterHostSuffix {
+			config = append(config, fmt.Sprintf("routing.clusterHostSuffix=%s", routing.ClusterHostSuffix))
+		}
+		if routing.DefaultRoutingClass != defaultConfig.Routing.DefaultRoutingClass {
+			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", routing.DefaultRoutingClass))
+		}
+	}
+	workspace := currConfig.Workspace
+	if workspace != nil {
+		if workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
+			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", workspace.ImagePullPolicy))
+		}
+		if workspace.PVCName != defaultConfig.Workspace.PVCName {
+			config = append(config, fmt.Sprintf("workspace.pvcName=%s", workspace.PVCName))
+		}
+		if workspace.ServiceAccount != nil {
+			if workspace.ServiceAccount.ServiceAccountName != defaultConfig.Workspace.ServiceAccount.ServiceAccountName {
+				config = append(config, fmt.Sprintf("workspace.serviceAccount.serviceAccountName=%s", workspace.ServiceAccount.ServiceAccountName))
+			}
+			if workspace.ServiceAccount.DisableCreation != nil && *workspace.ServiceAccount.DisableCreation != *defaultConfig.Workspace.ServiceAccount.DisableCreation {
+				config = append(config, fmt.Sprintf("workspace.serviceAccount.disableCreation=%t", *workspace.ServiceAccount.DisableCreation))
+			}
+		}
+		if workspace.StorageClassName != nil && workspace.StorageClassName != defaultConfig.Workspace.StorageClassName {
+			config = append(config, fmt.Sprintf("workspace.storageClassName=%s", *workspace.StorageClassName))
+		}
+		if workspace.IdleTimeout != defaultConfig.Workspace.IdleTimeout {
+			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", workspace.IdleTimeout))
+		}
+		if workspace.ProgressTimeout != "" && workspace.ProgressTimeout != defaultConfig.Workspace.ProgressTimeout {
+			config = append(config, fmt.Sprintf("workspace.progressTimeout=%s", workspace.ProgressTimeout))
+		}
+		if workspace.IgnoredUnrecoverableEvents != nil {
+			config = append(config, fmt.Sprintf("workspace.ignoredUnrecoverableEvents=%s",
+				strings.Join(workspace.IgnoredUnrecoverableEvents, ";")))
+		}
+		if workspace.CleanupOnStop != nil && *workspace.CleanupOnStop != *defaultConfig.Workspace.CleanupOnStop {
+			config = append(config, fmt.Sprintf("workspace.cleanupOnStop=%t", *workspace.CleanupOnStop))
+		}
+		if workspace.DefaultStorageSize != nil {
+			if workspace.DefaultStorageSize.Common != nil && workspace.DefaultStorageSize.Common.String() != defaultConfig.Workspace.DefaultStorageSize.Common.String() {
+				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.common=%s", workspace.DefaultStorageSize.Common.String()))
+			}
+			if workspace.DefaultStorageSize.PerWorkspace != nil && workspace.DefaultStorageSize.PerWorkspace.String() != defaultConfig.Workspace.DefaultStorageSize.PerWorkspace.String() {
+				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.perWorkspace=%s", workspace.DefaultStorageSize.PerWorkspace.String()))
+			}
+		}
+		if !reflect.DeepEqual(workspace.PodSecurityContext, defaultConfig.Workspace.PodSecurityContext) {
+			config = append(config, "workspace.podSecurityContext is set")
+		}
+		if !reflect.DeepEqual(workspace.ContainerSecurityContext, defaultConfig.Workspace.ContainerSecurityContext) {
+			config = append(config, "workspace.containerSecurityContext is set")
+		}
+		if workspace.DefaultTemplate != nil {
+			config = append(config, "workspace.defaultTemplate is set")
+		}
+	}
+	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {
+		config = append(config, "enableExperimentalFeatures=true")
+	}
 	if len(config) == 0 {
+		return ""
+	} else {
+		return strings.Join(config, ",")
+	}
+}
+
+// logCurrentConfig formats the current operator configuration as a plain string
+func logCurrentConfig() {
+	currConfig := GetCurrentConfigString(internalConfig)
+	if len(currConfig) == 0 {
 		log.Info("Updated config to [(default config)]")
 	} else {
-		log.Info(fmt.Sprintf("Updated config to [%s]", strings.Join(config, ",")))
+		log.Info(fmt.Sprintf("Updated config to [%s]", currConfig))
 	}
 
 	if internalConfig.Routing.ProxyConfig != nil {

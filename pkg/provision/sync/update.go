@@ -50,11 +50,29 @@ func serviceUpdateFunc(spec, cluster crclient.Object) (crclient.Object, error) {
 	return specService, nil
 }
 
+func serviceAccountUpdateFunc(spec, cluster crclient.Object) (crclient.Object, error) {
+	if cluster == nil {
+		// May occur if ServiceAccount is not cached by the operator
+		return spec, nil
+	}
+	spec.SetResourceVersion(cluster.GetResourceVersion())
+	ownerrefs := spec.GetOwnerReferences()
+	for _, clusterOwnerref := range cluster.GetOwnerReferences() {
+		if !containsOwnerRef(clusterOwnerref, ownerrefs) {
+			ownerrefs = append(ownerrefs, clusterOwnerref)
+		}
+	}
+	spec.SetOwnerReferences(ownerrefs)
+	return spec, nil
+}
+
 func getUpdateFunc(obj crclient.Object) updateFunc {
 	objType := reflect.TypeOf(obj).Elem()
 	switch objType {
 	case reflect.TypeOf(corev1.Service{}):
 		return serviceUpdateFunc
+	case reflect.TypeOf(corev1.ServiceAccount{}):
+		return serviceAccountUpdateFunc
 	default:
 		return defaultUpdateFunc
 	}

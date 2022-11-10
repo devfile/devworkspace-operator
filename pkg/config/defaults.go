@@ -16,9 +16,13 @@
 package config
 
 import (
+	"fmt"
+
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 )
 
 // defaultConfig represents the default configuration for the DevWorkspace Operator.
@@ -30,29 +34,45 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 	Workspace: &v1alpha1.WorkspaceConfig{
 		ImagePullPolicy: "Always",
 		PVCName:         "claim-devworkspace",
+		ServiceAccount: &v1alpha1.ServiceAccountConfig{
+			DisableCreation: pointer.Bool(false),
+		},
 		DefaultStorageSize: &v1alpha1.StorageSizes{
 			Common:       &commonStorageSize,
 			PerWorkspace: &perWorkspaceStorageSize,
 		},
-		IdleTimeout:     "15m",
-		ProgressTimeout: "5m",
-		CleanupOnStop:   &boolFalse,
-		PodSecurityContext: &corev1.PodSecurityContext{
-			RunAsUser:    &int64UID,
-			RunAsGroup:   &int64GID,
-			RunAsNonRoot: &boolTrue,
-			FSGroup:      &int64UID,
-		},
-		DefaultTemplate: nil,
+		IdleTimeout:              "15m",
+		ProgressTimeout:          "5m",
+		CleanupOnStop:            pointer.BoolPtr(false),
+		PodSecurityContext:       nil,
+		ContainerSecurityContext: &corev1.SecurityContext{},
+		DefaultTemplate:          nil,
 	},
 }
 
+var defaultKubernetesPodSecurityContext = &corev1.PodSecurityContext{
+	RunAsUser:    pointer.Int64(1234),
+	RunAsGroup:   pointer.Int64(0),
+	RunAsNonRoot: pointer.Bool(true),
+	FSGroup:      pointer.Int64(1234),
+}
+
+var defaultOpenShiftPodSecurityContext = &corev1.PodSecurityContext{}
+
 // Necessary variables for setting pointer values
 var (
-	boolTrue                = true
-	boolFalse               = false
-	int64UID                = int64(1234)
-	int64GID                = int64(0)
 	commonStorageSize       = resource.MustParse("10Gi")
 	perWorkspaceStorageSize = resource.MustParse("5Gi")
 )
+
+func setDefaultPodSecurityContext() error {
+	if !infrastructure.IsInitialized() {
+		return fmt.Errorf("can not set default pod security context, infrastructure not detected")
+	}
+	if infrastructure.IsOpenShift() {
+		defaultConfig.Workspace.PodSecurityContext = defaultOpenShiftPodSecurityContext
+	} else {
+		defaultConfig.Workspace.PodSecurityContext = defaultKubernetesPodSecurityContext
+	}
+	return nil
+}

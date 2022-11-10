@@ -33,6 +33,16 @@ const gitCredentialsConfigMapName = "devworkspace-gitconfig"
 const gitCredentialsSecretKey = "credentials"
 const gitCredentialsSecretName = "devworkspace-merged-git-credentials"
 
+// gitLFSConfig is the default configuration that gets provisioned when git-lfs
+// is installed. It needs to be included in the overridden gitconfig to avoid
+// disabling git-lfs in repos that require a gitconfig.
+const gitLFSConfig = `[filter "lfs"]
+    clean = git-lfs clean -- %f
+    smudge = git-lfs smudge -- %f
+    process = git-lfs filter-process
+    required = true
+`
+
 const credentialTemplate = `[credential]
     helper = store --file %s
 `
@@ -47,6 +57,8 @@ const defaultGitServerTemplate = `[http]
 
 func constructGitConfig(namespace, credentialMountPath string, certificatesConfigMaps []corev1.ConfigMap, baseGitConfig *string) (*corev1.ConfigMap, error) {
 	var configSettings []string
+	configSettings = append(configSettings, gitLFSConfig)
+
 	if credentialMountPath != "" {
 		configSettings = append(configSettings, fmt.Sprintf(credentialTemplate, path.Join(credentialMountPath, gitCredentialsSecretKey)))
 	}
@@ -124,28 +136,4 @@ func mergeGitCredentials(namespace string, credentialSecrets []corev1.Secret) (*
 		Type: corev1.SecretTypeOpaque,
 	}
 	return mergedCredentials, nil
-}
-
-// getCredentialsMountPath returns the mount path to be used by all git credentials secrets. If no secrets define a mountPath,
-// the root path ('/credentials') is used. If secrets define conflicting mountPaths, an error is returned and represents an invalid
-// configuration. If any secret defines a mountPath, that mountPath overrides the mountPath for all secrets that do not
-// define a mountPath. If there are no credentials secrets, the empty string is returned
-func getCredentialsMountPath(secrets []corev1.Secret) (string, error) {
-	if len(secrets) == 0 {
-		return "", nil
-	}
-	mountPath := ""
-	for _, secret := range secrets {
-		secretMountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
-		if secretMountPath != "" {
-			if mountPath != "" && secretMountPath != mountPath {
-				return "", fmt.Errorf("auto-mounted git credentials have conflicting mountPaths: %s, %s", mountPath, secretMountPath)
-			}
-			mountPath = secretMountPath
-		}
-	}
-	if mountPath == "" {
-		mountPath = "/"
-	}
-	return mountPath, nil
 }

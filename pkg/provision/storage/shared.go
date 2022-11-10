@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -29,14 +30,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
 
-func getPVCSpec(name, namespace string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
+func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -52,7 +52,7 @@ func getPVCSpec(name, namespace string, size resource.Quantity) (*corev1.Persist
 					"storage": size,
 				},
 			},
-			StorageClassName: config.Workspace.StorageClassName,
+			StorageClassName: storageClass,
 		},
 	}, nil
 }
@@ -85,7 +85,7 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return containerlib.AnyMountSources(workspace.Components)
 }
 
-func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
@@ -98,7 +98,7 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 		}
 	}
 
-	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, pvcSize)
+	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, config.Workspace.StorageClassName, pvcSize)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func syncCommonPVC(namespace string, clusterAPI sync.ClusterAPI) (*corev1.Persis
 // addEphemeralVolumesFromWorkspace adds emptyDir volumes for all ephemeral volume components required for a devworkspace.
 // This includes any volume components marked with the ephemeral field, including projects.
 // Returns a ProvisioningError if any ephemeral volume cannot be parsed (e.g. cannot parse size for kubernetes)
-func addEphemeralVolumesFromWorkspace(workspace *dw.DevWorkspace, podAdditions *v1alpha1.PodAdditions) error {
+func addEphemeralVolumesFromWorkspace(workspace *common.DevWorkspaceWithConfig, podAdditions *v1alpha1.PodAdditions) error {
 	_, ephemeralVolumes, projectsVolume := getWorkspaceVolumes(workspace)
 	_, err := addEphemeralVolumesToPodAdditions(podAdditions, ephemeralVolumes)
 	if err != nil {
@@ -179,7 +179,7 @@ func addEphemeralVolumesToPodAdditions(podAdditions *v1alpha1.PodAdditions, work
 // getWorkspaceVolumes returns all volumes defined in the DevWorkspace, separated out into persistent volumes, ephemeral
 // volumes, and the projects volume, which must be handled specially. If the workspace does not define a projects volume,
 // the returned value is nil.
-func getWorkspaceVolumes(workspace *dw.DevWorkspace) (persistent, ephemeral []dw.Component, projects *dw.Component) {
+func getWorkspaceVolumes(workspace *common.DevWorkspaceWithConfig) (persistent, ephemeral []dw.Component, projects *dw.Component) {
 	for idx, component := range workspace.Spec.Template.Components {
 		if component.Volume == nil {
 			continue
@@ -219,21 +219,22 @@ func processProjectsVolume(workspace *dw.DevWorkspaceTemplateSpec) (projectsComp
 	return
 }
 
-// checkForExistingCommonPVC checks the current namespace for existing PVCs that may be used for workspace storage. If
+// checkForAlternatePVC checks the current namespace for existing PVCs that may be used for workspace storage. If
 // such a PVC is found, its name is returned and should be used in place of the configured common PVC. If no suitable
 // PVC is found, the returned PVC name is an empty string and a nil error is returned. If an error occurs during the lookup,
 // then an empty string is returned as well as the error.
-func checkForExistingCommonPVC(namespace string, api sync.ClusterAPI) (string, error) {
+// Currently, the only alternate PVC that can be used is named `claim-che-workspace`.
+func checkForAlternatePVC(namespace string, api sync.ClusterAPI) (exists bool, name string, err error) {
 	existingPVC := &corev1.PersistentVolumeClaim{}
 	namespacedName := types.NamespacedName{Name: constants.CheCommonPVCName, Namespace: namespace}
-	err := api.Client.Get(api.Ctx, namespacedName, existingPVC)
+	err = api.Client.Get(api.Ctx, namespacedName, existingPVC)
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
-			return "", nil
+			return false, "", nil
 		}
-		return "", err
+		return false, "", err
 	}
-	return existingPVC.Name, nil
+	return true, existingPVC.Name, nil
 }
 
 // getSharedPVCWorkspaceCount returns the total number of workspaces which are using a shared PVC
@@ -252,7 +253,7 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 		}
 		storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
 		// Note, if the storageClass attribute isn't set (ie. storageClass == ""), then the storage class being used is "common"
-		if storageClass == constants.AsyncStorageClassType || storageClass == constants.CommonStorageClassType || storageClass == "" {
+		if storageClass == constants.AsyncStorageClassType || storageClass == constants.CommonStorageClassType || storageClass == constants.PerUserStorageClassType || storageClass == "" {
 			total++
 		}
 	}
@@ -261,7 +262,8 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 
 func checkPVCTerminating(name, namespace string, api sync.ClusterAPI) (bool, error) {
 	if name == "" {
-		name = config.Workspace.PVCName
+		// Should not happen
+		return false, fmt.Errorf("attempted to read deletion status of PVC with empty name")
 	}
 	pvc := &corev1.PersistentVolumeClaim{}
 	namespacedName := types.NamespacedName{Name: name, Namespace: namespace}

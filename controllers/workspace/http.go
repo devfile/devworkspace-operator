@@ -34,11 +34,13 @@ func setupHttpClients() {
 		InsecureSkipVerify: true,
 	}
 
-	if config.Routing != nil && config.Routing.ProxyConfig != nil {
+	globalConfig := config.GetGlobalConfig()
+
+	if globalConfig.Routing != nil && globalConfig.Routing.ProxyConfig != nil {
 		proxyConf := httpproxy.Config{
-			HTTPProxy:  config.Routing.ProxyConfig.HttpProxy,
-			HTTPSProxy: config.Routing.ProxyConfig.HttpsProxy,
-			NoProxy:    config.Routing.ProxyConfig.NoProxy,
+			HTTPProxy:  globalConfig.Routing.ProxyConfig.HttpProxy,
+			HTTPSProxy: globalConfig.Routing.ProxyConfig.HttpsProxy,
+			NoProxy:    globalConfig.Routing.ProxyConfig.NoProxy,
 		}
 		proxyFunc := func(req *http.Request) (*url.URL, error) {
 			return proxyConf.ProxyFunc()(req.URL)

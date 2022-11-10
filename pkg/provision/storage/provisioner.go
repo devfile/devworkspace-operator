@@ -17,6 +17,7 @@ package storage
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -29,18 +30,18 @@ type Provisioner interface {
 	// out-of-pod required objects to the cluster.
 	// Returns NotReadyError to signify that storage is not ready, ProvisioningError when a fatal issue is encountered,
 	// and other error if there is an unexpected problem.
-	ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error
+	ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error
 	// NeedsStorage returns whether the current workspace needs a PVC to be provisioned, given this storage strategy.
 	NeedsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool
 	// CleanupWorkspaceStorage removes any objects provisioned by in the ProvisionStorage step that aren't automatically removed when a
 	// DevWorkspace is deleted (e.g. delete subfolders in a common PVC assigned to the workspace)
 	// Returns nil on success (DevWorkspace can be deleted), NotReadyError if additional reconciles are necessary, ProvisioningError when
 	// a fatal issue is encountered, and any other error if an unexpected problem arises.
-	CleanupWorkspaceStorage(workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error
+	CleanupWorkspaceStorage(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error
 }
 
 // GetProvisioner returns the storage provisioner that should be used for the current workspace
-func GetProvisioner(workspace *dw.DevWorkspace) (Provisioner, error) {
+func GetProvisioner(workspace *common.DevWorkspaceWithConfig) (Provisioner, error) {
 	storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
 	if storageClass == "" {
 		return &CommonStorageProvisioner{}, nil
@@ -54,6 +55,8 @@ func GetProvisioner(workspace *dw.DevWorkspace) (Provisioner, error) {
 		return &AsyncStorageProvisioner{}, nil
 	case constants.EphemeralStorageClassType:
 		return &EphemeralStorageProvisioner{}, nil
+	case constants.PerUserStorageClassType:
+		return &CommonStorageProvisioner{}, nil
 	default:
 		return nil, UnsupportedStorageStrategy
 	}

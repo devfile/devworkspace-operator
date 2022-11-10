@@ -1,0 +1,23 @@
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspaceTemplate
+metadata:
+  name: web-terminal-tooling
+  labels:
+    console.openshift.io/terminal: 'true'
+  annotations:
+    controller.devfile.io/allow-import-from: '*'
+spec:
+  components:
+    - name: web-terminal-tooling
+      container:
+        image: quay.io/wto/web-terminal-tooling:next
+        args:
+          - tail
+          - '-f'
+          - /dev/null
+        cpuLimit: 400m
+        cpuRequest: 100m
+        memoryLimit: 256Mi
+        memoryRequest: 128Mi
+        mountSources: false
+        sourceMapping: /projects

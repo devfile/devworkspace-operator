@@ -52,9 +52,9 @@ type ResolverTools struct {
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
 // are inlined as components.
-func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools) (*dw.DevWorkspaceTemplateSpec, *variables.VariableWarning, error) {
+func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, contributions []dw.ComponentContribution, tooling ResolverTools) (*dw.DevWorkspaceTemplateSpec, *variables.VariableWarning, error) {
 	resolutionCtx := &resolutionContextTree{}
-	resolvedDW, err := recursiveResolve(workspace, tooling, resolutionCtx)
+	resolvedDW, err := recursiveResolve(workspace, contributions, tooling, resolutionCtx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -64,52 +64,84 @@ func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, tooling Resolve
 		return resolvedDW, &warnings, nil
 	}
 
+	if needsMerge, err := needsContainerContributionMerge(resolvedDW); needsMerge {
+		if err := mergeContainerContributions(resolvedDW); err != nil {
+			return nil, nil, err
+		}
+	} else if err != nil {
+		return nil, nil, err
+	}
+
 	return resolvedDW, nil, nil
 }
 
-func recursiveResolve(workspace *dw.DevWorkspaceTemplateSpec, tooling ResolverTools, resolveCtx *resolutionContextTree) (*dw.DevWorkspaceTemplateSpec, error) {
-	if DevWorkspaceIsFlattened(workspace) {
+func recursiveResolve(workspace *dw.DevWorkspaceTemplateSpec, contributions []dw.ComponentContribution, tooling ResolverTools, resolveCtx *resolutionContextTree) (*dw.DevWorkspaceTemplateSpec, error) {
+	if DevWorkspaceIsFlattened(workspace, contributions) {
 		return workspace.DeepCopy(), nil
 	}
 
-	resolvedParent := &dw.DevWorkspaceTemplateSpecContent{}
-	if workspace.Parent != nil {
-		resolvedParentSpec, err := resolveParentComponent(workspace.Parent, tooling)
+	var pluginSpecContents []*dw.DevWorkspaceTemplateSpecContent
+	for _, contribution := range contributions {
+		pluginComponent, err := resolvePluginComponent(contribution.Name, &contribution.PluginComponent, tooling)
 		if err != nil {
 			return nil, err
 		}
-		if !DevWorkspaceIsFlattened(resolvedParentSpec) {
-			// TODO: implemenent this
-			return nil, fmt.Errorf("parents containing plugins or parents are not supported")
+		newCtx := resolveCtx.addPlugin(contribution.Name, &contribution.PluginComponent)
+		if err := newCtx.hasCycle(); err != nil {
+			return nil, err
 		}
-		annotate.AddSourceAttributesForTemplate("parent", resolvedParentSpec)
-		resolvedParent = &resolvedParentSpec.DevWorkspaceTemplateSpecContent
+
+		resolvedPlugin, err := recursiveResolve(pluginComponent, nil, tooling, newCtx)
+		if err != nil {
+			return nil, err
+		}
+
+		annotate.AddSourceAttributesForTemplate(contribution.Name, resolvedPlugin)
+		pluginSpecContents = append(pluginSpecContents, &resolvedPlugin.DevWorkspaceTemplateSpecContent)
 	}
-	resolvedContent := workspace.DevWorkspaceTemplateSpecContent.DeepCopy()
-	resolvedContent.Components = nil
 
-	var pluginSpecContents []*dw.DevWorkspaceTemplateSpecContent
-	for _, component := range workspace.Components {
-		if component.Plugin == nil {
-			// No action necessary
-			resolvedContent.Components = append(resolvedContent.Components, component)
-		} else {
-			pluginComponent, err := resolvePluginComponent(component.Name, component.Plugin, tooling)
+	resolvedParent := &dw.DevWorkspaceTemplateSpecContent{}
+	resolvedContent := &dw.DevWorkspaceTemplateSpecContent{}
+	if workspace != nil {
+		resolvedContent = workspace.DevWorkspaceTemplateSpecContent.DeepCopy()
+		resolvedContent.Components = nil
+	}
+	if workspace != nil {
+		if workspace.Parent != nil {
+			resolvedParentSpec, err := resolveParentComponent(workspace.Parent, tooling)
 			if err != nil {
 				return nil, err
 			}
-			newCtx := resolveCtx.addPlugin(component.Name, component.Plugin)
-			if err := newCtx.hasCycle(); err != nil {
-				return nil, err
+			if !DevWorkspaceIsFlattened(resolvedParentSpec, nil) {
+				// TODO: implemenent this
+				return nil, fmt.Errorf("parents containing plugins or parents are not supported")
 			}
+			annotate.AddSourceAttributesForTemplate("parent", resolvedParentSpec)
+			resolvedParent = &resolvedParentSpec.DevWorkspaceTemplateSpecContent
+		}
 
-			resolvedPlugin, err := recursiveResolve(pluginComponent, tooling, newCtx)
-			if err != nil {
-				return nil, err
+		for _, component := range workspace.Components {
+			if component.Plugin == nil {
+				// No action necessary
+				resolvedContent.Components = append(resolvedContent.Components, component)
+			} else {
+				pluginComponent, err := resolvePluginComponent(component.Name, component.Plugin, tooling)
+				if err != nil {
+					return nil, err
+				}
+				newCtx := resolveCtx.addPlugin(component.Name, component.Plugin)
+				if err := newCtx.hasCycle(); err != nil {
+					return nil, err
+				}
+
+				resolvedPlugin, err := recursiveResolve(pluginComponent, nil, tooling, newCtx)
+				if err != nil {
+					return nil, err
+				}
+
+				annotate.AddSourceAttributesForTemplate(component.Name, resolvedPlugin)
+				pluginSpecContents = append(pluginSpecContents, &resolvedPlugin.DevWorkspaceTemplateSpecContent)
 			}
-
-			annotate.AddSourceAttributesForTemplate(component.Name, resolvedPlugin)
-			pluginSpecContents = append(pluginSpecContents, &resolvedPlugin.DevWorkspaceTemplateSpecContent)
 		}
 	}
 

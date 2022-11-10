@@ -3,7 +3,7 @@ module github.com/devfile/devworkspace-operator
 go 1.16
 
 require (
-	github.com/devfile/api/v2 v2.0.0-20220414122024-32cae1f8e42c
+	github.com/devfile/api/v2 v2.0.0-20220928161623-fe7c10eaa530
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/go-logr/logr v0.4.0
 	github.com/google/go-cmp v0.5.5
@@ -21,6 +21,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.21.3
 	k8s.io/apimachinery v0.21.3
 	k8s.io/client-go v0.21.3
+	k8s.io/utils v0.0.0-20210722164352-7f3ee0f31471
 	sigs.k8s.io/controller-runtime v0.9.5
 	sigs.k8s.io/yaml v1.2.0
 )

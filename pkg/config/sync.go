@@ -317,6 +317,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			templateSpecContentCopy := from.Workspace.DefaultTemplate.DeepCopy()
 			to.Workspace.DefaultTemplate = templateSpecContentCopy
 		}
+		if from.Workspace.DefaultSchedulerName != "" {
+			to.Workspace.DefaultSchedulerName = from.Workspace.DefaultSchedulerName
+		}
 	}
 }
 

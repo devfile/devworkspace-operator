@@ -244,6 +244,11 @@ spec:
                             type: string
                         type: object
                     type: object
+                  defaultSchedulerName:
+                    description: DefaultSchedulerName is the name of the pod scheduler
+                      for DevWorkspace pods. If not specified, the pod scheduler is
+                      set to the default scheduler.
+                    type: string
                   defaultStorageSize:
                     description: DefaultStorageSize defines an optional struct with
                       fields to specify the sizes of Persistent Volume Claims for

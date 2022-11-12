@@ -234,6 +234,7 @@ func getSpecDeployment(
 					Volumes:                       podAdditions.Volumes,
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
+					SchedulerName:                 workspace.Config.Workspace.DefaultSchedulerName,
 					SecurityContext:               workspace.Config.Workspace.PodSecurityContext,
 					ServiceAccountName:            saName,
 					AutomountServiceAccountToken:  nil,

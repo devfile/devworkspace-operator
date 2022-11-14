@@ -153,9 +153,9 @@ type WorkspaceConfig struct {
 	// if the workspace's Template Spec Components are not defined. The DefaultTemplate will overwrite the existing
 	// Template Spec, with the exception of Projects (if any are defined).
 	DefaultTemplate *dw.DevWorkspaceTemplateSpecContent `json:"defaultTemplate,omitempty"`
-	// DefaultSchedulerName is the name of the pod scheduler for DevWorkspace pods.
-	// If not specified, the pod scheduler is set to the default scheduler.
-	DefaultSchedulerName string `json:"defaultSchedulerName,omitempty"`
+	// SchedulerName is the name of the pod scheduler for DevWorkspace pods.
+	// If not specified, the pod scheduler is set to the default scheduler on the cluster.
+	SchedulerName string `json:"schedulerName,omitempty"`
 }
 
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API

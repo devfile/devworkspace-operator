@@ -580,7 +580,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(devworkspace_fail_total) / sum(devworkspace_started_total) * 100.0",
+          "expr": "sum(increase(devworkspace_fail_total[$__range])) / sum(increase(devworkspace_started_total[$__range])) * 100.0",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -637,7 +637,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "devworkspace_fail_total{}",
+          "expr": "sum(increase(devworkspace_fail_total[$__range])) by (reason)",
           "format": "time_series",
           "instant": false,
           "interval": "",

@@ -244,11 +244,6 @@ spec:
                             type: string
                         type: object
                     type: object
-                  defaultSchedulerName:
-                    description: DefaultSchedulerName is the name of the pod scheduler
-                      for DevWorkspace pods. If not specified, the pod scheduler is
-                      set to the default scheduler.
-                    type: string
                   defaultStorageSize:
                     description: DefaultStorageSize defines an optional struct with
                       fields to specify the sizes of Persistent Volume Claims for
@@ -2453,6 +2448,11 @@ spec:
                       cluster.
                     maxLength: 63
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                    type: string
+                  schedulerName:
+                    description: SchedulerName is the name of the pod scheduler for
+                      DevWorkspace pods. If not specified, the pod scheduler is set
+                      to the default scheduler on the cluster.
                     type: string
                   serviceAccount:
                     description: ServiceAccount defines configuration options for

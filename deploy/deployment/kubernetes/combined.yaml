@@ -2450,6 +2450,11 @@ spec:
                     maxLength: 63
                     pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                     type: string
+                  schedulerName:
+                    description: SchedulerName is the name of the pod scheduler for
+                      DevWorkspace pods. If not specified, the pod scheduler is set
+                      to the default scheduler on the cluster.
+                    type: string
                   serviceAccount:
                     description: ServiceAccount defines configuration options for
                       the ServiceAccount used for DevWorkspaces.

@@ -317,8 +317,8 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			templateSpecContentCopy := from.Workspace.DefaultTemplate.DeepCopy()
 			to.Workspace.DefaultTemplate = templateSpecContentCopy
 		}
-		if from.Workspace.DefaultSchedulerName != "" {
-			to.Workspace.DefaultSchedulerName = from.Workspace.DefaultSchedulerName
+		if from.Workspace.SchedulerName != "" {
+			to.Workspace.SchedulerName = from.Workspace.SchedulerName
 		}
 	}
 }
@@ -434,6 +434,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.DefaultTemplate != nil {
 			config = append(config, "workspace.defaultTemplate is set")
+		}
+		if workspace.SchedulerName != "" {
+			config = append(config, fmt.Sprintf("workspace.schedulerName=%s", workspace.SchedulerName))
 		}
 	}
 	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {

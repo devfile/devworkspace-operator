@@ -241,7 +241,7 @@ configuration will use the global values.
 ## Fine-grained configuration of workspace pods and containers
 The attributes `pod-overrides` and `container-overrides` can be applied to DevWorkspaces in order to configure fields on the Kubernetes objects that are not normally exposed through the Kubernetes API.
 
-The format for overrides is the same as the object being overridden -- a pod template in the case of pod-overrides and a container in the case of container-overrides. The value of the attribute is applied via Kubernetes _strategic merge_ to patch the default configuration according to predefined merge rules.
+The format for overrides is the same as the object being overridden -- a pod template in the case of pod-overrides and a container in the case of container-overrides. The value of the attribute is applied via Kubernetes _strategic merge_ to patch the default configuration according to predefined merge rules. By default, strategic merge patch will update objects in place, leaving fields not specified in the patch unchanged, though this can be configured using patch directives. See https://github.com/kubernetes/community/blob/3892a416b2b59df3a7c9e5910ad12655f738aad1/contributors/devel/sig-api-machinery/strategic-merge-patch.md[strategic merge patch documentation] for details.
 
 The value of attributes can be specified as yaml or json. In other words, both
 [source,yaml]

@@ -58,14 +58,16 @@ type testCase struct {
 }
 
 type testInput struct {
-	DevWorkspaceID string                       `json:"devworkspaceId,omitempty"`
-	PodAdditions   v1alpha1.PodAdditions        `json:"podAdditions,omitempty"`
-	Workspace      *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
+	DevWorkspaceID   string                         `json:"devworkspaceId,omitempty"`
+	PodAdditions     v1alpha1.PodAdditions          `json:"podAdditions,omitempty"`
+	Workspace        *dw.DevWorkspaceTemplateSpec   `json:"workspace,omitempty"`
+	ControllerConfig v1alpha1.OperatorConfiguration `json:"config,omitempty"`
 }
 
 type testOutput struct {
-	PodAdditions v1alpha1.PodAdditions `json:"podAdditions,omitempty"`
-	ErrRegexp    *string               `json:"errRegexp,omitempty"`
+	PodAdditions    v1alpha1.PodAdditions `json:"podAdditions,omitempty"`
+	ErrRegexp       *string               `json:"errRegexp,omitempty"`
+	ExpectedPVCSize resource.Quantity     `json:"expectedPVCSize,omitempty"`
 }
 
 var testControllerCfg = config.GetConfigForTesting(&v1alpha1.OperatorConfiguration{
@@ -128,10 +130,7 @@ func TestUseCommonStorageProvisionerForPerUserStorageClass(t *testing.T) {
 func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
-	if err != nil {
-		t.Fatalf("Failure during setup: %s", err)
-	}
+	commonPVC := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
 	commonPVC.Status.Phase = corev1.ClaimBound
 	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
@@ -164,10 +163,7 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 
 func TestTerminatingPVC(t *testing.T) {
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
-	if err != nil {
-		t.Fatalf("Failure during setup: %s", err)
-	}
+	commonPVC := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
 	testTime := metav1.Now()
 	commonPVC.SetDeletionTimestamp(&testTime)
 
@@ -181,7 +177,7 @@ func TestTerminatingPVC(t *testing.T) {
 	workspace.Spec.Template = *testCase.Input.Workspace
 	workspace.Status.DevWorkspaceId = testCase.Input.DevWorkspaceID
 	workspace.Namespace = "test-namespace"
-	err = commonStorage.ProvisionStorage(&testCase.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
+	err := commonStorage.ProvisionStorage(&testCase.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
 	if assert.Error(t, err, "Should return error when PVC is terminating") {
 		_, ok := err.(*NotReadyError)
 		assert.True(t, ok, "Expect NotReadyError when PVC is terminating")

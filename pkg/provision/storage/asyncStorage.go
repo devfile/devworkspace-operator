@@ -110,7 +110,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 
 	if !usingAlternatePVC {
 		// Create common PVC if needed
-		clusterPVC, err := syncCommonPVC(workspace.Namespace, workspace.Config, clusterAPI)
+		clusterPVC, err := syncCommonPVC(workspace.Namespace, workspace, clusterAPI)
 		if err != nil {
 			return err
 		}

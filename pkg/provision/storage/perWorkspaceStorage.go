@@ -27,8 +27,11 @@ import (
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // The PerWorkspaceStorageProvisioner provisions one PVC per workspace and configures all volumes in the workspace
@@ -171,9 +174,49 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 	}
 
 	storageClass := workspace.Config.Workspace.StorageClassName
-	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, storageClass, pvcSize)
+	pvc := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, storageClass, pvcSize)
+
+	namespaceName := types.NamespacedName{
+		Name:      common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId),
+		Namespace: workspace.Namespace,
+	}
+
+	existingPVC := &corev1.PersistentVolumeClaim{}
+	err = clusterAPI.Client.Get(clusterAPI.Ctx, namespaceName, existingPVC)
+
 	if err != nil {
-		return nil, err
+		if !k8sErrors.IsNotFound(err) {
+			return nil, err
+		}
+	} else if workspace.Config.Workspace.DefaultStorageSize.PerWorkspace != nil && PVCExpansionRequired(*existingPVC, workspace.Config.Workspace.DefaultStorageSize.PerWorkspace) && *workspace.Config.EnableExperimentalFeatures {
+		canExpand, err := StorageClassAllowsVolumeExpansion(workspace.Namespace, *existingPVC.Spec.StorageClassName, clusterAPI)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if canExpand {
+			// Resize the PVC
+			existingPVC.Spec.Resources.Requests[corev1.ResourceStorage] = *workspace.Config.Workspace.DefaultStorageSize.PerWorkspace
+			pvc = existingPVC
+
+			err = clusterAPI.Client.Update(clusterAPI.Ctx, pvc)
+			if err != nil {
+				return nil, err
+			}
+
+			msg, err := CheckPVCEvents(*pvc, clusterAPI)
+
+			if err != nil {
+				return nil, err
+			}
+
+			if msg != "" {
+				// TODO: Not sure if this is the best way to log in this case
+				// TODO: The error message could be better? Currently, it'll be something like: "PVC expansion error: Unable to expand PVC. More information: ..."
+				log.Log.Info(fmt.Sprintf("PVC expansion error: %s", msg))
+			}
+		}
 	}
 
 	if err := controllerutil.SetControllerReference(workspace.DevWorkspace, pvc, clusterAPI.Scheme); err != nil {

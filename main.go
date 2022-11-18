@@ -29,6 +29,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"github.com/devfile/devworkspace-operator/version"
+	storagev1 "k8s.io/api/storage/v1"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -68,6 +69,7 @@ func init() {
 	}
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(storagev1.AddToScheme(scheme))
 
 	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwv1.AddToScheme(scheme))

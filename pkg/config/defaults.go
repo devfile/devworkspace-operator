@@ -27,6 +27,7 @@ import (
 
 // defaultConfig represents the default configuration for the DevWorkspace Operator.
 var defaultConfig = &v1alpha1.OperatorConfiguration{
+	EnableExperimentalFeatures: pointer.BoolPtr(false),
 	Routing: &v1alpha1.RoutingConfig{
 		DefaultRoutingClass: "basic",
 		ClusterHostSuffix:   "", // is auto discovered when running on OpenShift. Must be defined by CR on Kubernetes.

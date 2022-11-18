@@ -23,20 +23,24 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
+	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
+func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity) *corev1.PersistentVolumeClaim {
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -54,7 +58,7 @@ func getPVCSpec(name, namespace string, storageClass *string, size resource.Quan
 			},
 			StorageClassName: storageClass,
 		},
-	}, nil
+	}
 }
 
 // isEphemeral evaluates is volume component is configured as ephemeral
@@ -85,12 +89,57 @@ func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return containerlib.AnyMountSources(workspace.Components)
 }
 
-func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
+func CheckPVCEvents(pvc corev1.PersistentVolumeClaim, clusterAPI sync.ClusterAPI) (msg string, err error) {
+	evs := &corev1.EventList{}
+	selector, err := fields.ParseSelector(fmt.Sprintf("involvedObject.name=%s", pvc.Name))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse field selector: %s", err)
+	}
+	if err := clusterAPI.Client.List(clusterAPI.Ctx, evs, k8sclient.InNamespace(pvc.Namespace), k8sclient.MatchingFieldsSelector{Selector: selector}); err != nil {
+		return "", fmt.Errorf("failed to list events in namespace %s: %w", pvc.Namespace, err)
+	}
+	for _, ev := range evs.Items {
+		if ev.InvolvedObject.Kind != "PersistentVolumeClaim" {
+			continue
+		}
+
+		if ev.Reason == "ExternalExpanding" && ev.Type == "Warning" {
+			return fmt.Sprintf("Unable to expand PVC. More information: %s", ev.Message), nil
+		}
+	}
+	return "", nil
+}
+
+func PVCExpansionRequired(existingPVC corev1.PersistentVolumeClaim, expectedPVCSize *resource.Quantity) bool {
+	// TODO: Check Resource Quota's and LimitRange's on the cluster to prevent expansion attempts that will fail.
+	return existingPVC.Status.Phase == corev1.ClaimBound && expectedPVCSize.Cmp(existingPVC.Spec.Resources.Requests[corev1.ResourceStorage]) == 1
+}
+
+// Returns whether the storage-class supports resizing. Returns an error if an error arises when fetching the storage class.
+func StorageClassAllowsVolumeExpansion(namespace string, storageClassName string, clusterAPI sync.ClusterAPI) (bool, error) {
+	namespaceName := types.NamespacedName{
+		Name:      storageClassName,
+		Namespace: namespace,
+	}
+	storageClass := &storagev1.StorageClass{}
+	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespaceName, storageClass)
+
+	if err != nil {
+		return false, err
+	}
+
+	if storageClass.AllowVolumeExpansion == nil {
+		return false, nil
+	}
+	return *storageClass.AllowVolumeExpansion, nil
+}
+
+func syncCommonPVC(namespace string, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
 	}
-	pvcSize := *config.Workspace.DefaultStorageSize.Common
+	pvcSize := *workspace.Config.Workspace.DefaultStorageSize.Common
 	if namespacedConfig != nil && namespacedConfig.CommonPVCSize != "" {
 		pvcSize, err = resource.ParseQuantity(namespacedConfig.CommonPVCSize)
 		if err != nil {
@@ -98,10 +147,50 @@ func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clu
 		}
 	}
 
-	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, config.Workspace.StorageClassName, pvcSize)
-	if err != nil {
-		return nil, err
+	pvc := getPVCSpec(workspace.Config.Workspace.PVCName, namespace, workspace.Config.Workspace.StorageClassName, pvcSize)
+
+	namespaceName := types.NamespacedName{
+		Name:      workspace.Config.Workspace.PVCName,
+		Namespace: namespace,
 	}
+
+	existingPVC := &corev1.PersistentVolumeClaim{}
+	err = clusterAPI.Client.Get(clusterAPI.Ctx, namespaceName, existingPVC)
+
+	if err != nil {
+		if !k8sErrors.IsNotFound(err) {
+			return nil, err
+		}
+	} else if workspace.Config.Workspace.DefaultStorageSize.Common != nil && PVCExpansionRequired(*existingPVC, workspace.Config.Workspace.DefaultStorageSize.Common) && *workspace.Config.EnableExperimentalFeatures {
+		canExpand, err := StorageClassAllowsVolumeExpansion(namespace, *existingPVC.Spec.StorageClassName, clusterAPI)
+
+		if err != nil {
+			return nil, err
+		}
+
+		if canExpand {
+			// Resize the PVC
+			existingPVC.Spec.Resources.Requests[corev1.ResourceStorage] = *workspace.Config.Workspace.DefaultStorageSize.Common
+			pvc = existingPVC
+
+			err = clusterAPI.Client.Update(clusterAPI.Ctx, pvc)
+			if err != nil {
+				return nil, err
+			}
+
+			msg, err := CheckPVCEvents(*pvc, clusterAPI)
+
+			if err != nil {
+				return nil, err
+			}
+
+			if msg != "" {
+				// TODO: Not sure if this is the best way to log in this case
+				log.Log.Info(fmt.Sprintf("PVC expansion error: %s", msg))
+			}
+		}
+	}
+
 	currObject, err := sync.SyncObjectWithCluster(pvc, clusterAPI)
 	switch t := err.(type) {
 	case nil:

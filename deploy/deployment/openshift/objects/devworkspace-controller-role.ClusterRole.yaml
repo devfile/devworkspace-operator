@@ -232,6 +232,14 @@ rules:
   verbs:
   - create
 - apiGroups:
+  - storage.k8s.io
+  resources:
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - workspace.devfile.io
   resources:
   - '*'

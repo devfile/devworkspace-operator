@@ -1,0 +1,21 @@
+name: "Storage expansion (experimental feature) enabled"
+
+input:
+  devworkspaceId: "test-workspaceid"
+
+  config:
+    enableExperimentalFeatures: true
+    workspace:
+      defaultStorageSize: 
+        common: 15Gi
+        perWorkspace: 15Gi
+      storageClassName: "test-storage-class"
+      pvcName: "claim-devworkspace"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          sourceMapping: "/plugins-mountpath"
+          mountSources: true 

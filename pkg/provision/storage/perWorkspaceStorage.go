@@ -173,8 +173,7 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 		}
 	}
 
-	storageClass := workspace.Config.Workspace.StorageClassName
-	pvc := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, storageClass, pvcSize)
+	pvc := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, workspace.Config.Workspace.StorageClassName, pvcSize)
 
 	namespaceName := types.NamespacedName{
 		Name:      common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId),

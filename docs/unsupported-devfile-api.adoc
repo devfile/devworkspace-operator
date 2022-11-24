@@ -1,0 +1,18 @@
+# Unsupported Devfile API
+
+The following features of the Devfile API that are not yet supported by the DevWorkspace-Operator:
+
+[options="header"]
+|================================================================================================================================================================================================
+| DevFile feature                               | Related issue                                                                                                                                  
+| `components.container.annotation.service`     | https://github.com/devfile/devworkspace-operator/issues/799[Support setting annotations on services/endpoints from DevWorkspace]               
+| `components.container.endpoints.annotations`  | https://github.com/devfile/devworkspace-operator/issues/799[Support setting annotations on services/endpoints from DevWorkspace]               
+| `components.container.dedicatedPod`           |                                                                                                                                                
+| `components.volume.size`                      | https://github.com/devfile/devworkspace-operator/issues/947[Compute required size for per-workspace PVC when all volumes have sizes specified.]
+| `components.image`                            | https://github.com/eclipse/che/issues/21186[Support Devfile v2 outer loop components of type image and kubernetes]                             
+| `components.custom`                           |                                                                                                                                                
+| `events.postStop`                             |                                                                                                                                                
+| `events.preStop`                              |                                                                                                                                                                                             
+|================================================================================================================================================================================================
+
+If there is no corresponding issue for a Devfile feature you'd like to use, please feel free to submit a feature request.

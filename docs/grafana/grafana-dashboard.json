@@ -129,7 +129,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "(sum by (source) (increase(devworkspace_startup_time_sum[$__interval]))) / (sum by (source) (increase(devworkspace_startup_time_count[$__interval])))",
+          "expr": "(sum by (source) (increase(devworkspace_startup_time_sum[$__range]))) / (sum by (source) (increase(devworkspace_startup_time_count[$__range])))",
           "interval": "",
           "legendFormat": "Average startup time (source={{source}})",
           "refId": "A"
@@ -645,7 +645,7 @@
           "refId": "A"
         }
       ],
-      "title": "DevWorkspace Startup Failure Reasons",
+      "title": "DevWorkspace Failure Reasons",
       "type": "piechart"
     },
     {
@@ -1316,7 +1316,7 @@
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {

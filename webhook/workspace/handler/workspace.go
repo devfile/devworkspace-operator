@@ -54,6 +54,10 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnCreate(ctx context.Context, re
 		return admission.Denied(err.Error())
 	}
 
+	if warnings := checkUnsupportedFeatures(wksp.Spec.Template); unsupportedWarningsPresent(warnings) {
+		return h.returnPatched(req, wksp).WithWarnings(formatUnsupportedFeaturesWarning(warnings))
+	}
+
 	return h.returnPatched(req, wksp)
 }
 
@@ -107,6 +111,12 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 		return admission.Denied("DevWorkspace ID cannot be changed once it is set")
 	}
 
+	warnings := ""
+	addedUnsupportedFeatures := checkForAddedUnsupportedFeatures(oldWksp, newWksp)
+	if unsupportedWarningsPresent(addedUnsupportedFeatures) {
+		warnings = formatUnsupportedFeaturesWarning(addedUnsupportedFeatures)
+	}
+
 	// TODO: re-enable webhooks for storageClass once handling is improved.
 	// oldStorageType := oldWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
 	// newStorageType := newWksp.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
@@ -155,13 +165,20 @@ func (h *WebhookHandler) MutateWorkspaceV1alpha2OnUpdate(ctx context.Context, re
 			newWksp.Labels = map[string]string{}
 		}
 		newWksp.Labels[constants.DevWorkspaceCreatorLabel] = oldCreator
-		return h.returnPatched(req, newWksp)
+		response := h.returnPatched(req, newWksp)
+		if warnings != "" {
+			return response.WithWarnings(warnings)
+		}
+		return response
 	}
 
 	if newCreator != oldCreator {
 		return admission.Denied(fmt.Sprintf("label '%s' is assigned once devworkspace is created and is immutable", constants.DevWorkspaceCreatorLabel))
 	}
 
+	if warnings != "" {
+		return admission.Allowed("").WithWarnings(warnings)
+	}
 	return admission.Allowed("new workspace has the same devworkspace as old one")
 }
 

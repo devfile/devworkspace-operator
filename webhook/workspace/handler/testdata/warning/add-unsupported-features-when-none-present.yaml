@@ -1,0 +1,26 @@
+name: "Add unsupported devfile features when initial workspace did not contain any unsupported features"
+
+input:
+  oldWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+      - name: projects
+        volume:
+          ephemeral: true
+
+  newWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+          dedicatedPod: true
+      - name: projects
+        volume:
+          ephemeral: true
+          size: "10Gi"
+
+output:
+  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].container.dedicatedPod, used by components: testing-container-1; components[].volume.size, used by components: projects"
+  newWarningsPresent: true

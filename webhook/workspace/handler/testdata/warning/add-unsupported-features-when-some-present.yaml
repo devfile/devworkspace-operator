@@ -1,0 +1,37 @@
+name: "Add unsupported devfile features to workspace that already contains unsupported features"
+
+input:
+  oldWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+          dedicatedPod: true
+      - name: projects
+        volume:
+          ephemeral: true
+
+  newWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+          dedicatedPod: true
+      - name: projects
+        volume:
+          ephemeral: true
+          size: "10Gi"
+      - name: image-component
+        image:
+          imageName: python-image:latest
+          autoBuild: true
+          dockerfile:
+            uri: docker/Dockerfile
+            args:
+              - 'MY_ENV=/home/path'
+            buildContext: .
+            rootRequired: false
+
+output:
+  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].image, used by components: image-component; components[].volume.size, used by components: projects"
+  newWarningsPresent: true

@@ -1,0 +1,57 @@
+name: "Add every unsupported devfile feature to a workspace"
+
+input:
+  oldWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+      - name: projects
+        volume:
+          ephemeral: true
+
+  newWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+          dedicatedPod: true
+          annotation:
+            service:
+              key: value
+          endpoints:
+            - name: web
+              targetPort: 8080
+              exposure: public
+              annotation:
+                key: value
+      - name: projects
+        volume:
+          ephemeral: true
+          size: 10Gi
+      - name: image-component
+        image:
+          imageName: python-image:latest
+          autoBuild: true
+          dockerfile:
+            uri: docker/Dockerfile
+            args:
+              - 'MY_ENV=/home/path'
+            buildContext: .
+            rootRequired: false
+      - name: custom-component
+        custom:
+          componentClass: "some-component-class"
+    events:
+      preStop: 
+        - eventA
+        - eventB
+        - eventC
+      postStop:
+        - eventD
+        - eventE
+        - eventF
+
+output:
+  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].container.annotation.service, used by components: testing-container-1; components[].container.endpoints[].annotations, used by components: testing-container-1; components[].container.dedicatedPod, used by components: testing-container-1; components[].image, used by components: image-component; components[].custom, used by components: custom-component; components[].volume.size, used by components: projects; events.postStop: eventD, eventE, eventF; events.preStop: eventA, eventB, eventC"
+  newWarningsPresent: true

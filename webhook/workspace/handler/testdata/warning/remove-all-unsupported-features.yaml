@@ -1,0 +1,30 @@
+name: "Remove all unsupported devfile features from workspace"
+
+input:
+  oldWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+          dedicatedPod: true
+          endpoints:
+            - name: web
+              targetPort: 8080
+              exposure: public
+              annotation:
+                key: value
+      - name: projects
+        volume:
+          ephemeral: true
+
+  newWorkspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image
+      - name: projects
+        volume:
+          ephemeral: true
+
+output:
+  newWarningsPresent: false

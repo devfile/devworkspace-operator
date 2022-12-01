@@ -128,10 +128,10 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, ignoredEvents []string,
 		}
 
 		if maxCount, isUnrecoverableEvent := unrecoverablePodEventReasons[ev.Reason]; isUnrecoverableEvent {
-			if !checkIfUnrecoverableEventIgnored(ev.Reason, ignoredEvents) && ev.Count >= maxCount {
+			if !checkIfUnrecoverableEventIgnored(ev.Reason, ignoredEvents) && getEventCount(ev) >= maxCount {
 				var msg string
-				if ev.Count > 1 {
-					msg = fmt.Sprintf("Detected unrecoverable event %s %d times: %s.", ev.Reason, ev.Count, ev.Message)
+				if getEventCount(ev) > 1 {
+					msg = fmt.Sprintf("Detected unrecoverable event %s %d times: %s.", ev.Reason, getEventCount(ev), ev.Message)
 				} else {
 					msg = fmt.Sprintf("Detected unrecoverable event %s: %s.", ev.Reason, ev.Message)
 				}
@@ -180,4 +180,25 @@ func checkPodConditions(pod *corev1.Pod) (msg string) {
 		}
 	}
 	return ""
+}
+
+// Returns the number of times an event has occurred.
+// This function exists for the following reasons:
+//
+// - Kubernetes 1.25 deprecated event.Count and replaced it with
+// event.Series.Count. However, on certain clusters, event.Series.Count
+// is not set, and event.Count is still being set.
+// See https://kubernetes.io/docs/reference/using-api/deprecation-guide/#event-v125
+//
+// - On OpenShift 4.10, 4.11 and 4.12, event.Series.Count is not set
+// and event.Count is set to 0 (and never incremented when the event occurs repeatedly).
+// Thus, this function will default to return a count of 1 as a fallback.
+// See https://issues.redhat.com/browse/OCPBUGS-3796
+func getEventCount(event corev1.Event) int32 {
+	if event.Series != nil {
+		return event.Series.Count
+	} else if event.Count > 0 {
+		return event.Count
+	}
+	return 1
 }

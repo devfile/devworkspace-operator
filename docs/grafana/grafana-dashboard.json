@@ -258,7 +258,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum by (source) (increase(devworkspace_started_total[$__interval]))",
+          "expr": "sum by (source) (floor(increase(devworkspace_started_total[$__interval])))",
           "format": "time_series",
           "interval": "",
           "legendFormat": "Workspaces started (source={{source}})",
@@ -512,14 +512,14 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "sum(increase(devworkspace_fail_total[$__interval]))",
+          "expr": "sum(floor(increase(devworkspace_fail_total[$__interval])))",
           "interval": "",
           "legendFormat": "Failures",
           "refId": "A"
         },
         {
           "exemplar": true,
-          "expr": "sum(increase(devworkspace_started_success_total[$__interval]))",
+          "expr": "sum(floor(increase(devworkspace_started_success_total[$__interval])))",
           "hide": false,
           "interval": "",
           "legendFormat": "Successes",

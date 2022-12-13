@@ -94,7 +94,6 @@ func SyncDeploymentToCluster(
 		return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
 	}
 	clusterDeployment := clusterObj.(*appsv1.Deployment)
-
 	deploymentReady := status.CheckDeploymentStatus(clusterDeployment)
 	if deploymentReady {
 		return DeploymentProvisioningStatus{

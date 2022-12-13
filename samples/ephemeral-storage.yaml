@@ -15,7 +15,7 @@ spec:
     components:
       - name: theia
         plugin:
-          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/next/devfile.yaml
+          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/latest/devfile.yaml
           components:
             - name: theia-ide
               container:

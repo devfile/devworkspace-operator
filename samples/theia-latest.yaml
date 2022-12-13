@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
-  name: theia-next
+  name: theia-latest
 spec:
   started: true
   template:
@@ -10,19 +10,19 @@ spec:
         git:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
+    components:
+      - name: theia
+        plugin:
+          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/latest/devfile.yaml
+          components:
+            - name: theia-ide
+              container:
+                env:
+                  - name: THEIA_HOST
+                    value: 0.0.0.0
     commands:
       - id: say-hello
         exec:
           component: theia-ide
           commandLine: echo "Hello from $(pwd)"
           workingDir: ${PROJECTS_ROOT}/project/app
-
-  contributions:
-    - name: theia
-      uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/next/devfile.yaml
-      components:
-        - name: theia-ide
-          container:
-            env:
-              - name: THEIA_HOST
-                value: 0.0.0.0

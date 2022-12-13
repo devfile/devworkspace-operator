@@ -27,6 +27,7 @@ import (
 	"github.com/devfile/devworkspace-operator/controllers/workspace/internal/testutil"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
@@ -37,7 +38,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
@@ -51,16 +51,17 @@ const (
 )
 
 var (
-	cfg               *rest.Config
 	k8sClient         client.Client
 	testEnv           *envtest.Environment
 	ctx               context.Context
 	cancel            context.CancelFunc
-	testControllerCfg = &controllerv1alpha1.OperatorConfiguration{
+	testControllerCfg = config.GetConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+		Workspace: &controllerv1alpha1.WorkspaceConfig{},
 		Routing: &controllerv1alpha1.RoutingConfig{
 			ClusterHostSuffix: "test-environment-cluster-suffix",
 		},
-	}
+		EnableExperimentalFeatures: pointer.Bool(true),
+	})
 )
 
 func TestAPIs(t *testing.T) {
@@ -93,6 +94,7 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+	config.SetGlobalConfigForTesting(testControllerCfg)
 
 	err = controllerv1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
@@ -124,8 +126,6 @@ var _ = BeforeSuite(func() {
 		return []string{ev.InvolvedObject.Name}
 	})
 	Expect(err).NotTo(HaveOccurred())
-
-	config.SetGlobalConfigForTesting(testControllerCfg)
 
 	// Don't set up DevWorkspaceRouting Reconciler so that we can manage routings
 

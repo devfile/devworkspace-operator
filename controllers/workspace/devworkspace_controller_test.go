@@ -177,6 +177,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Creates roles and rolebindings", func() {
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			By("Checking that common role is created")
 			dwRole := &rbacv1.Role{}
 			Eventually(func() bool {
@@ -196,9 +197,9 @@ var _ = Describe("DevWorkspace Controller", func() {
 			}, timeout, interval).Should(BeTrue(), "Common RoleBinding should be created for DevWorkspace")
 			Expect(dwRoleBinding.RoleRef.Name).Should(Equal(dwRole.Name), "Rolebinding should refer to DevWorkspace role")
 			expectedSubject := rbacv1.Subject{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     "Group",
-				Name:     fmt.Sprintf("system:serviceaccounts:%s", testNamespace),
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      common.ServiceAccountName(&common.DevWorkspaceWithConfig{DevWorkspace: devworkspace, Config: testControllerCfg}),
+				Namespace: testNamespace,
 			}
 			Expect(dwRoleBinding.Subjects).Should(ContainElement(expectedSubject), "Rolebinding should bind to serviceaccounts in current namespace")
 		})
@@ -272,7 +273,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			sa := &corev1.ServiceAccount{}
 			Eventually(func() error {
-				saNN := namespacedName(common.ServiceAccountName(workspaceID), testNamespace)
+				saNN := namespacedName(common.ServiceAccountName(&common.DevWorkspaceWithConfig{DevWorkspace: devworkspace, Config: testControllerCfg}), testNamespace)
 				return k8sClient.Get(ctx, saNN, sa)
 			}, timeout, interval).Should(Succeed(), "Should create DevWorkspace ServiceAccount")
 

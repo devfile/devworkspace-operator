@@ -99,6 +99,7 @@ func GetConfigForTesting(customConfig *controller.OperatorConfiguration) *contro
 func SetGlobalConfigForTesting(testConfig *controller.OperatorConfiguration) {
 	configMutex.Lock()
 	defer configMutex.Unlock()
+	setDefaultPodSecurityContext()
 	internalConfig = defaultConfig.DeepCopy()
 	mergeConfig(testConfig, internalConfig)
 }

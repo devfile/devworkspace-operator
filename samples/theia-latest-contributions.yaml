@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
-  name: theia-latest
+  name: theia-latest-contributions
 spec:
   started: true
   template:

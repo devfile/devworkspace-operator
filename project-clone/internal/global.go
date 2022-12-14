@@ -26,17 +26,18 @@ import (
 	gittransport "github.com/go-git/go-git/v5/plumbing/transport"
 	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/kevinburke/ssh_config"
 )
 
 const (
 	credentialsMountPath = "/.git-credentials/credentials"
+	sshConfigMountPath   = "/etc/ssh/ssh_config"
 )
 
 var (
 	ProjectsRoot     string
 	CloneTmpDir      string
 	tokenAuthMethod  map[string]*githttp.BasicAuth
-	sshAuthMethod    *gitssh.PublicKeys
 	credentialsRegex = regexp.MustCompile(`https://(.+):(.+)@(.+)`)
 )
 
@@ -67,8 +68,22 @@ func GetAuthForHost(repoURLStr string) (gittransport.AuthMethod, error) {
 	}
 	switch endpoint.Protocol {
 	case "ssh":
-		// TODO
-		return nil, fmt.Errorf("SSH support not yet implemented")
+		identityFiles := ssh_config.GetAll(endpoint.Host, "IdentityFile")
+		if len(identityFiles) == 0 {
+			log.Printf("No SSH key found for host %s", endpoint.Host)
+		} else if len(identityFiles) > 1 {
+			// Probably should try all keys, one by one, in the future
+			log.Printf("Warning: multiple SSH keys found for host %s. Using first match.", endpoint.Host)
+		}
+		user := ssh_config.Get(endpoint.Host, "User")
+		if user == "" {
+			user = "git"
+		}
+		pubkeys, err := gitssh.NewPublicKeysFromFile(user, identityFiles[0], "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to set up SSH: %w", err)
+		}
+		return pubkeys, nil
 	case "http", "https":
 		authMethod, ok := tokenAuthMethod[endpoint.Host]
 		if !ok {

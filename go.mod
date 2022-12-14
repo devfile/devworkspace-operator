@@ -4,9 +4,9 @@ go 1.18
 
 require (
 	github.com/devfile/api/v2 v2.0.0-20220928161623-fe7c10eaa530
-	github.com/go-git/go-git/v5 v5.2.0
+	github.com/go-git/go-git/v5 v5.5.1
 	github.com/go-logr/logr v0.4.0
-	github.com/google/go-cmp v0.5.5
+	github.com/google/go-cmp v0.5.9
 	github.com/google/gofuzz v1.2.0
 	github.com/google/uuid v1.1.2
 	github.com/onsi/ginkgo/v2 v2.0.0
@@ -15,8 +15,8 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/redhat-cop/operator-utils v1.1.4
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
-	golang.org/x/net v0.0.0-20210428140749-89ef3d95e781
+	golang.org/x/crypto v0.3.0
+	golang.org/x/net v0.2.0
 	k8s.io/api v0.21.3
 	k8s.io/apiextensions-apiserver v0.21.3
 	k8s.io/apimachinery v0.21.3

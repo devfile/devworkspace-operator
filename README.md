@@ -114,7 +114,7 @@ To see all rules supported by the makefile, run `make help`
 
 ### Test run controller
 1. Take a look samples devworkspace configuration in `./samples` folder.
-2. Apply any of them by executing `kubectl apply -f ./samples/flattened_theia-next.yaml -n <namespace>`
+2. Apply any of them by executing `kubectl apply -f ./samples/theia-latest.yaml -n <namespace>`
 3. As soon as devworkspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
 
 ### Run controller locally

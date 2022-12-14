@@ -16,15 +16,28 @@
 package internal
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/constants"
+	gittransport "github.com/go-git/go-git/v5/plumbing/transport"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+)
+
+const (
+	credentialsMountPath = "/.git-credentials/credentials"
 )
 
 var (
-	ProjectsRoot string
-	CloneTmpDir  string
+	ProjectsRoot     string
+	CloneTmpDir      string
+	tokenAuthMethod  map[string]*githttp.BasicAuth
+	sshAuthMethod    *gitssh.PublicKeys
+	credentialsRegex = regexp.MustCompile(`https://(.+):(.+)@(.+)`)
 )
 
 // Read and store ProjectsRoot env var for reuse throughout project-clone.
@@ -43,4 +56,60 @@ func init() {
 	}
 	log.Printf("Using temporary directory %s", tmpDir)
 	CloneTmpDir = tmpDir
+
+	setupAuth()
+}
+
+func GetAuthForHost(repoURLStr string) (gittransport.AuthMethod, error) {
+	endpoint, err := gittransport.NewEndpoint(repoURLStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse url: %w", err)
+	}
+	switch endpoint.Protocol {
+	case "ssh":
+		// TODO
+		return nil, fmt.Errorf("SSH support not yet implemented")
+	case "http", "https":
+		authMethod, ok := tokenAuthMethod[endpoint.Host]
+		if !ok {
+			log.Printf("No personal access token found for URL %s", repoURLStr)
+			return nil, nil
+		}
+		log.Printf("Found personal access token for URL %s", repoURLStr)
+		return authMethod, nil
+	default:
+		log.Printf("No personal access token for URL %s; unsupported protocol: %s", repoURLStr, endpoint.Protocol)
+	}
+	return nil, nil
+}
+
+func setupAuth() {
+	gitCredentials, err := os.ReadFile(credentialsMountPath)
+	if err != nil {
+		// If file does not exist, no credentials to mount
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Printf("Unexpected error reading git credentials file: %s", err)
+			os.Exit(1)
+		}
+	} else {
+		tokenAuthMethod = parseCredentialsFile(string(gitCredentials))
+	}
+}
+
+func parseCredentialsFile(gitCredentials string) map[string]*githttp.BasicAuth {
+	result := map[string]*githttp.BasicAuth{}
+	matches := credentialsRegex.FindAllStringSubmatch(gitCredentials, -1)
+	for idx, credential := range matches {
+		if len(credential) != 4 {
+			log.Printf("Malformed credential found in credentials file on line %d. Skipping", idx+1)
+		}
+		username := credential[1]
+		pat := credential[2]
+		url := credential[3]
+		result[url] = &githttp.BasicAuth{
+			Username: username,
+			Password: pat,
+		}
+	}
+	return result
 }

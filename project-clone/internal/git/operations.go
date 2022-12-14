@@ -24,6 +24,7 @@ import (
 	gitConfig "github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 
+	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/shell"
 )
 
@@ -113,7 +114,13 @@ func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath st
 		return fmt.Errorf("could not find remote %s: %s", defaultRemoteName, err)
 	}
 
-	refs, err := remote.List(&git.ListOptions{})
+	auth, err := internal.GetAuthForHost(remote.Config().URLs[0])
+	if err != nil {
+		log.Printf("Error reading credentials file: %s", err)
+	}
+	refs, err := remote.List(&git.ListOptions{
+		Auth: auth,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to read remote %s: %s", defaultRemoteName, err)
 	}

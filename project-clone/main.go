@@ -34,7 +34,6 @@ const (
 )
 
 // TODO: Handle sparse checkout
-// TODO: Add support for auth
 func main() {
 	f, err := os.Create(tmpLogFilePath)
 	if err != nil {

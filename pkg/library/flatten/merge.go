@@ -124,10 +124,17 @@ func mergeVolume(into, from *dw.VolumeComponent) error {
 }
 
 // needsContainerContributionMerge returns whether merging container contributions is necessary for this workspace. Merging
-// is necessary if at least one component has the merge-contribution: true attribute and at least one component has the
-// container-contribution: true attribute. If either attribute is present but cannot be parsed as a bool, an error is returned.
+// is necessary if the following two conditions are met:
+//
+// - At least one component has the container-contribution: true attribute.
+//
+// - At least one component has the merge-contribution: true attribute OR there exists a container component that was not imported by a
+// plugin or parent devworkspace.
+//
+// If the container-contribution or merge-contribution attribute are present but cannot be parsed as a bool, an error is returned.
+// If multiple components have the merge-contribution: true attribute, an error is returned.
 func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec) (bool, error) {
-	hasContribution, hasTarget := false, false
+	hasContribution, hasTarget, explicitTarget := false, false, false
 	var errHolder error
 	for _, component := range flattenedSpec.Components {
 		if component.Container == nil {
@@ -143,13 +150,22 @@ func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec)
 				// Don't include error in message as it will be propagated to user and is not very clear (references Go unmarshalling)
 				return false, fmt.Errorf("failed to parse %s attribute on component %s as true or false", constants.ContainerContributionAttribute, component.Name)
 			}
-		}
-		if component.Attributes.Exists(constants.MergeContributionAttribute) {
+		} else if component.Attributes.Exists(constants.MergeContributionAttribute) {
+			// Explicit opt out case is handled here if the merge-contributions attribute is set to false
 			if component.Attributes.GetBoolean(constants.MergeContributionAttribute, &errHolder) {
+				if explicitTarget {
+					return false, fmt.Errorf("multiple components have the %s attribute set to true. Only a single component may have the %s attribute set to true", constants.MergeContributionAttribute, constants.MergeContributionAttribute)
+				}
+				explicitTarget = true
 				hasTarget = true
 			}
 			if errHolder != nil {
 				return false, fmt.Errorf("failed to parse %s attribute on component %s as true or false", constants.MergeContributionAttribute, component.Name)
+			}
+		} else {
+			if !component.Attributes.Exists(constants.PluginSourceAttribute) {
+				// First, non-imported container component is implicitly selected as a contribution target
+				hasTarget = true
 			}
 		}
 	}
@@ -164,6 +180,11 @@ func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) err
 		}
 	}
 
+	targetComponentName, err := findMergeTarget(flattenedSpec)
+	if err != nil {
+		return err
+	}
+
 	var newComponents []dw.Component
 	mergeDone := false
 	for _, component := range flattenedSpec.Components {
@@ -174,7 +195,7 @@ func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) err
 		if component.Attributes.GetBoolean(constants.ContainerContributionAttribute, nil) {
 			// drop contributions from updated list as they will be merged
 			continue
-		} else if component.Attributes.GetBoolean(constants.MergeContributionAttribute, nil) && !mergeDone {
+		} else if component.Name == targetComponentName && !mergeDone {
 			mergedComponent, err := mergeContributionsInto(&component, contributions)
 			if err != nil {
 				return fmt.Errorf("failed to merge container contributions: %w", err)
@@ -191,6 +212,52 @@ func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) err
 	}
 
 	return nil
+}
+
+// Finds a component that is a suitable merge target for container contributions and returns its name.
+// The following rules are followed when finding a merge target:
+//
+// - A container component that has the merge-contribution: true attribute will automatically be selected as a merge target.
+//
+// - A container component that has the merge-contribution: false attribute will be never be selected as a merge target.
+//
+// - Otherwise, the first container component found that was not imported by a plugin or parent devworkspace (i.e. the controller.devfile.io/imported-by attribute is not present)
+// will be selected as a merge target.
+//
+// If no suitable merge target is found, an error is returned.
+func findMergeTarget(flattenedSpec *dw.DevWorkspaceTemplateSpec) (mergeTargetComponentName string, err error) {
+	firstComponent := ""
+	for _, component := range flattenedSpec.Components {
+		if component.Container == nil {
+			continue
+		}
+
+		if component.Attributes.Exists(constants.MergeContributionAttribute) {
+			// Check for explicit merge contributtion attribute
+			if component.Attributes.GetBoolean(constants.MergeContributionAttribute, nil) {
+				return component.Name, nil
+			}
+			// Don't select components that opt out as a merge contribution target
+			continue
+		}
+
+		// The target must not have been imported by a plugin or parent.
+		if component.Attributes.Exists(constants.PluginSourceAttribute) {
+			continue
+		}
+
+		// There might be other components that explicitly opt in as a merge target,
+		// so don't return immediately
+		if firstComponent == "" {
+			firstComponent = component.Name
+		}
+	}
+
+	if firstComponent != "" {
+		return firstComponent, nil
+	}
+
+	return "", fmt.Errorf("couldn't find any merge contribution target component")
 }
 
 func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Component) (*dw.Component, error) {

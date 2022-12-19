@@ -4,13 +4,43 @@
 
 Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
 
-## DevWorkspace CR
+## Configuration
+
+### Global configuration for the DevWorkspace Operator
+
+The DevWorkspace Operator installs the DevWorkspaceOperatorConfig custom resource (short name: `dwoc`). To configure global behavior of the DevWorkspace Operator, create a DevWorkspaceOperatorConfig named `devworkspace-operator-config` in the same namespace where the operator is deployed:
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  # Configuration fields
+```
+
+To apply a configuration to specific workspaces instead of globally, an existing DevWorkspaceOperatorConfig can be referenced in a DevWorkspace's attributes:
+```yaml
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
+metadata:
+  name: my-devworkspace
+spec:
+  template:
+    attributes:
+      controller.devfile.io/devworkspace-config:
+        name: <name of DevWorkspaceOperatorConfig CR>
+        namespace: <namespace of DevWorkspaceOperatorConfig CR>
+```
+Configuration specified as above will be merged into the default global configuration, overriding any values present.
+
+To see all all configuration options, see `kubectl explain dwoc.config`, `kubectl explain dwoc.config.workspace`, etc.
 
 ### Additional configuration
 
-DevWorkspaces can be configured through DevWorkspace attributes and Kubernetes labels/annotations. For a list of all options available, see [additional documentation](docs/additional-configuration.adoc).
+DevWorkspaces can be further configured through DevWorkspace attributes and Kubernetes labels/annotations. For a list of all options available, see [additional documentation](docs/additional-configuration.adoc).
 
-#### Restricted Access
+### Restricted Access
 
 The `controller.devfile.io/restricted-access` annotation specifies that a DevWorkspace needs additional access control (in addition to RBAC). When a DevWorkspace is created with the `controller.devfile.io/restricted-access` annotation set to `true`, the webhook server will guarantee
 - Only the DevWorkspace Operator ServiceAccount or DevWorkspace creator can modify important fields in the DevWorkspace
@@ -24,24 +54,25 @@ metadata:
   annotations:
     controller.devfile.io/restricted-access: true
 ```
-## Prerequisites
+
+## Deploying DevWorkspace Operator
+
+### Prerequisites
 - go 1.16 or later
 - git
 - sed
 - jq
 - yq (python-yq from https://github.com/kislyuk/yq#installation, other distributions may not work)
 - skopeo (if building the OLM catalogsource)
-- docker
+- podman or docker
 
 Note: kustomize `v4.0.5` is required for most tasks. It is downloaded automatically to the `.kustomize` folder in this repo when required. This downloaded version is used regardless of whether or not kustomize is already installed on the system.
 
-## Running the controller in a cluster
+### Running the controller in a cluster
 
-### With yaml resources
+#### With yaml resources
 
-When deployed to Kubernetes, the controller requires [cert-manager](https://cert-manager.io) running in the cluster.
-You can install it using `make install_cert_manager` if you don't run it already.
-The minimum version of cert-manager is `v1.0.4`.
+When installing on Kubernetes clusters, the DevWorkspace Operator requires the [cert-manager](https://cert-manager.io) operator in order to properly serve webhooks. To install the latest version of cert-manager in a cluster, the Makefile rule `install_cert_manager` can be used. The minimum version of cert-manager is `v1.0.4`.
 
 The controller can be deployed to a cluster provided you are logged in with cluster-admin credentials:
 
@@ -62,17 +93,34 @@ See below for all environment variables used in the makefile.
 > }
 > ```
 
-### With OLM
+#### With Operator Lifecycle Manager (OLM)
 
-DevWorkspace Operator has bundle and index images which allow to install it with OLM.
-You need to register custom catalog source to make it available on your cluster with help:
+DevWorkspace Operator has bundle and index images which enable installation via OLM. To enable installing the DevWorkspace Operator through OLM, it may be necessary to create a CatalogSource in the cluster for this index:
+```yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: devworkspace-operator-catalog
+  namespace: openshift-marketplace # Namespace for catalogsource, not operator itself
+spec:
+  sourceType: grpc
+  image: quay.io/devfile/devworkspace-operator-index:next
+  publisher: Red Hat
+  displayName: DevWorkspace Operator Catalog
+  updateStrategy:
+    registryPoll:
+      interval: 5m
 ```
-DWO_INDEX_IMG=quay.io/devfile/devworkspace-operator-index:next
-make register_catalogsource
-```
-After OLM finishes processing the created catalog source, DWO should appear on Operators page of OpenShift Console.
 
-In order to build a custom bundle, the following env vars should be set:
+Two index images are available for installing the DevWorkspace Operator:
+* `quay.io/devfile/devworkspace-operator-index:release` - multi-version catalog with all DevWorkspace Operator releases
+* `quay.io/devfile/devworkspace-operator-index:next` - single-version catalog that will deploy the latest commit in the `main` branch
+
+Both index images allow automatic updates (to either the latest release or latest commit in main).
+
+After OLM finishes processing the created CatalogSource, DWO should appear on the Operators page in the OpenShift Console.
+
+In order to build a custom bundle, the following environment variables should be set:
 | variable | purpose | default value |
 |---|---|---|
 | `DWO_BUNDLE_IMG` | Image used for Operator bundle image | `quay.io/devfile/devworkspace-operator-bundle:next` |
@@ -121,18 +169,24 @@ To see all rules supported by the makefile, run `make help`
 ```bash
 export NAMESPACE="devworkspace-controller"
 make install
+# Wait for webhook server to start
+kubectl rollout status deployment devworkspace-controller-manager -n $NAMESPACE --timeout 90s
+kubectl rollout status deployment devworkspace-webhook-server -n $NAMESPACE --timeout 90s
+# Scale on-cluster deployment to zero to avoid conflict with locally-running instance
 oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}" -n $NAMESPACE
 make run
 ```
-
-When running locally, only a single namespace is watched; as a result, all devworkspaces have to be deployed to `${NAMESPACE}`
 
 ### Run controller locally and debug
 Debugging the controller depends on [delve](https://github.com/go-delve/delve) being installed (`go install github.com/go-delve/delve/cmd/dlv@latest`). Note that `$GOPATH/bin` or `$GOBIN` must be added to `$PATH` in order for `make debug` to run correctly.
 
 ```bash
 make install
+# Wait for webhook server to start
+kubectl rollout status deployment devworkspace-controller-manager -n $NAMESPACE --timeout 90s
+kubectl rollout status deployment devworkspace-webhook-server -n $NAMESPACE --timeout 90s
 oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}"
+# Scale on-cluster deployment to zero to avoid conflict with locally-running instance
 make debug
 ```
 
@@ -177,7 +231,7 @@ make uninstall
 ```
 This will delete all custom resource definitions created for the controller, as well as the `devworkspace-controller` namespace.
 
-### CI
+## CI
 
 #### GitHub actions
 

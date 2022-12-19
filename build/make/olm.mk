@@ -50,12 +50,7 @@ build_bundle_and_index: _print_vars _check_skopeo_installed _check_opm_version
 
 ### register_catalogsource: create the catalogsource to make the operator be available on the marketplace
 register_catalogsource: _check_skopeo_installed
-	INDEX_DIGEST=$$(skopeo inspect docker://$(DWO_INDEX_IMG) | jq -r '.Digest')
-	INDEX_IMG=$(DWO_INDEX_IMG)
-	INDEX_IMG_DIGEST="$${INDEX_IMG%:*}@$${INDEX_DIGEST}"
-
-	# replace references of catalogsource img with your image
-	sed -e "s|quay.io/devfile/devworkspace-operator-index:next|$${INDEX_IMG_DIGEST}|g" ./catalog-source.yaml \
+	sed -e "s|quay.io/devfile/devworkspace-operator-index:next|$(DWO_INDEX_IMG)|g" ./catalog-source.yaml \
 	  | oc apply -f -
 
 ### unregister_catalogsource: unregister the catalogsource and delete the imageContentSourcePolicy

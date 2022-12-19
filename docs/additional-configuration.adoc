@@ -137,17 +137,16 @@ Labelling secrets with `controller.devfile.io/devworkspace_pullsecret: true` mar
 Note: As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to image pull secrets
 
 ## Adding git credentials to a workspace
-Labelling secrets with `controller.devfile.io/git-credential` marks the secret as containing git credentials. All git credential secrets will be merged into a single secret (leaving the original resources in-tact). See https://git-scm.com/docs/git-credential-store#_storage_format[git documentation] for details on the file format for this configuration. For example
+Labelling secrets with `controller.devfile.io/git-credential` marks the secret as containing git credentials. All git credential secrets will be merged into a single secret (leaving the original resources intact). The merged credentials secret is mounted to `/.git-credentials/credentials`. See https://git-scm.com/docs/git-credential-store#_storage_format[git documentation] for details on the file format for this configuration. For example
 [source,yaml]
 ----
 kind: Secret
 apiVersion: v1
 metadata:
   name: git-credentials-secret
-  annotations:
-    controller.devfile.io/mount-path: /tmp/.git-credentials/
   labels:
     controller.devfile.io/git-credential: 'true'
+    controller.devfile.io/watch-secret: 'true'
 type: Opaque
 data:
   credentials: https://{USERNAME}:{PERSONAL_ACCESS_TOKEN}@{GIT_WEBSITE}

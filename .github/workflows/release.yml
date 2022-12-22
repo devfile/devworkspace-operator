@@ -54,7 +54,7 @@ jobs:
           fi
 
       - name: Cache Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-operator-sdk
         with:
           path: ~/cache
@@ -74,7 +74,7 @@ jobs:
           echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Cache OPM ${{ env.OPM_VERSION }}
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-opm
         with:
           path: ~/cache

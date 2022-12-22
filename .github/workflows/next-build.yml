@@ -36,7 +36,7 @@ jobs:
 
     - name: Set output for Git short SHA
       id: git-sha
-      run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+      run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
     - name: Login to quay.io
       uses: docker/login-action@v1
@@ -77,7 +77,7 @@ jobs:
     steps:
 
       - name: Cache Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-operator-sdk
         with:
           path: ~/cache
@@ -97,7 +97,7 @@ jobs:
           echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Cache OPM ${{ env.OPM_VERSION }}
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         id: cache-opm
         with:
           path: ~/cache

@@ -23867,11 +23867,11 @@ spec:
         - name: WEBHOOK_SECRET_NAME
           value: devworkspace-webhookserver-tls
         - name: RELATED_IMAGE_devworkspace_webhook_server
-          value: quay.io/devfile/devworkspace-controller:v0.18.1
+          value: quay.io/devfile/devworkspace-controller:v0.18.2
         - name: RELATED_IMAGE_kube_rbac_proxy
           value: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8
         - name: RELATED_IMAGE_project_clone
-          value: quay.io/devfile/project-clone:v0.18.1
+          value: quay.io/devfile/project-clone:v0.18.2
         - name: WATCH_NAMESPACE
           value: ""
         - name: POD_NAME
@@ -23904,7 +23904,7 @@ spec:
           value: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
         - name: RELATED_IMAGE_async_storage_sidecar
           value: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
-        image: quay.io/devfile/devworkspace-controller:v0.18.1
+        image: quay.io/devfile/devworkspace-controller:v0.18.2
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 5

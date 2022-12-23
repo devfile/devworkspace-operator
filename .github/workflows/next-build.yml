@@ -32,21 +32,21 @@ jobs:
 
     steps:
     - name: Checkout devworkspace-operator source code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set output for Git short SHA
       id: git-sha
       run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
     - name: Login to quay.io
-      uses: docker/login-action@v1
+      uses: docker/login-action@v2
       with:
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
         registry: quay.io
 
     - name: Build and push
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v3
       with:
         context: .
         push: true
@@ -56,7 +56,7 @@ jobs:
         file: ./build/Dockerfile
 
     - name: Build and push
-      uses: docker/build-push-action@v2
+      uses: docker/build-push-action@v3
       with:
         context: .
         push: true
@@ -118,10 +118,10 @@ jobs:
           echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Checkout devworkspace-operator source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Login to quay.io
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}

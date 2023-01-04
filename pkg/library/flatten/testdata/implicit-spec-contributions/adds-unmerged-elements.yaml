@@ -4,8 +4,6 @@ input:
   devworkspace:
     components:
       - name: test-component
-        # attributes:
-        #   controller.devfile.io/merge-contribution: true
         container:
           image: test-image
           env:
@@ -46,18 +44,13 @@ output:
   devworkspace:
     components:
       - name: test-component
+        attributes:
+          controller.devfile.io/merged-contributions: "test-contribution"
         container:
           image: test-image
           env:
             - name: TEST_ENVVAR
               value: TEST_VALUE
-      - name: test-contribution
-        attributes:
-          controller.devfile.io/container-contribution: true
-          controller.devfile.io/imported-by: test-contribution
-        container:
-          image: contribution-image
-          env:
             - name: CONTRIB_ENVVAR
               value: CONTRIB_VALUE
       - name: unmerged-container

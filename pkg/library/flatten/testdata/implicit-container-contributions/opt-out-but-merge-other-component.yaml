@@ -1,11 +1,17 @@
-name: "Adds unmerged elements"
+name: "Opt out for first component, implcit opt in for other component"
 
 input:
   devworkspace:
     components:
-      - name: test-component
-        # attributes:
-        #   controller.devfile.io/merge-contribution: true
+      - name: test-component-opt-out
+        attributes:
+          controller.devfile.io/merge-contribution: false
+        container:
+          image: test-image
+          env:
+            - name: TEST_ENVVAR
+              value: TEST_VALUE
+      - name: test-component-implicit-opt-in
         container:
           image: test-image
           env:
@@ -46,19 +52,22 @@ input:
 output:
   devworkspace:
     components:
-      - name: test-component
+      - name: test-component-opt-out
+        attributes:
+          controller.devfile.io/merge-contribution: false
         container:
           image: test-image
           env:
             - name: TEST_ENVVAR
               value: TEST_VALUE
-      - name: test-contribution
+      - name: test-component-implicit-opt-in
         attributes:
-          controller.devfile.io/container-contribution: true
-          controller.devfile.io/imported-by: test-contribution
+          controller.devfile.io/merged-contributions: "test-contribution"
         container:
-          image: contribution-image
+          image: test-image
           env:
+            - name: TEST_ENVVAR
+              value: TEST_VALUE
             - name: CONTRIB_ENVVAR
               value: CONTRIB_VALUE
       - name: unmerged-container

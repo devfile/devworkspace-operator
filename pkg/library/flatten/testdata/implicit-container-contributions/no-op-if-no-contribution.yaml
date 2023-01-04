@@ -4,8 +4,6 @@ input:
   devworkspace:
     components:
       - name: test-component
-        attributes:
-          controller.devfile.io/merge-contribution: true
         container:
           image: test-image
           env:
@@ -47,8 +45,6 @@ output:
   devworkspace:
     components:
       - name: test-component
-        attributes:
-          controller.devfile.io/merge-contribution: true
         container:
           image: test-image
           env:

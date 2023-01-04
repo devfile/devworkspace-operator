@@ -1,0 +1,55 @@
+name: "Return error if multiple components have the merge-contribution attribute set to true"
+
+input:
+  devworkspace:
+    components:
+      - name: test-component
+        attributes:
+          controller.devfile.io/merge-contribution: true
+        container:
+          image: test-image
+          env:
+            - name: TEST_ENVVAR
+              value: TEST_VALUE
+      - name: test-component-2
+        attributes:
+          controller.devfile.io/merge-contribution: true
+        container:
+          image: test-image
+          env:
+            - name: TEST_ENVVAR
+              value: TEST_VALUE
+    contributions:
+      - name: test-contribution
+        plugin:
+          uri: test-contribution.yaml
+
+  devfileResources:
+    test-contribution.yaml:
+      schemaVersion: 2.1.0
+      metadata:
+        name: test-contribution
+      components:
+      - name: test-contribution
+        attributes:
+          controller.devfile.io/container-contribution: true
+        container:
+          image: contribution-image
+          env:
+            - name: CONTRIB_ENVVAR
+              value: CONTRIB_VALUE
+      - name: unmerged-container
+        container:
+          image: unmerged-container
+      - name: unmerged-volume
+        volume: {}
+      commands:
+      - name: plugin-command
+        apply:
+          component: unmerged-container
+      events:
+        prestart:
+          - plugin-command
+
+output:
+  errRegexp: "multiple components have the controller.devfile.io/merge-contribution attribute set to true. Only a single component may have the controller.devfile.io/merge-contribution attribute set to true"

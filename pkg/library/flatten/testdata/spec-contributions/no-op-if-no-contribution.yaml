@@ -1,4 +1,4 @@
-name: "Adds unmerged elements"
+name: "No op if no contributions"
 
 input:
   devworkspace:

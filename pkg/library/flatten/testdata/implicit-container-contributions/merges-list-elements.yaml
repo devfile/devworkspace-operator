@@ -1,0 +1,87 @@
+name: "Merges list elements in contribution"
+
+input:
+  devworkspace:
+    components:
+      - name: test-component
+        container:
+          image: test-image
+          volumeMounts:
+            - name: test-volume
+              path: test-volume-path
+          endpoints:
+            - name: test-endpoint-1
+              targetPort: 8888
+              exposure: internal
+              protocol: https
+            - name: test-endpoint-2
+              targetPort: 8889
+              exposure: internal
+              protocol: https
+          env:
+            - name: TEST_ENVVAR
+              value: TEST_VALUE
+
+      - name: test-contribution
+        plugin:
+          uri: test-contribution.yaml
+
+  devfileResources:
+    test-contribution.yaml:
+      schemaVersion: 2.1.0
+      metadata:
+        name: test-contribution
+      components:
+      - name: test-contribution
+        attributes:
+          controller.devfile.io/container-contribution: true
+        container:
+          image: contribution-image
+          volumeMounts:
+            - name: contrib-volume
+              path: contrib-volume-path
+          endpoints:
+            - name: contrib-endpoint-1
+              targetPort: 9999
+              exposure: public
+              protocol: https
+          env:
+            - name: CONTRIB_ENVVAR
+              value: CONTRIB_VALUE
+            - name: CONTRIB_ENVVAR_2
+              value: CONTRIB_VALUE_2
+
+
+output:
+  devworkspace:
+    components:
+      - name: test-component
+        attributes:
+          controller.devfile.io/merged-contributions: "test-contribution"
+        container:
+          image: test-image
+          volumeMounts:
+            - name: test-volume
+              path: test-volume-path
+            - name: contrib-volume
+              path: contrib-volume-path
+          endpoints:
+            - name: test-endpoint-1
+              targetPort: 8888
+              exposure: internal
+              protocol: https
+            - name: test-endpoint-2
+              targetPort: 8889
+              exposure: internal
+              protocol: https
+            - name: contrib-endpoint-1
+              targetPort: 9999
+              exposure: public
+              protocol: https
+          env:
+            - name: TEST_ENVVAR
+              value: TEST_VALUE
+            - name: CONTRIB_ENVVAR
+              value: CONTRIB_VALUE
+            - name: CONTRIB_ENVVAR_2
+              value: CONTRIB_VALUE_2

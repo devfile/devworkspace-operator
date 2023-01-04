@@ -1,20 +1,19 @@
-name: "No op if no contribution"
+name: "Opt out of container contribution"
 
 input:
   devworkspace:
     components:
       - name: test-component
         attributes:
-          controller.devfile.io/merge-contribution: true
+          controller.devfile.io/merge-contribution: false
         container:
           image: test-image
           env:
             - name: TEST_ENVVAR
               value: TEST_VALUE
-
-      - name: test-contribution
-        plugin:
-          uri: test-contribution.yaml
+  contributions:
+    - name: test-contribution
+      uri: test-contribution.yaml
 
   devfileResources:
     test-contribution.yaml:
@@ -23,8 +22,8 @@ input:
         name: test-contribution
       components:
       - name: test-contribution
-        # attributes:
-        #   controller.devfile.io/container-contribution: true
+        attributes:
+          controller.devfile.io/container-contribution: true
         container:
           image: contribution-image
           env:
@@ -48,7 +47,7 @@ output:
     components:
       - name: test-component
         attributes:
-          controller.devfile.io/merge-contribution: true
+          controller.devfile.io/merge-contribution: false
         container:
           image: test-image
           env:
@@ -56,6 +55,7 @@ output:
               value: TEST_VALUE
       - name: test-contribution
         attributes:
+          controller.devfile.io/container-contribution: true
           controller.devfile.io/imported-by: test-contribution
         container:
           image: contribution-image

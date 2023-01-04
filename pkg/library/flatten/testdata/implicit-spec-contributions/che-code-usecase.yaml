@@ -1,0 +1,186 @@
+name: "Merges Che Code IDE contribution"
+
+input:
+  devworkspace:
+    components:
+      - name: tools
+        container:
+          image: quay.io/devfile/universal-developer-image:latest
+          env:
+            - name: GOPATH
+              value: /projects:/home/user/go
+            - name: GOCACHE
+              value: /tmp/.cache
+          endpoints:
+            - name: 8080-tcp
+              targetPort: 8080
+          memoryLimit: 2Gi
+          mountSources: true
+  contributions:
+    - name: che-code
+      uri: che-code.yaml
+
+  devfileResources:
+    che-code.yaml:
+      schemaVersion: 2.1.0
+      metadata:
+        name: che-code
+      commands:
+        - id: init-container-command
+          apply:
+            component: che-code-injector
+      events:
+        preStart:
+          - init-container-command
+      components:
+        - name: che-code-runtime-description
+          attributes:
+            app.kubernetes.io/component: che-code-runtime
+            app.kubernetes.io/part-of: che-code.eclipse.org
+            controller.devfile.io/container-contribution: true
+          container:
+            image: quay.io/devfile/universal-developer-image:ubi8-0e189d9
+            command:
+              - /checode/entrypoint-volume.sh
+            volumeMounts:
+              - name: checode
+                path: /checode
+            memoryLimit: 1024Mi
+            memoryRequest: 256Mi
+            cpuLimit: 500m
+            cpuRequest: 30m
+            endpoints:
+              - name: che-code
+                attributes:
+                  type: main
+                  cookiesAuthEnabled: true
+                  discoverable: false
+                  urlRewriteSupported: true
+                targetPort: 3100
+                exposure: public
+                path: '?tkn=eclipse-che'
+                secure: false
+                protocol: https
+              - name: code-redirect-1
+                attributes:
+                  discoverable: false
+                  urlRewriteSupported: true
+                targetPort: 13131
+                exposure: public
+                protocol: http
+              - name: code-redirect-2
+                attributes:
+                  discoverable: false
+                  urlRewriteSupported: true
+                targetPort: 13132
+                exposure: public
+                protocol: http
+              - name: code-redirect-3
+                attributes:
+                  discoverable: false
+                  urlRewriteSupported: true
+                targetPort: 13133
+                exposure: public
+                protocol: http
+        - name: checode
+          volume: {}
+        - name: che-code-injector
+          container:
+            image: quay.io/che-incubator/che-code:insiders
+            command:
+              - /entrypoint-init-container.sh
+            volumeMounts:
+              - name: checode
+                path: /checode
+            memoryLimit: 128Mi
+            memoryRequest: 32Mi
+            cpuLimit: 500m
+            cpuRequest: 30m
+
+output:
+  devworkspace:
+    components:
+      - name: tools
+        attributes:
+          app.kubernetes.io/component: che-code-runtime
+          app.kubernetes.io/part-of: che-code.eclipse.org
+          controller.devfile.io/merged-contributions: "che-code"
+        container:
+          image: quay.io/devfile/universal-developer-image:latest
+          command:
+            - /checode/entrypoint-volume.sh
+          volumeMounts:
+            - name: checode
+              path: /checode
+          memoryLimit: 3Gi
+          memoryRequest: 256Mi
+          cpuLimit: 500m
+          cpuRequest: 30m
+          env:
+            - name: GOPATH
+              value: /projects:/home/user/go
+            - name: GOCACHE
+              value: /tmp/.cache
+          endpoints:
+            - name: 8080-tcp
+              targetPort: 8080
+            - name: che-code
+              attributes:
+                type: main
+                cookiesAuthEnabled: true
+                discoverable: false
+                urlRewriteSupported: true
+              targetPort: 3100
+              exposure: public
+              path: '?tkn=eclipse-che'
+              secure: false
+              protocol: https
+            - name: code-redirect-1
+              attributes:
+                discoverable: false
+                urlRewriteSupported: true
+              targetPort: 13131
+              exposure: public
+              protocol: http
+            - name: code-redirect-2
+              attributes:
+                discoverable: false
+                urlRewriteSupported: true
+              targetPort: 13132
+              exposure: public
+              protocol: http
+            - name: code-redirect-3
+              attributes:
+                discoverable: false
+                urlRewriteSupported: true
+              targetPort: 13133
+              exposure: public
+              protocol: http
+          mountSources: true
+      - name: checode
+        attributes:
+          controller.devfile.io/imported-by: che-code
+        volume: {}
+      - name: che-code-injector
+        attributes:
+          controller.devfile.io/imported-by: che-code
+        container:
+          image: quay.io/che-incubator/che-code:insiders
+          command:
+            - /entrypoint-init-container.sh
+          volumeMounts:
+            - name: checode
+              path: /checode
+          memoryLimit: 128Mi
+          memoryRequest: 32Mi
+          cpuLimit: 500m
+          cpuRequest: 30m
+    commands:
+      - id: init-container-command
+        attributes:
+          controller.devfile.io/imported-by: che-code
+        apply:
+          component: che-code-injector
+    events:
+      preStart:
+          - init-container-command

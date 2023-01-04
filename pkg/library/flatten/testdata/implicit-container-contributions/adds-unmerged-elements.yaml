@@ -1,11 +1,9 @@
-name: "No op if no contribution"
+name: "Adds unmerged elements"
 
 input:
   devworkspace:
     components:
       - name: test-component
-        attributes:
-          controller.devfile.io/merge-contribution: true
         container:
           image: test-image
           env:
@@ -23,8 +21,8 @@ input:
         name: test-contribution
       components:
       - name: test-contribution
-        # attributes:
-        #   controller.devfile.io/container-contribution: true
+        attributes:
+          controller.devfile.io/container-contribution: true
         container:
           image: contribution-image
           env:
@@ -48,18 +46,12 @@ output:
     components:
       - name: test-component
         attributes:
-          controller.devfile.io/merge-contribution: true
+          controller.devfile.io/merged-contributions: "test-contribution"
         container:
           image: test-image
           env:
             - name: TEST_ENVVAR
               value: TEST_VALUE
-      - name: test-contribution
-        attributes:
-          controller.devfile.io/imported-by: test-contribution
-        container:
-          image: contribution-image
-          env:
             - name: CONTRIB_ENVVAR
               value: CONTRIB_VALUE
       - name: unmerged-container

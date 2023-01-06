@@ -99,7 +99,7 @@ spec:
   relatedImages:
     - image: quay.io/devfile/devworkspace-controller:next
       name: devworkspace_webhook_server
-    - image: registry.redhat.io/openshift4/ose-kube-rbac-proxy:v4.8
+    - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
       name: kube_rbac_proxy
     - image: quay.io/devfile/project-clone:next
       name: project_clone

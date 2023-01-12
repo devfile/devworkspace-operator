@@ -52,6 +52,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -551,26 +552,19 @@ func (r *DevWorkspaceReconciler) stopWorkspace(ctx context.Context, workspace *c
 }
 
 func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *common.DevWorkspaceWithConfig, logger logr.Logger) (stopped bool, err error) {
-	workspaceDeployment := &appsv1.Deployment{}
-	namespaceName := types.NamespacedName{
-		Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
-		Namespace: workspace.Namespace,
-	}
-	err = r.Get(ctx, namespaceName, workspaceDeployment)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, err
+	if pointer.BoolDeref(workspace.Config.Workspace.CleanupOnStop, false) {
+		logger.Info("Cleaning up workspace-owned objects")
+		requeue, err := r.deleteWorkspaceOwnedObjects(ctx, workspace)
+		return !requeue, err
 	}
 
 	// Update DevWorkspaceRouting to have `devworkspace-started` annotation "false"
 	routing := &controllerv1alpha1.DevWorkspaceRouting{}
-	routingRef := types.NamespacedName{
+	routingNN := types.NamespacedName{
 		Name:      common.DevWorkspaceRoutingName(workspace.Status.DevWorkspaceId),
 		Namespace: workspace.Namespace,
 	}
-	err = r.Get(ctx, routingRef, routing)
+	err = r.Get(ctx, routingNN, routing)
 	if err != nil {
 		if !k8sErrors.IsNotFound(err) {
 			return false, err
@@ -586,24 +580,28 @@ func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *common.D
 		}
 	}
 
-	// CleanupOnStop should never be nil as a default is always set
-	if workspace.Config.Workspace.CleanupOnStop == nil || !*workspace.Config.Workspace.CleanupOnStop {
-		replicas := workspaceDeployment.Spec.Replicas
-		if replicas == nil || *replicas > 0 {
-			logger.Info("Stopping workspace")
-			err = wsprovision.ScaleDeploymentToZero(ctx, workspace, r.Client)
-			if err != nil && !k8sErrors.IsConflict(err) {
-				return false, err
-			}
-			return false, nil
-		}
-
-		return workspaceDeployment.Status.Replicas == 0, nil
-	} else {
-		logger.Info("Cleaning up workspace-owned objects")
-		requeue, err := r.deleteWorkspaceOwnedObjects(ctx, workspace)
-		return !requeue, err
+	workspaceDeployment := &appsv1.Deployment{}
+	deployNN := types.NamespacedName{
+		Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
+		Namespace: workspace.Namespace,
 	}
+	err = r.Get(ctx, deployNN, workspaceDeployment)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
+	}
+	replicas := workspaceDeployment.Spec.Replicas
+	if replicas == nil || *replicas > 0 {
+		logger.Info("Stopping workspace")
+		err = wsprovision.ScaleDeploymentToZero(ctx, workspace, r.Client)
+		if err != nil && !k8sErrors.IsConflict(err) {
+			return false, err
+		}
+		return false, nil
+	}
+	return workspaceDeployment.Status.Replicas == 0, nil
 }
 
 // failWorkspace marks a workspace as failed by setting relevant fields in the status struct.

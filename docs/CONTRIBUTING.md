@@ -1,6 +1,6 @@
 # Contributing to Devworkspace-Operator
 
-Hello there! thank you for choosing to the contributing to devfile/devworkspace-operator. Navigate through the following to understand more about contributing here.
+Hello there! Thank you for choosing to the contributing to devfile/devworkspace-operator. Navigate through the following to understand more about contributing here.
 
 - [Contributing to Devworkspace-Operator](#contributing-to-devworkspace-operator)
 - [Before You Get Started](#before-you-get-started)

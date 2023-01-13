@@ -28,6 +28,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -353,7 +354,6 @@ var _ = Describe("DevWorkspace Controller", func() {
 					},
 				},
 			})
-			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 		})
 
 		AfterEach(func() {
@@ -362,6 +362,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Mounts image pull secrets to the DevWorkspace Deployment", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
@@ -394,6 +395,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Manages git credentials for DevWorkspace", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
@@ -456,6 +458,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Automounts secrets and configmaps volumes", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
@@ -518,6 +521,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 
 		It("Automounts secrets and configmaps env vars", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
@@ -557,6 +561,45 @@ var _ = Describe("DevWorkspace Controller", func() {
 			for _, container := range deploy.Spec.Template.Spec.Containers {
 				Expect(container.EnvFrom).Should(ContainElements(expectedEnvFromSources), "Automounted env sources should be added to containers")
 			}
+		})
+
+		It("Detects changes to automount resources and reconciles", func() {
+			// NOTE: timeout for this test is reduced, as eventually DWO will reconcile the workspace by coincidence and notice
+			// the automount secret.
+			createStartedDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			mergedSecretNN := namespacedName(automount.GitCredentialsMergedSecretName, testNamespace)
+			mergedSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, mergedSecretNN, mergedSecret)).Error()
+
+			By("Creating git-credential secret")
+			secret := generateSecret("git-credential-secret", corev1.SecretTypeOpaque)
+			secret.Labels[constants.DevWorkspaceGitCredentialLabel] = "true"
+			secret.Data["credentials"] = []byte("https://test:token@github.com")
+			createObject(secret)
+			defer deleteObject(secret)
+
+			By("Checking that merged credentials secret is created")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, mergedSecretNN, mergedSecret)
+			}, 1*time.Second, interval).Should(Succeed(), "Merged credentials secret is created")
+
+			By("Checking that workspace deployment mounts merged credentials secret")
+			Eventually(func() error {
+				deploy := &appsv1.Deployment{}
+				deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+				if err := k8sClient.Get(ctx, deployNN, deploy); err != nil {
+					return err
+				}
+				for _, volume := range deploy.Spec.Template.Spec.Volumes {
+					if volume.Secret != nil && volume.Secret.SecretName == automount.GitCredentialsMergedSecretName {
+						return nil
+					}
+				}
+				return fmt.Errorf("Secret not found in volumes")
+			}, 1*time.Second, interval).Should(Succeed(), "Merged credentials secret is added to deployment")
 		})
 	})
 

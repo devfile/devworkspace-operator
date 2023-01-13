@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
@@ -83,4 +84,31 @@ var podPredicates = predicate.Funcs{
 
 		return true
 	},
+}
+
+var automountPredicates = predicate.Funcs{
+	CreateFunc: func(ev event.CreateEvent) bool {
+		return objectIsAutomountResource(ev.Object)
+	},
+	DeleteFunc: func(ev event.DeleteEvent) bool {
+		return objectIsAutomountResource(ev.Object)
+	},
+	UpdateFunc: func(ev event.UpdateEvent) bool {
+		return objectIsAutomountResource(ev.ObjectNew)
+	},
+	GenericFunc: func(_ event.GenericEvent) bool { return false },
+}
+
+func objectIsAutomountResource(obj client.Object) bool {
+	labels := obj.GetLabels()
+	switch {
+	case labels[constants.DevWorkspaceMountLabel] == "true",
+		labels[constants.DevWorkspaceGitCredentialLabel] == "true",
+		labels[constants.DevWorkspaceGitTLSLabel] == "true",
+		labels[constants.DevWorkspacePullSecretLabel] == "true":
+		return true
+	default:
+		return false
+	}
+
 }

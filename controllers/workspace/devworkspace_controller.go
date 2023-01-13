@@ -710,7 +710,8 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return []reconcile.Request{}
 	}
 
-	var configWatcher builder.WatchesOption = builder.WithPredicates(wkspConfig.Predicates())
+	configWatcher := builder.WithPredicates(wkspConfig.Predicates())
+	automountWatcher := builder.WithPredicates(automountPredicates)
 
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
 	return ctrl.NewControllerManagedBy(mgr).
@@ -728,6 +729,9 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ServiceAccount{}).
 		Watches(&source.Kind{Type: &corev1.Pod{}}, handler.EnqueueRequestsFromMapFunc(dwRelatedPodsHandler)).
 		Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, handler.EnqueueRequestsFromMapFunc(r.dwPVCHandler)).
+		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
+		Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
 		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configWatcher).
 		WithEventFilter(devworkspacePredicates).
 		WithEventFilter(podPredicates).

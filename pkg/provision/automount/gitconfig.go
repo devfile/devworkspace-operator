@@ -116,7 +116,7 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 
 func cleanupGitConfig(api sync.ClusterAPI, namespace string) error {
 	secretNN := types.NamespacedName{
-		Name:      GitCredentialsMergedSecretName,
+		Name:      constants.GitCredentialsMergedSecretName,
 		Namespace: namespace,
 	}
 	tlsSecret := &corev1.Secret{}
@@ -134,7 +134,7 @@ func cleanupGitConfig(api sync.ClusterAPI, namespace string) error {
 	}
 
 	configmapNN := types.NamespacedName{
-		Name:      gitCredentialsConfigMapName,
+		Name:      constants.GitCredentialsConfigMapName,
 		Namespace: namespace,
 	}
 	credentialsConfigMap := &corev1.ConfigMap{}

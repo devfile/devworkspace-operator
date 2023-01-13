@@ -28,7 +28,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -570,7 +569,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
-			mergedSecretNN := namespacedName(automount.GitCredentialsMergedSecretName, testNamespace)
+			mergedSecretNN := namespacedName(constants.GitCredentialsMergedSecretName, testNamespace)
 			mergedSecret := &corev1.Secret{}
 			Expect(k8sClient.Get(ctx, mergedSecretNN, mergedSecret)).Error()
 
@@ -594,7 +593,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 					return err
 				}
 				for _, volume := range deploy.Spec.Template.Spec.Volumes {
-					if volume.Secret != nil && volume.Secret.SecretName == automount.GitCredentialsMergedSecretName {
+					if volume.Secret != nil && volume.Secret.SecretName == constants.GitCredentialsMergedSecretName {
 						return nil
 					}
 				}

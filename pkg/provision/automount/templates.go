@@ -28,10 +28,8 @@ const gitTLSCertificateKey = "certificate"
 
 const gitConfigName = "gitconfig"
 const gitConfigLocation = "/etc/" + gitConfigName
-const gitCredentialsConfigMapName = "devworkspace-gitconfig"
 
 const gitCredentialsSecretKey = "credentials"
-const GitCredentialsMergedSecretName = "devworkspace-merged-git-credentials"
 
 // gitLFSConfig is the default configuration that gets provisioned when git-lfs
 // is installed. It needs to be included in the overridden gitconfig to avoid
@@ -95,7 +93,7 @@ func constructGitConfig(namespace, credentialMountPath string, certificatesConfi
 
 	gitConfigMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      gitCredentialsConfigMapName,
+			Name:      constants.GitCredentialsConfigMapName,
 			Namespace: namespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/defaultName":         "git-config-secret",
@@ -122,7 +120,7 @@ func mergeGitCredentials(namespace string, credentialSecrets []corev1.Secret) (*
 	}
 	mergedCredentials := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      GitCredentialsMergedSecretName,
+			Name:      constants.GitCredentialsMergedSecretName,
 			Namespace: namespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/defaultName":      "git-config-secret",

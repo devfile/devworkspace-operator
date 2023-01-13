@@ -25,10 +25,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-// predicates filters incoming events to avoid unnecessary reconciles to failed workspaces.
+// devworkspacePredicates filters incoming events to avoid unnecessary reconciles to failed workspaces.
 // If a workspace failed and its spec is changed, we trigger reconciles to allow for fixing
 // issues in the workspace spec.
-var predicates = predicate.Funcs{
+var devworkspacePredicates = predicate.Funcs{
 	CreateFunc: func(_ event.CreateEvent) bool { return true },
 	DeleteFunc: func(_ event.DeleteEvent) bool { return true },
 	UpdateFunc: func(ev event.UpdateEvent) bool {

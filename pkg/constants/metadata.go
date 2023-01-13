@@ -58,6 +58,15 @@ const (
 	// If the git host is not defined then the certificate will be used for all http repositories.
 	DevWorkspaceGitTLSLabel = "controller.devfile.io/git-tls-credential"
 
+	// GitCredentialsConfigMapName is the name used for the configmap that stores the Git configuration for workspaces
+	// in a given namespace. It is used when e.g. adding Git credentials via secret
+	GitCredentialsConfigMapName = "devworkspace-gitconfig"
+
+	// GitCredentialsMergedSecretName is the name for the merged Git credentials secret that is mounted to workspaces
+	// when Git credentials are defined. This secret combines the values of any secrets labelled
+	// "controller.devfile.io/git-credential"
+	GitCredentialsMergedSecretName = "devworkspace-merged-git-credentials"
+
 	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
 	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name>, secrets will
 	// be mounted at /etc/secret/<secret-name>, and persistent volume claims will be mounted to /tmp/<claim-name>

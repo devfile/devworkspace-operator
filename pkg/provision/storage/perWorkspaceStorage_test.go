@@ -49,7 +49,7 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
-			workspace := &dw.DevWorkspace{}
+			workspace := getDevWorkspaceWithConfig(&dw.DevWorkspace{})
 			workspace.Spec.Template = *tt.Input.Workspace
 			workspace.Status.DevWorkspaceId = tt.Input.DevWorkspaceID
 			workspace.Namespace = "test-namespace"
@@ -61,7 +61,7 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 			}
 
 			if needsStorage(&workspace.Spec.Template) {
-				err := perWorkspaceStorage.ProvisionStorage(&tt.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
+				err := perWorkspaceStorage.ProvisionStorage(tt.Input.PodAdditions.DeepCopy(), workspace, clusterAPI)
 				if !assert.Error(t, err, "Should get a NotReady error when creating PVC") {
 					return
 				}
@@ -82,9 +82,19 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 				}
 				assert.Len(t, retrievedPVC.ObjectMeta.OwnerReferences, 1)
 				assert.Equal(t, retrievedPVC.ObjectMeta.OwnerReferences[0].Kind, "DevWorkspace")
+
+				retrievedPVCSize := retrievedPVC.Spec.Resources.Requests[corev1.ResourceStorage]
+				if tt.Output.PVCSize != nil {
+					assert.True(t, tt.Output.PVCSize.Equal(retrievedPVCSize),
+						"Calculated PVC size is incorrect, should be %s but got %s", tt.Output.PVCSize.String(), retrievedPVCSize.String())
+				} else if tt.Output.ErrRegexp == nil {
+					assert.True(t, workspace.Config.Workspace.DefaultStorageSize.PerWorkspace.Equal(retrievedPVCSize),
+						"PVC size is incorrect, should use default PVC size of %s but got %s", workspace.Config.Workspace.DefaultStorageSize.PerWorkspace, retrievedPVCSize.String())
+				}
 			}
 
-			err := perWorkspaceStorage.ProvisionStorage(&tt.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
+			actualPodAdditions := tt.Input.PodAdditions.DeepCopy()
+			err := perWorkspaceStorage.ProvisionStorage(actualPodAdditions, workspace, clusterAPI)
 
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
@@ -94,9 +104,9 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 				}
 
 				sortVolumesAndVolumeMounts(&tt.Output.PodAdditions)
-				sortVolumesAndVolumeMounts(&tt.Input.PodAdditions)
-				assert.Equal(t, tt.Output.PodAdditions, tt.Input.PodAdditions,
-					"PodAdditions should match expected output: Diff: %s", cmp.Diff(tt.Output.PodAdditions, tt.Input.PodAdditions))
+				sortVolumesAndVolumeMounts(actualPodAdditions)
+				assert.Equal(t, tt.Output.PodAdditions, *actualPodAdditions,
+					"PodAdditions should match expected output: Diff: %s", cmp.Diff(tt.Output.PodAdditions, *actualPodAdditions))
 			}
 		})
 	}

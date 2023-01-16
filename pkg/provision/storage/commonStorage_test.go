@@ -65,6 +65,7 @@ type testInput struct {
 
 type testOutput struct {
 	PodAdditions v1alpha1.PodAdditions `json:"podAdditions,omitempty"`
+	PVCSize      *resource.Quantity    `json:"pvcSize,omitempty"`
 	ErrRegexp    *string               `json:"errRegexp,omitempty"`
 }
 
@@ -301,6 +302,13 @@ func sortVolumesAndVolumeMounts(podAdditions *v1alpha1.PodAdditions) {
 		})
 	}
 	for idx, container := range podAdditions.Containers {
+		if container.VolumeMounts != nil {
+			sort.Slice(podAdditions.Containers[idx].VolumeMounts, func(i, j int) bool {
+				return strings.Compare(podAdditions.Containers[idx].VolumeMounts[i].Name, podAdditions.Containers[idx].VolumeMounts[j].Name) < 0
+			})
+		}
+	}
+	for idx, container := range podAdditions.InitContainers {
 		if container.VolumeMounts != nil {
 			sort.Slice(podAdditions.Containers[idx].VolumeMounts, func(i, j int) bool {
 				return strings.Compare(podAdditions.Containers[idx].VolumeMounts[i].Name, podAdditions.Containers[idx].VolumeMounts[j].Name) < 0

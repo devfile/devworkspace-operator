@@ -155,23 +155,60 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	return nil
 }
 
+func getPVCSize(workspace *common.DevWorkspaceWithConfig, namespacedConfig *nsconfig.NamespacedConfig) (*resource.Quantity, error) {
+	defaultPVCSize := *workspace.Config.Workspace.DefaultStorageSize.PerWorkspace
+
+	// Calculate required PVC size based on workspace volumes
+	allVolumeSizesDefined := true
+	requiredPVCSize := resource.NewQuantity(0, resource.BinarySI)
+	for _, component := range workspace.Spec.Template.Components {
+		if component.Volume != nil {
+			if isEphemeral(component.Volume) {
+				continue
+			}
+
+			if component.Volume.Size == "" {
+				allVolumeSizesDefined = false
+				break
+			}
+
+			volumeSize, err := resource.ParseQuantity(component.Volume.Size)
+			if err != nil {
+				return nil, err
+			}
+			requiredPVCSize.Add(volumeSize)
+		}
+	}
+
+	// Use the calculated PVC size if it's greater than default PVC size
+	if allVolumeSizesDefined || requiredPVCSize.Cmp(defaultPVCSize) == 1 {
+		return requiredPVCSize, nil
+	}
+
+	if namespacedConfig != nil && namespacedConfig.PerWorkspacePVCSize != "" {
+		pvcSize, err := resource.ParseQuantity(namespacedConfig.PerWorkspacePVCSize)
+		if err != nil {
+			return nil, err
+		}
+		return &pvcSize, nil
+	}
+
+	return &defaultPVCSize, nil
+}
+
 func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {
 	namespacedConfig, err := nsconfig.ReadNamespacedConfig(workspace.Namespace, clusterAPI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read namespace-specific configuration: %w", err)
 	}
-	// TODO: Determine the storage size that is needed by iterating through workspace volumes,
-	// adding the sizes specified and figuring out overrides/defaults
-	pvcSize := *workspace.Config.Workspace.DefaultStorageSize.PerWorkspace
-	if namespacedConfig != nil && namespacedConfig.PerWorkspacePVCSize != "" {
-		pvcSize, err = resource.ParseQuantity(namespacedConfig.PerWorkspacePVCSize)
-		if err != nil {
-			return nil, err
-		}
+
+	pvcSize, err := getPVCSize(workspace, namespacedConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	storageClass := workspace.Config.Workspace.StorageClassName
-	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, storageClass, pvcSize)
+	pvc, err := getPVCSpec(common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId), workspace.Namespace, storageClass, *pvcSize)
 	if err != nil {
 		return nil, err
 	}

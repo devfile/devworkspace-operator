@@ -29,7 +29,6 @@ type unsupportedWarnings struct {
 	dedicatedPod        map[string]bool
 	imageComponent      map[string]bool
 	customComponent     map[string]bool
-	volumeSize          map[string]bool
 	eventPostStop       map[string]bool
 	eventPreStop        map[string]bool
 }
@@ -42,7 +41,6 @@ func newUnsupportedWarnings() *unsupportedWarnings {
 		dedicatedPod:        make(map[string]bool),
 		imageComponent:      make(map[string]bool),
 		customComponent:     make(map[string]bool),
-		volumeSize:          make(map[string]bool),
 		eventPostStop:       make(map[string]bool),
 		eventPreStop:        make(map[string]bool),
 	}
@@ -71,9 +69,6 @@ func checkUnsupportedFeatures(devWorkspaceSpec dwv2.DevWorkspaceTemplateSpec) (w
 		if component.Custom != nil {
 			warnings.customComponent[component.Name] = true
 		}
-		if component.Volume != nil && component.Volume.Size != "" {
-			warnings.volumeSize[component.Name] = true
-		}
 	}
 	if devWorkspaceSpec.Events != nil {
 		if len(devWorkspaceSpec.Events.PostStop) > 0 {
@@ -97,7 +92,6 @@ func unsupportedWarningsPresent(warnings *unsupportedWarnings) bool {
 		len(warnings.dedicatedPod) > 0 ||
 		len(warnings.imageComponent) > 0 ||
 		len(warnings.customComponent) > 0 ||
-		len(warnings.volumeSize) > 0 ||
 		len(warnings.eventPostStop) > 0 ||
 		len(warnings.eventPreStop) > 0
 }
@@ -135,10 +129,6 @@ func formatUnsupportedFeaturesWarning(warnings *unsupportedWarnings) string {
 		customComponentMsg := "components[].custom, used by components: " + strings.Join(getWarningNames(warnings.customComponent), ", ")
 		msg = append(msg, customComponentMsg)
 	}
-	if len(warnings.volumeSize) > 0 {
-		volumeSizeMsg := "components[].volume.size, used by components: " + strings.Join(getWarningNames(warnings.volumeSize), ", ")
-		msg = append(msg, volumeSizeMsg)
-	}
 	if len(warnings.eventPostStop) > 0 {
 		eventPostStopMsg := "events.postStop: " + strings.Join(getWarningNames(warnings.eventPostStop), ", ")
 		msg = append(msg, eventPostStopMsg)
@@ -172,7 +162,6 @@ func checkForAddedUnsupportedFeatures(oldWksp, newWksp *dwv2.DevWorkspace) *unsu
 	addedWarnings.dedicatedPod = getAddedWarnings(oldWarnings.dedicatedPod, newWarnings.dedicatedPod)
 	addedWarnings.imageComponent = getAddedWarnings(oldWarnings.imageComponent, newWarnings.imageComponent)
 	addedWarnings.customComponent = getAddedWarnings(oldWarnings.customComponent, newWarnings.customComponent)
-	addedWarnings.volumeSize = getAddedWarnings(oldWarnings.volumeSize, newWarnings.volumeSize)
 	addedWarnings.eventPreStop = getAddedWarnings(oldWarnings.eventPreStop, newWarnings.eventPreStop)
 	addedWarnings.eventPostStop = getAddedWarnings(oldWarnings.eventPostStop, newWarnings.eventPostStop)
 	return addedWarnings

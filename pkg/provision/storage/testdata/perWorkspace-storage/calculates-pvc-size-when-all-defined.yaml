@@ -1,0 +1,71 @@
+name: "Calculates PVC size when all volumes define their size"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects-mountpath"
+          - name: "volume-1"
+            mountPath: "/test-1"
+    initContainers:
+      - name: testing-initContainer-1
+        image: testing-image
+        volumeMounts:
+          - name: "plugins"
+            mountPath: "/plugins"
+          - name: "volume-1"
+            mountPath: "/test-3"
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          sourceMapping: "/plugins-mountpath"
+      - name: volume-1
+        volume:
+          size: 1Gi
+      - name: volume-2
+        volume:
+          size: 4Gi
+      - name: volume-3
+        volume:
+          size: 512Mi
+      - name: volume-4
+        volume:
+          size: 248Mi
+      - name: plugins
+        volume:
+          size: 248Mi
+
+output:
+  pvcSize: 6128Mi
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: storage-test-workspaceid
+            subPath: "projects"
+            mountPath: "/projects-mountpath"
+          - name: storage-test-workspaceid
+            subPath: "volume-1"
+            mountPath: "/test-1"
+    initContainers:
+      - name: testing-initContainer-1
+        image: testing-image
+        volumeMounts:
+          - name: storage-test-workspaceid
+            subPath: "plugins"
+            mountPath: "/plugins"
+          - name: storage-test-workspaceid
+            subPath: "volume-1"
+            mountPath: "/test-3"
+    volumes:
+      - name: storage-test-workspaceid
+        persistentVolumeClaim:
+          claimName: storage-test-workspaceid

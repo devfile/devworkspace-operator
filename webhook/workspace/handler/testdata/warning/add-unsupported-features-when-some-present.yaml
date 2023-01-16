@@ -33,5 +33,5 @@ input:
             rootRequired: false
 
 output:
-  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].image, used by components: image-component; components[].volume.size, used by components: projects"
+  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].image, used by components: image-component"
   newWarningsPresent: true

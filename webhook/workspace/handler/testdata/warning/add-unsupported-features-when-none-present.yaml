@@ -22,5 +22,5 @@ input:
           size: "10Gi"
 
 output:
-  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].container.dedicatedPod, used by components: testing-container-1; components[].volume.size, used by components: projects"
+  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].container.dedicatedPod, used by components: testing-container-1"
   newWarningsPresent: true

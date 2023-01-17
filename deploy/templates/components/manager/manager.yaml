@@ -11,7 +11,7 @@ spec:
       serviceAccountName: $(CONTROLLER_SERVICE_ACCOUNT)
       containers:
         - name: kube-rbac-proxy
-          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
           args:
           - "--secure-listen-address=0.0.0.0:8443"
           - "--upstream=http://127.0.0.1:8080/"
@@ -97,4 +97,4 @@ spec:
             - name: RELATED_IMAGE_project_clone
               value: "quay.io/devfile/project-clone:next"
             - name: RELATED_IMAGE_kube_rbac_proxy
-              value: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+              value: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1

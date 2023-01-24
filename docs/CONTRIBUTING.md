@@ -2,57 +2,21 @@
 
 Hello there! Thank you for choosing to the contributing to devfile/devworkspace-operator. Navigate through the following to understand more about contributing here.
 
-- [Contributing to the DevWorkspace Operator](#contributing-to-devworkspace-operator)
-- [Before You Get Started](#before-you-get-started)
-  - [Code of Conduct](#code-of-conduct)
-  - [For Newcomers](#for-newcomers)
+- [Contributing to Devworkspace-Operator](#contributing-to-devworkspace-operator)
 - [How to Contribute](#how-to-contribute)
-  - [Set up your Local Development Environment](#set-up-your-local-development-environment)
+  - [Set up your Development Environment](#set-up-your-development-environment)
+      - [Running the controller locally.](#running-the-controller-locally)
   - [Testing Changes](#testing-changes)
+      - [Test run the controller](#test-run-the-controller)
+      - [Developing Webhooks](#developing-webhooks)
   - [Signing-off on Commits](#signing-off-on-commits)
-    (#testing-your-changes)
-  - [Signing-off on Commits](#signing-off-on-commits)
-
-# Before You Get Started
-
-## Code of Conduct
-
-## For Newcomers
 
 # How to Contribute
+To contribute to the devworkspace-operator project, developers should follow the fork and pull request workflow. 
+## Set up your Development Environment
 
-<!--
-## Prerequisites
 
-Make sure you have the following prerequisites installed on your operating system before you start contributing:
-
-- [Nodejs and npm](https://nodejs.org/en/)
-
-  To verify run:
-
-  ```
-  node -v
-  ```
-
-  ```
-  npm -v
-  ```
-
-- [Gatsby.js](https://www.gatsbyjs.com/)
-
-  To verify run:
-
-  ```
-  gatsby --version
-  ```
-
-**Note:** If you're on a _Windows environment_ then it is highly recommended that you install [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install) both for performance and ease of use. Refer to the [documentation](https://docs.microsoft.com/en-us/windows/dev-environment/javascript/gatsby-on-wsl) for the installation of _Gatsby.js on WSL_. -->
-
-## Set up your Local Development Environment
-
-Follow the following instructions to start contributing.
-
-**1.** Fork [this](https://github.com/devfile/devworkspace-operator) repository.
+**1.** Fork [Devworkspace operator](https://github.com/devfile/devworkspace-operator) repository.
 
 **2.** Clone your forked copy of the project.
 
@@ -60,130 +24,79 @@ Follow the following instructions to start contributing.
 git clone https://github.com/<your-github-username>/devworkspace-operator.git
 ```
 
-**3.** Navigate to the project directory.
+#### Running the controller locally.
 
-```
-cd devworkspace-operator
-```
+In the steps listed below, we set up the development environment using a minikube cluster. 
 
-**4.** Add a reference(remote) to the original repository.
-
-```
-git remote add upstream https://github.com/devfile/devworkspace-operator.git
-```
-
-**5.** Check the remotes for this repository.
-
-```
-git remote -v
-```
-
-**6.** Always take a pull from the upstream repository to your master branch to keep it at par with the main project (updated repository).
-
-```
-git pull upstream master
-```
-
-**7.** Create a new branch.
-
-```
-git checkout -b <your_branch_name>
-```
-
-**8.** Start the minikube cluster.
+**1.** Start the minikube cluster.
 
 ```
 minikube start
 ```
 
-**9.** Enable the ingress add-on for your minikube cluster.
+**2.** Enable the ingress add-on for your minikube cluster.
 
 ```
 minikube addons enable ingress
 ```
 
-**10.** Set the namespace environment variable for the development environment to avoid changes inside the default namespace.
+**3.** Set the namespace environment variable for the development environment to avoid changes inside the default namespace.
 
 ```
 export NAMESPACE="devworkspace-controller"
 ```
 
-**11.** Install the kubernetes certificate management controller to generate and manage TLS certificates for your cluster.
+**4.** Install the kubernetes certificate management controller to generate and manage TLS certificates for your cluster. 
 
 ```
-make install cert-manager.
+make install_cert_manager.
 ```
+Please note that the above step is not specific to minikube. The cert-manager is required for all deployments on kubernetes.
 
-**12.** Install the dependencies for running the devworkspace-operator in your cluster.
+
+**5.** Install the dependencies for running the devworkspace-operator in your cluster.
 
 ```
 make install
 ```
 
-**13.** Scale down the replicas of pods to 0.
+**6.** Scale down the replicas controller-manager pods to 0.
 
 ```
 kubectl patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}" -n $NAMESPACE
 ```
 
-**14.** Run the devworkspace-operator.
+**7.** Run the devworkspace-operator.
 
 ```
 make run
 ```
 
-This will run the devworkspace-controller in your local cluster (minikube/openshift).
+This will run the devworkspace-controller in your local system.
 
-**15.** Make your changes in the new branch and trach the changes.
+**8.** Make your changes in the new branch and test the changes.
 
-```
-git add .
-```
-
-**16.** Commit your changes. To contribute to this project, you must agree to the [Developer Certificate of Origin (DCO)](#signing-off-on-commits) for each commit you make.
-
-```
-git commit --signoff -m "<commit subject>"
-```
-
-or you could go with the shorter format for the same, as shown below.
-
-```
-git commit -s -m "<commit subject>"
-```
-
-**17.** While you are working on your branch, other developers may update the `master` branch with their branch. This action means your branch is now out of date with the `master` branch and missing content. So to fetch the new changes, follow along:
-
-```
-git checkout master
-git fetch origin master
-git merge upstream/master
-git push origin
-```
-
-Now you need to merge the `master` branch into your branch. This can be done in the following way:
-
-```
-git checkout <your_branch_name>
-git merge master
-```
-
-**18.** Push the committed changes in your feature branch to your remote repo.
-
-```
-git push -u origin <your_branch_name>
-```
 
 ## Testing Changes
 
+#### Test run the controller
+
+**1.** Take a look samples devworkspace configuration in `./samples` folder.
+**2.** Apply any of them by executing `kubectl apply -f ./samples/theia-latest.yaml -n <namespace>`.
+**3.** As soon as devworkspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
+
+
+#### Developing Webhooks
+
+**1.** Make a change to the webhook.
+**2.** Ensure the `DWO_IMG` environment variable points to your container image repository, eg. export `DWO_IMG=quay.io/aobuchow/dwo-webhook:next`.
+**3.** Run `make docker restart` (assuming DWO is already deployed to the cluster, otherwise make docker install).
+Wait for the webhook deployment to update with your image that contains your latest changes.
 ## Signing-off on Commits
 
-To contribute to this project, you must agree to the **Developer Certificate of
-Origin (DCO)** for each commit you make. The DCO is a simple statement that you,
-as a contributor, have the legal right to make the contribution.
+To contribute to this project, you must agree to the **code fo conduct** for each commit you make. 
 
-See the [DCO](https://developercertificate.org) file for the full text of what you must agree to
-and how it works [here](https://github.com/probot/dco#how-it-works).
+See the [code of conduct](https://github.com/devfile/api/blob/main/CODE_OF_CONDUCT.md) file for the full text of what you must agree to.
 To signify that you agree to the DCO for contributions, you simply add a line to each of your
 git commit messages:
 

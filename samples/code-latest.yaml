@@ -10,10 +10,14 @@ spec:
         git:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
+    components:
+      - name: dev
+        container:
+          image: quay.io/devfile/universal-developer-image:latest
     commands:
       - id: say-hello
         exec:
-          component: che-code-runtime-description
+          component: dev
           commandLine: echo "Hello from $(pwd)"
           workingDir: ${PROJECT_SOURCE}/app
   contributions:

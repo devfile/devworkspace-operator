@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
-  name: theia-latest-pod-overrides
+  name: code-latest-pod-overrides
 spec:
   started: true
   template:
@@ -20,19 +20,18 @@ spec:
         git:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
-    components:
-      - name: theia
-        plugin:
-          uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/latest/devfile.yaml
-          components:
-            - name: theia-ide
-              container:
-                env:
-                  - name: THEIA_HOST
-                    value: 0.0.0.0
     commands:
       - id: say-hello
         exec:
-          component: theia-ide
+          component: che-code-runtime-description
           commandLine: echo "Hello from $(pwd)"
-          workingDir: ${PROJECTS_ROOT}/project/app
+          workingDir: ${PROJECT_SOURCE}/app
+  contributions:
+    - name: che-code
+      uri: https://eclipse-che.github.io/che-plugin-registry/main/v3/plugins/che-incubator/che-code/latest/devfile.yaml
+      components:
+        - name: che-code-runtime-description
+          container:
+            env:
+              - name: CODE_HOST
+                value: 0.0.0.0

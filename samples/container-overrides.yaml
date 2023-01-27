@@ -4,7 +4,6 @@ metadata:
   name: web-terminal-container-overrides
 spec:
   started: true
-
   template:
     attributes:
       controller.devfile.io/storage-type: ephemeral

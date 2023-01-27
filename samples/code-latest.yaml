@@ -1,7 +1,7 @@
 kind: DevWorkspace
 apiVersion: workspace.devfile.io/v1alpha2
 metadata:
-  name: theia-latest-contributions
+  name: code-latest
 spec:
   started: true
   template:
@@ -13,16 +13,15 @@ spec:
     commands:
       - id: say-hello
         exec:
-          component: theia-ide
+          component: che-code-runtime-description
           commandLine: echo "Hello from $(pwd)"
-          workingDir: ${PROJECTS_ROOT}/project/app
-
+          workingDir: ${PROJECT_SOURCE}/app
   contributions:
-    - name: theia
-      uri: https://che-plugin-registry-main.surge.sh/v3/plugins/eclipse/che-theia/latest/devfile.yaml
+    - name: che-code
+      uri: https://eclipse-che.github.io/che-plugin-registry/main/v3/plugins/che-incubator/che-code/latest/devfile.yaml
       components:
-        - name: theia-ide
+        - name: che-code-runtime-description
           container:
             env:
-              - name: THEIA_HOST
+              - name: CODE_HOST
                 value: 0.0.0.0

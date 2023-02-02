@@ -18,6 +18,8 @@ package solvers
 import (
 	"fmt"
 	"net/url"
+	"path"
+	"strings"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -95,7 +97,10 @@ func getURLForEndpoint(endpoint controllerv1alpha1.Endpoint, host, basePath stri
 		// If endpoint path is empty and we try to join it, we lose the trailing slash in paths:
 		// example.com/base/path/ --> example.com/base/path
 		if endpointUrl.Path != "" {
-			resolvedUrl = resolvedUrl.JoinPath(endpointUrl.Path)
+			resolvedUrl.Path = path.Join(resolvedUrl.Path, endpointUrl.Path)
+			if strings.HasSuffix(endpointUrl.Path, "/") {
+				resolvedUrl.Path = resolvedUrl.Path + "/"
+			}
 		}
 		// If path is empty but has query parameters/fragments, set path to "/". While example.com?query=param is valid
 		// most browsers prefer example.com/?query=param, and the slash was required in obsoleted RFCs.

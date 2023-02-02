@@ -122,6 +122,24 @@ func TestGetUrlForEndpoint(t *testing.T) {
 
 			outURL: "https://example.com/base/path/endpoint/path#test",
 		},
+		{
+			name:         "Resolves URL with absolute endpoint and base path components",
+			host:         "example.com",
+			basePath:     "/base/path/",
+			endpointPath: "/endpoint/path",
+			secure:       true,
+
+			outURL: "https://example.com/base/path/endpoint/path",
+		},
+		{
+			name:         "Resolves URL with absolute path and query param",
+			host:         "example.com",
+			basePath:     "/base/path/",
+			endpointPath: "/?query=param",
+			secure:       true,
+
+			outURL: "https://example.com/base/path/?query=param",
+		},
 	}
 
 	for _, tt := range tests {

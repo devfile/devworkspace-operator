@@ -18,7 +18,6 @@ package solvers
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -79,24 +78,34 @@ func getURLForEndpoint(endpoint controllerv1alpha1.Endpoint, host, basePath stri
 		protocol = controllerv1alpha1.EndpointProtocol(getSecureProtocol(string(protocol)))
 	}
 
-	// Format host/path ensuring only a single '/' character between the two. Can't use path.Join here as it would drop
-	// a trailing '/' if present
-	basehost := fmt.Sprintf("%s/%s", strings.TrimRight(host, "/"), strings.TrimLeft(basePath, "/"))
-	baseUrl := fmt.Sprintf("%s://%s", protocol, basehost)
-
-	url, err := url.Parse(baseUrl)
+	hostUrl, err := url.Parse(fmt.Sprintf("%s://%s", protocol, host))
 	if err != nil {
 		return "", err
 	}
-
+	resolvedUrl, err := hostUrl.Parse(basePath)
+	if err != nil {
+		return "", err
+	}
 	if endpoint.Path != "" {
-		relPath, err := url.Parse(endpoint.Path)
+		endpointUrl, err := hostUrl.Parse(endpoint.Path)
 		if err != nil {
 			return "", err
 		}
-		url = url.ResolveReference(relPath)
+		// Fixups for path cases:
+		// If endpoint path is empty and we try to join it, we lose the trailing slash in paths:
+		// example.com/base/path/ --> example.com/base/path
+		if endpointUrl.Path != "" {
+			resolvedUrl = resolvedUrl.JoinPath(endpointUrl.Path)
+		}
+		// If path is empty but has query parameters/fragments, set path to "/". While example.com?query=param is valid
+		// most browsers prefer example.com/?query=param, and the slash was required in obsoleted RFCs.
+		if resolvedUrl.Path == "" {
+			resolvedUrl.Path = "/"
+		}
+		resolvedUrl.Fragment = endpointUrl.Fragment
+		resolvedUrl.RawQuery = endpointUrl.RawQuery
 	}
-	return url.String(), nil
+	return resolvedUrl.String(), nil
 }
 
 // getSecureProtocol takes a (potentially unsecure protocol e.g. http) and returns the secure version (e.g. https).

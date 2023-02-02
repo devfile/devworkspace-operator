@@ -39,7 +39,7 @@ func TestGetUrlForEndpoint(t *testing.T) {
 			endpointPath: "",
 			secure:       false,
 
-			outURL: "http://example.com/",
+			outURL: "http://example.com",
 		},
 		{
 			name:         "Resolves secure URL with no path components",
@@ -48,7 +48,7 @@ func TestGetUrlForEndpoint(t *testing.T) {
 			endpointPath: "",
 			secure:       true,
 
-			outURL: "https://example.com/",
+			outURL: "https://example.com",
 		},
 		{
 			name:         "Resolves URL with basepath component, including trailing slash",
@@ -69,7 +69,7 @@ func TestGetUrlForEndpoint(t *testing.T) {
 			outURL: "https://example.com/test/path",
 		},
 		{
-			name:         "Resolves URL with endpoint path component",
+			name:         "Resolves URL with absolute endpoint path component",
 			host:         "example.com",
 			basePath:     "",
 			endpointPath: "/endpoint/path/",
@@ -96,13 +96,22 @@ func TestGetUrlForEndpoint(t *testing.T) {
 			outURL: "https://example.com/?test=param",
 		},
 		{
-			name:         "Resolves URL with query param in endpoint path and base path",
+			name:         "Resolves URL with query param in endpoint path and base path with trailing slash",
 			host:         "example.com",
 			basePath:     "/base/path/",
 			endpointPath: "?test=param",
 			secure:       true,
 
 			outURL: "https://example.com/base/path/?test=param",
+		},
+		{
+			name:         "Resolves URL with query param in endpoint path and base path",
+			host:         "example.com",
+			basePath:     "/base/path",
+			endpointPath: "?test=param",
+			secure:       true,
+
+			outURL: "https://example.com/base/path?test=param",
 		},
 		{
 			name:         "Resolves URL with query param and path in endpoint path",

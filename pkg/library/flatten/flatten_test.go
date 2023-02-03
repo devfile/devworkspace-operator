@@ -280,7 +280,7 @@ func TestMergeSpecContributions(t *testing.T) {
 }
 
 func TestMergeImplicitSpecContributions(t *testing.T) {
-	tests := testutil.LoadAllTestsOrPanic(t, "testdata/spec-contributions")
+	tests := testutil.LoadAllTestsOrPanic(t, "testdata/implicit-spec-contributions")
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			testResolverTools := getTestingTools(tt.Input, "test-namespace")

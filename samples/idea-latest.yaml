@@ -1,0 +1,19 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: idea-latest
+spec:
+  started: true
+  template:
+    projects:
+      - name: python-hello-world
+        git:
+          remotes:
+            origin: "https://github.com/che-samples/python-hello-world.git"
+    components:
+      - name: dev
+        container:
+          image: quay.io/devfile/universal-developer-image:latest
+  contributions:
+    - name: che-idea
+      uri: https://eclipse-che.github.io/che-plugin-registry/main/v3/plugins/che-incubator/che-idea/latest/devfile.yaml

@@ -174,9 +174,11 @@ func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec)
 
 func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) error {
 	var contributions []dw.Component
+	contributionNameSet := map[string]bool{}
 	for _, component := range flattenedSpec.Components {
 		if component.Container != nil && component.Attributes.GetBoolean(constants.ContainerContributionAttribute, nil) {
 			contributions = append(contributions, component)
+			contributionNameSet[component.Name] = true
 		}
 	}
 
@@ -208,6 +210,9 @@ func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) err
 	}
 
 	if mergeDone {
+		if err := updateCommandTargetsAfterMerge(flattenedSpec, targetComponentName, contributionNameSet); err != nil {
+			return err
+		}
 		flattenedSpec.Components = newComponents
 	}
 
@@ -332,4 +337,23 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 	delete(mergedComponent.Attributes, constants.ContainerContributionAttribute)
 
 	return &mergedComponent, nil
+}
+
+func updateCommandTargetsAfterMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec, mergedName string, contributionNames map[string]bool) error {
+	var newCommands []dw.Command
+	for _, command := range flattenedSpec.Commands {
+		switch {
+		case command.Exec != nil:
+			if contributionNames[command.Exec.Component] {
+				command.Exec.Component = mergedName
+			}
+		case command.Apply != nil:
+			if contributionNames[command.Apply.Component] {
+				return fmt.Errorf("apply command %s uses container contribution %s as component", command.Id, command.Apply.Component)
+			}
+		}
+		newCommands = append(newCommands, command)
+	}
+	flattenedSpec.Commands = newCommands
+	return nil
 }

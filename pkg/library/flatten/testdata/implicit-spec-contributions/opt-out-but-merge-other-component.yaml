@@ -17,10 +17,9 @@ input:
           env:
             - name: TEST_ENVVAR
               value: TEST_VALUE
-    contributions:
-      - name: test-contribution
-        plugin:
-          uri: test-contribution.yaml
+  contributions:
+    - name: test-contribution
+      uri: test-contribution.yaml
 
   devfileResources:
     test-contribution.yaml:

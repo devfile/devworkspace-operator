@@ -43,14 +43,18 @@ var WorkspaceTemplateDiffOpts = cmp.Options{
 	cmpopts.SortSlices(func(a, b dw.VolumeMount) bool {
 		return strings.Compare(a.Name, b.Name) > 0
 	}),
+	cmpopts.SortSlices(func(a, b dw.Command) bool {
+		return strings.Compare(a.Key(), b.Key()) > 0
+	}),
 	// TODO: Devworkspace overriding results in empty []string instead of nil
 	cmpopts.IgnoreFields(dw.DevWorkspaceEvents{}, "PostStart", "PreStop", "PostStop"),
 }
 
 type TestCase struct {
-	Name   string     `json:"name"`
-	Input  TestInput  `json:"input"`
-	Output TestOutput `json:"output"`
+	Name     string     `json:"name"`
+	Input    TestInput  `json:"input"`
+	Output   TestOutput `json:"output"`
+	TestPath string
 }
 
 type TestInput struct {
@@ -89,6 +93,7 @@ func LoadTestCaseOrPanic(t *testing.T, testFilepath string) TestCase {
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
+	test.TestPath = testFilepath
 	return test
 }
 

@@ -16,6 +16,17 @@ input:
           container:
             name: test-container
             image: test-image
+      commands:
+        - id: test-exec
+          exec:
+            component: plugin-a
+            commandLine: "echo 'hello world'"
+        - id: test-apply
+          apply:
+            component: plugin-a
+      events:
+        prestart:
+          - test-apply
 
 output:
   devworkspace:
@@ -26,3 +37,18 @@ output:
         container:
           name: test-container
           image: test-image
+    commands:
+      - id: test-exec
+        attributes:
+          controller.devfile.io/imported-by: "test-plugin"
+        exec:
+          component: plugin-a
+          commandLine: "echo 'hello world'"
+      - id: test-apply
+        attributes:
+          controller.devfile.io/imported-by: "test-plugin"
+        apply:
+          component: plugin-a
+    events:
+      prestart:
+        - test-apply

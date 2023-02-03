@@ -17,6 +17,7 @@ package flatten
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten/internal/testutil"
@@ -28,7 +29,7 @@ import (
 func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/k8s-ref")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -50,7 +51,7 @@ func TestResolveDevWorkspaceKubernetesReference(t *testing.T) {
 func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/plugin-id")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -73,7 +74,7 @@ func TestResolveDevWorkspacePluginRegistry(t *testing.T) {
 func TestResolveDevWorkspacePluginURI(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/plugin-uri")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -96,7 +97,7 @@ func TestResolveDevWorkspacePluginURI(t *testing.T) {
 func TestResolveDevWorkspaceParents(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/parent")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -122,7 +123,7 @@ func TestResolveDevWorkspaceMissingDefaults(t *testing.T) {
 		testutil.LoadTestCaseOrPanic(t, "testdata/general/fail-nicely-when-no-namespace.yaml"),
 	}
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "")
@@ -145,7 +146,7 @@ func TestResolveDevWorkspaceMissingDefaults(t *testing.T) {
 func TestResolveDevWorkspaceAnnotations(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/annotate")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -168,7 +169,7 @@ func TestResolveDevWorkspaceAnnotations(t *testing.T) {
 func TestResolveDevWorkspaceTemplateNamespaceRestriction(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/namespace-restriction")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines devworkspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-namespace")
@@ -191,7 +192,7 @@ func TestResolveDevWorkspaceTemplateNamespaceRestriction(t *testing.T) {
 func TestMergesDuplicateVolumeComponents(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/volume_merging")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -214,7 +215,7 @@ func TestMergesDuplicateVolumeComponents(t *testing.T) {
 func TestMergeContainerContributions(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/container-contributions")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -237,7 +238,7 @@ func TestMergeContainerContributions(t *testing.T) {
 func TestMergeImplicitContainerContributions(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/implicit-container-contributions")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			// sanity check: input defines components
 			assert.True(t, len(tt.Input.DevWorkspace.Components) > 0, "Test case defines workspace with no components")
 			testResolverTools := getTestingTools(tt.Input, "test-ignored")
@@ -260,7 +261,7 @@ func TestMergeImplicitContainerContributions(t *testing.T) {
 func TestMergeSpecContributions(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/spec-contributions")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			testResolverTools := getTestingTools(tt.Input, "test-namespace")
 
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, tt.Input.Contributions, testResolverTools)
@@ -281,7 +282,7 @@ func TestMergeSpecContributions(t *testing.T) {
 func TestMergeImplicitSpecContributions(t *testing.T) {
 	tests := testutil.LoadAllTestsOrPanic(t, "testdata/spec-contributions")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.TestPath), func(t *testing.T) {
 			testResolverTools := getTestingTools(tt.Input, "test-namespace")
 
 			outputWorkspace, _, err := ResolveDevWorkspace(tt.Input.DevWorkspace, tt.Input.Contributions, testResolverTools)

@@ -1,0 +1,65 @@
+name: "Updates commands' components after merging"
+
+input:
+  devworkspace:
+    components:
+    - name: test-component
+      container:
+        image: test-image
+    commands:
+    - id: base-apply
+      apply:
+        component: test-component
+    - id: base-exec
+      exec:
+        component: test-component
+    - id: base-composite
+      composite:
+        commands:
+        - base-apply
+        - base-exec
+  contributions:
+  - name: test-contribution
+    uri: test-contribution.yaml
+
+  devfileResources:
+    test-contribution.yaml:
+      schemaVersion: 2.1.0
+      metadata:
+        name: test-contribution
+      components:
+      - name: contribution
+        attributes:
+          controller.devfile.io/container-contribution: true
+        container:
+          image: contribution-image
+      commands:
+      - id: test-exec
+        exec:
+          component: contribution
+
+output:
+  devworkspace:
+    components:
+    - name: test-component
+      attributes:
+        controller.devfile.io/merged-contributions: "test-contribution"
+      container:
+        image: test-image
+    commands:
+    - id: base-apply
+      apply:
+        component: test-component
+    - id: base-exec
+      exec:
+        component: test-component
+    - id: base-composite
+      composite:
+        commands:
+        - base-apply
+        - base-exec
+    - id: test-exec
+      attributes:
+        controller.devfile.io/imported-by: test-contribution
+      exec:
+        component: test-component

@@ -1,8 +1,8 @@
-# Contributing to Devworkspace-Operator
+# Contributing to DevWorkspace Operator
 
-Hello there! Thank you for choosing to the contributing to devfile/devworkspace-operator. Navigate through the following to understand more about contributing here.
+Hello there! Thank you for choosing to contribute to DevWorkspace Operator. Navigate through the following table of contents to learn more about contributing to the project.
 
-- [Contributing to Devworkspace-Operator](#contributing-to-devworkspace-operator)
+- [Contributing to DevWorkspace Operator](#contributing-to-devworkspace-operator)
 - [How to Contribute](#how-to-contribute)
   - [Set up your Development Environment](#set-up-your-development-environment)
       - [Running the controller locally.](#running-the-controller-locally)
@@ -12,11 +12,11 @@ Hello there! Thank you for choosing to the contributing to devfile/devworkspace-
   - [Signing-off on Commits](#signing-off-on-commits)
 
 # How to Contribute
-To contribute to the devworkspace-operator project, developers should follow the fork and pull request workflow. 
+To contribute to the DevWorkspace Operator project, developers should follow the [fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) and [pull request workflow](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request-from-a-fork). 
 ## Set up your Development Environment
 
 
-**1.** Fork [Devworkspace operator](https://github.com/devfile/devworkspace-operator) repository.
+**1.** Fork [devworkspace-operator](https://github.com/devfile/devworkspace-operator) repository.
 
 **2.** Clone your forked copy of the project.
 
@@ -26,7 +26,7 @@ git clone https://github.com/<your-github-username>/devworkspace-operator.git
 
 #### Running the controller locally.
 
-In the steps listed below, we set up the development environment using a minikube cluster. 
+In the steps listed below, we set up the development environment using a [minikube cluster](https://minikube.sigs.k8s.io/docs/start/). 
 
 **1.** Start the minikube cluster.
 
@@ -51,10 +51,10 @@ export NAMESPACE="devworkspace-controller"
 ```
 make install_cert_manager.
 ```
-Please note that the above step is not specific to minikube. The cert-manager is required for all deployments on kubernetes.
+Please note that the above step is not specific to minikube. The cert-manager is required for all deployments on Kubernetes.
 
 
-**5.** Install the dependencies for running the devworkspace-operator in your cluster.
+**5.** Install the dependencies for running the DevWorkspace Operator in your cluster.
 
 ```
 make install
@@ -72,7 +72,7 @@ kubectl patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"r
 make run
 ```
 
-This will run the devworkspace-controller in your local system.
+This will run the devworkspace-controller on your local system.
 
 **8.** Make your changes in the new branch and test the changes.
 
@@ -81,20 +81,29 @@ This will run the devworkspace-controller in your local system.
 
 #### Test run the controller
 
-**1.** Take a look samples devworkspace configuration in `./samples` folder.
-**2.** Apply any of them by executing `kubectl apply -f ./samples/theia-latest.yaml -n <namespace>`.
-**3.** As soon as devworkspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
+**1.** Take a look samples DevWorkspaces in the `./samples` directory. If you are uncertain on which one to try, use `theia-latest.yaml`.
 
+**2.** Apply a sample by executing `kubectl apply -f ./samples/<SAMPLE-FILENAME> -n $NAMESPACE`. For instance, `kubectl apply -f ./samples/theia-latest.yaml -n  $NAMESPACE`.
+
+**3.** As soon as devworkspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`.
+
+**4.** To check for the DevWorkspace status, execute `kubectl get dw -n $NAMESPACE -w`.
+
+**5.** As soon as the DevWorkspace is started, an IDE url will appear from the output of `kubectl get dw -n $NAMESPACE -w`. This assumes that the DevWorkspace sample you chose includes an IDE.
 
 #### Developing Webhooks
 
 **1.** Make a change to the webhook.
-**2.** Ensure the `DWO_IMG` environment variable points to your container image repository, eg. export `DWO_IMG=quay.io/aobuchow/dwo-webhook:next`.
-**3.** Run `make docker restart` (assuming DWO is already deployed to the cluster, otherwise make docker install).
+
+
+**2.** Ensure the `DWO_IMG` environment variable points to your container image repository, eg. export `DWO_IMG=quay.io/<username>/dwo-webhook:next`.
+
+
+**3.** Run `make docker restart` (assuming DWO is already deployed to the cluster, otherwise run `make docker install`).
 Wait for the webhook deployment to update with your image that contains your latest changes.
 ## Signing-off on Commits
 
-To contribute to this project, you must agree to the **code fo conduct** for each commit you make. 
+To contribute to this project, you must agree to the **code of conduct** for each commit you make. 
 
 See the [code of conduct](https://github.com/devfile/api/blob/main/CODE_OF_CONDUCT.md) file for the full text of what you must agree to.
 To signify that you agree to the DCO for contributions, you simply add a line to each of your

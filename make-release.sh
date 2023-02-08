@@ -147,54 +147,6 @@ update_images() {
   make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
 }
 
-set_image_digest() {
-  local JQ_FILTER=${1}
-  local CSV_FILE=${2}
-
-  local IMAGE=$(yq -r ${JQ_FILTER} "${CSV_FILE}")
-  if [[ ! ${IMAGE} =~ sha256 ]]; then
-    local DIGEST=$(skopeo inspect --tls-verify=false docker://${IMAGE} 2>/dev/null | jq -r '.Digest')
-    local IMAGE_WITH_DIGEST=$(echo "${IMAGE}" | sed -e 's/^\(.*\):[^:]*$/\1/')@"${DIGEST}"
-    yq -riY ''"${JQ_FILTER}"' = '"\"${IMAGE_WITH_DIGEST}\""'' ${CSV_FILE}
-    echo "[INFO] ${IMAGE} -> ${IMAGE_WITH_DIGEST}"
-  fi
-}
-
-set_digests() {
-  local CSV_FILE=deploy/templates/components/csv/clusterserviceversion.yaml
-
-  i=0
-  local CONTAINERS_LENGTH=$(yq -r '.spec.install.spec.deployments[0].spec.template.spec.containers | length' ${CSV_FILE})
-  while [ "${i}" -lt "${CONTAINERS_LENGTH}" ]; do
-      # RELATED_IMAGE environment variables
-      j=0
-      local ENV_VARS_LENGTH=$(yq -r '.spec.install.spec.deployments[0].spec.template.spec.containers['"${i}"'].env | length' ${CSV_FILE})
-      while [ "${j}" -lt "${ENV_VARS_LENGTH}" ]; do
-          ENV_NAME=$(yq -r '.spec.install.spec.deployments[0].spec.template.spec.containers['"${i}"'].env['"${j}"'].name' ${CSV_FILE})
-          if [[ ${ENV_NAME} =~ ^RELATED_IMAGE_ ]]; then
-              set_image_digest ".spec.install.spec.deployments[0].spec.template.spec.containers[${i}].env[${j}].value" ${CSV_FILE}
-          fi
-
-          j=$((j+1))
-      done
-
-      # Container image
-      set_image_digest ".spec.install.spec.deployments[0].spec.template.spec.containers[${i}].image" ${CSV_FILE}
-
-      i=$((i+1))
-  done
-
-  # Related images
-  i=0
-  local RELATED_IMAGE_LENGTH=$(yq -r '.spec.relatedImages | length' ${CSV_FILE})
-  while [ "${i}" -lt "${RELATED_IMAGE_LENGTH}" ]; do
-      set_image_digest ".spec.relatedImages[${i}].image" ${CSV_FILE}
-      i=$((i+1))
-  done
-
-  make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
-}
-
 # Build and push images for specified release version. Respects the DRY_RUN flag
 # TODO:
 #   - Build release images for bundle and index
@@ -275,7 +227,6 @@ prerelease() {
   echo "[INFO] Updating version to $VERSION"
   update_version "$VERSION"
   update_images "$VERSION"
-  set_digests
 
   git_commit_and_push "[prerelease] Prepare branch for release" "ci-prerelease-$VERSION"
 

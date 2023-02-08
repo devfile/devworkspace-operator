@@ -110,6 +110,9 @@ if [ "$RELEASE" == "true" ]; then
   # shellcheck disable=SC2016
   yq -Yi --arg replaces "$LATEST_BUGFIX" '.spec.replaces = $replaces' \
     deploy/templates/components/csv/clusterserviceversion.yaml
+
+  # Set digests instead of tags, it allows to mirror images in disconnected environment
+  . build/scripts/set_digests.sh -c deploy/templates/components/csv/clusterserviceversion.yaml
 else
   # Remove replaces field from CSVs in nightly builds since the 'next' catalog doesn't currently support
   # an upgrade path.

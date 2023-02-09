@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Package images is intended to support deploying the operator on restricted networks. It contains
 // utilities for translating images referenced by environment variables to regular image references,
 // allowing images that are defined by a tag to be replaced by digests automatically. This allows all
@@ -25,18 +26,13 @@ package images
 import (
 	"fmt"
 	"os"
-	"regexp"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var log = logf.Log.WithName("container-images")
 
-var envRegexp = regexp.MustCompile(`\${(RELATED_IMAGE_.*)}`)
-
 const (
-	webTerminalToolingImageEnvVar  = "RELATED_IMAGE_web_terminal_tooling"
 	webhookServerImageEnvVar       = "RELATED_IMAGE_devworkspace_webhook_server"
 	kubeRBACProxyImageEnvVar       = "RELATED_IMAGE_kube_rbac_proxy"
 	pvcCleanupJobImageEnvVar       = "RELATED_IMAGE_pvc_cleanup_job"
@@ -62,17 +58,6 @@ func GetKubeRBACProxyImage() string {
 	val, ok := os.LookupEnv(kubeRBACProxyImageEnvVar)
 	if !ok {
 		log.Error(fmt.Errorf("environment variable %s is not set", kubeRBACProxyImageEnvVar), "Could not get webhook server image")
-		return ""
-	}
-	return val
-}
-
-// GetWebTerminalToolingImage returns the image reference for the default web tooling image. Returns
-// the empty string if environment variable RELATED_IMAGE_web_terminal_tooling is not defined
-func GetWebTerminalToolingImage() string {
-	val, ok := os.LookupEnv(webTerminalToolingImageEnvVar)
-	if !ok {
-		log.Error(fmt.Errorf("environment variable %s is not set", webTerminalToolingImageEnvVar), "Could not get web terminal tooling image")
 		return ""
 	}
 	return val
@@ -107,48 +92,11 @@ func GetAsyncStorageSidecarImage() string {
 	return val
 }
 
-func GetProjectClonerImage() string {
+func GetProjectCloneImage() string {
 	val, ok := os.LookupEnv(projectCloneImageEnvVar)
 	if !ok {
 		log.Info(fmt.Sprintf("Could not get initial project clone image: environment variable %s is not set", projectCloneImageEnvVar))
 		return ""
 	}
 	return val
-}
-
-// FillPluginEnvVars replaces plugin devworkspaceTemplate .spec.components[].container.image environment
-// variables of the form ${RELATED_IMAGE_*} with values from environment variables with the same name.
-//
-// Returns error if any referenced environment variable is undefined.
-func FillPluginEnvVars(pluginDWT *dw.DevWorkspaceTemplate) (*dw.DevWorkspaceTemplate, error) {
-	for idx, component := range pluginDWT.Spec.Components {
-		if component.Container == nil {
-			continue
-		}
-		img, err := getImageForEnvVar(component.Container.Image)
-		if err != nil {
-			return nil, err
-		}
-		pluginDWT.Spec.Components[idx].Container.Image = img
-	}
-	return pluginDWT, nil
-}
-
-func isImageEnvVar(query string) bool {
-	return envRegexp.MatchString(query)
-}
-
-func getImageForEnvVar(envStr string) (string, error) {
-	if !isImageEnvVar(envStr) {
-		// Value passed in is not env var, return unmodified
-		return envStr, nil
-	}
-	matches := envRegexp.FindStringSubmatch(envStr)
-	env := matches[1]
-	val, ok := os.LookupEnv(env)
-	if !ok {
-		log.Info(fmt.Sprintf("Environment variable '%s' is unset. Cannot determine image to use", env))
-		return "", fmt.Errorf("environment variable %s is unset", env)
-	}
-	return val, nil
 }

@@ -367,10 +367,6 @@ spec:
                   value: 200m
                 - name: WEBHOOKS_SERVER_CPU_REQUEST
                   value: 100m
-                - name: RELATED_IMAGE_plugin_redhat_developer_web_terminal_4_5_0
-                  value: quay.io/eclipse/che-machine-exec:nightly
-                - name: RELATED_IMAGE_web_terminal_tooling
-                  value: quay.io/wto/web-terminal-tooling:latest
                 - name: RELATED_IMAGE_pvc_cleanup_job
                   value: registry.access.redhat.com/ubi8-micro:8.4-81
                 - name: RELATED_IMAGE_async_storage_server
@@ -489,10 +485,6 @@ spec:
     name: kube_rbac_proxy
   - image: quay.io/devfile/project-clone:next
     name: project_clone
-  - image: quay.io/eclipse/che-machine-exec:nightly
-    name: plugin_redhat_developer_web_terminal_4_5_0
-  - image: quay.io/wto/web-terminal-tooling:latest
-    name: web_terminal_tooling
   - image: registry.access.redhat.com/ubi8-micro:8.4-81
     name: pvc_cleanup_job
   - image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1

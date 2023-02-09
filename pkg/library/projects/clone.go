@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Package projects defines library functions for reconciling projects in a Devfile (i.e. cloning and maintaining state)
 package projects
 
@@ -43,7 +44,7 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPo
 		return nil, nil
 	}
 
-	cloneImage := images.GetProjectClonerImage()
+	cloneImage := images.GetProjectCloneImage()
 	if cloneImage == "" {
 		// Assume project clone is intentionally disabled if project clone image is not defined
 		return nil, nil

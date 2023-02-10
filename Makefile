@@ -99,7 +99,7 @@ test: generate fmt vet manifests envtest
   ifneq ($(shell command -v ginkgo 2> /dev/null),)
 	  go test $(shell go list ./... | grep -v test/e2e | grep -v controllers/workspace) -coverprofile cover.out
 	  KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
-	    ginkgo run --timeout 5m --randomize-all -coverprofile controller.cover.out controllers/workspace
+	    ginkgo run --timeout 5m --randomize-all -coverprofile controller.cover.out controllers/workspace controllers/controller/devworkspacerouting
   else
 	  KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" \
 	    go test $(shell go list ./... | grep -v test/e2e) -coverprofile cover.out

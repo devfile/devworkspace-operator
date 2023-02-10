@@ -14,11 +14,13 @@
 package devworkspacerouting_test
 
 import (
+	"fmt"
 	"time"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	routeV1 "github.com/openshift/api/route/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,7 +28,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -44,6 +48,10 @@ const (
 	discoverableTargetPort   = 7979
 	nonExposedEndpointName   = "non-exposed-endpoint"
 	nonExposedTargetPort     = 8989
+)
+
+var (
+	ExpectedLabels = map[string]string{constants.DevWorkspaceIDLabel: testWorkspaceID}
 )
 
 func createPreparingDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspaceRouting {
@@ -128,6 +136,19 @@ func createDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspace
 	return dwr
 }
 
+func getExistingDevWorkspaceRouting(name string) *controllerv1alpha1.DevWorkspaceRouting {
+	By(fmt.Sprintf("Getting existing DevWorkspaceRouting %s", name))
+	dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+	dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+	Eventually(func() (string, error) {
+		if err := k8sClient.Get(ctx, dwrNamespacedName, dwr); err != nil {
+			return "", err
+		}
+		return dwr.Spec.DevWorkspaceId, nil
+	}, timeout, interval).Should(Not(BeEmpty()), "DevWorkspaceRouting should exist in cluster")
+	return dwr
+}
+
 func deleteService(serviceName string, namespace string) {
 	createdService := &corev1.Service{}
 	serviceNamespacedName := namespacedName(serviceName, namespace)
@@ -174,6 +195,17 @@ func deleteDevWorkspaceRouting(name string) {
 		err := k8sClient.Get(ctx, dwrNN, dwr)
 		return err != nil && k8sErrors.IsNotFound(err)
 	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue(), "DevWorkspaceRouting not deleted after timeout")
+}
+
+func devWorkspaceRoutingOwnerRef(dwr *controllerv1alpha1.DevWorkspaceRouting) metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion:         "controller.devfile.io/v1alpha1",
+		Kind:               "DevWorkspaceRouting",
+		Name:               dwr.Name,
+		UID:                dwr.UID,
+		Controller:         pointer.BoolPtr(true),
+		BlockOwnerDeletion: pointer.BoolPtr(true),
+	}
 }
 
 func deleteObject(obj crclient.Object) {

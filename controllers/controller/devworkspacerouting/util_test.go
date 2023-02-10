@@ -13,6 +13,180 @@
 
 package devworkspacerouting_test
 
-const (
-	testNamespace = "devworkspace-test"
+import (
+	"time"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	. "github.com/onsi/gomega"
+	routeV1 "github.com/openshift/api/route/v1"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+const (
+	timeout  = 10 * time.Second
+	interval = 250 * time.Millisecond
+
+	testNamespace           = "devworkspace-test"
+	devWorkspaceRoutingName = "test-devworkspacerouting"
+	testWorkspaceID         = "test-id"
+	testMachineName         = "test-machine-name"
+
+	exposedEndPointName      = "test-endpoint"
+	exposedTargetPort        = 7777
+	discoverableEndpointName = "discoverable-endpoint"
+	discoverableTargetPort   = 7979
+	nonExposedEndpointName   = "non-exposed-endpoint"
+	nonExposedTargetPort     = 8989
+)
+
+func createPreparingDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspaceRouting {
+	mainAttributes := controllerv1alpha1.Attributes{}
+	mainAttributes.PutString("type", "main")
+	exposedEndpoint := controllerv1alpha1.Endpoint{
+		Name:       exposedEndPointName,
+		Attributes: mainAttributes,
+		// Target port must be within range 1 and 65535
+		// Created service will be invalid on cluster and error will be logged
+		// DWR will continue trying to reconcile however, keeping it stuck in preparing phase
+		TargetPort: 0,
+	}
+	machineEndpointsMap := map[string]controllerv1alpha1.EndpointList{
+		testMachineName: {
+			exposedEndpoint,
+		},
+	}
+
+	dwr := &controllerv1alpha1.DevWorkspaceRouting{
+		Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{
+			DevWorkspaceId: workspaceID,
+			RoutingClass:   controllerv1alpha1.DevWorkspaceRoutingBasic,
+			Endpoints:      machineEndpointsMap,
+			PodSelector: map[string]string{
+				constants.DevWorkspaceIDLabel: workspaceID,
+			},
+		},
+	}
+	dwr.SetName(name)
+	dwr.SetNamespace(testNamespace)
+	Expect(k8sClient.Create(ctx, dwr)).Should(Succeed())
+	return dwr
+}
+
+func createDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspaceRouting {
+	mainAttributes := controllerv1alpha1.Attributes{}
+	mainAttributes.PutString("type", "main")
+	discoverableAttributes := controllerv1alpha1.Attributes{}
+	discoverableAttributes.PutBoolean(string(controllerv1alpha1.DiscoverableAttribute), true)
+
+	exposedEndpoint := controllerv1alpha1.Endpoint{
+		Name:       exposedEndPointName,
+		Exposure:   controllerv1alpha1.PublicEndpointExposure,
+		Attributes: mainAttributes,
+		TargetPort: exposedTargetPort,
+	}
+	nonExposedEndpoint := controllerv1alpha1.Endpoint{
+		Name:       nonExposedEndpointName,
+		Exposure:   controllerv1alpha1.NoneEndpointExposure,
+		TargetPort: nonExposedTargetPort,
+	}
+	discoverableEndpoint := controllerv1alpha1.Endpoint{
+		Name:       discoverableEndpointName,
+		Exposure:   controllerv1alpha1.PublicEndpointExposure,
+		Attributes: discoverableAttributes,
+		TargetPort: discoverableTargetPort,
+	}
+	machineEndpointsMap := map[string]controllerv1alpha1.EndpointList{
+		"test-machine-name": {
+			exposedEndpoint,
+			nonExposedEndpoint,
+			discoverableEndpoint,
+		},
+	}
+
+	dwr := &controllerv1alpha1.DevWorkspaceRouting{
+		Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{
+			DevWorkspaceId: workspaceID,
+			RoutingClass:   controllerv1alpha1.DevWorkspaceRoutingBasic,
+			Endpoints:      machineEndpointsMap,
+			PodSelector: map[string]string{
+				constants.DevWorkspaceIDLabel: workspaceID,
+			},
+		},
+	}
+
+	dwr.SetName(name)
+	dwr.SetNamespace(testNamespace)
+
+	Expect(k8sClient.Create(ctx, dwr)).Should(Succeed())
+	return dwr
+}
+
+func deleteService(serviceName string, namespace string) {
+	createdService := &corev1.Service{}
+	serviceNamespacedName := namespacedName(serviceName, namespace)
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, serviceNamespacedName, createdService)
+		return err == nil
+	}, timeout, interval).Should(BeTrue(), "Service should exist in cluster")
+	deleteObject(createdService)
+}
+
+func deleteRoute(endpointName string, namespace string) {
+	createdRoute := routeV1.Route{}
+	routeNamespacedName := namespacedName(common.RouteName(testWorkspaceID, endpointName), namespace)
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, routeNamespacedName, &createdRoute)
+		return err == nil
+	}, timeout, interval).Should(BeTrue(), "Route should exist in cluster")
+	deleteObject(&createdRoute)
+}
+
+func deleteIngress(endpointName string, namespace string) {
+	createdIngress := networkingv1.Ingress{}
+	ingressNamespacedName := namespacedName(common.RouteName(testWorkspaceID, endpointName), namespace)
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, ingressNamespacedName, &createdIngress)
+		return err == nil
+	}, timeout, interval).Should(BeTrue(), "Ingress should exist in cluster")
+	deleteObject(&createdIngress)
+}
+
+func deleteDevWorkspaceRouting(name string) {
+	dwrNN := namespacedName(name, testNamespace)
+	dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+	dwr.Name = name
+	dwr.Namespace = testNamespace
+	// Do nothing if already deleted
+	err := k8sClient.Delete(ctx, dwr)
+	if k8sErrors.IsNotFound(err) {
+		return
+	}
+	Expect(err).Should(BeNil())
+
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, dwrNN, dwr)
+		return err != nil && k8sErrors.IsNotFound(err)
+	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue(), "DevWorkspaceRouting not deleted after timeout")
+}
+
+func deleteObject(obj crclient.Object) {
+	Expect(k8sClient.Delete(ctx, obj)).Should(Succeed())
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, namespacedName(obj.GetName(), obj.GetNamespace()), obj)
+		return k8sErrors.IsNotFound(err)
+	}, 10*time.Second, 250*time.Millisecond).Should(BeTrue(), "Deleting %s with name %s", obj.GetObjectKind(), obj.GetName())
+}
+
+func namespacedName(name, namespace string) types.NamespacedName {
+	return types.NamespacedName{
+		Name:      name,
+		Namespace: namespace,
+	}
+}

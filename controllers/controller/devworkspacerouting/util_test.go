@@ -149,6 +149,18 @@ func getExistingDevWorkspaceRouting(name string) *controllerv1alpha1.DevWorkspac
 	return dwr
 }
 
+func getReadyDevWorkspaceRouting(name string) *controllerv1alpha1.DevWorkspaceRouting {
+	dwr := getExistingDevWorkspaceRouting(name)
+	dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+	Eventually(func() (controllerv1alpha1.DevWorkspaceRoutingPhase, error) {
+		if err := k8sClient.Get(ctx, dwrNamespacedName, dwr); err != nil {
+			return "", err
+		}
+		return controllerv1alpha1.DevWorkspaceRoutingPhase(dwr.Status.Phase), nil
+	}, timeout, interval).Should(Equal(controllerv1alpha1.RoutingReady), "Ready DevWorkspaceRouting should exist in cluster")
+	return dwr
+}
+
 func deleteService(serviceName string, namespace string) {
 	createdService := &corev1.Service{}
 	serviceNamespacedName := namespacedName(serviceName, namespace)

@@ -18,6 +18,7 @@ import (
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	. "github.com/onsi/ginkgo/v2"
@@ -372,6 +373,145 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				}, timeout, interval).Should(BeTrue(), "Route for non-exposed endpoint should not exist in cluster")
 			})
 		})
+	})
 
+	Context("Failure cases", func() {
+		BeforeEach(func() {
+			config.SetGlobalConfigForTesting(testControllerCfg)
+			infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+			createDWR(testWorkspaceID, devWorkspaceRoutingName)
+			getReadyDevWorkspaceRouting(testWorkspaceID)
+		})
+
+		AfterEach(func() {
+			config.SetGlobalConfigForTesting(testControllerCfg)
+			deleteDevWorkspaceRouting(devWorkspaceRoutingName)
+			deleteService(common.ServiceName(testWorkspaceID), testNamespace)
+			deleteService(common.EndpointName(discoverableEndpointName), testNamespace)
+			deleteIngress(exposedEndPointName, testNamespace)
+			deleteIngress(discoverableEndpointName, testNamespace)
+		})
+		It("Fails DevWorkspaceRouting with no routing class", func() {
+			By("Creating DevWorkspaceRouting with no routing class")
+			mainAttributes := controllerv1alpha1.Attributes{}
+			mainAttributes.PutString("type", "main")
+			machineEndpointsMap := map[string]controllerv1alpha1.EndpointList{
+				testMachineName: {
+					controllerv1alpha1.Endpoint{
+						Name:       exposedEndPointName,
+						Exposure:   controllerv1alpha1.PublicEndpointExposure,
+						Attributes: mainAttributes,
+						TargetPort: exposedTargetPort,
+					},
+				},
+			}
+
+			dwr := &controllerv1alpha1.DevWorkspaceRouting{
+				Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{
+					DevWorkspaceId: testWorkspaceID,
+					RoutingClass:   "",
+					Endpoints:      machineEndpointsMap,
+					PodSelector: map[string]string{
+						constants.DevWorkspaceIDLabel: testWorkspaceID,
+					},
+				},
+			}
+			// Choose a unique name because a DWR will have already been created in the BeforeEach,
+			// causing a conflict if we try reusing the same name
+			dwrName := "dwr-with-no-routing-class"
+			dwr.SetName(dwrName)
+			dwr.SetNamespace(testNamespace)
+			Expect(k8sClient.Create(ctx, dwr)).Should(Succeed())
+
+			By("Checking that the DevWorkspaceRouting's has the failed status")
+			dwrNamespacedName := namespacedName(dwrName, testNamespace)
+			createdDWR := &controllerv1alpha1.DevWorkspaceRouting{}
+			Eventually(func() (bool, error) {
+				err := k8sClient.Get(ctx, dwrNamespacedName, createdDWR)
+				if err != nil {
+					return false, err
+				}
+				return createdDWR.Status.Phase == controllerv1alpha1.RoutingFailed, nil
+			}, timeout, interval).Should(BeTrue(), "DevWorkspaceRouting should be in failed phase")
+
+			Expect(createdDWR.Status.Message).Should(Equal("DevWorkspaceRouting requires field routingClass to be set"),
+				"DevWorkspaceRouting status message should indicate that the routingClass must be set")
+
+			// Manual cleanup since we specified a DWR name that is different than what is specified in the AfterEach
+			// No ingresses or services owned by the DWR-with-no-routing-class will be created, as it entered the failed phase early
+			deleteDevWorkspaceRouting(dwrName)
+		})
+
+		It("Fails DevWorkspaceRouting when routing class removed", func() {
+			By("Removing DevWorkspaceRouting's routing class")
+			Eventually(func() error {
+				createdDWR := getReadyDevWorkspaceRouting(devWorkspaceRoutingName)
+				createdDWR.Spec.RoutingClass = ""
+				return k8sClient.Update(ctx, createdDWR)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting routing class should be updated on cluster")
+
+			By("Checking that the DevWorkspaceRouting's has the failed status")
+			dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+			updatedDWR := &controllerv1alpha1.DevWorkspaceRouting{}
+			Eventually(func() (bool, error) {
+				err := k8sClient.Get(ctx, dwrNamespacedName, updatedDWR)
+				if err != nil {
+					return false, err
+				}
+				return updatedDWR.Status.Phase == controllerv1alpha1.RoutingFailed, nil
+			}, timeout, interval).Should(BeTrue(), "DevWorkspaceRouting should be in failed phase")
+
+			Expect(updatedDWR.Status.Message).Should(Equal("DevWorkspaceRouting requires field routingClass to be set"),
+				"DevWorkspaceRouting status message should indicate that the routingClass must be set")
+
+		})
+
+		It("Fails DevWorkspaceRouting with cluster-tls routing class on Kubernetes", func() {
+			By("Setting cluster-tls DevWorkspaceRouting's routing class")
+			Eventually(func() error {
+				createdDWR := getReadyDevWorkspaceRouting(devWorkspaceRoutingName)
+				createdDWR.Spec.RoutingClass = "cluster-tls"
+				return k8sClient.Update(ctx, createdDWR)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting routing class should be updated on cluster")
+
+			By("Checking that the DevWorkspaceRouting's has the failed status")
+			dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+			updatedDWR := &controllerv1alpha1.DevWorkspaceRouting{}
+			Eventually(func() (bool, error) {
+				err := k8sClient.Get(ctx, dwrNamespacedName, updatedDWR)
+				if err != nil {
+					return false, err
+				}
+				return updatedDWR.Status.Phase == controllerv1alpha1.RoutingFailed, nil
+			}, timeout, interval).Should(BeTrue(), "DevWorkspaceRouting should be in failed phase")
+		})
+
+		It("Fails DevWorkspaceRouting when cluster host suffix missing on Kubernetes", func() {
+			By("Removing cluster host suffix from DevWorkspace Operator Configuration")
+			dwoc := testControllerCfg.DeepCopy()
+			dwoc.Routing = &controllerv1alpha1.RoutingConfig{
+				ClusterHostSuffix: "",
+			}
+			config.SetGlobalConfigForTesting(dwoc)
+
+			By("Triggering a reconcile")
+			Eventually(func() error {
+				createdDWR := getReadyDevWorkspaceRouting(devWorkspaceRoutingName)
+				createdDWR.Annotations = make(map[string]string)
+				createdDWR.Annotations["test"] = "test"
+				return k8sClient.Update(ctx, createdDWR)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting annotations should be updated on cluster")
+
+			By("Checking that the DevWorkspaceRouting's has the failed status")
+			dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+			updatedDWR := &controllerv1alpha1.DevWorkspaceRouting{}
+			Eventually(func() (controllerv1alpha1.DevWorkspaceRoutingPhase, error) {
+				err := k8sClient.Get(ctx, dwrNamespacedName, updatedDWR)
+				if err != nil {
+					return "", err
+				}
+				return updatedDWR.Status.Phase, nil
+			}, timeout, interval).Should(Equal(controllerv1alpha1.RoutingFailed), "DevWorkspaceRouting should be in failed phase")
+		})
 	})
 })

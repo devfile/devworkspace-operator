@@ -16,6 +16,7 @@
 package common
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"regexp"
 	"strings"
@@ -128,6 +129,13 @@ func AutoMountSecretVolumeName(volumeName string) string {
 
 func AutoMountPVCVolumeName(pvcName string) string {
 	return pvcName
+}
+
+func AutoMountProjectedVolumeName(mountPath string) string {
+	// To avoid issues around sanitizing mountPath to generate a unique name (length, allowed chars)
+	// just use the sha256 hash of mountPath
+	hash := sha256.Sum256([]byte(mountPath))
+	return fmt.Sprintf("projected-%x", hash[:10])
 }
 
 func WorkspaceRoleName() string {

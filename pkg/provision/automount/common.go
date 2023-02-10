@@ -99,12 +99,18 @@ func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, e
 		filterGitconfigAutomountVolume(secretAutoMountResources)
 	}
 
+	cmAndSecretResources := mergeAutomountResources(cmAutoMountResources, secretAutoMountResources)
+	mergedResources, err := mergeProjectedVolumes(cmAndSecretResources)
+	if err != nil {
+		return nil, err
+	}
+
 	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api)
 	if err != nil {
 		return nil, err
 	}
 
-	return mergeAutomountResources(gitCMAutoMountResources, cmAutoMountResources, secretAutoMountResources, pvcAutoMountResources), nil
+	return mergeAutomountResources(gitCMAutoMountResources, mergedResources, pvcAutoMountResources), nil
 }
 
 func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, automount *Resources) error {
@@ -172,6 +178,8 @@ func formatVolumeDescription(vol corev1.Volume) string {
 		return fmt.Sprintf("secret '%s'", vol.Secret.SecretName)
 	} else if vol.ConfigMap != nil {
 		return fmt.Sprintf("configmap '%s'", vol.ConfigMap.Name)
+	} else if vol.PersistentVolumeClaim != nil {
+		return fmt.Sprintf("pvc '%s'", vol.PersistentVolumeClaim.ClaimName)
 	}
 	return fmt.Sprintf("'%s'", vol.Name)
 }

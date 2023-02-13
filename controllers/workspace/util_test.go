@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -224,14 +225,13 @@ func scaleDeploymentToZero(deploymentName string) {
 }
 
 func devworkspaceOwnerRef(wksp *dw.DevWorkspace) metav1.OwnerReference {
-	boolTrue := true
 	return metav1.OwnerReference{
 		APIVersion:         "workspace.devfile.io/v1alpha2",
 		Kind:               "DevWorkspace",
 		Name:               wksp.Name,
 		UID:                wksp.UID,
-		Controller:         &boolTrue,
-		BlockOwnerDeletion: &boolTrue,
+		Controller:         pointer.BoolPtr(true),
+		BlockOwnerDeletion: pointer.BoolPtr(true),
 	}
 }
 

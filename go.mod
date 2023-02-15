@@ -13,7 +13,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.0.0
 	github.com/onsi/gomega v1.17.0
 	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87
-	github.com/prometheus/client_golang v1.11.0
+	github.com/prometheus/client_golang v1.11.1
 	github.com/redhat-cop/operator-utils v1.1.4
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/crypto v0.3.0

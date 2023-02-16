@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
@@ -154,6 +155,22 @@ func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus, ign
 		}
 	}
 	return true, ""
+}
+
+// Returns an error message if the workspace related pods are in an unrecoverable state, which may
+// have been caused  by an ignoredUnrecoverableEvent.
+// Otherwise, en empty string is returned.
+func CheckForIgnoredWorkspacePodEvents(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (errMsg string) {
+	workspaceIDLabel := k8sclient.MatchingLabels{constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId}
+	// CheckPodsState returns either a message or error, not both.
+	errMsg, checkErr := CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, workspaceIDLabel, []string{}, clusterAPI)
+	if checkErr != nil {
+		return checkErr.Error()
+	}
+	if errMsg != "" {
+		return errMsg
+	}
+	return ""
 }
 
 func checkIfUnrecoverableEventIgnored(reason string, ignoredEvents []string) (ignored bool) {

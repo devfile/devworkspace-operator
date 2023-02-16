@@ -36,6 +36,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
+	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
@@ -221,7 +222,14 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// encountered in main reconcile loop.
 		if err == nil {
 			if timeoutErr := checkForStartTimeout(clusterWorkspace); timeoutErr != nil {
-				reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+				// Check if an ignoredUnrecoverableEvent occured and report it alongside the timeout notice
+				errMsg := status.CheckForIgnoredWorkspacePodEvents(workspace, clusterAPI)
+				if errMsg != "" {
+					failureMsg := fmt.Sprintf("%s. Reason: %s", timeoutErr.Error(), errMsg)
+					reconcileResult, err = r.failWorkspace(workspace, failureMsg, metrics.DetermineProvisioningFailureReason(errMsg), reqLogger, &reconcileStatus)
+				} else {
+					reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+				}
 			}
 		}
 		if reconcileStatus.phase == dw.DevWorkspaceStatusRunning {
@@ -480,7 +488,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	deploymentStatus := wsprovision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
-			failureReason := metrics.DetermineProvisioningFailureReason(deploymentStatus)
+			failureReason := metrics.DetermineProvisioningFailureReason(deploymentStatus.Info())
 			return r.failWorkspace(workspace, deploymentStatus.Info(), failureReason, reqLogger, &reconcileStatus)
 		}
 		reqLogger.Info("Waiting on deployment to be ready")

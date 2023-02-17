@@ -96,11 +96,6 @@ func CheckPodsState(workspaceID string, namespace string, labelSelector k8sclien
 		if msg, err := CheckPodEvents(&pod, workspaceID, ignoredEvents, clusterAPI); err != nil || msg != "" {
 			return msg, err
 		}
-		if pod.Status.Phase == corev1.PodPending {
-			if msg := checkPodConditions(&pod); msg != "" {
-				return msg, nil
-			}
-		}
 	}
 	return "", nil
 }
@@ -168,18 +163,6 @@ func checkIfUnrecoverableEventIgnored(reason string, ignoredEvents []string) (ig
 		}
 	}
 	return false
-}
-
-func checkPodConditions(pod *corev1.Pod) (msg string) {
-	if pod.Status.Conditions != nil {
-		for _, condition := range pod.Status.Conditions {
-			// Pod unschedulable condition
-			if condition.Type == corev1.PodScheduled && condition.Status == corev1.ConditionFalse && condition.Reason == corev1.PodReasonUnschedulable {
-				return fmt.Sprintf("Pod is unschedulable: %s", condition.Message)
-			}
-		}
-	}
-	return ""
 }
 
 // Returns the number of times an event has occurred.

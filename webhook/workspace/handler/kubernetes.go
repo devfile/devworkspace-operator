@@ -26,6 +26,13 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
+var (
+	// Verbs used in SAR checks when users attempt to use a Kubernetes/OpenShift component. A longer list results in
+	// more SAR checks per request. We cannot use '*' as a verb as the SAR will check for literal '*' permissions
+	// rather than "all verbs"
+	userVerbs = []string{"get", "create", "update", "delete"}
+)
+
 func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context.Context, req admission.Request, wksp *dwv2.DevWorkspaceTemplateSpec) error {
 	kubeComponents := getKubeComponentsFromWorkspace(wksp)
 	for componentName, component := range kubeComponents {
@@ -97,37 +104,14 @@ func (h *WebhookHandler) validatePermissionsOnObject(ctx context.Context, req ad
 	// Convert e.g. Pod -> pods, Deployment -> deployments
 	resourceType := fmt.Sprintf("%ss", strings.ToLower(typeMeta.Kind))
 
-	sar := &authv1.LocalSubjectAccessReview{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: req.Namespace,
-		},
-		Spec: authv1.SubjectAccessReviewSpec{
-			ResourceAttributes: &authv1.ResourceAttributes{
-				Namespace: req.Namespace,
-				Verb:      "*",
-				Group:     typeMeta.GroupVersionKind().Group,
-				Version:   typeMeta.GroupVersionKind().Version,
-				Resource:  resourceType,
-			},
-			User:   req.UserInfo.Username,
-			Groups: req.UserInfo.Groups,
-			UID:    req.UserInfo.UID,
-		},
+	// Check that user has permissions to use the resource
+	for _, verb := range userVerbs {
+		if err := h.checkSAR(ctx, req, typeMeta, resourceType, verb, componentName); err != nil {
+			return err
+		}
 	}
 
-	err := h.Client.Create(ctx, sar)
-	if err != nil {
-		return fmt.Errorf("failed to create subjectaccessreview for request: %w", err)
-	}
-
-	username := req.UserInfo.Username
-	if username == "" {
-		username = req.UserInfo.UID
-	}
-	if !sar.Status.Allowed {
-		return fmt.Errorf("user %s does not have permissions to work with objects of kind %s defined in component %s", username, typeMeta.GroupVersionKind().String(), componentName)
-	}
-
+	// Check that DWO has '*' permissions for the relevant resource
 	ssar := &authv1.LocalSubjectAccessReview{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: req.Namespace,
@@ -249,4 +233,38 @@ func getKubeLikeComponent_v1alpha1(component *dwv1.Component) (*dwv1.K8sLikeComp
 		return &component.Openshift.K8sLikeComponent, nil
 	}
 	return nil, fmt.Errorf("component does not specify kubernetes or openshift fields")
+}
+
+func (h *WebhookHandler) checkSAR(ctx context.Context, req admission.Request, typeMeta *metav1.TypeMeta, resourceType, verb, componentName string) error {
+	sar := &authv1.LocalSubjectAccessReview{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: req.Namespace,
+		},
+		Spec: authv1.SubjectAccessReviewSpec{
+			ResourceAttributes: &authv1.ResourceAttributes{
+				Namespace: req.Namespace,
+				Verb:      verb,
+				Group:     typeMeta.GroupVersionKind().Group,
+				Version:   typeMeta.GroupVersionKind().Version,
+				Resource:  resourceType,
+			},
+			User:   req.UserInfo.Username,
+			Groups: req.UserInfo.Groups,
+			UID:    req.UserInfo.UID,
+		},
+	}
+
+	err := h.Client.Create(ctx, sar)
+	if err != nil {
+		return fmt.Errorf("failed to create subjectaccessreview for request: %w", err)
+	}
+
+	username := req.UserInfo.Username
+	if username == "" {
+		username = req.UserInfo.UID
+	}
+	if !sar.Status.Allowed {
+		return fmt.Errorf("user %s does not have permissions to '%s' objects of kind %s defined in component %s", username, verb, typeMeta.GroupVersionKind().String(), componentName)
+	}
+	return nil
 }

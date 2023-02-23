@@ -37,7 +37,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
-	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
@@ -136,7 +135,7 @@ func SyncDeploymentToCluster(
 }
 
 // DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace
-func DeleteWorkspaceDeployment(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client runtimeClient.Client) (wait bool, err error) {
+func DeleteWorkspaceDeployment(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client k8sclient.Client) (wait bool, err error) {
 	err = client.Delete(ctx, &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: workspace.Namespace,
@@ -153,14 +152,14 @@ func DeleteWorkspaceDeployment(ctx context.Context, workspace *common.DevWorkspa
 }
 
 // ScaleDeploymentToZero scales the cluster deployment to zero
-func ScaleDeploymentToZero(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client runtimeClient.Client) error {
+func ScaleDeploymentToZero(ctx context.Context, workspace *common.DevWorkspaceWithConfig, client k8sclient.Client) error {
 	patch := []byte(`{"spec":{"replicas": 0}}`)
 	err := client.Patch(ctx, &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: workspace.Namespace,
 			Name:      common.DeploymentName(workspace.Status.DevWorkspaceId),
 		},
-	}, runtimeClient.RawPatch(types.StrategicMergePatchType, patch))
+	}, k8sclient.RawPatch(types.StrategicMergePatchType, patch))
 
 	if err != nil && !k8sErrors.IsNotFound(err) {
 		return err

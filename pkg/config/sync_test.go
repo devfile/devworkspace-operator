@@ -26,6 +26,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -97,6 +98,15 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 		func(_ *dw.DevWorkspaceTemplateSpecContent, c fuzz.Continue) {},
 		// Ensure no empty strings are generated as they cause default values to be used
 		func(s *string, c fuzz.Continue) { *s = "a" + c.RandString() },
+		// The only valid deployment strategies are Recreate and RollingUpdate
+		func(deploymentStrategy *appsv1.DeploymentStrategyType, c fuzz.Continue) {
+			switch c.Int() % 2 {
+			case 0:
+				*deploymentStrategy = appsv1.RollingUpdateDeploymentStrategyType
+			default:
+				*deploymentStrategy = appsv1.RecreateDeploymentStrategyType
+			}
+		},
 	)
 	for i := 0; i < 100; i++ {
 		fuzzedConfig := &v1alpha1.OperatorConfiguration{}

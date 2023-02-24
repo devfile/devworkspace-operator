@@ -1439,6 +1439,12 @@ spec:
                         description: "Map of key-value variables used for string replacement in the devfile. Values can be referenced via {{variable-key}} to replace the corresponding value in string fields in the devfile. Replacement cannot be used for \n  - schemaVersion, metadata, parent source \n  - element identifiers, e.g. command id, component name, endpoint name, project name \n  - references to identifiers, e.g. in events, a command's component, container's volume mount name \n  - string enums, e.g. command group kind, endpoint exposure"
                         type: object
                     type: object
+                  deploymentStrategy:
+                    description: DeploymentStrategy defines the deployment strategy to use to replace existing DevWorkspace pods with new ones. The available deployment stragies are "Recreate" and "RollingUpdate". With the "Recreate" deployment strategy, the existing workspace pod is killed before the new one is created. With the "RollingUpdate" deployment strategy, a new workspace pod is created and the existing workspace pod is deleted only when the new workspace pod is in a ready state. If not specified, the default "Recreate" deployment strategy is used.
+                    enum:
+                    - Recreate
+                    - RollingUpdate
+                    type: string
                   idleTimeout:
                     description: IdleTimeout determines how long a workspace should sit idle before being automatically scaled down. Proper functionality of this configuration property requires support in the workspace being started. If not specified, the default value of "15m" is used.
                     type: string

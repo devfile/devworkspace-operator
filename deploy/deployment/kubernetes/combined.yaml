@@ -2276,6 +2276,20 @@ spec:
                           e.g. command group kind, endpoint exposure"
                         type: object
                     type: object
+                  deploymentStrategy:
+                    description: DeploymentStrategy defines the deployment strategy
+                      to use to replace existing DevWorkspace pods with new ones.
+                      The available deployment stragies are "Recreate" and "RollingUpdate".
+                      With the "Recreate" deployment strategy, the existing workspace
+                      pod is killed before the new one is created. With the "RollingUpdate"
+                      deployment strategy, a new workspace pod is created and the
+                      existing workspace pod is deleted only when the new workspace
+                      pod is in a ready state. If not specified, the default "Recreate"
+                      deployment strategy is used.
+                    enum:
+                    - Recreate
+                    - RollingUpdate
+                    type: string
                   idleTimeout:
                     description: IdleTimeout determines how long a workspace should
                       sit idle before being automatically scaled down. Proper functionality

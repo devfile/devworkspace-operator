@@ -17,6 +17,7 @@ package v1alpha1
 
 import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,6 +101,14 @@ type WorkspaceConfig struct {
 	// not specified, the default value of "Always" is used.
 	// +kubebuilder:validation:Enum=IfNotPresent;Always;Never
 	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
+	// DeploymentStrategy defines the deployment strategy to use to replace existing DevWorkspace pods
+	// with new ones. The available deployment stragies are "Recreate" and "RollingUpdate".
+	// With the "Recreate" deployment strategy, the existing workspace pod is killed before the new one is created.
+	// With the "RollingUpdate" deployment strategy, a new workspace pod is created and the existing workspace pod is deleted
+	// only when the new workspace pod is in a ready state.
+	// If not specified, the default "Recreate" deployment strategy is used.
+	// +kubebuilder:validation:Enum=Recreate;RollingUpdate
+	DeploymentStrategy appsv1.DeploymentStrategyType `json:"deploymentStrategy,omitempty"`
 	// PVCName defines the name used for the persistent volume claim created
 	// to support workspace storage when the 'common' storage class is used.
 	// If not specified, the default value of `claim-devworkspace` is used.

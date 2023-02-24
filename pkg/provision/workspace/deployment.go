@@ -199,6 +199,16 @@ func getSpecDeployment(
 		return nil, err
 	}
 
+	deploymentStrategy := appsv1.DeploymentStrategy{
+		Type: workspace.Config.Workspace.DeploymentStrategy,
+	}
+	if workspace.Config.Workspace.DeploymentStrategy == appsv1.RollingUpdateDeploymentStrategyType {
+		deploymentStrategy.RollingUpdate = &appsv1.RollingUpdateDeployment{
+			MaxUnavailable: &constants.RollingUpdateMaxUnavailable,
+			MaxSurge:       &constants.RollingUpdateMaximumSurge,
+		}
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        common.DeploymentName(workspace.Status.DevWorkspaceId),
@@ -213,9 +223,7 @@ func getSpecDeployment(
 					constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 				},
 			},
-			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RecreateDeploymentStrategyType,
-			},
+			Strategy: deploymentStrategy,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workspace.Status.DevWorkspaceId,

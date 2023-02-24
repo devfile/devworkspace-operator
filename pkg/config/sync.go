@@ -290,6 +290,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.ImagePullPolicy != "" {
 			to.Workspace.ImagePullPolicy = from.Workspace.ImagePullPolicy
 		}
+		if from.Workspace.DeploymentStrategy != "" {
+			to.Workspace.DeploymentStrategy = from.Workspace.DeploymentStrategy
+		}
 		if from.Workspace.IdleTimeout != "" {
 			to.Workspace.IdleTimeout = from.Workspace.IdleTimeout
 		}
@@ -398,6 +401,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 	if workspace != nil {
 		if workspace.ImagePullPolicy != defaultConfig.Workspace.ImagePullPolicy {
 			config = append(config, fmt.Sprintf("workspace.imagePullPolicy=%s", workspace.ImagePullPolicy))
+		}
+		if workspace.DeploymentStrategy != defaultConfig.Workspace.DeploymentStrategy {
+			config = append(config, fmt.Sprintf("workspace.deploymentStrategy=%s", workspace.DeploymentStrategy))
 		}
 		if workspace.PVCName != defaultConfig.Workspace.PVCName {
 			config = append(config, fmt.Sprintf("workspace.pvcName=%s", workspace.PVCName))

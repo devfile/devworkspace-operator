@@ -16,8 +16,8 @@ package asyncstorage
 import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // RemoveAuthorizedKeyFromConfigMap removes the ssh key used by a given workspace from the common async storage
@@ -60,8 +60,8 @@ func RemoveAuthorizedKeyFromConfigMap(workspace *common.DevWorkspaceWithConfig, 
 		return false, err
 	}
 
-	if coputil.HasFinalizer(sshSecret, asyncStorageFinalizer) {
-		coputil.RemoveFinalizer(sshSecret, asyncStorageFinalizer)
+	if controllerutil.ContainsFinalizer(sshSecret, asyncStorageFinalizer) {
+		controllerutil.RemoveFinalizer(sshSecret, asyncStorageFinalizer)
 		err := api.Client.Update(api.Ctx, sshSecret)
 		if err != nil && !k8sErrors.IsConflict(err) {
 			return false, err

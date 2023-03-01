@@ -27,9 +27,9 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/rbac"
 
 	"github.com/go-logr/logr"
-	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
@@ -94,7 +94,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	} else if terminating {
 		// Namespace is terminating, it's redundant to clean PVC files since it's going to be removed
 		log.Info("Namespace is terminating; clearing storage finalizer")
-		coputil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
+		controllerutil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
 		return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
 	}
 
@@ -129,7 +129,7 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 		}
 	}
 	log.Info("PVC clean up successful; clearing finalizer")
-	coputil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
+	controllerutil.RemoveFinalizer(workspace, constants.StorageCleanupFinalizer)
 	return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
 }
 
@@ -140,7 +140,7 @@ func (r *DevWorkspaceReconciler) finalizeRBAC(ctx context.Context, log logr.Logg
 	} else if terminating {
 		// Namespace is terminating, it's redundant to update roles/rolebindings since they will be removed with the workspace
 		log.Info("Namespace is terminating; clearing storage finalizer")
-		coputil.RemoveFinalizer(workspace, constants.RBACCleanupFinalizer)
+		controllerutil.RemoveFinalizer(workspace, constants.RBACCleanupFinalizer)
 		return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
 	}
 
@@ -167,7 +167,7 @@ func (r *DevWorkspaceReconciler) finalizeRBAC(ctx context.Context, log logr.Logg
 		}
 	}
 	log.Info("RBAC cleanup successful; clearing finalizer")
-	coputil.RemoveFinalizer(workspace, constants.RBACCleanupFinalizer)
+	controllerutil.RemoveFinalizer(workspace, constants.RBACCleanupFinalizer)
 	return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
 }
 
@@ -185,7 +185,7 @@ func (r *DevWorkspaceReconciler) finalizeServiceAccount(ctx context.Context, log
 		return reconcile.Result{Requeue: true}, nil
 	}
 	log.Info("ServiceAccount clean up successful; clearing finalizer")
-	coputil.RemoveFinalizer(workspace, constants.ServiceAccountCleanupFinalizer)
+	controllerutil.RemoveFinalizer(workspace, constants.ServiceAccountCleanupFinalizer)
 	return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
 }
 

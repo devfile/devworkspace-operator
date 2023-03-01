@@ -45,7 +45,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/rbac"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	coputil "github.com/redhat-cop/operator-utils/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -58,6 +57,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -291,8 +291,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Set finalizer on DevWorkspace if necessary
 	// Note: we need to check the flattened workspace to see if a finalizer is needed, as plugins could require storage
-	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) && !coputil.HasFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer) {
-		coputil.AddFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer)
+	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) && !controllerutil.ContainsFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer) {
+		controllerutil.AddFinalizer(clusterWorkspace, constants.StorageCleanupFinalizer)
 		if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}
@@ -349,8 +349,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Add finalizer to ensure workspace rolebinding gets cleaned up when workspace
 	// is deleted.
-	if !coputil.HasFinalizer(clusterWorkspace, constants.RBACCleanupFinalizer) {
-		coputil.AddFinalizer(clusterWorkspace, constants.RBACCleanupFinalizer)
+	if !controllerutil.ContainsFinalizer(clusterWorkspace, constants.RBACCleanupFinalizer) {
+		controllerutil.AddFinalizer(clusterWorkspace, constants.RBACCleanupFinalizer)
 		if err := r.Update(ctx, clusterWorkspace.DevWorkspace); err != nil {
 			return reconcile.Result{}, err
 		}

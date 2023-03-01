@@ -128,7 +128,7 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 							Args:            []string{"/usr/local/bin/webhook-server", "--metrics-addr=127.0.0.1:8080"},
 							ImagePullPolicy: corev1.PullAlways,
 							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
 										Port:   intstr.FromString("liveness-port"),
@@ -142,7 +142,7 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 								FailureThreshold:    5,
 							},
 							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
+								ProbeHandler: corev1.ProbeHandler{
 									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/readyz",
 										Port:   intstr.FromString("liveness-port"),

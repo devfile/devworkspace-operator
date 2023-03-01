@@ -77,7 +77,7 @@ func GetAsyncSidecar(devworkspaceID, sshVolumeName string, volumes []corev1.Volu
 		},
 		VolumeMounts: volumeMounts,
 		Lifecycle: &corev1.Lifecycle{
-			PreStop: &corev1.Handler{
+			PreStop: &corev1.LifecycleHandler{
 				Exec: &corev1.ExecAction{
 					Command: []string{"/bin/sh", "-c", "/scripts/backup.sh"},
 				},

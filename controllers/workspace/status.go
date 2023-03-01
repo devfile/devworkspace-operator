@@ -31,7 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubeclock "k8s.io/apimachinery/pkg/util/clock"
+	kubeclock "k8s.io/utils/clock"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"

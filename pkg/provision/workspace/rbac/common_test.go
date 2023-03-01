@@ -25,7 +25,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	testlog "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -175,7 +175,7 @@ func getTestClusterAPI(t *testing.T, initialObjects ...client.Object) sync.Clust
 		Ctx:    context.Background(),
 		Client: fakeClient,
 		Scheme: scheme,
-		Logger: testlog.TestLogger{T: t},
+		Logger: testr.New(t),
 	}
 }
 

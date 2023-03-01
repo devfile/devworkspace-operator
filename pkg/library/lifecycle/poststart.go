@@ -66,7 +66,7 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 	return nil
 }
 
-func processCommandForPostStart(command *dw.ExecCommand) (*corev1.Handler, error) {
+func processCommandForPostStart(command *dw.ExecCommand) (*corev1.LifecycleHandler, error) {
 	cmd := []string{"/bin/sh", "-c"}
 
 	if len(command.Env) > 0 {
@@ -81,7 +81,7 @@ func processCommandForPostStart(command *dw.ExecCommand) (*corev1.Handler, error
 
 	cmd = append(cmd, strings.Join(fullCmd, "\n"))
 
-	handler := &corev1.Handler{
+	handler := &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
 			Command: cmd,
 		},

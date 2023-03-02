@@ -25,7 +25,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-	testlog "github.com/go-logr/logr/testing"
+	"github.com/go-logr/logr/testr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
@@ -99,7 +99,7 @@ func TestHandleKubernetesComponents(t *testing.T) {
 			api := sync.ClusterAPI{
 				Client: testClient,
 				Scheme: testScheme,
-				Logger: testlog.TestLogger{T: t},
+				Logger: testr.New(t),
 			}
 			wksp := &common.DevWorkspaceWithConfig{
 				DevWorkspace: testDevWorkspace.DeepCopy(),
@@ -157,7 +157,7 @@ func TestSecretAndConfigMapProvisioning(t *testing.T) {
 	api := sync.ClusterAPI{
 		Client: testClient,
 		Scheme: testScheme,
-		Logger: testlog.TestLogger{T: t},
+		Logger: testr.New(t),
 	}
 	wksp := &common.DevWorkspaceWithConfig{
 		DevWorkspace: testDevWorkspace.DeepCopy(),

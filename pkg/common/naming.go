@@ -138,6 +138,11 @@ func AutoMountProjectedVolumeName(mountPath string) string {
 	return fmt.Sprintf("projected-%x", hash[:10])
 }
 
+func ServiceAccountTokenProjectionName(mountPath string) string {
+	hash := sha256.Sum256([]byte(mountPath))
+	return fmt.Sprintf("sa-token-projected-%x", hash[:10])
+}
+
 func WorkspaceRoleName() string {
 	return "devworkspace-default-role"
 }

@@ -16,6 +16,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -92,6 +94,40 @@ type ServiceAccountConfig struct {
 	// exists in any namespace where a workspace is created. If a suitable ServiceAccount does not exist, starting DevWorkspaces
 	// will fail.
 	DisableCreation *bool `json:"disableCreation,omitempty"`
+	// List of ServiceAccount tokens that will be mounted into workspace pods as projected volumes.
+	ServiceAccountTokens []ServiceAccountToken `json:"serviceAccountTokens,omitempty"`
+}
+
+type ServiceAccountToken struct {
+	// Identifiable name of the ServiceAccount token.
+	// If multiple ServiceAccount tokens use the same mount path, a generic name will be used
+	// for the projected volume instead.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+	// Path within the workspace container at which the token should be mounted.  Must
+	// not contain ':'.
+	// +kubebuilder:validation:Required
+	MountPath string `json:"mountPath"`
+	// Path is the path relative to the mount point of the file to project the
+	// token into.
+	// +kubebuilder:validation:Required
+	Path string `json:"path"`
+	// Audience is the intended audience of the token. A recipient of a token
+	// must identify itself with an identifier specified in the audience of the
+	// token, and otherwise should reject the token. The audience defaults to the
+	// identifier of the apiserver.
+	// +kubebuilder:validation:Optional
+	Audience string `json:"audience,omitempty"`
+	// ExpirationSeconds is the requested duration of validity of the service
+	// account token. As the token approaches expiration, the kubelet volume
+	// plugin will proactively rotate the service account token. The kubelet will
+	// start trying to rotate the token if the token is older than 80 percent of
+	// its time to live or if the token is older than 24 hours. Defaults to 1 hour
+	// and must be at least 10 minutes.
+	// +kubebuilder:validation:Minimum=600
+	// +kubebuilder:default:=3600
+	// +kubebuilder:validation:Optional
+	ExpirationSeconds int64 `json:"expirationSeconds,omitempty"`
 }
 
 type WorkspaceConfig struct {
@@ -178,4 +214,8 @@ type DevWorkspaceOperatorConfigList struct {
 
 func init() {
 	SchemeBuilder.Register(&DevWorkspaceOperatorConfig{}, &DevWorkspaceOperatorConfigList{})
+}
+
+func (saToken ServiceAccountToken) String() string {
+	return fmt.Sprintf("{name: %s, path: %s, mountPath: %s, audience: %s, expirationSeconds %d}", saToken.Name, saToken.Path, saToken.MountPath, saToken.Audience, saToken.ExpirationSeconds)
 }

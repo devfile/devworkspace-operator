@@ -286,6 +286,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			if from.Workspace.ServiceAccount.DisableCreation != nil {
 				to.Workspace.ServiceAccount.DisableCreation = pointer.BoolPtr(*from.Workspace.ServiceAccount.DisableCreation)
 			}
+			if from.Workspace.ServiceAccount.ServiceAccountTokens != nil {
+				to.Workspace.ServiceAccount.ServiceAccountTokens = from.Workspace.ServiceAccount.ServiceAccountTokens
+			}
 		}
 		if from.Workspace.ImagePullPolicy != "" {
 			to.Workspace.ImagePullPolicy = from.Workspace.ImagePullPolicy
@@ -408,6 +411,13 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			}
 			if workspace.ServiceAccount.DisableCreation != nil && *workspace.ServiceAccount.DisableCreation != *defaultConfig.Workspace.ServiceAccount.DisableCreation {
 				config = append(config, fmt.Sprintf("workspace.serviceAccount.disableCreation=%t", *workspace.ServiceAccount.DisableCreation))
+			}
+			if workspace.ServiceAccount.ServiceAccountTokens != nil {
+				serviceAccountTokens := make([]string, 0)
+				for _, saToken := range workspace.ServiceAccount.ServiceAccountTokens {
+					serviceAccountTokens = append(serviceAccountTokens, saToken.String())
+				}
+				config = append(config, fmt.Sprintf("workspace.serviceAccount.serviceAccountTokens=[%s]", strings.Join(serviceAccountTokens, ", ")))
 			}
 		}
 		if workspace.StorageClassName != nil && workspace.StorageClassName != defaultConfig.Workspace.StorageClassName {

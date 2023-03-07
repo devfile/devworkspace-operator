@@ -1564,6 +1564,34 @@ spec:
                         maxLength: 63
                         pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         type: string
+                      serviceAccountTokens:
+                        description: List of ServiceAccount tokens that will be mounted into workspace pods as projected volumes.
+                        items:
+                          properties:
+                            audience:
+                              description: Audience is the intended audience of the token. A recipient of a token must identify itself with an identifier specified in the audience of the token, and otherwise should reject the token. The audience defaults to the identifier of the apiserver.
+                              type: string
+                            expirationSeconds:
+                              default: 3600
+                              description: ExpirationSeconds is the requested duration of validity of the service account token. As the token approaches expiration, the kubelet volume plugin will proactively rotate the service account token. The kubelet will start trying to rotate the token if the token is older than 80 percent of its time to live or if the token is older than 24 hours. Defaults to 1 hour and must be at least 10 minutes.
+                              format: int64
+                              minimum: 600
+                              type: integer
+                            mountPath:
+                              description: Path within the workspace container at which the token should be mounted.  Must not contain ':'.
+                              type: string
+                            name:
+                              description: Identifiable name of the ServiceAccount token. If multiple ServiceAccount tokens use the same mount path, a generic name will be used for the projected volume instead.
+                              type: string
+                            path:
+                              description: Path is the path relative to the mount point of the file to project the token into.
+                              type: string
+                          required:
+                          - mountPath
+                          - name
+                          - path
+                          type: object
+                        type: array
                     type: object
                   storageClassName:
                     description: StorageClassName defines an optional storageClass to use for persistent volume claims created to support DevWorkspaces

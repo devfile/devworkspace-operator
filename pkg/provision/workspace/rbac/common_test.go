@@ -24,6 +24,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
@@ -111,7 +112,7 @@ func TestSyncRBAC(t *testing.T) {
 	// Keep calling SyncRBAC until error returned is nil, to account for multiple steps
 	iterCount := 0
 	maxIters := 30
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	for err := SyncRBAC(testdw1, api); err != nil; err = SyncRBAC(testdw1, api) {
 		iterCount += 1
 		if err == nil {

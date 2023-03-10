@@ -18,6 +18,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,7 +39,7 @@ func filterForKubeLikeComponents(components []dw.Component) ([]dw.Component, err
 			continue
 		}
 		if k8sLikeComponent.Uri != "" {
-			return nil, &FailError{fmt.Errorf("kubernetes/openshift components that define a URI are unsupported (component %s)", component.Name)}
+			return nil, &dwerrors.FailError{Message: fmt.Sprintf("kubernetes/openshift components that define a URI are unsupported (component %s)", component.Name)}
 		}
 		if k8sLikeComponent.Inlined == "" {
 			continue

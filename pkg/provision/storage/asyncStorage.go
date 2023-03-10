@@ -22,6 +22,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -49,8 +50,9 @@ func (*AsyncStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateS
 
 func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	if err := checkConfigured(); err != nil {
-		return &ProvisioningError{
-			Message: fmt.Sprintf("%s. Contact an administrator to resolve this issue.", err.Error()),
+		return &dwerrors.FailError{
+			Message: "Asynchronous storage is not configured. Contact an administrator to resolve this issue.",
+			Err:     err,
 		}
 	}
 
@@ -62,8 +64,8 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	// Note we need to check phase so as to not accidentally fail an already-running workspace when a second one
 	// is created.
 	if numWorkspaces > 1 && workspace.Status.Phase != dw.DevWorkspaceStatusRunning {
-		return &ProvisioningError{
-			Message: fmt.Sprintf("cannot provision storage for workspace %s", workspace.Name),
+		return &dwerrors.FailError{
+			Message: fmt.Sprintf("Cannot provision storage for workspace %s", workspace.Name),
 			Err:     fmt.Errorf("at most one workspace using async storage can be running in a namespace"),
 		}
 	}
@@ -82,8 +84,8 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	secret, configmap, err := asyncstorage.GetOrCreateSSHConfig(workspace, clusterAPI)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
-			return &NotReadyError{
-				Message:      "setting up configuration for async storage",
+			return &dwerrors.RetryError{
+				Message:      "Setting up configuration for async storage",
 				RequeueAfter: 1 * time.Second,
 			}
 		}
@@ -102,7 +104,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	if err != nil {
 		return err
 	} else if pvcTerminating {
-		return &NotReadyError{
+		return &dwerrors.RetryError{
 			Message:      "Shared PVC is in terminating state",
 			RequeueAfter: 2 * time.Second,
 		}
@@ -121,7 +123,7 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 	deploy, err := asyncstorage.SyncWorkspaceSyncDeploymentToCluster(workspace, configmap, pvcName, clusterAPI)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
-			return &NotReadyError{
+			return &dwerrors.RetryError{
 				Message:      "waiting for async storage server deployment to be ready",
 				RequeueAfter: 1 * time.Second,
 			}
@@ -139,21 +141,21 @@ func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdd
 		if !k8sErrors.IsConflict(err) {
 			return err
 		}
-		return &NotReadyError{RequeueAfter: 0}
+		return &dwerrors.RetryError{Message: "Updated asynchonous storage configmap", RequeueAfter: 0}
 	}
 
 	// Create service for async storage server
 	_, err = asyncstorage.SyncWorkspaceSyncServiceToCluster(deploy, clusterAPI)
 	if err != nil {
 		if errors.Is(err, asyncstorage.NotReadyError) {
-			return &NotReadyError{
+			return &dwerrors.RetryError{
 				Message:      "waiting for async storage service to be ready",
 				RequeueAfter: 1 * time.Second,
 			}
 		}
 		var unrecoverableErr *sync.UnrecoverableSyncError
 		if errors.As(err, &unrecoverableErr) {
-			return &ProvisioningError{
+			return &dwerrors.FailError{
 				Message: "Failed to set up async storage service",
 				Err:     unrecoverableErr.Cause,
 			}
@@ -199,12 +201,12 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevW
 			break
 		}
 		// Another async workspace is currently running; we can't safely clean up
-		return &ProvisioningError{
+		return &dwerrors.FailError{
 			Message: "Cannot clean up DevWorkspace until other async-storage workspaces are stopped",
 			Err:     fmt.Errorf("another workspace is using the async server"),
 		}
 	default:
-		return &ProvisioningError{
+		return &dwerrors.FailError{
 			Message: "Cannot clean up DevWorkspace: multiple devworkspaces are using async server",
 			Err:     fmt.Errorf("multiple workspaces are using using the async server"),
 		}
@@ -218,7 +220,7 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevW
 		if err != nil && !k8sErrors.IsConflict(err) {
 			return err
 		}
-		return &NotReadyError{Message: "Scaling down async storage deployment to 0"}
+		return &dwerrors.RetryError{Message: "Scaling down async storage deployment to 0"}
 	}
 
 	// Clean up PVC using usual job
@@ -229,13 +231,13 @@ func (p *AsyncStorageProvisioner) CleanupWorkspaceStorage(workspace *common.DevW
 
 	retry, err := asyncstorage.RemoveAuthorizedKeyFromConfigMap(workspace, clusterAPI)
 	if err != nil {
-		return &ProvisioningError{
+		return &dwerrors.FailError{
 			Message: "Failed to remove authorized key from async storage configmap",
 			Err:     err,
 		}
 	}
 	if retry {
-		return &NotReadyError{Message: "Removing authorized key from async storage configmap"}
+		return &dwerrors.RetryError{Message: "Removing authorized key from async storage configmap"}
 	}
 
 	// Delete the async deployment if there are no workspaces except for the one being deleted

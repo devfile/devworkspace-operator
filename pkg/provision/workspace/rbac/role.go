@@ -18,6 +18,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -29,7 +30,7 @@ import (
 func syncRoles(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
 	defaultRole := generateDefaultRole(workspace.Namespace)
 	if _, err := sync.SyncObjectWithCluster(defaultRole, api); err != nil {
-		return wrapSyncError(err)
+		return dwerrors.WrapSyncError(err)
 	}
 	if !workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
 		return nil
@@ -37,7 +38,7 @@ func syncRoles(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) er
 	sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
 	sccRole := generateUseRoleForSCC(workspace.Namespace, sccName)
 	if _, err := sync.SyncObjectWithCluster(sccRole, api); err != nil {
-		return wrapSyncError(err)
+		return dwerrors.WrapSyncError(err)
 	}
 	return nil
 }
@@ -52,9 +53,9 @@ func deleteRole(name, namespace string, api sync.ClusterAPI) error {
 	switch {
 	case err == nil:
 		if err := api.Client.Delete(api.Ctx, role); err != nil {
-			return &RetryError{fmt.Errorf("failed to delete role %s in namespace %s: %w", name, namespace, err)}
+			return &dwerrors.RetryError{Message: fmt.Sprintf("failed to delete role %s in namespace %s", name, namespace), Err: err}
 		}
-		return &RetryError{fmt.Errorf("deleted role %s in namespace %s", name, namespace)}
+		return &dwerrors.RetryError{Message: fmt.Sprintf("deleted role %s in namespace %s", name, namespace)}
 	case k8sErrors.IsNotFound(err):
 		// Already deleted
 		return nil

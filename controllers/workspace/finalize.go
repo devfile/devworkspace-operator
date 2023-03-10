@@ -21,6 +21,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -113,10 +114,10 @@ func (r *DevWorkspaceReconciler) finalizeStorage(ctx context.Context, log logr.L
 	})
 	if err != nil {
 		switch storageErr := err.(type) {
-		case *storage.NotReadyError:
+		case *dwerrors.RetryError:
 			log.Info(storageErr.Message)
 			return reconcile.Result{RequeueAfter: storageErr.RequeueAfter}, nil
-		case *storage.ProvisioningError:
+		case *dwerrors.FailError:
 			if workspace.Status.Phase != dw.DevWorkspaceStatusError {
 				// Avoid repeatedly logging error unless it's relevant
 				log.Error(storageErr, "Failed to clean up DevWorkspace storage")
@@ -151,10 +152,10 @@ func (r *DevWorkspaceReconciler) finalizeRBAC(ctx context.Context, log logr.Logg
 		Logger: log,
 	}); err != nil {
 		switch rbacErr := err.(type) {
-		case *rbac.RetryError:
+		case *dwerrors.RetryError:
 			log.Info(rbacErr.Error())
 			return reconcile.Result{Requeue: true}, nil
-		case *rbac.FailError:
+		case *dwerrors.FailError:
 			if workspace.Status.Phase != dw.DevWorkspaceStatusError {
 				// Avoid repeatedly logging error unless it's relevant
 				log.Error(rbacErr, "Failed to finalize workspace RBAC")

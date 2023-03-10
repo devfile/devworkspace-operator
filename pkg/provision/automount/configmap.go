@@ -16,12 +16,12 @@
 package automount
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"sort"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +39,7 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 	var allAutoMountResouces []Resources
 	for _, configmap := range configmaps.Items {
 		if msg := checkAutomountVolumeForPotentialError(&configmap); msg != "" {
-			return nil, &AutoMountError{Err: errors.New(msg), IsFatal: true}
+			return nil, &dwerrors.FailError{Message: msg}
 		}
 		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
@@ -48,9 +48,9 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 		}
 		accessMode, err := getAccessModeForAutomount(&configmap)
 		if err != nil {
-			return nil, &AutoMountError{
-				Err:     fmt.Errorf("failed to process configmap %s: %w", configmap.Name, err),
-				IsFatal: true,
+			return nil, &dwerrors.FailError{
+				Message: fmt.Sprintf("failed to process configmap %s", configmap.Name),
+				Err:     err,
 			}
 		}
 

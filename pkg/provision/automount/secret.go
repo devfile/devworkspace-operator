@@ -16,12 +16,12 @@
 package automount
 
 import (
-	"errors"
 	"fmt"
 	"path"
 	"sort"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,7 +39,7 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 	var allAutoMountResouces []Resources
 	for _, secret := range secrets.Items {
 		if msg := checkAutomountVolumeForPotentialError(&secret); msg != "" {
-			return nil, &AutoMountError{Err: errors.New(msg), IsFatal: true}
+			return nil, &dwerrors.FailError{Message: msg}
 		}
 		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
@@ -48,9 +48,9 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 		}
 		accessMode, err := getAccessModeForAutomount(&secret)
 		if err != nil {
-			return nil, &AutoMountError{
-				Err:     fmt.Errorf("failed to process secret %s: %w", secret.Name, err),
-				IsFatal: true,
+			return nil, &dwerrors.FailError{
+				Message: fmt.Sprintf("failed to process secret %s", secret.Name),
+				Err:     err,
 			}
 		}
 

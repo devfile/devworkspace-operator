@@ -20,6 +20,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/stretchr/testify/assert"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -33,7 +34,7 @@ func TestDeletesRoleAndRolebindingWhenLastWorkspaceIsDeleted(t *testing.T) {
 	testdw := getTestDevWorkspace("test-devworkspace")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, newRole, newRolebinding)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
 	if assert.Error(t, err, "Should return error to indicate role deleted") {
 		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")
@@ -56,7 +57,7 @@ func TestDeletesRoleAndRolebindingWhenAllWorkspacesAreDeleted(t *testing.T) {
 	testdw2.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newRole, newRolebinding)
 
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
 	if assert.Error(t, err, "Should return error to indicate role deleted") {
 		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")
@@ -90,7 +91,7 @@ func TestShouldRemoveWorkspaceSAFromRolebindingWhenDeleted(t *testing.T) {
 			Namespace: testNamespace,
 		})
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, testrb, newRole)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
 	if assert.Error(t, err, "Should return error to indicate rolebinding updated") {
 		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")
@@ -133,7 +134,7 @@ func TestDeletesSCCRoleAndRolebindingWhenLastWorkspaceIsDeleted(t *testing.T) {
 	testdw2 := getTestDevWorkspace("test-devworkspace2")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newSCCRole, newSCCRolebinding)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
 	if assert.Error(t, err, "Should return error to indicate role deleted") {
 		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")
@@ -156,7 +157,7 @@ func TestDeletesSCCRoleAndRolebindingWhenAllWorkspacesAreDeleted(t *testing.T) {
 	testdw2.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newSCCRole, newSCCRolebinding)
 
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
 	if assert.Error(t, err, "Should return error to indicate role deleted") {
 		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")
@@ -190,7 +191,7 @@ func TestShouldRemoveWorkspaceSAFromSCCRolebindingWhenDeleted(t *testing.T) {
 			Namespace: testNamespace,
 		})
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, testrb, newSCCRole)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
 	if assert.Error(t, err, "Should return error to indicate rolebinding updated") {
 		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")

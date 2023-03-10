@@ -18,6 +18,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/stretchr/testify/assert"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -29,7 +30,7 @@ func TestCreatesRoleIfNotExists(t *testing.T) {
 	testdw := getTestDevWorkspace("test-devworkspace")
 	api := getTestClusterAPI(t, testdw.DevWorkspace)
 	err := syncRoles(testdw, api)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	if assert.Error(t, err, "Should return RetryError to indicate that role was created") {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
 	}
@@ -48,7 +49,7 @@ func TestDoesNothingIfRoleAlreadyInSync(t *testing.T) {
 	testdw := getTestDevWorkspace("test-devworkspace")
 	api := getTestClusterAPI(t, testdw.DevWorkspace)
 	err := syncRoles(testdw, api)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	if assert.Error(t, err, "Should return RetryError to indicate that role was created") {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
 	}
@@ -68,7 +69,7 @@ func TestCreatesSCCRoleIfNotExists(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
 	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := syncRoles(testdw, api)
 	if assert.Error(t, err, "Should return RetryError to indicate that role was created") {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
@@ -91,7 +92,7 @@ func TestDoesNothingIfSCCRoleAlreadyInSync(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
 	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	err := syncRoles(testdw, api)
 	if assert.Error(t, err, "Should return RetryError to indicate that role was created") {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")

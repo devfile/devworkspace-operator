@@ -21,6 +21,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -107,11 +108,11 @@ func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clu
 	case nil:
 		break
 	case *sync.NotInSyncError:
-		return nil, &NotReadyError{
+		return nil, &dwerrors.RetryError{
 			Message: "Updated common PVC on cluster",
 		}
 	case *sync.UnrecoverableSyncError:
-		return nil, &ProvisioningError{
+		return nil, &dwerrors.FailError{
 			Message: "Failed to sync PVC to cluster",
 			Err:     t.Cause,
 		}
@@ -139,11 +140,11 @@ func addEphemeralVolumesFromWorkspace(workspace *common.DevWorkspaceWithConfig, 
 	_, ephemeralVolumes, projectsVolume := getWorkspaceVolumes(workspace)
 	_, err := addEphemeralVolumesToPodAdditions(podAdditions, ephemeralVolumes)
 	if err != nil {
-		return &ProvisioningError{Message: "Failed to add ephemeral volumes to workspace", Err: err}
+		return &dwerrors.FailError{Message: "Failed to add ephemeral volumes to workspace", Err: err}
 	}
 	if projectsVolume != nil && isEphemeral(projectsVolume.Volume) {
 		if _, err := addEphemeralVolumesToPodAdditions(podAdditions, []dw.Component{*projectsVolume}); err != nil {
-			return &ProvisioningError{Message: "Failed to add projects volume to workspace", Err: err}
+			return &dwerrors.FailError{Message: "Failed to add projects volume to workspace", Err: err}
 		}
 	}
 	return nil

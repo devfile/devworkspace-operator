@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,20 +40,10 @@ const (
 	pullSecretCreationTimeout time.Duration = 5 * time.Second
 )
 
-type PullSecretsProvisioningStatus struct {
-	ProvisioningStatus
-	v1alpha1.PodAdditions
-}
-
-func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace string) PullSecretsProvisioningStatus {
+func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace string) (*v1alpha1.PodAdditions, error) {
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspacePullSecretLabel, "true"))
 	if err != nil {
-		return PullSecretsProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Err:         err,
-				FailStartup: true,
-			},
-		}
+		return nil, &dwerrors.FailError{Message: "Failed to get pull secrets", Err: err}
 	}
 
 	secrets := corev1.SecretList{}
@@ -61,11 +52,7 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		return PullSecretsProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Err: err,
-			},
-		}
+		return nil, err
 	}
 
 	serviceAccount := &corev1.ServiceAccount{}
@@ -77,27 +64,14 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			// ServiceAccount does not exist, no pull secrets to extract
-			return PullSecretsProvisioningStatus{
-				ProvisioningStatus: ProvisioningStatus{
-					Continue: true,
-				},
-			}
+			return nil, nil
 		}
-		return PullSecretsProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Err: err,
-			},
-		}
+		return nil, err
 	}
 
 	if infrastructure.IsOpenShift() {
 		if len(serviceAccount.ImagePullSecrets) == 0 && serviceAccount.CreationTimestamp.Add(pullSecretCreationTimeout).After(time.Now()) {
-			return PullSecretsProvisioningStatus{
-				ProvisioningStatus: ProvisioningStatus{
-					Requeue: true,
-					Message: "Waiting for image pull secrets",
-				},
-			}
+			return nil, &dwerrors.RetryError{Message: "Waiting for image pull secrets"}
 		}
 	}
 
@@ -112,12 +86,5 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 		return strings.Compare(dockerCfgs[i].Name, dockerCfgs[j].Name) < 0
 	})
 
-	return PullSecretsProvisioningStatus{
-		ProvisioningStatus: ProvisioningStatus{
-			Continue: true,
-		},
-		PodAdditions: v1alpha1.PodAdditions{
-			PullSecrets: dockerCfgs,
-		},
-	}
+	return &v1alpha1.PodAdditions{PullSecrets: dockerCfgs}, nil
 }

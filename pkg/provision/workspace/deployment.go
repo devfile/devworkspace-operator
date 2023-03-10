@@ -22,6 +22,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
@@ -42,98 +43,55 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-type DeploymentProvisioningStatus struct {
-	ProvisioningStatus
-}
-
 func SyncDeploymentToCluster(
 	workspace *common.DevWorkspaceWithConfig,
 	podAdditions []v1alpha1.PodAdditions,
 	saName string,
-	clusterAPI sync.ClusterAPI) DeploymentProvisioningStatus {
+	clusterAPI sync.ClusterAPI) error {
 
 	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
 	if err != nil {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{
-				Message:     "failed to read pod tolerations and node selector from namespace",
-				Err:         err,
-				FailStartup: true,
-			},
-		}
+		return &dwerrors.FailError{Message: "Failed to read pod tolerations and node selector from namespace", Err: err}
 	}
 
 	// [design] we have to pass components and routing pod additions separately because we need mountsources from each
 	// component.
 	specDeployment, err := getSpecDeployment(workspace, podAdditions, saName, podTolerations, nodeSelector, clusterAPI.Scheme)
 	if err != nil {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{
-				Err:         err,
-				FailStartup: true,
-			},
-		}
+		return &dwerrors.FailError{Message: "Error while creating workspace deployment", Err: err}
 	}
 	if len(specDeployment.Spec.Template.Spec.Containers) == 0 {
 		// DevWorkspace defines no container components, cannot create a deployment
-		return DeploymentProvisioningStatus{ProvisioningStatus{Continue: true}}
+		return nil
 	}
 
 	clusterObj, err := sync.SyncObjectWithCluster(specDeployment, clusterAPI)
-	switch t := err.(type) {
-	case nil:
-		break
-	case *sync.NotInSyncError:
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{Requeue: true},
-		}
-	case *sync.UnrecoverableSyncError:
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{FailStartup: true, Err: t.Cause},
-		}
-	default:
-		return DeploymentProvisioningStatus{ProvisioningStatus{Err: err}}
+	if err != nil {
+		return dwerrors.WrapSyncError(err)
 	}
+
 	clusterDeployment := clusterObj.(*appsv1.Deployment)
 	deploymentReady := status.CheckDeploymentStatus(clusterDeployment, workspace)
 	if deploymentReady {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Continue: true,
-			},
-		}
+		return nil
 	}
 
 	deploymentHealthy, deploymentErrMsg := status.CheckDeploymentConditions(clusterDeployment)
 	if !deploymentHealthy {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				FailStartup: true,
-				Message:     deploymentErrMsg,
-			},
-		}
+		return &dwerrors.FailError{Message: deploymentErrMsg}
 	}
 
 	workspaceIDLabel := k8sclient.MatchingLabels{constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId}
 	ignoredEvents := workspace.Config.Workspace.IgnoredUnrecoverableEvents
 	failureMsg, checkErr := status.CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, workspaceIDLabel, ignoredEvents, clusterAPI)
 	if checkErr != nil {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Err: checkErr,
-			},
-		}
+		return err
 	}
 	if failureMsg != "" {
-		return DeploymentProvisioningStatus{
-			ProvisioningStatus{
-				FailStartup: true,
-				Message:     failureMsg,
-			},
-		}
+		return &dwerrors.FailError{Message: failureMsg}
 	}
 
-	return DeploymentProvisioningStatus{}
+	return nil
 }
 
 // DeleteWorkspaceDeployment deletes the deployment for the DevWorkspace

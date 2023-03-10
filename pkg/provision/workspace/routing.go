@@ -17,8 +17,10 @@ package workspace
 
 import (
 	"strings"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/conversion"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -31,58 +33,30 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-type RoutingProvisioningStatus struct {
-	ProvisioningStatus
-	PodAdditions     *v1alpha1.PodAdditions
-	ExposedEndpoints map[string]v1alpha1.ExposedEndpointList
-}
-
 func SyncRoutingToCluster(
 	workspace *common.DevWorkspaceWithConfig,
-	clusterAPI sync.ClusterAPI) RoutingProvisioningStatus {
+	clusterAPI sync.ClusterAPI) (*v1alpha1.PodAdditions, map[string]v1alpha1.ExposedEndpointList, string, error) {
 
 	specRouting, err := getSpecRouting(workspace, clusterAPI.Scheme)
 	if err != nil {
-		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{Err: err},
-		}
+		return nil, nil, "", err
 	}
 
 	clusterObj, err := sync.SyncObjectWithCluster(specRouting, clusterAPI)
-	switch t := err.(type) {
-	case nil:
-		break
-	case *sync.NotInSyncError:
-		return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
-	case *sync.UnrecoverableSyncError:
-		return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{FailStartup: true, Err: t.Cause}}
-	default:
-		return RoutingProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
+	if err != nil {
+		return nil, nil, "", dwerrors.WrapSyncError(err)
 	}
 
 	clusterRouting := clusterObj.(*v1alpha1.DevWorkspaceRouting)
+	statusMsg := clusterRouting.Status.Message
 	if clusterRouting.Status.Phase == v1alpha1.RoutingFailed {
-		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{FailStartup: true, Message: clusterRouting.Status.Message},
-		}
+		return nil, nil, statusMsg, &dwerrors.FailError{Message: statusMsg}
 	}
 	if clusterRouting.Status.Phase != v1alpha1.RoutingReady {
-		return RoutingProvisioningStatus{
-			ProvisioningStatus: ProvisioningStatus{
-				Continue: false,
-				Requeue:  false,
-				Message:  clusterRouting.Status.Message,
-			},
-		}
+		return nil, nil, statusMsg, &dwerrors.RetryError{Message: statusMsg, RequeueAfter: 5 * time.Second}
 	}
 
-	return RoutingProvisioningStatus{
-		ProvisioningStatus: ProvisioningStatus{
-			Continue: true,
-		},
-		PodAdditions:     clusterRouting.Status.PodAdditions,
-		ExposedEndpoints: clusterRouting.Status.ExposedEndpoints,
-	}
+	return clusterRouting.Status.PodAdditions, clusterRouting.Status.ExposedEndpoints, statusMsg, nil
 }
 
 func getSpecRouting(

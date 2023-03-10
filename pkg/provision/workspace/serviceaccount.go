@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	securityv1 "github.com/openshift/api/security/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,15 +34,10 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 )
 
-type ServiceAcctProvisioningStatus struct {
-	ProvisioningStatus
-	ServiceAccountName string
-}
-
 func SyncServiceAccount(
 	workspace *common.DevWorkspaceWithConfig,
 	additionalAnnotations map[string]string,
-	clusterAPI sync.ClusterAPI) ServiceAcctProvisioningStatus {
+	clusterAPI sync.ClusterAPI) (serviceAccountName string, err error) {
 	saName := common.ServiceAccountName(workspace)
 
 	specSA := &corev1.ServiceAccount{
@@ -51,7 +47,7 @@ func SyncServiceAccount(
 			Labels:    common.ServiceAccountLabels(workspace),
 		},
 		// note: autoMountServiceAccount := true comes from a hardcoded value in prerequisites.go
-		AutomountServiceAccountToken: pointer.BoolPtr(true),
+		AutomountServiceAccountToken: pointer.Bool(true),
 	}
 
 	if len(additionalAnnotations) > 0 {
@@ -64,41 +60,20 @@ func SyncServiceAccount(
 	if workspace.Config.Workspace.ServiceAccount.ServiceAccountName != "" {
 		// Add ownerref for the current workspace. The object may have existing owner references
 		if err := controllerutil.SetOwnerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme); err != nil {
-			return ServiceAcctProvisioningStatus{
-				ProvisioningStatus: ProvisioningStatus{
-					Err: err,
-				},
-			}
+			return "", err
 		}
 	} else {
 		// Only add controller reference if shared ServiceAccount is not being used.
 		if err := controllerutil.SetControllerReference(workspace.DevWorkspace, specSA, clusterAPI.Scheme); err != nil {
-			return ServiceAcctProvisioningStatus{
-				ProvisioningStatus: ProvisioningStatus{
-					Err: err,
-				},
-			}
+			return "", err
 		}
 	}
 
-	_, err := sync.SyncObjectWithCluster(specSA, clusterAPI)
-	switch t := err.(type) {
-	case nil:
-		break
-	case *sync.NotInSyncError:
-		return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Requeue: true}}
-	case *sync.UnrecoverableSyncError:
-		return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{FailStartup: true, Message: t.Cause.Error()}}
-	default:
-		return ServiceAcctProvisioningStatus{ProvisioningStatus: ProvisioningStatus{Err: err}}
+	if _, err := sync.SyncObjectWithCluster(specSA, clusterAPI); err != nil {
+		return "", dwerrors.WrapSyncError(err)
 	}
 
-	return ServiceAcctProvisioningStatus{
-		ProvisioningStatus: ProvisioningStatus{
-			Continue: true,
-		},
-		ServiceAccountName: saName,
-	}
+	return saName, nil
 }
 
 // FinalizeServiceAccount removes the workspace service account from the SCC specified by the controller.devfile.io/scc attribute.

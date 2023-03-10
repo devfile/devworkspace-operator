@@ -32,7 +32,10 @@ type RetryError struct {
 
 func (e *RetryError) Error() string {
 	if e.Err != nil {
-		return fmt.Sprintf("%s: %s", e.Message, e.Err)
+		if e.Message != "" {
+			return fmt.Sprintf("%s: %s", e.Message, e.Err)
+		}
+		return e.Err.Error()
 	}
 	return e.Message
 }
@@ -50,7 +53,10 @@ type FailError struct {
 
 func (e *FailError) Error() string {
 	if e.Err != nil {
-		return fmt.Sprintf("%s: %s", e.Message, e.Err)
+		if e.Message != "" {
+			return fmt.Sprintf("%s: %s", e.Message, e.Err)
+		}
+		return e.Err.Error()
 	}
 	return e.Message
 }

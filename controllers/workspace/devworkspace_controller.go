@@ -350,25 +350,18 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
-	routingStatus := wsprovision.SyncRoutingToCluster(workspace, clusterAPI)
-	if !routingStatus.Continue {
-		if routingStatus.FailStartup {
-			return r.failWorkspace(workspace, routingStatus.Message, metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
-		}
+	routingPodAdditions, exposedEndpoints, statusMsg, err := wsprovision.SyncRoutingToCluster(workspace, clusterAPI)
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Failed to set up networking for workspace", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
 		reqLogger.Info("Waiting on routing to be ready")
-		message := "Preparing networking"
-		if routingStatus.Message != "" {
-			message = routingStatus.Message
+		if statusMsg == "" {
+			statusMsg = "Preparing networking"
 		}
-		reconcileStatus.setConditionFalse(dw.DevWorkspaceRoutingReady, message)
-		if !routingStatus.Requeue && routingStatus.Err == nil {
-			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
-		}
-		return reconcile.Result{Requeue: routingStatus.Requeue}, routingStatus.Err
+		reconcileStatus.setConditionFalse(dw.DevWorkspaceRoutingReady, statusMsg)
+		return reconcileResult, reconcileErr
 	}
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceRoutingReady, "Networking ready")
 
-	statusOk, err := syncWorkspaceMainURL(clusterWorkspace, routingStatus.ExposedEndpoints, clusterAPI)
+	statusOk, err := syncWorkspaceMainURL(clusterWorkspace, exposedEndpoints, clusterAPI)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -377,7 +370,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{Requeue: true}, nil
 	}
 
-	annotate.AddURLAttributesToEndpoints(&workspace.Spec.Template, routingStatus.ExposedEndpoints)
+	annotate.AddURLAttributesToEndpoints(&workspace.Spec.Template, exposedEndpoints)
 
 	// Step three: provision a configmap on the cluster to mount the flattened devfile in deployment containers
 	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, workspace, clusterAPI)
@@ -387,7 +380,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Step four: Collect all workspace deployment contributions
 	allPodAdditions := []controllerv1alpha1.PodAdditions{*devfilePodAdditions}
-	routingPodAdditions := routingStatus.PodAdditions
 	if routingPodAdditions != nil {
 		allPodAdditions = append(allPodAdditions, *routingPodAdditions)
 	}
@@ -413,31 +405,23 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		if routingPodAdditions != nil {
 			saAnnotations = routingPodAdditions.ServiceAccountAnnotations
 		}
-		serviceAcctStatus := wsprovision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
-		if !serviceAcctStatus.Continue {
-			if serviceAcctStatus.FailStartup {
-				return r.failWorkspace(workspace, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
-			}
+		saName, err := wsprovision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
+		if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error setting up DevWorkspace ServiceAccount", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
 			reqLogger.Info("Waiting for workspace ServiceAccount")
 			reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
-			if !serviceAcctStatus.Requeue && serviceAcctStatus.Err == nil {
-				return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
-			}
-			return reconcile.Result{Requeue: serviceAcctStatus.Requeue}, serviceAcctStatus.Err
+			return reconcileResult, reconcileErr
 		}
-		serviceAcctName = serviceAcctStatus.ServiceAccountName
+		serviceAcctName = saName
 		reconcileStatus.setConditionTrue(dw.DevWorkspaceServiceAccountReady, "DevWorkspace serviceaccount ready")
 	}
 
-	pullSecretStatus := wsprovision.PullSecrets(clusterAPI, serviceAcctName, workspace.GetNamespace())
-	if !pullSecretStatus.Continue {
+	pullSecretPodAdditions, err := wsprovision.PullSecrets(clusterAPI, serviceAcctName, workspace.GetNamespace())
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error getting DevWorkspace image pull secrets", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
 		reconcileStatus.setConditionFalse(conditions.PullSecretsReady, "Waiting for DevWorkspace pull secrets")
-		if !pullSecretStatus.Requeue && pullSecretStatus.Err == nil {
-			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
-		}
-		return reconcile.Result{Requeue: pullSecretStatus.Requeue}, pullSecretStatus.Err
+		return reconcileResult, reconcileErr
 	}
-	allPodAdditions = append(allPodAdditions, pullSecretStatus.PodAdditions)
+
+	allPodAdditions = append(allPodAdditions, *pullSecretPodAdditions)
 	reconcileStatus.setConditionTrue(conditions.PullSecretsReady, "DevWorkspace secrets ready")
 
 	if kubesync.HasKubelikeComponent(workspace) {
@@ -450,18 +434,12 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Step six: Create deployment and wait for it to be ready
-	deploymentStatus := wsprovision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI)
-	if !deploymentStatus.Continue {
-		if deploymentStatus.FailStartup {
-			failureReason := metrics.DetermineProvisioningFailureReason(deploymentStatus.Info())
-			return r.failWorkspace(workspace, deploymentStatus.Info(), failureReason, reqLogger, &reconcileStatus), nil
+	if err := wsprovision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI); err != nil {
+		if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error creating DevWorkspace deployment", metrics.DetermineProvisioningFailureReason(err.Error()), reqLogger, &reconcileStatus); shouldReturn {
+			reqLogger.Info("Waiting on deployment to be ready")
+			reconcileStatus.setConditionFalse(conditions.DeploymentReady, "Waiting for workspace deployment")
+			return reconcileResult, reconcileErr
 		}
-		reqLogger.Info("Waiting on deployment to be ready")
-		reconcileStatus.setConditionFalse(conditions.DeploymentReady, "Waiting for workspace deployment")
-		if !deploymentStatus.Requeue && deploymentStatus.Err == nil {
-			return reconcile.Result{RequeueAfter: startingWorkspaceRequeueInterval}, nil
-		}
-		return reconcile.Result{Requeue: deploymentStatus.Requeue}, deploymentStatus.Err
 	}
 	reconcileStatus.setConditionTrue(conditions.DeploymentReady, "DevWorkspace deployment ready")
 
@@ -582,7 +560,7 @@ func (r *DevWorkspaceReconciler) checkDWError(workspace *common.DevWorkspaceWith
 	switch detailErr := err.(type) {
 	case *dwerrors.RetryError:
 		logger.Info(detailErr.Error())
-		return true, reconcile.Result{Requeue: true}, nil
+		return true, reconcile.Result{Requeue: true, RequeueAfter: detailErr.RequeueAfter}, nil
 	case *dwerrors.FailError:
 		return true, r.failWorkspace(workspace, fmt.Sprintf("%s: %s", failHint, detailErr), metrics.ReasonInfrastructureFailure, logger, status), nil
 	default:

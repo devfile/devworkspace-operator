@@ -24,6 +24,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/go-logr/logr/testr"
 	"github.com/google/go-cmp/cmp"
@@ -109,7 +110,7 @@ func TestHandleKubernetesComponents(t *testing.T) {
 			i := 0
 			maxIters := 30
 			var err error
-			retryErr := &RetryError{}
+			retryErr := &dwerrors.RetryError{}
 			for err = HandleKubernetesComponents(wksp, api); errors.As(err, &retryErr); err = HandleKubernetesComponents(wksp, api) {
 				i += 1
 				assert.LessOrEqual(t, i, maxIters, "HandleKubernetesComponents did no complete within %d iterations", maxIters)
@@ -196,7 +197,7 @@ func TestSecretAndConfigMapProvisioning(t *testing.T) {
 	i := 0
 	maxIters := 30
 	var err error
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	for err = HandleKubernetesComponents(wksp, api); errors.As(err, &retryErr); err = HandleKubernetesComponents(wksp, api) {
 		i += 1
 		assert.LessOrEqual(t, i, maxIters, "HandleKubernetesComponents did no complete within %d iterations", maxIters)

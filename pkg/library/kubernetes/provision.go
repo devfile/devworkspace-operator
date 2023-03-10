@@ -19,6 +19,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,13 +46,13 @@ func HandleKubernetesComponents(workspace *common.DevWorkspaceWithConfig, api sy
 		k8sLikeComponent, _ := getK8sLikeComponent(component)
 		obj, err := deserializeToObject([]byte(k8sLikeComponent.Inlined), api)
 		if err != nil {
-			return &FailError{fmt.Errorf("could not process component %s: %w", component.Name, err)}
+			return &dwerrors.FailError{Message: fmt.Sprintf("could not process component %s", component.Name), Err: err}
 		}
 		if err := addMetadata(obj, workspace, api); err != nil {
-			return &RetryError{fmt.Errorf("failed to add ownerref for component %s: %w", component.Name, err)}
+			return &dwerrors.RetryError{Message: fmt.Sprintf("failed to add ownerref for component %s", component.Name), Err: err}
 		}
 		if err := checkForExistingObject(obj, api); err != nil {
-			return &FailError{fmt.Errorf("could not process component %s: %w", component.Name, err)}
+			return &dwerrors.FailError{Message: fmt.Sprintf("could not process component %s", component.Name), Err: err}
 		}
 		var syncErr error
 		if sync.IsRecognizedObject(obj) {
@@ -60,7 +61,7 @@ func HandleKubernetesComponents(workspace *common.DevWorkspaceWithConfig, api sy
 			_, syncErr = sync.SyncUnrecognizedObjectWithCluster(obj, api)
 		}
 		if syncErr != nil {
-			return wrapSyncError(syncErr)
+			return dwerrors.WrapSyncError(syncErr)
 		}
 	}
 	return nil

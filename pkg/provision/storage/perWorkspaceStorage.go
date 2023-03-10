@@ -23,6 +23,7 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -64,14 +65,14 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 
 	// If PVC is being deleted, we need to fail workspace startup as a running pod will block deletion.
 	if perWorkspacePVC.DeletionTimestamp != nil {
-		return &ProvisioningError{
+		return &dwerrors.FailError{
 			Message: "DevWorkspace PVC is being deleted",
 		}
 	}
 
 	// Rewrite container volume mounts
 	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, pvcName, podAdditions, &workspace.Spec.Template); err != nil {
-		return &ProvisioningError{
+		return &dwerrors.FailError{
 			Err:     err,
 			Message: "Could not rewrite container volume mounts",
 		}
@@ -222,11 +223,11 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 	case nil:
 		break
 	case *sync.NotInSyncError:
-		return nil, &NotReadyError{
+		return nil, &dwerrors.RetryError{
 			Message: fmt.Sprintf("Updated %s PVC on cluster", pvc.Name),
 		}
 	case *sync.UnrecoverableSyncError:
-		return nil, &ProvisioningError{
+		return nil, &dwerrors.FailError{
 			Message: fmt.Sprintf("Failed to sync %s PVC to cluster", pvc.Name),
 			Err:     t.Cause,
 		}

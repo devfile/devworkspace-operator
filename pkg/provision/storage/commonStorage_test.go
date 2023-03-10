@@ -24,6 +24,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/google/go-cmp/cmp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,8 +185,8 @@ func TestTerminatingPVC(t *testing.T) {
 	workspace.Namespace = "test-namespace"
 	err = commonStorage.ProvisionStorage(&testCase.Input.PodAdditions, getDevWorkspaceWithConfig(workspace), clusterAPI)
 	if assert.Error(t, err, "Should return error when PVC is terminating") {
-		_, ok := err.(*NotReadyError)
-		assert.True(t, ok, "Expect NotReadyError when PVC is terminating")
+		_, ok := err.(*dwerrors.RetryError)
+		assert.True(t, ok, "Expect RetryError when PVC is terminating")
 		assert.Equal(t, "Shared PVC is in terminating state", err.Error(), "Expect message that existing PVC is terminating")
 	}
 }

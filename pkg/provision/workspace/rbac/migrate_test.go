@@ -16,6 +16,7 @@ package rbac
 import (
 	"testing"
 
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/stretchr/testify/assert"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -28,7 +29,7 @@ func TestRemovesOldRBACWhenNewRBACNotPresent(t *testing.T) {
 	api := getTestClusterAPI(t, oldRole, oldRolebinding)
 	// Expect three calls to be required: 1. delete role, 2. delete rolebinding, 3. return nil
 	err := cleanupDeprecatedRBAC(testNamespace, api)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	if assert.ErrorAs(t, err, &retryErr, "Error should be of type RetryErr") {
 		assert.Contains(t, err.Error(), "deleted deprecated DevWorkspace Role")
 	}
@@ -80,7 +81,7 @@ func TestRemovesOldRolebindingWhenNewRolebindingNotPresent(t *testing.T) {
 	api := getTestClusterAPI(t, oldRole, oldRolebinding, newRole)
 	// Expect two calls to be required: 1. delete rolebinding, 2. return nil
 	err := cleanupDeprecatedRBAC(testNamespace, api)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	if assert.ErrorAs(t, err, &retryErr, "Error should be of type RetryErr") {
 		assert.Contains(t, err.Error(), "deleted deprecated DevWorkspace RoleBinding")
 	}
@@ -107,7 +108,7 @@ func TestRemovesOldRoleWhenNewRoleNotPresent(t *testing.T) {
 	api := getTestClusterAPI(t, oldRole, oldRolebinding, newRolebinding)
 	// Expect two calls to be required: 1. delete role, 2. return nil
 	err := cleanupDeprecatedRBAC(testNamespace, api)
-	retryErr := &RetryError{}
+	retryErr := &dwerrors.RetryError{}
 	if assert.ErrorAs(t, err, &retryErr, "Error should be of type RetryErr") {
 		assert.Contains(t, err.Error(), "deleted deprecated DevWorkspace Role")
 	}

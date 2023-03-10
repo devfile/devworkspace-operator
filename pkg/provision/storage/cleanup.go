@@ -20,6 +20,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
@@ -66,15 +67,8 @@ func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI
 		return err
 	}
 	clusterObj, err := sync.SyncObjectWithCluster(specJob, clusterAPI)
-	switch t := err.(type) {
-	case nil:
-		break
-	case *sync.NotInSyncError:
-		return &NotReadyError{Message: t.Error()}
-	case *sync.UnrecoverableSyncError:
-		return &ProvisioningError{Message: "Failed to sync cleanup job with cluster", Err: t.Cause}
-	default:
-		return err
+	if err != nil {
+		return dwerrors.WrapSyncError(err)
 	}
 
 	clusterJob := clusterObj.(*batchv1.Job)
@@ -86,7 +80,7 @@ func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI
 		case batchv1.JobComplete:
 			return nil
 		case batchv1.JobFailed:
-			return &ProvisioningError{
+			return &dwerrors.FailError{
 				Message: fmt.Sprintf("DevWorkspace PVC cleanup job failed: see logs for job %q for details", clusterJob.Name),
 			}
 		}
@@ -95,20 +89,21 @@ func runCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, clusterAPI
 	jobLabels := k8sclient.MatchingLabels{"job-name": common.PVCCleanupJobName(workspace.Status.DevWorkspaceId)}
 	msg, err := status.CheckPodsState(workspace.Status.DevWorkspaceId, clusterJob.Namespace, jobLabels, workspace.Config.Workspace.IgnoredUnrecoverableEvents, clusterAPI)
 	if err != nil {
-		return &ProvisioningError{
-			Err: err,
+		return &dwerrors.FailError{
+			Message: "Error while checking cleanup job pods state",
+			Err:     err,
 		}
 	}
 
 	if msg != "" {
 		errMsg := fmt.Sprintf("DevWorkspace common PVC cleanup job failed: see logs for job %q for details. Additional information: %s", clusterJob.Name, msg)
-		return &ProvisioningError{
+		return &dwerrors.FailError{
 			Message: errMsg,
 		}
 	}
 
 	// Requeue at least each 10 seconds to check if PVC is not removed by someone else
-	return &NotReadyError{
+	return &dwerrors.RetryError{
 		Message:      "Cleanup job is not in completed state",
 		RequeueAfter: 10 * time.Second,
 	}

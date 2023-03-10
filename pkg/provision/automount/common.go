@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -38,22 +39,6 @@ type Resources struct {
 	Volumes       []corev1.Volume
 	VolumeMounts  []corev1.VolumeMount
 	EnvFromSource []corev1.EnvFromSource
-}
-
-type AutoMountError struct {
-	Err     error
-	IsFatal bool
-}
-
-func (e *AutoMountError) Error() string {
-	if e.Err != nil {
-		return e.Err.Error()
-	}
-	return ""
-}
-
-func (e *AutoMountError) Unwrap() error {
-	return e.Err
 }
 
 func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string) error {
@@ -130,9 +115,8 @@ func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, auto
 	// Check that workspace volumes do not conflict with automounted volumes
 	for _, volume := range podAdditions.Volumes {
 		if conflict, exists := automountVolumeNames[volume.Name]; exists {
-			return &AutoMountError{
-				IsFatal: true,
-				Err:     fmt.Errorf("DevWorkspace volume '%s' conflicts with automounted volume from %s", volume.Name, formatVolumeDescription(conflict)),
+			return &dwerrors.FailError{
+				Message: fmt.Sprintf("DevWorkspace volume '%s' conflicts with automounted volume from %s", volume.Name, formatVolumeDescription(conflict)),
 			}
 		}
 	}
@@ -141,9 +125,8 @@ func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, auto
 	automountVolumeMountsByMountPath := map[string]corev1.VolumeMount{}
 	for _, vm := range automount.VolumeMounts {
 		if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
-			return &AutoMountError{
-				IsFatal: true,
-				Err: fmt.Errorf("auto-mounted volumes from %s and %s have the same mount path",
+			return &dwerrors.FailError{
+				Message: fmt.Sprintf("auto-mounted volumes from %s and %s have the same mount path",
 					getVolumeDescriptionFromVolumeMount(vm, automount.Volumes), getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes)),
 			}
 		}
@@ -154,9 +137,8 @@ func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, auto
 	for _, container := range podAdditions.Containers {
 		for _, vm := range container.VolumeMounts {
 			if conflict, exists := automountVolumeMountsByMountPath[vm.MountPath]; exists {
-				return &AutoMountError{
-					IsFatal: true,
-					Err: fmt.Errorf("DevWorkspace volume %s in container %s has same mountpath as auto-mounted volume from %s",
+				return &dwerrors.FailError{
+					Message: fmt.Sprintf("DevWorkspace volume %s in container %s has same mountpath as auto-mounted volume from %s",
 						getVolumeDescriptionFromVolumeMount(vm, podAdditions.Volumes), container.Name, getVolumeDescriptionFromVolumeMount(conflict, automount.Volumes)),
 				}
 			}

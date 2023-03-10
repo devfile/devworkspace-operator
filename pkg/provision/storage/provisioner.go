@@ -16,6 +16,8 @@
 package storage
 
 import (
+	"errors"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -23,6 +25,9 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
+
+// UnsupportedStorageStrategy is used when the controller is configured with an invalid storage strategy
+var UnsupportedStorageStrategy = errors.New("configured storage type not supported")
 
 // Provisioner is an interface for rewriting volumeMounts in a pod according to a storage policy (e.g. common PVC for all mounts, etc.)
 type Provisioner interface {

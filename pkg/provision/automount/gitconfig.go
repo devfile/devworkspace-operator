@@ -14,9 +14,8 @@
 package automount
 
 import (
-	"fmt"
-
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,37 +45,22 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 
 	mergedCredentialsSecret, err := mergeGitCredentials(namespace, credentialsSecrets)
 	if err != nil {
-		return nil, &AutoMountError{IsFatal: true, Err: err}
+		return nil, &dwerrors.FailError{Message: "Failed to collect git credentials secrets", Err: err}
 	}
 
 	gitConfigMap, err := constructGitConfig(namespace, mergedGitCredentialsMountPath, tlsConfigMaps, baseGitConfig)
 	if err != nil {
-		return nil, &AutoMountError{IsFatal: true, Err: err}
+		return nil, &dwerrors.FailError{Message: "Failed to prepare git config for workspace", Err: err}
 	}
 
-	_, err = sync.SyncObjectWithCluster(mergedCredentialsSecret, api)
-	switch t := err.(type) {
-	case nil:
-		break
-	case *sync.NotInSyncError:
-		return nil, &AutoMountError{IsFatal: false, Err: fmt.Errorf("syncing merged git credentials secret: %w", t)}
-	case *sync.UnrecoverableSyncError:
-		return nil, &AutoMountError{IsFatal: true, Err: fmt.Errorf("failed to sync merged git credentials secret: %w", t.Cause)}
-	default:
-		return nil, &AutoMountError{IsFatal: false, Err: err}
+	if _, err = sync.SyncObjectWithCluster(mergedCredentialsSecret, api); err != nil {
+		return nil, dwerrors.WrapSyncError(err)
 	}
 
-	_, err = sync.SyncObjectWithCluster(gitConfigMap, api)
-	switch t := err.(type) {
-	case nil:
-		break
-	case *sync.NotInSyncError:
-		return nil, &AutoMountError{IsFatal: false, Err: fmt.Errorf("syncing gitconfig configmap: %w", t)}
-	case *sync.UnrecoverableSyncError:
-		return nil, &AutoMountError{IsFatal: true, Err: fmt.Errorf("failed to sync gitconfig configmap: %w", t.Cause)}
-	default:
-		return nil, &AutoMountError{IsFatal: false, Err: err}
+	if _, err = sync.SyncObjectWithCluster(gitConfigMap, api); err != nil {
+		return nil, dwerrors.WrapSyncError(err)
 	}
+
 	resources := flattenAutomountResources([]Resources{
 		getAutomountSecret(mergedGitCredentialsMountPath, constants.DevWorkspaceMountAsFile, defaultAccessMode, mergedCredentialsSecret),
 		getAutomountConfigmap("/etc/", constants.DevWorkspaceMountAsSubpath, defaultAccessMode, gitConfigMap),

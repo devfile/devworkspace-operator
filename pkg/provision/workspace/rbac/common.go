@@ -24,33 +24,6 @@ var rbacLabels = map[string]string{
 	"controller.devfile.io/workspace-rbac": "true",
 }
 
-type RetryError struct {
-	Err error
-}
-
-func (e *RetryError) Error() string {
-	return e.Err.Error()
-}
-
-type FailError struct {
-	Err error
-}
-
-func (e *FailError) Error() string {
-	return e.Err.Error()
-}
-
-func wrapSyncError(err error) error {
-	switch syncErr := err.(type) {
-	case *sync.NotInSyncError:
-		return &RetryError{syncErr}
-	case *sync.UnrecoverableSyncError:
-		return &FailError{syncErr}
-	default:
-		return err
-	}
-}
-
 func SyncRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
 	if err := cleanupDeprecatedRBAC(workspace.Namespace, api); err != nil {
 		return err

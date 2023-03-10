@@ -17,7 +17,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -30,6 +29,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
@@ -226,9 +226,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				errMsg := status.CheckForIgnoredWorkspacePodEvents(workspace, clusterAPI)
 				if errMsg != "" {
 					failureMsg := fmt.Sprintf("%s. Reason: %s", timeoutErr.Error(), errMsg)
-					reconcileResult, err = r.failWorkspace(workspace, failureMsg, metrics.DetermineProvisioningFailureReason(errMsg), reqLogger, &reconcileStatus)
+					reconcileResult = r.failWorkspace(workspace, failureMsg, metrics.DetermineProvisioningFailureReason(errMsg), reqLogger, &reconcileStatus)
 				} else {
-					reconcileResult, err = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+					reconcileResult = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
 				}
 			}
 		}
@@ -244,7 +244,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if workspace.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation] == "true" {
 		msg, err := r.validateCreatorLabel(clusterWorkspace)
 		if err != nil {
-			return r.failWorkspace(workspace, msg, metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, msg, metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
 		}
 	}
 
@@ -267,7 +267,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	flattenedWorkspace, warnings, err := flatten.ResolveDevWorkspace(&workspace.Spec.Template, workspace.Spec.Contributions, flattenHelpers)
 	if err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 	if warnings != nil {
 		reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, flatten.FormatVariablesWarning(warnings))
@@ -280,13 +280,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if components != nil {
 		eventErrors := devfilevalidation.ValidateComponents(components)
 		if eventErrors != nil {
-			return r.failWorkspace(workspace, eventErrors.Error(), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, eventErrors.Error(), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 		}
 	}
 
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning storage: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning storage: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 
 	// Set finalizer on DevWorkspace if necessary
@@ -303,17 +303,17 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		workspace.Config.Workspace.ContainerSecurityContext,
 		workspace.Config.Workspace.ImagePullPolicy)
 	if err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 
 	// Add common environment variables and env vars defined via workspaceEnv attribute
 	if err := env.AddCommonEnvironmentVariables(devfilePodAdditions, clusterWorkspace, &workspace.Spec.Template); err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Failed to process workspace environment variables: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to process workspace environment variables: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 
 	// Add init container to clone projects
 	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, workspace.Config.Workspace.ImagePullPolicy, workspace.Config.Routing.ProxyConfig); err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 	} else if projectClone != nil {
 		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)
 	}
@@ -324,31 +324,15 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Add automount resources into devfile containers
-	if err := automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace); err != nil {
-		var autoMountErr *automount.AutoMountError
-		if errors.As(err, &autoMountErr) {
-			if autoMountErr.IsFatal {
-				return r.failWorkspace(workspace, fmt.Sprintf("Failed to process automount resources: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
-			}
-			reqLogger.Info(autoMountErr.Error())
-			return reconcile.Result{Requeue: true}, nil
-		} else {
-			return reconcile.Result{}, err
-		}
+	err = automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace)
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Failed to process automount resources", metrics.ReasonBadRequest, reqLogger, &reconcileStatus); shouldReturn {
+		return reconcileResult, reconcileErr
 	}
 
 	err = storageProvisioner.ProvisionStorage(devfilePodAdditions, workspace, clusterAPI)
-	if err != nil {
-		switch storageErr := err.(type) {
-		case *storage.NotReadyError:
-			reqLogger.Info(storageErr.Message)
-			reconcileStatus.setConditionFalse(conditions.StorageReady, fmt.Sprintf("Provisioning storage: %s", storageErr.Message))
-			return reconcile.Result{Requeue: true, RequeueAfter: storageErr.RequeueAfter}, nil
-		case *storage.ProvisioningError:
-			return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning storage: %s", storageErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
-		default:
-			return reconcile.Result{}, storageErr
-		}
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error provisioning storage", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
+		reconcileStatus.setConditionFalse(conditions.StorageReady, fmt.Sprintf("Provisioning storage: %s", err.Error()))
+		return reconcileResult, reconcileErr
 	}
 	reconcileStatus.setConditionTrue(conditions.StorageReady, "Storage ready")
 
@@ -360,23 +344,16 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return reconcile.Result{}, err
 		}
 	}
-	if err := rbac.SyncRBAC(workspace, clusterAPI); err != nil {
-		switch rbacErr := err.(type) {
-		case *rbac.RetryError:
-			reqLogger.Info(rbacErr.Error())
-			return reconcile.Result{Requeue: true}, nil
-		case *rbac.FailError:
-			return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning rbac: %s", rbacErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
-		default:
-			return reconcile.Result{}, err
-		}
+	err = rbac.SyncRBAC(workspace, clusterAPI)
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error provisioning rbac", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
+		return reconcileResult, reconcileErr
 	}
 
 	// Step two: Create routing, and wait for routing to be ready
 	routingStatus := wsprovision.SyncRoutingToCluster(workspace, clusterAPI)
 	if !routingStatus.Continue {
 		if routingStatus.FailStartup {
-			return r.failWorkspace(workspace, routingStatus.Message, metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, routingStatus.Message, metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 		}
 		reqLogger.Info("Waiting on routing to be ready")
 		message := "Preparing networking"
@@ -404,16 +381,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Step three: provision a configmap on the cluster to mount the flattened devfile in deployment containers
 	err = metadata.ProvisionWorkspaceMetadata(devfilePodAdditions, clusterWorkspace, workspace, clusterAPI)
-	if err != nil {
-		switch provisionErr := err.(type) {
-		case *metadata.NotReadyError:
-			reqLogger.Info(provisionErr.Message)
-			return reconcile.Result{Requeue: true, RequeueAfter: provisionErr.RequeueAfter}, nil
-		case *metadata.ProvisioningError:
-			return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning metadata configmap: %s", provisionErr), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)
-		default:
-			return reconcile.Result{}, provisionErr
-		}
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error provisioning metadata configmap", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
+		return reconcileResult, reconcileErr
 	}
 
 	// Step four: Collect all workspace deployment contributions
@@ -427,13 +396,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	var serviceAcctName string
 	if *workspace.Config.Workspace.ServiceAccount.DisableCreation {
 		if workspace.Config.Workspace.ServiceAccount.ServiceAccountName == "" {
-			return r.failWorkspace(workspace, "Configured ServiceAccount name is required when ServiceAccount creation is disabled", metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, "Configured ServiceAccount name is required when ServiceAccount creation is disabled", metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 		}
 		if routingPodAdditions != nil && routingPodAdditions.Annotations != nil {
 			// This routingClass defines annotations to be applied to the workspace SA, which we cannot do since
 			// we are not managing the SA. This feature is not used in DWO anymore and was previously used to support
 			// the openshift-oauth routingClass.
-			return r.failWorkspace(workspace, fmt.Sprintf("Disabling ServiceAccount creation is incompatible with workspace routingClass %s", workspace.Spec.RoutingClass), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, fmt.Sprintf("Disabling ServiceAccount creation is incompatible with workspace routingClass %s", workspace.Spec.RoutingClass), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 		}
 		// We have to assume the ServiceAccount exists as even if it does exist we generally can't access it -- DWO only caches
 		// ServiceAccounts with the devworkspace ID label.
@@ -447,7 +416,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		serviceAcctStatus := wsprovision.SyncServiceAccount(workspace, saAnnotations, clusterAPI)
 		if !serviceAcctStatus.Continue {
 			if serviceAcctStatus.FailStartup {
-				return r.failWorkspace(workspace, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+				return r.failWorkspace(workspace, serviceAcctStatus.Message, metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 			}
 			reqLogger.Info("Waiting for workspace ServiceAccount")
 			reconcileStatus.setConditionFalse(dw.DevWorkspaceServiceAccountReady, "Waiting for DevWorkspace ServiceAccount")
@@ -472,19 +441,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(conditions.PullSecretsReady, "DevWorkspace secrets ready")
 
 	if kubesync.HasKubelikeComponent(workspace) {
-		if err := kubesync.HandleKubernetesComponents(workspace, clusterAPI); err != nil {
-			switch syncErr := err.(type) {
-			case *kubesync.RetryError:
-				reqLogger.Info(syncErr.Error())
-				reconcileStatus.setConditionFalse(conditions.KubeComponentsReady, "Waiting for DevWorkspace Kubernetes components to be created on cluster")
-				return reconcile.Result{Requeue: true}, nil
-			case *kubesync.FailError:
-				return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning workspace Kubernetes components: %s", syncErr), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
-			case *kubesync.WarningError:
-				reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, fmt.Sprintf("Warning in Kubernetes components: %s", syncErr))
-			default:
-				return reconcile.Result{}, err
-			}
+		err := kubesync.HandleKubernetesComponents(workspace, clusterAPI)
+		if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error provisioning workspace Kubernetes components", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
+			reconcileStatus.setConditionFalse(conditions.KubeComponentsReady, "Waiting for DevWorkspace Kubernetes components to be created on cluster")
+			return reconcileResult, reconcileErr
 		}
 		reconcileStatus.setConditionTrue(conditions.KubeComponentsReady, "Kubernetes components ready")
 	}
@@ -494,7 +454,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if !deploymentStatus.Continue {
 		if deploymentStatus.FailStartup {
 			failureReason := metrics.DetermineProvisioningFailureReason(deploymentStatus.Info())
-			return r.failWorkspace(workspace, deploymentStatus.Info(), failureReason, reqLogger, &reconcileStatus)
+			return r.failWorkspace(workspace, deploymentStatus.Info(), failureReason, reqLogger, &reconcileStatus), nil
 		}
 		reqLogger.Info("Waiting on deployment to be ready")
 		reconcileStatus.setConditionFalse(conditions.DeploymentReady, "Waiting for workspace deployment")
@@ -605,14 +565,29 @@ func (r *DevWorkspaceReconciler) doStop(ctx context.Context, workspace *common.D
 // failWorkspace marks a workspace as failed by setting relevant fields in the status struct.
 // These changes are not synced to cluster immediately, and are intended to be synced to the cluster via a deferred function
 // in the main reconcile loop. If needed, changes can be flushed to the cluster immediately via `updateWorkspaceStatus()`
-func (r *DevWorkspaceReconciler) failWorkspace(workspace *common.DevWorkspaceWithConfig, msg string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) (reconcile.Result, error) {
+func (r *DevWorkspaceReconciler) failWorkspace(workspace *common.DevWorkspaceWithConfig, msg string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) reconcile.Result {
 	logger.Info("DevWorkspace failed to start: " + msg)
 	status.phase = devworkspacePhaseFailing
 	status.setConditionTrueWithReason(dw.DevWorkspaceFailedStart, msg, string(reason))
 	if workspace.Spec.Started {
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{Requeue: true}
 	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{}
+}
+
+func (r *DevWorkspaceReconciler) checkDWError(workspace *common.DevWorkspaceWithConfig, err error, failHint string, reason metrics.FailureReason, logger logr.Logger, status *currentStatus) (shouldReturn bool, res reconcile.Result, returnErr error) {
+	if err == nil {
+		return false, reconcile.Result{}, nil
+	}
+	switch detailErr := err.(type) {
+	case *dwerrors.RetryError:
+		logger.Info(detailErr.Error())
+		return true, reconcile.Result{Requeue: true}, nil
+	case *dwerrors.FailError:
+		return true, r.failWorkspace(workspace, fmt.Sprintf("%s: %s", failHint, detailErr), metrics.ReasonInfrastructureFailure, logger, status), nil
+	default:
+		return true, reconcile.Result{}, err
+	}
 }
 
 func (r *DevWorkspaceReconciler) syncStartedAtToCluster(

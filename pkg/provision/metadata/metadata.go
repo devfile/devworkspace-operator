@@ -18,6 +18,7 @@ package metadata
 import (
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,17 +55,8 @@ func ProvisionWorkspaceMetadata(podAdditions *v1alpha1.PodAdditions, original, f
 	if err != nil {
 		return err
 	}
-	_, err = sync.SyncObjectWithCluster(cm, api)
-	switch t := err.(type) {
-	case nil:
-		break
-	case *sync.NotInSyncError:
-		return &NotReadyError{Message: "Waiting for DevWorkspace metadata configmap to be ready"}
-	case *sync.UnrecoverableSyncError:
-		return &ProvisioningError{
-			Err:     t.Cause,
-			Message: "Failed to sync DevWorkspace metadata configmap with cluster",
-		}
+	if _, err = sync.SyncObjectWithCluster(cm, api); err != nil {
+		dwerrors.WrapSyncError(err)
 	}
 
 	vol := getVolumeFromConfigMap(cm)

@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -55,7 +56,7 @@ func cleanupDeprecatedRBAC(namespace string, api sync.ClusterAPI) error {
 		deleteErr := api.Client.Delete(api.Ctx, oldRole)
 		switch {
 		case deleteErr == nil:
-			return &RetryError{fmt.Errorf("deleted deprecated DevWorkspace Role")}
+			return &dwerrors.RetryError{Message: fmt.Sprintf("deleted deprecated DevWorkspace Role")}
 		case k8sErrors.IsNotFound(err):
 			// Already deleted
 			break
@@ -87,7 +88,7 @@ func cleanupDeprecatedRBAC(namespace string, api sync.ClusterAPI) error {
 		deleteErr := api.Client.Delete(api.Ctx, oldRolebinding)
 		switch {
 		case deleteErr == nil:
-			return &RetryError{fmt.Errorf("deleted deprecated DevWorkspace RoleBinding")}
+			return &dwerrors.RetryError{Message: fmt.Sprintf("deleted deprecated DevWorkspace RoleBinding")}
 		case k8sErrors.IsNotFound(err):
 			// Already deleted
 			break

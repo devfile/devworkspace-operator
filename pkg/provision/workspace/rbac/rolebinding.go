@@ -18,6 +18,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -55,9 +56,9 @@ func deleteRolebinding(name, namespace string, api sync.ClusterAPI) error {
 	switch {
 	case err == nil:
 		if err := api.Client.Delete(api.Ctx, rolebinding); err != nil {
-			return &RetryError{fmt.Errorf("failed to delete rolebinding %s in namespace %s: %w", name, namespace, err)}
+			return &dwerrors.RetryError{Message: fmt.Sprintf("failed to delete rolebinding %s in namespace %s", name, namespace), Err: err}
 		}
-		return &RetryError{fmt.Errorf("deleted rolebinding %s in namespace %s", name, namespace)}
+		return &dwerrors.RetryError{Message: fmt.Sprintf("deleted rolebinding %s in namespace %s", name, namespace)}
 	case k8sErrors.IsNotFound(err):
 		// Already deleted
 		return nil
@@ -92,7 +93,7 @@ func addServiceAccountToRolebinding(saName, namespace, roleName, rolebindingName
 	}
 
 	if _, err = sync.SyncObjectWithCluster(rolebinding, api); err != nil {
-		return wrapSyncError(err)
+		return dwerrors.WrapSyncError(err)
 	}
 	return nil
 }
@@ -126,7 +127,7 @@ func removeServiceAccountFromRolebinding(saName, namespace, roleBindingName stri
 	}
 	rolebinding.Subjects = newSubjects
 	if _, err := sync.SyncObjectWithCluster(rolebinding, api); err != nil {
-		return wrapSyncError(err)
+		return dwerrors.WrapSyncError(err)
 	}
 	return nil
 }

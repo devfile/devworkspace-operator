@@ -21,6 +21,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +66,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	if err != nil {
 		return err
 	} else if pvcTerminating {
-		return &NotReadyError{
+		return &dwerrors.RetryError{
 			Message:      "Shared PVC is in terminating state",
 			RequeueAfter: 2 * time.Second,
 		}
@@ -80,7 +81,7 @@ func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAd
 	}
 
 	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, pvcName, podAdditions, &workspace.Spec.Template); err != nil {
-		return &ProvisioningError{
+		return &dwerrors.FailError{
 			Err:     err,
 			Message: "Could not rewrite container volume mounts",
 		}

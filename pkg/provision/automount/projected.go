@@ -117,6 +117,22 @@ func generateProjectedVolume(mountPath string, volumeMounts []corev1.VolumeMount
 		projectedVolume.Projected.Sources = append(projectedVolume.Projected.Sources, projection)
 	}
 
+	// Order of resources here may be random; to avoid unnecessarily updating deployment
+	// we need to sort them somehow.
+	sort.Slice(projectedVolume.Projected.Sources, func(i, j int) bool {
+		iSource, jSource := projectedVolume.Projected.Sources[i], projectedVolume.Projected.Sources[j]
+		switch {
+		case iSource.ConfigMap != nil && jSource.ConfigMap == nil:
+			return true // ConfigMaps first
+		case iSource.ConfigMap == nil && jSource.ConfigMap != nil:
+			return false
+		case iSource.ConfigMap != nil && jSource.ConfigMap != nil:
+			return iSource.ConfigMap.Name < jSource.ConfigMap.Name
+		default: // both sources are Secrets
+			return iSource.Secret.Name < jSource.Secret.Name
+		}
+	})
+
 	projectedVolumeMount := &corev1.VolumeMount{
 		Name:      volumeName,
 		MountPath: mountPath,

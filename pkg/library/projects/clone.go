@@ -20,7 +20,9 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -32,7 +34,7 @@ const (
 	projectClonerContainerName = "project-clone"
 )
 
-func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPolicy string) (*corev1.Container, error) {
+func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPolicy string, proxyConfig *controllerv1alpha1.Proxy) (*corev1.Container, error) {
 	if len(workspace.Projects) == 0 {
 		return nil, nil
 	}
@@ -66,16 +68,18 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPo
 		return nil, fmt.Errorf("project clone container has invalid CPU request configured: %w", err)
 	}
 
+	cloneEnv := []corev1.EnvVar{
+		{
+			Name:  devfileConstants.ProjectsRootEnvVar,
+			Value: constants.DefaultProjectsSourcesRoot,
+		},
+	}
+	cloneEnv = append(cloneEnv, env.GetProxyEnvVars(proxyConfig)...)
+
 	return &corev1.Container{
 		Name:  projectClonerContainerName,
 		Image: cloneImage,
-		Env: []corev1.EnvVar{
-			// TODO: add proxy env
-			{
-				Name:  devfileConstants.ProjectsRootEnvVar,
-				Value: constants.DefaultProjectsSourcesRoot,
-			},
-		},
+		Env:   cloneEnv,
 		Resources: corev1.ResourceRequirements{
 			Limits: map[corev1.ResourceName]resource.Quantity{
 				corev1.ResourceMemory: memLimit,

@@ -71,12 +71,12 @@ func commonEnvironmentVariables(workspaceWithConfig *common.DevWorkspaceWithConf
 		},
 	}
 
-	envvars = append(envvars, getProxyEnvVars(workspaceWithConfig.Config.Routing.ProxyConfig)...)
+	envvars = append(envvars, GetProxyEnvVars(workspaceWithConfig.Config.Routing.ProxyConfig)...)
 
 	return envvars
 }
 
-func getProxyEnvVars(proxyConfig *v1alpha1.Proxy) []corev1.EnvVar {
+func GetProxyEnvVars(proxyConfig *v1alpha1.Proxy) []corev1.EnvVar {
 	if proxyConfig == nil {
 		return nil
 	}

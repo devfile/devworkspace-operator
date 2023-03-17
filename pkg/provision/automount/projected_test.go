@@ -15,6 +15,7 @@ package automount
 
 import (
 	"path"
+	"sort"
 	"strings"
 	"testing"
 
@@ -309,20 +310,22 @@ func testProjectedVolume(name string, secretNames, configmapNames []string) core
 			},
 		},
 	}
-	for _, secretName := range secretNames {
-		vol.Projected.Sources = append(vol.Projected.Sources, corev1.VolumeProjection{
-			Secret: &corev1.SecretProjection{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: secretName,
-				},
-			},
-		})
-	}
+	sort.Strings(configmapNames)
+	sort.Strings(secretNames)
 	for _, configmapName := range configmapNames {
 		vol.Projected.Sources = append(vol.Projected.Sources, corev1.VolumeProjection{
 			ConfigMap: &corev1.ConfigMapProjection{
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: configmapName,
+				},
+			},
+		})
+	}
+	for _, secretName := range secretNames {
+		vol.Projected.Sources = append(vol.Projected.Sources, corev1.VolumeProjection{
+			Secret: &corev1.SecretProjection{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: secretName,
 				},
 			},
 		})

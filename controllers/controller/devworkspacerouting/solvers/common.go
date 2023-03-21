@@ -153,33 +153,33 @@ func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointLis
 	}
 }
 
-func getRoutesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []routeV1.Route {
+func getRoutesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, annotations map[string]string) []routeV1.Route {
 	var routes []routeV1.Route
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure != controllerv1alpha1.PublicEndpointExposure {
 				continue
 			}
-			routes = append(routes, getRouteForEndpoint(routingSuffix, endpoint, meta))
+			routes = append(routes, getRouteForEndpoint(routingSuffix, endpoint, meta, annotations))
 		}
 	}
 	return routes
 }
 
-func getIngressesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []networkingv1.Ingress {
+func getIngressesForSpec(routingSuffix string, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, annotations map[string]string) []networkingv1.Ingress {
 	var ingresses []networkingv1.Ingress
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure != controllerv1alpha1.PublicEndpointExposure {
 				continue
 			}
-			ingresses = append(ingresses, getIngressForEndpoint(routingSuffix, endpoint, meta))
+			ingresses = append(ingresses, getIngressForEndpoint(routingSuffix, endpoint, meta, annotations))
 		}
 	}
 	return ingresses
 }
 
-func getRouteForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpoint, meta DevWorkspaceMetadata) routeV1.Route {
+func getRouteForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpoint, meta DevWorkspaceMetadata, annotations map[string]string) routeV1.Route {
 	targetEndpoint := intstr.FromInt(endpoint.TargetPort)
 	endpointName := common.EndpointName(endpoint.Name)
 	return routeV1.Route{
@@ -189,7 +189,7 @@ func getRouteForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpo
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
-			Annotations: routeAnnotations(endpointName),
+			Annotations: createAnnotations(endpoint.Name, annotations, routeAnnotations),
 		},
 		Spec: routeV1.RouteSpec{
 			Host: common.WorkspaceHostname(routingSuffix, meta.DevWorkspaceId),
@@ -209,7 +209,7 @@ func getRouteForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpo
 	}
 }
 
-func getIngressForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpoint, meta DevWorkspaceMetadata) networkingv1.Ingress {
+func getIngressForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpoint, meta DevWorkspaceMetadata, annotations map[string]string) networkingv1.Ingress {
 	endpointName := common.EndpointName(endpoint.Name)
 	hostname := common.EndpointHostname(routingSuffix, meta.DevWorkspaceId, endpointName, endpoint.TargetPort)
 	ingressPathType := networkingv1.PathTypeImplementationSpecific
@@ -220,7 +220,7 @@ func getIngressForEndpoint(routingSuffix string, endpoint controllerv1alpha1.End
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
-			Annotations: nginxIngressAnnotations(endpoint.Name),
+			Annotations: createAnnotations(endpoint.Name, annotations, nginxIngressAnnotations),
 		},
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{

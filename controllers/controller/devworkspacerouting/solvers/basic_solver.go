@@ -22,20 +22,33 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
-var routeAnnotations = func(endpointName string) map[string]string {
-	return map[string]string{
-		"haproxy.router.openshift.io/rewrite-target": "/",
-		constants.DevWorkspaceEndpointNameAnnotation: endpointName,
+func appendMap[K, V comparable](dst map[K]V, m map[K]V) {
+	for k, v := range m {
+		dst[k] = v
 	}
 }
 
-var nginxIngressAnnotations = func(endpointName string) map[string]string {
-	return map[string]string{
-		"kubernetes.io/ingress.class":                "nginx",
-		"nginx.ingress.kubernetes.io/rewrite-target": "/",
-		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+var routeAnnotations = map[string]string{
+	"haproxy.router.openshift.io/rewrite-target": "/",
+}
+
+var nginxIngressAnnotations = map[string]string{
+	"kubernetes.io/ingress.class":                "nginx",
+	"nginx.ingress.kubernetes.io/rewrite-target": "/",
+	"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
+}
+
+func createAnnotations(endpointName string, routingAnnotations map[string]string, defaultAnnotations map[string]string) map[string]string {
+	annotations := map[string]string{
 		constants.DevWorkspaceEndpointNameAnnotation: endpointName,
 	}
+
+	if routingAnnotations == nil || len(routingAnnotations) == 0 {
+		appendMap(annotations, defaultAnnotations)
+	} else {
+		appendMap(annotations, routingAnnotations)
+	}
+	return annotations
 }
 
 // Basic solver exposes endpoints without any authentication
@@ -67,12 +80,12 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRou
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
 	routingObjects.Services = services
+	routingAnnotations := config.GetGlobalConfig().Routing.Annotations
 	if infrastructure.IsOpenShift() {
-		routingObjects.Routes = getRoutesForSpec(routingSuffix, spec.Endpoints, workspaceMeta)
+		routingObjects.Routes = getRoutesForSpec(routingSuffix, spec.Endpoints, workspaceMeta, routingAnnotations)
 	} else {
-		routingObjects.Ingresses = getIngressesForSpec(routingSuffix, spec.Endpoints, workspaceMeta)
+		routingObjects.Ingresses = getIngressesForSpec(routingSuffix, spec.Endpoints, workspaceMeta, routingAnnotations)
 	}
-
 	return routingObjects, nil
 }
 

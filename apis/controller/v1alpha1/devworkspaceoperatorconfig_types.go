@@ -57,6 +57,11 @@ type RoutingConfig struct {
 	// DevWorkspaces. However, changing the proxy configuration for the DevWorkspace Operator itself
 	// requires restarting the controller deployment.
 	ProxyConfig *Proxy `json:"proxyConfig,omitempty"`
+	// Annotations defines the collection of annotations to add on the routing object.
+	//
+	// Use this property to set the annotations expected by the routing framework used
+	// in your cluster (nginx, traefik, ...)
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 type Proxy struct {

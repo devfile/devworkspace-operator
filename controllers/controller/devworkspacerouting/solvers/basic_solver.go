@@ -80,6 +80,7 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRou
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
 	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
 	routingObjects.Services = services
+	// TODO: Use workspace-scoped routing annotations to allow overriding
 	routingAnnotations := config.GetGlobalConfig().Routing.Annotations
 	if infrastructure.IsOpenShift() {
 		routingObjects.Routes = getRoutesForSpec(routingSuffix, spec.Endpoints, workspaceMeta, routingAnnotations)

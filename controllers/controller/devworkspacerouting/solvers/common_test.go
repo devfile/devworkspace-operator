@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -11,54 +12,48 @@ func TestGetRouteForEndpointAnnotations(t *testing.T) {
 	tests := []struct {
 		name string
 
-		routingSuffix string
-		endpoint      v1alpha1.Endpoint
-		meta          DevWorkspaceMetadata
-		annotations   map[string]string
+		annotations map[string]string
 
-		expectedAnnotationsKeys []string
+		expectedAnnotations map[string]string
 	}{
 		{
-			name: "nil",
+			name: "Gets default OpenShift route annotation when annotations aren't defined",
 
 			annotations: nil,
 
-			expectedAnnotationsKeys: []string{
-				"controller.devfile.io/endpoint_name",
-				"haproxy.router.openshift.io/rewrite-target",
+			expectedAnnotations: map[string]string{
+				"controller.devfile.io/endpoint_name":        "Endpoint",
+				"haproxy.router.openshift.io/rewrite-target": "/",
 			},
 		},
 		{
-			name: "empty",
+			name: "Gets default OpenShift route annotation when annotations are empty",
 
 			annotations: map[string]string{},
 
-			expectedAnnotationsKeys: []string{
-				"controller.devfile.io/endpoint_name",
-				"haproxy.router.openshift.io/rewrite-target",
+			expectedAnnotations: map[string]string{
+				"controller.devfile.io/endpoint_name":        "Endpoint",
+				"haproxy.router.openshift.io/rewrite-target": "/",
 			},
 		},
 		{
-			name: "defined",
+			name: "Gets default OpenShift route annotation when annotations are defined",
 
 			annotations: map[string]string{
 				"example.com/extra": "val",
 			},
 
-			expectedAnnotationsKeys: []string{
-				"controller.devfile.io/endpoint_name",
-				"example.com/extra"},
+			expectedAnnotations: map[string]string{
+				"controller.devfile.io/endpoint_name": "Endpoint",
+				"example.com/extra":                   "val",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			route := getRouteForEndpoint("routingSuffix", v1alpha1.Endpoint{Name: "Endpoint"}, DevWorkspaceMetadata{DevWorkspaceId: "WorkspaceTest"}, tt.annotations)
-			for _, expected := range tt.expectedAnnotationsKeys {
-				_, ok := route.Annotations[expected]
-				assert.True(t, ok, "Key %s does not exist", expected)
-				assert.Equal(t, len(tt.expectedAnnotationsKeys), len(route.Annotations))
-			}
+			assert.Equal(t, tt.expectedAnnotations, route.Annotations, "Annotations should match: Diff: %s", cmp.Diff(tt.expectedAnnotations, route.Annotations))
 		})
 	}
 }
@@ -67,47 +62,44 @@ func TestGetIngressForEndpointAnnotations(t *testing.T) {
 	tests := []struct {
 		name string
 
-		routingSuffix string
-		endpoint      v1alpha1.Endpoint
-		meta          DevWorkspaceMetadata
-		annotations   map[string]string
+		annotations map[string]string
 
-		expectedAnnotationsKeys []string
+		expectedAnnotations map[string]string
 	}{
 		{
-			name: "nil",
+			name: "Gets default Kubernetes ingress annotation when annotations aren't defined",
 
 			annotations: nil,
 
-			expectedAnnotationsKeys: []string{
-				"controller.devfile.io/endpoint_name",
-				"kubernetes.io/ingress.class",
-				"nginx.ingress.kubernetes.io/rewrite-target",
-				"nginx.ingress.kubernetes.io/ssl-redirect",
+			expectedAnnotations: map[string]string{
+				"controller.devfile.io/endpoint_name":        "Endpoint",
+				"kubernetes.io/ingress.class":                "nginx",
+				"nginx.ingress.kubernetes.io/rewrite-target": "/",
+				"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
 			},
 		},
 		{
-			name: "empty",
+			name: "Gets default Kubernetes ingress annotation when annotations are empty",
 
 			annotations: map[string]string{},
 
-			expectedAnnotationsKeys: []string{
-				"controller.devfile.io/endpoint_name",
-				"kubernetes.io/ingress.class",
-				"nginx.ingress.kubernetes.io/rewrite-target",
-				"nginx.ingress.kubernetes.io/ssl-redirect",
+			expectedAnnotations: map[string]string{
+				"controller.devfile.io/endpoint_name":        "Endpoint",
+				"kubernetes.io/ingress.class":                "nginx",
+				"nginx.ingress.kubernetes.io/rewrite-target": "/",
+				"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
 			},
 		},
 		{
-			name: "defined",
+			name: "Gets default Kubernetes ingress annotation when annotations are defined",
 
 			annotations: map[string]string{
 				"kubernetes.io/ingress.class": "traefik",
 			},
 
-			expectedAnnotationsKeys: []string{
-				"controller.devfile.io/endpoint_name",
-				"kubernetes.io/ingress.class",
+			expectedAnnotations: map[string]string{
+				"controller.devfile.io/endpoint_name": "Endpoint",
+				"kubernetes.io/ingress.class":         "traefik",
 			},
 		},
 	}
@@ -115,11 +107,7 @@ func TestGetIngressForEndpointAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ingress := getIngressForEndpoint("routingSuffix", v1alpha1.Endpoint{Name: "Endpoint"}, DevWorkspaceMetadata{DevWorkspaceId: "WorkspaceTest"}, tt.annotations)
-			for _, expected := range tt.expectedAnnotationsKeys {
-				_, ok := ingress.Annotations[expected]
-				assert.True(t, ok, "Key %s does not exist", expected)
-				assert.Equal(t, len(tt.expectedAnnotationsKeys), len(ingress.Annotations))
-			}
+			assert.Equal(t, tt.expectedAnnotations, ingress.Annotations, "Annotations should match: Diff: %s", cmp.Diff(tt.expectedAnnotations, ingress.Annotations))
 		})
 	}
 }

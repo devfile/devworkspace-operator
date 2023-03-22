@@ -256,6 +256,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Routing.DefaultRoutingClass != "" {
 			to.Routing.DefaultRoutingClass = from.Routing.DefaultRoutingClass
 		}
+		if from.Routing.Annotations != nil {
+			to.Routing.Annotations = from.Routing.Annotations
+		}
 		if from.Routing.ClusterHostSuffix != "" {
 			to.Routing.ClusterHostSuffix = from.Routing.ClusterHostSuffix
 		}
@@ -387,6 +390,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 	routing := currConfig.Routing
 	var config []string
 	if routing != nil {
+		if routing.Annotations != nil && len(routing.Annotations) > 0 {
+			config = append(config, fmt.Sprintf("routing.Annotations=%s", routing.Annotations))
+		}
 		if routing.ClusterHostSuffix != "" && routing.ClusterHostSuffix != defaultConfig.Routing.ClusterHostSuffix {
 			config = append(config, fmt.Sprintf("routing.clusterHostSuffix=%s", routing.ClusterHostSuffix))
 		}

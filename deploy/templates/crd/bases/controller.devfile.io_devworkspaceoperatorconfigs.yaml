@@ -42,6 +42,14 @@ spec:
                 description: Routing defines configuration options related to DevWorkspace
                   networking
                 properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    description: "Annotations defines the map of annotations to add
+                      on to the routing object. \n Use this property to set the annotations
+                      expected by the routing framework used in your cluster (nginx,
+                      traefik, ...)"
+                    type: object
                   clusterHostSuffix:
                     description: ClusterHostSuffix is the hostname suffix to be used
                       for DevWorkspace endpoints. On OpenShift, the DevWorkspace Operator

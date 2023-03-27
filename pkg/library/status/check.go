@@ -51,6 +51,7 @@ var unrecoverablePodEventReasons = map[string]int32{
 
 var unrecoverableDeploymentConditionReasons = []string{
 	"FailedCreate",
+	"ProgressDeadlineExceeded",
 }
 
 func CheckDeploymentStatus(deployment *appsv1.Deployment, workspace *common.DevWorkspaceWithConfig) (ready bool) {

@@ -100,10 +100,9 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 		func(s *string, c fuzz.Continue) { *s = "a" + c.RandString() },
 		// The only valid deployment strategies are Recreate and RollingUpdate
 		func(deploymentStrategy *appsv1.DeploymentStrategyType, c fuzz.Continue) {
-			switch c.Int() % 2 {
-			case 0:
+			if c.Int()%2 == 0 {
 				*deploymentStrategy = appsv1.RollingUpdateDeploymentStrategyType
-			default:
+			} else {
 				*deploymentStrategy = appsv1.RecreateDeploymentStrategyType
 			}
 		},

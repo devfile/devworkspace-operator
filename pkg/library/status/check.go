@@ -53,8 +53,27 @@ var unrecoverableDeploymentConditionReasons = []string{
 	"FailedCreate",
 }
 
-func CheckDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
+func CheckDeploymentStatus(deployment *appsv1.Deployment, workspace *common.DevWorkspaceWithConfig) (ready bool) {
+	if workspace.Config.Workspace.DeploymentStrategy == appsv1.RollingUpdateDeploymentStrategyType {
+		return checkRollingUpdateDeploymentStatus(deployment)
+	}
 	return deployment.Status.ReadyReplicas > 0
+}
+
+func checkRollingUpdateDeploymentStatus(deployment *appsv1.Deployment) (ready bool) {
+	if deployment.Generation > deployment.Status.ObservedGeneration {
+		// Current deployment spec not observed by cluster
+		return false
+	}
+	if deployment.Status.UpdatedReplicas < 1 {
+		// Replica has not been updated
+		return false
+	}
+	if deployment.Status.AvailableReplicas < 1 {
+		// Updated replica is not available yet
+		return false
+	}
+	return true
 }
 
 func CheckDeploymentConditions(deployment *appsv1.Deployment) (healthy bool, errorMsg string) {

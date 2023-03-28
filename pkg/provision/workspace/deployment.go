@@ -19,6 +19,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
@@ -208,6 +210,10 @@ func getSpecDeployment(
 			MaxSurge:       &constants.RollingUpdateMaximumSurge,
 		}
 	}
+	progressDeadlineSeconds, err := getProgressDeadlineSeconds(workspace.Config)
+	if err != nil {
+		return nil, err
+	}
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -223,7 +229,8 @@ func getSpecDeployment(
 					constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 				},
 			},
-			Strategy: deploymentStrategy,
+			Strategy:                deploymentStrategy,
+			ProgressDeadlineSeconds: &progressDeadlineSeconds,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      workspace.Status.DevWorkspaceId,
@@ -306,6 +313,22 @@ func getSpecDeployment(
 	}
 
 	return deployment, nil
+}
+
+// Returns the ProgressDeadlineSeconds to use for workspace deployments as an int32.
+// The ProgressDeadLineSeconds returned is the same length of time as DWOC's workspace.ProgressTimeout.
+// Returns an error if ProgressTimeout could not be properly parsed,
+// or if the ProgressTimeout would exceed the maximum capacity of an int32
+func getProgressDeadlineSeconds(config *v1alpha1.OperatorConfiguration) (int32, error) {
+	timeout, err := time.ParseDuration(config.Workspace.ProgressTimeout)
+	if err != nil {
+		return 0, fmt.Errorf("invalid duration specified for workspace progress timeout: %w", err)
+	}
+	// Prevent overflow
+	if timeout.Seconds() > math.MaxInt32 {
+		return 0, fmt.Errorf("duration specified for workspace progress timeout is too long: %s", config.Workspace.ProgressTimeout)
+	}
+	return int32(timeout.Seconds()), nil
 }
 
 func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions, error) {

@@ -104,14 +104,12 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 	return nil
 }
 
-//GetWebhookServer returns webhook server if it's configured
-//  nil otherwise
+// GetWebhookServer returns webhook server if it's configured, or nil otherwise
 func GetWebhookServer() *webhook.Server {
 	return webhookServer
 }
 
-//IsSetUp returns true if webhook server is configured
-//  false otherwise
+// IsSetUp returns true if webhook server is configured, or false otherwise
 func IsSetUp() bool {
 	return webhookServer != nil
 }

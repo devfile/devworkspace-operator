@@ -122,7 +122,7 @@ func (c *K8sClient) Kube() kubernetes.Interface {
 	return c.kubeClient
 }
 
-//read a source file and copy to the selected path
+// read a source file and copy to the selected path
 func copyFile(sourceFile string, destinationFile string) error {
 	input, err := os.ReadFile(sourceFile)
 	if err != nil {
@@ -136,7 +136,7 @@ func copyFile(sourceFile string, destinationFile string) error {
 	return nil
 }
 
-//generateUniqPrefixForFile generates unique prefix by using current time in milliseconds and get last 5 numbers
+// generateUniqPrefixForFile generates unique prefix by using current time in milliseconds and get last 5 numbers
 func generateUniqPrefixForFile() string {
 	//get the uniq time in seconds as string
 	prefix := strconv.FormatInt(time.Now().UnixNano(), 10)

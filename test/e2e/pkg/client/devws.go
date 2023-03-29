@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-//get workspace current dev workspace status from the Custom Resource object
+// get workspace current dev workspace status from the Custom Resource object
 func (w *K8sClient) GetDevWsStatus(name, namespace string) (*dw.DevWorkspaceStatus, error) {
 	namespacedName := types.NamespacedName{
 		Name:      name,

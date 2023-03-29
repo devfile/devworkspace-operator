@@ -29,10 +29,11 @@ import (
 //
 // If the k8s objects do not exist, an SSH keypair is generated and a secret and configmap are created on the cluster.
 // This function works on two streams:
-// 1. If the async storage SSH secret for the given workspace does not exist on the cluster, an SSH keypair are generated, a
-//    Secret is synced to the cluster and the corresponding authorized key is added to the ConfigMap
-// 2. If the async storage SSH secret exists, its content is read, and the ConfigMap is verified to contain the corresponding public
-//    key in authorized_keys.
+//  1. If the async storage SSH secret for the given workspace does not exist on the cluster, an SSH keypair are generated, a
+//     Secret is synced to the cluster and the corresponding authorized key is added to the ConfigMap
+//  2. If the async storage SSH secret exists, its content is read, and the ConfigMap is verified to contain the corresponding public
+//     key in authorized_keys.
+//
 // In both cases, if the ConfigMap does not exist, it is created.
 //
 // Returns NotReadyError if changes were made to the cluster.

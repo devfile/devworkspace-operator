@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-//Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
+// Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
 func Configure(ctx context.Context) error {
 	log.Info("Configuring devworkspace webhooks")
 	c, err := createClient()

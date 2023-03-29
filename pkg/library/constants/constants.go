@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 // Package constants contains constants related to the devfile API spec (e.g. reserved env vars)
 package constants
 

@@ -104,12 +104,14 @@ func generateProjectedVolume(mountPath string, volumeMounts []corev1.VolumeMount
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: volume.Secret.SecretName,
 				},
+				Items: volume.Secret.Items,
 			}
 		case volume.ConfigMap != nil:
 			projection.ConfigMap = &corev1.ConfigMapProjection{
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: volume.ConfigMap.Name,
 				},
+				Items: volume.ConfigMap.Items,
 			}
 		default:
 			return nil, nil, fmt.Errorf("unrecognized volume type for volume %s", volume.Name)

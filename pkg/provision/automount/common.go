@@ -110,6 +110,7 @@ func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, e
 	if err != nil {
 		return nil, err
 	}
+	dropItemsFieldFromVolumes(mergedResources.Volumes)
 
 	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api)
 	if err != nil {
@@ -320,6 +321,9 @@ func checkAutomountVolumeForPotentialError(obj k8sclient.Object) string {
 	return ""
 }
 
+// getAccessModeForAutomount reads the access mode that should be used for an automounted configmap or secret
+// by parsing the controller.devfile.io/mount-access-mode annotation. Returns an error if the access mode cannot
+// be parse or is invalid (outside the range 0000-0777). If no annotation is present, a default value is returned.
 func getAccessModeForAutomount(obj k8sclient.Object) (*int32, error) {
 	accessModeStr := obj.GetAnnotations()[constants.DevWorkspaceMountAccessModeAnnotation]
 	if accessModeStr == "" {
@@ -335,4 +339,17 @@ func getAccessModeForAutomount(obj k8sclient.Object) (*int32, error) {
 	}
 	accessMode32 := int32(accessMode64)
 	return &accessMode32, nil
+}
+
+// dropItemsFieldFromVolumes removes the items field from any secret or configmap pod volumes. This function is useful
+// to avoid having to create a new pod if an item is added to the configmap or secret later, as the additional item
+// will be propagated into the pod without changing the pod's spec.
+func dropItemsFieldFromVolumes(volumes []corev1.Volume) {
+	for idx, volume := range volumes {
+		if volume.ConfigMap != nil {
+			volumes[idx].ConfigMap.Items = nil
+		} else if volume.Secret != nil {
+			volumes[idx].Secret.Items = nil
+		}
+	}
 }

@@ -42,6 +42,28 @@ const (
 	// DevWorkspaceMountLabel is the label key to store if a configmap, secret, or PVC should be mounted to the devworkspace
 	DevWorkspaceMountLabel = "controller.devfile.io/mount-to-devworkspace"
 
+	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
+	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name>, secrets will
+	// be mounted at /etc/secret/<secret-name>, and persistent volume claims will be mounted to /tmp/<claim-name>
+	DevWorkspaceMountPathAnnotation = "controller.devfile.io/mount-path"
+
+	// DevWorkspaceMountAsAnnotation is the annotation key to configure the way how configmaps or secrets should be mounted.
+	// Supported options:
+	// - "env" - mount as environment variables
+	// - "file" - mount as files within the mount path
+	// - "subpath" - mount keys as subpath volume mounts within the mount path
+	// When a configmap or secret is mounted via "file", the keys within the configmap/secret are mounted as files
+	// within a directory, erasing all contents of the directory. Mounting via "subpath" leaves existing files in the
+	// mount directory changed, but prevents on-cluster changes to the configmap/secret propagating to the container
+	// until it is restarted.
+	// If mountAs is not provided, the default behaviour will be to mount as a file.
+	DevWorkspaceMountAsAnnotation = "controller.devfile.io/mount-as"
+
+	// DevWorkspaceMountAccessModeAnnotation is an annotation key used to configure the access mode for configmaps and
+	// secrets mounted using the 'controller.devfile.io/mount-to-devworkspace' annotation. The access mode annotation
+	// can either be specified as a decimal (e.g. '416') or as an octal by prefixing the number with zero (e.g. '0640')
+	DevWorkspaceMountAccessModeAnnotation = "controller.devfile.io/mount-access-mode"
+
 	// DevWorkspaceGitCredentialLabel is the label key to specify if the secret is a git credential. All secrets who
 	// specify this label in a namespace will consolidate into one secret before mounting into a devworkspace.
 	// Only secret data with the credentials key will be used and credentials must be the base64 encoded version
@@ -66,23 +88,6 @@ const (
 	// when Git credentials are defined. This secret combines the values of any secrets labelled
 	// "controller.devfile.io/git-credential"
 	GitCredentialsMergedSecretName = "devworkspace-merged-git-credentials"
-
-	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
-	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name>, secrets will
-	// be mounted at /etc/secret/<secret-name>, and persistent volume claims will be mounted to /tmp/<claim-name>
-	DevWorkspaceMountPathAnnotation = "controller.devfile.io/mount-path"
-
-	// DevWorkspaceMountAsAnnotation is the annotation key to configure the way how configmaps or secrets should be mounted.
-	// Supported options:
-	// - "env" - mount as environment variables
-	// - "file" - mount as files within the mount path
-	// - "subpath" - mount keys as subpath volume mounts within the mount path
-	// When a configmap or secret is mounted via "file", the keys within the configmap/secret are mounted as files
-	// within a directory, erasing all contents of the directory. Mounting via "subpath" leaves existing files in the
-	// mount directory changed, but prevents on-cluster changes to the configmap/secret propagating to the container
-	// until it is restarted.
-	// If mountAs is not provided, the default behaviour will be to mount as a file.
-	DevWorkspaceMountAsAnnotation = "controller.devfile.io/mount-as"
 
 	// DevWorkspaceMountAsEnv is the annotation value for DevWorkspaceMountAsAnnotation to mount the resource as environment variables
 	// via envFrom

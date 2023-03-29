@@ -78,8 +78,8 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 		return nil, &AutoMountError{IsFatal: false, Err: err}
 	}
 	resources := flattenAutomountResources([]Resources{
-		getAutomountSecret(mergedGitCredentialsMountPath, constants.DevWorkspaceMountAsFile, mergedCredentialsSecret),
-		getAutomountConfigmap("/etc/", constants.DevWorkspaceMountAsSubpath, gitConfigMap),
+		getAutomountSecret(mergedGitCredentialsMountPath, constants.DevWorkspaceMountAsFile, defaultAccessMode, mergedCredentialsSecret),
+		getAutomountConfigmap("/etc/", constants.DevWorkspaceMountAsSubpath, defaultAccessMode, gitConfigMap),
 	})
 
 	return &resources, nil

@@ -17,12 +17,12 @@ package automount
 
 import (
 	"errors"
+	"fmt"
 	"path"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -45,7 +45,15 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 		if mountPath == "" {
 			mountPath = path.Join("/etc/", "secret/", secret.Name)
 		}
-		allAutoMountResouces = append(allAutoMountResouces, getAutomountSecret(mountPath, mountAs, &secret))
+		accessMode, err := getAccessModeForAutomount(&secret)
+		if err != nil {
+			return nil, &AutoMountError{
+				Err:     fmt.Errorf("failed to process secret %s: %w", secret.Name, err),
+				IsFatal: true,
+			}
+		}
+
+		allAutoMountResouces = append(allAutoMountResouces, getAutomountSecret(mountPath, mountAs, accessMode, &secret))
 	}
 	automountResources := flattenAutomountResources(allAutoMountResouces)
 	return &automountResources, nil
@@ -54,14 +62,14 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 // getAutomountSecret defines the volumes, volumeMounts, and envFromSource that is required to mount
 // a given secret. Parameter mountAs defines how the secret should be mounted (file, subpath, or as env vars).
 // Parameter mountPath is ignored when mounting as environment variables
-func getAutomountSecret(mountPath, mountAs string, secret *corev1.Secret) Resources {
+func getAutomountSecret(mountPath, mountAs string, accessMode *int32, secret *corev1.Secret) Resources {
 	// Define volume to be used when mountAs is "file" or "subpath"
 	volume := corev1.Volume{
 		Name: common.AutoMountSecretVolumeName(secret.Name),
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
 				SecretName:  secret.Name,
-				DefaultMode: pointer.Int32(0640),
+				DefaultMode: accessMode,
 			},
 		},
 	}

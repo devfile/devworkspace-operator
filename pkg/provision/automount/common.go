@@ -18,6 +18,7 @@ package automount
 import (
 	"fmt"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -26,6 +27,11 @@ import (
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
+)
+
+var (
+	defaultAccessMode = pointer.Int32(0640)
 )
 
 type Resources struct {
@@ -312,4 +318,21 @@ func checkAutomountVolumeForPotentialError(obj k8sclient.Object) string {
 	}
 
 	return ""
+}
+
+func getAccessModeForAutomount(obj k8sclient.Object) (*int32, error) {
+	accessModeStr := obj.GetAnnotations()[constants.DevWorkspaceMountAccessModeAnnotation]
+	if accessModeStr == "" {
+		return defaultAccessMode, nil
+	}
+
+	accessMode64, err := strconv.ParseInt(accessModeStr, 0, 32)
+	if err != nil {
+		return nil, err
+	}
+	if accessMode64 < 0 || accessMode64 > 0777 {
+		return nil, fmt.Errorf("invalid access mode annotation: %o", accessMode64)
+	}
+	accessMode32 := int32(accessMode64)
+	return &accessMode32, nil
 }

@@ -72,8 +72,7 @@ func CheckDeploymentConditions(deployment *appsv1.Deployment) (healthy bool, err
 // checkPodsState checks if workspace-related pods are in an unrecoverable state. A pod is considered to be unrecoverable
 // if it has a container with one of the containerFailureStateReasons states, or if an unrecoverable event (with reason
 // matching unrecoverablePodEventReasons) has the pod as the involved object.
-// Returns optional message with detected unrecoverable state details
-//         error if any happens during check
+// Returns optional message with detected unrecoverable state details or error if any happens during check
 func CheckPodsState(workspaceID string, namespace string, labelSelector k8sclient.MatchingLabels, ignoredEvents []string,
 	clusterAPI sync.ClusterAPI) (stateMsg string, checkFailure error) {
 	podList := &corev1.PodList{}

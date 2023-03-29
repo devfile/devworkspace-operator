@@ -169,7 +169,7 @@ type DevWorkspaceOperatorConfig struct {
 }
 
 // DevWorkspaceOperatorConfigList contains a list of DevWorkspaceOperatorConfig
-//+kubebuilder:object:root=true
+// +kubebuilder:object:root=true
 type DevWorkspaceOperatorConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-//CreateNamespace creates a new namespace
+// CreateNamespace creates a new namespace
 func (w *K8sClient) CreateNamespace(namespace string) error {
 	_, err := w.kubeClient.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}, metav1.CreateOptions{})
 	if k8sErrors.IsAlreadyExists(err) {
@@ -37,12 +37,12 @@ func (w *K8sClient) CreateNamespace(namespace string) error {
 	return err
 }
 
-//DeleteNamespace deletes a namespace
+// DeleteNamespace deletes a namespace
 func (w *K8sClient) DeleteNamespace(namespace string) error {
 	return w.kubeClient.CoreV1().Namespaces().Delete(context.TODO(), namespace, metav1.DeleteOptions{})
 }
 
-//WaitNamespaceIsTerminated waits until namespace that is marked to be removed, is fully cleaned up
+// WaitNamespaceIsTerminated waits until namespace that is marked to be removed, is fully cleaned up
 func (w *K8sClient) WaitNamespaceIsTerminated(namespace string) (err error) {
 	var delay time.Duration = 1
 	var timeout time.Duration = 60

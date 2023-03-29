@@ -28,14 +28,14 @@ import (
 	"github.com/onsi/gomega"
 )
 
-//Create Constant file
+// Create Constant file
 const (
 	testResultsDirectory = "/tmp/artifacts"
 	jUnitOutputFilename  = "junit-workspaces-operator.xml"
 	testServiceAccount   = "terminal-test"
 )
 
-//SynchronizedBeforeSuite blocks is executed before run all test suites
+// SynchronizedBeforeSuite blocks is executed before run all test suites
 var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	log.Println("Starting to setup objects before run ginkgo suite")
 

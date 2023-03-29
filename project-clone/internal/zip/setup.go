@@ -175,9 +175,13 @@ func unzip(archivePath string, destPath string) error {
 
 // dropTopLevelFolder handles the case where a zip archive contains a single folder by moving all files in a
 // single subdirectory into their parent directory. E.g., it converts
-//     /projects/my-project/my-project-main/[files]
+//
+//	/projects/my-project/my-project-main/[files]
+//
 // to
-//     /projects/my-project/[files]
+//
+//	/projects/my-project/[files]
+//
 // and removes directory /projects/my-project/my-project-master/
 // If the specified path contains additional files or directories, no changes are made.
 func dropTopLevelFolder(projectPath string) error {

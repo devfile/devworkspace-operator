@@ -65,8 +65,8 @@ func (w *K8sClient) AssignRoleToSA(namespace, serviceAccount, role string) error
 	return err
 }
 
-//WaitSAToken waits until a secret with the token related to the specified SA
-//error is returned if token is not found after 10 seconds of tries
+// WaitSAToken waits until a secret with the token related to the specified SA
+// error is returned if token is not found after 10 seconds of tries
 func (w *K8sClient) WaitSAToken(namespace, serviceAccount string) (token string, err error) {
 	var delay time.Duration = 1
 	//usually the Service Account token is available just after SA is created but sometimes it's not

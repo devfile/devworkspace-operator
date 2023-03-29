@@ -198,11 +198,11 @@ func getWorkspaceVolumes(workspace *common.DevWorkspaceWithConfig) (persistent, 
 }
 
 // processProjectsVolume handles the special case of the projects volume, for which there are four possibilities:
-// 1. The projects volume is not needed for the workspace (no component has mountSources: true)
-// 2. The projects volume is needed but not defined in the devfile. This is the usual case, as the projects volume
-//    is implicitly defined by mountSources
-// 3. The projects volume is explicitly defined in the workspace, as a regular volume.
-// 4. The projects volume is explicitly defined in the workspace as an ephemeral volume.
+//  1. The projects volume is not needed for the workspace (no component has mountSources: true)
+//  2. The projects volume is needed but not defined in the devfile. This is the usual case, as the projects volume
+//     is implicitly defined by mountSources
+//  3. The projects volume is explicitly defined in the workspace, as a regular volume.
+//  4. The projects volume is explicitly defined in the workspace as an ephemeral volume.
 //
 // To handle these cases, this function returns the projects component, if it is defined explictly (covering cases 3 and 4)
 // and a boolean defining if the projects volume is generally necessary for the workspace (covering cases 1 and 2)

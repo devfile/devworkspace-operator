@@ -17,12 +17,12 @@ package automount
 
 import (
 	"errors"
+	"fmt"
 	"path"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -45,7 +45,15 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 		if mountPath == "" {
 			mountPath = path.Join("/etc/config/", configmap.Name)
 		}
-		allAutoMountResouces = append(allAutoMountResouces, getAutomountConfigmap(mountPath, mountAs, &configmap))
+		accessMode, err := getAccessModeForAutomount(&configmap)
+		if err != nil {
+			return nil, &AutoMountError{
+				Err:     fmt.Errorf("failed to process configmap %s: %w", configmap.Name, err),
+				IsFatal: true,
+			}
+		}
+
+		allAutoMountResouces = append(allAutoMountResouces, getAutomountConfigmap(mountPath, mountAs, accessMode, &configmap))
 	}
 	automountResources := flattenAutomountResources(allAutoMountResouces)
 	return &automountResources, nil
@@ -54,7 +62,7 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 // getAutomountConfigmap defines the volumes, volumeMounts, and envFromSource that is required to mount
 // a given configmap. Parameter mountAs defines how the secret should be mounted (file, subpath, or as env vars).
 // Parameter mountPath is ignored when mounting as environment variables
-func getAutomountConfigmap(mountPath, mountAs string, configmap *corev1.ConfigMap) Resources {
+func getAutomountConfigmap(mountPath, mountAs string, accessMode *int32, configmap *corev1.ConfigMap) Resources {
 	// Define volume to be used when mountAs is "file" or "subpath"
 	volume := corev1.Volume{
 		Name: common.AutoMountConfigMapVolumeName(configmap.Name),
@@ -63,7 +71,7 @@ func getAutomountConfigmap(mountPath, mountAs string, configmap *corev1.ConfigMa
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: configmap.Name,
 				},
-				DefaultMode: pointer.Int32(0640),
+				DefaultMode: accessMode,
 			},
 		},
 	}

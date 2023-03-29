@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"sort"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -74,6 +75,30 @@ func getAutomountConfigmap(mountPath, mountAs string, accessMode *int32, configm
 				DefaultMode: accessMode,
 			},
 		},
+	}
+
+	// In order to handle access mode when this configmap is merged into a projected volume, we need to add access mode
+	// to each item in the configmap. If this configmap does not get merged into a projected volume, these items should be
+	// dropped in the final spec -- see dropItemsFieldFromVolumes()
+	if accessMode != defaultAccessMode {
+		for key := range configmap.Data {
+			volume.ConfigMap.Items = append(volume.ConfigMap.Items, corev1.KeyToPath{
+				Key:  key,
+				Path: key,
+				Mode: accessMode,
+			})
+		}
+		for key := range configmap.BinaryData {
+			volume.ConfigMap.Items = append(volume.ConfigMap.Items, corev1.KeyToPath{
+				Key:  key,
+				Path: key,
+				Mode: accessMode,
+			})
+		}
+		// Sort to avoid random map iteration order
+		sort.Slice(volume.ConfigMap.Items, func(i, j int) bool {
+			return volume.ConfigMap.Items[i].Key < volume.ConfigMap.Items[j].Key
+		})
 	}
 
 	automount := Resources{}

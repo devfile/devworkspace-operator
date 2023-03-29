@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"sort"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -72,6 +73,23 @@ func getAutomountSecret(mountPath, mountAs string, accessMode *int32, secret *co
 				DefaultMode: accessMode,
 			},
 		},
+	}
+
+	// In order to handle access mode when this secret is merged into a projected volume, we need to add access mode
+	// to each item in the secret. If this secret does not get merged into a projected volume, these items should be
+	// dropped in the final spec -- see dropItemsFieldFromVolumes().
+	if accessMode != defaultAccessMode {
+		for key := range secret.Data {
+			volume.Secret.Items = append(volume.Secret.Items, corev1.KeyToPath{
+				Key:  key,
+				Path: key,
+				Mode: accessMode,
+			})
+		}
+		// Sort to avoid random map iteration order
+		sort.Slice(volume.Secret.Items, func(i, j int) bool {
+			return volume.Secret.Items[i].Key < volume.Secret.Items[j].Key
+		})
 	}
 
 	automount := Resources{}

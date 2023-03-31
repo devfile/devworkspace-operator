@@ -153,7 +153,7 @@ data:
 ----
 Note: As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to git credentials secrets
 
-This will mount a file `/tmp/.git-credentials/credentials` in all workspace containers, and construct a git config to use this file as a credentials store. The mount path specified by the `controller.devfile.io/mount-path` annotation can by omitted, in which case `/` is used (mounting a file `/credentials`).
+This will mount a file `/tmp/.git-credentials/credentials` in all workspace containers, and construct a git config to use this file as a credentials store.
 
 ## Configuring DevWorkspaces to use SSH keys for Git operations
 Git SSH keys can be configured for DevWorkspaces by mounting secrets to workspaces.

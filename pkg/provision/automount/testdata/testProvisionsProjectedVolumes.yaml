@@ -1,0 +1,62 @@
+name: "Provisions projected volumes when secrets and configmaps use same mount path"
+
+input:
+  secrets:
+  -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: test-projected-secret
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-secret: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/test-projected/
+    type: Opaque
+    data:
+      secret-data: aGVsbG8K # "hello"
+  configmaps:
+  -
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-projected-configmap-1
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-configmap: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/test-projected/
+    data:
+      configmap-1-key: "hello"
+  -
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-projected-configmap-2
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-configmap: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/test-projected/
+    data:
+      configmap-2-key: "hello"
+
+output:
+  volumes:
+  - name: "/tmp/test-projected/"
+    projected:
+      defaultMode: 0640
+      sources:
+      - secret:
+          name: test-projected-secret
+      - configmap:
+          name: test-projected-configmap-1
+      - configmap:
+          name: test-projected-configmap-2
+  volumeMounts:
+  - name: "/tmp/test-projected/"
+    readOnly: true
+    mountPath: "/tmp/test-projected/"

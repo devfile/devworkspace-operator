@@ -35,7 +35,6 @@ var (
 		gitTLSHostKey:        "github.com",
 		gitTLSCertificateKey: "sample_data_here",
 	}
-	testNamespace = "test-namespace"
 )
 
 func TestUserCredentialsAreMountedWithOneCredential(t *testing.T) {

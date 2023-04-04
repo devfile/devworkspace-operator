@@ -335,7 +335,7 @@ func getAccessModeForAutomount(obj k8sclient.Object) (*int32, error) {
 		return nil, err
 	}
 	if accessMode64 < 0 || accessMode64 > 0777 {
-		return nil, fmt.Errorf("invalid access mode annotation: %o", accessMode64)
+		return nil, fmt.Errorf("invalid access mode annotation: value '%s' parsed to %o (octal)", accessModeStr, accessMode64)
 	}
 	accessMode32 := int32(accessMode64)
 	return &accessMode32, nil

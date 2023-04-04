@@ -1,0 +1,21 @@
+name: "Returns error when access mode is invalid"
+
+input:
+  configmaps:
+  -
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-file-configmap
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-configmap: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/configmap/file
+        controller.devfile.io/mount-access-mode: "777" # Not parsed as octal
+    data:
+      configmap-key: "hello"
+
+output:
+  errRegexp: "invalid access mode annotation: value '777' parsed to 1411 \\(octal\\)"

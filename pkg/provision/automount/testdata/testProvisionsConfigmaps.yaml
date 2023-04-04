@@ -1,0 +1,70 @@
+name: Provisions automount configmaps to containers
+
+input:
+  configmaps:
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: test-file-configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: 'true'
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/configmap/file
+      data:
+        configmap-key: "hello"
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: test-subpath-configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: 'true'
+        annotations:
+          controller.devfile.io/mount-as: subpath
+          controller.devfile.io/mount-path: /tmp/configmap/subpath
+      data:
+        configmap-key: "This is secret"
+        configmap-key-2: "This is also secret I guess"
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: test-env-configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: 'true'
+        annotations:
+          controller.devfile.io/mount-as: env
+      data:
+        CONFIGMAP_ENV_1: CONFIGMAP_ENV_1_VALUE
+        CONFIGMAP_ENV_2: CONFIGMAP_ENV_2_VALUE
+
+output:
+  volumes:
+  - name: test-file-configmap
+    configmap:
+      name: test-file-configmap
+      defaultMode: 0640
+  - name: test-subpath-configmap
+    configmap:
+      name: test-subpath-configmap
+      defaultMode: 0640
+  volumeMounts:
+  - name: test-file-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/file
+  - name: test-subpath-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/subpath/configmap-key
+    subpath: configmap-key
+  - name: test-subpath-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/subpath/configmap-key-2
+    subpath: configmap-key-2
+  envFrom:
+  - configmapRef:
+      name: test-env-configmap

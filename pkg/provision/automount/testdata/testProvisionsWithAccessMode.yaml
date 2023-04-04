@@ -1,0 +1,104 @@
+name: Provisions automount resources using access mode
+
+input:
+  secrets:
+  -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: test-file-secret
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-secret: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/secret/file
+        controller.devfile.io/mount-access-mode: "0111"
+    type: Opaque
+    data:
+      test-data: aGVsbG8K # "hello"
+  -
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: test-projected-secret
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-secret: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/test-projected/
+        controller.devfile.io/mount-access-mode: "0222"
+    type: Opaque
+    data:
+      test-projected-data: aGVsbG8K # "hello"
+  configmaps:
+  -
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-file-configmap
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-configmap: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/configmap/file
+        controller.devfile.io/mount-access-mode: "0333"
+    data:
+      configmap-key: "hello"
+  -
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-projected-configmap
+      labels:
+        controller.devfile.io/mount-to-devworkspace: "true"
+        controller.devfile.io/watch-configmap: 'true'
+      annotations:
+        controller.devfile.io/mount-as: file
+        controller.devfile.io/mount-path: /tmp/test-projected/
+        controller.devfile.io/mount-access-mode: "0444"
+    data:
+      projected-configmap-key: "hello"
+      projected-configmap-key-2: "hello-2"
+
+output:
+  volumes:
+  - name: test-file-configmap
+    configmap:
+      name: test-file-configmap
+      defaultMode: 0333
+  - name: test-file-secret
+    secret:
+      secretName: test-file-secret
+      defaultMode: 0111
+  - name: /tmp/test-projected/
+    projected:
+      defaultMode: 0640
+      sources:
+      - secret:
+          name: test-projected-secret
+          items:
+          - key: test-projected-data
+            path: test-projected-data
+            mode: 0222
+      - configmap:
+          name: test-projected-configmap
+          items:
+          - key: projected-configmap-key
+            path: projected-configmap-key
+            mode: 0444
+          - key: projected-configmap-key-2
+            path: projected-configmap-key-2
+            mode: 0444
+  volumeMounts:
+  - name: test-file-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/file
+  - name: test-file-secret
+    readOnly: true
+    mountPath: /tmp/secret/file
+  - name: "/tmp/test-projected/"
+    readOnly: true
+    mountPath: "/tmp/test-projected/"

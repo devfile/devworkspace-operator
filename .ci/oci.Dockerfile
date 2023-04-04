@@ -19,7 +19,8 @@ SHELL ["/bin/bash", "-c"]
 
 RUN yum install --assumeyes -d1 python3-pip && \
     pip3 install --upgrade setuptools && \
-    pip3 install yq && \
+    # Need to pin yq version due to version 3.2.0 requiring python 3.6 and above
+    pip3 install yq==v3.1.1 && \
     # install kubectl
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \

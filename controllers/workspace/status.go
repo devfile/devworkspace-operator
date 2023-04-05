@@ -47,9 +47,6 @@ const (
 	// devworkspacePhaseFailing represents a DevWorkspace that has encountered an unrecoverable error and is in
 	// the process of stopping.
 	devworkspacePhaseFailing dw.DevWorkspacePhase = "Failing"
-
-	// warningPresentInfoMessage is the info message printed
-	warningPresentInfoMessage string = "[warnings present]"
 )
 
 type currentStatus struct {
@@ -71,8 +68,8 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *common.DevWork
 	workspace.Status.Phase = status.phase
 
 	infoMessage := getInfoMessage(workspace, status)
-	if warn := conditions.GetConditionByType(workspace.Status.Conditions, conditions.DevWorkspaceWarning); warn != nil && warn.Status == corev1.ConditionTrue {
-		infoMessage = fmt.Sprintf("%s %s", warningPresentInfoMessage, infoMessage)
+	if numWarnings := conditions.CountWarningConditions(workspace.Status.Conditions); numWarnings > 0 {
+		infoMessage = fmt.Sprintf("%s (%d warnings)", infoMessage, numWarnings)
 	}
 	if workspace.Status.Message != infoMessage {
 		workspace.Status.Message = infoMessage
@@ -100,27 +97,33 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 
 	// Set of conditions already set on the workspace
 	existingConditions := map[dw.DevWorkspaceConditionType]bool{}
-	for idx, workspaceCondition := range workspaceStatus.Conditions {
+	existingWarnings := map[string]dw.DevWorkspaceCondition{}
+	var newConditions []dw.DevWorkspaceCondition
+	for _, workspaceCondition := range workspaceStatus.Conditions {
+		if workspaceCondition.Type == conditions.DevWorkspaceWarning {
+			// Handle warnings separately as there may be multiple conditions of same type
+			existingWarnings[workspaceCondition.Message] = workspaceCondition
+			continue
+		}
 		existingConditions[workspaceCondition.Type] = true
 
 		currCondition, ok := currentStatus.conditions[workspaceCondition.Type]
 		if !ok {
 			// Didn't observe this condition this time; set status to unknown
-			if workspaceCondition.Status != corev1.ConditionUnknown {
-				workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
-				workspaceStatus.Conditions[idx].Status = corev1.ConditionUnknown
-				workspaceStatus.Conditions[idx].Message = ""
-				workspaceStatus.Conditions[idx].Reason = ""
+			workspaceCondition.LastTransitionTime = currTransitionTime
+			workspaceCondition.Status = corev1.ConditionUnknown
+			workspaceCondition.Message = ""
+			workspaceCondition.Reason = ""
+			newConditions = append(newConditions, workspaceCondition)
+		} else {
+			// Update condition if needed
+			if workspaceCondition.Status != currCondition.Status || workspaceCondition.Message != currCondition.Message || workspaceCondition.Reason != currCondition.Reason {
+				workspaceCondition.LastTransitionTime = currTransitionTime
+				workspaceCondition.Status = currCondition.Status
+				workspaceCondition.Message = currCondition.Message
+				workspaceCondition.Reason = currCondition.Reason
 			}
-			continue
-		}
-
-		// Update condition if needed
-		if workspaceCondition.Status != currCondition.Status || workspaceCondition.Message != currCondition.Message || workspaceCondition.Reason != currCondition.Reason {
-			workspaceStatus.Conditions[idx].LastTransitionTime = currTransitionTime
-			workspaceStatus.Conditions[idx].Status = currCondition.Status
-			workspaceStatus.Conditions[idx].Message = currCondition.Message
-			workspaceStatus.Conditions[idx].Reason = currCondition.Reason
+			newConditions = append(newConditions, workspaceCondition)
 		}
 	}
 
@@ -130,7 +133,7 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 			// Condition is already present and was updated (if necessary) above
 			continue
 		}
-		workspaceStatus.Conditions = append(workspaceStatus.Conditions, dw.DevWorkspaceCondition{
+		newConditions = append(newConditions, dw.DevWorkspaceCondition{
 			LastTransitionTime: currTransitionTime,
 			Type:               condType,
 			Status:             cond.Status,
@@ -139,10 +142,39 @@ func syncConditions(workspaceStatus *dw.DevWorkspaceStatus, currentStatus *curre
 		})
 	}
 
+	// Add warning conditions
+	for _, warningCond := range currentStatus.warningConditions {
+		if existingWarning, exists := existingWarnings[warningCond.Message]; exists {
+			// This warning is already present; don't update it unless necessary (note messages are the same automatically)
+			if existingWarning.Status != warningCond.Status || existingWarning.Reason != warningCond.Reason {
+				existingWarning.LastTransitionTime = currTransitionTime
+				existingWarning.Status = warningCond.Status
+				existingWarning.Reason = warningCond.Reason
+			}
+			newConditions = append(newConditions, existingWarning)
+		} else {
+			newConditions = append(newConditions, dw.DevWorkspaceCondition{
+				LastTransitionTime: currTransitionTime,
+				Type:               conditions.DevWorkspaceWarning,
+				Status:             corev1.ConditionTrue,
+				Message:            warningCond.Message,
+				Reason:             warningCond.Reason,
+			})
+		}
+	}
+
 	// Sort conditions to avoid unnecessary updates
-	sort.SliceStable(workspaceStatus.Conditions, func(i, j int) bool {
-		return getConditionIndexInOrder(workspaceStatus.Conditions[i].Type) < getConditionIndexInOrder(workspaceStatus.Conditions[j].Type)
+	sort.SliceStable(newConditions, func(i, j int) bool {
+		// Accomodate multiple conditions of the same type
+		iOrder, jOrder := getConditionIndexInOrder(newConditions[i].Type), getConditionIndexInOrder(newConditions[j].Type)
+		if iOrder == jOrder {
+			// Same condition type (or both conditions not in order -- e.g. warnings): compare message
+			return newConditions[i].Message < newConditions[j].Message
+		}
+		return iOrder < jOrder
 	})
+
+	workspaceStatus.Conditions = newConditions
 }
 
 func syncWorkspaceMainURL(workspace *common.DevWorkspaceWithConfig, exposedEndpoints map[string]v1alpha1.ExposedEndpointList, clusterAPI sync.ClusterAPI) (ok bool, err error) {

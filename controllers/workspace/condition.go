@@ -36,7 +36,8 @@ var conditionOrder = []dw.DevWorkspaceConditionType{
 
 // workspaceConditions is a description of last-observed workspace conditions.
 type workspaceConditions struct {
-	conditions map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition
+	conditions        map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition
+	warningConditions []dw.DevWorkspaceCondition
 }
 
 func (c *workspaceConditions) setConditionTrue(conditionType dw.DevWorkspaceConditionType, msg string) {
@@ -72,6 +73,18 @@ func (c *workspaceConditions) setConditionFalse(conditionType dw.DevWorkspaceCon
 		Status:  corev1.ConditionFalse,
 		Message: msg,
 	}
+}
+
+func (c *workspaceConditions) addWarning(msg string) {
+	c.addWarningWithReason(msg, "")
+}
+
+func (c *workspaceConditions) addWarningWithReason(msg, reason string) {
+	c.warningConditions = append(c.warningConditions, dw.DevWorkspaceCondition{
+		Status:  corev1.ConditionTrue,
+		Message: msg,
+		Reason:  reason,
+	})
 }
 
 // getFirstFalse checks current conditions in a set order (defined by conditionOrder) and returns the first

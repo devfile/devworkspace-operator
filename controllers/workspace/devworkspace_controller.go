@@ -130,7 +130,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus := currentStatus{}
 	config, err := wkspConfig.ResolveConfigForWorkspace(rawWorkspace, clusterAPI.Client)
 	if err != nil {
-		reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, fmt.Sprint("Error applying external DevWorkspace-Operator configuration: ", err.Error()))
+		reconcileStatus.addWarning(fmt.Sprint("Error applying external DevWorkspace-Operator configuration: ", err.Error()))
 		config = wkspConfig.GetGlobalConfig()
 	}
 	configString := wkspConfig.GetCurrentConfigString(config)
@@ -270,7 +270,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 	if warnings != nil {
-		reconcileStatus.setConditionTrue(conditions.DevWorkspaceWarning, flatten.FormatVariablesWarning(warnings))
+		reconcileStatus.addWarning(flatten.FormatVariablesWarning(warnings))
 	}
 	workspace.Spec.Template = *flattenedWorkspace
 	reconcileStatus.setConditionTrue(conditions.DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")
@@ -563,6 +563,9 @@ func (r *DevWorkspaceReconciler) checkDWError(workspace *common.DevWorkspaceWith
 		return true, reconcile.Result{Requeue: true, RequeueAfter: detailErr.RequeueAfter}, nil
 	case *dwerrors.FailError:
 		return true, r.failWorkspace(workspace, fmt.Sprintf("%s: %s", failHint, detailErr), metrics.ReasonInfrastructureFailure, logger, status), nil
+	case *dwerrors.WarningError:
+		status.addWarning(detailErr.Error())
+		return false, reconcile.Result{}, nil
 	default:
 		return true, reconcile.Result{}, err
 	}

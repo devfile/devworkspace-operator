@@ -15,7 +15,10 @@
 
 package conditions
 
-import dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+import (
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	corev1 "k8s.io/api/core/v1"
+)
 
 const (
 	Started              dw.DevWorkspaceConditionType = "Started"
@@ -34,4 +37,14 @@ func GetConditionByType(conditions []dw.DevWorkspaceCondition, t dw.DevWorkspace
 		}
 	}
 	return nil
+}
+
+func CountWarningConditions(conditions []dw.DevWorkspaceCondition) int {
+	numWarnings := 0
+	for _, condition := range conditions {
+		if condition.Type == DevWorkspaceWarning && condition.Status == corev1.ConditionTrue {
+			numWarnings += 1
+		}
+	}
+	return numWarnings
 }

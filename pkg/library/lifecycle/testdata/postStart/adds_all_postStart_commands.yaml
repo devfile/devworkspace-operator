@@ -35,7 +35,10 @@ output:
             command:
               - "/bin/sh"
               - "-c"
-              - echo 'hello world 1'
+              - |
+                {
+                echo 'hello world 1'
+                } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
     - name: test-component-2
       image: test-img
       lifecycle:
@@ -44,8 +47,11 @@ output:
             command:
               - "/bin/sh"
               - "-c"
-              - |-
+              - |
+                {
                 cd /tmp/test-dir
                 echo 'hello world 2'
+                } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
+
     - name: test-component-3
       image: test-img

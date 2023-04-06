@@ -18,4 +18,4 @@ input:
       image: test-img
 
 output:
-  errRegexp: ".*env vars in postStart command are unsupported.*"
+  errRegexp: ".*env vars in postStart command test-cmd are unsupported.*"

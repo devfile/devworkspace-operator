@@ -1,15 +1,20 @@
-name: "Should add postStart lifecycle hook for basic event"
+name: "Multiple postStart commands use same component"
 
 input:
   devfile:
     commands:
-      - id: test-postStart
+      - id: test-cmd-1
         exec:
           component: test-component
-          commandLine: "echo 'hello world'"
+          commandLine: "echo 'hello world 1'"
+      - id: test-cmd-2
+        exec:
+          component: test-component
+          commandLine: "echo 'hello world 2'"
     events:
       postStart:
-        - test-postStart
+        - test-cmd-1
+        - test-cmd-2
   containers:
     - name: test-component
       image: test-img
@@ -26,5 +31,6 @@ output:
               - "-c"
               - |
                 {
-                echo 'hello world'
+                echo 'hello world 1'
+                echo 'hello world 2'
                 } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt

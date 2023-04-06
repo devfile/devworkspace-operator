@@ -320,7 +320,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Add ServiceAccount tokens into devfile containers
 	if err := wsprovision.ProvisionServiceAccountTokensInto(devfilePodAdditions, workspace); err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Failed to mount ServiceAccount tokens to workspace: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus)
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to mount ServiceAccount tokens to workspace: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 
 	// Add automount resources into devfile containers

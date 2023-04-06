@@ -21,6 +21,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const redirectOutputFmt = `{
+%s
+} 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
+`
+
 func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container) error {
 	if wksp.Events == nil || len(wksp.Events.PostStart) == 0 {
 		return nil
@@ -87,12 +92,14 @@ func processCommandsForPostStart(commands []dw.Command) (*corev1.LifecycleHandle
 		dwCommands = append(dwCommands, execCmd.CommandLine)
 	}
 
+	joinedCommands := strings.Join(dwCommands, "\n")
+
 	handler := &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
 			Command: []string{
 				"/bin/sh",
 				"-c",
-				strings.Join(dwCommands, "\n"),
+				fmt.Sprintf(redirectOutputFmt, joinedCommands),
 			},
 		},
 	}

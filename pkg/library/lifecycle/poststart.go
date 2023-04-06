@@ -26,7 +26,7 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 		return nil
 	}
 
-	usedContainers := map[string]bool{}
+	componentToCommands := map[string][]dw.Command{}
 	for _, commandName := range wksp.Events.PostStart {
 		command, err := getCommandByKey(commandName, wksp.Commands)
 		if err != nil {
@@ -40,50 +40,60 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 			return fmt.Errorf("can not use %s-type command in postStart lifecycle event", cmdType)
 		}
 
-		execCmd := command.Exec
-		if usedContainers[execCmd.Component] {
-			return fmt.Errorf("component %s has multiple postStart events attached to it", command.Exec.Component)
+		componentToCommands[command.Exec.Component] = append(componentToCommands[command.Exec.Component], *command)
+	}
+
+	for componentName, commands := range componentToCommands {
+		cmdContainer, err := getContainerWithName(componentName, containers)
+		if err != nil {
+			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
 
-		cmdContainer, err := getContainerWithName(execCmd.Component, containers)
+		postStartHandler, err := processCommandsForPostStart(commands)
 		if err != nil {
-			return fmt.Errorf("failed to process postStart event %s: %w", commandName, err)
-		}
-
-		postStartHandler, err := processCommandForPostStart(execCmd)
-		if err != nil {
-			return fmt.Errorf("failed to process postStart event %s: %w", commandName, err)
+			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
 
 		if cmdContainer.Lifecycle == nil {
 			cmdContainer.Lifecycle = &corev1.Lifecycle{}
 		}
 		cmdContainer.Lifecycle.PostStart = postStartHandler
-
-		usedContainers[execCmd.Component] = true
 	}
 
 	return nil
 }
 
-func processCommandForPostStart(command *dw.ExecCommand) (*corev1.LifecycleHandler, error) {
-	cmd := []string{"/bin/sh", "-c"}
-
-	if len(command.Env) > 0 {
-		return nil, fmt.Errorf("env vars in postStart command are unsupported")
+// processCommandsForPostStart builds a lifecycle handler that runs the provided command(s)
+// The command has the format
+//
+// exec:
+//
+//	command:
+//	  - "/bin/sh"
+//	  - "-c"
+//	  - |
+//	    cd <workingDir>
+//	    <commandline>
+func processCommandsForPostStart(commands []dw.Command) (*corev1.LifecycleHandler, error) {
+	var dwCommands []string
+	for _, command := range commands {
+		execCmd := command.Exec
+		if len(execCmd.Env) > 0 {
+			return nil, fmt.Errorf("env vars in postStart command %s are unsupported", command.Id)
+		}
+		if execCmd.WorkingDir != "" {
+			dwCommands = append(dwCommands, fmt.Sprintf("cd %s", execCmd.WorkingDir))
+		}
+		dwCommands = append(dwCommands, execCmd.CommandLine)
 	}
-
-	var fullCmd []string
-	if command.WorkingDir != "" {
-		fullCmd = append(fullCmd, fmt.Sprintf("cd %s", command.WorkingDir))
-	}
-	fullCmd = append(fullCmd, command.CommandLine)
-
-	cmd = append(cmd, strings.Join(fullCmd, "\n"))
 
 	handler := &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
-			Command: cmd,
+			Command: []string{
+				"/bin/sh",
+				"-c",
+				strings.Join(dwCommands, "\n"),
+			},
 		},
 	}
 	return handler, nil

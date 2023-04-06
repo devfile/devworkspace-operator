@@ -25,6 +25,8 @@ output:
             command:
               - "/bin/sh"
               - "-c"
-              - |-
+              - |
+                {
                 cd /tmp/test-dir
                 echo 'hello world'
+                } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt

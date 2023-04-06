@@ -14,6 +14,7 @@
 package lifecycle
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,9 +26,10 @@ import (
 )
 
 type postStartTestCase struct {
-	Name   string              `json:"name,omitempty"`
-	Input  postStartTestInput  `json:"input,omitempty"`
-	Output postStartTestOutput `json:"output,omitempty"`
+	Name     string              `json:"name,omitempty"`
+	Input    postStartTestInput  `json:"input,omitempty"`
+	Output   postStartTestOutput `json:"output,omitempty"`
+	testPath string
 }
 
 type postStartTestInput struct {
@@ -49,6 +51,7 @@ func loadPostStartTestCaseOrPanic(t *testing.T, testPath string) postStartTestCa
 	if err := yaml.Unmarshal(bytes, &test); err != nil {
 		t.Fatal(err)
 	}
+	test.testPath = testPath
 	return test
 }
 
@@ -71,7 +74,7 @@ func loadAllPostStartTestCasesOrPanic(t *testing.T, fromDir string) []postStartT
 func TestAddPostStartLifecycleHooks(t *testing.T) {
 	tests := loadAllPostStartTestCasesOrPanic(t, "./testdata/postStart")
 	for _, tt := range tests {
-		t.Run(tt.Name, func(t *testing.T) {
+		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.testPath), func(t *testing.T) {
 			err := AddPostStartLifecycleHooks(tt.Input.Devfile, tt.Input.Containers)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")

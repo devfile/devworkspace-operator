@@ -188,28 +188,29 @@ func syncWorkspaceMainURL(workspace *common.DevWorkspaceWithConfig, exposedEndpo
 	return false, err
 }
 
-func checkServerStatus(workspace *common.DevWorkspaceWithConfig) (ok bool, err error) {
+func checkServerStatus(workspace *common.DevWorkspaceWithConfig) (ok bool, responseCode *int, err error) {
 	mainUrl := workspace.Status.MainUrl
 	if mainUrl == "" {
 		// Support DevWorkspaces that do not specify an mainUrl
-		return true, nil
+		return true, nil, nil
 	}
 	healthz, err := url.Parse(mainUrl)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	healthz.Path = path.Join(healthz.Path, "healthz")
 
 	resp, err := healthCheckHttpClient.Get(healthz.String())
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	if (resp.StatusCode / 100) == 4 {
 		// Assume endpoint is unimplemented and/or * is covered with authentication.
-		return true, nil
+		return true, &resp.StatusCode, nil
 	}
+
 	ok = (resp.StatusCode / 100) == 2
-	return ok, nil
+	return ok, &resp.StatusCode, nil
 }
 
 func getMainUrl(exposedEndpoints map[string]v1alpha1.ExposedEndpointList) string {

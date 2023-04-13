@@ -443,14 +443,16 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	reconcileStatus.setConditionTrue(conditions.DeploymentReady, "DevWorkspace deployment ready")
 
-	serverReady, err := checkServerStatus(clusterWorkspace)
+	serverReady, serverStatusCode, err := checkServerStatus(clusterWorkspace)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	if !serverReady {
+		reqLogger.Info("Main URL server not ready", "status-code", serverStatusCode)
 		reconcileStatus.setConditionFalse(dw.DevWorkspaceReady, "Waiting for editor to start")
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
 	}
+	reqLogger.Info("Workspace is running")
 	reconcileStatus.setConditionTrue(dw.DevWorkspaceReady, "")
 	reconcileStatus.phase = dw.DevWorkspaceStatusRunning
 	return reconcile.Result{}, nil

@@ -40,6 +40,20 @@ type workspaceConditions struct {
 	warningConditions []dw.DevWorkspaceCondition
 }
 
+func workspaceConditionsFromClusterObject(clusterConditions []dw.DevWorkspaceCondition) *workspaceConditions {
+	wkspConditions := &workspaceConditions{
+		conditions: map[dw.DevWorkspaceConditionType]dw.DevWorkspaceCondition{},
+	}
+	for _, condition := range clusterConditions {
+		if condition.Type == conditions.DevWorkspaceWarning {
+			wkspConditions.warningConditions = append(wkspConditions.warningConditions, condition)
+		} else {
+			wkspConditions.conditions[condition.Type] = condition
+		}
+	}
+	return wkspConditions
+}
+
 func (c *workspaceConditions) setConditionTrue(conditionType dw.DevWorkspaceConditionType, msg string) {
 	c.setConditionTrueWithReason(conditionType, msg, "")
 }

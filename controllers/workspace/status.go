@@ -291,8 +291,7 @@ func checkForStartTimeout(workspace *common.DevWorkspaceWithConfig) error {
 		}
 	}
 	if !lastUpdateTime.IsZero() && lastUpdateTime.Add(timeout).Before(currTime) {
-		return fmt.Errorf("devworkspace failed to progress past phase '%s' for longer than timeout (%s)",
-			workspace.Status.Phase, workspace.Config.Workspace.ProgressTimeout)
+		return fmtStartTimeoutMessage(workspace)
 	}
 	return nil
 }
@@ -320,4 +319,22 @@ func checkForFailingTimeout(workspace *common.DevWorkspaceWithConfig) (isTimedOu
 		return true, nil
 	}
 	return false, nil
+}
+
+func fmtStartTimeoutMessage(workspace *common.DevWorkspaceWithConfig) error {
+	status := workspaceConditionsFromClusterObject(workspace.Status.Conditions)
+	latestCondition := status.getFirstFalse()
+	if latestCondition != nil {
+		return fmt.Errorf("DevWorkspace failed to progress past step '%s' for longer than timeout (%s)",
+			latestCondition.Message, workspace.Config.Workspace.ProgressTimeout)
+	}
+
+	latestTrueCondition := status.getLastTrue()
+	if latestTrueCondition != nil {
+		return fmt.Errorf("DevWorkspace failed to progress past step '%s' for longer than timeout (%s)",
+			latestTrueCondition.Message, workspace.Config.Workspace.ProgressTimeout)
+	}
+
+	return fmt.Errorf("DevWorkspace failed to progress past phase '%s' for longer than timeout (%s)",
+		workspace.Status.Phase, workspace.Config.Workspace.ProgressTimeout)
 }

@@ -225,7 +225,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				// Check if an ignoredUnrecoverableEvent occured and report it alongside the timeout notice
 				errMsg := status.CheckForIgnoredWorkspacePodEvents(workspace, clusterAPI)
 				if errMsg != "" {
-					failureMsg := fmt.Sprintf("%s. Reason: %s", timeoutErr.Error(), errMsg)
+					failureMsg := fmt.Sprintf("%s. Ignored events: %s", timeoutErr.Error(), errMsg)
 					reconcileResult = r.failWorkspace(workspace, failureMsg, metrics.DetermineProvisioningFailureReason(errMsg), reqLogger, &reconcileStatus)
 				} else {
 					reconcileResult = r.failWorkspace(workspace, timeoutErr.Error(), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus)

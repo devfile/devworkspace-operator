@@ -105,6 +105,7 @@
         "ymin": null
       },
       "tableColumn": "",
+      "span": 6,
       "targets": [
         {
           "exemplar": true,
@@ -167,6 +168,7 @@
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
+      "span": 6,
       "targets": [
         {
           "expr": "sum by (source) (floor(increase(devworkspace_started_total[$__interval])))",
@@ -393,6 +395,7 @@
         "ymin": null
       },
       "tableColumn": "",
+      "span": 6,
       "targets": [
         {
           "exemplar": true,
@@ -497,6 +500,7 @@
           "unit": "short"
         }
       ],
+      "span": 6,
       "targets": [
         {
           "expr": "sum(increase(devworkspace_fail_total[$__range])) by (reason)",
@@ -568,6 +572,7 @@
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
+      "span": 6,
       "targets": [
         {
           "exemplar": true,
@@ -651,6 +656,7 @@
       "maxDataPoints": 120,
       "pluginVersion": "7.5.5",
       "reverseYBuckets": false,
+      "span": 6,
       "targets": [
         {
           "exemplar": true,
@@ -729,6 +735,7 @@
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
+      "span": 6,
       "targets": [
         {
           "exemplar": true,
@@ -823,6 +830,7 @@
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
+      "span": 6,
       "targets": [
         {
           "exemplar": true,
@@ -917,6 +925,7 @@
       "spaceLength": 10,
       "stack": false,
       "steppedLine": false,
+      "span": 6,
       "targets": [
         {
           "exemplar": true,
@@ -1000,7 +1009,7 @@
   },
   "timezone": "",
   "title": "Dev Workspace Operator",
-  "uid": "QNHYhgPVz",
+  "uid": "EdJ14YW7l",
   "variables": {
     "list": []
   },

@@ -334,6 +334,29 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.SchedulerName != "" {
 			to.Workspace.SchedulerName = from.Workspace.SchedulerName
 		}
+		if from.Workspace.ProjectCloneConfig != nil {
+			if to.Workspace.ProjectCloneConfig == nil {
+				to.Workspace.ProjectCloneConfig = &controller.ProjectCloneConfig{}
+			}
+			if from.Workspace.ProjectCloneConfig.Image != "" {
+				to.Workspace.ProjectCloneConfig.Image = from.Workspace.ProjectCloneConfig.Image
+			}
+			if from.Workspace.ProjectCloneConfig.ImagePullPolicy != "" {
+				to.Workspace.ProjectCloneConfig.ImagePullPolicy = from.Workspace.ProjectCloneConfig.ImagePullPolicy
+			}
+			if from.Workspace.ProjectCloneConfig.Resources != nil {
+				if to.Workspace.ProjectCloneConfig.Resources == nil {
+					to.Workspace.ProjectCloneConfig.Resources = &corev1.ResourceRequirements{}
+				}
+				to.Workspace.ProjectCloneConfig.Resources = mergeResources(from.Workspace.ProjectCloneConfig.Resources, to.Workspace.ProjectCloneConfig.Resources)
+			}
+
+			// Overwrite env instead of trying to merge, don't want to bother merging lists when
+			// the default is empty
+			if from.Workspace.ProjectCloneConfig.Env != nil {
+				to.Workspace.ProjectCloneConfig.Env = from.Workspace.ProjectCloneConfig.Env
+			}
+		}
 	}
 }
 
@@ -383,6 +406,33 @@ func mergeContainerSecurityContext(base, patch *corev1.SecurityContext) *corev1.
 		return base
 	}
 	return patched
+}
+
+func mergeResources(from, to *corev1.ResourceRequirements) *corev1.ResourceRequirements {
+	result := to.DeepCopy()
+	if from.Limits != nil {
+		if result.Limits == nil {
+			result.Limits = corev1.ResourceList{}
+		}
+		if cpu, ok := from.Limits[corev1.ResourceCPU]; ok {
+			result.Limits[corev1.ResourceCPU] = cpu
+		}
+		if memory, ok := from.Limits[corev1.ResourceMemory]; ok {
+			result.Limits[corev1.ResourceMemory] = memory
+		}
+	}
+	if from.Requests != nil {
+		if result.Requests == nil {
+			result.Requests = corev1.ResourceList{}
+		}
+		if cpu, ok := from.Requests[corev1.ResourceCPU]; ok {
+			result.Requests[corev1.ResourceCPU] = cpu
+		}
+		if memory, ok := from.Requests[corev1.ResourceMemory]; ok {
+			result.Requests[corev1.ResourceMemory] = memory
+		}
+	}
+	return result
 }
 
 func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string {
@@ -461,6 +511,20 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.SchedulerName != "" {
 			config = append(config, fmt.Sprintf("workspace.schedulerName=%s", workspace.SchedulerName))
+		}
+		if workspace.ProjectCloneConfig != nil {
+			if workspace.ProjectCloneConfig.Image != defaultConfig.Workspace.ProjectCloneConfig.Image {
+				config = append(config, fmt.Sprintf("workspace.projectClone.image=%s", workspace.ProjectCloneConfig.Image))
+			}
+			if workspace.ProjectCloneConfig.ImagePullPolicy != defaultConfig.Workspace.ProjectCloneConfig.ImagePullPolicy {
+				config = append(config, fmt.Sprintf("workspace.projectClone.imagePullPolicy=%s", workspace.ProjectCloneConfig.ImagePullPolicy))
+			}
+			if workspace.ProjectCloneConfig.Env != nil {
+				config = append(config, "workspace.projectClone.env is set")
+			}
+			if !reflect.DeepEqual(workspace.ProjectCloneConfig.Resources, defaultConfig.Workspace.ProjectCloneConfig.Resources) {
+				config = append(config, "workspace.projectClone.resources is set")
+			}
 		}
 	}
 	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {

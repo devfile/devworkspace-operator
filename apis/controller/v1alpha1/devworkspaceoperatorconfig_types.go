@@ -62,76 +62,10 @@ type RoutingConfig struct {
 	ProxyConfig *Proxy `json:"proxyConfig,omitempty"`
 }
 
-type Proxy struct {
-	// HttpProxy is the URL of the proxy for HTTP requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
-	HttpProxy string `json:"httpProxy,omitempty"`
-	// HttpsProxy is the URL of the proxy for HTTPS requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
-	HttpsProxy string `json:"httpsProxy,omitempty"`
-	// NoProxy is a comma-separated list of hostnames and/or CIDRs for which the proxy should not be used. Ignored
-	// when HttpProxy and HttpsProxy are unset
-	NoProxy string `json:"noProxy,omitempty"`
-}
-
-type StorageSizes struct {
-	// The default Persistent Volume Claim size for the "common" storage class.
-	// Note that the "async" storage class also uses the PVC size set for the "common" storage class.
-	// If not specified, the "common" and "async" Persistent Volume Claim sizes are set to 10Gi
-	Common *resource.Quantity `json:"common,omitempty"`
-	// The default Persistent Volume Claim size for the "per-workspace" storage class.
-	// If not specified, the "per-workspace" Persistent Volume Claim size is set to 5Gi
-	PerWorkspace *resource.Quantity `json:"perWorkspace,omitempty"`
-}
-
-type ServiceAccountConfig struct {
-	// ServiceAccountName defines a fixed name to be used for all DevWorkspaces. If set, the DevWorkspace
-	// Operator will not generate a separate ServiceAccount for each DevWorkspace, and will instead create
-	// a ServiceAccount with the specified name in each namespace where DevWorkspaces are created. If specified,
-	// the created ServiceAccount will not be removed when DevWorkspaces are deleted and must be cleaned up manually.
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-	// +kubebuilder:validation:MaxLength=63
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-	// Disable creation of DevWorkspace ServiceAccounts by the DevWorkspace Operator. If set to true, the serviceAccountName
-	// field must also be set. If ServiceAccount creation is disabled, it is assumed that the specified ServiceAccount already
-	// exists in any namespace where a workspace is created. If a suitable ServiceAccount does not exist, starting DevWorkspaces
-	// will fail.
-	DisableCreation *bool `json:"disableCreation,omitempty"`
-	// List of ServiceAccount tokens that will be mounted into workspace pods as projected volumes.
-	ServiceAccountTokens []ServiceAccountToken `json:"serviceAccountTokens,omitempty"`
-}
-
-type ServiceAccountToken struct {
-	// Identifiable name of the ServiceAccount token.
-	// If multiple ServiceAccount tokens use the same mount path, a generic name will be used
-	// for the projected volume instead.
-	// +kubebuilder:validation:Required
-	Name string `json:"name"`
-	// Path within the workspace container at which the token should be mounted.  Must
-	// not contain ':'.
-	// +kubebuilder:validation:Required
-	MountPath string `json:"mountPath"`
-	// Path is the path relative to the mount point of the file to project the
-	// token into.
-	// +kubebuilder:validation:Required
-	Path string `json:"path"`
-	// Audience is the intended audience of the token. A recipient of a token
-	// must identify itself with an identifier specified in the audience of the
-	// token, and otherwise should reject the token. The audience defaults to the
-	// identifier of the apiserver.
-	// +kubebuilder:validation:Optional
-	Audience string `json:"audience,omitempty"`
-	// ExpirationSeconds is the requested duration of validity of the service
-	// account token. As the token approaches expiration, the kubelet volume
-	// plugin will proactively rotate the service account token. The kubelet will
-	// start trying to rotate the token if the token is older than 80 percent of
-	// its time to live or if the token is older than 24 hours. Defaults to 1 hour
-	// and must be at least 10 minutes.
-	// +kubebuilder:validation:Minimum=600
-	// +kubebuilder:default:=3600
-	// +kubebuilder:validation:Optional
-	ExpirationSeconds int64 `json:"expirationSeconds,omitempty"`
-}
-
 type WorkspaceConfig struct {
+	// ProjectCloneConfig defines configuration related to the project clone init container
+	// that is used to clone git projects into the DevWorkspace.
+	ProjectCloneConfig *ProjectCloneConfig `json:"projectClone,omitempty"`
 	// ImagePullPolicy defines the imagePullPolicy used for containers in a DevWorkspace
 	// For additional information, see Kubernetes documentation for imagePullPolicy. If
 	// not specified, the default value of "Always" is used.
@@ -201,6 +135,89 @@ type WorkspaceConfig struct {
 	// SchedulerName is the name of the pod scheduler for DevWorkspace pods.
 	// If not specified, the pod scheduler is set to the default scheduler on the cluster.
 	SchedulerName string `json:"schedulerName,omitempty"`
+}
+
+type Proxy struct {
+	// HttpProxy is the URL of the proxy for HTTP requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
+	HttpProxy string `json:"httpProxy,omitempty"`
+	// HttpsProxy is the URL of the proxy for HTTPS requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
+	HttpsProxy string `json:"httpsProxy,omitempty"`
+	// NoProxy is a comma-separated list of hostnames and/or CIDRs for which the proxy should not be used. Ignored
+	// when HttpProxy and HttpsProxy are unset
+	NoProxy string `json:"noProxy,omitempty"`
+}
+
+type StorageSizes struct {
+	// The default Persistent Volume Claim size for the "common" storage class.
+	// Note that the "async" storage class also uses the PVC size set for the "common" storage class.
+	// If not specified, the "common" and "async" Persistent Volume Claim sizes are set to 10Gi
+	Common *resource.Quantity `json:"common,omitempty"`
+	// The default Persistent Volume Claim size for the "per-workspace" storage class.
+	// If not specified, the "per-workspace" Persistent Volume Claim size is set to 5Gi
+	PerWorkspace *resource.Quantity `json:"perWorkspace,omitempty"`
+}
+
+type ServiceAccountConfig struct {
+	// ServiceAccountName defines a fixed name to be used for all DevWorkspaces. If set, the DevWorkspace
+	// Operator will not generate a separate ServiceAccount for each DevWorkspace, and will instead create
+	// a ServiceAccount with the specified name in each namespace where DevWorkspaces are created. If specified,
+	// the created ServiceAccount will not be removed when DevWorkspaces are deleted and must be cleaned up manually.
+	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+	// +kubebuilder:validation:MaxLength=63
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+	// Disable creation of DevWorkspace ServiceAccounts by the DevWorkspace Operator. If set to true, the serviceAccountName
+	// field must also be set. If ServiceAccount creation is disabled, it is assumed that the specified ServiceAccount already
+	// exists in any namespace where a workspace is created. If a suitable ServiceAccount does not exist, starting DevWorkspaces
+	// will fail.
+	DisableCreation *bool `json:"disableCreation,omitempty"`
+	// List of ServiceAccount tokens that will be mounted into workspace pods as projected volumes.
+	ServiceAccountTokens []ServiceAccountToken `json:"serviceAccountTokens,omitempty"`
+}
+
+type ServiceAccountToken struct {
+	// Identifiable name of the ServiceAccount token.
+	// If multiple ServiceAccount tokens use the same mount path, a generic name will be used
+	// for the projected volume instead.
+	// +kubebuilder:validation:Required
+	Name string `json:"name"`
+	// Path within the workspace container at which the token should be mounted.  Must
+	// not contain ':'.
+	// +kubebuilder:validation:Required
+	MountPath string `json:"mountPath"`
+	// Path is the path relative to the mount point of the file to project the
+	// token into.
+	// +kubebuilder:validation:Required
+	Path string `json:"path"`
+	// Audience is the intended audience of the token. A recipient of a token
+	// must identify itself with an identifier specified in the audience of the
+	// token, and otherwise should reject the token. The audience defaults to the
+	// identifier of the apiserver.
+	// +kubebuilder:validation:Optional
+	Audience string `json:"audience,omitempty"`
+	// ExpirationSeconds is the requested duration of validity of the service
+	// account token. As the token approaches expiration, the kubelet volume
+	// plugin will proactively rotate the service account token. The kubelet will
+	// start trying to rotate the token if the token is older than 80 percent of
+	// its time to live or if the token is older than 24 hours. Defaults to 1 hour
+	// and must be at least 10 minutes.
+	// +kubebuilder:validation:Minimum=600
+	// +kubebuilder:default:=3600
+	// +kubebuilder:validation:Optional
+	ExpirationSeconds int64 `json:"expirationSeconds,omitempty"`
+}
+
+type ProjectCloneConfig struct {
+	// Image is the container image to use for cloning projects
+	Image string `json:"image,omitempty"`
+	// ImagePullPolicy configures the imagePullPolicy for the project clone container.
+	// If undefined, the general setting .config.workspace.imagePullPolicy is used instead.
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// Resources defines the resource (cpu, memory) limits and requests for the project
+	// clone container. To explicitly not specify a limit or request, define the resource
+	// quantity as zero ('0')
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	// Env allows defining additional environment variables for the project clone container.
+	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API

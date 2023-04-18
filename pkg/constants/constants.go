@@ -65,12 +65,6 @@ const (
 	// PVCCleanupPodCPURequest is the cpu request used for PVC clean up pods
 	PVCCleanupPodCPURequest = "5m"
 
-	// Resource limits/requests for project cloner init container
-	ProjectCloneMemoryLimit   = "1Gi"
-	ProjectCloneMemoryRequest = "128Mi"
-	ProjectCloneCPULimit      = "1000m"
-	ProjectCloneCPURequest    = "100m"
-
 	// Constants describing storage classes supported by the controller
 
 	// CommonStorageClassType defines the 'common' storage policy, which is an alias of the 'per-user' storage policy, and operates in the same fashion as the 'per-user' storage policy.

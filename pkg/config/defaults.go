@@ -49,6 +49,18 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 		PodSecurityContext:       nil,
 		ContainerSecurityContext: &corev1.SecurityContext{},
 		DefaultTemplate:          nil,
+		ProjectCloneConfig: &v1alpha1.ProjectCloneConfig{
+			Resources: &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+				},
+			},
+		},
 	},
 }
 

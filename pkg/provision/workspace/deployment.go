@@ -72,23 +72,23 @@ func SyncDeploymentToCluster(
 
 	clusterDeployment := clusterObj.(*appsv1.Deployment)
 	deploymentReady := status.CheckDeploymentStatus(clusterDeployment, workspace)
-	if deploymentReady {
-		return nil
-	}
+	if !deploymentReady {
+		deploymentHealthy, deploymentErrMsg := status.CheckDeploymentConditions(clusterDeployment)
+		if !deploymentHealthy {
+			return &dwerrors.FailError{Message: deploymentErrMsg}
+		}
 
-	deploymentHealthy, deploymentErrMsg := status.CheckDeploymentConditions(clusterDeployment)
-	if !deploymentHealthy {
-		return &dwerrors.FailError{Message: deploymentErrMsg}
-	}
+		workspaceIDLabel := k8sclient.MatchingLabels{constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId}
+		ignoredEvents := workspace.Config.Workspace.IgnoredUnrecoverableEvents
+		failureMsg, checkErr := status.CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, workspaceIDLabel, ignoredEvents, clusterAPI)
+		if checkErr != nil {
+			return err
+		}
+		if failureMsg != "" {
+			return &dwerrors.FailError{Message: failureMsg}
+		}
 
-	workspaceIDLabel := k8sclient.MatchingLabels{constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId}
-	ignoredEvents := workspace.Config.Workspace.IgnoredUnrecoverableEvents
-	failureMsg, checkErr := status.CheckPodsState(workspace.Status.DevWorkspaceId, workspace.Namespace, workspaceIDLabel, ignoredEvents, clusterAPI)
-	if checkErr != nil {
-		return err
-	}
-	if failureMsg != "" {
-		return &dwerrors.FailError{Message: failureMsg}
+		return &dwerrors.RetryError{Message: "Deployment is not ready"}
 	}
 
 	return nil

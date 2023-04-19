@@ -140,7 +140,7 @@ func (r *DevWorkspaceReconciler) finalizeRBAC(ctx context.Context, log logr.Logg
 		return reconcile.Result{}, err
 	} else if terminating {
 		// Namespace is terminating, it's redundant to update roles/rolebindings since they will be removed with the workspace
-		log.Info("Namespace is terminating; clearing storage finalizer")
+		log.Info("Namespace is terminating; clearing RBAC finalizer")
 		controllerutil.RemoveFinalizer(workspace, constants.RBACCleanupFinalizer)
 		return reconcile.Result{}, r.Update(ctx, workspace.DevWorkspace)
 	}

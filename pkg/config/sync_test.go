@@ -27,6 +27,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -106,6 +107,9 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 				*deploymentStrategy = appsv1.RecreateDeploymentStrategyType
 			}
 		},
+		fuzzQuantity,
+		fuzzResourceList,
+		fuzzResourceRequirements,
 	)
 	for i := 0; i < 100; i++ {
 		fuzzedConfig := &v1alpha1.OperatorConfiguration{}
@@ -355,10 +359,38 @@ func TestSyncConfigDoesNotEraseClusterRoutingSuffix(t *testing.T) {
 func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	f := fuzz.New().NilChance(0).Funcs(
 		func(embeddedResource *runtime.RawExtension, c fuzz.Continue) {},
+		fuzzQuantity,
+		fuzzResourceList,
+		fuzzResourceRequirements,
 	)
 	expectedConfig := &v1alpha1.OperatorConfiguration{}
 	actualConfig := &v1alpha1.OperatorConfiguration{}
 	f.Fuzz(expectedConfig)
 	mergeConfig(expectedConfig, actualConfig)
 	assert.Equal(t, expectedConfig, actualConfig, "merging configs should merge all fields")
+}
+
+func fuzzQuantity(q *resource.Quantity, c fuzz.Continue) {
+	q.Set(c.Int63n(999))
+	q.Format = resource.DecimalSI
+	_ = q.String()
+}
+
+func fuzzResourceList(resourceList *corev1.ResourceList, c fuzz.Continue) {
+	memReq := resource.Quantity{}
+	c.Fuzz(&memReq)
+	cpuReq := resource.Quantity{}
+	c.Fuzz(&cpuReq)
+	*resourceList = corev1.ResourceList{
+		corev1.ResourceMemory: memReq,
+		corev1.ResourceCPU:    cpuReq,
+	}
+}
+
+func fuzzResourceRequirements(req *corev1.ResourceRequirements, c fuzz.Continue) {
+	limits, requests := corev1.ResourceList{}, corev1.ResourceList{}
+	c.Fuzz(&limits)
+	c.Fuzz(&requests)
+	req.Limits = limits
+	req.Requests = requests
 }

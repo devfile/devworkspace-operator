@@ -312,7 +312,17 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Add init container to clone projects
-	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, workspace.Config.Workspace.ImagePullPolicy, workspace.Config.Routing.ProxyConfig); err != nil {
+	projectCloneOptions := projects.Options{
+		Image:     workspace.Config.Workspace.ProjectCloneConfig.Image,
+		Env:       workspace.Config.Workspace.ProjectCloneConfig.Env,
+		Resources: workspace.Config.Workspace.ProjectCloneConfig.Resources,
+	}
+	if workspace.Config.Workspace.ProjectCloneConfig.ImagePullPolicy != "" {
+		projectCloneOptions.PullPolicy = config.Workspace.ProjectCloneConfig.ImagePullPolicy
+	} else {
+		projectCloneOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
+	}
+	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, projectCloneOptions, workspace.Config.Routing.ProxyConfig); err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 	} else if projectClone != nil {
 		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)

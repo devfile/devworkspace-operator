@@ -24,7 +24,6 @@ import (
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -34,7 +33,14 @@ const (
 	projectClonerContainerName = "project-clone"
 )
 
-func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPolicy string, proxyConfig *controllerv1alpha1.Proxy) (*corev1.Container, error) {
+type Options struct {
+	Image      string
+	PullPolicy corev1.PullPolicy
+	Resources  *corev1.ResourceRequirements
+	Env        []corev1.EnvVar
+}
+
+func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, options Options, proxyConfig *controllerv1alpha1.Proxy) (*corev1.Container, error) {
 	if len(workspace.Projects) == 0 {
 		return nil, nil
 	}
@@ -46,26 +52,15 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPo
 		return nil, nil
 	}
 
-	cloneImage := images.GetProjectCloneImage()
+	var cloneImage string
+	if options.Image != "" {
+		cloneImage = options.Image
+	} else {
+		cloneImage = images.GetProjectCloneImage()
+	}
 	if cloneImage == "" {
 		// Assume project clone is intentionally disabled if project clone image is not defined
 		return nil, nil
-	}
-	memLimit, err := resource.ParseQuantity(constants.ProjectCloneMemoryLimit)
-	if err != nil {
-		return nil, fmt.Errorf("project clone container has invalid memory limit configured: %w", err)
-	}
-	memRequest, err := resource.ParseQuantity(constants.ProjectCloneMemoryRequest)
-	if err != nil {
-		return nil, fmt.Errorf("project clone container has invalid memory request configured: %w", err)
-	}
-	cpuLimit, err := resource.ParseQuantity(constants.ProjectCloneCPULimit)
-	if err != nil {
-		return nil, fmt.Errorf("project clone container has invalid CPU limit configured: %w", err)
-	}
-	cpuRequest, err := resource.ParseQuantity(constants.ProjectCloneCPURequest)
-	if err != nil {
-		return nil, fmt.Errorf("project clone container has invalid CPU request configured: %w", err)
 	}
 
 	cloneEnv := []corev1.EnvVar{
@@ -75,29 +70,66 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, pullPo
 		},
 	}
 	cloneEnv = append(cloneEnv, env.GetProxyEnvVars(proxyConfig)...)
+	cloneEnv = append(cloneEnv, options.Env...)
+
+	resources, err := processResources(options.Resources)
+	if err != nil {
+		return nil, err
+	}
 
 	return &corev1.Container{
-		Name:  projectClonerContainerName,
-		Image: cloneImage,
-		Env:   cloneEnv,
-		Resources: corev1.ResourceRequirements{
-			Limits: map[corev1.ResourceName]resource.Quantity{
-				corev1.ResourceMemory: memLimit,
-				corev1.ResourceCPU:    cpuLimit,
-			},
-			Requests: map[corev1.ResourceName]resource.Quantity{
-				corev1.ResourceMemory: memRequest,
-				corev1.ResourceCPU:    cpuRequest,
-			},
-		},
+		Name:      projectClonerContainerName,
+		Image:     cloneImage,
+		Env:       cloneEnv,
+		Resources: *resources,
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      devfileConstants.ProjectsVolumeName,
 				MountPath: constants.DefaultProjectsSourcesRoot,
 			},
 		},
-		ImagePullPolicy: corev1.PullPolicy(pullPolicy),
+		ImagePullPolicy: options.PullPolicy,
 	}, nil
+}
+
+// processResources checks that specified resources are valid (e.g. requests are less than limits) and supports
+// un-setting resources that have default values by interpreting zero as "do not set"
+func processResources(resources *corev1.ResourceRequirements) (*corev1.ResourceRequirements, error) {
+	result := resources.DeepCopy()
+
+	if result.Limits.Memory().IsZero() {
+		delete(result.Limits, corev1.ResourceMemory)
+	}
+	if result.Limits.Cpu().IsZero() {
+		delete(result.Limits, corev1.ResourceCPU)
+	}
+	if result.Requests.Memory().IsZero() {
+		delete(result.Requests, corev1.ResourceMemory)
+	}
+	if result.Requests.Cpu().IsZero() {
+		delete(result.Requests, corev1.ResourceCPU)
+	}
+
+	memLimit, hasMemLimit := result.Limits[corev1.ResourceMemory]
+	memRequest, hasMemRequest := result.Requests[corev1.ResourceMemory]
+	if hasMemLimit && hasMemRequest && memRequest.Cmp(memLimit) > 0 {
+		return result, fmt.Errorf("project clone memory request (%s) must be less than limit (%s)", memRequest.String(), memLimit.String())
+	}
+
+	cpuLimit, hasCPULimit := result.Limits[corev1.ResourceCPU]
+	cpuRequest, hasCPURequest := result.Requests[corev1.ResourceCPU]
+	if hasCPULimit && hasCPURequest && cpuRequest.Cmp(cpuLimit) > 0 {
+		return result, fmt.Errorf("project clone CPU request (%s) must be less than limit (%s)", cpuRequest.String(), cpuLimit.String())
+	}
+
+	if len(result.Limits) == 0 {
+		result.Limits = nil
+	}
+	if len(result.Requests) == 0 {
+		result.Requests = nil
+	}
+
+	return result, nil
 }
 
 func hasContainerComponents(workspace *dw.DevWorkspaceTemplateSpec) bool {

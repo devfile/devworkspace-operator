@@ -37,6 +37,10 @@ var (
 const (
 	DefaultProjectsSourcesRoot = "/projects"
 
+	HomeUserDirectory = "/home/user/"
+
+	HomeVolumeName = "persistentHome"
+
 	ServiceAccount = "devworkspace"
 
 	SidecarDefaultMemoryLimit   = "128M"

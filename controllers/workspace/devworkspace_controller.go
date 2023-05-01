@@ -34,6 +34,7 @@ import (
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
+	"github.com/devfile/devworkspace-operator/pkg/library/home"
 	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
@@ -287,6 +288,15 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	storageProvisioner, err := storage.GetProvisioner(workspace)
 	if err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning storage: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+	}
+
+	if home.NeedsPersistentHomeDirectory(workspace) {
+		workspaceWithHomeVolume, err := home.AddPersistentHomeVolume(workspace)
+		if err != nil {
+			reconcileStatus.addWarning(fmt.Sprintf("Info: default persistentHome volume is not being used: %s", err.Error()))
+		} else {
+			workspace.Spec.Template = *workspaceWithHomeVolume
+		}
 	}
 
 	// Set finalizer on DevWorkspace if necessary

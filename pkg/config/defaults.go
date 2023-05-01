@@ -43,9 +43,12 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 			Common:       &commonStorageSize,
 			PerWorkspace: &perWorkspaceStorageSize,
 		},
+		PersistUserHome: &v1alpha1.PersistentHomeConfig{
+			Enabled: pointer.Bool(false),
+		},
 		IdleTimeout:              "15m",
 		ProgressTimeout:          "5m",
-		CleanupOnStop:            pointer.BoolPtr(false),
+		CleanupOnStop:            pointer.Bool(false),
 		PodSecurityContext:       nil,
 		ContainerSecurityContext: &corev1.SecurityContext{},
 		DefaultTemplate:          nil,

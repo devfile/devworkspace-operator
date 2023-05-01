@@ -98,6 +98,9 @@ type WorkspaceConfig struct {
 	// DefaultStorageSize defines an optional struct with fields to specify the sizes of Persistent Volume Claims for storage
 	// classes used by DevWorkspaces.
 	DefaultStorageSize *StorageSizes `json:"defaultStorageSize,omitempty"`
+	// PersistUserHome defines configuration options for persisting the `/home/user/`
+	// directory in workspaces.
+	PersistUserHome *PersistentHomeConfig `json:"persistUserHome,omitempty"`
 	// IdleTimeout determines how long a workspace should sit idle before being
 	// automatically scaled down. Proper functionality of this configuration property
 	// requires support in the workspace being started. If not specified, the default
@@ -135,6 +138,14 @@ type WorkspaceConfig struct {
 	// SchedulerName is the name of the pod scheduler for DevWorkspace pods.
 	// If not specified, the pod scheduler is set to the default scheduler on the cluster.
 	SchedulerName string `json:"schedulerName,omitempty"`
+}
+
+type PersistentHomeConfig struct {
+	// Determines whether the `/home/user/` directory in workspaces should persist between
+	// workspace shutdown and startup.
+	// Must be used with the 'per-user'/'common' or 'per-workspace' storage class in order to take effect.
+	// Disabled by default.
+	Enabled *bool `json:"enabled,omitempty"`
 }
 
 type Proxy struct {

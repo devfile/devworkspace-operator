@@ -109,11 +109,11 @@ func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clu
 		break
 	case *sync.NotInSyncError:
 		return nil, &dwerrors.RetryError{
-			Message: "Updated common PVC on cluster",
+			Message: fmt.Sprintf("Updated %s PVC on cluster", pvc.Name),
 		}
 	case *sync.UnrecoverableSyncError:
 		return nil, &dwerrors.FailError{
-			Message: "Failed to sync PVC to cluster",
+			Message: fmt.Sprintf("Failed to sync %s PVC to cluster", pvc.Name),
 			Err:     t.Cause,
 		}
 	default:
@@ -122,7 +122,7 @@ func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clu
 
 	currPVC, ok := currObject.(*corev1.PersistentVolumeClaim)
 	if !ok {
-		return nil, errors.New("tried to sync PVC to cluster but did not get a PVC back")
+		return nil, errors.New("tried to sync common PVC to cluster but did not get a PVC back")
 	}
 	// TODO: Does not work for WaitFirstConsumer storage type; needs to be improved.
 	// if currPVC.Status.Phase != corev1.ClaimBound {

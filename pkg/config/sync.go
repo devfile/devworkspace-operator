@@ -327,6 +327,14 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.DefaultStorageSize.PerWorkspace = &perWorkspaceSizeCopy
 			}
 		}
+		if from.Workspace.PersistUserHome != nil {
+			if to.Workspace.PersistUserHome == nil {
+				to.Workspace.PersistUserHome = &controller.PersistentHomeConfig{}
+			}
+			if from.Workspace.PersistUserHome.Enabled != nil {
+				to.Workspace.PersistUserHome.Enabled = from.Workspace.PersistUserHome.Enabled
+			}
+		}
 		if from.Workspace.DefaultTemplate != nil {
 			templateSpecContentCopy := from.Workspace.DefaultTemplate.DeepCopy()
 			to.Workspace.DefaultTemplate = templateSpecContentCopy
@@ -498,6 +506,11 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			}
 			if workspace.DefaultStorageSize.PerWorkspace != nil && workspace.DefaultStorageSize.PerWorkspace.String() != defaultConfig.Workspace.DefaultStorageSize.PerWorkspace.String() {
 				config = append(config, fmt.Sprintf("workspace.defaultStorageSize.perWorkspace=%s", workspace.DefaultStorageSize.PerWorkspace.String()))
+			}
+		}
+		if workspace.PersistUserHome != nil {
+			if workspace.PersistUserHome.Enabled != nil && *workspace.PersistUserHome.Enabled != *defaultConfig.Workspace.PersistUserHome.Enabled {
+				config = append(config, fmt.Sprintf("workspace.persistUserHome.enabled=%t", *workspace.PersistUserHome.Enabled))
 			}
 		}
 		if !reflect.DeepEqual(workspace.PodSecurityContext, defaultConfig.Workspace.PodSecurityContext) {

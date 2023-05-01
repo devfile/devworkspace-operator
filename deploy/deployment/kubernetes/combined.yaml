@@ -2317,6 +2317,18 @@ spec:
                     - Always
                     - Never
                     type: string
+                  persistUserHome:
+                    description: PersistUserHome defines configuration options for
+                      persisting the `/home/user/` directory in workspaces.
+                    properties:
+                      enabled:
+                        description: Determines whether the `/home/user/` directory
+                          in workspaces should persist between workspace shutdown
+                          and startup. Must be used with the 'per-user'/'common' or
+                          'per-workspace' storage class in order to take effect. Disabled
+                          by default.
+                        type: boolean
+                    type: object
                   podSecurityContext:
                     description: PodSecurityContext overrides the default PodSecurityContext
                       used for all workspace-related pods created by the DevWorkspace

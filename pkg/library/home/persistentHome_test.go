@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-package workspace
+package home
 
 import (
 	"os"
@@ -43,6 +43,7 @@ type testInput struct {
 
 type testOutput struct {
 	Workspace *dw.DevWorkspaceTemplateSpec `json:"workspace,omitempty"`
+	Error     *string                      `json:"error,omitempty"`
 }
 
 func loadTestCaseOrPanic(t *testing.T, testFilepath string) testCase {
@@ -91,14 +92,23 @@ func TestPersistentHomeVolume(t *testing.T) {
 			assert.NotNil(t, tt.Input.Workspace, "Input does not define workspace")
 			assert.NotNil(t, tt.Input.Config, "Input does not define a config")
 			workspace := getDevWorkspaceWithConfig(tt.Input)
+			actualDWTemplateSpec := &workspace.Spec.Template
 
 			if NeedsPersistentHomeDirectory(workspace) {
-				AddHomeVolume(&workspace.Spec.Template)
+				workspaceWithHomeVolume, err := AddPersistentHomeVolume(workspace)
+
+				if tt.Output.Error != nil {
+					assert.Error(t, err, "Error expected")
+					assert.Equal(t, *tt.Output.Error, err.Error())
+				} else {
+					assert.NoError(t, err)
+					workspace.Spec.Template = *workspaceWithHomeVolume
+				}
 			}
 
-			assert.Equal(t, tt.Output.Workspace.DevWorkspaceTemplateSpecContent, workspace.Spec.Template.DevWorkspaceTemplateSpecContent,
+			assert.Equal(t, tt.Output.Workspace, actualDWTemplateSpec,
 				"DevWorkspace Template Spec should match expected output: Diff: %s",
-				cmp.Diff(tt.Output.Workspace.DevWorkspaceTemplateSpecContent, workspace.Spec.Template.DevWorkspaceTemplateSpecContent))
+				cmp.Diff(tt.Output.Workspace, actualDWTemplateSpec))
 		})
 	}
 

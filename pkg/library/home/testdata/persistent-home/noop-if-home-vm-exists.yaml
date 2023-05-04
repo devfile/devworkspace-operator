@@ -1,0 +1,50 @@
+name: "Does not create persistent home volume if a volume already mounts to /home/user/ "
+
+input:
+  devworkspaceId: "test-workspaceid"
+  config:
+    workspace:
+      persistUserHome:
+        enabled: true
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+            - name: pre-existing-home-volume
+              path: /home/user/
+      - name: testing-container-2
+        container:
+          image: testing-image-2
+          volumeMounts: 
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+      - name: my-defined-volume
+        volume: {}
+      - name: pre-existing-home-volume
+        volume: {}
+
+output:
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+            - name: pre-existing-home-volume
+              path: /home/user/
+      - name: testing-container-2
+        container:
+          image: testing-image-2
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+      - name: my-defined-volume
+        volume: {}
+      - name: pre-existing-home-volume
+        volume: {}

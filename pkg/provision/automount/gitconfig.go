@@ -85,6 +85,7 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 	if len(secretList.Items) > 0 {
 		secrets = secretList.Items
 	}
+	sortSecrets(secrets)
 
 	configmapList := &corev1.ConfigMapList{}
 	if err := api.Client.List(api.Ctx, configmapList, k8sclient.InNamespace(namespace), tlsLabelSelector); err != nil {
@@ -94,6 +95,7 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 	if len(configmapList.Items) > 0 {
 		configmaps = configmapList.Items
 	}
+	sortConfigmaps(configmaps)
 
 	return secrets, configmaps, nil
 }

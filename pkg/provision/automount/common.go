@@ -18,6 +18,7 @@ package automount
 import (
 	"fmt"
 	"path"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -334,4 +335,16 @@ func dropItemsFieldFromVolumes(volumes []corev1.Volume) {
 			volumes[idx].Secret.Items = nil
 		}
 	}
+}
+
+func sortSecrets(secrets []corev1.Secret) {
+	sort.Slice(secrets, func(i, j int) bool {
+		return secrets[i].Name < secrets[j].Name
+	})
+}
+
+func sortConfigmaps(cms []corev1.ConfigMap) {
+	sort.Slice(cms, func(i, j int) bool {
+		return cms[i].Name < cms[j].Name
+	})
 }

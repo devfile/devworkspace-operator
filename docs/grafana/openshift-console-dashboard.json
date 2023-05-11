@@ -112,7 +112,7 @@
                     "refId": "A"
                 }
             ],
-            "title": "Average CPU Workspace Usage",
+            "title": "Average Workspace CPU Usage",
             "type": "graph",
             "xaxis": {
                 "buckets": null,
@@ -326,7 +326,7 @@
             "targets": [
                 {
                     "exemplar": true,
-                    "expr": "   (sum( 1 - sum without (mode) (rate(node_cpu_seconds_total{mode=~\"idle|iowait|steal\"}[2m])) * on(instance) group_left() (label_replace(max by (node) (kube_node_role{role=~\".+\"}), \"instance\", \"$1\", \"node\",\"(.*)\")))/  count(node_cpu_info)) ",
+                    "expr": " (sum( 1 - sum without (mode) (rate(node_cpu_seconds_total{mode=~\"idle|iowait|steal\"}[2m]))) / count(node_cpu_info)) ",
                     "interval": "",
                     "legendFormat": "CPU Usage %",
                     "refId": "A"

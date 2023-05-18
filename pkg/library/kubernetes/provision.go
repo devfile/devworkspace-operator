@@ -16,6 +16,7 @@ package kubernetes
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -32,13 +33,18 @@ import (
 // has the correct permissions to create/update/delete these objects and instead assumes the
 // workspace owner has all applicable RBAC permissions.
 // Only Kubernetes/OpenShift components that are inlined are supported; components that define
-// a URI will cause a FailError to be returned
+// a URI will cause a WarningError to be returned
 func HandleKubernetesComponents(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
-	kubeComponents, err := filterForKubeLikeComponents(workspace.Spec.Template.Components)
+	kubeComponents, warnings, err := filterForKubeLikeComponents(workspace.Spec.Template.Components)
 	if err != nil {
 		return err
 	}
 	if len(kubeComponents) == 0 {
+		if len(warnings) > 0 {
+			return &dwerrors.WarningError{
+				Message: fmt.Sprintf("Ignored components that use unsupported features: %s", strings.Join(warnings, ", ")),
+			}
+		}
 		return nil
 	}
 	for _, component := range kubeComponents {
@@ -62,6 +68,11 @@ func HandleKubernetesComponents(workspace *common.DevWorkspaceWithConfig, api sy
 		}
 		if syncErr != nil {
 			return dwerrors.WrapSyncError(syncErr)
+		}
+	}
+	if len(warnings) > 0 {
+		return &dwerrors.WarningError{
+			Message: fmt.Sprintf("Ignored components that use unsupported features: %s", strings.Join(warnings, ", ")),
 		}
 	}
 	return nil

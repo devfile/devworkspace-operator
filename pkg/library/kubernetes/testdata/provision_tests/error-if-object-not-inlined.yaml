@@ -25,4 +25,4 @@ input:
               targetPort: 8081
 
 output:
-  errRegexp: "components that define a URI are unsupported"
+  errRegexp: "Ignored components that use unsupported features"

@@ -42,7 +42,8 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context
 			continue
 		}
 		if component.Uri != "" {
-			return fmt.Errorf("kubenetes components specified via URI are unsupported")
+			// We're going to ignore URI components for now
+			continue
 		}
 		if component.Inlined == "" {
 			return fmt.Errorf("kubernetes component does not define inlined content")
@@ -66,7 +67,8 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate(ctx context
 		}
 
 		if newComponent.Uri != "" {
-			return fmt.Errorf("kubenetes components specified via URI are unsupported")
+			// We're going to ignore URI components for now
+			continue
 		}
 		if newComponent.Inlined == "" {
 			return fmt.Errorf("kubernetes component does not define inlined content")

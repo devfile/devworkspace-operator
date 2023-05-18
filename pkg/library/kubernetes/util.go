@@ -18,7 +18,6 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,24 +30,35 @@ func HasKubelikeComponent(workspace *common.DevWorkspaceWithConfig) bool {
 	return false
 }
 
-func filterForKubeLikeComponents(components []dw.Component) ([]dw.Component, error) {
+func filterForKubeLikeComponents(components []dw.Component) (kubeComponents []dw.Component, warnings []string, err error) {
 	var k8sLikeComponents []dw.Component
 	for _, component := range components {
 		k8sLikeComponent, err := getK8sLikeComponent(component)
 		if err != nil {
+			// Not a kube component (e.g. container, image, etc.)
 			continue
 		}
-		if k8sLikeComponent.Uri != "" {
-			return nil, &dwerrors.FailError{Message: fmt.Sprintf("kubernetes/openshift components that define a URI are unsupported (component %s)", component.Name)}
+
+		if !k8sLikeComponent.GetDeployByDefault() {
+			// Not handled by operator
+			continue
 		}
+
+		if k8sLikeComponent.Uri != "" {
+			// Not currently supported; return a warning and ignore it but do not fail startup
+			warnings = append(warnings, fmt.Sprintf("component %s defines a Kubernetes/OpenShift component via URI", component.Name))
+			continue
+		}
+
 		if k8sLikeComponent.Inlined == "" {
 			continue
 		}
+
 		if k8sLikeComponent.GetDeployByDefault() {
 			k8sLikeComponents = append(k8sLikeComponents, component)
 		}
 	}
-	return k8sLikeComponents, nil
+	return k8sLikeComponents, warnings, nil
 }
 
 // getK8sLikeComponent returns the K8sLikeComponent from a DevWorkspace component,

@@ -140,11 +140,12 @@ func checkSATokenPathCollisions(saTokens []v1alpha1.ServiceAccountToken, mountPa
 			for _, saToken := range collidingSATokens {
 				problemNames = append(problemNames, saToken.Name)
 			}
-
 			if len(problemPaths) == 1 {
+				sort.Strings(problemNames)
 				return fmt.Errorf("the following ServiceAccount tokens have the same path (%s) and mount path (%s): %s", path, mountPath, strings.Join(problemNames, ", "))
 			}
 		}
+		sort.Strings(problemNames)
 		return fmt.Errorf("multiple ServiceAccount tokens share the same path and mount path: %s", strings.Join(problemNames, ", "))
 	}
 	return nil

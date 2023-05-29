@@ -120,6 +120,9 @@ test_e2e_debug:
 manager: generate fmt vet
 	go build -o bin/manager main.go
 
+### generate_all: regenerate all resources for operator (CRDs, manifests, bundle, etc.)
+generate_all: generate manifests generate_default_deployment generate_olm_bundle_yaml
+
 ### generate_deployment: Generates the files used for deployment from kustomize templates, using environment variables
 generate_deployment:
 	deploy/generate-deployment.sh

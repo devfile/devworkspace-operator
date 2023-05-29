@@ -112,7 +112,7 @@ update_version() {
     --arg version "$VERSION_CSV" \
     '.metadata.name = $operator_name | .spec.version = $version' deploy/templates/components/csv/clusterserviceversion.yaml
 
-  make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
+  make generate_all
 }
 
 # Updates container images and tags used in deployment templates for a release version
@@ -144,7 +144,7 @@ update_images() {
 
   export DEFAULT_DWO_IMG
   export PROJECT_CLONE_IMG
-  make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml
+  make generate_all
 }
 
 # Build and push images for specified release version. Respects the DRY_RUN flag

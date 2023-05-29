@@ -212,7 +212,7 @@ make disconnect-debug-webhook-server
 
 ```bash
 make update_devworkspace_api update_devworkspace_crds # first commit
-make generate manifests fmt generate_default_deployment generate_olm_bundle_yaml # second commit
+make generate_all # second commit
 ```
 Example of the devfile API update [PR](https://github.com/devfile/devworkspace-operator/pull/797)
 

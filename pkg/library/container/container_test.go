@@ -16,8 +16,11 @@
 package container
 
 import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"os"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -38,6 +41,8 @@ type testOutput struct {
 	PodAdditions *v1alpha1.PodAdditions `json:"podAdditions,omitempty"`
 	ErrRegexp    *string                `json:"errRegexp,omitempty"`
 }
+
+var scheme = runtime.NewScheme()
 
 const testImagePullPolicy = "Always"
 
@@ -70,13 +75,16 @@ func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
 }
 
 func TestGetKubeContainersFromDevfile(t *testing.T) {
+	scheme.AddKnownTypes(corev1.SchemeGroupVersion, &corev1.LimitRangeList{})
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+
 	tests := loadAllTestCasesOrPanic(t, "./testdata")
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.True(t, len(tt.Input.Components) > 0, "Input defines no components")
-			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input, nil, testImagePullPolicy)
+			gotPodAdditions, err := GetKubeContainersFromDevfile(client, "default", tt.Input, nil, testImagePullPolicy)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

@@ -95,6 +95,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies,verbs=get,resourceNames=cluster
 // +kubebuilder:rbac:groups=apps,resourceNames=devworkspace-controller,resources=deployments/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=limitranges,verbs=list
 /////// Required permissions for workspace ServiceAccount
 // +kubebuilder:rbac:groups="",resources=pods/exec,verbs=create
 // +kubebuilder:rbac:groups=apps;extensions,resources=replicasets,verbs=get;list;watch
@@ -299,6 +300,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(
+		r.NonCachingClient,
+		workspace.Namespace,
 		&workspace.Spec.Template,
 		workspace.Config.Workspace.ContainerSecurityContext,
 		workspace.Config.Workspace.ImagePullPolicy)
@@ -322,7 +325,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	} else {
 		projectCloneOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
 	}
-	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, projectCloneOptions, workspace.Config.Routing.ProxyConfig); err != nil {
+	if projectClone, err := projects.GetProjectCloneInitContainer(r.NonCachingClient, workspace.Namespace, &workspace.Spec.Template, projectCloneOptions, workspace.Config.Routing.ProxyConfig); err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 	} else if projectClone != nil {
 		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)

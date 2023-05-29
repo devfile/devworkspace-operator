@@ -26,6 +26,8 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+var ProjectCloneContainerDefaultCpuLimit = resource.MustParse("1000m")
+
 // defaultConfig represents the default configuration for the DevWorkspace Operator.
 var defaultConfig = &v1alpha1.OperatorConfiguration{
 	Routing: &v1alpha1.RoutingConfig{
@@ -53,7 +55,6 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 			Resources: &corev1.ResourceRequirements{
 				Limits: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("1Gi"),
-					corev1.ResourceCPU:    resource.MustParse("1000m"),
 				},
 				Requests: corev1.ResourceList{
 					corev1.ResourceMemory: resource.MustParse("128Mi"),

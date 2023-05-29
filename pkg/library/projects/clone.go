@@ -17,7 +17,10 @@
 package projects
 
 import (
+	"context"
 	"fmt"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -40,7 +43,7 @@ type Options struct {
 	Env        []corev1.EnvVar
 }
 
-func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, options Options, proxyConfig *controllerv1alpha1.Proxy) (*corev1.Container, error) {
+func GetProjectCloneInitContainer(client client.Client, namespace string, workspace *dw.DevWorkspaceTemplateSpec, options Options, proxyConfig *controllerv1alpha1.Proxy) (*corev1.Container, error) {
 	if len(workspace.Projects) == 0 {
 		return nil, nil
 	}
@@ -72,7 +75,7 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 	cloneEnv = append(cloneEnv, env.GetProxyEnvVars(proxyConfig)...)
 	cloneEnv = append(cloneEnv, options.Env...)
 
-	resources, err := processResources(options.Resources)
+	resources, err := processResources(client, namespace, options.Resources)
 	if err != nil {
 		return nil, err
 	}
@@ -94,15 +97,31 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 
 // processResources checks that specified resources are valid (e.g. requests are less than limits) and supports
 // un-setting resources that have default values by interpreting zero as "do not set"
-func processResources(resources *corev1.ResourceRequirements) (*corev1.ResourceRequirements, error) {
+func processResources(k8sClient client.Client, namespace string, resources *corev1.ResourceRequirements) (*corev1.ResourceRequirements, error) {
 	result := resources.DeepCopy()
 
 	if result.Limits.Memory().IsZero() {
 		delete(result.Limits, corev1.ResourceMemory)
 	}
-	if result.Limits.Cpu().IsZero() {
+
+	cpuLimit, hasCpuLimit := result.Limits[corev1.ResourceCPU]
+	if !hasCpuLimit {
+		result.Limits[corev1.ResourceCPU] = config.ProjectCloneContainerDefaultCpuLimit
+
+		// Set empty CPU limits when possible:
+		// 1. If there is no LimitRange in the namespace
+		// 2. CPU limits is not overridden
+		// See details at https://github.com/eclipse/che/issues/22198
+		limitRanges := &corev1.LimitRangeList{}
+		if err := k8sClient.List(context.TODO(), limitRanges, &client.ListOptions{Namespace: namespace}); err != nil {
+			return nil, err
+		} else if len(limitRanges.Items) == 0 {
+			delete(result.Limits, corev1.ResourceCPU)
+		}
+	} else if cpuLimit.IsZero() {
 		delete(result.Limits, corev1.ResourceCPU)
 	}
+
 	if result.Requests.Memory().IsZero() {
 		delete(result.Requests, corev1.ResourceMemory)
 	}

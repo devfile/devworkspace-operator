@@ -16,7 +16,9 @@
 package container
 
 import (
+	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -27,13 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func convertContainerToK8s(devfileComponent dw.Component, securityContext *corev1.SecurityContext, pullPolicy string) (*corev1.Container, error) {
+func convertContainerToK8s(k8sClient client.Client, namespace string, devfileComponent dw.Component, securityContext *corev1.SecurityContext, pullPolicy string) (*corev1.Container, error) {
 	if devfileComponent.Container == nil {
 		return nil, fmt.Errorf("cannot get k8s container from non-container component")
 	}
 	devfileContainer := devfileComponent.Container
 
-	containerResources, err := devfileResourcesToContainerResources(devfileContainer)
+	containerResources, err := devfileResourcesToContainerResources(k8sClient, namespace, devfileContainer)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get resources for container %s: %s", devfileComponent.Name, err)
 	}
@@ -72,7 +74,7 @@ func devfileEndpointsToContainerPorts(endpoints []dw.Endpoint) []corev1.Containe
 	return containerPorts
 }
 
-func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponent) (*corev1.ResourceRequirements, error) {
+func devfileResourcesToContainerResources(k8sClient client.Client, namespace string, devfileContainer *dw.ContainerComponent) (*corev1.ResourceRequirements, error) {
 	limits := corev1.ResourceList{}
 	requests := corev1.ResourceList{}
 
@@ -108,6 +110,17 @@ func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponen
 	cpuLimit := devfileContainer.CpuLimit
 	if cpuLimit == "" {
 		cpuLimit = constants.SidecarDefaultCpuLimit
+
+		// Set empty CPU limits when possible:
+		// 1. If there is no LimitRange in the namespace
+		// 2. CPU limits is not overridden
+		// See details at https://github.com/eclipse/che/issues/22198
+		limitRanges := &corev1.LimitRangeList{}
+		if err := k8sClient.List(context.TODO(), limitRanges, &client.ListOptions{Namespace: namespace}); err != nil {
+			return nil, err
+		} else if len(limitRanges.Items) == 0 {
+			cpuLimit = ""
+		}
 	}
 	if cpuLimit != "" {
 		cpuLimitQuantity, err := resource.ParseQuantity(cpuLimit)

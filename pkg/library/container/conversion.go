@@ -18,6 +18,7 @@ package container
 import (
 	"context"
 	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"

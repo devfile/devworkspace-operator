@@ -19,6 +19,7 @@ package projects
 import (
 	"context"
 	"fmt"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 

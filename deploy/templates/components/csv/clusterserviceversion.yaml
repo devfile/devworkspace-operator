@@ -103,7 +103,7 @@ spec:
       name: kube_rbac_proxy
     - image: quay.io/devfile/project-clone:next
       name: project_clone
-    - image: registry.access.redhat.com/ubi8-micro:8.4-81
+    - image: registry.access.redhat.com/ubi8-micro:8.8-1
       name: pvc_cleanup_job
     - image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
       name: async_storage_server

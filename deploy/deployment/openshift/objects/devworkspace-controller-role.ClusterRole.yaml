@@ -40,6 +40,12 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - limitranges
+  verbs:
+  - list
+- apiGroups:
+  - ""
+  resources:
   - pods/exec
   verbs:
   - create

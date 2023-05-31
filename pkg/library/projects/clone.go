@@ -107,8 +107,6 @@ func processResources(k8sClient client.Client, namespace string, resources *core
 
 	cpuLimit, hasCpuLimit := result.Limits[corev1.ResourceCPU]
 	if !hasCpuLimit {
-		result.Limits[corev1.ResourceCPU] = config.ProjectCloneContainerDefaultCpuLimit
-
 		// Set empty CPU limits when possible:
 		// 1. If there is no LimitRange in the namespace
 		// 2. CPU limits is not overridden
@@ -118,6 +116,8 @@ func processResources(k8sClient client.Client, namespace string, resources *core
 			return nil, err
 		} else if len(limitRanges.Items) == 0 {
 			delete(result.Limits, corev1.ResourceCPU)
+		} else {
+			result.Limits[corev1.ResourceCPU] = config.ProjectCloneContainerDefaultCpuLimit
 		}
 	} else if cpuLimit.IsZero() {
 		delete(result.Limits, corev1.ResourceCPU)

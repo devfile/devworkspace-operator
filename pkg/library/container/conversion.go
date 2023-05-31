@@ -110,8 +110,6 @@ func devfileResourcesToContainerResources(k8sClient client.Client, namespace str
 
 	cpuLimit := devfileContainer.CpuLimit
 	if cpuLimit == "" {
-		cpuLimit = constants.SidecarDefaultCpuLimit
-
 		// Set empty CPU limits when possible:
 		// 1. If there is no LimitRange in the namespace
 		// 2. CPU limits is not overridden
@@ -121,6 +119,8 @@ func devfileResourcesToContainerResources(k8sClient client.Client, namespace str
 			return nil, err
 		} else if len(limitRanges.Items) == 0 {
 			cpuLimit = ""
+		} else {
+			cpuLimit = constants.SidecarDefaultCpuLimit
 		}
 	}
 	if cpuLimit != "" {

@@ -27,9 +27,8 @@ import (
 )
 
 // By default, we do not set a CPU limit for the project clone container. However, to ensure the container
-// still works in clusters with limit ranges configured, this quantity is used when:
-// - a limitrange may set a default value for CPU limit
-// - the Operator's configuration does not specify a non-default value.
+// still works in clusters with limit ranges configured, this quantity is used when a limitrange may set a default value for CPU limit
+// and the Operator's configuration does not specify a non-default value.
 var ProjectCloneContainerDefaultCpuLimit = resource.MustParse("1000m")
 
 // defaultConfig represents the default configuration for the DevWorkspace Operator.

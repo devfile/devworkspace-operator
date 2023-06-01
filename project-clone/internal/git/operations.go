@@ -22,9 +22,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/go-git/go-git/v5"
 	gitConfig "github.com/go-git/go-git/v5/config"
-	"github.com/go-git/go-git/v5/plumbing"
 
-	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/shell"
 )
 
@@ -109,44 +107,25 @@ func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath st
 	} else {
 		defaultRemoteName = checkoutFrom.Remote
 	}
-	remote, err := repo.Remote(defaultRemoteName)
+
+	revision := checkoutFrom.Revision
+	refType, err := shell.GitResolveReference(projectPath, defaultRemoteName, revision)
 	if err != nil {
-		return fmt.Errorf("could not find remote %s: %s", defaultRemoteName, err)
+		return fmt.Errorf("failed to resolve git revision %s: %w", revision, err)
 	}
-
-	auth, err := internal.GetAuthForHost(remote.Config().URLs[0])
-	if err != nil {
-		log.Printf("Error reading credentials file: %s", err)
+	switch refType {
+	case shell.GitRefLocalBranch:
+		return checkoutLocalBranch(projectPath, revision, defaultRemoteName)
+	case shell.GitRefRemoteBranch:
+		return checkoutRemoteBranch(projectPath, revision, defaultRemoteName)
+	case shell.GitRefTag:
+		return checkoutTag(projectPath, revision)
+	case shell.GitRefHash:
+		return checkoutCommit(projectPath, revision)
+	default:
+		log.Printf("Could not find revision %s in repository, using default branch", checkoutFrom.Revision)
+		return nil
 	}
-	refs, err := remote.List(&git.ListOptions{
-		Auth: auth,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to read remote %s: %s", defaultRemoteName, err)
-	}
-
-	branch, err := repo.Branch(checkoutFrom.Revision)
-	if err == nil {
-		return checkoutLocalBranch(projectPath, branch.Name, defaultRemoteName)
-	}
-
-	for _, ref := range refs {
-		if ref.Name().Short() != checkoutFrom.Revision {
-			continue
-		}
-		if ref.Name().IsBranch() {
-			return checkoutRemoteBranch(projectPath, defaultRemoteName, ref)
-		} else if ref.Name().IsTag() {
-			return checkoutTag(projectPath, defaultRemoteName, ref)
-		}
-	}
-
-	log.Printf("No tag or branch named %s found on remote %s; attempting to resolve commit", checkoutFrom.Revision, defaultRemoteName)
-	if _, err := repo.ResolveRevision(plumbing.Revision(checkoutFrom.Revision)); err == nil {
-		return checkoutCommit(projectPath, checkoutFrom.Revision)
-	}
-	log.Printf("Could not find revision %s in repository, using default branch", checkoutFrom.Revision)
-	return nil
 }
 
 func checkoutLocalBranch(projectPath, branchName, remote string) error {
@@ -163,29 +142,21 @@ func checkoutLocalBranch(projectPath, branchName, remote string) error {
 	return nil
 }
 
-func checkoutRemoteBranch(projectPath string, remote string, branchRef *plumbing.Reference) error {
-	// Implement logic of `git checkout <remote-branch-name>`:
-	// 1. Create tracking info in .git/config to properly track remote branch
-	// 2. Create local branch to match name of remote branch with hash matching remote branch
-	// More info: see https://git-scm.com/docs/git-checkout section `git checkout [<branch>]`
-	branchName := branchRef.Name().Short()
-	log.Printf("Creating branch %s to track remote branch %s from %s", branchName, branchName, remote)
+func checkoutRemoteBranch(projectPath, branchName, remote string) error {
+	log.Printf("Checking out remote branch %s", branchName)
 
 	if err := shell.GitCheckoutBranch(projectPath, branchName, remote); err != nil {
 		return fmt.Errorf("failed to checkout branch %s: %s", branchName, err)
 	}
-
 	return nil
 }
 
-func checkoutTag(projectPath, remote string, tagRef *plumbing.Reference) error {
-	tagName := tagRef.Name().Short()
-	log.Printf("Checking out tag %s from remote %s", tagName, remote)
+func checkoutTag(projectPath, tagName string) error {
+	log.Printf("Checking out tag %s", tagName)
 
 	if err := shell.GitCheckoutRef(projectPath, tagName); err != nil {
 		return fmt.Errorf("failed to checkout tag %s: %s", tagName, err)
 	}
-
 	return nil
 }
 

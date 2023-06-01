@@ -13,8 +13,8 @@ spec:
       - name: devworkspace-operator
         git:
           checkoutFrom:
-            remote: amisevsk
-            revision: clone-projects-on-start
+            remote: origin
+            revision: 0.21.x
           remotes:
             origin: "https://github.com/devfile/devworkspace-operator.git"
             amisevsk: "https://github.com/amisevsk/devworkspace-operator.git"

@@ -22,6 +22,16 @@ import (
 	"os/exec"
 )
 
+type GitRefType int64
+
+const (
+	GitRefUnknown GitRefType = iota
+	GitRefLocalBranch
+	GitRefRemoteBranch
+	GitRefTag
+	GitRefHash
+)
+
 // GitCloneProject constructs a command-line string for cloning a git project, and delegates execution
 // to the os/exec package.
 func GitCloneProject(repoUrl, defaultRemoteName, destPath string) error {
@@ -139,9 +149,46 @@ func GitSetTrackingRemoteBranch(projectPath, branchName, remote string) error {
 	return executeCommand("git", "branch", "--set-upstream-to", fmt.Sprintf("%s/%s", remote, branchName), branchName)
 }
 
+// GitResolveReference determines if the provided revision is a (local) branch, tag, or hash for use when preparing a
+// cloned repository. This is done by using `git show-ref` for branches/tags and `git rev-parse` for checking whether
+// a commit hash exists. If the reference type cannot be determined, GitRefUnknown is returned.
+func GitResolveReference(projectPath, remote, revision string) (GitRefType, error) {
+	currDir, err := os.Getwd()
+	if err != nil {
+		return GitRefUnknown, fmt.Errorf("failed to get current working directory: %s", err)
+	}
+	defer func() {
+		if err := os.Chdir(currDir); err != nil {
+			log.Printf("failed to return to original working directory: %s", err)
+		}
+	}()
+	err = os.Chdir(projectPath)
+	if err != nil {
+		return GitRefUnknown, fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
+	}
+	if err := executeCommandSilent("git", "show-ref", "-q", "--verify", fmt.Sprintf("refs/heads/%s", revision)); err == nil {
+		return GitRefLocalBranch, nil
+	}
+	if err := executeCommandSilent("git", "show-ref", "-q", "--verify", fmt.Sprintf("refs/remotes/%s/%s", remote, revision)); err == nil {
+		return GitRefRemoteBranch, nil
+	}
+	if err := executeCommandSilent("git", "show-ref", "-q", "--verify", fmt.Sprintf("refs/tags/%s", revision)); err == nil {
+		return GitRefTag, nil
+	}
+	if err := executeCommandSilent("git", "rev-parse", "-q", "--verify", fmt.Sprintf("%s^{commit}", revision)); err == nil {
+		return GitRefHash, nil
+	}
+	return GitRefUnknown, nil
+}
+
 func executeCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
+	return cmd.Run()
+}
+
+func executeCommandSilent(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
 	return cmd.Run()
 }

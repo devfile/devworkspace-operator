@@ -58,7 +58,7 @@ unregister_catalogsource:
 	oc delete catalogsource devworkspace-operator-catalog -n openshift-marketplace --ignore-not-found
 
 _generate_olm_deployment_files:
-	deploy/generate-deployment.sh --generate-olm
+	build/scripts/generate_deployment.sh --generate-olm
 
 _check_operator_sdk_version:
 	if ! command -v operator-sdk &>/dev/null; then \

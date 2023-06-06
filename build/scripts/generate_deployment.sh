@@ -34,10 +34,15 @@ set -e
 SUBST_VARS='$NAMESPACE $DWO_IMG $RBAC_PROXY_IMAGE $PROJECT_CLONE_IMG $ROUTING_SUFFIX $DEFAULT_ROUTING $PULL_POLICY'
 
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
+DEPLOY_DIR="$SCRIPT_DIR/../../deploy/"
+if [ ! -d "$DEPLOY_DIR" ]; then
+  echo "Something went wrong: expected deploy directory $(readlink -f "$DEPLOY_DIR") does not exist"
+  exit 1
+fi
 
 function print_help() {
   cat << EOF
-Usage: generate-deployment.sh [ARGS]
+Usage: generate_deployment.sh [ARGS]
 Arguments:
   --use-defaults
       Output deployment files to deploy/deployment, using default
@@ -68,20 +73,20 @@ EOF
 
 USE_DEFAULT_ENV=false
 GEN_OLM=false
-OUTPUT_DIR="${SCRIPT_DIR%/}/current"
+OUTPUT_DIR="${DEPLOY_DIR%/}/current"
 SPLIT_YAMLS=false
 while [[ "$#" -gt 0 ]]; do
   case $1 in
       --use-defaults)
       USE_DEFAULT_ENV=true
       SPLIT_YAMLS=true
-      OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
+      OUTPUT_DIR="${DEPLOY_DIR%/}/deployment"
       ;;
       --generate-olm)
       GEN_OLM=true
       USE_DEFAULT_ENV=true
       SPLIT_YAMLS=true
-      OUTPUT_DIR="${SCRIPT_DIR%/}/deployment"
+      OUTPUT_DIR="${DEPLOY_DIR%/}/deployment"
       ;;
       --default-image)
       DEFAULT_DWO_IMG=$2
@@ -127,7 +132,7 @@ COMBINED_FILENAME="combined.yaml"
 OBJECTS_DIR="objects"
 
 KUSTOMIZE_VER=4.0.5
-KUSTOMIZE_DIR="${SCRIPT_DIR}/../bin/kustomize"
+KUSTOMIZE_DIR="${SCRIPT_DIR}/../../bin/kustomize"
 KUSTOMIZE=${KUSTOMIZE_DIR}/kustomize
 
 rm -rf "$KUBERNETES_DIR" "$OPENSHIFT_DIR"
@@ -173,7 +178,7 @@ fi
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
 export RBAC_PROXY_IMAGE="${KUBE_RBAC_PROXY_IMAGE:-gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1}"
-${KUSTOMIZE} build "${SCRIPT_DIR}/templates/cert-manager" \
+${KUSTOMIZE} build "${DEPLOY_DIR}/templates/cert-manager" \
   | envsubst "$SUBST_VARS" \
   > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 unset RBAC_PROXY_IMAGE
@@ -181,7 +186,7 @@ echo "File saved to ${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 
 echo "Generating config for OpenShift"
 export RBAC_PROXY_IMAGE="${OPENSHIFT_RBAC_PROXY_IMAGE:-gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1}"
-${KUSTOMIZE} build "${SCRIPT_DIR}/templates/service-ca" \
+${KUSTOMIZE} build "${DEPLOY_DIR}/templates/service-ca" \
   | envsubst "$SUBST_VARS" \
   > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 unset RBAC_PROXY_IMAGE
@@ -213,7 +218,7 @@ if $GEN_OLM; then
   # in the CSV causes scorecard failures. The easiest way to do this is by filtering it out *here*, as kustomize makes it
   # impossible to drop the serviceaccount without reworking the templates significantly (the manager.yaml deployment depends
   # on the SERVICE_ACCOUNT_NAME variable pulled from the serviceaccount)
-  ${KUSTOMIZE} build "${SCRIPT_DIR}/templates/olm" \
+  ${KUSTOMIZE} build "${DEPLOY_DIR}/templates/olm" \
     | envsubst "$SUBST_VARS" \
     | yq -Y 'select(.kind != "ServiceAccount")' \
     > "${OLM_DIR}/${COMBINED_FILENAME}"

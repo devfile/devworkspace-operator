@@ -125,11 +125,11 @@ generate_all: generate manifests generate_default_deployment generate_olm_bundle
 
 ### generate_deployment: Generates the files used for deployment from kustomize templates, using environment variables
 generate_deployment:
-	deploy/generate-deployment.sh
+	build/scripts/generate_deployment.sh
 
 ### generate_default_deployment: Generates the files used for deployment from kustomize templates with default values
 generate_default_deployment:
-	deploy/generate-deployment.sh --use-defaults
+	build/scripts/generate_deployment.sh --use-defaults
 
 ### manifests: Generates the manifests e.g. CRD, RBAC etc.
 manifests: controller-gen

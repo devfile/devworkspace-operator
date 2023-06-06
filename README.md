@@ -207,7 +207,7 @@ make disconnect-debug-webhook-server
 
 [devfile API](https://github.com/devfile/api) is the Kube-native API for cloud development workspaces specification and the core dependency of the devworkspace-operator that should be regularly updated to the latest version. In order to do the update:
 
-1. update `DEVWORKSPACE_API_VERSION` variable in the `Makefile` and `generate-deployment.sh`. The variable should correspond to the commit SHA from the [devfile API](https://github.com/devfile/api) repository
+1. update `DEVWORKSPACE_API_VERSION` variable in the `Makefile` and `build/scripts/generate_deployment.sh`. The variable should correspond to the commit SHA from the [devfile API](https://github.com/devfile/api) repository
 2. run the following scripts and the open pull request
 
 ```bash

@@ -72,6 +72,8 @@ jobs:
       DWO_BUNDLE_REPO: quay.io/devfile/devworkspace-operator-bundle
       DWO_BUNDLE_TAG: next
       DWO_INDEX_IMG: quay.io/devfile/devworkspace-operator-index:next
+      DWO_DIGEST_BUNDLE_TAG: next-digest
+      DWO_DIGEST_INDEX_IMG: quay.io/devfile/devworkspace-operator-index:next-digest
       OPM_VERSION: v1.19.5
       OPERATOR_SDK_VERSION: v1.8.0
     steps:
@@ -174,3 +176,16 @@ jobs:
             --index-image ${DWO_INDEX_IMG} \
             --container-tool docker \
             --force
+
+          ## Build digests bundle from next bundle and build digests catalog from that
+          mkdir -p ./olm-catalog/next-digest
+          ./build/scripts/build_digests_bundle.sh \
+            --bundle ${DWO_BUNDLE_REPO}:${DWO_BUNDLE_TAG} \
+            --render ./olm-catalog/next-digest/ \
+            --push "${DWO_BUNDLE_REPO}:${DWO_DIGEST_BUNDLE_TAG}" \
+            --container-tool docker \
+            --debug
+
+          cp ./olm-catalog/next/{channel,package}.yaml ./olm-catalog/next-digest
+          docker build . -t ${DWO_DIGEST_INDEX_IMG} -f build/index.next-digest.Dockerfile
+          docker push ${DWO_DIGEST_INDEX_IMG}

@@ -21,6 +21,7 @@ DWO_QUAY_REPO="${DWO_QUAY_REPO:-quay.io/devfile/devworkspace-controller}"
 PROJECT_CLONE_QUAY_REPO="${PROJECT_CLONE_QUAY_REPO:-quay.io/devfile/project-clone}"
 DWO_BUNDLE_QUAY_REPO="${DWO_BUNDLE_QUAY_REPO:-quay.io/devfile/devworkspace-operator-bundle}"
 DWO_INDEX_IMAGE="${DWO_INDEX_IMAGE:-quay.io/devfile/devworkspace-operator-index:release}"
+DWO_DIGEST_INDEX_IMAGE="${DWO_DIGEST_INDEX_IMAGE:-quay.io/devfile/devworkspace-operator-index:release-digest}"
 MAIN_BRANCH="main"
 VERBOSE=""
 TMP=""
@@ -281,6 +282,21 @@ release() {
 
   # Build container images for relase
   build_and_push_images "$VERSION"
+
+  $DRY_RUN build/scripts/build_digests_bundle.sh \
+    --bundle "${DWO_BUNDLE_QUAY_REPO}:${VERSION}" \
+    --render olm-catalog/release-digest/ \
+    --push "${DWO_BUNDLE_QUAY_REPO}:${VERSION}-digest" \
+    --container-tool docker \
+    --debug
+
+  opm validate olm-catalog/release-digest/
+  echo "[INFO] Building index image $DWO_DIGEST_INDEX_IMAGE"
+  docker build . -t "$DWO_DIGEST_INDEX_IMAGE" -f "build/index.release-digest.Dockerfile"
+  docker push "$DWO_DIGEST_INDEX_IMAGE" 2>&1
+
+  # Commit changes from rendering digests bundle
+  git_commit_and_push "[post-release] Add OLM digest bundle for $VERSION in $X_BRANCH" "ci-add-digest-bundle-$VERSION"
 
   # Update ${X_BRANCH} to the new rc version
   git checkout "${X_BRANCH}"

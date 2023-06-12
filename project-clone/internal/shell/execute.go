@@ -183,8 +183,8 @@ func GitResolveReference(projectPath, remote, revision string) (GitRefType, erro
 
 func executeCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
+	cmd.Stderr = log.Writer()
+	cmd.Stdout = log.Writer()
 	return cmd.Run()
 }
 

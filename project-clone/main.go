@@ -59,6 +59,7 @@ func main() {
 		log.Printf("Failed to read current DevWorkspace: %s", err)
 		os.Exit(1)
 	}
+	encounteredError := false
 	for _, project := range workspace.Projects {
 		log.Printf("Processing project %s", project.Name)
 		var err error
@@ -74,9 +75,11 @@ func main() {
 		}
 		if err != nil {
 			log.Printf("Encountered error while setting up project %s: %s", project.Name, err)
-			copyLogFileToProjectsRoot()
-			os.Exit(0)
+			encounteredError = true
 		}
+	}
+	if encounteredError {
+		copyLogFileToProjectsRoot()
 	}
 }
 

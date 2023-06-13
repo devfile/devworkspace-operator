@@ -175,6 +175,7 @@ jobs:
             --bundle-tag ${DWO_BUNDLE_TAG} \
             --index-image ${DWO_INDEX_IMG} \
             --container-tool docker \
+            --debug \
             --force
 
           ## Build digests bundle from next bundle and build digests catalog from that
@@ -189,3 +190,6 @@ jobs:
           cp ./olm-catalog/next/{channel,package}.yaml ./olm-catalog/next-digest
           docker build . -t ${DWO_DIGEST_INDEX_IMG} -f build/index.next-digest.Dockerfile
           docker push ${DWO_DIGEST_INDEX_IMG}
+
+          git restore "$OUTDIR"
+          git clean -fd "$OUTDIR"

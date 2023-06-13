@@ -137,7 +137,7 @@ info "Resolved image $NEW_BUNDLE_DIGEST from $PUSH_IMAGE"
 info "Rendering $NEW_BUNDLE_DIGEST to $RENDER"
 BUNDLE_YAML=$(opm render "$NEW_BUNDLE_DIGEST" --output yaml | sed '/---/d')
 BUNDLE_NAME="$(echo "$BUNDLE_YAML" | yq -r ".name")"
-BUNDLE_FILE="${RENDER}/${BUNDLE_NAME}.bundle.yaml"
+BUNDLE_FILE=$(readlink -m "${RENDER}/${BUNDLE_NAME}.bundle.yaml")
 if [ -f "$BUNDLE_FILE" ]; then
   error "Bundle file $BUNDLE_FILE already exists"
 fi

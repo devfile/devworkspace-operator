@@ -31,7 +31,7 @@ spec:
         - name: RELATED_IMAGE_kube_rbac_proxy
           value: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
         - name: RELATED_IMAGE_project_clone
-          value: quay.io/devfile/project-clone:next
+          value: quay.io/amisevsk/project-clone:dev
         - name: WATCH_NAMESPACE
           value: ""
         - name: POD_NAME

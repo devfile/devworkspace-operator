@@ -101,7 +101,7 @@ spec:
       name: devworkspace_webhook_server
     - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
       name: kube_rbac_proxy
-    - image: quay.io/devfile/project-clone:next
+    - image: quay.io/amisevsk/project-clone:dev
       name: project_clone
     - image: registry.access.redhat.com/ubi8-micro:8.8-1
       name: pvc_cleanup_job

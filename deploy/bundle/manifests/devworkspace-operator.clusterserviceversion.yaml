@@ -116,6 +116,13 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - limitranges
+          verbs:
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
           - pods/exec
           verbs:
           - create
@@ -342,7 +349,7 @@ spec:
                 - name: RELATED_IMAGE_kube_rbac_proxy
                   value: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
                 - name: RELATED_IMAGE_project_clone
-                  value: quay.io/devfile/project-clone:next
+                  value: quay.io/amisevsk/project-clone:dev
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -483,7 +490,7 @@ spec:
     name: devworkspace_webhook_server
   - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
     name: kube_rbac_proxy
-  - image: quay.io/devfile/project-clone:next
+  - image: quay.io/amisevsk/project-clone:dev
     name: project_clone
   - image: registry.access.redhat.com/ubi8-micro:8.8-1
     name: pvc_cleanup_job

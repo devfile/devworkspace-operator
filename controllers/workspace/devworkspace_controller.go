@@ -96,6 +96,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;create
 // +kubebuilder:rbac:groups=config.openshift.io,resources=proxies,verbs=get,resourceNames=cluster
 // +kubebuilder:rbac:groups=apps,resourceNames=devworkspace-controller,resources=deployments/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=limitranges,verbs=list;watch
 /////// Required permissions for workspace ServiceAccount
 // +kubebuilder:rbac:groups="",resources=pods/exec,verbs=create
 // +kubebuilder:rbac:groups=apps;extensions,resources=replicasets,verbs=get;list;watch
@@ -134,6 +135,12 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		reconcileStatus.addWarning(fmt.Sprint("Error applying external DevWorkspace-Operator configuration: ", err.Error()))
 		config = wkspConfig.GetGlobalConfig()
 	}
+	if updatedConfig, err := wkspConfig.UpdateConfigDefaultsForNamespace(rawWorkspace.Namespace, config, r.Client); err != nil {
+		reqLogger.Error(err, "Failed to update configuration defaults for namespace")
+	} else {
+		config = updatedConfig
+	}
+
 	configString := wkspConfig.GetCurrentConfigString(config)
 	workspace := &common.DevWorkspaceWithConfig{}
 	workspace.DevWorkspace = rawWorkspace

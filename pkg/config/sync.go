@@ -161,6 +161,24 @@ func ExperimentalFeaturesEnabled() bool {
 	return *internalConfig.EnableExperimentalFeatures
 }
 
+func UpdateConfigDefaultsForNamespace(namespace string, config *controller.OperatorConfiguration, client crclient.Client) (*controller.OperatorConfiguration, error) {
+	if !defaultProjectCloneCPULimit.Equal(config.Workspace.ProjectCloneConfig.Resources.Limits[corev1.ResourceCPU]) {
+		// Config defines non-default CPU limit, do not do anything
+		return config, nil
+	}
+	limitRanges := &corev1.LimitRangeList{}
+	if err := client.List(context.TODO(), limitRanges, crclient.InNamespace(namespace)); err != nil {
+		return nil, fmt.Errorf("failed to list limitranges in cluster: %w", err)
+	}
+	if len(limitRanges.Items) > 0 {
+		return config, nil
+	}
+
+	updatedConfig := config.DeepCopy()
+	delete(updatedConfig.Workspace.ProjectCloneConfig.Resources.Limits, corev1.ResourceCPU)
+	return updatedConfig, nil
+}
+
 func getClusterConfig(namespace string, client crclient.Client) (*controller.DevWorkspaceOperatorConfig, error) {
 	clusterConfig := &controller.DevWorkspaceOperatorConfig{}
 	if err := client.Get(context.Background(), types.NamespacedName{Name: OperatorConfigName, Namespace: namespace}, clusterConfig); err != nil {

@@ -191,5 +191,5 @@ jobs:
           docker build . -t ${DWO_DIGEST_INDEX_IMG} -f build/index.next-digest.Dockerfile
           docker push ${DWO_DIGEST_INDEX_IMG}
 
-          git restore "$OUTDIR"
-          git clean -fd "$OUTDIR"
+          git restore ./olm-catalog/
+          git clean -fd ./olm-catalog/

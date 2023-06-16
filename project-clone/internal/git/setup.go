@@ -58,7 +58,7 @@ func doInitialGitClone(project *dw.Project) error {
 	if err := SetupRemotes(repo, project, tmpClonePath); err != nil {
 		return fmt.Errorf("failed to set up remotes for project: %s", err)
 	}
-	if err := CheckoutReference(repo, project, tmpClonePath); err != nil {
+	if err := CheckoutReference(project, tmpClonePath); err != nil {
 		return fmt.Errorf("failed to checkout revision: %s", err)
 	}
 

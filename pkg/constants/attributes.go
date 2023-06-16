@@ -141,4 +141,8 @@ const (
 	//       container:
 	//         image: ...
 	ContainerOverridesAttribute = "container-overrides"
+
+	// StarterProjectAttribute is an attribute applied to the top-level attributes in a DevWorkspace to specify which
+	// starterProject in the workspace should be cloned.
+	StarterProjectAttribute = "controller.devfile.io/use-starter-project"
 )

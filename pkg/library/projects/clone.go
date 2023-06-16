@@ -42,7 +42,11 @@ type Options struct {
 }
 
 func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, options Options, proxyConfig *controllerv1alpha1.Proxy) (*corev1.Container, error) {
-	if len(workspace.Projects) == 0 {
+	starterProject, err := GetStarterProject(workspace)
+	if err != nil {
+		return nil, err
+	}
+	if len(workspace.Projects) == 0 && starterProject == nil {
 		return nil, nil
 	}
 	if workspace.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {
@@ -91,6 +95,24 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 		},
 		ImagePullPolicy: options.PullPolicy,
 	}, nil
+}
+
+func GetStarterProject(workspace *dw.DevWorkspaceTemplateSpec) (*dw.StarterProject, error) {
+	if !workspace.Attributes.Exists(constants.StarterProjectAttribute) {
+		return nil, nil
+	}
+	var err error
+	selectedStarterProject := workspace.Attributes.GetString(constants.StarterProjectAttribute, &err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %s attribute on workspace: %w", constants.StarterProjectAttribute, err)
+	}
+	for _, starterProject := range workspace.StarterProjects {
+		if starterProject.Name == selectedStarterProject {
+			starterProject := starterProject
+			return &starterProject, nil
+		}
+	}
+	return nil, fmt.Errorf("selected starter project %s not found in workspace starterProjects", selectedStarterProject)
 }
 
 func hasContainerComponents(workspace *dw.DevWorkspaceTemplateSpec) bool {

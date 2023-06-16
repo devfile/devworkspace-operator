@@ -93,7 +93,7 @@ func SetupRemotes(repo *git.Repository, project *dw.Project, projectPath string)
 }
 
 // CheckoutReference sets the current HEAD in repo to point at the revision and remote referenced by checkoutFrom
-func CheckoutReference(repo *git.Repository, project *dw.Project, projectPath string) error {
+func CheckoutReference(project *dw.Project, projectPath string) error {
 	checkoutFrom := project.Git.CheckoutFrom
 	if checkoutFrom == nil || checkoutFrom.Revision == "" {
 		return nil

@@ -18,7 +18,6 @@ package shell
 import (
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 )
 
@@ -47,135 +46,43 @@ func GitCloneProject(repoUrl, defaultRemoteName, destPath string) error {
 
 // GitResetProject runs `git reset --hard` in the project specified by projectPath
 func GitResetProject(projectPath string) error {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %s", err)
-	}
-	defer func() {
-		if err := os.Chdir(currDir); err != nil {
-			log.Printf("failed to return to original working directory: %s", err)
-		}
-	}()
-
-	err = os.Chdir(projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
-	}
-	return executeCommand("git", "reset", "--hard")
+	return executeCommand("git", "-C", projectPath, "reset", "--hard")
 }
 
 func GitFetchRemote(projectPath, remote string) error {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %s", err)
-	}
-	defer func() {
-		if err := os.Chdir(currDir); err != nil {
-			log.Printf("failed to return to original working directory: %s", err)
-		}
-	}()
-	err = os.Chdir(projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
-	}
-	return executeCommand("git", "fetch", remote)
+	return executeCommand("git", "-C", projectPath, "fetch", remote)
 }
 
 func GitCheckoutRef(projectPath, reference string) error {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %s", err)
-	}
-	defer func() {
-		if err := os.Chdir(currDir); err != nil {
-			log.Printf("failed to return to original working directory: %s", err)
-		}
-	}()
-	err = os.Chdir(projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
-	}
-	return executeCommand("git", "checkout", reference)
+	return executeCommand("git", "-C", projectPath, "checkout", reference)
 }
 
 func GitCheckoutBranch(projectPath, branchName, remote string) error {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %s", err)
-	}
-	defer func() {
-		if err := os.Chdir(currDir); err != nil {
-			log.Printf("failed to return to original working directory: %s", err)
-		}
-	}()
-	err = os.Chdir(projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
-	}
-	return executeCommand("git", "checkout", "-b", branchName, "--track", fmt.Sprintf("%s/%s", remote, branchName))
+	return executeCommand("git", "-C", projectPath, "checkout", "-b", branchName, "--track", fmt.Sprintf("%s/%s", remote, branchName))
 }
 
 func GitCheckoutBranchLocal(projectPath, branchName string) error {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %s", err)
-	}
-	defer func() {
-		if err := os.Chdir(currDir); err != nil {
-			log.Printf("failed to return to original working directory: %s", err)
-		}
-	}()
-	err = os.Chdir(projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
-	}
-	return executeCommand("git", "checkout", branchName)
+	return executeCommand("git", "-C", projectPath, "checkout", branchName)
 }
 
 func GitSetTrackingRemoteBranch(projectPath, branchName, remote string) error {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get current working directory: %s", err)
-	}
-	defer func() {
-		if err := os.Chdir(currDir); err != nil {
-			log.Printf("failed to return to original working directory: %s", err)
-		}
-	}()
-	err = os.Chdir(projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
-	}
-	return executeCommand("git", "branch", "--set-upstream-to", fmt.Sprintf("%s/%s", remote, branchName), branchName)
+	return executeCommand("git", "-C", projectPath, "branch", "--set-upstream-to", fmt.Sprintf("%s/%s", remote, branchName), branchName)
 }
 
 // GitResolveReference determines if the provided revision is a (local) branch, tag, or hash for use when preparing a
 // cloned repository. This is done by using `git show-ref` for branches/tags and `git rev-parse` for checking whether
 // a commit hash exists. If the reference type cannot be determined, GitRefUnknown is returned.
 func GitResolveReference(projectPath, remote, revision string) (GitRefType, error) {
-	currDir, err := os.Getwd()
-	if err != nil {
-		return GitRefUnknown, fmt.Errorf("failed to get current working directory: %s", err)
-	}
-	defer func() {
-		if err := os.Chdir(currDir); err != nil {
-			log.Printf("failed to return to original working directory: %s", err)
-		}
-	}()
-	err = os.Chdir(projectPath)
-	if err != nil {
-		return GitRefUnknown, fmt.Errorf("failed to move to project directory %s: %s", projectPath, err)
-	}
-	if err := executeCommandSilent("git", "show-ref", "-q", "--verify", fmt.Sprintf("refs/heads/%s", revision)); err == nil {
+	if err := executeCommandSilent("git", "-C", projectPath, "show-ref", "-q", "--verify", fmt.Sprintf("refs/heads/%s", revision)); err == nil {
 		return GitRefLocalBranch, nil
 	}
-	if err := executeCommandSilent("git", "show-ref", "-q", "--verify", fmt.Sprintf("refs/remotes/%s/%s", remote, revision)); err == nil {
+	if err := executeCommandSilent("git", "-C", projectPath, "show-ref", "-q", "--verify", fmt.Sprintf("refs/remotes/%s/%s", remote, revision)); err == nil {
 		return GitRefRemoteBranch, nil
 	}
-	if err := executeCommandSilent("git", "show-ref", "-q", "--verify", fmt.Sprintf("refs/tags/%s", revision)); err == nil {
+	if err := executeCommandSilent("git", "-C", projectPath, "show-ref", "-q", "--verify", fmt.Sprintf("refs/tags/%s", revision)); err == nil {
 		return GitRefTag, nil
 	}
-	if err := executeCommandSilent("git", "rev-parse", "-q", "--verify", fmt.Sprintf("%s^{commit}", revision)); err == nil {
+	if err := executeCommandSilent("git", "-C", projectPath, "rev-parse", "-q", "--verify", fmt.Sprintf("%s^{commit}", revision)); err == nil {
 		return GitRefHash, nil
 	}
 	return GitRefUnknown, nil

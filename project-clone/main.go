@@ -23,6 +23,7 @@ import (
 	"path"
 	"syscall"
 
+	projectslib "github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/git"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/zip"
@@ -59,8 +60,18 @@ func main() {
 		log.Printf("Failed to read current DevWorkspace: %s", err)
 		os.Exit(1)
 	}
+
+	projects := workspace.Projects
+
+	starterProject, err := projectslib.GetStarterProject(workspace)
+	if err != nil {
+		log.Printf("Encountered error while processing starterProjects: %s", err)
+	} else if starterProject != nil {
+		projects = append(projects, internal.StarterProjectToRegularProject(starterProject))
+	}
+
 	encounteredError := false
-	for _, project := range workspace.Projects {
+	for _, project := range projects {
 		log.Printf("Processing project %s", project.Name)
 		var err error
 		switch {

@@ -21,10 +21,13 @@ import (
 	"os"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/attributes"
 	"sigs.k8s.io/yaml"
 
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 )
+
+const ProjectSubDir = "subDir"
 
 // GetClonePath gets the correct clonePath for a project, given the semantics in devfile/api
 func GetClonePath(project *dw.Project) string {
@@ -54,4 +57,24 @@ func ReadFlattenedDevWorkspace() (*dw.DevWorkspaceTemplateSpec, error) {
 
 	log.Printf("Read DevWorkspace at %s", flattenedDevWorkspacePath)
 	return dwts, nil
+}
+
+// StarterProjectToRegularProject converts a starter project defined in a DevWorkspace to a standard Project for
+// easier handling
+func StarterProjectToRegularProject(starterProject *dw.StarterProject) dw.Project {
+	// Note: starter project does not allow for specifying clonePath
+	project := dw.Project{
+		Name:          starterProject.Name,
+		Attributes:    starterProject.Attributes,
+		ProjectSource: starterProject.ProjectSource,
+	}
+
+	if starterProject.SubDir != "" {
+		if project.Attributes == nil {
+			project.Attributes = attributes.Attributes{}
+		}
+		project.Attributes.PutString(ProjectSubDir, starterProject.SubDir)
+	}
+
+	return project
 }

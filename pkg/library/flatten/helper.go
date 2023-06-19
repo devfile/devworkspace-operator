@@ -75,50 +75,49 @@ func parseResourcesFromComponent(component *dw.Component) (*corev1.ResourceRequi
 	if component.Container == nil {
 		return nil, fmt.Errorf("attemped to parse resource requirements from a non-container component")
 	}
+
+	resources := &corev1.ResourceRequirements{
+		Limits:   corev1.ResourceList{},
+		Requests: corev1.ResourceList{},
+	}
+
 	memLimitStr := component.Container.MemoryLimit
-	if memLimitStr == "" {
-		memLimitStr = "0Mi"
+	if memLimitStr != "" {
+		memoryLimit, err := resource.ParseQuantity(memLimitStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse memory limit for container component %s: %w", component.Name, err)
+		}
+		resources.Limits[corev1.ResourceMemory] = memoryLimit
 	}
+
 	memRequestStr := component.Container.MemoryRequest
-	if memRequestStr == "" {
-		memRequestStr = "0Mi"
+	if memRequestStr != "" {
+		memoryRequest, err := resource.ParseQuantity(memRequestStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse memory request for container component %s: %w", component.Name, err)
+		}
+		resources.Requests[corev1.ResourceMemory] = memoryRequest
 	}
+
 	cpuLimitStr := component.Container.CpuLimit
-	if cpuLimitStr == "" {
-		cpuLimitStr = "0m"
+	if cpuLimitStr != "" {
+		cpuLimit, err := resource.ParseQuantity(cpuLimitStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse CPU limit for container component %s: %w", component.Name, err)
+		}
+		resources.Limits[corev1.ResourceCPU] = cpuLimit
 	}
+
 	cpuRequestStr := component.Container.CpuRequest
-	if cpuRequestStr == "" {
-		cpuRequestStr = "0m"
+	if cpuRequestStr != "" {
+		cpuRequest, err := resource.ParseQuantity(cpuRequestStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse CPU request for container component %s: %w", component.Name, err)
+		}
+		resources.Requests[corev1.ResourceCPU] = cpuRequest
 	}
 
-	memoryLimit, err := resource.ParseQuantity(memLimitStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse memory limit for container component %s: %w", component.Name, err)
-	}
-	memoryRequest, err := resource.ParseQuantity(memRequestStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse memory request for container component %s: %w", component.Name, err)
-	}
-	cpuLimit, err := resource.ParseQuantity(cpuLimitStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse CPU limit for container component %s: %w", component.Name, err)
-	}
-	cpuRequest, err := resource.ParseQuantity(cpuRequestStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse CPU request for container component %s: %w", component.Name, err)
-	}
-
-	return &corev1.ResourceRequirements{
-		Limits: corev1.ResourceList{
-			corev1.ResourceMemory: memoryLimit,
-			corev1.ResourceCPU:    cpuLimit,
-		},
-		Requests: corev1.ResourceList{
-			corev1.ResourceMemory: memoryRequest,
-			corev1.ResourceCPU:    cpuRequest,
-		},
-	}, nil
+	return resources, nil
 }
 
 func addResourceRequirements(resources *corev1.ResourceRequirements, toAdd *dw.Component) error {
@@ -127,21 +126,19 @@ func addResourceRequirements(resources *corev1.ResourceRequirements, toAdd *dw.C
 		return err
 	}
 
-	memoryLimit := resources.Limits[corev1.ResourceMemory]
-	memoryLimit.Add(componentResources.Limits[corev1.ResourceMemory])
-	resources.Limits[corev1.ResourceMemory] = memoryLimit
+	for resourceName, limit := range resources.Limits {
+		if componentLimit, ok := componentResources.Limits[resourceName]; ok {
+			limit.Add(componentLimit)
+			resources.Limits[resourceName] = limit
+		}
+	}
 
-	cpuLimit := resources.Limits[corev1.ResourceCPU]
-	cpuLimit.Add(componentResources.Limits[corev1.ResourceCPU])
-	resources.Limits[corev1.ResourceCPU] = cpuLimit
-
-	memoryRequest := resources.Requests[corev1.ResourceMemory]
-	memoryRequest.Add(componentResources.Requests[corev1.ResourceMemory])
-	resources.Requests[corev1.ResourceMemory] = memoryRequest
-
-	cpuRequest := resources.Requests[corev1.ResourceCPU]
-	cpuRequest.Add(componentResources.Requests[corev1.ResourceCPU])
-	resources.Requests[corev1.ResourceCPU] = cpuRequest
+	for resourceName, request := range resources.Requests {
+		if componentRequest, ok := componentResources.Requests[resourceName]; ok {
+			request.Add(componentRequest)
+			resources.Requests[resourceName] = request
+		}
+	}
 
 	return nil
 }

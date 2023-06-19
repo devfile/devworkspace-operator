@@ -1,0 +1,111 @@
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
+metadata:
+  name: starter-project-test
+  labels:
+    app.kubernetes.io/name: devworkspace-project-clone-tests
+    app.kubernetes.io/part-of: devworkspace-operator
+  annotations:
+    controller.devfile.io/debug-start: "true"
+spec:
+  started: true
+  routingClass: 'basic'
+  template:
+    attributes:
+      controller.devfile.io/storage-type: ephemeral
+      controller.devfile.io/use-starter-project: starter-project-1
+    variables:
+      test_runner_image: quay.io/devfile/project-clone:next # Requires git, bash
+      main_repo: https://github.com/devfile/devworkspace-operator.git
+      fork_repo: https://github.com/amisevsk/devworkspace-operator.git
+      checkout_branch: 0.21.x
+      project_subdir: project-clone
+      default_branch_name: main
+    projects:
+      - name: default-project-setup
+        git:
+          remotes:
+            main-origin: "{{main_repo}}"
+    starterProjects:
+      - name: starter-project-1
+        subDir: "{{project_subdir}}"
+        git:
+          checkoutFrom:
+            remote: origin
+            revision: "{{checkout_branch}}"
+          remotes:
+            origin: "{{main_repo}}"
+      - name: starter-project-2
+        git:
+          remotes:
+            origin: "{{fork_repo}}"
+    components:
+      - name: test-project-clone
+        container:
+          image: "{{test_runner_image}}"
+          memoryLimit: 512Mi
+          mountSources: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              set -e
+
+              fail() {
+                echo "[ERROR] $1"
+                echo "[ERROR] See project-clone logs: "
+                echo "[ERROR]    oc logs -n $DEVWORKSPACE_NAMESPACE deploy/$DEVWORKSPACE_ID -c project-clone"
+                exit 1
+              }
+
+              if [ -f "${PROJECTS_ROOT}/project-clone-errors.log" ]; then
+                echo "==== BEGIN PROJECT CLONE LOGS ===="
+                sed 's/^/    /g' "${PROJECTS_ROOT}/project-clone-errors.log"
+                echo "====  END PROJECT CLONE LOGS  ===="
+                echo -e "\n\n"
+              fi
+
+              for project_dir in "default-project-setup" "starter-project-1"; do
+                if [ ! -d "${PROJECTS_ROOT}/${project_dir}" ]; then
+                  fail "Project $project_dir not cloned successfully"
+                fi
+              done
+
+              echo "Testing default project set up"
+              cd "${PROJECTS_ROOT}/default-project-setup"
+              branch_name=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$branch_name" != "{{default_branch_name}}" ]; then
+                fail "Project does not have default branch checked out"
+              fi
+              tracking_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+              if [ "$tracking_branch" != "main-origin/{{default_branch_name}}" ]; then
+                fail "Default project's branch does not track remote branch"
+              fi
+              remote_url=$(git config remote.main-origin.url)
+              if [ "$remote_url" != "{{main_repo}}" ]; then
+                fail "Remote 'main-origin' not configured"
+              fi
+              echo "Project is on $branch_name, tracking $tracking_branch, with remotes configured"
+
+              echo "Testing starter project is set up"
+              cd "${PROJECTS_ROOT}/starter-project-1"
+              branch_name=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$branch_name" != "{{checkout_branch}}" ]; then
+                fail "Project does not have {{checkout_branch}} branch checked out"
+              fi
+              tracking_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+              if [ "$tracking_branch" != "origin/{{checkout_branch}}" ]; then
+                fail "Checked out branch does not track remote branch origin/{{checkout_branch}}"
+              fi
+              remote_url=$(git config remote.origin.url)
+              if [ "$remote_url" != "{{main_repo}}" ]; then
+                fail "Remote 'origin' not configured"
+              fi
+              sparse_checkout_dirs=$(git sparse-checkout list)
+              if [ "$sparse_checkout_dirs" != "{{project_subdir}}" ]; then
+                fail "Sparse checkout is not configured"
+              fi
+              echo "Project is on $branch_name, tracking $tracking_branch, with remotes and sparse checkout configured"
+
+              echo "[SUCCESS] Test succeeded. Sleeping indefinitely"
+              tail -f /dev/null

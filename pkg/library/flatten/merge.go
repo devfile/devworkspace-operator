@@ -24,6 +24,7 @@ import (
 	"github.com/devfile/api/v2/pkg/attributes"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
@@ -269,7 +270,7 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 	if mergeInto == nil || mergeInto.Container == nil {
 		return nil, fmt.Errorf("attempting to merge container contributions into a non-container component")
 	}
-	totalResources, err := parseResourcesFromComponent(mergeInto)
+	totalResources, err := dwResources.ParseResourcesFromComponent(mergeInto)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +294,7 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 			mergedComponentNames = append(mergedComponentNames, component.Attributes.GetString(constants.PluginSourceAttribute, nil))
 			delete(component.Attributes, constants.PluginSourceAttribute)
 		}
-		if err := addResourceRequirements(totalResources, &component); err != nil {
+		if err := dwResources.AddResourceRequirements(totalResources, &component); err != nil {
 			return nil, err
 		}
 		component.Container.MemoryLimit = ""
@@ -327,7 +328,7 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 	}
 
 	mergedComponent := mergedSpecContent.Components[0]
-	applyResourceRequirementsToComponent(mergedComponent.Container, totalResources)
+	dwResources.ApplyResourceRequirementsToComponent(mergedComponent.Container, totalResources)
 
 	if mergedComponent.Attributes == nil {
 		mergedComponent.Attributes = attributes.Attributes{}

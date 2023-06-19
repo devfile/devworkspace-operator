@@ -113,9 +113,6 @@ output:
             - name: checode
               path: /checode
           memoryLimit: 3Gi
-          memoryRequest: 256Mi
-          cpuLimit: 500m
-          cpuRequest: 30m
           env:
             - name: GOPATH
               value: /projects:/home/user/go

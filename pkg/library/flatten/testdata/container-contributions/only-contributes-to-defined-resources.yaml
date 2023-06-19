@@ -1,0 +1,62 @@
+name: "Only adds contributioon resources if they are defined in merge target"
+
+input:
+  devworkspace:
+    components:
+      - name: test-component
+        attributes:
+          controller.devfile.io/merge-contribution: true
+        container:
+          image: test-image
+          memoryLimit: 1Gi
+          # memoryRequest is not defined
+          # cpuLimit is not defined
+          cpuRequest: 15m
+      - name: first-contribution
+        plugin:
+          uri: first-contribution.yaml
+      - name: second-contribution
+        plugin:
+          uri: second-contribution.yaml
+
+  devfileResources:
+    first-contribution.yaml:
+      schemaVersion: 2.1.0
+      metadata:
+        name: first-contribution
+      components:
+      - name: first-contribution
+        attributes:
+          controller.devfile.io/container-contribution: true
+        container:
+          image: contribution-image
+          memoryLimit: 512Mi
+          memoryRequest: 1.5G
+          cpuLimit: "0.5"
+          # cpuRequest is not defined
+    second-contribution.yaml:
+      schemaVersion: 2.1.0
+      metadata:
+        name: second-contribution
+      components:
+      - name: second-contribution
+        attributes:
+          controller.devfile.io/container-contribution: true
+        container:
+          image: contribution-image
+          # memoryLimit is not defined
+          # memoryRequest is not defined
+          # cpuLimit is not defined
+          cpuRequest: 100m
+
+output:
+  devworkspace:
+    components:
+      - name: test-component
+        attributes:
+          controller.devfile.io/merged-contributions: "first-contribution,second-contribution"
+        container:
+          image: test-image
+          memoryLimit: 1536Mi # 1Gi + 512Mi (from first-contribution)
+          cpuRequest: 115m # 15m + 100m (from second-contributioon) 
+

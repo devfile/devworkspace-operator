@@ -17,12 +17,11 @@
 package projects
 
 import (
-	"fmt"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
+	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -72,7 +71,7 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 	cloneEnv = append(cloneEnv, env.GetProxyEnvVars(proxyConfig)...)
 	cloneEnv = append(cloneEnv, options.Env...)
 
-	resources, err := processResources(options.Resources)
+	resources, err := dwResources.ProcessResources(options.Resources)
 	if err != nil {
 		return nil, err
 	}
@@ -90,46 +89,6 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 		},
 		ImagePullPolicy: options.PullPolicy,
 	}, nil
-}
-
-// processResources checks that specified resources are valid (e.g. requests are less than limits) and supports
-// un-setting resources that have default values by interpreting zero as "do not set"
-func processResources(resources *corev1.ResourceRequirements) (*corev1.ResourceRequirements, error) {
-	result := resources.DeepCopy()
-
-	if result.Limits.Memory().IsZero() {
-		delete(result.Limits, corev1.ResourceMemory)
-	}
-	if result.Limits.Cpu().IsZero() {
-		delete(result.Limits, corev1.ResourceCPU)
-	}
-	if result.Requests.Memory().IsZero() {
-		delete(result.Requests, corev1.ResourceMemory)
-	}
-	if result.Requests.Cpu().IsZero() {
-		delete(result.Requests, corev1.ResourceCPU)
-	}
-
-	memLimit, hasMemLimit := result.Limits[corev1.ResourceMemory]
-	memRequest, hasMemRequest := result.Requests[corev1.ResourceMemory]
-	if hasMemLimit && hasMemRequest && memRequest.Cmp(memLimit) > 0 {
-		return result, fmt.Errorf("project clone memory request (%s) must be less than limit (%s)", memRequest.String(), memLimit.String())
-	}
-
-	cpuLimit, hasCPULimit := result.Limits[corev1.ResourceCPU]
-	cpuRequest, hasCPURequest := result.Requests[corev1.ResourceCPU]
-	if hasCPULimit && hasCPURequest && cpuRequest.Cmp(cpuLimit) > 0 {
-		return result, fmt.Errorf("project clone CPU request (%s) must be less than limit (%s)", cpuRequest.String(), cpuLimit.String())
-	}
-
-	if len(result.Limits) == 0 {
-		result.Limits = nil
-	}
-	if len(result.Requests) == 0 {
-		result.Requests = nil
-	}
-
-	return result, nil
 }
 
 func hasContainerComponents(workspace *dw.DevWorkspaceTemplateSpec) bool {

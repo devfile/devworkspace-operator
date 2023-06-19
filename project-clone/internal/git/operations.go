@@ -23,6 +23,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	gitConfig "github.com/go-git/go-git/v5/config"
 
+	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/shell"
 )
 
@@ -62,13 +63,38 @@ func CloneProject(project *dw.Project, projectPath string) error {
 		}
 	}
 
-	// Delegate to standard git binary because git.PlainClone takes a lot of memory for large repos
-	err := shell.GitCloneProject(defaultRemoteURL, defaultRemoteName, projectPath)
-	if err != nil {
-		return fmt.Errorf("failed to git clone from %s: %s", defaultRemoteURL, err)
+	if project.Attributes.Exists(internal.ProjectSubDir) {
+		if err := shell.GitSparseCloneProject(defaultRemoteURL, defaultRemoteName, projectPath); err != nil {
+			return fmt.Errorf("failed to sparsely git clone from %s: %s", defaultRemoteURL, err)
+		}
+	} else {
+		// Delegate to standard git binary because git.PlainClone takes a lot of memory for large repos
+		err := shell.GitCloneProject(defaultRemoteURL, defaultRemoteName, projectPath)
+		if err != nil {
+			return fmt.Errorf("failed to git clone from %s: %s", defaultRemoteURL, err)
+		}
+
 	}
 
 	log.Printf("Cloned project %s to %s", project.Name, projectPath)
+	return nil
+}
+
+func SetupSparseCheckout(project *dw.Project, projectPath string) error {
+	log.Printf("Setting up sparse checkout for project %s", project.Name)
+
+	var err error
+	subdir := project.Attributes.GetString(internal.ProjectSubDir, &err)
+	if err != nil {
+		return fmt.Errorf("failed to read %s attribute on project %s", internal.ProjectSubDir, project.Name)
+	}
+	if subdir == "" {
+		return nil
+	}
+	if err := shell.GitSetupSparseCheckout(projectPath, subdir); err != nil {
+		return fmt.Errorf("error running sparse-checkout set: %w", err)
+	}
+
 	return nil
 }
 

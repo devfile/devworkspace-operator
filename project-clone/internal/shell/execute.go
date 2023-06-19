@@ -44,9 +44,20 @@ func GitCloneProject(repoUrl, defaultRemoteName, destPath string) error {
 	return executeCommand("git", args...)
 }
 
-// GitResetProject runs `git reset --hard` in the project specified by projectPath
-func GitResetProject(projectPath string) error {
-	return executeCommand("git", "-C", projectPath, "reset", "--hard")
+func GitSparseCloneProject(repoUrl, defaultRemoteName, destPath string) error {
+	args := []string{
+		"clone",
+		"--sparse",
+		repoUrl,
+		"--origin", defaultRemoteName,
+		"--",
+		destPath,
+	}
+	return executeCommand("git", args...)
+}
+
+func GitSetupSparseCheckout(projectPath string, sparseCheckoutDir string) error {
+	return executeCommand("git", "-C", projectPath, "sparse-checkout", "set", sparseCheckoutDir)
 }
 
 func GitFetchRemote(projectPath, remote string) error {

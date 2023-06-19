@@ -49,15 +49,24 @@ func doInitialGitClone(project *dw.Project) error {
 	if err != nil {
 		return fmt.Errorf("failed to clone project: %s", err)
 	}
+
+	if project.Attributes.Exists(internal.ProjectSubDir) {
+		if err := SetupSparseCheckout(project, tmpClonePath); err != nil {
+			return fmt.Errorf("failed to set up sparse checkout on project %s: %w", project.Name, err)
+		}
+	}
+
 	repo, err := internal.OpenRepo(tmpClonePath)
 	if err != nil {
 		return fmt.Errorf("failed to open existing project in filesystem: %s", err)
 	} else if repo == nil {
 		return fmt.Errorf("unexpected error while setting up remotes for project: git repository not present")
 	}
+
 	if err := SetupRemotes(repo, project, tmpClonePath); err != nil {
 		return fmt.Errorf("failed to set up remotes for project: %s", err)
 	}
+
 	if err := CheckoutReference(project, tmpClonePath); err != nil {
 		return fmt.Errorf("failed to checkout revision: %s", err)
 	}

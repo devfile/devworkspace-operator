@@ -19,7 +19,7 @@ spec:
       fork_repo: https://github.com/amisevsk/devworkspace-operator.git
       checkout_branch: 0.21.x
       checkout_tag: v0.21.0
-      checkout_hash: e17b2754
+      checkout_hash: d3897be0
       default_branch_name: main
     projects:
       - name: default-project-setup
@@ -137,7 +137,7 @@ spec:
               echo "Testing hash checkout project set up"
               cd "${PROJECTS_ROOT}/test-checkout-hash"
               commit_hash=$(git rev-parse HEAD)
-              if [[ "$commit_hash" == "{{checkout_hash}}"* ]]; then
+              if [[ "$commit_hash" != "{{checkout_hash}}"* ]]; then
                 fail "Current HEAD is not at {{checkout_hash}}"
               fi
               remote_url=$(git config remote.origin.url)

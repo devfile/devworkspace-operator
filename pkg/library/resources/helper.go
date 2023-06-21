@@ -27,6 +27,7 @@ import (
 // Takes a component and returns the resource requests and limits that it defines.
 // If a resource request or limit is not defined within the component, it will
 // not be populated in the corresponding corev1.ResourceList map.
+//
 // Returns an error if  a non-container component is passed to the function, or if an error
 // occurs while parsing a resource limit or request.
 func ParseResourcesFromComponent(component *dw.Component) (*corev1.ResourceRequirements, error) {
@@ -78,34 +79,30 @@ func ParseResourcesFromComponent(component *dw.Component) (*corev1.ResourceRequi
 	return resources, nil
 }
 
-// Adds the resource limits and requests that are set in the component "toAdd" to "resources".
+// Adds the resource limits and requests that are set in the component toAdd to resources.
 // Returns an error if the resources defined in toAdd could not be parsed.
 //
-// Note: only resources that are set in the function argument "resources" will be summed
-// with the resources set in "toAdd".
-// For example, if "resources" does not set a CPU limit but "toAdd" does set a CPU limit,
+// Note: only resources that are set in the argument resources will be summed with the resources set in toAdd.
+// For example, if resources does not set a CPU limit but toAdd does set a CPU limit,
 // the CPU limit of "resources" will remain unset.
-func AddResourceRequirements(resources *corev1.ResourceRequirements, toAdd *dw.Component) error {
-	componentResources, err := ParseResourcesFromComponent(toAdd)
-	if err != nil {
-		return err
-	}
+func AddResourceRequirements(resources, toAdd *corev1.ResourceRequirements) *corev1.ResourceRequirements {
+	result := resources.DeepCopy()
 
 	for resourceName, limit := range resources.Limits {
-		if componentLimit, ok := componentResources.Limits[resourceName]; ok {
+		if componentLimit, ok := toAdd.Limits[resourceName]; ok {
 			limit.Add(componentLimit)
-			resources.Limits[resourceName] = limit
+			result.Limits[resourceName] = limit
 		}
 	}
 
 	for resourceName, request := range resources.Requests {
-		if componentRequest, ok := componentResources.Requests[resourceName]; ok {
+		if componentRequest, ok := toAdd.Requests[resourceName]; ok {
 			request.Add(componentRequest)
-			resources.Requests[resourceName] = request
+			result.Requests[resourceName] = request
 		}
 	}
 
-	return nil
+	return result
 }
 
 // Applies the given resource limits and requirements that are non-zero to the container component.
@@ -133,9 +130,10 @@ func ApplyResourceRequirementsToComponent(container *dw.ContainerComponent, reso
 	}
 }
 
-// ProcessResources checks that specified resources are valid (e.g. requests are less than limits) and supports
-// un-setting resources that have default values by interpreting zero as "do not set"
-func ProcessResources(resources *corev1.ResourceRequirements) (*corev1.ResourceRequirements, error) {
+// FilterResources removes zero values from a corev1.ResourceRequirements in order to allow explicitly defining
+// "do not set a limit/request" for a resource. Any request/limit that has a zero value is removed from the returned
+// corev1.ResourceRequirements.
+func FilterResources(resources *corev1.ResourceRequirements) *corev1.ResourceRequirements {
 	result := resources.DeepCopy()
 
 	if result.Limits.Memory().IsZero() {
@@ -151,18 +149,6 @@ func ProcessResources(resources *corev1.ResourceRequirements) (*corev1.ResourceR
 		delete(result.Requests, corev1.ResourceCPU)
 	}
 
-	memLimit, hasMemLimit := result.Limits[corev1.ResourceMemory]
-	memRequest, hasMemRequest := result.Requests[corev1.ResourceMemory]
-	if hasMemLimit && hasMemRequest && memRequest.Cmp(memLimit) > 0 {
-		return result, fmt.Errorf("project clone memory request (%s) must be less than limit (%s)", memRequest.String(), memLimit.String())
-	}
-
-	cpuLimit, hasCPULimit := result.Limits[corev1.ResourceCPU]
-	cpuRequest, hasCPURequest := result.Requests[corev1.ResourceCPU]
-	if hasCPULimit && hasCPURequest && cpuRequest.Cmp(cpuLimit) > 0 {
-		return result, fmt.Errorf("project clone CPU request (%s) must be less than limit (%s)", cpuRequest.String(), cpuLimit.String())
-	}
-
 	if len(result.Limits) == 0 {
 		result.Limits = nil
 	}
@@ -170,5 +156,22 @@ func ProcessResources(resources *corev1.ResourceRequirements) (*corev1.ResourceR
 		result.Requests = nil
 	}
 
-	return result, nil
+	return result
+}
+
+// ValidateResources validates that a corev1.ResourceRequirements is valid, i.e. that (if specified), limits are greater than requests
+func ValidateResources(resources *corev1.ResourceRequirements) error {
+	memLimit, hasMemLimit := resources.Limits[corev1.ResourceMemory]
+	memRequest, hasMemRequest := resources.Requests[corev1.ResourceMemory]
+	if hasMemLimit && hasMemRequest && memRequest.Cmp(memLimit) > 0 {
+		return fmt.Errorf("memory request (%s) must be less than limit (%s)", memRequest.String(), memLimit.String())
+	}
+
+	cpuLimit, hasCPULimit := resources.Limits[corev1.ResourceCPU]
+	cpuRequest, hasCPURequest := resources.Requests[corev1.ResourceCPU]
+	if hasCPULimit && hasCPURequest && cpuRequest.Cmp(cpuLimit) > 0 {
+		return fmt.Errorf("CPU request (%s) must be less than limit (%s)", cpuRequest.String(), cpuLimit.String())
+	}
+
+	return nil
 }

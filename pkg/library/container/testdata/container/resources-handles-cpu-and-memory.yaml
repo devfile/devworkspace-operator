@@ -40,8 +40,8 @@ output:
             value: "testing-container-2"
         resources:
           requests:
-            memory: "64M"
+            memory: "64Mi"
             # cpu: "" default behaviour - do not provide any value
           limits:
-            memory: "128M"
+            memory: "128Mi"
             # cpu: "" default behaviour - do not provide any value

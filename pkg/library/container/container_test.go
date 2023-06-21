@@ -23,6 +23,8 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"sigs.k8s.io/yaml"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -40,6 +42,15 @@ type testOutput struct {
 }
 
 const testImagePullPolicy = "Always"
+
+var defaultResources = &corev1.ResourceRequirements{
+	Limits: corev1.ResourceList{
+		corev1.ResourceMemory: resource.MustParse("128Mi"),
+	},
+	Requests: corev1.ResourceList{
+		corev1.ResourceMemory: resource.MustParse("64Mi"),
+	},
+}
 
 func loadAllTestCasesOrPanic(t *testing.T, fromDir string) []testCase {
 	files, err := os.ReadDir(fromDir)
@@ -76,7 +87,7 @@ func TestGetKubeContainersFromDevfile(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.True(t, len(tt.Input.Components) > 0, "Input defines no components")
-			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input, nil, testImagePullPolicy)
+			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input, nil, testImagePullPolicy, defaultResources)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

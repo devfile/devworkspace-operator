@@ -20,22 +20,24 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
-
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-
+	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func convertContainerToK8s(devfileComponent dw.Component, securityContext *corev1.SecurityContext, pullPolicy string) (*corev1.Container, error) {
+func convertContainerToK8s(devfileComponent dw.Component, securityContext *corev1.SecurityContext, pullPolicy string, defaultResources *corev1.ResourceRequirements) (*corev1.Container, error) {
 	if devfileComponent.Container == nil {
 		return nil, fmt.Errorf("cannot get k8s container from non-container component")
 	}
 	devfileContainer := devfileComponent.Container
 
-	containerResources, err := devfileResourcesToContainerResources(devfileContainer)
+	containerResources, err := dwResources.ParseResourcesFromComponent(&devfileComponent)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get resources for container %s: %s", devfileComponent.Name, err)
+	}
+	containerResources = dwResources.ApplyDefaults(containerResources, defaultResources)
+	if err := dwResources.ValidateResources(containerResources); err != nil {
+		return nil, fmt.Errorf("container resources are invalid for component %s: %w", devfileComponent.Name, err)
 	}
 
 	container := &corev1.Container{
@@ -70,77 +72,6 @@ func devfileEndpointsToContainerPorts(endpoints []dw.Endpoint) []corev1.Containe
 		exposedPorts[endpoint.TargetPort] = true
 	}
 	return containerPorts
-}
-
-func devfileResourcesToContainerResources(devfileContainer *dw.ContainerComponent) (*corev1.ResourceRequirements, error) {
-	limits := corev1.ResourceList{}
-	requests := corev1.ResourceList{}
-
-	memLimit := devfileContainer.MemoryLimit
-	if memLimit == "" {
-		memLimit = constants.SidecarDefaultMemoryLimit
-	}
-	memLimitQuantity, err := resource.ParseQuantity(memLimit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse memory limit %q: %w", memLimit, err)
-	}
-	limits[corev1.ResourceMemory] = memLimitQuantity
-
-	memReq := devfileContainer.MemoryRequest
-	if memReq == "" {
-		memReq = constants.SidecarDefaultMemoryRequest
-	}
-	memReqQuantity, err := resource.ParseQuantity(memReq)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse memory request %q: %w", memReq, err)
-	}
-	requests[corev1.ResourceMemory] = memReqQuantity
-
-	if memLimitQuantity.Cmp(memReqQuantity) < 0 {
-		if devfileContainer.MemoryRequest != "" {
-			return nil, fmt.Errorf("container resources are invalid: memory limit (%s) is less than request (%s)", memLimit, devfileContainer.MemoryRequest)
-		} else {
-			// No value was supplied; the issue is that the default value is greater than supplied limit. To resolve this, reuse limit as request
-			requests[corev1.ResourceMemory] = memLimitQuantity
-		}
-	}
-
-	cpuLimit := devfileContainer.CpuLimit
-	if cpuLimit == "" {
-		cpuLimit = constants.SidecarDefaultCpuLimit
-	}
-	if cpuLimit != "" {
-		cpuLimitQuantity, err := resource.ParseQuantity(cpuLimit)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse cpu limit %q: %w", cpuLimit, err)
-		}
-		limits[corev1.ResourceCPU] = cpuLimitQuantity
-	}
-
-	cpuReq := devfileContainer.CpuRequest
-	if cpuReq == "" {
-		cpuReq = constants.SidecarDefaultCpuRequest
-	}
-	if cpuReq != "" {
-		cpuReqQuantity, err := resource.ParseQuantity(cpuReq)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse cpu request %q: %w", cpuReq, err)
-		}
-		requests[corev1.ResourceCPU] = cpuReqQuantity
-	}
-
-	if parsedCPULimit, ok := limits[corev1.ResourceCPU]; ok {
-		if parsedCPUReq, ok := requests[corev1.ResourceCPU]; ok {
-			if parsedCPULimit.Cmp(parsedCPUReq) < 0 {
-				return nil, fmt.Errorf("container resources are invalid: CPU limit (%s) is less than request (%s)", cpuLimit, cpuReq)
-			}
-		}
-	}
-
-	return &corev1.ResourceRequirements{
-		Limits:   limits,
-		Requests: requests,
-	}, nil
 }
 
 func devfileVolumeMountsToContainerVolumeMounts(devfileVolumeMounts []dw.VolumeMount) []corev1.VolumeMount {

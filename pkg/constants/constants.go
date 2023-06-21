@@ -43,12 +43,6 @@ const (
 
 	ServiceAccount = "devworkspace"
 
-	SidecarDefaultMemoryLimit   = "128M"
-	SidecarDefaultMemoryRequest = "64M"
-
-	SidecarDefaultCpuLimit   = "" // do not provide any value
-	SidecarDefaultCpuRequest = "" // do not provide any value
-
 	PVCStorageSize = "10Gi"
 
 	// DevWorkspaceIDLoggerKey is the key used to log workspace ID in the reconcile

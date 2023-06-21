@@ -284,7 +284,7 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.ServiceAccount.ServiceAccountName = from.Workspace.ServiceAccount.ServiceAccountName
 			}
 			if from.Workspace.ServiceAccount.DisableCreation != nil {
-				to.Workspace.ServiceAccount.DisableCreation = pointer.BoolPtr(*from.Workspace.ServiceAccount.DisableCreation)
+				to.Workspace.ServiceAccount.DisableCreation = pointer.Bool(*from.Workspace.ServiceAccount.DisableCreation)
 			}
 			if from.Workspace.ServiceAccount.ServiceAccountTokens != nil {
 				to.Workspace.ServiceAccount.ServiceAccountTokens = from.Workspace.ServiceAccount.ServiceAccountTokens
@@ -364,6 +364,12 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			if from.Workspace.ProjectCloneConfig.Env != nil {
 				to.Workspace.ProjectCloneConfig.Env = from.Workspace.ProjectCloneConfig.Env
 			}
+		}
+		if from.Workspace.DefaultContainerResources != nil {
+			if to.Workspace.DefaultContainerResources == nil {
+				to.Workspace.DefaultContainerResources = &corev1.ResourceRequirements{}
+			}
+			to.Workspace.DefaultContainerResources = mergeResources(from.Workspace.DefaultContainerResources, to.Workspace.DefaultContainerResources)
 		}
 	}
 }
@@ -538,6 +544,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			if !reflect.DeepEqual(workspace.ProjectCloneConfig.Resources, defaultConfig.Workspace.ProjectCloneConfig.Resources) {
 				config = append(config, "workspace.projectClone.resources is set")
 			}
+		}
+		if !reflect.DeepEqual(workspace.DefaultContainerResources, defaultConfig.Workspace.DefaultContainerResources) {
+			config = append(config, "workspace.defaultContainerResources is set")
 		}
 	}
 	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {

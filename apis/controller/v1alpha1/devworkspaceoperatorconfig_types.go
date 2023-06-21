@@ -138,6 +138,11 @@ type WorkspaceConfig struct {
 	// SchedulerName is the name of the pod scheduler for DevWorkspace pods.
 	// If not specified, the pod scheduler is set to the default scheduler on the cluster.
 	SchedulerName string `json:"schedulerName,omitempty"`
+	// DefaultContainerResources defines the resource requirements (memory/cpu limit/request) used for
+	// container components that do not define limits or requests. In order to not set a field by default,
+	// the value "0" should be used. By default, the memory limit is 128Mi and the memory request is 64Mi.
+	// No CPU limit or request is added by default.
+	DefaultContainerResources *corev1.ResourceRequirements `json:"defaultContainerResources,omitempty"`
 }
 
 type PersistentHomeConfig struct {

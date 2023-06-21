@@ -256,10 +256,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	flattenHelpers := flatten.ResolverTools{
-		WorkspaceNamespace: workspace.Namespace,
-		Context:            ctx,
-		K8sClient:          r.Client,
-		HttpClient:         httpClient,
+		WorkspaceNamespace:          workspace.Namespace,
+		Context:                     ctx,
+		K8sClient:                   r.Client,
+		HttpClient:                  httpClient,
+		DefaultResourceRequirements: workspace.Config.Workspace.DefaultContainerResources,
 	}
 
 	if wsDefaults.NeedsDefaultTemplate(workspace) {

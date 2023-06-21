@@ -25,6 +25,7 @@ import (
 	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
@@ -173,7 +174,7 @@ func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec)
 	return hasContribution && hasTarget, nil
 }
 
-func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) error {
+func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec, defaultResources *corev1.ResourceRequirements) error {
 	var contributions []dw.Component
 	contributionNameSet := map[string]bool{}
 	for _, component := range flattenedSpec.Components {
@@ -199,7 +200,7 @@ func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec) err
 			// drop contributions from updated list as they will be merged
 			continue
 		} else if component.Name == targetComponentName && !mergeDone {
-			mergedComponent, err := mergeContributionsInto(&component, contributions)
+			mergedComponent, err := mergeContributionsInto(&component, contributions, defaultResources)
 			if err != nil {
 				return fmt.Errorf("failed to merge container contributions: %w", err)
 			}
@@ -266,7 +267,7 @@ func findMergeTarget(flattenedSpec *dw.DevWorkspaceTemplateSpec) (mergeTargetCom
 	return "", fmt.Errorf("couldn't find any merge contribution target component")
 }
 
-func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Component) (*dw.Component, error) {
+func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Component, defaultResources *corev1.ResourceRequirements) (*dw.Component, error) {
 	if mergeInto == nil || mergeInto.Container == nil {
 		return nil, fmt.Errorf("attempting to merge container contributions into a non-container component")
 	}
@@ -274,6 +275,7 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 	if err != nil {
 		return nil, err
 	}
+	totalResources = dwResources.ApplyDefaults(totalResources, defaultResources)
 
 	// We don't want to reimplement the complexity of a strategic merge here, so we set up a fake plugin override
 	// and use devfile/api overriding functionality. For specific fields that have to be handled specially (memory

@@ -25,6 +25,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/api/v2/pkg/utils/overriding"
 	"github.com/devfile/api/v2/pkg/validation/variables"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,10 +45,11 @@ const (
 )
 
 type ResolverTools struct {
-	WorkspaceNamespace string
-	Context            context.Context
-	K8sClient          client.Client
-	HttpClient         network.HTTPGetter
+	WorkspaceNamespace          string
+	Context                     context.Context
+	K8sClient                   client.Client
+	HttpClient                  network.HTTPGetter
+	DefaultResourceRequirements *corev1.ResourceRequirements
 }
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
@@ -65,7 +67,7 @@ func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, contributions [
 	}
 
 	if needsMerge, err := needsContainerContributionMerge(resolvedDW); needsMerge {
-		if err := mergeContainerContributions(resolvedDW); err != nil {
+		if err := mergeContainerContributions(resolvedDW, tooling.DefaultResourceRequirements); err != nil {
 			return nil, nil, err
 		}
 	} else if err != nil {

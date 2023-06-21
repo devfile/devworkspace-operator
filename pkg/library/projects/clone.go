@@ -17,6 +17,8 @@
 package projects
 
 import (
+	"fmt"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
@@ -71,9 +73,9 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 	cloneEnv = append(cloneEnv, env.GetProxyEnvVars(proxyConfig)...)
 	cloneEnv = append(cloneEnv, options.Env...)
 
-	resources, err := dwResources.ProcessResources(options.Resources)
-	if err != nil {
-		return nil, err
+	resources := dwResources.FilterResources(options.Resources)
+	if err := dwResources.ValidateResources(resources); err != nil {
+		return nil, fmt.Errorf("invalid resources for project clone container: %w", err)
 	}
 
 	return &corev1.Container{

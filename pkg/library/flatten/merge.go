@@ -294,9 +294,12 @@ func mergeContributionsInto(mergeInto *dw.Component, contributions []dw.Componen
 			mergedComponentNames = append(mergedComponentNames, component.Attributes.GetString(constants.PluginSourceAttribute, nil))
 			delete(component.Attributes, constants.PluginSourceAttribute)
 		}
-		if err := dwResources.AddResourceRequirements(totalResources, &component); err != nil {
+		componentResources, err := dwResources.ParseResourcesFromComponent(&component)
+		if err != nil {
 			return nil, err
 		}
+		totalResources = dwResources.AddResourceRequirements(totalResources, componentResources)
+
 		component.Container.MemoryLimit = ""
 		component.Container.MemoryRequest = ""
 		component.Container.CpuLimit = ""

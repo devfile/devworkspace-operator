@@ -79,11 +79,11 @@ func ParseResourcesFromComponent(component *dw.Component) (*corev1.ResourceRequi
 	return resources, nil
 }
 
-// Adds the resource limits and requests that are set in the component toAdd to resources.
-// Returns an error if the resources defined in toAdd could not be parsed.
+// Adds the resource limits and requests that are set in the component "toAdd" to "resources".
+// Returns an error if the "resources" defined in "toAdd" could not be parsed.
 //
-// Note: only resources that are set in the argument resources will be summed with the resources set in toAdd.
-// For example, if resources does not set a CPU limit but toAdd does set a CPU limit,
+// Note: only resources that are set in the argument "resources" will be summed with the resources set in "toAdd".
+// For example, if "resources" does not set a CPU limit but "toAdd" does set a CPU limit,
 // the CPU limit of "resources" will remain unset.
 func AddResourceRequirements(resources, toAdd *corev1.ResourceRequirements) *corev1.ResourceRequirements {
 	result := resources.DeepCopy()
@@ -159,18 +159,79 @@ func FilterResources(resources *corev1.ResourceRequirements) *corev1.ResourceReq
 	return result
 }
 
-// ValidateResources validates that a corev1.ResourceRequirements is valid, i.e. that (if specified), limits are greater than requests
+func ApplyDefaults(resources, defaults *corev1.ResourceRequirements) *corev1.ResourceRequirements {
+	result := resources.DeepCopy()
+	if defaults == nil {
+		return result
+	}
+
+	// Set default limits if not present
+	for resource, quantity := range defaults.Limits {
+		if result.Limits == nil {
+			result.Limits = corev1.ResourceList{}
+		}
+		if _, ok := result.Limits[resource]; !ok && !quantity.IsZero() {
+			result.Limits[resource] = quantity
+		}
+	}
+	// Set default requests if not present
+	for resource, quantity := range defaults.Requests {
+		if result.Requests == nil {
+			result.Requests = corev1.ResourceList{}
+		}
+		if _, ok := result.Requests[resource]; !ok && !quantity.IsZero() {
+			result.Requests[resource] = quantity
+		}
+	}
+
+	// Edge cases: we don't want the defaults we apply to result in an invalid resources (if e.g. the default
+	// request is greater than the defined limit). In this case, we use the minimum (maximum) limit (request)
+	// to ensure the result is still valid
+	memLimit := result.Limits[corev1.ResourceMemory]
+	memRequest := result.Requests[corev1.ResourceMemory]
+	if !memLimit.IsZero() && !memRequest.IsZero() && memLimit.Cmp(memRequest) < 0 {
+		originalMemLimit := resources.Limits[corev1.ResourceMemory]
+		originalMemRequest := resources.Requests[corev1.ResourceMemory]
+		switch {
+		case originalMemLimit.IsZero() && !originalMemRequest.IsZero(): // The memory limit from default is smaller than the provided request
+			result.Limits[corev1.ResourceMemory] = originalMemRequest
+		case !originalMemLimit.IsZero() && originalMemRequest.IsZero(): // The memory request from default is greater than the provided limit
+			result.Requests[corev1.ResourceMemory] = originalMemLimit
+		default: // Invalid resources is not a result of applying defaults, do nothing
+			break
+		}
+	}
+
+	cpuLimit := result.Limits[corev1.ResourceCPU]
+	cpuRequest := result.Requests[corev1.ResourceCPU]
+	if !cpuLimit.IsZero() && !cpuRequest.IsZero() && cpuLimit.Cmp(cpuRequest) < 0 {
+		originalCPULimit := resources.Limits[corev1.ResourceCPU]
+		originalCPURequest := resources.Requests[corev1.ResourceCPU]
+		switch {
+		case originalCPULimit.IsZero() && !originalCPURequest.IsZero(): // The CPU limit from default is smaller than the provided request
+			result.Limits[corev1.ResourceCPU] = originalCPURequest
+		case !originalCPULimit.IsZero() && originalCPURequest.IsZero(): // The CPU request from default is greater than the provided limit
+			result.Requests[corev1.ResourceCPU] = originalCPULimit
+		default: // Invalid resources is not a result of applying defaults, do nothing
+			break
+		}
+	}
+
+	return result
+}
+
+// ValidateResources validates that a corev1.ResourceRequirements is valid, i.e. that (if specified), limits are greater than or equal to requests
 func ValidateResources(resources *corev1.ResourceRequirements) error {
 	memLimit, hasMemLimit := resources.Limits[corev1.ResourceMemory]
 	memRequest, hasMemRequest := resources.Requests[corev1.ResourceMemory]
 	if hasMemLimit && hasMemRequest && memRequest.Cmp(memLimit) > 0 {
-		return fmt.Errorf("memory request (%s) must be less than limit (%s)", memRequest.String(), memLimit.String())
+		return fmt.Errorf("memory request (%s) must be less than or equal to limit (%s)", memRequest.String(), memLimit.String())
 	}
 
 	cpuLimit, hasCPULimit := resources.Limits[corev1.ResourceCPU]
 	cpuRequest, hasCPURequest := resources.Requests[corev1.ResourceCPU]
 	if hasCPULimit && hasCPURequest && cpuRequest.Cmp(cpuLimit) > 0 {
-		return fmt.Errorf("CPU request (%s) must be less than limit (%s)", cpuRequest.String(), cpuLimit.String())
+		return fmt.Errorf("CPU request (%s) must be less than or equal to limit (%s)", cpuRequest.String(), cpuLimit.String())
 	}
 
 	return nil

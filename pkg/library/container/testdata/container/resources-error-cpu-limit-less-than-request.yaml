@@ -9,4 +9,4 @@ input:
         cpuRequest: 620m
 
 output:
-  errRegexp: "container resources are invalid: CPU limit \\(500m\\) is less than request \\(620m\\)"
+  errRegexp: "CPU request \\(620m\\) must be less than or equal to limit \\(500m\\)"

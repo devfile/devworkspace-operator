@@ -9,4 +9,4 @@ input:
         memoryRequest: 1Gi
 
 output:
-  errRegexp: "container resources are invalid: memory limit \\(256Mi\\) is less than request \\(1Gi\\)"
+  errRegexp: "memory request \\(1Gi\\) must be less than or equal to limit \\(256Mi\\)"

@@ -311,7 +311,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(
 		&workspace.Spec.Template,
 		workspace.Config.Workspace.ContainerSecurityContext,
-		workspace.Config.Workspace.ImagePullPolicy)
+		workspace.Config.Workspace.ImagePullPolicy,
+		workspace.Config.Workspace.DefaultContainerResources)
 	if err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}

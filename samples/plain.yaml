@@ -10,6 +10,7 @@ spec:
       - name: web-terminal
         container:
           image: quay.io/wto/web-terminal-tooling:next
+          memoryRequest: 256Mi
           memoryLimit: 512Mi
           mountSources: true
           command:

@@ -94,6 +94,30 @@ spec:
       controller.devfile.io/project-clone: disable
 ----
 
+### Configuring sparse checkout for projects
+The project-level attribute `sparseCheckout` can be used to enable a sparse checkout for a given project. The value of this attribute should be a list of paths within the project that should be included in the sparse checkout, separated by spaces. For example, the project
+
+[source,yaml]
+----
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: my-workspace
+spec:
+  template:
+    projects:
+      - name: devworkspace-operator
+        attributes:
+          sparseCheckout: "docs"
+        git:
+          remotes:
+            origin: "https://github.com/devfile/devworkspace-operator.git"
+----
+
+will clone the DevWorkspace Operator sparsely, so only the `docs` directory is present.
+
+For more information on sparse checkouts, see documentation for [git sparse-checkout](https://git-scm.com/docs/git-sparse-checkout)
+
 ## Automatically mounting volumes, configmaps, and secrets
 Existing configmaps, secrets, and persistent volume claims on the cluster can be configured by applying the appropriate labels. To mark a resource for mounting to workspaces, apply the **label**
 [source,yaml]

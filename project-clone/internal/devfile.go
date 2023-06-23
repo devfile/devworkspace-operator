@@ -27,7 +27,10 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
 )
 
-const ProjectSubDir = "subDir"
+const (
+	ProjectSparseCheckout = "sparseCheckout"
+	ProjectSubDir         = "subDir"
+)
 
 // GetClonePath gets the correct clonePath for a project, given the semantics in devfile/api
 func GetClonePath(project *dw.Project) string {

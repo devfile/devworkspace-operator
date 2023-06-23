@@ -63,7 +63,7 @@ func CloneProject(project *dw.Project, projectPath string) error {
 		}
 	}
 
-	if project.Attributes.Exists(internal.ProjectSubDir) {
+	if project.Attributes.Exists(internal.ProjectSparseCheckout) {
 		if err := shell.GitSparseCloneProject(defaultRemoteURL, defaultRemoteName, projectPath); err != nil {
 			return fmt.Errorf("failed to sparsely git clone from %s: %s", defaultRemoteURL, err)
 		}
@@ -84,14 +84,14 @@ func SetupSparseCheckout(project *dw.Project, projectPath string) error {
 	log.Printf("Setting up sparse checkout for project %s", project.Name)
 
 	var err error
-	subdir := project.Attributes.GetString(internal.ProjectSubDir, &err)
+	sparseCheckoutDir := project.Attributes.GetString(internal.ProjectSparseCheckout, &err)
 	if err != nil {
-		return fmt.Errorf("failed to read %s attribute on project %s", internal.ProjectSubDir, project.Name)
+		return fmt.Errorf("failed to read %s attribute on project %s", internal.ProjectSparseCheckout, project.Name)
 	}
-	if subdir == "" {
+	if sparseCheckoutDir == "" {
 		return nil
 	}
-	if err := shell.GitSetupSparseCheckout(projectPath, subdir); err != nil {
+	if err := shell.GitSetupSparseCheckout(projectPath, sparseCheckoutDir); err != nil {
 		return fmt.Errorf("error running sparse-checkout set: %w", err)
 	}
 

@@ -32,6 +32,9 @@ import (
 // The git repo can have additional remotes -- they will be ignored here. If both the project and git repo have remote
 // A configured, but the corresponding remote URL is different, needRemotes will be true.
 func CheckProjectState(project *dw.Project) (needClone, needRemotes bool, err error) {
+	if project.Attributes.Exists(ProjectSubDir) {
+		return checkSubPathProjectState(project)
+	}
 	repo, err := OpenRepo(path.Join(ProjectsRoot, GetClonePath(project)))
 	if err != nil {
 		return false, false, err
@@ -89,4 +92,28 @@ func DirExists(dir string) (bool, error) {
 		return true, nil
 	}
 	return false, fmt.Errorf("path %s already exists and is not a directory", dir)
+}
+
+func checkSubPathProjectState(project *dw.Project) (needClone, needRemotes bool, err error) {
+	// Check that attribute is valid and parseable
+	var attrErr error
+	_ = project.Attributes.GetString(ProjectSubDir, &attrErr)
+	if err != nil {
+		return false, false, fmt.Errorf("failed to read %s attribute on project %s: %w", ProjectSubDir, project.Name, err)
+	}
+
+	// Result here won't be a git repository, so we only check whether the directory exists
+	clonePath := path.Join(ProjectsRoot, GetClonePath(project))
+	stat, err := os.Stat(clonePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return true, false, nil
+		}
+		return false, false, err
+	}
+	if stat.IsDir() {
+		return false, false, nil
+	} else {
+		return false, false, fmt.Errorf("could not check project state for project %s -- path %s exists and is not a directory", project.Name, clonePath)
+	}
 }

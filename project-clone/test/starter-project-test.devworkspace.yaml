@@ -89,23 +89,12 @@ spec:
 
               echo "Testing starter project is set up"
               cd "${PROJECTS_ROOT}/starter-project-1"
-              branch_name=$(git rev-parse --abbrev-ref HEAD)
-              if [ "$branch_name" != "{{checkout_branch}}" ]; then
-                fail "Project does not have {{checkout_branch}} branch checked out"
+              if [ $(git rev-parse --is-inside-work-tree) == "true" ]; then
+                fail "Do not expect subDir starter project to be a git repository"
               fi
-              tracking_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
-              if [ "$tracking_branch" != "origin/{{checkout_branch}}" ]; then
-                fail "Checked out branch does not track remote branch origin/{{checkout_branch}}"
-              fi
-              remote_url=$(git config remote.origin.url)
-              if [ "$remote_url" != "{{main_repo}}" ]; then
-                fail "Remote 'origin' not configured"
-              fi
-              sparse_checkout_dirs=$(git sparse-checkout list)
-              if [ "$sparse_checkout_dirs" != "{{project_subdir}}" ]; then
-                fail "Sparse checkout is not configured"
-              fi
-              echo "Project is on $branch_name, tracking $tracking_branch, with remotes and sparse checkout configured"
+              echo "Files inside starter project directory:"
+              ls -l
+              echo "Project directory is present"
 
               echo "[SUCCESS] Test succeeded. Sleeping indefinitely"
               tail -f /dev/null

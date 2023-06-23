@@ -1,7 +1,7 @@
 apiVersion: workspace.devfile.io/v1alpha2
 kind: DevWorkspace
 metadata:
-  name: project-clone-test-basic
+  name: sparse-clone-project-test
   labels:
     app.kubernetes.io/name: devworkspace-project-clone-tests
     app.kubernetes.io/part-of: devworkspace-operator
@@ -14,16 +14,26 @@ spec:
     attributes:
       controller.devfile.io/storage-type: ephemeral
     variables:
-          test_runner_image: quay.io/devfile/project-clone:next # Requires git, bash
-          main_repo: https://github.com/devfile/devworkspace-operator.git
-          default_branch_name: main
+      test_runner_image: quay.io/devfile/project-clone:next # Requires git, bash
+      main_repo: https://github.com/devfile/devworkspace-operator.git
+      fork_repo: https://github.com/amisevsk/devworkspace-operator.git
+      checkout_branch: 0.21.x
+      project_subdir: project-clone
+      default_branch_name: main
     projects:
-      - name: test-project
+      - name: default-project-setup
         git:
           remotes:
             main-origin: "{{main_repo}}"
+      - name: sparse-clone-project-1
+        attributes:
+          sparseCheckout: "project-clone" # Can't use variable here as they are not replaced in attributes
+        git:
           checkoutFrom:
-            revision: "{{default_branch_name}}"
+            remote: origin
+            revision: "{{checkout_branch}}"
+          remotes:
+            origin: "{{main_repo}}"
     components:
       - name: test-project-clone
         container:
@@ -50,12 +60,14 @@ spec:
                 echo -e "\n\n"
               fi
 
-              if [ ! -d "${PROJECTS_ROOT}/${project_dir}" ]; then
-                fail "Project $project_dir not cloned successfully"
-              fi
+              for project_dir in "default-project-setup" "sparse-clone-project-1"; do
+                if [ ! -d "${PROJECTS_ROOT}/${project_dir}" ]; then
+                  fail "Project $project_dir not cloned successfully"
+                fi
+              done
 
               echo "Testing default project set up"
-              cd ${PROJECTS_ROOT}/test-project
+              cd "${PROJECTS_ROOT}/default-project-setup"
               branch_name=$(git rev-parse --abbrev-ref HEAD)
               if [ "$branch_name" != "{{default_branch_name}}" ]; then
                 fail "Project does not have default branch checked out"
@@ -69,6 +81,26 @@ spec:
                 fail "Remote 'main-origin' not configured"
               fi
               echo "Project is on $branch_name, tracking $tracking_branch, with remotes configured"
+
+              echo "Testing sparse-clone project is set up"
+              cd "${PROJECTS_ROOT}/sparse-clone-project-1"
+              branch_name=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$branch_name" != "{{checkout_branch}}" ]; then
+                fail "Project does not have {{checkout_branch}} branch checked out"
+              fi
+              tracking_branch=$(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+              if [ "$tracking_branch" != "origin/{{checkout_branch}}" ]; then
+                fail "Checked out branch does not track remote branch origin/{{checkout_branch}}"
+              fi
+              remote_url=$(git config remote.origin.url)
+              if [ "$remote_url" != "{{main_repo}}" ]; then
+                fail "Remote 'origin' not configured"
+              fi
+              sparse_checkout_dirs=$(git sparse-checkout list)
+              if [ "$sparse_checkout_dirs" != "{{project_subdir}}" ]; then
+                fail "Sparse checkout is not configured"
+              fi
+              echo "Project is on $branch_name, tracking $tracking_branch, with remotes and sparse checkout configured"
 
               echo "[SUCCESS] Test succeeded. Sleeping indefinitely"
               tail -f /dev/null

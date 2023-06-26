@@ -21,7 +21,7 @@ rules:
   - controller.devfile.io
   resources:
   - devworkspaceroutings
-  - components
+  - devworkspaceoperatorconfigs
   verbs:
   - get
   - list

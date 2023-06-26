@@ -24132,7 +24132,7 @@ rules:
   - controller.devfile.io
   resources:
   - devworkspaceroutings
-  - components
+  - devworkspaceoperatorconfigs
   verbs:
   - create
   - delete
@@ -24437,7 +24437,7 @@ rules:
   - controller.devfile.io
   resources:
   - devworkspaceroutings
-  - components
+  - devworkspaceoperatorconfigs
   verbs:
   - get
   - list

@@ -74,9 +74,7 @@ jobs:
       run: |
         go install github.com/google/addlicense@latest
         go install golang.org/x/tools/cmd/goimports@latest
-        make check_fmt
-        if [[ $? != 0 ]]
-        then
+        if ! make check_fmt; then
           echo "not well formatted sources are found:"
           git --no-pager diff
           exit 1

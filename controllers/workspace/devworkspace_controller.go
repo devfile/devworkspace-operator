@@ -443,8 +443,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcileResult, reconcileErr
 	}
 
-	allPodAdditions = append(allPodAdditions, *pullSecretPodAdditions)
-	reconcileStatus.setConditionTrue(conditions.PullSecretsReady, "DevWorkspace secrets ready")
+	if pullSecretPodAdditions != nil && pullSecretPodAdditions.PullSecrets != nil {
+		allPodAdditions = append(allPodAdditions, *pullSecretPodAdditions)
+		reconcileStatus.setConditionTrue(conditions.PullSecretsReady, "DevWorkspace secrets ready")
+	}
 
 	if kubesync.HasKubelikeComponent(workspace) {
 		err := kubesync.HandleKubernetesComponents(workspace, clusterAPI)

@@ -64,7 +64,7 @@ func PullSecrets(clusterAPI sync.ClusterAPI, serviceAccountName, namespace strin
 	if err != nil {
 		if k8sErrors.IsNotFound(err) {
 			// ServiceAccount does not exist, no pull secrets to extract
-			return nil, nil
+			return &v1alpha1.PodAdditions{}, nil
 		}
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-name: "Theia and NodeJS plugin workspace"
+name: "Generic IDE and NodeJS plugin workspace"
 
 input:
   devworkspace:
@@ -8,10 +8,10 @@ input:
           remotes:
             origin: "https://github.com/che-samples/web-nodejs-sample.git"
     components:
-      - name: che-theia
+      - name: generic-ide
         plugin:
           kubernetes:
-            name: theia-next
+            name: ide-next
             namespace: devworkspace-plugins
       - name: machine-exec
         plugin:
@@ -77,11 +77,11 @@ input:
               ]
             }
   devworkspaceResources:
-    theia-next:
+    ide-next:
       kind: DevWorkspaceTemplate
       apiVersion: workspace.devfile.io/v1alpha2
       metadata:
-        name: theia-next
+        name: ide-next
         annotations:
           "controller.devfile.io/allow-import-from": "*"
       spec:
@@ -90,12 +90,9 @@ input:
             volume: {}
           - name: remote-endpoint
             volume: {} # TODO: Fix this once ephemeral volumes are supported
-          - name: vsx-installer  # Mainly reads the container objects and searches for those
-                                  # with che-theia.eclipse.org/vscode-extensions attributes to get VSX urls
-                                  # Those found in the dedicated containers components are with a sidecar,
-                                  # Those found in the che-theia container are without a sidecar.
+          - name: vsx-installer
             attributes:
-              "app.kubernetes.io/part-of": che-theia.eclipse.org
+              "app.kubernetes.io/part-of": generic-ide.eclipse.org
               "app.kubernetes.io/component": bootstrapper
             container:
               args:
@@ -106,9 +103,9 @@ input:
                   TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) &&\
                   WORKSPACE=$(curl -fsS --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" $KUBE_API_ENDPOINT) &&\
                   IFS=$'\n' &&\
-                  for container in $(echo $WORKSPACE | sed -e 's|[[,]\({"attributes":{"app.kubernetes.io\)|\n\1|g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
-                    dest=$(echo "$container" | sed 's|.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*|\1|' - ) ;\
-                    urls=$(echo "$container" | sed 's|.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*|\1|' - ) ;\
+                  for container in $(echo $WORKSPACE | sed -e 's|[[,]\({"attributes":{"app.kubernetes.io\)|\n\1|g' | grep '"generic-ide.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
+                    dest=$(echo "$container" | sed 's|.*{"name":"IDE_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*|\1|' - ) ;\
+                    urls=$(echo "$container" | sed 's|.*"generic-ide.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*|\1|' - ) ;\
                     mkdir -p $dest ;\
                     unset IFS &&\
                     for url in $(echo $urls | sed 's/[",]/ /g' - ); do \
@@ -121,10 +118,10 @@ input:
                   name: plugins
           - name: remote-runtime-injector
             attributes:
-              "app.kubernetes.io/part-of": che-theia.eclipse.org
+              "app.kubernetes.io/part-of": generic-ide.eclipse.org
               "app.kubernetes.io/component": bootstrapper
             container:                          #### corresponds to `initContainer` definition in old meta.yaml.
-              image: "quay.io/eclipse/che-theia-endpoint-runtime-binary:7.20.0"
+              image: "quay.io/eclipse/generic-ide-endpoint-runtime-binary:7.20.0"
               volumeMounts:
                 - path: "/remote-endpoint"
                   name: remote-endpoint
@@ -133,26 +130,21 @@ input:
                   value: /remote-endpoint/plugin-remote-endpoint
                 - name: REMOTE_ENDPOINT_VOLUME_NAME
                   value: remote-endpoint
-          - name: theia-ide
+          - name: ide-ide
             attributes:
-              "app.kubernetes.io/name": che-theia.eclipse.org
+              "app.kubernetes.io/name": generic-ide.eclipse.org
               "app.kubernetes.io/part-of": che.eclipse.org
               "app.kubernetes.io/component": editor
-
-              # Added by Che-theia at start when detecting, after cloning, that the extensions.json in the repo
-              # contains the vscode-pull-request-github vscode plugin.
-              "che-theia.eclipse.org/vscode-extensions":
-                - https://github.com/microsoft/vscode-pull-request-github/releases/download/v0.8.0/vscode-pull-request-github-0.8.0.vsix
             container:
-              image: "quay.io/eclipse/che-theia:next"
+              image: "quay.io/eclipse/generic-ide:next"
               env:
-                - name: THEIA_PLUGINS
+                - name: IDE_PLUGINS
                   value: local-dir:///plugins
                 - name: HOSTED_PLUGIN_HOSTNAME
                   value: 0.0.0.0
                 - name: HOSTED_PLUGIN_PORT
                   value: "3130"
-                - name: THEIA_HOST
+                - name: IDE_HOST
                   value: 0.0.0.0
               volumeMounts:
                 - path: "/plugins"
@@ -160,7 +152,7 @@ input:
               mountSources: true
               memoryLimit: "512M"
               endpoints:
-                - name: "theia"
+                - name: "ide"
                   exposure: public
                   targetPort: 3100
                   secure: true
@@ -175,27 +167,27 @@ input:
                   attributes:
                     type: webview
                     unique: "true"
-                - name: "theia-dev"
+                - name: "ide-dev"
                   exposure: public
                   targetPort: 3130
                   protocol: http
                   attributes:
                     type: ide-dev
-                - name: "theia-redir-1"
+                - name: "ide-redir-1"
                   exposure: public
                   targetPort: 13131
                   protocol: http
-                - name: "theia-redir-2"
+                - name: "ide-redir-2"
                   exposure: public
                   targetPort: 13132
                   protocol: http
-                - name: "theia-redir-3"
+                - name: "ide-redir-3"
                   exposure: public
                   targetPort: 13133
                   protocol: http
         commands:
           # Commands coming from plugin editor
-          - id: inject-theia-in-remote-sidecar
+          - id: inject-ide-in-remote-sidecar
             apply:
               component: remote-runtime-injector
           - id: copy-vsx
@@ -203,7 +195,7 @@ input:
               component: vsx-installer
         events:
           preStart:
-            - inject-theia-in-remote-sidecar
+            - inject-ide-in-remote-sidecar
             - copy-vsx
 
     machine-exec:
@@ -214,7 +206,7 @@ input:
         annotations:
           "controller.devfile.io/allow-import-from": "*"
         labels:
-          "devworkspace.devfile.io/editor-compatibility": "che-theia"
+          "devworkspace.devfile.io/editor-compatibility": "generic-ide"
       spec:
         components:
           - name: che-machine-exec
@@ -247,18 +239,13 @@ input:
         annotations:
           "controller.devfile.io/allow-import-from": "*"
         labels:
-          "devworkspace.devfile.io/editor-compatibility": "che-theia"
+          "devworkspace.devfile.io/editor-compatibility": "generic-ide"
       spec:
         components:
           - name: sidecar-typescript
             attributes:
-              "app.kubernetes.io/part-of": che-theia.eclipse.org
+              "app.kubernetes.io/part-of": generic-ide.eclipse.org
               "app.kubernetes.io/component": vscode-plugin
-
-              # Added by Che-theia at start when detecting, after cloning, that the extensions.json in the repo
-              # contains the typescript vscode plugin.
-              "che-theia.eclipse.org/vscode-extensions":
-                - https://download.jboss.org/jbosstools/vscode/3rdparty/ms-code.typescript/che-typescript-language-1.35.1.vsix
 
             container:
               image: "quay.io/eclipse/che-sidecar-node:10-0cb5d78"
@@ -266,7 +253,7 @@ input:
               env:
                 - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
                   value: /remote-endpoint/plugin-remote-endpoint
-                - name: THEIA_PLUGINS
+                - name: IDE_PLUGINS
                   value: local-dir:///plugins/sidecars/vscode-typescript
               volumeMounts:
                 - path: "/remote-endpoint"
@@ -285,27 +272,22 @@ output:
 
     components:
 
-      - name: theia-ide
+      - name: ide-ide
         attributes:
-          "app.kubernetes.io/name": che-theia.eclipse.org
+          "app.kubernetes.io/name": generic-ide.eclipse.org
           "app.kubernetes.io/part-of": che.eclipse.org
           "app.kubernetes.io/component": editor
-
-          # Added by Che-theia at start when detecting, after cloning, that the extensions.json in the repo
-          # contains the vscode-pull-request-github vscode plugin.
-          "che-theia.eclipse.org/vscode-extensions":
-            - https://github.com/microsoft/vscode-pull-request-github/releases/download/v0.8.0/vscode-pull-request-github-0.8.0.vsix
-          controller.devfile.io/imported-by: "che-theia"
+          controller.devfile.io/imported-by: "generic-ide"
         container:
-          image: "quay.io/eclipse/che-theia:next"
+          image: "quay.io/eclipse/generic-ide:next"
           env:
-            - name: THEIA_PLUGINS
+            - name: IDE_PLUGINS
               value: local-dir:///plugins
             - name: HOSTED_PLUGIN_HOSTNAME
               value: 0.0.0.0
             - name: HOSTED_PLUGIN_PORT
               value: "3130"
-            - name: THEIA_HOST
+            - name: IDE_HOST
               value: 0.0.0.0
           volumeMounts:
             - path: "/plugins"
@@ -313,7 +295,7 @@ output:
           mountSources: true
           memoryLimit: "512M"
           endpoints:
-            - name: "theia"
+            - name: "ide"
               exposure: public
               targetPort: 3100
               secure: true
@@ -328,38 +310,35 @@ output:
               attributes:
                 type: webview
                 unique: "true"
-            - name: "theia-dev"
+            - name: "ide-dev"
               exposure: public
               targetPort: 3130
               protocol: http
               attributes:
                 type: ide-dev
-            - name: "theia-redir-1"
+            - name: "ide-redir-1"
               exposure: public
               targetPort: 13131
               protocol: http
-            - name: "theia-redir-2"
+            - name: "ide-redir-2"
               exposure: public
               targetPort: 13132
               protocol: http
-            - name: "theia-redir-3"
+            - name: "ide-redir-3"
               exposure: public
               targetPort: 13133
               protocol: http
 
       - name: plugins
         attributes:
-          controller.devfile.io/imported-by: "che-theia"
+          controller.devfile.io/imported-by: "generic-ide"
         volume: {}
 
-      - name: vsx-installer  # Mainly reads the container objects and searches for those
-                            # with che-theia.eclipse.org/vscode-extensions attributes to get VSX urls
-                            # Those found in the dedicated containers components are with a sidecar,
-                            # Those found in the che-theia container are without a sidecar.
+      - name: vsx-installer
         attributes:
-          "app.kubernetes.io/part-of": che-theia.eclipse.org
+          "app.kubernetes.io/part-of": generic-ide.eclipse.org
           "app.kubernetes.io/component": bootstrapper
-          controller.devfile.io/imported-by: "che-theia"
+          controller.devfile.io/imported-by: "generic-ide"
         container:
           args:
             - /bin/sh
@@ -369,9 +348,9 @@ output:
               TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token) &&\
               WORKSPACE=$(curl -fsS --cacert /var/run/secrets/kubernetes.io/serviceaccount/ca.crt -H "Authorization: Bearer ${TOKEN}" $KUBE_API_ENDPOINT) &&\
               IFS=$'\n' &&\
-              for container in $(echo $WORKSPACE | sed -e 's|[[,]\({"attributes":{"app.kubernetes.io\)|\n\1|g' | grep '"che-theia.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
-                dest=$(echo "$container" | sed 's|.*{"name":"THEIA_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*|\1|' - ) ;\
-                urls=$(echo "$container" | sed 's|.*"che-theia.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*|\1|' - ) ;\
+              for container in $(echo $WORKSPACE | sed -e 's|[[,]\({"attributes":{"app.kubernetes.io\)|\n\1|g' | grep '"generic-ide.eclipse.org/vscode-extensions":' | grep -e '^{"attributes".*'); do \
+                dest=$(echo "$container" | sed 's|.*{"name":"IDE_PLUGINS","value":"local-dir://\([^"][^"]*\)"}.*|\1|' - ) ;\
+                urls=$(echo "$container" | sed 's|.*"generic-ide.eclipse.org/vscode-extensions":\[\([^]][^]]*\)\]}.*|\1|' - ) ;\
                 mkdir -p $dest ;\
                 unset IFS &&\
                 for url in $(echo $urls | sed 's/[",]/ /g' - ); do \
@@ -385,17 +364,17 @@ output:
 
       - name: remote-endpoint
         attributes:
-          controller.devfile.io/imported-by: "che-theia"
+          controller.devfile.io/imported-by: "generic-ide"
         volume: {}
           # ephemeral: true                #### We should add it in the Devfile 2.0 spec ! Not critical to implement at start though
 
       - name: remote-runtime-injector
         attributes:
-          "app.kubernetes.io/part-of": che-theia.eclipse.org
+          "app.kubernetes.io/part-of": generic-ide.eclipse.org
           "app.kubernetes.io/component": bootstrapper
-          controller.devfile.io/imported-by: "che-theia"
+          controller.devfile.io/imported-by: "generic-ide"
         container:                          #### corresponds to `initContainer` definition in old meta.yaml.
-          image: "quay.io/eclipse/che-theia-endpoint-runtime-binary:7.20.0"
+          image: "quay.io/eclipse/generic-ide-endpoint-runtime-binary:7.20.0"
           volumeMounts:
             - path: "/remote-endpoint"
               name: remote-endpoint
@@ -429,13 +408,8 @@ output:
                 type: terminal
       - name: sidecar-typescript
         attributes:
-          "app.kubernetes.io/part-of": che-theia.eclipse.org
+          "app.kubernetes.io/part-of": generic-ide.eclipse.org
           "app.kubernetes.io/component": vscode-plugin
-
-          # Added by Che-theia at start when detecting, after cloning, that the extensions.json in the repo
-          # contains the typescript vscode plugin.
-          "che-theia.eclipse.org/vscode-extensions":
-            - https://download.jboss.org/jbosstools/vscode/3rdparty/ms-code.typescript/che-typescript-language-1.35.1.vsix
 
           controller.devfile.io/imported-by: "typescript"
 
@@ -445,7 +419,7 @@ output:
           env:
             - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
               value: /remote-endpoint/plugin-remote-endpoint
-            - name: THEIA_PLUGINS
+            - name: IDE_PLUGINS
               value: local-dir:///plugins/sidecars/vscode-typescript
           volumeMounts:
             - path: "/remote-endpoint"
@@ -467,14 +441,14 @@ output:
     commands:
 
       # Commands coming from plugin editor
-      - id: inject-theia-in-remote-sidecar
+      - id: inject-ide-in-remote-sidecar
         attributes:
-          controller.devfile.io/imported-by: "che-theia"
+          controller.devfile.io/imported-by: "generic-ide"
         apply:
           component: remote-runtime-injector
       - id: copy-vsx
         attributes:
-          controller.devfile.io/imported-by: "che-theia"
+          controller.devfile.io/imported-by: "generic-ide"
         apply:
           component: vsx-installer
 
@@ -521,5 +495,5 @@ output:
 
     events:
       preStart:
-        - inject-theia-in-remote-sidecar
+        - inject-ide-in-remote-sidecar
         - copy-vsx

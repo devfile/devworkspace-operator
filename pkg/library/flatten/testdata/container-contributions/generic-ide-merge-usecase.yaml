@@ -1,9 +1,11 @@
-name: "Merges Theia IDE contribution"
+name: "Merges generic IDE contribution"
 
 input:
   devworkspace:
     components:
       - name: tools
+        attributes:
+          controller.devfile.io/merge-contribution: true
         container:
           image: quay.io/devfile/universal-developer-image:latest
           env:
@@ -16,15 +18,15 @@ input:
               targetPort: 8080
           memoryLimit: 2Gi
           mountSources: true
-  contributions:
-    - name: theia-ide
-      uri: theia-ide.yaml
+      - name: generic-ide
+        plugin:
+          uri: generic-ide.yaml
 
   devfileResources:
-    theia-ide.yaml:
+    generic-ide.yaml:
       schemaVersion: 2.1.0
       metadata:
-        name: theia-ide
+        name: generic-ide
       commands:
         - id: init-container-command
           apply:
@@ -33,7 +35,7 @@ input:
         preStart:
           - init-container-command
       components:
-        - name: theia-ide-contributions
+        - name: generic-ide-contributions
           attributes:
             controller.devfile.io/container-contribution: true
           container:
@@ -44,7 +46,7 @@ input:
             env:
               - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
                 value: /remote-endpoint/plugin-remote-endpoint
-              - name: THEIA_PLUGINS
+              - name: IDE_PLUGINS
                 value: local-dir:///plugins/sidecars/tools
             memoryLimit: 512Mi
             volumeMounts:
@@ -53,29 +55,29 @@ input:
               - name: remote-endpoint
                 path: /remote-endpoint
             image: quay.io/devfile/universal-developer-image@sha256:53cec58dd190dd1e06100478ae879d7c28abd8fc883d5fdf5be3eb6e943fe5e7
-        - name: theia-ide
+        - name: generic-ide
           container:
-            image: quay.io/eclipse/che-theia:next
+            image: quay.io/eclipse/generic-ide:next
             env:
-              - name: THEIA_PLUGINS
+              - name: IDE_PLUGINS
                 value: local-dir:///plugins
               - name: HOSTED_PLUGIN_HOSTNAME
                 value: 0.0.0.0
               - name: HOSTED_PLUGIN_PORT
                 value: '3130'
-              - name: THEIA_HOST
+              - name: IDE_HOST
                 value: 127.0.0.1
             volumeMounts:
               - name: plugins
                 path: /plugins
-              - name: theia-local
-                path: /home/theia/.theia
+              - name: ide-local
+                path: /home/ide/.ide
             mountSources: true
             memoryLimit: 512M
             cpuLimit: 1500m
             cpuRequest: 100m
             endpoints:
-              - name: theia
+              - name: ide
                 attributes:
                   type: main
                   cookiesAuthEnabled: true
@@ -107,7 +109,7 @@ input:
                 exposure: public
                 secure: false
                 protocol: https
-              - name: theia-dev
+              - name: ide-dev
                 attributes:
                   type: ide-dev
                   discoverable: false
@@ -115,21 +117,21 @@ input:
                 targetPort: 3130
                 exposure: public
                 protocol: http
-              - name: theia-redirect-1
+              - name: ide-redirect-1
                 attributes:
                   discoverable: false
                   urlRewriteSupported: true
                 targetPort: 13131
                 exposure: public
                 protocol: http
-              - name: theia-redirect-2
+              - name: ide-redirect-2
                 attributes:
                   discoverable: false
                   urlRewriteSupported: true
                 targetPort: 13132
                 exposure: public
                 protocol: http
-              - name: theia-redirect-3
+              - name: ide-redirect-3
                 attributes:
                   discoverable: false
                   urlRewriteSupported: true
@@ -147,11 +149,11 @@ input:
                 secure: false
                 protocol: wss
           attributes:
-            app.kubernetes.io/component: che-theia
-            app.kubernetes.io/part-of: che-theia.eclipse.org
+            app.kubernetes.io/component: generic-ide
+            app.kubernetes.io/part-of: generic-ide.eclipse.org
         - name: plugins
           volume: {}
-        - name: theia-local
+        - name: ide-local
           volume: {}
         - name: che-machine-exec
           container:
@@ -168,10 +170,10 @@ input:
             cpuRequest: 30m
           attributes:
             app.kubernetes.io/component: machine-exec
-            app.kubernetes.io/part-of: che-theia.eclipse.org
+            app.kubernetes.io/part-of: generic-ide.eclipse.org
         - name: remote-runtime-injector
           container:
-            image: quay.io/eclipse/che-theia-endpoint-runtime-binary:next
+            image: quay.io/eclipse/generic-ide-endpoint-runtime-binary:next
             env:
               - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
                 value: /remote-endpoint/plugin-remote-endpoint
@@ -188,7 +190,7 @@ input:
             cpuRequest: 30m
           attributes:
             app.kubernetes.io/component: remote-runtime-injector
-            app.kubernetes.io/part-of: che-theia.eclipse.org
+            app.kubernetes.io/part-of: generic-ide.eclipse.org
         - name: remote-endpoint
           volume:
             ephemeral: true
@@ -199,7 +201,7 @@ output:
     components:
       - name: tools
         attributes:
-          controller.devfile.io/merged-contributions: "theia-ide"
+          controller.devfile.io/merged-contributions: "generic-ide"
         container:
           image: quay.io/devfile/universal-developer-image:latest
           env:
@@ -209,7 +211,7 @@ output:
               value: /tmp/.cache
             - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
               value: /remote-endpoint/plugin-remote-endpoint
-            - name: THEIA_PLUGINS
+            - name: IDE_PLUGINS
               value: local-dir:///plugins/sidecars/tools
           args:
             - sh
@@ -225,33 +227,33 @@ output:
               path: /remote-endpoint
           memoryLimit: 2560Mi # 2Gi = 2048Mi + 512Mi
           mountSources: true
-      - name: theia-ide
+      - name: generic-ide
         attributes:
-          app.kubernetes.io/component: che-theia
-          app.kubernetes.io/part-of: che-theia.eclipse.org
-          controller.devfile.io/imported-by: theia-ide
+          app.kubernetes.io/component: generic-ide
+          app.kubernetes.io/part-of: generic-ide.eclipse.org
+          controller.devfile.io/imported-by: generic-ide
         container:
-          image: quay.io/eclipse/che-theia:next
+          image: quay.io/eclipse/generic-ide:next
           env:
-            - name: THEIA_PLUGINS
+            - name: IDE_PLUGINS
               value: local-dir:///plugins
             - name: HOSTED_PLUGIN_HOSTNAME
               value: 0.0.0.0
             - name: HOSTED_PLUGIN_PORT
               value: '3130'
-            - name: THEIA_HOST
+            - name: IDE_HOST
               value: 127.0.0.1
           volumeMounts:
             - name: plugins
               path: /plugins
-            - name: theia-local
-              path: /home/theia/.theia
+            - name: ide-local
+              path: /home/ide/.ide
           mountSources: true
           memoryLimit: 512M
           cpuLimit: 1500m
           cpuRequest: 100m
           endpoints:
-            - name: theia
+            - name: ide
               attributes:
                 type: main
                 cookiesAuthEnabled: true
@@ -283,7 +285,7 @@ output:
               exposure: public
               secure: false
               protocol: https
-            - name: theia-dev
+            - name: ide-dev
               attributes:
                 type: ide-dev
                 discoverable: false
@@ -291,21 +293,21 @@ output:
               targetPort: 3130
               exposure: public
               protocol: http
-            - name: theia-redirect-1
+            - name: ide-redirect-1
               attributes:
                 discoverable: false
                 urlRewriteSupported: true
               targetPort: 13131
               exposure: public
               protocol: http
-            - name: theia-redirect-2
+            - name: ide-redirect-2
               attributes:
                 discoverable: false
                 urlRewriteSupported: true
               targetPort: 13132
               exposure: public
               protocol: http
-            - name: theia-redirect-3
+            - name: ide-redirect-3
               attributes:
                 discoverable: false
                 urlRewriteSupported: true
@@ -324,17 +326,17 @@ output:
               protocol: wss
       - name: plugins
         attributes:
-          controller.devfile.io/imported-by: theia-ide
+          controller.devfile.io/imported-by: generic-ide
         volume: {}
-      - name: theia-local
+      - name: ide-local
         attributes:
-          controller.devfile.io/imported-by: theia-ide
+          controller.devfile.io/imported-by: generic-ide
         volume: {}
       - name: che-machine-exec
         attributes:
           app.kubernetes.io/component: machine-exec
-          app.kubernetes.io/part-of: che-theia.eclipse.org
-          controller.devfile.io/imported-by: theia-ide
+          app.kubernetes.io/part-of: generic-ide.eclipse.org
+          controller.devfile.io/imported-by: generic-ide
         container:
           image: quay.io/eclipse/che-machine-exec:next
           command:
@@ -349,11 +351,11 @@ output:
           cpuRequest: 30m
       - name: remote-runtime-injector
         attributes:
-          controller.devfile.io/imported-by: theia-ide
+          controller.devfile.io/imported-by: generic-ide
           app.kubernetes.io/component: remote-runtime-injector
-          app.kubernetes.io/part-of: che-theia.eclipse.org
+          app.kubernetes.io/part-of: generic-ide.eclipse.org
         container:
-          image: quay.io/eclipse/che-theia-endpoint-runtime-binary:next
+          image: quay.io/eclipse/generic-ide-endpoint-runtime-binary:next
           env:
             - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
               value: /remote-endpoint/plugin-remote-endpoint
@@ -370,13 +372,13 @@ output:
           cpuRequest: 30m
       - name: remote-endpoint
         attributes:
-          controller.devfile.io/imported-by: theia-ide
+          controller.devfile.io/imported-by: generic-ide
         volume:
           ephemeral: true
     commands:
       - id: init-container-command
         attributes:
-          controller.devfile.io/imported-by: theia-ide
+          controller.devfile.io/imported-by: generic-ide
         apply:
           component: remote-runtime-injector
     events:

@@ -5,7 +5,7 @@ input:
     commands:
       - id: prestart-cmd
         exec:
-          component: theia-ide
+          component: test-component
           commandLine: echo "Hello from $(pwd)"
     events:
       preStart:

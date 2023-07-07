@@ -31,7 +31,6 @@ var routeAnnotations = func(endpointName string) map[string]string {
 
 var nginxIngressAnnotations = func(endpointName string) map[string]string {
 	return map[string]string{
-		"kubernetes.io/ingress.class":                "nginx",
 		"nginx.ingress.kubernetes.io/rewrite-target": "/",
 		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
 		constants.DevWorkspaceEndpointNameAnnotation: endpointName,

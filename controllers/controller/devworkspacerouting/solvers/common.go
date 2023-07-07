@@ -25,6 +25,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/pointer"
 )
 
 type DevWorkspaceMetadata struct {
@@ -223,6 +224,7 @@ func getIngressForEndpoint(routingSuffix string, endpoint controllerv1alpha1.End
 			Annotations: nginxIngressAnnotations(endpoint.Name),
 		},
 		Spec: networkingv1.IngressSpec{
+			IngressClassName: pointer.String("nginx"),
 			Rules: []networkingv1.IngressRule{
 				{
 					Host: hostname,

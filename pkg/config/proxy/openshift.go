@@ -51,9 +51,9 @@ func GetClusterProxyConfig(nonCachedClient crclient.Client) (*controller.Proxy, 
 	}
 
 	proxyConfig := &controller.Proxy{
-		HttpProxy:  proxy.Status.HTTPProxy,
-		HttpsProxy: proxy.Status.HTTPSProxy,
-		NoProxy:    proxy.Status.NoProxy,
+		HttpProxy:  &proxy.Status.HTTPProxy,
+		HttpsProxy: &proxy.Status.HTTPSProxy,
+		NoProxy:    &proxy.Status.NoProxy,
 	}
 
 	return proxyConfig, nil
@@ -63,31 +63,53 @@ func GetClusterProxyConfig(nonCachedClient crclient.Client) (*controller.Proxy, 
 // operator configuration taking precedence. Accepts nil arguments. If both arguments are nil, returns nil.
 func MergeProxyConfigs(operatorConfig, clusterConfig *controller.Proxy) *controller.Proxy {
 	if clusterConfig == nil {
-		return operatorConfig
+		return removeEmptyStrings(operatorConfig)
 	}
 	if operatorConfig == nil {
-		return clusterConfig
+		return removeEmptyStrings(clusterConfig)
 	}
+
 	mergedProxy := &controller.Proxy{
 		HttpProxy:  operatorConfig.HttpProxy,
 		HttpsProxy: operatorConfig.HttpsProxy,
 		NoProxy:    operatorConfig.NoProxy,
 	}
 
-	if mergedProxy.HttpProxy == "" {
+	if mergedProxy.HttpProxy == nil {
 		mergedProxy.HttpProxy = clusterConfig.HttpProxy
 	}
-	if mergedProxy.HttpsProxy == "" {
+	if mergedProxy.HttpsProxy == nil {
 		mergedProxy.HttpsProxy = clusterConfig.HttpsProxy
 	}
-	if mergedProxy.NoProxy == "" {
+	if mergedProxy.NoProxy == nil {
 		mergedProxy.NoProxy = clusterConfig.NoProxy
-	} else {
+	} else if *mergedProxy.NoProxy != "" {
 		// Merge noProxy fields, joining with a comma
-		if clusterConfig.NoProxy != "" {
-			mergedProxy.NoProxy = fmt.Sprintf("%s,%s", clusterConfig.NoProxy, operatorConfig.NoProxy)
+		if clusterConfig.NoProxy != nil {
+			noProxy := fmt.Sprintf("%s,%s", *clusterConfig.NoProxy, *operatorConfig.NoProxy)
+			mergedProxy.NoProxy = &noProxy
 		}
 	}
 
-	return mergedProxy
+	return removeEmptyStrings(mergedProxy)
+}
+
+// removeEmptyStrings is a utility function for removing empty fields from a proxy configuration. This is required
+// to allow overriding
+func removeEmptyStrings(proxyConfig *controller.Proxy) *controller.Proxy {
+	if proxyConfig == nil {
+		return nil
+	}
+
+	updated := &controller.Proxy{}
+	if proxyConfig.HttpProxy != nil && *proxyConfig.HttpProxy != "" {
+		updated.HttpProxy = proxyConfig.HttpProxy
+	}
+	if proxyConfig.HttpsProxy != nil && *proxyConfig.HttpsProxy != "" {
+		updated.HttpsProxy = proxyConfig.HttpsProxy
+	}
+	if proxyConfig.NoProxy != nil && *proxyConfig.NoProxy != "" {
+		updated.NoProxy = proxyConfig.NoProxy
+	}
+	return updated
 }

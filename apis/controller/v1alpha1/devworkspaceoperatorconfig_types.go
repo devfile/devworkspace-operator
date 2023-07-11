@@ -54,7 +54,8 @@ type RoutingConfig struct {
 	// On OpenShift, the operator automatically reads values from the "cluster" proxies.config.openshift.io
 	// object and this value only needs to be set to override those defaults. Values for httpProxy
 	// and httpsProxy override the cluster configuration directly. Entries for noProxy are merged
-	// with the noProxy values in the cluster configuration.
+	// with the noProxy values in the cluster configuration. To ignore automatically read values from the cluster,
+	// set values in fields to the empty string ("")
 	//
 	// Changes to the proxy configuration are detected by the DevWorkspace Operator and propagated to
 	// DevWorkspaces. However, changing the proxy configuration for the DevWorkspace Operator itself
@@ -154,13 +155,16 @@ type PersistentHomeConfig struct {
 }
 
 type Proxy struct {
-	// HttpProxy is the URL of the proxy for HTTP requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
-	HttpProxy string `json:"httpProxy,omitempty"`
-	// HttpsProxy is the URL of the proxy for HTTPS requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
-	HttpsProxy string `json:"httpsProxy,omitempty"`
+	// HttpProxy is the URL of the proxy for HTTP requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/. To ignore
+	// automatically detected proxy settings for the cluster, set this field to an empty string ("")
+	HttpProxy *string `json:"httpProxy,omitempty"`
+	// HttpsProxy is the URL of the proxy for HTTPS requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/. To ignore
+	// automatically detected proxy settings for the cluster, set this field to an empty string ("")
+	HttpsProxy *string `json:"httpsProxy,omitempty"`
 	// NoProxy is a comma-separated list of hostnames and/or CIDRs for which the proxy should not be used. Ignored
-	// when HttpProxy and HttpsProxy are unset
-	NoProxy string `json:"noProxy,omitempty"`
+	// when HttpProxy and HttpsProxy are unset. To ignore automatically detected proxy settings for the cluster, set this
+	// field to an empty string ("")
+	NoProxy *string `json:"noProxy,omitempty"`
 }
 
 type StorageSizes struct {

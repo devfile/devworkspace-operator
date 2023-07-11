@@ -37,11 +37,17 @@ func setupHttpClients() {
 	globalConfig := config.GetGlobalConfig()
 
 	if globalConfig.Routing != nil && globalConfig.Routing.ProxyConfig != nil {
-		proxyConf := httpproxy.Config{
-			HTTPProxy:  globalConfig.Routing.ProxyConfig.HttpProxy,
-			HTTPSProxy: globalConfig.Routing.ProxyConfig.HttpsProxy,
-			NoProxy:    globalConfig.Routing.ProxyConfig.NoProxy,
+		proxyConf := httpproxy.Config{}
+		if globalConfig.Routing.ProxyConfig.HttpProxy != nil {
+			proxyConf.HTTPProxy = *globalConfig.Routing.ProxyConfig.HttpProxy
 		}
+		if globalConfig.Routing.ProxyConfig.HttpsProxy != nil {
+			proxyConf.HTTPSProxy = *globalConfig.Routing.ProxyConfig.HttpsProxy
+		}
+		if globalConfig.Routing.ProxyConfig.NoProxy != nil {
+			proxyConf.NoProxy = *globalConfig.Routing.ProxyConfig.NoProxy
+		}
+
 		proxyFunc := func(req *http.Request) (*url.URL, error) {
 			return proxyConf.ProxyFunc()(req.URL)
 		}

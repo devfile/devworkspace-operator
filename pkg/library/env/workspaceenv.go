@@ -81,26 +81,27 @@ func GetProxyEnvVars(proxyConfig *v1alpha1.Proxy) []corev1.EnvVar {
 		return nil
 	}
 
-	if proxyConfig.HttpProxy == "" && proxyConfig.HttpsProxy == "" {
+	// If httpProxy and httpsProxy are both unset, ignore any value for noProxy``
+	if proxyConfig.HttpProxy == nil && proxyConfig.HttpsProxy == nil {
 		return nil
 	}
 
 	// Proxy env vars are defined by consensus rather than standard; most tools use the lower-snake-case version
 	// but some may only look at the upper-snake-case version, so we add both.
 	var env []v1.EnvVar
-	if proxyConfig.HttpProxy != "" {
-		env = append(env, v1.EnvVar{Name: "http_proxy", Value: proxyConfig.HttpProxy})
-		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: proxyConfig.HttpProxy})
+	if proxyConfig.HttpProxy != nil {
+		env = append(env, v1.EnvVar{Name: "http_proxy", Value: *proxyConfig.HttpProxy})
+		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: *proxyConfig.HttpProxy})
 	}
-	if proxyConfig.HttpsProxy != "" {
-		env = append(env, v1.EnvVar{Name: "https_proxy", Value: proxyConfig.HttpsProxy})
-		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: proxyConfig.HttpsProxy})
+	if proxyConfig.HttpsProxy != nil {
+		env = append(env, v1.EnvVar{Name: "https_proxy", Value: *proxyConfig.HttpsProxy})
+		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: *proxyConfig.HttpsProxy})
 	}
-	if proxyConfig.NoProxy != "" {
+	if proxyConfig.NoProxy != nil {
 		// Adding 'KUBERNETES_SERVICE_HOST' env var to the 'no_proxy / NO_PROXY' list. Hot Fix for https://issues.redhat.com/browse/CRW-2820
 		kubernetesServiceHost := os.Getenv("KUBERNETES_SERVICE_HOST")
-		env = append(env, v1.EnvVar{Name: "no_proxy", Value: proxyConfig.NoProxy + "," + kubernetesServiceHost})
-		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: proxyConfig.NoProxy + "," + kubernetesServiceHost})
+		env = append(env, v1.EnvVar{Name: "no_proxy", Value: *proxyConfig.NoProxy + "," + kubernetesServiceHost})
+		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: *proxyConfig.NoProxy + "," + kubernetesServiceHost})
 	}
 
 	return env

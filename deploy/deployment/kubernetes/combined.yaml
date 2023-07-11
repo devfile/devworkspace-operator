@@ -64,23 +64,31 @@ spec:
                       to be set to override those defaults. Values for httpProxy and
                       httpsProxy override the cluster configuration directly. Entries
                       for noProxy are merged with the noProxy values in the cluster
-                      configuration. \n Changes to the proxy configuration are detected
-                      by the DevWorkspace Operator and propagated to DevWorkspaces.
-                      However, changing the proxy configuration for the DevWorkspace
-                      Operator itself requires restarting the controller deployment."
+                      configuration. To ignore automatically read values from the
+                      cluster, set values in fields to the empty string (\"\") \n
+                      Changes to the proxy configuration are detected by the DevWorkspace
+                      Operator and propagated to DevWorkspaces. However, changing
+                      the proxy configuration for the DevWorkspace Operator itself
+                      requires restarting the controller deployment."
                     properties:
                       httpProxy:
                         description: HttpProxy is the URL of the proxy for HTTP requests,
-                          in the format http://USERNAME:PASSWORD@SERVER:PORT/
+                          in the format http://USERNAME:PASSWORD@SERVER:PORT/. To
+                          ignore automatically detected proxy settings for the cluster,
+                          set this field to an empty string ("")
                         type: string
                       httpsProxy:
                         description: HttpsProxy is the URL of the proxy for HTTPS
-                          requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/
+                          requests, in the format http://USERNAME:PASSWORD@SERVER:PORT/.
+                          To ignore automatically detected proxy settings for the
+                          cluster, set this field to an empty string ("")
                         type: string
                       noProxy:
                         description: NoProxy is a comma-separated list of hostnames
                           and/or CIDRs for which the proxy should not be used. Ignored
-                          when HttpProxy and HttpsProxy are unset
+                          when HttpProxy and HttpsProxy are unset. To ignore automatically
+                          detected proxy settings for the cluster, set this field
+                          to an empty string ("")
                         type: string
                     type: object
                 type: object

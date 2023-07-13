@@ -41,8 +41,12 @@ const gitLFSConfig = `[filter "lfs"]
     required = true
 `
 
+// Since we're mounting the credentials file read-only, we need to ignore 'store'
+// and 'erase' commands to the credential helper (will print an error about being
+// unable to get a lock on the credentials file). This snippet effectively wraps
+// only 'git credential-store get' to make it read-only.
 const credentialTemplate = `[credential]
-    helper = store --file %s
+    helper = "!f() { test \"$1\" = get && git credential-store --file %s \"$@\"; }; f"
 `
 
 const gitServerTemplate = `[http "%s"]

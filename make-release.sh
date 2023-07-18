@@ -290,6 +290,9 @@ release() {
     --container-tool docker \
     --debug
 
+  CHANNEL_ENTRY_JSON=$(yq --arg version "$VERSION" '.entries[] | select(.name == "devworkspace-operator.\($version)")' olm-catalog/release/channel.yaml)
+  yq -Y -i --argjson entry "$CHANNEL_ENTRY_JSON" '.entries |= . + [$entry]' olm-catalog/release-digest/channel.yaml
+
   opm validate olm-catalog/release-digest/
   echo "[INFO] Building index image $DWO_DIGEST_INDEX_IMAGE"
   docker build . -t "$DWO_DIGEST_INDEX_IMAGE" -f "build/index.release-digest.Dockerfile"

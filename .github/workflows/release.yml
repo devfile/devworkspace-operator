@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up Go 1.x
-        uses: actions/setup-go@v2
+        uses: actions/setup-go@v4
         with:
           go-version: 1.18.4
 
@@ -101,7 +101,7 @@ jobs:
           registry: quay.io
 
       - name: Set up yq
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.6
       - name: Setup yq

@@ -1,0 +1,40 @@
+name: Includes configmap's binaryData field when provisioning
+
+input:
+  configmaps:
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: test-subpath-configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: 'true'
+        annotations:
+          controller.devfile.io/mount-as: subpath
+          controller.devfile.io/mount-path: /tmp/configmap/subpath
+      data:
+        configmap-key: "This is secret"
+        configmap-key-2: "This is also secret I guess"
+      binaryData:
+        binary-key: aGVsbG8K # "hello"
+
+output:
+  volumes:
+  - name: test-subpath-configmap
+    configmap:
+      name: test-subpath-configmap
+      defaultMode: 0640
+  volumeMounts:
+  - name: test-subpath-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/subpath/configmap-key
+    subpath: configmap-key
+  - name: test-subpath-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/subpath/configmap-key-2
+    subpath: configmap-key-2
+  - name: test-subpath-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/subpath/binary-key
+    subpath: binary-key

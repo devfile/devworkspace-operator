@@ -114,9 +114,18 @@ func getAutomountConfigmap(mountPath, mountAs string, accessMode *int32, configm
 		automount.EnvFromSource = []corev1.EnvFromSource{envFromSource}
 	case constants.DevWorkspaceMountAsSubpath:
 		var volumeMounts []corev1.VolumeMount
+		volumeName := common.AutoMountConfigMapVolumeName(configmap.Name)
 		for secretKey := range configmap.Data {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      common.AutoMountConfigMapVolumeName(configmap.Name),
+				Name:      volumeName,
+				ReadOnly:  true,
+				MountPath: path.Join(mountPath, secretKey),
+				SubPath:   secretKey,
+			})
+		}
+		for secretKey := range configmap.BinaryData {
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      volumeName,
 				ReadOnly:  true,
 				MountPath: path.Join(mountPath, secretKey),
 				SubPath:   secretKey,

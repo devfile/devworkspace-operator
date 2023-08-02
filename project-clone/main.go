@@ -29,6 +29,8 @@ import (
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/git"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/zip"
+	gitclient "github.com/go-git/go-git/v5/plumbing/transport/client"
+	githttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 )
 
 const (
@@ -89,6 +91,7 @@ func main() {
 				},
 			},
 		}
+		gitclient.InstallProtocol("https", githttp.NewClient(httpClient))
 	}
 
 	encounteredError := false

@@ -16,9 +16,11 @@
 package internal
 
 import (
+	"crypto/x509"
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/go-git/go-git/v5"
@@ -116,4 +118,36 @@ func checkSubPathProjectState(project *dw.Project) (needClone, needRemotes bool,
 	} else {
 		return false, false, fmt.Errorf("could not check project state for project %s -- path %s exists and is not a directory", project.Name, clonePath)
 	}
+}
+
+func GetAdditionalCerts() (certs *x509.CertPool, warnings []string, err error) {
+	rootCAs, err := x509.SystemCertPool()
+	if err != nil {
+		return nil, warnings, fmt.Errorf("could not read system certificates pool: %w", err)
+	}
+
+	certFiles, err := os.ReadDir(publicCertsDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return rootCAs, warnings, nil
+		}
+		return nil, warnings, fmt.Errorf("could not read files in %s: %w", publicCertsDir, err)
+	}
+	for _, certFile := range certFiles {
+		if certFile.IsDir() {
+			continue
+		}
+		ext := filepath.Ext(certFile.Name())
+		if ext == ".crt" || ext == ".pem" {
+			fullPath := path.Join(publicCertsDir, certFile.Name())
+			fileBytes, err := os.ReadFile(fullPath)
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("Failed to read certificate %s: %s", fullPath, err))
+			}
+			if ok := rootCAs.AppendCertsFromPEM(fileBytes); !ok {
+				warnings = append(warnings, fmt.Sprintf("Failed to append certificate %s to pool", fullPath))
+			}
+		}
+	}
+	return rootCAs, warnings, nil
 }

@@ -16,8 +16,10 @@
 package main
 
 import (
+	"crypto/tls"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"path"
@@ -70,6 +72,25 @@ func main() {
 		projects = append(projects, internal.StarterProjectToRegularProject(starterProject))
 	}
 
+	var httpClient *http.Client
+	certs, warnings, err := internal.GetAdditionalCerts()
+	for _, warning := range warnings {
+		log.Printf("Warning while reading additional certificates: %s", warning)
+	}
+	if err != nil || certs == nil {
+		log.Printf("Failed to read additional certificates: %s", err)
+		log.Printf("Using default system certificate pool")
+		httpClient = http.DefaultClient
+	} else {
+		httpClient = &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: certs,
+				},
+			},
+		}
+	}
+
 	encounteredError := false
 	for _, project := range projects {
 		log.Printf("Processing project %s", project.Name)
@@ -78,7 +99,7 @@ func main() {
 		case project.Git != nil:
 			err = git.SetupGitProject(project)
 		case project.Zip != nil:
-			err = zip.SetupZipProject(project)
+			err = zip.SetupZipProject(project, httpClient)
 		default:
 			log.Printf("Project does not specify Git or Zip source")
 			copyLogFileToProjectsRoot()

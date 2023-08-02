@@ -32,6 +32,7 @@ import (
 const (
 	credentialsMountPath = "/.git-credentials/credentials"
 	sshConfigMountPath   = "/etc/ssh/ssh_config"
+	publicCertsDir       = "/public-certs"
 )
 
 var (

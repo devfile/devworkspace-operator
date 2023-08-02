@@ -35,7 +35,7 @@ const (
 )
 
 // SetupZipProject downloads and extracts a zip-type project to the corresponding clonePath.
-func SetupZipProject(project v1alpha2.Project) error {
+func SetupZipProject(project v1alpha2.Project, httpClient *http.Client) error {
 	if project.Zip == nil {
 		return fmt.Errorf("project has no 'zip' source")
 	}
@@ -54,7 +54,7 @@ func SetupZipProject(project v1alpha2.Project) error {
 
 	zipFilePath := path.Join(tmpDir, fmt.Sprintf("%s.zip", clonePath))
 	log.Printf("Downloading project archive from %s", url)
-	err := downloadZip(url, zipFilePath)
+	err := downloadZip(url, zipFilePath, httpClient)
 	if err != nil {
 		return fmt.Errorf("failed to download archive: %s", err)
 	}
@@ -83,9 +83,8 @@ func SetupZipProject(project v1alpha2.Project) error {
 //
 // Adapted from the Che plugin broker:
 // https://github.com/eclipse/che-plugin-broker/blob/27e7c6953c92633cbe7e8ce746a16ca10d240ea2/utils/ioutil.go#L67
-func downloadZip(url, destPath string) error {
-	client := http.DefaultClient
-	resp, err := client.Get(url)
+func downloadZip(url, destPath string, httpClient *http.Client) error {
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}

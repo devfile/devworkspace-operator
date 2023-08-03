@@ -128,10 +128,10 @@ func mergeVolume(into, from *dw.VolumeComponent) error {
 // needsContainerContributionMerge returns whether merging container contributions is necessary for this workspace. Merging
 // is necessary if the following two conditions are met:
 //
-// - At least one component has the container-contribution: true attribute.
+//   - At least one component has the container-contribution: true attribute.
 //
-// - At least one component has the merge-contribution: true attribute OR there exists a container component that was not imported by a
-// plugin or parent devworkspace.
+//   - At least one component has the merge-contribution: true attribute OR there exists a container component that was not imported by a
+//     plugin devworkspace.
 //
 // If the container-contribution or merge-contribution attribute are present but cannot be parsed as a bool, an error is returned.
 // If multiple components have the merge-contribution: true attribute, an error is returned.
@@ -165,7 +165,8 @@ func needsContainerContributionMerge(flattenedSpec *dw.DevWorkspaceTemplateSpec)
 				return false, fmt.Errorf("failed to parse %s attribute on component %s as true or false", constants.MergeContributionAttribute, component.Name)
 			}
 		} else {
-			if !component.Attributes.Exists(constants.PluginSourceAttribute) {
+			pluginSource := component.Attributes.GetString(constants.PluginSourceAttribute, nil)
+			if pluginSource == "" || pluginSource == "parent" {
 				// First, non-imported container component is implicitly selected as a contribution target
 				hasTarget = true
 			}
@@ -224,12 +225,12 @@ func mergeContainerContributions(flattenedSpec *dw.DevWorkspaceTemplateSpec, def
 // Finds a component that is a suitable merge target for container contributions and returns its name.
 // The following rules are followed when finding a merge target:
 //
-// - A container component that has the merge-contribution: true attribute will automatically be selected as a merge target.
+//   - A container component that has the merge-contribution: true attribute will automatically be selected as a merge target.
 //
-// - A container component that has the merge-contribution: false attribute will be never be selected as a merge target.
+//   - A container component that has the merge-contribution: false attribute will be never be selected as a merge target.
 //
-// - Otherwise, the first container component found that was not imported by a plugin or parent devworkspace (i.e. the controller.devfile.io/imported-by attribute is not present)
-// will be selected as a merge target.
+//   - Otherwise, the first container component found that was not imported by a plugin devworkspace
+//     will be selected as a merge target.
 //
 // If no suitable merge target is found, an error is returned.
 func findMergeTarget(flattenedSpec *dw.DevWorkspaceTemplateSpec) (mergeTargetComponentName string, err error) {
@@ -248,8 +249,9 @@ func findMergeTarget(flattenedSpec *dw.DevWorkspaceTemplateSpec) (mergeTargetCom
 			continue
 		}
 
-		// The target must not have been imported by a plugin or parent.
-		if component.Attributes.Exists(constants.PluginSourceAttribute) {
+		// The target must not have been imported by a plugin.
+		pluginSource := component.Attributes.GetString(constants.PluginSourceAttribute, nil)
+		if pluginSource != "" && pluginSource != "parent" {
 			continue
 		}
 

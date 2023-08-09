@@ -1,4 +1,4 @@
-name: "Calculates PVC size when all volumes define their size"
+name: "Calculates PVC size when sum of volumes with defined size is greater than default PVC size"
 
 input:
   devworkspaceId: "test-workspaceid"
@@ -26,6 +26,8 @@ input:
         container:
           image: testing-image-1
           sourceMapping: "/plugins-mountpath"
+      - name: plugins
+        volume: {} # Size is not defined, but calculated PVC size will be greater than default 5Gi so, calculated size should be used
       - name: volume-1
         volume:
           size: 1Gi
@@ -38,8 +40,6 @@ input:
       - name: volume-4
         volume:
           size: 248Mi
-      - name: plugins
-        volume: {} # Size is not defined, but calculated PVC size will be greater than default 5Gi so, calculated size should be used
 
 output:
   pvcSize: 5880Mi

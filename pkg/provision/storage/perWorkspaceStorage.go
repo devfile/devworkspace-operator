@@ -170,7 +170,7 @@ func getPVCSize(workspace *common.DevWorkspaceWithConfig, namespacedConfig *nsco
 
 			if component.Volume.Size == "" {
 				allVolumeSizesDefined = false
-				break
+				continue
 			}
 
 			volumeSize, err := resource.ParseQuantity(component.Volume.Size)

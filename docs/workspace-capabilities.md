@@ -33,8 +33,6 @@ rules:
   - watch
 - apiGroups:
   - ""
-  resourceNames:
-  - workspace-credentials-secret
   resources:
   - secrets
   verbs:
@@ -44,8 +42,6 @@ rules:
   - delete
 - apiGroups:
   - ""
-  resourceNames:
-  - workspace-preferences-configmap
   resources:
   - configmaps
   verbs:

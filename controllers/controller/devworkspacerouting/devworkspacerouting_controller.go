@@ -108,6 +108,9 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	if instance.Annotations != nil && instance.Annotations[constants.DevWorkspaceStartedStatusAnnotation] == "false" {
+		if err := r.setStatusStopped(instance); err != nil {
+			return reconcile.Result{}, err
+		}
 		return reconcile.Result{}, nil
 	}
 
@@ -288,6 +291,14 @@ func (r *DevWorkspaceRoutingReconciler) reconcileStatus(
 	instance.Status.Message = "DevWorkspaceRouting prepared"
 	instance.Status.PodAdditions = routingObjects.PodAdditions
 	instance.Status.ExposedEndpoints = exposedEndpoints
+	return r.Status().Update(context.TODO(), instance)
+}
+
+func (r *DevWorkspaceRoutingReconciler) setStatusStopped(instance *controllerv1alpha1.DevWorkspaceRouting) error {
+	instance.Status.Phase = controllerv1alpha1.RoutingStopped
+	instance.Status.Message = "DevWorkspace is not started"
+	instance.Status.PodAdditions = nil
+	instance.Status.ExposedEndpoints = nil
 	return r.Status().Update(context.TODO(), instance)
 }
 

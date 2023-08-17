@@ -62,6 +62,7 @@ const (
 	RoutingReady     DevWorkspaceRoutingPhase = "Ready"
 	RoutingPreparing DevWorkspaceRoutingPhase = "Preparing"
 	RoutingFailed    DevWorkspaceRoutingPhase = "Failed"
+	RoutingStopped   DevWorkspaceRoutingPhase = "Stopped"
 )
 
 type ExposedEndpoint struct {

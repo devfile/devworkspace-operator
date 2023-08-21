@@ -1,0 +1,10 @@
+name: "Returns error when preStop command does not exist"
+
+input:
+  devfile:
+    events:
+      preStop:
+        - test-cmd
+
+output:
+  errRegexp: ".*could not resolve command for preStop event 'test-cmd'.*"

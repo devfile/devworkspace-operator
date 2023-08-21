@@ -1,0 +1,14 @@
+name: "Returns error when preStop command is not exec-type"
+
+input:
+  devfile:
+    commands:
+      - id: test-command
+        apply:
+          component: my-component
+    events:
+      preStop:
+        - test-command
+
+output:
+  errRegexp: "can not use Apply-type command in preStop lifecycle event"

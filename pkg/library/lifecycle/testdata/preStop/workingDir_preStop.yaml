@@ -1,0 +1,32 @@
+name: "Should add preStop lifecycle hook for event with workingDir"
+
+input:
+  devfile:
+    commands:
+      - id: test-preStop
+        exec:
+          component: test-component
+          commandLine: "echo 'hello world'"
+          workingDir: "/tmp/test-dir"
+    events:
+      preStop:
+        - test-preStop
+  containers:
+    - name: test-component
+      image: test-img
+
+output:
+  containers:
+    - name: test-component
+      image: test-img
+      lifecycle:
+        preStop:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - |
+                {
+                cd /tmp/test-dir
+                echo 'hello world'
+                }

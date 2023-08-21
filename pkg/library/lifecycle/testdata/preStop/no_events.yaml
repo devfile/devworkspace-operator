@@ -1,0 +1,12 @@
+name: "Should do nothing when devfile does not specify events"
+
+input:
+  devfile: {}
+  containers:
+    - name: test-container
+      image: my-test-image
+
+output:
+  containers:
+    - name: test-container
+      image: my-test-image

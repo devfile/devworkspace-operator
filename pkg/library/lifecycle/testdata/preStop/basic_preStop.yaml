@@ -1,0 +1,30 @@
+name: "Should add preStop lifecycle hook for basic event"
+
+input:
+  devfile:
+    commands:
+      - id: test-preStop
+        exec:
+          component: test-component
+          commandLine: "echo 'hello world'"
+    events:
+      preStop:
+        - test-preStop
+  containers:
+    - name: test-component
+      image: test-img
+
+output:
+  containers:
+    - name: test-component
+      image: test-img
+      lifecycle:
+        preStop:
+          exec:
+            command:
+              - "/bin/sh"
+              - "-c"
+              - |
+                {
+                echo 'hello world'
+                }

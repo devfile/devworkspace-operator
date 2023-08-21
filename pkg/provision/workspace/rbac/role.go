@@ -95,12 +95,12 @@ func generateDefaultRole(namespace string) *rbacv1.Role {
 			{
 				Resources: []string{"secrets"},
 				APIGroups: []string{""},
-				Verbs:     []string{"get", "create", "patch", "delete"},
+				Verbs:     []string{"get", "list", "create", "patch", "update", "delete"},
 			},
 			{
 				Resources: []string{"configmaps"},
 				APIGroups: []string{""},
-				Verbs:     []string{"get", "create", "patch", "delete"},
+				Verbs:     []string{"get", "list", "create", "patch", "update", "delete"},
 			},
 			{
 				Resources: []string{"devworkspaces"},

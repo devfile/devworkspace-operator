@@ -99,6 +99,10 @@ func GitResolveReference(projectPath, remote, revision string) (GitRefType, erro
 	return GitRefUnknown, nil
 }
 
+func GitInitSubmodules(projectPath string) error {
+	return executeCommand("git", "-C", projectPath, "submodule", "update", "--init", "--recursive")
+}
+
 func executeCommand(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	cmd.Stderr = log.Writer()

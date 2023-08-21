@@ -37,8 +37,10 @@ rules:
   - secrets
   verbs:
   - get
+  - list
   - create
   - patch
+  - update
   - delete
 - apiGroups:
   - ""
@@ -46,8 +48,10 @@ rules:
   - configmaps
   verbs:
   - get
+  - list
   - create
   - patch
+  - update
   - delete
 - apiGroups:
   - workspace.devfile.io

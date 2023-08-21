@@ -21,70 +21,70 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const redirectOutputFmt = `{
+const preStopCommandFmt = `{
 %s
-} 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
+}
 `
 
-func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container) error {
-	if wksp.Events == nil || len(wksp.Events.PostStart) == 0 {
+func AddPreStopLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container) error {
+	if wksp.Events == nil || len(wksp.Events.PreStop) == 0 {
 		return nil
 	}
 
 	componentToCommands := map[string][]dw.Command{}
-	for _, commandName := range wksp.Events.PostStart {
+	for _, commandName := range wksp.Events.PreStop {
 		command, err := getCommandByKey(commandName, wksp.Commands)
 		if err != nil {
-			return fmt.Errorf("could not resolve command for postStart event '%s': %w", commandName, err)
+			return fmt.Errorf("could not resolve command for preStop event '%s': %w", commandName, err)
 		}
 		cmdType, err := getCommandType(*command)
 		if err != nil {
 			return fmt.Errorf("could not determine command type for '%s': %w", command.Key(), err)
 		}
 		if cmdType != dw.ExecCommandType {
-			return fmt.Errorf("can not use %s-type command in postStart lifecycle event", cmdType)
+			return fmt.Errorf("can not use %s-type command in preStop lifecycle event", cmdType)
 		}
-
 		componentToCommands[command.Exec.Component] = append(componentToCommands[command.Exec.Component], *command)
 	}
 
 	for componentName, commands := range componentToCommands {
 		cmdContainer, err := getContainerWithName(componentName, containers)
 		if err != nil {
-			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
+			return fmt.Errorf("failed to process preStop event '%s': %w", commands[0].Id, err)
 		}
 
-		postStartHandler, err := processCommandsForPostStart(commands)
+		preStopHandler, err := processCommandsForPreStop(commands)
 		if err != nil {
-			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
+			return fmt.Errorf("failed to process preStop event '%s': %w", commands[0].Id, err)
 		}
 
 		if cmdContainer.Lifecycle == nil {
 			cmdContainer.Lifecycle = &corev1.Lifecycle{}
 		}
-		cmdContainer.Lifecycle.PostStart = postStartHandler
+		cmdContainer.Lifecycle.PreStop = preStopHandler
 	}
 
 	return nil
 }
 
-// processCommandsForPostStart builds a lifecycle handler that runs the provided command(s)
+// processCommandsForPreStop builds a lifecycle handler that runs the provided command(s)
 // The command has the format
 //
-// exec:
-//
-//	command:
-//	  - "/bin/sh"
-//	  - "-c"
-//	  - |
-//	    cd <workingDir>
-//	    <commandline>
-func processCommandsForPostStart(commands []dw.Command) (*corev1.LifecycleHandler, error) {
+//	exec:
+//		command:
+//		  - "/bin/sh"
+//		  - "-c"
+//		  - |
+//	        {
+//		    cd <workingDir>
+//		    <commandline>
+//	        }
+func processCommandsForPreStop(commands []dw.Command) (*corev1.LifecycleHandler, error) {
 	var dwCommands []string
 	for _, command := range commands {
 		execCmd := command.Exec
 		if len(execCmd.Env) > 0 {
-			return nil, fmt.Errorf("env vars in postStart command %s are unsupported", command.Id)
+			return nil, fmt.Errorf("env vars in preStop command %s are unsupported", command.Id)
 		}
 		if execCmd.WorkingDir != "" {
 			dwCommands = append(dwCommands, fmt.Sprintf("cd %s", execCmd.WorkingDir))
@@ -99,7 +99,7 @@ func processCommandsForPostStart(commands []dw.Command) (*corev1.LifecycleHandle
 			Command: []string{
 				"/bin/sh",
 				"-c",
-				fmt.Sprintf(redirectOutputFmt, joinedCommands),
+				fmt.Sprintf(preStopCommandFmt, joinedCommands),
 			},
 		},
 	}

@@ -80,6 +80,10 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securi
 		return nil, err
 	}
 
+	if err := lifecycle.AddPreStopLifecycleHooks(workspace, podAdditions.Containers); err != nil {
+		return nil, err
+	}
+
 	for _, initComponent := range initComponents {
 		k8sContainer, err := convertContainerToK8s(initComponent, securityContext, pullPolicy, defaultResources)
 		if err != nil {

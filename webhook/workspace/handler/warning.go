@@ -30,7 +30,6 @@ type unsupportedWarnings struct {
 	imageComponent      map[string]bool
 	customComponent     map[string]bool
 	eventPostStop       map[string]bool
-	eventPreStop        map[string]bool
 }
 
 // Returns an initialized unsupportedWarnings struct
@@ -42,7 +41,6 @@ func newUnsupportedWarnings() *unsupportedWarnings {
 		imageComponent:      make(map[string]bool),
 		customComponent:     make(map[string]bool),
 		eventPostStop:       make(map[string]bool),
-		eventPreStop:        make(map[string]bool),
 	}
 }
 
@@ -76,12 +74,6 @@ func checkUnsupportedFeatures(devWorkspaceSpec dwv2.DevWorkspaceTemplateSpec) (w
 				warnings.eventPostStop[event] = true
 			}
 		}
-		if len(devWorkspaceSpec.Events.PreStop) > 0 {
-			for _, event := range devWorkspaceSpec.Events.PreStop {
-				warnings.eventPreStop[event] = true
-			}
-
-		}
 	}
 	return warnings
 }
@@ -92,8 +84,7 @@ func unsupportedWarningsPresent(warnings *unsupportedWarnings) bool {
 		len(warnings.dedicatedPod) > 0 ||
 		len(warnings.imageComponent) > 0 ||
 		len(warnings.customComponent) > 0 ||
-		len(warnings.eventPostStop) > 0 ||
-		len(warnings.eventPreStop) > 0
+		len(warnings.eventPostStop) > 0
 }
 
 func formatUnsupportedFeaturesWarning(warnings *unsupportedWarnings) string {
@@ -133,10 +124,6 @@ func formatUnsupportedFeaturesWarning(warnings *unsupportedWarnings) string {
 		eventPostStopMsg := "events.postStop: " + strings.Join(getWarningNames(warnings.eventPostStop), ", ")
 		msg = append(msg, eventPostStopMsg)
 	}
-	if len(warnings.eventPreStop) > 0 {
-		eventPreStopMsg := "events.preStop: " + strings.Join(getWarningNames(warnings.eventPreStop), ", ")
-		msg = append(msg, eventPreStopMsg)
-	}
 	return fmt.Sprintf("Unsupported Devfile features are present in this workspace. The following features will have no effect: %s", strings.Join(msg, "; "))
 }
 
@@ -162,7 +149,6 @@ func checkForAddedUnsupportedFeatures(oldWksp, newWksp *dwv2.DevWorkspace) *unsu
 	addedWarnings.dedicatedPod = getAddedWarnings(oldWarnings.dedicatedPod, newWarnings.dedicatedPod)
 	addedWarnings.imageComponent = getAddedWarnings(oldWarnings.imageComponent, newWarnings.imageComponent)
 	addedWarnings.customComponent = getAddedWarnings(oldWarnings.customComponent, newWarnings.customComponent)
-	addedWarnings.eventPreStop = getAddedWarnings(oldWarnings.eventPreStop, newWarnings.eventPreStop)
 	addedWarnings.eventPostStop = getAddedWarnings(oldWarnings.eventPostStop, newWarnings.eventPostStop)
 	return addedWarnings
 }

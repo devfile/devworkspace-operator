@@ -18,6 +18,8 @@ package git
 import (
 	"fmt"
 	"log"
+	"os"
+	"path"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/go-git/go-git/v5"
@@ -114,6 +116,18 @@ func SetupRemotes(repo *git.Repository, project *dw.Project, projectPath string)
 			return fmt.Errorf("failed to fetch from remote %s: %s", remoteUrl, err)
 		}
 		log.Printf("Fetched remote %s at %s", remoteName, remoteUrl)
+	}
+	return nil
+}
+
+func SetupSubmodules(project *dw.Project, projectPath string) error {
+	if _, err := os.Stat(path.Join(projectPath, ".gitmodules")); os.IsNotExist(err) {
+		// No submodules; do nothing
+		return nil
+	}
+	log.Printf("Initializing submodules for project %s", project.Name)
+	if err := shell.GitInitSubmodules(projectPath); err != nil {
+		return fmt.Errorf("git submodule update --init --recursive failed: %s", err)
 	}
 	return nil
 }

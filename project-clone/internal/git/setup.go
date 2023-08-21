@@ -71,6 +71,10 @@ func doInitialGitClone(project *dw.Project) error {
 		return fmt.Errorf("failed to checkout revision: %s", err)
 	}
 
+	if err := SetupSubmodules(project, tmpClonePath); err != nil {
+		log.Printf("Failed to set up submodules in project: %s", err)
+	}
+
 	if err := copyProjectFromTmpDir(project, tmpClonePath); err != nil {
 		return err
 	}

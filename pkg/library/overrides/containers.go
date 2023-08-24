@@ -24,6 +24,16 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
+// Constants representing the default values used by Kubernetes for container fields.
+// If a pod is created that does not set these fields in a Probe (but does create a probe)
+// these are the values that will be automatically applied to the pod spec.
+const (
+	defaultProbeSuccessThreshold = 1
+	defaultProbeFailureThreshold = 3
+	defaultProbeTimeoutSeconds   = 1
+	defaultProbePeriodSeconds    = 10
+)
+
 func NeedsContainerOverride(component *dw.Component) bool {
 	return component.Container != nil && component.Attributes.Exists(constants.ContainerOverridesAttribute)
 }
@@ -57,6 +67,10 @@ func ApplyContainerOverrides(component *dw.Component, container *corev1.Containe
 	// does not have the omitempty json tag.
 	patched.Name = container.Name
 	patched.Image = container.Image
+
+	// Make sure any fields that will be defaulted by the cluster are set (e.g. probes)
+	handleDefaultedContainerFields(patched)
+
 	return patched, nil
 }
 
@@ -90,4 +104,36 @@ func restrictContainerOverride(override *corev1.Container) error {
 		return fmt.Errorf("cannot use container-overrides to override container %s", invalidField)
 	}
 	return nil
+}
+
+// handleDefaultedContainerFields fills partially-filled structs with defaulted fields
+// in a container. This is required to avoid repeatedly reconciling a container where e.g.
+//
+// 1. We create a readinessProbe with no successThreshold since it's not defined in the override
+// 2. Kubernetes sets the defaulted field successThreshold: 1
+// 3. We detect that the spec is different from the cluster and unset successThreshold (go to 1.)
+func handleDefaultedContainerFields(patched *corev1.Container) {
+	setProbeFields := func(probe *corev1.Probe) {
+		if probe.SuccessThreshold == 0 {
+			probe.SuccessThreshold = defaultProbeSuccessThreshold
+		}
+		if probe.FailureThreshold == 0 {
+			probe.FailureThreshold = defaultProbeFailureThreshold
+		}
+		if probe.PeriodSeconds == 0 {
+			probe.PeriodSeconds = defaultProbePeriodSeconds
+		}
+		if probe.TimeoutSeconds == 0 {
+			probe.TimeoutSeconds = defaultProbeTimeoutSeconds
+		}
+	}
+	if patched.ReadinessProbe != nil {
+		setProbeFields(patched.ReadinessProbe)
+	}
+	if patched.LivenessProbe != nil {
+		setProbeFields(patched.LivenessProbe)
+	}
+	if patched.StartupProbe != nil {
+		setProbeFields(patched.StartupProbe)
+	}
 }

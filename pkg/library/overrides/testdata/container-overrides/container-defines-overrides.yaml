@@ -10,9 +10,6 @@ input:
             nvidia.com/gpu: "1"
           requests:
             nvidia.com/gpu: "1"
-        readinessProbe:
-          exec:
-            command: ["echo", "hello"]
         securityContext:
           runAsUser: 1000
           runAsGroup: 3000
@@ -32,9 +29,6 @@ output:
         nvidia.com/gpu: "1"
       requests:
         nvidia.com/gpu: "1"
-    readinessProbe:
-      exec:
-        command: ["echo", "hello"]
     securityContext:
       runAsUser: 1000
       runAsGroup: 3000

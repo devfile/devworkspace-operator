@@ -100,6 +100,7 @@ func SetGlobalConfigForTesting(testConfig *controller.OperatorConfiguration) {
 	configMutex.Lock()
 	defer configMutex.Unlock()
 	setDefaultPodSecurityContext()
+	setDefaultContainerSecurityContext()
 	internalConfig = defaultConfig.DeepCopy()
 	mergeConfig(testConfig, internalConfig)
 }
@@ -109,6 +110,9 @@ func SetupControllerConfig(client crclient.Client) error {
 		return fmt.Errorf("internal controller configuration is already set up")
 	}
 	if err := setDefaultPodSecurityContext(); err != nil {
+		return err
+	}
+	if err := setDefaultContainerSecurityContext(); err != nil {
 		return err
 	}
 

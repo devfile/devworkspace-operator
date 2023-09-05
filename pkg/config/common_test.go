@@ -55,6 +55,7 @@ func setupForTest(t *testing.T) {
 	}
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 	setDefaultPodSecurityContext()
+	setDefaultContainerSecurityContext()
 	configNamespace = testNamespace
 	originalDefaultConfig := defaultConfig.DeepCopy()
 	t.Cleanup(func() {

@@ -213,6 +213,10 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 	if err != nil {
 		return nil, err
 	}
+	if pvc.Labels == nil {
+		pvc.Labels = map[string]string{}
+	}
+	pvc.Labels[constants.DevWorkspaceIDLabel] = workspace.Status.DevWorkspaceId
 
 	if err := controllerutil.SetControllerReference(workspace.DevWorkspace, pvc, clusterAPI.Scheme); err != nil {
 		return nil, err

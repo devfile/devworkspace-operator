@@ -356,12 +356,82 @@ func TestSyncConfigDoesNotEraseClusterRoutingSuffix(t *testing.T) {
 	assert.Equal(t, "test-host", internalConfig.Routing.ClusterHostSuffix, "clusterHostSuffix should persist after an update")
 }
 
+func TestMergeConfigHandlesProxySettings(t *testing.T) {
+	setupForTest(t)
+	baseProxyConfig := &v1alpha1.Proxy{
+		HttpProxy:  pointer.String("baseHttpProxy"),
+		HttpsProxy: pointer.String("baseHttpsProxy"),
+		NoProxy:    pointer.String("baseNoProxy"),
+	}
+	defaultConfig.Routing.ProxyConfig = baseProxyConfig
+
+	tests := []struct {
+		name     string
+		message  string
+		input    *v1alpha1.Proxy
+		expected *v1alpha1.Proxy
+	}{
+		{
+			name:    "Merges non-empty proxy settings",
+			message: "Non-empty fields in proxy should be merged",
+			input: &v1alpha1.Proxy{
+				HttpProxy:  pointer.String("testHttpProxy"),
+				HttpsProxy: pointer.String("testHttpsProxy"),
+				NoProxy:    pointer.String("testNoProxy"),
+			},
+			expected: &v1alpha1.Proxy{
+				HttpProxy:  pointer.String("testHttpProxy"),
+				HttpsProxy: pointer.String("testHttpsProxy"),
+				NoProxy:    pointer.String("baseNoProxy,testNoProxy"),
+			},
+		},
+		{
+			name:    "Empty string unsets proxy fields",
+			message: "Merging an empty string should delete the corresponding proxy field",
+			input: &v1alpha1.Proxy{
+				HttpProxy:  pointer.String(""),
+				HttpsProxy: pointer.String(""),
+				NoProxy:    pointer.String(""),
+			},
+			expected: &v1alpha1.Proxy{},
+		},
+		{
+			name:    "Using nil for fields leaves base unchanged",
+			message: "Merging an empty string should delete the corresponding proxy field",
+			input: &v1alpha1.Proxy{
+				HttpProxy:  nil,
+				HttpsProxy: nil,
+				NoProxy:    nil,
+			},
+			expected: baseProxyConfig,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fromConfig := &v1alpha1.OperatorConfiguration{
+				Routing: &v1alpha1.RoutingConfig{
+					ProxyConfig: tt.input,
+				},
+			}
+			actualConfig := &v1alpha1.OperatorConfiguration{
+				Routing: &v1alpha1.RoutingConfig{
+					ProxyConfig: baseProxyConfig,
+				},
+			}
+			mergeConfig(fromConfig, actualConfig)
+			assert.Equal(t, tt.expected, actualConfig.Routing.ProxyConfig, tt.message)
+		})
+	}
+}
+
 func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	f := fuzz.New().NilChance(0).Funcs(
 		func(embeddedResource *runtime.RawExtension, c fuzz.Continue) {},
 		fuzzQuantity,
 		fuzzResourceList,
 		fuzzResourceRequirements,
+		fuzzStringPtr,
 	)
 	expectedConfig := &v1alpha1.OperatorConfiguration{}
 	actualConfig := &v1alpha1.OperatorConfiguration{}
@@ -393,4 +463,13 @@ func fuzzResourceRequirements(req *corev1.ResourceRequirements, c fuzz.Continue)
 	c.Fuzz(&requests)
 	req.Limits = limits
 	req.Requests = requests
+}
+
+func fuzzStringPtr(str *string, c fuzz.Continue) {
+	randString := c.RandString()
+	// Only set string pointer if the generated string is not empty to avoid edge cases with
+	// replacing empty strings with nils in sync code. This edge case has to be tested manually.
+	if randString != "" {
+		*str = randString
+	}
 }

@@ -120,7 +120,7 @@ if $USE_DEFAULT_ENV; then
   export PROJECT_CLONE_IMG=${PROJECT_CLONE_IMG:-"quay.io/devfile/project-clone:next"}
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic
-  export DEVWORKSPACE_API_VERSION=2568944140c38aa941390d0f8e941534bf88f793
+  export DEVWORKSPACE_API_VERSION=a6c32fca0dbdcb61454e7bb7ff5b5ef525bbbe86
   export ROUTING_SUFFIX='""'
   export FORCE_DEVWORKSPACE_CRDS_UPDATE=true
 fi

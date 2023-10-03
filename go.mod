@@ -3,7 +3,7 @@ module github.com/devfile/devworkspace-operator
 go 1.18
 
 require (
-	github.com/devfile/api/v2 v2.2.0
+	github.com/devfile/api/v2 v2.2.1-alpha.0.20230413012049-a6c32fca0dbd
 	github.com/go-git/go-git/v5 v5.5.1
 	github.com/go-logr/logr v1.2.3
 	github.com/google/go-cmp v0.5.9

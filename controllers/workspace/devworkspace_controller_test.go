@@ -929,4 +929,50 @@ var _ = Describe("DevWorkspace Controller", func() {
 			}, timeout, interval).Should(BeTrue(), "Finalizer should be cleared and workspace should be deleted")
 		})
 	})
+
+	Context("Edge cases", func() {
+
+		It("Allows Kubernetes and Container components to share same target port on endpoint", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace-duplicate-ports.yaml")
+			defer deleteDevWorkspace(devWorkspaceName)
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						"test-url/healthz": {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+			By("Manually making Routing ready to continue")
+			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
+
+			By("Setting the deployment to have 1 ready replica")
+			markDeploymentReady(common.DeploymentName(workspaceID))
+
+			currDW := &dw.DevWorkspace{}
+			Eventually(func() (dw.DevWorkspacePhase, error) {
+				err := k8sClient.Get(ctx, namespacedName(devworkspace.Name, devworkspace.Namespace), currDW)
+				if err != nil {
+					return "", err
+				}
+				GinkgoWriter.Printf("Waiting for DevWorkspace to enter running phase -- Phase: %s, Message %s\n", currDW.Status.Phase, currDW.Status.Message)
+				return currDW.Status.Phase, nil
+			}, timeout, interval).Should(Equal(dw.DevWorkspaceStatusRunning), "Workspace did not enter Running phase before timeout")
+
+			// Verify DevWorkspace is Running as expected
+			Expect(currDW.Status.Message).Should(Equal(currDW.Status.MainUrl))
+			runningCondition := conditions.GetConditionByType(currDW.Status.Conditions, dw.DevWorkspaceReady)
+			Expect(runningCondition).NotTo(BeNil())
+			Expect(runningCondition.Status).Should(Equal(corev1.ConditionTrue))
+
+			// Clean up
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+		})
+
+	})
+
 })

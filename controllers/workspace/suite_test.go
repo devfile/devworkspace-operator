@@ -25,6 +25,7 @@ import (
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/internal/testutil"
+	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
@@ -108,6 +109,9 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	// Replicate controller setup similarly to how we do for main.go
+	err = kubesync.InitializeDeserializer(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	cacheFunc, err := cache.GetCacheFunc()
 	Expect(err).NotTo(HaveOccurred())
 

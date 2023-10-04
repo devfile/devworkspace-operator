@@ -621,8 +621,14 @@ func (r *DevWorkspaceReconciler) syncStartedAtToCluster(
 func (r *DevWorkspaceReconciler) removeStartedAtFromCluster(
 	ctx context.Context, workspace *common.DevWorkspaceWithConfig, reqLogger logr.Logger) {
 	if workspace.Annotations == nil {
-		workspace.Annotations = map[string]string{}
+		// No annotations, nothing to do
+		return
 	}
+	if _, ok := workspace.Annotations[constants.DevWorkspaceStartedAtAnnotation]; !ok {
+		// Annotation has already been deleted
+		return
+	}
+
 	delete(workspace.Annotations, constants.DevWorkspaceStartedAtAnnotation)
 	if err := r.Update(ctx, workspace.DevWorkspace); err != nil {
 		if k8sErrors.IsConflict(err) {

@@ -17,7 +17,7 @@ FROM registry.access.redhat.com/ubi9/nodejs-18:1
 # hadolint ignore=DL3002
 USER 0
 
-ENV GOCACHE="/home/.cache/go-build"
+ENV GOCACHE="/home/user/.cache/go-build"
 
 # hadolint ignore=DL3041
 RUN dnf install -y -q --allowerasing --nobest nodejs-devel nodejs-libs \
@@ -30,7 +30,7 @@ RUN dnf install -y -q --allowerasing --nobest nodejs-devel nodejs-libs \
   echo -n "yarn version: "; yarn -v
 
 RUN dnf -y install go && \
-  mkdir -p /home/.cache/go-build && \
+  mkdir -p $GOCACHE && \
   dnf update -y && dnf clean all && \
   echo -n "go version: "; go version && \
   dnf install --assumeyes -d1 python3-pip && \

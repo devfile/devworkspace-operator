@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"reflect"
 	"sort"
 	"time"
 
@@ -63,6 +64,7 @@ var clock kubeclock.Clock = &kubeclock.RealClock{}
 // Parameters for result and error are returned unmodified, unless error is nil and another error is encountered while
 // updating the status.
 func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *common.DevWorkspaceWithConfig, logger logr.Logger, status *currentStatus, reconcileResult reconcile.Result, reconcileError error) (reconcile.Result, error) {
+	oldWorkspace := workspace.DevWorkspace.DeepCopy()
 	syncConditions(&workspace.Status, status)
 	oldPhase := workspace.Status.Phase
 	workspace.Status.Phase = status.phase
@@ -75,6 +77,9 @@ func (r *DevWorkspaceReconciler) updateWorkspaceStatus(workspace *common.DevWork
 		workspace.Status.Message = infoMessage
 	}
 
+	if reflect.DeepEqual(oldWorkspace.Status, workspace.Status) {
+		return reconcileResult, reconcileError
+	}
 	err := r.Status().Update(context.TODO(), workspace.DevWorkspace)
 	if err != nil {
 		if k8sErrors.IsConflict(err) {

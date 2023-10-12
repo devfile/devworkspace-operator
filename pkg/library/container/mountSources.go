@@ -23,6 +23,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	projectslib "github.com/devfile/devworkspace-operator/pkg/library/projects"
 )
 
 // HasMountSources evaluates whether project sources should be mounted in the given container component.
@@ -53,9 +54,9 @@ func AnyMountSources(devfileComponents []dw.Component) bool {
 
 // handleMountSources adds a volumeMount to a container if the corresponding devfile container has
 // mountSources enabled.
-func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.ContainerComponent, projects []dw.Project) {
+func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.ContainerComponent, workspace *dw.DevWorkspaceTemplateSpec) error {
 	if !HasMountSources(devfileContainer) {
-		return
+		return nil
 	}
 	var sourceMapping string
 	if vm := getProjectsVolumeMount(k8sContainer); vm != nil {
@@ -75,7 +76,10 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.Con
 		})
 	}
 
-	projectsSourcePath := getProjectSourcePath(projects)
+	projectsSourcePath, err := getProjectSourcePath(workspace)
+	if err != nil {
+		return err
+	}
 
 	k8sContainer.Env = append(k8sContainer.Env, corev1.EnvVar{
 		Name:  devfileConstants.ProjectsRootEnvVar,
@@ -84,20 +88,37 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.Con
 		Name:  devfileConstants.ProjectsSourceEnvVar,
 		Value: path.Join(sourceMapping, projectsSourcePath),
 	})
+
+	return nil
 }
 
-// getProjectSourcePath gets the path, relative to PROJECTS_ROOT, that should be used for the PROJECT_SOURCE env var
-func getProjectSourcePath(projects []dw.Project) string {
-	projectPath := ""
+// getProjectSourcePath gets the path, relative to PROJECTS_ROOT, that should be used for the PROJECT_SOURCE env var.
+// Returns an error if there was a problem retrieving the selected starter project.
+//
+// The project source path is determined based on the following priorities:
+//
+//  1. If the workspace has at least one regular project, the first one will be selected.
+//     If the first project has a clone path, it will be used, otherwise the project's name will be used as the project source path.
+//
+//  2. If the workspace has a starter project that is selected, its name will be used as the project source path.
+//
+//  3. Otherwise, the returned project source path will be an empty string.
+func getProjectSourcePath(workspace *dw.DevWorkspaceTemplateSpec) (string, error) {
+	projects := workspace.Projects
+	// If there are any projects, return the first one's clone path
 	if len(projects) > 0 {
-		firstProject := projects[0]
-		if firstProject.ClonePath != "" {
-			projectPath = firstProject.ClonePath
-		} else {
-			projectPath = firstProject.Name
-		}
+		return projectslib.GetClonePath(&projects[0]), nil
 	}
-	return projectPath
+
+	// No projects, check if we have a selected starter project
+	selectedStarterProject, err := projectslib.GetStarterProject(workspace)
+	if err != nil {
+		return "", err
+	} else if selectedStarterProject != nil {
+		// Starter projects do not allow specifying a clone path, so use the name
+		return selectedStarterProject.Name, nil
+	}
+	return "", nil
 }
 
 // getProjectsVolumeMount returns the projects volumeMount in a container, if it is defined; if it does not exist,

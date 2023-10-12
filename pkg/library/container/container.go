@@ -27,12 +27,11 @@ package container
 import (
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -65,7 +64,9 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securi
 		if err != nil {
 			return nil, err
 		}
-		handleMountSources(k8sContainer, component.Container, workspace.Projects)
+		if err := handleMountSources(k8sContainer, component.Container, workspace); err != nil {
+			return nil, err
+		}
 		if overrides.NeedsContainerOverride(&component) {
 			patchedContainer, err := overrides.ApplyContainerOverrides(&component, k8sContainer)
 			if err != nil {
@@ -89,7 +90,9 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securi
 		if err != nil {
 			return nil, err
 		}
-		handleMountSources(k8sContainer, initComponent.Container, workspace.Projects)
+		if err := handleMountSources(k8sContainer, initComponent.Container, workspace); err != nil {
+			return nil, err
+		}
 		if overrides.NeedsContainerOverride(&initComponent) {
 			patchedContainer, err := overrides.ApplyContainerOverrides(&initComponent, k8sContainer)
 			if err != nil {

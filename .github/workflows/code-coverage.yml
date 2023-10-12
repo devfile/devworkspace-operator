@@ -14,12 +14,12 @@ jobs:
       name: Set up Go 1.x
       uses: actions/setup-go@v4
       with:
-        go-version: 1.18.4
+        go-version: 1.19.10
     -
-      name: Set up Python 3.8
+      name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: 3.11
     -
       name: Check out code into the Go module directory
       uses: actions/checkout@v3

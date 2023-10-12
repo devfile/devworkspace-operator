@@ -28,7 +28,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v4
         with:
-          go-version: 1.18.4
+          go-version: 1.19.10
 
       - name: Clone source code
         uses: actions/checkout@v3

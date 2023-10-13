@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"golang.org/x/net/http/httpproxy"
@@ -60,5 +61,6 @@ func setupHttpClients() {
 	}
 	healthCheckHttpClient = &http.Client{
 		Transport: healthCheckTransport,
+		Timeout:   500 * time.Millisecond,
 	}
 }

@@ -38,7 +38,6 @@ const (
 	tmpLogFilePath = "/tmp/" + logFileName
 )
 
-// TODO: Handle sparse checkout
 func main() {
 	f, err := os.Create(tmpLogFilePath)
 	if err != nil {

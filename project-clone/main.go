@@ -27,6 +27,7 @@ import (
 
 	projectslib "github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
+	"github.com/devfile/devworkspace-operator/project-clone/internal/bootstrap"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/git"
 	"github.com/devfile/devworkspace-operator/project-clone/internal/zip"
 	gitclient "github.com/go-git/go-git/v5/plumbing/transport/client"
@@ -114,6 +115,18 @@ func main() {
 	}
 	if encounteredError {
 		copyLogFileToProjectsRoot()
+		os.Exit(0)
+	}
+
+	needBootstrap, err := bootstrap.NeedsBootstrap(workspace)
+	if err != nil {
+		log.Printf("Encountered error reading DevWorkspace attributes: %s", err)
+		copyLogFileToProjectsRoot()
+	} else if needBootstrap {
+		if err := bootstrap.BootstrapWorkspace(workspace); err != nil {
+			log.Printf("Encountered error setting up DevWorkspace from devfile: %s", err)
+			copyLogFileToProjectsRoot()
+		}
 	}
 }
 

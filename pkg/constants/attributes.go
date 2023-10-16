@@ -145,4 +145,10 @@ const (
 	// StarterProjectAttribute is an attribute applied to the top-level attributes in a DevWorkspace to specify which
 	// starterProject in the workspace should be cloned.
 	StarterProjectAttribute = "controller.devfile.io/use-starter-project"
+
+	// BootstrapDevWorkspaceAttribute is an attribute applied to the top-level attributes in a DevWorkspace to configure
+	// the project-clone container to "bootstrap" the DevWorkspace from a devfile.yaml or .devfile.yaml file at the root
+	// of a cloned project. If the bootstrap process is successful, project-clone will automatically remove this attribute
+	// from the DevWorkspace
+	BootstrapDevWorkspaceAttribute = "controller.devfile.io/bootstrap-devworkspace"
 )

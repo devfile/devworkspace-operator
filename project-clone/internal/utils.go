@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	projectslib "github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/go-git/go-git/v5"
 )
 
@@ -37,7 +38,7 @@ func CheckProjectState(project *dw.Project) (needClone, needRemotes bool, err er
 	if project.Attributes.Exists(ProjectSubDir) {
 		return checkSubPathProjectState(project)
 	}
-	repo, err := OpenRepo(path.Join(ProjectsRoot, GetClonePath(project)))
+	repo, err := OpenRepo(path.Join(ProjectsRoot, projectslib.GetClonePath(project)))
 	if err != nil {
 		return false, false, err
 	}
@@ -105,7 +106,7 @@ func checkSubPathProjectState(project *dw.Project) (needClone, needRemotes bool,
 	}
 
 	// Result here won't be a git repository, so we only check whether the directory exists
-	clonePath := path.Join(ProjectsRoot, GetClonePath(project))
+	clonePath := path.Join(ProjectsRoot, projectslib.GetClonePath(project))
 	stat, err := os.Stat(clonePath)
 	if err != nil {
 		if os.IsNotExist(err) {

@@ -115,6 +115,14 @@ func GetStarterProject(workspace *dw.DevWorkspaceTemplateSpec) (*dw.StarterProje
 	return nil, fmt.Errorf("selected starter project %s not found in workspace starterProjects", selectedStarterProject)
 }
 
+// GetClonePath gets the correct clonePath for a project, given the semantics in devfile/api
+func GetClonePath(project *dw.Project) string {
+	if project.ClonePath != "" {
+		return project.ClonePath
+	}
+	return project.Name
+}
+
 func hasContainerComponents(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	for _, component := range workspace.Components {
 		if component.Container != nil {

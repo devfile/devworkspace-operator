@@ -32,14 +32,6 @@ const (
 	ProjectSubDir         = "subDir"
 )
 
-// GetClonePath gets the correct clonePath for a project, given the semantics in devfile/api
-func GetClonePath(project *dw.Project) string {
-	if project.ClonePath != "" {
-		return project.ClonePath
-	}
-	return project.Name
-}
-
 // ReadFlattenedDevWorkspace reads the flattened DevWorkspaceTemplateSpec from disk. The location of the flattened
 // yaml is determined from the DevWorkspace Operator-provisioned environment variable.
 func ReadFlattenedDevWorkspace() (*dw.DevWorkspaceTemplateSpec, error) {

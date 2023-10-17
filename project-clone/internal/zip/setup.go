@@ -27,6 +27,7 @@ import (
 
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
+	projectslib "github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
 )
 
@@ -40,7 +41,7 @@ func SetupZipProject(project v1alpha2.Project, httpClient *http.Client) error {
 		return fmt.Errorf("project has no 'zip' source")
 	}
 	url := project.Zip.Location
-	clonePath := internal.GetClonePath(&project)
+	clonePath := projectslib.GetClonePath(&project)
 	projectPath := path.Join(internal.ProjectsRoot, clonePath)
 	if exists, err := internal.DirExists(projectPath); exists {
 		// Assume project is already set up

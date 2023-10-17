@@ -22,6 +22,7 @@ import (
 	"path"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	projectslib "github.com/devfile/devworkspace-operator/pkg/library/projects"
 
 	"github.com/devfile/devworkspace-operator/project-clone/internal"
 )
@@ -44,7 +45,7 @@ func SetupGitProject(project dw.Project) error {
 func doInitialGitClone(project *dw.Project) error {
 	// Clone into a temp dir and then move set up project to PROJECTS_ROOT to try and make clone atomic in case
 	// project-clone container is terminated
-	tmpClonePath := path.Join(internal.CloneTmpDir, internal.GetClonePath(project))
+	tmpClonePath := path.Join(internal.CloneTmpDir, projectslib.GetClonePath(project))
 	err := CloneProject(project, tmpClonePath)
 	if err != nil {
 		return fmt.Errorf("failed to clone project: %s", err)
@@ -83,7 +84,7 @@ func doInitialGitClone(project *dw.Project) error {
 }
 
 func setupRemotesForExistingProject(project *dw.Project) error {
-	projectPath := path.Join(internal.ProjectsRoot, internal.GetClonePath(project))
+	projectPath := path.Join(internal.ProjectsRoot, projectslib.GetClonePath(project))
 	repo, err := internal.OpenRepo(projectPath)
 	if err != nil {
 		return fmt.Errorf("failed to open existing project in filesystem: %s", err)
@@ -105,13 +106,13 @@ func copyProjectFromTmpDir(project *dw.Project, tmpClonePath string) error {
 			return fmt.Errorf("failed to process subDir on project: %w", err)
 		}
 		subDirPath := path.Join(tmpClonePath, subDirSubPath)
-		projectPath := path.Join(internal.ProjectsRoot, internal.GetClonePath(project))
+		projectPath := path.Join(internal.ProjectsRoot, projectslib.GetClonePath(project))
 		log.Printf("Moving subdirectory %s in project %s from temporary directory to %s", subDirSubPath, project.Name, projectPath)
 		if err := os.Rename(subDirPath, projectPath); err != nil {
 			return fmt.Errorf("failed to move subdirectory of cloned project to %s: %w", internal.ProjectsRoot, err)
 		}
 	} else {
-		projectPath := path.Join(internal.ProjectsRoot, internal.GetClonePath(project))
+		projectPath := path.Join(internal.ProjectsRoot, projectslib.GetClonePath(project))
 		log.Printf("Moving cloned project %s from temporary directory %s to %s", project.Name, tmpClonePath, projectPath)
 		if err := os.Rename(tmpClonePath, projectPath); err != nil {
 			return fmt.Errorf("failed to move cloned project to %s: %w", internal.ProjectsRoot, err)

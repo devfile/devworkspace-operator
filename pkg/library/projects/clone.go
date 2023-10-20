@@ -22,7 +22,6 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
-	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
 	corev1 "k8s.io/api/core/v1"
 
@@ -68,15 +67,6 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 		return nil, nil
 	}
 
-	cloneEnv := []corev1.EnvVar{
-		{
-			Name:  devfileConstants.ProjectsRootEnvVar,
-			Value: constants.DefaultProjectsSourcesRoot,
-		},
-	}
-	cloneEnv = append(cloneEnv, env.GetProxyEnvVars(proxyConfig)...)
-	cloneEnv = append(cloneEnv, options.Env...)
-
 	resources := dwResources.FilterResources(options.Resources)
 	if err := dwResources.ValidateResources(resources); err != nil {
 		return nil, fmt.Errorf("invalid resources for project clone container: %w", err)
@@ -85,7 +75,7 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 	return &corev1.Container{
 		Name:      projectClonerContainerName,
 		Image:     cloneImage,
-		Env:       cloneEnv,
+		Env:       options.Env,
 		Resources: *resources,
 		VolumeMounts: []corev1.VolumeMount{
 			{

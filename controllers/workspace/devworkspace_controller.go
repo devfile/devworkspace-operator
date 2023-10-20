@@ -326,7 +326,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Add init container to clone projects
 	projectCloneOptions := projects.Options{
 		Image:     workspace.Config.Workspace.ProjectCloneConfig.Image,
-		Env:       workspace.Config.Workspace.ProjectCloneConfig.Env,
+		Env:       env.GetEnvironmentVariablesForProjectClone(workspace),
 		Resources: workspace.Config.Workspace.ProjectCloneConfig.Resources,
 	}
 	if workspace.Config.Workspace.ProjectCloneConfig.ImagePullPolicy != "" {

@@ -21,8 +21,8 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -45,6 +45,17 @@ func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterD
 		podAdditions.InitContainers[idx].Env = append(podAdditions.InitContainers[idx].Env, workspaceEnv...)
 	}
 	return nil
+}
+
+func GetEnvironmentVariablesForProjectClone(workspace *common.DevWorkspaceWithConfig) []corev1.EnvVar {
+	var cloneEnv []corev1.EnvVar
+	cloneEnv = append(cloneEnv, workspace.Config.Workspace.ProjectCloneConfig.Env...)
+	cloneEnv = append(cloneEnv, commonEnvironmentVariables(workspace)...)
+	cloneEnv = append(cloneEnv, corev1.EnvVar{
+		Name:  devfileConstants.ProjectsRootEnvVar,
+		Value: constants.DefaultProjectsSourcesRoot,
+	})
+	return cloneEnv
 }
 
 func commonEnvironmentVariables(workspaceWithConfig *common.DevWorkspaceWithConfig) []corev1.EnvVar {
@@ -88,20 +99,20 @@ func GetProxyEnvVars(proxyConfig *v1alpha1.Proxy) []corev1.EnvVar {
 
 	// Proxy env vars are defined by consensus rather than standard; most tools use the lower-snake-case version
 	// but some may only look at the upper-snake-case version, so we add both.
-	var env []v1.EnvVar
+	var env []corev1.EnvVar
 	if proxyConfig.HttpProxy != nil {
-		env = append(env, v1.EnvVar{Name: "http_proxy", Value: *proxyConfig.HttpProxy})
-		env = append(env, v1.EnvVar{Name: "HTTP_PROXY", Value: *proxyConfig.HttpProxy})
+		env = append(env, corev1.EnvVar{Name: "http_proxy", Value: *proxyConfig.HttpProxy})
+		env = append(env, corev1.EnvVar{Name: "HTTP_PROXY", Value: *proxyConfig.HttpProxy})
 	}
 	if proxyConfig.HttpsProxy != nil {
-		env = append(env, v1.EnvVar{Name: "https_proxy", Value: *proxyConfig.HttpsProxy})
-		env = append(env, v1.EnvVar{Name: "HTTPS_PROXY", Value: *proxyConfig.HttpsProxy})
+		env = append(env, corev1.EnvVar{Name: "https_proxy", Value: *proxyConfig.HttpsProxy})
+		env = append(env, corev1.EnvVar{Name: "HTTPS_PROXY", Value: *proxyConfig.HttpsProxy})
 	}
 	if proxyConfig.NoProxy != nil {
 		// Adding 'KUBERNETES_SERVICE_HOST' env var to the 'no_proxy / NO_PROXY' list. Hot Fix for https://issues.redhat.com/browse/CRW-2820
 		kubernetesServiceHost := os.Getenv("KUBERNETES_SERVICE_HOST")
-		env = append(env, v1.EnvVar{Name: "no_proxy", Value: *proxyConfig.NoProxy + "," + kubernetesServiceHost})
-		env = append(env, v1.EnvVar{Name: "NO_PROXY", Value: *proxyConfig.NoProxy + "," + kubernetesServiceHost})
+		env = append(env, corev1.EnvVar{Name: "no_proxy", Value: *proxyConfig.NoProxy + "," + kubernetesServiceHost})
+		env = append(env, corev1.EnvVar{Name: "NO_PROXY", Value: *proxyConfig.NoProxy + "," + kubernetesServiceHost})
 	}
 
 	return env

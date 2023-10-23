@@ -34,6 +34,14 @@ jobs:
     - name: Checkout devworkspace-operator source code
       uses: actions/checkout@v3
 
+     # Setup hardware emulator using QEMU
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v2
+  
+      # Setup Docker Builderx for multi-arch images
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
     - name: Set output for Git short SHA
       id: git-sha
       run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
@@ -50,6 +58,7 @@ jobs:
       with:
         context: .
         push: true
+        platforms: linux/amd64, linux/arm64, linux/ppc64le, linux/s390x
         tags: |
           quay.io/devfile/devworkspace-controller:next
           quay.io/devfile/devworkspace-controller:sha-${{ steps.git-sha.outputs.sha }}
@@ -60,6 +69,7 @@ jobs:
       with:
         context: .
         push: true
+        platforms: linux/amd64, linux/arm64, linux/ppc64le, linux/s390x
         tags: |
           quay.io/devfile/project-clone:next
           quay.io/devfile/project-clone:sha-${{ steps.git-sha.outputs.sha }}

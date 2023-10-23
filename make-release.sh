@@ -194,8 +194,7 @@ git_commit_and_push() {
     git checkout "${PR_BRANCH}"
     git pull origin "${PR_BRANCH}" || true
     $DRY_RUN git push origin "${PR_BRANCH}"
-    lastCommitComment="$(git log -1 --pretty=%B)"
-    $DRY_RUN hub pull-request -f -m "${lastCommitComment}" -b "${CURRENT_BRANCH}" -h "${PR_BRANCH}"
+    $DRY_RUN gh pr create -f -B "${CURRENT_BRANCH}" -H "${PR_BRANCH}"
   fi
   git checkout "${CURRENT_BRANCH}"
 }

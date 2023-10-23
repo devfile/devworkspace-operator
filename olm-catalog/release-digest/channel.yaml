@@ -2,9 +2,54 @@ schema: olm.channel
 package: devworkspace-operator
 name: fast
 entries:
+  - name: devworkspace-operator.v0.10.0
+  - name: devworkspace-operator.v0.11.0
+    replaces: devworkspace-operator.v0.10.0
+  - name: devworkspace-operator.v0.12.0
+    replaces: devworkspace-operator.v0.11.0
+  - name: devworkspace-operator.v0.12.1
+    replaces: devworkspace-operator.v0.12.0
+  - name: devworkspace-operator.v0.12.2
+    replaces: devworkspace-operator.v0.12.1
+  - name: devworkspace-operator.v0.12.3
+    replaces: devworkspace-operator.v0.12.2
+  - name: devworkspace-operator.v0.13.0
+    replaces: devworkspace-operator.v0.12.3
+    skipRange: '>=0.12.0 <0.12.3'
+  - name: devworkspace-operator.v0.14.0
+    replaces: devworkspace-operator.v0.13.0
+  - name: devworkspace-operator.v0.14.1
+    replaces: devworkspace-operator.v0.14.0
+  - name: devworkspace-operator.v0.15.0
+    replaces: devworkspace-operator.v0.14.1
+    skipRange: '>=0.14.0 <0.14.1'
+  - name: devworkspace-operator.v0.15.1
+    replaces: devworkspace-operator.v0.15.0
+  - name: devworkspace-operator.v0.15.2
+    replaces: devworkspace-operator.v0.15.1
+  - name: devworkspace-operator.v0.15.3
+    replaces: devworkspace-operator.v0.15.2
+  - name: devworkspace-operator.v0.16.0
+    replaces: devworkspace-operator.v0.15.3
+    skipRange: '>=0.15.0 <0.15.3'
+  - name: devworkspace-operator.v0.17.0
+    replaces: devworkspace-operator.v0.16.0
+  - name: devworkspace-operator.v0.18.0
+    replaces: devworkspace-operator.v0.17.0
+  - name: devworkspace-operator.v0.18.1
+    replaces: devworkspace-operator.v0.18.0
+  - name: devworkspace-operator.v0.19.0
+    replaces: devworkspace-operator.v0.18.1
+    skipRange: '>=0.18.0 <0.18.1'
+  - name: devworkspace-operator.v0.19.1
+    replaces: devworkspace-operator.v0.19.0
+  - name: devworkspace-operator.v0.20.0
+    replaces: devworkspace-operator.v0.19.1
+    skipRange: '>=0.19.0 <0.19.1'
+  - name: devworkspace-operator.v0.21.0
+    replaces: devworkspace-operator.v0.20.0
   - name: devworkspace-operator.v0.21.1
     replaces: devworkspace-operator.v0.21.0
-    skipRange: '>=0.10.0 <0.21.1'
   - name: devworkspace-operator.v0.21.2
     replaces: devworkspace-operator.v0.21.1
   - name: devworkspace-operator.v0.22.0

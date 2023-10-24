@@ -62,7 +62,7 @@ func (r *DevWorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.D
 			routesInSync = false
 			continue
 		case *sync.UnrecoverableSyncError:
-			return false, nil, t.Cause
+			return false, nil, t
 		default:
 			return false, nil, err
 		}

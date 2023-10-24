@@ -26,6 +26,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -185,6 +186,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	servicesInSync, clusterServices, err := r.syncServices(instance, services)
 	if err != nil {
+		failError := &sync.UnrecoverableSyncError{}
+		if errors.As(err, &failError) {
+			return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
+		}
 		reqLogger.Error(err, "Error syncing services")
 		return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing services")
 	} else if !servicesInSync {
@@ -199,6 +204,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	if infrastructure.IsOpenShift() {
 		routesInSync, clusterRoutes, err := r.syncRoutes(instance, routes)
 		if err != nil {
+			failError := &sync.UnrecoverableSyncError{}
+			if errors.As(err, &failError) {
+				return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
+			}
 			reqLogger.Error(err, "Error syncing routes")
 			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing routes")
 		} else if !routesInSync {
@@ -209,6 +218,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	} else {
 		ingressesInSync, clusterIngresses, err := r.syncIngresses(instance, ingresses)
 		if err != nil {
+			failError := &sync.UnrecoverableSyncError{}
+			if errors.As(err, &failError) {
+				return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
+			}
 			reqLogger.Error(err, "Error syncing ingresses")
 			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing ingresses")
 		} else if !ingressesInSync {

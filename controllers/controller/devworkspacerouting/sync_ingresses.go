@@ -63,7 +63,7 @@ func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha
 			ingressesInSync = false
 			continue
 		case *sync.UnrecoverableSyncError:
-			return false, nil, t.Cause
+			return false, nil, t
 		default:
 			return false, nil, err
 		}

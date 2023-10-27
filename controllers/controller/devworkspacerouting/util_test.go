@@ -54,39 +54,6 @@ var (
 	ExpectedLabels = map[string]string{constants.DevWorkspaceIDLabel: testWorkspaceID}
 )
 
-func createPreparingDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspaceRouting {
-	mainAttributes := controllerv1alpha1.Attributes{}
-	mainAttributes.PutString("type", "main")
-	exposedEndpoint := controllerv1alpha1.Endpoint{
-		Name:       exposedEndPointName,
-		Attributes: mainAttributes,
-		// Target port must be within range 1 and 65535
-		// Created service will be invalid on cluster and error will be logged
-		// DWR will continue trying to reconcile however, keeping it stuck in preparing phase
-		TargetPort: 0,
-	}
-	machineEndpointsMap := map[string]controllerv1alpha1.EndpointList{
-		testMachineName: {
-			exposedEndpoint,
-		},
-	}
-
-	dwr := &controllerv1alpha1.DevWorkspaceRouting{
-		Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{
-			DevWorkspaceId: workspaceID,
-			RoutingClass:   controllerv1alpha1.DevWorkspaceRoutingBasic,
-			Endpoints:      machineEndpointsMap,
-			PodSelector: map[string]string{
-				constants.DevWorkspaceIDLabel: workspaceID,
-			},
-		},
-	}
-	dwr.SetName(name)
-	dwr.SetNamespace(testNamespace)
-	Expect(k8sClient.Create(ctx, dwr)).Should(Succeed())
-	return dwr
-}
-
 func createDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspaceRouting {
 	mainAttributes := controllerv1alpha1.Attributes{}
 	mainAttributes.PutString("type", "main")

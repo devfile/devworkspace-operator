@@ -102,7 +102,9 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.Con
 //
 //  2. If the workspace has a starter project that is selected, its name will be used as the project source path.
 //
-//  3. Otherwise, the returned project source path will be an empty string.
+//  3. If the workspace has any dependentProjects, the first one will be selected.
+//
+//  4. Otherwise, the returned project source path will be an empty string.
 func getProjectSourcePath(workspace *dw.DevWorkspaceTemplateSpec) (string, error) {
 	projects := workspace.Projects
 	// If there are any projects, return the first one's clone path
@@ -118,6 +120,12 @@ func getProjectSourcePath(workspace *dw.DevWorkspaceTemplateSpec) (string, error
 		// Starter projects do not allow specifying a clone path, so use the name
 		return selectedStarterProject.Name, nil
 	}
+
+	// Finally, check if there are any dependent projects
+	if len(workspace.DependentProjects) > 0 {
+		return projectslib.GetClonePath(&workspace.DependentProjects[0]), nil
+	}
+
 	return "", nil
 }
 

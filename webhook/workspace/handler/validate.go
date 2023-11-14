@@ -40,6 +40,7 @@ func (h *WebhookHandler) ValidateDevfile(ctx context.Context, req admission.Requ
 	events := workspace.Events
 	projects := workspace.Projects
 	starterProjects := workspace.StarterProjects
+	dependentProjects := workspace.DependentProjects
 
 	var devfileErrors []string
 
@@ -56,6 +57,13 @@ func (h *WebhookHandler) ValidateDevfile(ctx context.Context, req admission.Requ
 		projectsErrors := devfilevalidation.ValidateProjects(projects)
 		if projectsErrors != nil {
 			devfileErrors = append(devfileErrors, projectsErrors.Error())
+		}
+	}
+
+	if dependentProjects != nil {
+		dependentProjectsErrors := devfilevalidation.ValidateProjects(dependentProjects)
+		if dependentProjectsErrors != nil {
+			devfileErrors = append(devfileErrors, dependentProjectsErrors.Error())
 		}
 	}
 

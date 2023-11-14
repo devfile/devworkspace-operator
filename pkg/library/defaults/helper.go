@@ -28,8 +28,10 @@ func ApplyDefaultTemplate(workspace *common.DevWorkspaceWithConfig) {
 	}
 	defaultCopy := workspace.Config.Workspace.DefaultTemplate.DeepCopy()
 	originalProjects := workspace.Spec.Template.Projects
+	originalDependentProjects := workspace.Spec.Template.DependentProjects
 	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = *defaultCopy
 	workspace.Spec.Template.Projects = append(workspace.Spec.Template.Projects, originalProjects...)
+	workspace.Spec.Template.DependentProjects = append(workspace.Spec.Template.DependentProjects, originalDependentProjects...)
 }
 
 func NeedsDefaultTemplate(workspace *common.DevWorkspaceWithConfig) bool {

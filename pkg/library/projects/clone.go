@@ -45,7 +45,7 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 	if err != nil {
 		return nil, err
 	}
-	if len(workspace.Projects) == 0 && starterProject == nil {
+	if len(workspace.Projects) == 0 && len(workspace.DependentProjects) == 0 && starterProject == nil {
 		return nil, nil
 	}
 	if workspace.Attributes.GetString(constants.ProjectCloneAttribute, nil) == constants.ProjectCloneDisable {

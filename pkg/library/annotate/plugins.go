@@ -49,4 +49,10 @@ func AddSourceAttributesForTemplate(sourceID string, template *dw.DevWorkspaceTe
 		}
 		template.StarterProjects[idx].Attributes.PutString(constants.PluginSourceAttribute, sourceID)
 	}
+	for idx, project := range template.DependentProjects {
+		if project.Attributes == nil {
+			template.DependentProjects[idx].Attributes = attributes.Attributes{}
+		}
+		template.DependentProjects[idx].Attributes.PutString(constants.PluginSourceAttribute, sourceID)
+	}
 }

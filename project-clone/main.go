@@ -66,6 +66,7 @@ func main() {
 	}
 
 	projects := workspace.Projects
+	projects = append(projects, workspace.DependentProjects...)
 
 	starterProject, err := projectslib.GetStarterProject(workspace)
 	if err != nil {

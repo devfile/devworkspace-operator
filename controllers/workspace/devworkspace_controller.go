@@ -323,6 +323,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to process workspace environment variables: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 
+	// Validate that projects, dependentProjects, and starterProjects do not collide
+	if err := projects.ValidateAllProjects(&workspace.Spec.Template); err != nil {
+		return r.failWorkspace(workspace, fmt.Sprintf("Invalid devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+	}
 	// Add init container to clone projects
 	projectCloneOptions := projects.Options{
 		Image:     workspace.Config.Workspace.ProjectCloneConfig.Image,

@@ -15,7 +15,7 @@
 
 # Build the manager binary
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi8/go-toolset
-FROM registry.access.redhat.com/ubi8/go-toolset:1.19.10-16 as builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.20.10-3 as builder
 ENV GOPATH=/go/
 USER root
 WORKDIR /project-clone

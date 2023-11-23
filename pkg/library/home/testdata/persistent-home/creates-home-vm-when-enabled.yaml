@@ -26,9 +26,9 @@ output:
           volumeMounts:
             - name: my-defined-volume
               path: /my-defined-volume-path
-            - name: persistentHome
+            - name: persistent-home
               path: /home/user/
       - name: my-defined-volume
         volume: {}
-      - name: persistentHome
+      - name: persistent-home
         volume: {}

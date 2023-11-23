@@ -1,4 +1,4 @@
-name: "Does not create persistent home volume if a volume already named 'persistentHome'"
+name: "Does not create persistent home volume if a volume is already named 'persistent-home'"
 
 input:
   devworkspaceId: "test-workspaceid"
@@ -14,7 +14,7 @@ input:
           volumeMounts:
             - name: my-defined-volume
               path: /my-defined-volume-path
-            - name: persistentHome
+            - name: persistent-home
               path: /some/path
       - name: testing-container-2
         container:
@@ -24,11 +24,11 @@ input:
               path: /my-defined-volume-path
       - name: my-defined-volume
         volume: {}
-      - name: persistentHome
+      - name: persistent-home
         volume: {}
 
 output:
-  error: "addition of persistentHome volume would render DevWorkspace invalid: 1 error occurred:\n\t* duplicate key: persistentHome\n\n"
+  error: "addition of persistent-home volume would render DevWorkspace invalid: 1 error occurred:\n\t* duplicate key: persistent-home\n\n"
   workspace:
     components:
       - name: testing-container-1
@@ -37,7 +37,7 @@ output:
           volumeMounts:
             - name: my-defined-volume
               path: /my-defined-volume-path
-            - name: persistentHome
+            - name: persistent-home
               path: /some/path
       - name: testing-container-2
         container:
@@ -47,5 +47,5 @@ output:
               path: /my-defined-volume-path
       - name: my-defined-volume
         volume: {}
-      - name: persistentHome
+      - name: persistent-home
         volume: {}

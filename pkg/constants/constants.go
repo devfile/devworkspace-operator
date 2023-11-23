@@ -39,7 +39,7 @@ const (
 
 	HomeUserDirectory = "/home/user/"
 
-	HomeVolumeName = "persistentHome"
+	HomeVolumeName = "persistent-home"
 
 	ServiceAccount = "devworkspace"
 

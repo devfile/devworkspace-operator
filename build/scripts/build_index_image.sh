@@ -118,7 +118,9 @@ fi
 make generate_olm_bundle_yaml
 
 echo "Building bundle image $BUNDLE_IMAGE"
-$PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
+#$PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
+docker buildx build . --platform linux/amd64,linux/arm64,linux/ppc64le,linux/s390x -t "$BUNDLE_IMAGE"  -f build/bundle.Dockerfile
+nostalgic_brown
 $PODMAN push "$BUNDLE_IMAGE" 2>&1
 
 BUNDLE_SHA=$(skopeo inspect "docker://${BUNDLE_IMAGE}" | jq -r '.Digest')
@@ -177,7 +179,10 @@ opm validate "$OUTDIR"
 
 # Build index container
 echo "Building index image $INDEX_IMAGE"
-$PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE"
+#$PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE"
+
+docker buildx build . --platform linux/amd64,linux/arm64,linux/ppc64le,linux/s390x -t "$INDEX_IMAGE"  -f "$DOCKERFILE"
+
 $PODMAN push "$INDEX_IMAGE" 2>&1
 
 if [ $DEBUG != "true" ] && [ "$RELEASE" != "true" ]; then

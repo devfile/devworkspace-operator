@@ -117,6 +117,9 @@ else
 fi
 make generate_olm_bundle_yaml
 
+echo "Setting up buildx builder"
+docker buildx create --name multiplatformbuilder --use
+
 echo "Building bundle image $BUNDLE_IMAGE"
 #$PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
 docker buildx build . --platform linux/amd64,linux/arm64,linux/ppc64le,linux/s390x -t "$BUNDLE_IMAGE"  -f build/bundle.Dockerfile

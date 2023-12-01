@@ -183,6 +183,7 @@ jobs:
             --bundle-tag ${DWO_BUNDLE_TAG} \
             --index-image ${DWO_INDEX_IMG} \
             --container-tool docker \
+            --multi-arch \
             --debug \
             --force
 
@@ -193,11 +194,13 @@ jobs:
             --render ./olm-catalog/next-digest/ \
             --push "${DWO_BUNDLE_REPO}:${DWO_DIGEST_BUNDLE_TAG}" \
             --container-tool docker \
+            --multi-arch \
             --debug
 
           cp ./olm-catalog/next/{channel,package}.yaml ./olm-catalog/next-digest
-          docker build . -t ${DWO_DIGEST_INDEX_IMG} -f build/index.next-digest.Dockerfile
-          docker push ${DWO_DIGEST_INDEX_IMG}
+          docker buildx build . -t ${DWO_DIGEST_INDEX_IMG} -f build/index.next-digest.Dockerfile \
+          --platform linux/amd64,linux/arm64,linux/ppc64le,linux/s390x \
+          --push
 
           git restore ./olm-catalog/
           git clean -fd ./olm-catalog/

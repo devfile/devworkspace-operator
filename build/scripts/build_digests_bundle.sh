@@ -3,7 +3,11 @@
 set -eo pipefail
 
 PODMAN=podman
+MULTI_ARCH="false"
+ARCHITECTURES="linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
 SCRIPT_DIR=$(cd "$(dirname "$0")" || exit; pwd)
+
+DEFAULT_BUILDER_NAME="dwo-multi-platform-builder"
 
 usage() {
   cat <<EOF
@@ -20,6 +24,8 @@ Arguments:
   --push <IMAGE>          : Push processed digests bundle to <IMAGE> (required). Pushing the bundle image to a
                             repository is required because opm render works from a remote repository.
   --container-tool <TOOL> : Use specific container tool for building/pushing images (default: use podman).
+  --multi-arch            : Create images for the following architectures: $ARCHITECTURES. Note: Docker buildx will be
+                            used for building and pushing the images, instead of the container tool selected with --container-tool.
   --debug, -d             : Print debug information.
   --help, -h              : Show this message.
 EOF
@@ -51,6 +57,7 @@ parse_args() {
       '--render') RENDER="$2"; shift;;
       '--push') PUSH_IMAGE="$2"; shift;;
       '--container-tool') PODMAN="$2"; shift;;
+      '--multi-arch') MULTI_ARCH="true";;
       '-d'|'--debug') DEBUG="true";;
       '-h'|'--help') usage; exit 0;;
       *) error "Unknown parameter is used: $1."; usage; exit 1;;
@@ -80,6 +87,19 @@ preflight() {
 
 parse_args "$@"
 preflight
+
+if [ "$MULTI_ARCH" == "true" ]; then
+  # Create a multi-arch builder if one doesn't already exist
+  BUILDER_EXISTS=0
+  docker buildx use "$DEFAULT_BUILDER_NAME" || BUILDER_EXISTS=$?
+
+  if [ $BUILDER_EXISTS -eq 0 ]; then
+    echo "Using $DEFAULT_BUILDER_NAME for build"
+  else
+    echo "Setting up Docker buildx builder:"
+    docker buildx create --name "$DEFAULT_BUILDER_NAME" --driver docker-container --config build/buildkitd.toml --use
+  fi
+fi
 
 # Work in a temporary directory
 TMPDIR="$(mktemp -d)"
@@ -125,10 +145,17 @@ if [ "$DEBUG" == true ]; then
   cat "${PROCESSED_DIR}/bundle.Dockerfile" | sed 's|^|        |g'
 fi
 
-info "Building bundle $PUSH_IMAGE"
-$PODMAN build -t "$PUSH_IMAGE" -f "${PROCESSED_DIR}/bundle.Dockerfile" "$PROCESSED_DIR" | sed 's|^|        |g'
-info "Pushing bundle $PUSH_IMAGE"
-$PODMAN push "$PUSH_IMAGE" 2>&1 | sed 's|^|        |g'
+if [ "$MULTI_ARCH" == "true" ]; then
+  info "Building and pushing bundle $PUSH_IMAGE"
+  docker buildx build -t "$PUSH_IMAGE" -f "${PROCESSED_DIR}/bundle.Dockerfile" "$PROCESSED_DIR" \
+  --platform "$ARCHITECTURES" \
+  --push 2>&1 | sed 's|^|        |g'
+else
+  info "Building bundle $PUSH_IMAGE"
+  $PODMAN build -t "$PUSH_IMAGE" -f "${PROCESSED_DIR}/bundle.Dockerfile" "$PROCESSED_DIR" | sed 's|^|        |g'
+  info "Pushing bundle $PUSH_IMAGE"
+  $PODMAN push "$PUSH_IMAGE" 2>&1 | sed 's|^|        |g'
+fi
 
 NEW_BUNDLE_SHA=$(skopeo inspect "docker://${PUSH_IMAGE}" | jq -r '.Digest')
 NEW_BUNDLE_DIGEST="${PUSH_IMAGE%%:*}@${NEW_BUNDLE_SHA}"

@@ -4,12 +4,15 @@ set -e
 
 PODMAN=podman
 FORCE="false"
+MULTI_ARCH="false"
+ARCHITECTURES="linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
 DEBUG="false"
 
 DEFAULT_BUNDLE_REPO="quay.io/devfile/devworkspace-operator-bundle"
 DEFAULT_BUNDLE_TAG="next"
 DEFAULT_INDEX_IMAGE="quay.io/devfile/devworkspace-operator-index:next"
 DEFAULT_RELEASE_INDEX_IMAGE="quay.io/devfile/devworkspace-operator-index:release"
+DEFAULT_BUILDER_NAME="dwo-multi-platform-builder"
 
 error() {
   echo "[ERROR] $1"
@@ -36,6 +39,9 @@ Arguments:
   --container-tool <TOOL> : Use specific container tool for building/pushing images (default: use podman)
   --force                 : Do not prompt for confirmation if pushing to default repos. Intended for
                             use in CI.
+  --multi-arch            : Create images for the following architectures: $ARCHITECTURES. Note: Docker
+                            buildx will be used for building and pushing the images, instead of
+                            the container tool selected with --container-tool.
   --debug                 : Don't do any normal cleanup on exit, leaving repo in dirty state
 
 Examples:
@@ -56,6 +62,7 @@ parse_args() {
       '--container-tool') PODMAN="$2"; shift 1;;
       '--release') RELEASE="true";;
       '--force') FORCE="true";;
+      '--multi-arch') MULTI_ARCH="true";;
       '--debug') DEBUG="true";;
       *) echo "[ERROR] Unknown parameter is used: $1."; usage; exit 1;;
     esac
@@ -64,6 +71,19 @@ parse_args() {
 }
 
 parse_args "$@"
+
+if [ "$MULTI_ARCH" == "true" ]; then
+  # Create a multi-arch builder if one doesn't already exist
+  BUILDER_EXISTS=0
+  docker buildx use "$DEFAULT_BUILDER_NAME" || BUILDER_EXISTS=$?
+
+  if [ $BUILDER_EXISTS -eq 0 ]; then
+    echo "Using $DEFAULT_BUILDER_NAME for build"
+  else
+    echo "Setting up Docker buildx builder:"
+    docker buildx create --name "$DEFAULT_BUILDER_NAME" --driver docker-container --config build/buildkitd.toml --use
+  fi
+fi
 
 if [ "$RELEASE" == "true" ]; then
   # Set up for release and check arguments
@@ -118,8 +138,15 @@ fi
 make generate_olm_bundle_yaml
 
 echo "Building bundle image $BUNDLE_IMAGE"
-$PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
-$PODMAN push "$BUNDLE_IMAGE" 2>&1
+if [ "$MULTI_ARCH" == "true" ]; then
+  docker buildx build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile \
+  --platform "$ARCHITECTURES" \
+  --push
+else
+  $PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
+  $PODMAN push "$BUNDLE_IMAGE" 2>&1
+fi
+
 
 BUNDLE_SHA=$(skopeo inspect "docker://${BUNDLE_IMAGE}" | jq -r '.Digest')
 BUNDLE_DIGEST="${BUNDLE_REPO}@${BUNDLE_SHA}"
@@ -177,8 +204,15 @@ opm validate "$OUTDIR"
 
 # Build index container
 echo "Building index image $INDEX_IMAGE"
-$PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE"
-$PODMAN push "$INDEX_IMAGE" 2>&1
+if [ "$MULTI_ARCH" == "true" ]; then
+  docker buildx build . -t "$INDEX_IMAGE" -f "$DOCKERFILE" \
+  --platform "$ARCHITECTURES" \
+  --push
+else
+  $PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE"
+  $PODMAN push "$INDEX_IMAGE" 2>&1
+fi
+
 
 if [ $DEBUG != "true" ] && [ "$RELEASE" != "true" ]; then
   echo "Cleaning up"

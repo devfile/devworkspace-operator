@@ -1,6 +1,8 @@
 # Dev Workspace Operator
 
 [![codecov](https://codecov.io/gh/devfile/devworkspace-operator/branch/main/graph/badge.svg)](https://codecov.io/gh/devfile/devworkspace-operator)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8258/badge)](https://www.bestpractices.dev/projects/8258)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/devfile/devworkspace-operator/badge)](https://securityscorecards.dev/viewer/?uri=github.com/devfile/devworkspace-operator)
 
 Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
 

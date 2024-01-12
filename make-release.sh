@@ -23,6 +23,7 @@ DWO_BUNDLE_QUAY_REPO="${DWO_BUNDLE_QUAY_REPO:-quay.io/devfile/devworkspace-opera
 DWO_INDEX_IMAGE="${DWO_INDEX_IMAGE:-quay.io/devfile/devworkspace-operator-index:release}"
 DWO_DIGEST_INDEX_IMAGE="${DWO_DIGEST_INDEX_IMAGE:-quay.io/devfile/devworkspace-operator-index:release-digest}"
 MAIN_BRANCH="main"
+ARCHITECTURES="linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
 VERBOSE=""
 TMP=""
 
@@ -156,10 +157,20 @@ update_images() {
 build_and_push_images() {
   DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
   PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
-  docker build -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile .
-  $DRY_RUN docker push "${DWO_QUAY_IMG}"
-  docker build -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile .
-  $DRY_RUN docker push "${PROJECT_CLONE_QUAY_IMG}"
+
+  if [ "$DRY_RUN" == "dryrun" ]; then
+    docker buildx build . -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile \
+    --platform "$ARCHITECTURES"
+    docker buildx build . -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile \
+    --platform "$ARCHITECTURES"
+  else
+    docker buildx build . -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile \
+    --platform "$ARCHITECTURES" \
+    --push
+    docker buildx build . -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile \
+    --platform "$ARCHITECTURES" \
+    --push
+  fi
 }
 
 # Commit and push changes in local repo to remote (respecting DRY_RUN setting). If the branch cannot be pushed to,

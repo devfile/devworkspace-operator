@@ -13,21 +13,21 @@ jobs:
     steps:
     -
       name: Set up Go 1.x
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
       with:
         go-version: 1.20.10
     -
       name: Set up Python 3.11
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@b64ffcaf5b410884ad320a9cfac8866006a109aa # v4.8.0
       with:
         python-version: 3.11
     -
       name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
     -
       name: Cache Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
-      uses: actions/cache@v3
+      uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.0
       id: cache-operator-sdk
       with:
         path: ~/cache
@@ -49,7 +49,7 @@ jobs:
     -
       name: Cache go modules
       id: cache-mod
-      uses: actions/cache@v3
+      uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.0
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
@@ -111,7 +111,7 @@ jobs:
         make test
     -
       name: Build Codecov report
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
       with:
         files: ./cover.out,./controller.cover.out
 
@@ -123,7 +123,7 @@ jobs:
     steps:
     -
       name: Check out code into the Go module directory
-      uses: actions/checkout@v3
+      uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
     -
       name: Check if dockerimage build is working
       run: docker build -f ./build/Dockerfile .

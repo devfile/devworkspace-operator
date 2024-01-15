@@ -1,6 +1,8 @@
 # Dev Workspace Operator
 
 [![codecov](https://codecov.io/gh/devfile/devworkspace-operator/branch/main/graph/badge.svg)](https://codecov.io/gh/devfile/devworkspace-operator)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8258/badge)](https://www.bestpractices.dev/projects/8258)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/devfile/devworkspace-operator/badge)](https://securityscorecards.dev/viewer/?uri=github.com/devfile/devworkspace-operator)
 
 Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
 
@@ -237,4 +239,8 @@ This will delete all custom resource definitions created for the controller, as 
 
 - [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/main/.github/workflows/dockerimage-next.yml) action builds main branch and pushes it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
 
-- [Code Coverage Report](./.github/workflows/code-coverage.yml) action creates a code coverage report using [codecov.io](https://about.codecov.io/). 
+- [Code Coverage Report](./.github/workflows/code-coverage.yml) action creates a code coverage report using [codecov.io](https://about.codecov.io/).
+
+## Contributing
+
+For information on contributing to this project please see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -26,18 +26,18 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - name: Set up Go 1.x
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
         with:
           go-version: 1.20.10
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@2b82ce82d56a2a04d2637cd93a637ae1b359c0a7 #v2.2.0
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 #v2.10.0
 
       - name: Clone source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
           fetch-depth: 0
 
@@ -60,7 +60,7 @@ jobs:
           fi
 
       - name: Cache Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
-        uses: actions/cache@v3
+        uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.0
         id: cache-operator-sdk
         with:
           path: ~/cache
@@ -80,7 +80,7 @@ jobs:
           echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Cache OPM ${{ env.OPM_VERSION }}
-        uses: actions/cache@v3
+        uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.0
         id: cache-opm
         with:
           path: ~/cache
@@ -100,14 +100,14 @@ jobs:
           echo "$HOME/bin" >> $GITHUB_PATH
 
       - name: Login to quay.io
-        uses: docker/login-action@v2
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc #v2.2.0
         with:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_PASSWORD }}
           registry: quay.io
 
       - name: Set up yq
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@b64ffcaf5b410884ad320a9cfac8866006a109aa # v4.8.0
         with:
           python-version: 3.6
       - name: Setup yq
@@ -139,18 +139,3 @@ jobs:
             RELEASE_COMMAND="$RELEASE_COMMAND --dry-run"
           fi
           $RELEASE_COMMAND
-
-      - name: Create failure MM message
-        if: ${{ failure() }}
-        run: |
-          echo "{\"text\":\":no_entry_sign: DevWorkspace Operator ${{ github.event.inputs.version }} release has failed: https://github.com/devfile/devworkspace-operator/actions/workflows/release.yml\"}" > mattermost.json
-      - name: Create success MM message
-        run: |
-          echo "{\"text\":\":white_check_mark: DevWorkspace Operator ${{ github.event.inputs.version }} has been released: https://quay.io/devfile/devworkspace-operator:${{ github.event.inputs.version }}\"}" > mattermost.json
-      - name: Send MM message
-        if: ${{ github.event.inputs.dryrun != true && github.event.inputs.prerelease == false && (success() || failure()) }}
-        uses: mattermost/action-mattermost-notify@1.1.0
-        env:
-          MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
-          MATTERMOST_CHANNEL: eclipse-che-releases
-          MATTERMOST_USERNAME: che-bot

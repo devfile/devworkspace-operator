@@ -1,0 +1,37 @@
+name: "Pod overrides can add volumes"
+
+input:
+  workspace:
+    attributes:
+      pod-overrides:
+        spec:
+          volumes:
+            - name: test-volume-1
+    components:
+      - name: test-component
+        container:
+          image: test-image
+
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+      volumes:
+        - name: test-volume-2
+
+output:
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+      volumes:
+      - name: test-volume-1
+      - name: test-volume-2

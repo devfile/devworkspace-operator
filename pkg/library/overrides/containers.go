@@ -94,9 +94,6 @@ func restrictContainerOverride(override *corev1.Container) error {
 	if override.Ports != nil {
 		invalidField = "ports"
 	}
-	if override.VolumeMounts != nil {
-		invalidField = "volumeMounts"
-	}
 	if override.Env != nil {
 		invalidField = "env"
 	}

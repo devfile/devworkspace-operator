@@ -1,4 +1,4 @@
-name: "Returns error when attempting to patch pod volumes"
+name: "Pod overrides can define volumes"
 
 input:
   workspace:
@@ -22,4 +22,13 @@ input:
         image: test-image
 
 output:
-  errRegexp: "cannot use pod-overrides to override pod volumes"
+  podTemplateSpec:
+    metadata:
+      labels:
+        controller.devfile.io/devworkspace-id: test-id
+    spec:
+      containers:
+      - name: test-component
+        image: test-image
+      volumes:
+      - name: test-volume

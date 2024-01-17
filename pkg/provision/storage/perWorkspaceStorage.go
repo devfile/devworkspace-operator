@@ -25,6 +25,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
@@ -107,6 +108,15 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	additionalVolumes := map[string]bool{}
 	for _, additionalVolume := range podAdditions.Volumes {
 		additionalVolumes[additionalVolume.Name] = true
+	}
+
+	// Containers in podAdditions may reference volumes defined in pod overrides, and this is not an error
+	overridesVolumes, err := overrides.GetPodVolumeOverrides(workspace)
+	if err != nil {
+		return err
+	}
+	for _, overridesVolume := range *overridesVolumes {
+		additionalVolumes[overridesVolume.Name] = true
 	}
 
 	// Add implicit projects volume to support mountSources, if needed

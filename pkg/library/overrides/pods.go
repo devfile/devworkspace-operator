@@ -76,24 +76,27 @@ func ApplyPodOverrides(workspace *common.DevWorkspaceWithConfig, deployment *app
 	return patched, nil
 }
 
-func GetPodVolumeOverrides(workspace *dw.DevWorkspaceTemplateSpec) (*[]corev1.Volume, error) {
-	var volumeOverrides []corev1.Volume
+func GetVolumesFromOverrides(workspace *dw.DevWorkspaceTemplateSpec) (map[string]bool, error) {
+	overrideVolumes := map[string]bool{}
+
 	overrides, err := getPodOverrides(workspace)
 	if err != nil {
-		return &volumeOverrides, err
+		return nil, err
 	}
 
 	for _, override := range overrides {
 		podSpecTemplate := corev1.PodTemplateSpec{}
 		if err := json.Unmarshal(override.Raw, &podSpecTemplate); err != nil {
-			return &volumeOverrides, fmt.Errorf("error unmarshalling: %w", err)
+			return nil, fmt.Errorf("error unmarshalling: %w", err)
 		}
 
 		if podSpecTemplate.Spec.Volumes != nil {
-			volumeOverrides = append(volumeOverrides, podSpecTemplate.Spec.Volumes...)
+			for _, volume := range podSpecTemplate.Spec.Volumes {
+				overrideVolumes[volume.Name] = true
+			}
 		}
 	}
-	return &volumeOverrides, nil
+	return overrideVolumes, nil
 }
 
 // getPodOverrides returns PodTemplateSpecOverrides for every instance of the pod overrides attribute

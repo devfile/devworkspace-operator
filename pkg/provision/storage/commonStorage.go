@@ -146,12 +146,12 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId, pvc
 	}
 
 	// Containers in podAdditions may reference volumes defined in pod overrides, and this is not an error
-	overridesVolumes, err := overrides.GetPodVolumeOverrides(workspace)
+	overridesVolumes, err := overrides.GetVolumesFromOverrides(workspace)
 	if err != nil {
 		return err
 	}
-	for _, overridesVolume := range *overridesVolumes {
-		additionalVolumes[overridesVolume.Name] = true
+	for key, value := range overridesVolumes {
+		additionalVolumes[key] = value
 	}
 
 	// Add implicit projects volume to support mountSources, if needed

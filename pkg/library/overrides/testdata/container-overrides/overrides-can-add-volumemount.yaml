@@ -1,0 +1,28 @@
+name: "Container overrides can add volumeMounts"
+
+input:
+  component:
+    name: test-component
+    attributes:
+      container-overrides:
+        volumeMounts:
+          - name: test-volume
+            mountPath: /test-volume/path
+    container:
+      image: test-image
+  container:
+    name: test-component
+    image: test-image
+    volumeMounts:
+      - name: my-volume
+        mountPath: /my-volume/path
+
+output:
+  container:
+    name: test-component
+    image: test-image
+    volumeMounts:
+      - name: test-volume
+        mountPath: /test-volume/path
+      - name: my-volume
+        mountPath: /my-volume/path

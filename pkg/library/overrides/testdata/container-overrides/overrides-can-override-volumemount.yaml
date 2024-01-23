@@ -1,0 +1,28 @@
+name: "Container overrides can override existing volumeMounts"
+
+input:
+  component:
+    name: test-component
+    attributes:
+      container-overrides:
+        volumeMounts:
+          # patchMergeKey is mountPath
+          - mountPath: /my-volume/path
+            subPath: test-subpath
+    container:
+      image: test-image
+  container:
+    name: test-component
+    image: test-image
+    volumeMounts:
+      - name: my-volume
+        mountPath: /my-volume/path
+
+output:
+  container:
+    name: test-component
+    image: test-image
+    volumeMounts:
+      - name: my-volume
+        mountPath: /my-volume/path
+        subPath: test-subpath

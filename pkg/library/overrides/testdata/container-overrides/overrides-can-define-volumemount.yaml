@@ -1,4 +1,4 @@
-name: "Container overrides can add define volumeMounts"
+name: "Container overrides can define a volumeMount"
 
 input:
   component:

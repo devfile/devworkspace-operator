@@ -150,8 +150,8 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(workspaceId, pvc
 	if err != nil {
 		return err
 	}
-	for key, value := range overridesVolumes {
-		additionalVolumes[key] = value
+	for volumeName, present := range overridesVolumes {
+		additionalVolumes[volumeName] = present
 	}
 
 	// Add implicit projects volume to support mountSources, if needed

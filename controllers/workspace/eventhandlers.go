@@ -15,9 +15,7 @@ package controllers
 
 import (
 	"context"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -62,10 +60,8 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 		}
 	}
 
-	// TODO: Label PVCs used for workspace storage so that they can be cleaned up if non-default name is used.
-	// Otherwise, check if common PVC is deleted to make sure all DevWorkspaces see it happen
-	if obj.GetName() != wkspConfig.GetGlobalConfig().Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
-		// We're looking for a deleted common PVC
+	// for deleted PVCs, or those that don't have common/async PVC label, do not trigger reconcile
+	if obj.GetLabels()[constants.DevWorkspacePVCLabel] != "todo-pvc-label-value" || obj.GetDeletionTimestamp() == nil {
 		return []reconcile.Request{}
 	}
 	dwList := &dw.DevWorkspaceList{}

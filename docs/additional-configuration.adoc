@@ -302,7 +302,9 @@ spec:
           securityContext:
             runAsUser: 1234
 ----
-Note that the pod-overrides field does not allow configuring `containers`, `initContainers`, and `volumes`. In order to configure these elements, use existing DevWorkspace fields (container components, volume components)
+Note that the pod-overrides field does not allow configuring the `containers` and `initContainers` fields from the pod spec. In order to configure these elements, use the existing DevWorkspace `spec.template.components` field.
+
+The DevWorkspace Operator sets the pod `spec.volumes` field by default for config files, metadata, and credentials. To avoid unexpected behaviour, the `spec.volumes` field should not be overridden.
 
 In the case that the `pod-overrides` attribute is defined multiple times in a DevWorkspace, each override will be applied in sequence (with later overrides potentially rewriting previous ones) in the following order:
 
@@ -325,7 +327,9 @@ spec:
         attributes:
           container-overrides: {"resources":{"limits":{"nvidia.com/gpu":"1"}}}
 ----
-Note that the container-overrides field does not allow configuring fields that are available through the regular DevWorkspace API. In particular, workspaces will fail to start if the container-overrides attribute attempts to override `name`, `image`, `command`, `args`, `ports`, `volumeMounts`, or `env`.
+Note that the container-overrides field does not allow configuring most fields that are available through the regular DevWorkspace API. In particular, workspaces will fail to start if the container-overrides attribute attempts to override `name`, `image`, `command`, `args`, `ports`, or `env`.
+
+The DevWorkspace Operator sets the `volumeMounts` by default for config files, metadata, and credentials. To avoid unexpected behaviour, the `volumeMounts` field should not be overridden.
 
 ## Debugging a failing workspace
 Normally, when a workspace fails to start, the deployment will be scaled down and the workspace will be stopped in a `Failed` state. This can make it difficult to debug misconfiguration errors, so the annotation `controller.devfile.io/debug-start: "true"` can be applied to DevWorkspaces to leave resources for failed workspaces on the cluster. This allows viewing logs from workspace containers.

@@ -123,8 +123,8 @@ jobs:
           # PR checks.
           go install golang.org/x/tools/cmd/goimports@latest
 
-          git config --global user.name "Angel Misevski"
-          git config --global user.email "amisevsk@redhat.com"
+          git config --global user.name "Andrew Obuchowicz"
+          git config --global user.email "aobuchow@redhat.com"
 
           export GITHUB_TOKEN=${{ secrets.CHE_INCUBATOR_BOT_GITHUB_TOKEN }}
 

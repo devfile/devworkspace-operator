@@ -470,8 +470,8 @@ spec:
   - name: Devworkspace Operator
     url: https://github.com/devfile/devworkspace-operator
   maintainers:
-  - email: amisevsk@redhat.com
-    name: Angel Misevski
+  - email: aobuchow@redhat.com
+    name: Andrew Obuchowicz
   - email: ibuziuk@redhat.com
     name: Ilya Buziuk
   maturity: alpha

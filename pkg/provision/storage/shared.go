@@ -38,11 +38,19 @@ import (
 )
 
 func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
-
+	var pvcLabelValue string;
+	if storageClass != nil {
+		pvcLabelValue = *storageClass
+	} else {
+		pvcLabelValue = ""
+	}
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				constants.DevWorkspacePVCTypeLabel: pvcLabelValue,
+			},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -103,6 +111,10 @@ func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clu
 	if err != nil {
 		return nil, err
 	}
+	if pvc.Labels == nil {
+		pvc.Labels = map[string]string{}
+	}
+
 	currObject, err := sync.SyncObjectWithCluster(pvc, clusterAPI)
 	switch t := err.(type) {
 	case nil:

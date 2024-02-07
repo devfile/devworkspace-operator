@@ -2,6 +2,22 @@
 
 This document contains the instructions for the DevWorkspace Operator release procedure.
 
+## Preparing for a release
+
+Prior to starting the release process, issues which have been resolved from pull requests need to be added to the milestone for the version being released.
+
+### Creating a milestone
+
+If necessary, create a milestone for the version being released. This is done by clicking "New milestone" on the [milestones page](https://github.com/devfile/devworkspace-operator/milestones). Set the title of the milestone in the format `v0.y.x` e.g. `v0.26.x`. Bug-fix releases do not need their own milestone. The due date and description fields can be left blank.
+
+### Adding resolved issues to the milestone
+
+Find all issues which have been resolved from pull requests since the last release, and add them to the milestone for the version that will be released. 
+
+This can be done by using the following issue search filter: `is:issue sort:updated-desc is:closed closed:>={LAST_RELEASE_DATE} no:milestone`, where `{LAST_RELEASE_DATE}` is the date of the last commit that bumped the DevWorkspace Operator version. 
+
+For example, when adding issues to the v0.26.x milestone, the search filter `is:issue sort:updated-desc is:closed closed:>=2024-01-17 no:milestone` should be used, as the version bump [commit](https://github.com/devfile/devworkspace-operator/commit/935f2405206a28375d51c114742865256cd99c75) occured on January 17th 2024.
+
 ## GitHub Action
 
 The release process is powered by the 'Release DevWorkspace Operator' [GitHub Action](https://github.com/devfile/devworkspace-operator/actions/workflows/release.yml).
@@ -51,7 +67,15 @@ The index image with the `release` tag is also pushed automatically to quay.io:
 
 - https://quay.io/repository/devfile/devworkspace-operator-index?tag=release&tab=tags
 
-After releasing a new version of the DevWorkspace Operator, it is necessary to copy the bundle files generated for that release to the main branch by opening a PR.
+### Post-release
+
+After releasing a new version of the DevWorkspace Operator, it is necessary to copy the bundle files generated for that release as well as the new channel entries to the main branch by opening a PR.
+
+#### Copying bundles & adding channel entries
+
+On the release branch, 2 automated commits will be created: one pre-fixed with `[release]` and another pre-fixed with `[post-release]`. See [here](https://github.com/devfile/devworkspace-operator/commit/3c083e4840f2f26c5c8abd95c745d8f09666b586) for an example of the release commit, and [here](https://github.com/devfile/devworkspace-operator/commit/070adc49bcc34fe0d527d6a452a4c1aa01ee4a67) for an example of the post-release commit.
+
+These commits will include changes to add an entry to the OLM catalog's `channel.yaml` and a generated bundle file. The `[release]` commit will modify the regular OLM catalog files, and the `[post-release]` commit will modify the OLM digest catalog files. These bundle and channel additions must be manually copied over from the release branch to the main branch in a PR to complete the release process. An examplary PR demonstrating this process can be found [here](https://github.com/devfile/devworkspace-operator/pull/1222).
 
 ### Creating a bugfix release
 

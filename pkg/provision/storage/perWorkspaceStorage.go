@@ -227,6 +227,7 @@ func syncPerWorkspacePVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sy
 		pvc.Labels = map[string]string{}
 	}
 	pvc.Labels[constants.DevWorkspaceIDLabel] = workspace.Status.DevWorkspaceId
+	pvc.Labels[constants.DevWorkspacePVCTypeLabel] = constants.PerWorkspaceStorageClassType
 
 	if err := controllerutil.SetControllerReference(workspace.DevWorkspace, pvc, clusterAPI.Scheme); err != nil {
 		return nil, err

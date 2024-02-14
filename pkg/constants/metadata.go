@@ -20,6 +20,9 @@ const (
 	// DevWorkspaceIDLabel is the label key to store workspace identifier
 	DevWorkspaceIDLabel = "controller.devfile.io/devworkspace_id"
 
+	// DevWorkspacePVCTypeLabel is the label key to identify DeWorkspace common PVCs and their type
+	DevWorkspacePVCTypeLabel = "controller.devfile.io/devworkspace_pvc_type_label"
+
 	// WorkspaceIdOverrideAnnotation is an annotation that can be applied to DevWorkspaces
 	// to override the default DevWorkspace ID assigned by the Operator. Is only respected
 	// when a DevWorkspace is created. Once a DevWorkspace has an ID set, it cannot be changed.

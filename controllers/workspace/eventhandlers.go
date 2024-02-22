@@ -47,7 +47,7 @@ func dwRelatedPodsHandler(obj client.Object) []reconcile.Request {
 }
 
 func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Request {
-	// No need to reconcile PVC, if it doesn't have a label specifying its type
+	// No need to reconcile, if PVC doesn't have a label specifying its type
 	pvcLabel, ok := obj.GetLabels()[constants.DevWorkspacePVCTypeLabel]
 	if !ok {
 		return []reconcile.Request{}

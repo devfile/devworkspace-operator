@@ -26,6 +26,7 @@ contribution-policy:
   code-of-conduct: https://github.com/devfile/api/blob/main/CODE_OF_CONDUCT.md
 documentation:
 - https://github.com/devfile/devworkspace-operator/blob/main/README.md
+- https://github.com/devfile/devworkspace-operator/blob/main/docs/additional-configuration.adoc
 dependencies:
   third-party-packages: true
   dependencies-lists:

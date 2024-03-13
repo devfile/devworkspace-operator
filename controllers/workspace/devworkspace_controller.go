@@ -291,7 +291,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Error provisioning storage: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
 
-	if storageProvisioner.NeedsStorage(&workspace.Spec.Template) && home.NeedsPersistentHomeDirectory(workspace) {
+	if home.StorageStrategySupportsPersistentHome(workspace) && home.NeedsPersistentHomeDirectory(workspace) {
 		workspaceWithHomeVolume, err := home.AddPersistentHomeVolume(workspace)
 		if err != nil {
 			reconcileStatus.addWarning(fmt.Sprintf("Info: default persistentHome volume is not being used: %s", err.Error()))

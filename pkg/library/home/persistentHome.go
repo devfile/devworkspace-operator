@@ -59,6 +59,14 @@ func AddPersistentHomeVolume(workspace *common.DevWorkspaceWithConfig) (*v1alpha
 	return dwTemplateSpecCopy, nil
 }
 
+// Returns true if the workspace's storage strategy supports persisting the user home directory.
+// The storage strategies which support home persistence are: per-user/common, per-workspace & async.
+// The ephemeral storage strategy does not support home persistence.
+func StorageStrategySupportsPersistentHome(workspace *common.DevWorkspaceWithConfig) bool {
+	storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	return storageClass != constants.EphemeralStorageClassType
+}
+
 // Returns true if `persistUserHome` is enabled in the DevWorkspaceOperatorConfig
 // and none of the container components in the DevWorkspace mount a volume to `/home/user/`.
 // Returns false otherwise.

@@ -53,7 +53,7 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 	}
 
 	// If persistent storage is not needed, we're done
-	if !needsStorage(&workspace.Spec.Template) {
+	if !WorkspaceNeedsStorage(&workspace.Spec.Template) {
 		return nil
 	}
 

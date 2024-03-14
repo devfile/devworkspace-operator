@@ -20,6 +20,7 @@ import (
 
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
+	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"k8s.io/utils/pointer"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -67,8 +68,10 @@ func StorageStrategySupportsPersistentHome(workspace *common.DevWorkspaceWithCon
 	return storageClass != constants.EphemeralStorageClassType
 }
 
-// Returns true if `persistUserHome` is enabled in the DevWorkspaceOperatorConfig
-// and none of the container components in the DevWorkspace mount a volume to `/home/user/`.
+// Returns true if the following criteria is met:
+// - `persistUserHome` is enabled in the DevWorkspaceOperatorConfig
+// - None of the container components in the DevWorkspace mount a volume to `/home/user/`.
+// - Persistent storage is required for the DevWorkspace
 // Returns false otherwise.
 func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool {
 	if !pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.Enabled, false) {
@@ -86,5 +89,5 @@ func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool
 			}
 		}
 	}
-	return true
+	return storage.WorkspaceNeedsStorage(&workspace.Spec.Template)
 }

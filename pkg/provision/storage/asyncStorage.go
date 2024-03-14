@@ -45,7 +45,7 @@ type AsyncStorageProvisioner struct{}
 var _ Provisioner = (*AsyncStorageProvisioner)(nil)
 
 func (*AsyncStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
-	return needsStorage(workspace)
+	return WorkspaceNeedsStorage(workspace)
 }
 
 func (p *AsyncStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {

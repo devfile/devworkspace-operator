@@ -37,6 +37,29 @@ import (
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 )
 
+// WorkspaceNeedsStorage returns true if storage will need to be provisioned for the current workspace. Note that ephemeral volumes
+// do not need to provision storage
+func WorkspaceNeedsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
+	projectsVolumeIsEphemeral := false
+	for _, component := range workspace.Components {
+		if component.Volume != nil {
+			// If any non-ephemeral volumes are defined, we need to mount storage
+			if !isEphemeral(component.Volume) {
+				return true
+			}
+			if component.Name == devfileConstants.ProjectsVolumeName {
+				projectsVolumeIsEphemeral = isEphemeral(component.Volume)
+			}
+		}
+	}
+	if projectsVolumeIsEphemeral {
+		// No non-ephemeral volumes, and projects volume mount is ephemeral, so all volumes are ephemeral
+		return false
+	}
+	// Implicit projects volume is non-ephemeral, so any container that mounts sources requires storage
+	return containerlib.AnyMountSources(workspace.Components)
+}
+
 func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
 
 	return &corev1.PersistentVolumeClaim{
@@ -61,29 +84,6 @@ func getPVCSpec(name, namespace string, storageClass *string, size resource.Quan
 // isEphemeral evaluates is volume component is configured as ephemeral
 func isEphemeral(volume *dw.VolumeComponent) bool {
 	return volume.Ephemeral != nil && *volume.Ephemeral
-}
-
-// needsStorage returns true if storage will need to be provisioned for the current workspace. Note that ephemeral volumes
-// do not need to provision storage
-func needsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
-	projectsVolumeIsEphemeral := false
-	for _, component := range workspace.Components {
-		if component.Volume != nil {
-			// If any non-ephemeral volumes are defined, we need to mount storage
-			if !isEphemeral(component.Volume) {
-				return true
-			}
-			if component.Name == devfileConstants.ProjectsVolumeName {
-				projectsVolumeIsEphemeral = isEphemeral(component.Volume)
-			}
-		}
-	}
-	if projectsVolumeIsEphemeral {
-		// No non-ephemeral volumes, and projects volume mount is ephemeral, so all volumes are ephemeral
-		return false
-	}
-	// Implicit projects volume is non-ephemeral, so any container that mounts sources requires storage
-	return containerlib.AnyMountSources(workspace.Components)
 }
 
 func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clusterAPI sync.ClusterAPI) (*corev1.PersistentVolumeClaim, error) {

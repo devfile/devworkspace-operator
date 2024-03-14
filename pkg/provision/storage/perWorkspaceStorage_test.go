@@ -60,7 +60,7 @@ func TestRewriteContainerVolumeMountsForPerWorkspaceStorageClass(t *testing.T) {
 				Logger: zap.New(),
 			}
 
-			if needsStorage(&workspace.Spec.Template) {
+			if WorkspaceNeedsStorage(&workspace.Spec.Template) {
 				err := perWorkspaceStorage.ProvisionStorage(tt.Input.PodAdditions.DeepCopy(), workspace, clusterAPI)
 				if !assert.Error(t, err, "Should get a NotReady error when creating PVC") {
 					return

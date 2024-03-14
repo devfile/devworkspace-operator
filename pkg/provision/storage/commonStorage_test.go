@@ -288,9 +288,9 @@ func TestNeedsStorage(t *testing.T) {
 			workspace := &dw.DevWorkspaceTemplateSpec{}
 			workspace.Components = tt.Components
 			if tt.NeedsStorage {
-				assert.True(t, needsStorage(workspace), tt.Explanation)
+				assert.True(t, WorkspaceNeedsStorage(workspace), tt.Explanation)
 			} else {
-				assert.False(t, needsStorage(workspace), tt.Explanation)
+				assert.False(t, WorkspaceNeedsStorage(workspace), tt.Explanation)
 			}
 		})
 	}

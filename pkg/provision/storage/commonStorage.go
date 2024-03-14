@@ -41,7 +41,7 @@ type CommonStorageProvisioner struct{}
 var _ Provisioner = (*CommonStorageProvisioner)(nil)
 
 func (*CommonStorageProvisioner) NeedsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
-	return needsStorage(workspace)
+	return WorkspaceNeedsStorage(workspace)
 }
 
 func (p *CommonStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1.PodAdditions, workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {

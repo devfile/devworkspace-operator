@@ -60,21 +60,17 @@ func AddPersistentHomeVolume(workspace *common.DevWorkspaceWithConfig) (*v1alpha
 	return dwTemplateSpecCopy, nil
 }
 
-// Returns true if the workspace's storage strategy supports persisting the user home directory.
-// The storage strategies which support home persistence are: per-user/common, per-workspace & async.
-// The ephemeral storage strategy does not support home persistence.
-func StorageStrategySupportsPersistentHome(workspace *common.DevWorkspaceWithConfig) bool {
-	storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-	return storageClass != constants.EphemeralStorageClassType
-}
-
 // Returns true if the following criteria is met:
 // - `persistUserHome` is enabled in the DevWorkspaceOperatorConfig
+// - The storage strategy used by the DevWorkspace supports home persistence
 // - None of the container components in the DevWorkspace mount a volume to `/home/user/`.
 // - Persistent storage is required for the DevWorkspace
 // Returns false otherwise.
 func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool {
 	if !pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.Enabled, false) {
+		return false
+	}
+	if !storageStrategySupportsPersistentHome(workspace) {
 		return false
 	}
 	for _, component := range workspace.Spec.Template.Components {
@@ -90,4 +86,12 @@ func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool
 		}
 	}
 	return storage.WorkspaceNeedsStorage(&workspace.Spec.Template)
+}
+
+// Returns true if the workspace's storage strategy supports persisting the user home directory.
+// The storage strategies which support home persistence are: per-user/common, per-workspace & async.
+// The ephemeral storage strategy does not support home persistence.
+func storageStrategySupportsPersistentHome(workspace *common.DevWorkspaceWithConfig) bool {
+	storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	return storageClass != constants.EphemeralStorageClassType
 }

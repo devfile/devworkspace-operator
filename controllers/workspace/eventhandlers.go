@@ -69,9 +69,9 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 	}
 
 	pvcLabel := obj.GetLabels()[constants.DevWorkspacePVCTypeLabel]
-  // No need to reconcile if PVC is being deleted, or it doesn't have a PVC type label.
-	// However, since it is possible for PVCs to not have such label, 
-  // we will handle this PVC if it has a name that correspons with PVC name in global config
+	// No need to reconcile if PVC is being deleted, or it doesn't have a PVC type label.
+	// However, since it is possible for PVCs to not have such label,
+	// we will handle this PVC if it has a name that correspons with PVC name in global config
 	// see comments to https://github.com/devfile/devworkspace-operator/pull/1233/files
 	if pvcLabel != "" {
 		if obj.GetName() != wkspConfig.GetGlobalConfig().Workspace.PVCName {
@@ -97,10 +97,10 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 				r.Log.Info("Couldn't fetch external config for workspace %s, using PVC Name from global config instead", err.Error())
 			}
 			storageType := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-			if (storageType == constants.CommonStorageClassType || storageType == constants.PerUserStorageClassType) {
+			if storageType == constants.CommonStorageClassType || storageType == constants.PerUserStorageClassType {
 				workspacePVCName = externalConfig.Workspace.PVCName
 			}
-			
+
 		}
 		if obj.GetName() == workspacePVCName {
 			reconciles = append(reconciles, reconcile.Request{

@@ -47,7 +47,13 @@ func dwRelatedPodsHandler(obj client.Object) []reconcile.Request {
 }
 
 func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Request {
-	// Check if PVC is owned by a DevWorkspace (per-workspace storage case)
+	if obj.GetDeletionTimestamp() == nil {
+		return []reconcile.Request{}
+	}
+	// we can wrap the code below for handling per-workspace PVCs
+	// in the if-block to check for presence of the respective label,
+	// once we ensure that it is applied to all per-workspace PVCs
+	// see comments to https://github.com/devfile/devworkspace-operator/pull/1233/files
 	for _, ownerref := range obj.GetOwnerReferences() {
 		if ownerref.Kind != "DevWorkspace" {
 			continue
@@ -62,20 +68,41 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 		}
 	}
 
-	// TODO: Label PVCs used for workspace storage so that they can be cleaned up if non-default name is used.
-	// Otherwise, check if common PVC is deleted to make sure all DevWorkspaces see it happen
-	if obj.GetName() != wkspConfig.GetGlobalConfig().Workspace.PVCName || obj.GetDeletionTimestamp() == nil {
-		// We're looking for a deleted common PVC
-		return []reconcile.Request{}
+	pvcLabel := obj.GetLabels()[constants.DevWorkspacePVCTypeLabel]
+	// No need to reconcile if PVC is being deleted, or it doesn't have a PVC type label.
+	// However, since it is possible for PVCs to not have such label,
+	// we will handle this PVC if it has a name that correspons with PVC name in global config
+	// see comments to https://github.com/devfile/devworkspace-operator/pull/1233/files
+	if pvcLabel != "" {
+		if obj.GetName() != wkspConfig.GetGlobalConfig().Workspace.PVCName {
+			return []reconcile.Request{}
+		}
 	}
+
 	dwList := &dw.DevWorkspaceList{}
 	if err := r.Client.List(context.Background(), dwList, &client.ListOptions{Namespace: obj.GetNamespace()}); err != nil {
 		return []reconcile.Request{}
 	}
 	var reconciles []reconcile.Request
+
 	for _, workspace := range dwList.Items {
-		storageType := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-		if storageType == constants.CommonStorageClassType || storageType == constants.PerUserStorageClassType || storageType == "" {
+		//Determine workspaces to reconcile that use the current common PVC.
+		// Workspaces can either use the common PVC where the PVC name
+		// is coming from the global config, or from an external config the workspace might use
+		workspacePVCName := wkspConfig.GetGlobalConfig().Workspace.PVCName
+
+		if workspace.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
+			externalConfig, err := wkspConfig.ResolveConfigForWorkspace(&workspace, r.Client)
+			if err != nil {
+				r.Log.Info("Couldn't fetch external config for workspace %s, using PVC Name from global config instead", err.Error())
+			}
+			storageType := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+			if storageType == constants.CommonStorageClassType || storageType == constants.PerUserStorageClassType {
+				workspacePVCName = externalConfig.Workspace.PVCName
+			}
+
+		}
+		if obj.GetName() == workspacePVCName {
 			reconciles = append(reconciles, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      workspace.GetName(),

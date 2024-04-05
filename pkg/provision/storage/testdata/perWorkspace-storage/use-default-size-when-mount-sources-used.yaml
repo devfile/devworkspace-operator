@@ -1,0 +1,39 @@
+name: "Uses default PVC size when no volumes define their size but mountSources used"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: "projects"
+            mountPath: "/projects-mountpath"
+    initContainers:
+      - name: testing-initContainer-1
+        image: testing-image
+
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          mountSources: true
+
+output:
+  podAdditions:
+    containers:
+      - name: testing-container-1
+        image: testing-image
+        volumeMounts:
+          - name: storage-test-workspaceid
+            subPath: "projects"
+            mountPath: "/projects-mountpath"
+    initContainers:
+      - name: testing-initContainer-1
+        image: testing-image
+
+    volumes:
+      - name: storage-test-workspaceid
+        persistentVolumeClaim:
+          claimName: storage-test-workspaceid

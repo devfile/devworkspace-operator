@@ -29,11 +29,13 @@ var (
 )
 
 func setupHttpClients() {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
-	healthCheckTransport.TLSClientConfig = &tls.Config{
+	tlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
 	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSClientConfig = tlsConfig
+	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
+	healthCheckTransport.TLSClientConfig = tlsConfig
 
 	globalConfig := config.GetGlobalConfig()
 

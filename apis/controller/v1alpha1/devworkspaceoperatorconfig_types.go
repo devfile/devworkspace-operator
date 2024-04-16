@@ -152,6 +152,12 @@ type PersistentHomeConfig struct {
 	// Must be used with the 'per-user'/'common' or 'per-workspace' storage class in order to take effect.
 	// Disabled by default.
 	Enabled *bool `json:"enabled,omitempty"`
+	// Determines whether the init container that initializes the persistent home directory should be disabled.
+	// When the `/home/user` directory is persisted, the init container is used to initialize the directory before
+	// the workspace starts. If set to true, the init container will not be created.
+	// This field is not used if the `workspace.persistUserHome.enabled` field is set to false.
+	// Enabled by default.
+	DisableInitContainer *bool `json:"disableInitContainer,omitempty"`
 }
 
 type Proxy struct {

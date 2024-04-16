@@ -44,7 +44,8 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 			PerWorkspace: &perWorkspaceStorageSize,
 		},
 		PersistUserHome: &v1alpha1.PersistentHomeConfig{
-			Enabled: pointer.Bool(false),
+			Enabled:              pointer.Bool(false),
+			DisableInitContainer: pointer.Bool(false),
 		},
 		IdleTimeout:              "15m",
 		ProgressTimeout:          "5m",

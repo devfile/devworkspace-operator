@@ -294,7 +294,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if home.NeedsPersistentHomeDirectory(workspace) {
 		workspaceWithHomeVolume, err := home.AddPersistentHomeVolume(workspace)
 		if err != nil {
-			reconcileStatus.addWarning(fmt.Sprintf("Info: default persistentHome volume is not being used: %s", err.Error()))
+			reconcileStatus.addWarning(fmt.Sprintf("Info: unable to setup home persistence: %s", err.Error()))
 		} else {
 			workspace.Spec.Template = *workspaceWithHomeVolume
 		}

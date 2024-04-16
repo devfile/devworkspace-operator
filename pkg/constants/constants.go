@@ -41,6 +41,10 @@ const (
 
 	HomeVolumeName = "persistent-home"
 
+	HomeInitComponentName = "init-persistent-home"
+
+	HomeInitEventId = "init-persistent-home"
+
 	ServiceAccount = "devworkspace"
 
 	PVCStorageSize = "10Gi"

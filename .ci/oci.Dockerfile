@@ -27,4 +27,4 @@ RUN yum install --assumeyes -d1 python3-pip nodejs && \
     chmod +x ./kubectl && \
     mv ./kubectl /usr/local/bin && \
     # Install chectl
-    bash <(curl -sL https://www.eclipse.org/che/chectl/) --channel=next
+    bash <(curl -sL https://che-incubator.github.io/chectl/install.sh) --channel=next

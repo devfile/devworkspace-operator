@@ -166,6 +166,14 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	return nil
 }
 
+// Calculates the per-workspace PVC size required for the given devworkspace based on the following rules:
+//
+// 1. If all volumes in the devworkspace specify their size, the computed PVC size will be used.
+//
+// 2. If all volumes in the devworkspace either specify their size or are ephemeral, the computed PVC size will be used.
+//
+//  3. If at least one volume in the devworkspace specifies its size, and the computed PVC size is greater
+//     than the default per-workspace PVC size, the computed PVC size will be used.
 func getPVCSize(workspace *common.DevWorkspaceWithConfig, namespacedConfig *nsconfig.NamespacedConfig) (*resource.Quantity, error) {
 	defaultPVCSize := *workspace.Config.Workspace.DefaultStorageSize.PerWorkspace
 

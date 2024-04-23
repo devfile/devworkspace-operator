@@ -61,6 +61,8 @@ type RoutingConfig struct {
 	// DevWorkspaces. However, changing the proxy configuration for the DevWorkspace Operator itself
 	// requires restarting the controller deployment.
 	ProxyConfig *Proxy `json:"proxyConfig,omitempty"`
+	// DisableTLSVerification turns off TLS verification for http requests.
+	DisableTLSVerification *bool `json:"disableTLSVerification,omitempty"`
 }
 
 type WorkspaceConfig struct {

@@ -29,15 +29,16 @@ var (
 )
 
 func setupHttpClients() {
-	tlsConfig := &tls.Config{
+	globalConfig := config.GetGlobalConfig()
+	insecureTlsConfig := &tls.Config{
 		InsecureSkipVerify: true,
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.TLSClientConfig = tlsConfig
+	if globalConfig.Routing != nil && globalConfig.Routing.DisableTLSVerification != nil && *globalConfig.Routing.DisableTLSVerification {
+		transport.TLSClientConfig = insecureTlsConfig
+	}
 	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
-	healthCheckTransport.TLSClientConfig = tlsConfig
-
-	globalConfig := config.GetGlobalConfig()
+	healthCheckTransport.TLSClientConfig = insecureTlsConfig
 
 	if globalConfig.Routing != nil && globalConfig.Routing.ProxyConfig != nil {
 		proxyConf := httpproxy.Config{}

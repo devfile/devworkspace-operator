@@ -1,0 +1,14 @@
+name: "No op if there are no components"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  config:
+    workspace:
+      persistUserHome:
+        enabled: true
+  workspace:
+    components: []
+
+output:
+  workspace:
+    components: []

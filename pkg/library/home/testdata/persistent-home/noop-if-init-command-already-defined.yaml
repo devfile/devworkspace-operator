@@ -1,0 +1,29 @@
+name: "Does not create persistent home volume if command with an id of 'init-persistent-home' is already defined"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  config:
+    workspace:
+      persistUserHome:
+        enabled: true
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+    commands:
+      - id: init-persistent-home
+        apply:
+          component: testing-container-1
+
+output:
+  error: "failed to add init container for home persistence setup: command with id init-persistent-home already exists in the devworkspace"
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+    commands:
+      - id: init-persistent-home
+        apply:
+          component: testing-container-1

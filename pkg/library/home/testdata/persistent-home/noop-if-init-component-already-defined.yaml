@@ -1,0 +1,55 @@
+name: "Does not create persistent home volume if component named 'init-persistent-home' is already defined"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  config:
+    workspace:
+      persistUserHome:
+        enabled: true
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+      - name: my-defined-volume
+        volume: {}
+      - name: init-persistent-home
+        container:
+          image: testing-image-1
+          command:
+            - echo helloworld
+    commands:
+      - id: init-persistent-home
+        apply:
+          component: init-persistent-home
+    events:
+      prestart:
+        - init-persistent-home
+
+output:
+  error: "failed to add init container for home persistence setup: component named init-persistent-home already exists in the devworkspace"
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+      - name: my-defined-volume
+        volume: {}
+      - name: init-persistent-home
+        container:
+          image: testing-image-1
+          command:
+            - echo helloworld
+    commands:
+      - id: init-persistent-home
+        apply:
+          component: init-persistent-home
+    events:
+      prestart:
+        - init-persistent-home

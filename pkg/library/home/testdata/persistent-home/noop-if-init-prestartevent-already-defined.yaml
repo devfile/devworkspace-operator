@@ -1,0 +1,19 @@
+name: "Does not create persistent home volume if prestart event with an id of 'init-persistent-home' is already defined"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  config:
+    workspace:
+      persistUserHome:
+        enabled: true
+  workspace:
+    events:
+      prestart:
+        - init-persistent-home
+
+output:
+  error: "failed to add init container for home persistence setup: command with id init-persistent-home already exists in the devworkspace"
+  workspace:
+    events:
+      prestart:
+        - init-persistent-home

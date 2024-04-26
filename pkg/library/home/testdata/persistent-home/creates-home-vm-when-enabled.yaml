@@ -6,6 +6,7 @@ input:
     workspace:
       persistUserHome:
         enabled: true
+        disableInitContainer: true
   workspace:
     components:
       - name: testing-container-1

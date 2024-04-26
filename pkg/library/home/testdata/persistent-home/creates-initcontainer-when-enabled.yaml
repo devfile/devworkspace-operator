@@ -1,0 +1,68 @@
+name: "Creates init container when persistUserHome is enabled"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  config:
+    workspace:
+      persistUserHome:
+        enabled: true
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+      - name: my-defined-volume
+        volume: {}
+
+output:
+  workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+            - name: persistent-home
+              path: /home/user/
+      - name: my-defined-volume
+        volume: {}
+      - name: init-persistent-home
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: persistent-home
+              path: /home/user/
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - |
+              (echo "Checking for stow command"
+              STOW_COMPLETE=/home/user/.stow_completed
+              if command -v stow &> /dev/null; then
+                if  [ ! -f $STOW_COMPLETE ]; then
+                  echo "Running stow command"
+                  stow . -t /home/user/ -d /home/tooling/ --no-folding -v 2 > /home/user/.stow.log 2>&1
+                  cp -n /home/tooling/.viminfo /home/user/.viminfo
+                  cp -n /home/tooling/.bashrc /home/user/.bashrc
+                  cp -n /home/tooling/.bash_profile /home/user/.bash_profile
+                  touch $STOW_COMPLETE
+                else
+                  echo "Stow command already run. If you wish to re-run it, delete $STOW_COMPLETE from the persistent volume and restart the workspace."
+                fi
+              else
+                echo "Stow command not found"
+              fi) || true
+      - name: persistent-home
+        volume: {}
+    commands:
+      - id: init-persistent-home
+        apply:
+          component: init-persistent-home
+    events:
+      prestart:
+        - init-persistent-home

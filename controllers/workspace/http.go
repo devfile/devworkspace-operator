@@ -14,12 +14,21 @@
 package controllers
 
 import (
+	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/config"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"golang.org/x/net/http/httpproxy"
 )
 
@@ -28,7 +37,7 @@ var (
 	healthCheckHttpClient *http.Client
 )
 
-func setupHttpClients() {
+func setupHttpClients(k8s client.Client, logger logr.Logger) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
 	healthCheckTransport.TLSClientConfig = &tls.Config{
@@ -62,5 +71,48 @@ func setupHttpClients() {
 	healthCheckHttpClient = &http.Client{
 		Transport: healthCheckTransport,
 		Timeout:   500 * time.Millisecond,
+	}
+	InjectCertificates(k8s, logger)
+}
+
+func InjectCertificates(k8s client.Client, logger logr.Logger) {
+	if certs, ok := readCertificates(k8s, logger); ok {
+		for _, certsPem := range certs {
+			injectCertificates([]byte(certsPem), httpClient.Transport.(*http.Transport), logger)
+		}
+	}
+}
+
+func readCertificates(k8s client.Client, logger logr.Logger) (map[string]string, bool) {
+	configmapRef := config.GetGlobalConfig().Routing.TLSCertificateConfigmapRef
+	if configmapRef == nil {
+		return nil, false
+	}
+	configMap := &corev1.ConfigMap{}
+	namespacedName := &types.NamespacedName{
+		Name:      configmapRef.Name,
+		Namespace: configmapRef.Namespace,
+	}
+	err := k8s.Get(context.Background(), *namespacedName, configMap)
+	if err != nil {
+		logger.Error(err, "Failed to read configmap with certificates")
+		return nil, false
+	}
+	return configMap.Data, true
+}
+
+func injectCertificates(certsPem []byte, transport *http.Transport, logger logr.Logger) {
+	caCertPool := transport.TLSClientConfig.RootCAs
+	if caCertPool == nil {
+		systemCertPool, err := x509.SystemCertPool()
+		if err != nil {
+			logger.Error(err, "Failed to load system cert pool")
+			caCertPool = x509.NewCertPool()
+		} else {
+			caCertPool = systemCertPool
+		}
+	}
+	if ok := caCertPool.AppendCertsFromPEM(certsPem); ok {
+		transport.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
 	}
 }

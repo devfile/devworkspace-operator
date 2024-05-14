@@ -17,7 +17,6 @@ package v1alpha1
 
 import (
 	"fmt"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -61,6 +60,9 @@ type RoutingConfig struct {
 	// DevWorkspaces. However, changing the proxy configuration for the DevWorkspace Operator itself
 	// requires restarting the controller deployment.
 	ProxyConfig *Proxy `json:"proxyConfig,omitempty"`
+	// TLSCertificateConfigmapRef defines the name and namespace of the configmap with a certificate to inject into the
+	// HTTP client.
+	TLSCertificateConfigmapRef *ConfigmapReference `json:"tlsCertificateConfigmapRef,omitempty"`
 }
 
 type WorkspaceConfig struct {
@@ -244,6 +246,13 @@ type ProjectCloneConfig struct {
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 	// Env allows defining additional environment variables for the project clone container.
 	Env []corev1.EnvVar `json:"env,omitempty"`
+}
+
+type ConfigmapReference struct {
+	// Name is the name of the configmap
+	Name string `json:"name"`
+	// Namespace is the namespace of the configmap
+	Namespace string `json:"namespace"`
 }
 
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API

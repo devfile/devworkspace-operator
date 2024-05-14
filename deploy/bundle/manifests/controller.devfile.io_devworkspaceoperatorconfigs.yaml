@@ -55,6 +55,19 @@ spec:
                         description: NoProxy is a comma-separated list of hostnames and/or CIDRs for which the proxy should not be used. Ignored when HttpProxy and HttpsProxy are unset. To ignore automatically detected proxy settings for the cluster, set this field to an empty string ("")
                         type: string
                     type: object
+                  tlsCertificateConfigmapRef:
+                    description: TLSCertificateConfigmapRef defines the name and namespace of the configmap with a certificate to inject into the HTTP client.
+                    properties:
+                      name:
+                        description: Name is the name of the configmap
+                        type: string
+                      namespace:
+                        description: Namespace is the namespace of the configmap
+                        type: string
+                    required:
+                    - name
+                    - namespace
+                    type: object
                 type: object
               workspace:
                 description: Workspace defines configuration options related to how DevWorkspaces are managed

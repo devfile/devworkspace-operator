@@ -103,6 +103,10 @@ func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clu
 	if err != nil {
 		return nil, err
 	}
+	if pvc.Labels == nil {
+		pvc.Labels = map[string]string{}
+	}
+	pvc.Labels[constants.DevWorkspacePVCTypeLabel] = constants.PerUserStorageClassType
 	currObject, err := sync.SyncObjectWithCluster(pvc, clusterAPI)
 	switch t := err.(type) {
 	case nil:

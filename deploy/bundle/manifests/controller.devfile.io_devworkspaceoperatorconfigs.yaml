@@ -1588,6 +1588,11 @@ spec:
                         description: Determines whether the `/home/user/` directory in workspaces should persist between workspace shutdown and startup. Must be used with the 'per-user'/'common' or 'per-workspace' storage class in order to take effect. Disabled by default.
                         type: boolean
                     type: object
+                  podAnnotations:
+                    additionalProperties:
+                      type: string
+                    description: PodAnnotations defines the metadata.annotations for DevWorkspace pods created by the DevWorkspace Operator.
+                    type: object
                   podSecurityContext:
                     description: PodSecurityContext overrides the default PodSecurityContext used for all workspace-related pods created by the DevWorkspace Operator. If set, defined values are merged into the default configuration
                     properties:

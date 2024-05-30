@@ -413,6 +413,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		allPodAdditions = append(allPodAdditions, *routingPodAdditions)
 	}
 
+	annotationAdditions := controllerv1alpha1.PodAdditions{Annotations: workspace.Config.Workspace.PodAnnotations}
+	allPodAdditions = append(allPodAdditions, annotationAdditions)
+
 	// Step five: Prepare workspace ServiceAccount
 	var serviceAcctName string
 	if *workspace.Config.Workspace.ServiceAccount.DisableCreation {

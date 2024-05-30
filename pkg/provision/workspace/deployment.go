@@ -197,6 +197,7 @@ func getSpecDeployment(
 						constants.DevWorkspaceIDLabel:   workspace.Status.DevWorkspaceId,
 						constants.DevWorkspaceNameLabel: workspace.Name,
 					},
+					Annotations: podAdditions.Annotations,
 				},
 				Spec: corev1.PodSpec{
 					InitContainers:                podAdditions.InitContainers,
@@ -300,9 +301,15 @@ func mergePodAdditions(toMerge []v1alpha1.PodAdditions) (*v1alpha1.PodAdditions,
 	pullSecretNames := map[string]bool{}
 	for _, additions := range toMerge {
 		for annotKey, annotVal := range additions.Annotations {
+			if podAdditions.Annotations == nil {
+				podAdditions.Annotations = map[string]string{}
+			}
 			podAdditions.Annotations[annotKey] = annotVal
 		}
 		for labelKey, labelVal := range additions.Labels {
+			if podAdditions.Labels == nil {
+				podAdditions.Labels = map[string]string{}
+			}
 			podAdditions.Labels[labelKey] = labelVal
 		}
 		for _, container := range additions.Containers {

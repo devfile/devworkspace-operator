@@ -384,6 +384,15 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			}
 			to.Workspace.DefaultContainerResources = mergeResources(from.Workspace.DefaultContainerResources, to.Workspace.DefaultContainerResources)
 		}
+
+		if from.Workspace.PodAnnotations != nil {
+			if to.Workspace.PodAnnotations == nil {
+				to.Workspace.PodAnnotations = make(map[string]string)
+			}
+			for key, value := range from.Workspace.PodAnnotations {
+				to.Workspace.PodAnnotations[key] = value
+			}
+		}
 	}
 }
 
@@ -585,6 +594,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if !reflect.DeepEqual(workspace.DefaultContainerResources, defaultConfig.Workspace.DefaultContainerResources) {
 			config = append(config, "workspace.defaultContainerResources is set")
+		}
+		if !reflect.DeepEqual(workspace.PodAnnotations, defaultConfig.Workspace.PodAnnotations) {
+			config = append(config, "workspace.podAnnotations is set")
 		}
 	}
 	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {

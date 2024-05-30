@@ -147,6 +147,8 @@ type WorkspaceConfig struct {
 	// the value "0" should be used. By default, the memory limit is 128Mi and the memory request is 64Mi.
 	// No CPU limit or request is added by default.
 	DefaultContainerResources *corev1.ResourceRequirements `json:"defaultContainerResources,omitempty"`
+	// PodAnnotations defines the metadata.annotations for DevWorkspace pods created by the DevWorkspace Operator.
+	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 }
 
 type PersistentHomeConfig struct {

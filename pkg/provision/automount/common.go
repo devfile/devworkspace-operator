@@ -42,7 +42,7 @@ type Resources struct {
 	EnvFromSource []corev1.EnvFromSource
 }
 
-func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string) error {
+func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string, persistentHome bool) error {
 	resources, err := getAutomountResources(api, namespace)
 
 	if err != nil {
@@ -59,10 +59,16 @@ func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sy
 	}
 
 	for idx, initContainer := range podAdditions.InitContainers {
+
+		// Don't add automount resources if persistent home init container exists, because
+		// automount resources can conflict with the init container's stow command
+		if persistentHome && initContainer.Name == constants.HomeInitComponentName {
+			continue
+		}
+
 		podAdditions.InitContainers[idx].VolumeMounts = append(initContainer.VolumeMounts, resources.VolumeMounts...)
 		podAdditions.InitContainers[idx].EnvFrom = append(initContainer.EnvFrom, resources.EnvFromSource...)
 	}
-
 	if resources.Volumes != nil {
 		podAdditions.Volumes = append(podAdditions.Volumes, resources.Volumes...)
 	}

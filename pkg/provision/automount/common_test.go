@@ -125,7 +125,7 @@ func TestProvisionAutomountResourcesInto(t *testing.T) {
 			}
 			// Note: this test does not allow for returning AutoMountError with isFatal: false (i.e. no retrying)
 			// and so is not suitable for testing automount features that provision cluster resources (yet)
-			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace)
+			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, false)
 			if tt.Output.ErrRegexp != nil {
 				if !assert.Error(t, err, "Expected an error but got none") {
 					return

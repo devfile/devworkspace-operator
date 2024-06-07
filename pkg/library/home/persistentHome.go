@@ -92,10 +92,7 @@ func AddPersistentHomeVolume(workspace *common.DevWorkspaceWithConfig) (*v1alpha
 // - Persistent storage is required for the DevWorkspace
 // Returns false otherwise.
 func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool {
-	if !pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.Enabled, false) {
-		return false
-	}
-	if !storageStrategySupportsPersistentHome(workspace) {
+	if !PersistUserHomeEnabled(workspace) || !storageStrategySupportsPersistentHome(workspace) {
 		return false
 	}
 	for _, component := range workspace.Spec.Template.Components {
@@ -111,6 +108,10 @@ func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool
 		}
 	}
 	return storage.WorkspaceNeedsStorage(&workspace.Spec.Template)
+}
+
+func PersistUserHomeEnabled(workspace *common.DevWorkspaceWithConfig) bool {
+	return pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.Enabled, false)
 }
 
 // Returns true if the workspace's storage strategy supports persisting the user home directory.

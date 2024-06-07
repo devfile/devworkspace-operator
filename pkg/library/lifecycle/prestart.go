@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 // GetInitContainers partitions the components in a devfile's flattened spec into initContainer and non-initContainer lists
@@ -71,7 +72,23 @@ func GetInitContainers(devfile dw.DevWorkspaceTemplateSpecContent) (initContaine
 		}
 	}
 
+	// This is necessary because if there is another initcontainer that runs before it,
+	// an automount resource can mount within /home/user and cause stow conflicts
+	// in init-persistent-home since the automount resource would be saved in the PVC.
+	initContainers = setHomeInitContainerToFront(initContainers)
 	return initContainers, mainComponents, nil
+}
+
+// Takes a slice of components which are intended to run as initContainers and moves the
+// init-persistent-home component to the start of the slice.
+func setHomeInitContainerToFront(initContainers []dw.Component) []dw.Component {
+	for i, container := range initContainers {
+		if container.Name == constants.HomeInitComponentName {
+			initContainers = append(initContainers[:i], initContainers[i+1:]...)
+			return append([]dw.Component{container}, initContainers...)
+		}
+	}
+	return initContainers
 }
 
 func checkPreStartEventCommandsValidity(initCommands []dw.Command) error {

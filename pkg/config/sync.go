@@ -253,6 +253,20 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 	if from.EnableExperimentalFeatures != nil {
 		to.EnableExperimentalFeatures = from.EnableExperimentalFeatures
 	}
+	if from.Webhook != nil {
+		if to.Webhook == nil {
+			to.Webhook = &controller.WebhookConfig{}
+		}
+		if from.Webhook.NodeSelector != nil {
+			to.Webhook.NodeSelector = from.Webhook.NodeSelector
+		}
+		if from.Webhook.Tolerations != nil {
+			to.Webhook.Tolerations = from.Webhook.Tolerations
+		}
+		if from.Webhook.Replicas != nil {
+			to.Webhook.Replicas = from.Webhook.Replicas
+		}
+	}
 	if from.Routing != nil {
 		if to.Routing == nil {
 			to.Routing = &controller.RoutingConfig{}
@@ -506,6 +520,26 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if routing.DefaultRoutingClass != defaultConfig.Routing.DefaultRoutingClass {
 			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", routing.DefaultRoutingClass))
+		}
+	}
+	webhook := currConfig.Webhook
+	if webhook != nil {
+		if webhook.NodeSelector != nil {
+			webhookNodeSelectors := make([]string, 0)
+			for label, value := range webhook.NodeSelector {
+				webhookNodeSelectors = append(webhookNodeSelectors, fmt.Sprintf("%s=%s", label, value))
+			}
+			config = append(config, fmt.Sprintf("webhook.nodeSelectors=[%s]", strings.Join(webhookNodeSelectors, ", ")))
+		}
+		if webhook.Tolerations != nil {
+			webhookTolerations := make([]string, 0)
+			for _, toleration := range webhook.Tolerations {
+				webhookTolerations = append(webhookTolerations, toleration.String())
+			}
+			config = append(config, fmt.Sprintf("webhook.tolerations=[%s]", strings.Join(webhookTolerations, ", ")))
+		}
+		if webhook.Replicas != nil && *webhook.Replicas != *defaultConfig.Webhook.Replicas {
+			config = append(config, fmt.Sprintf("webhook.replicas=%d", *webhook.Replicas))
 		}
 	}
 	workspace := currConfig.Workspace

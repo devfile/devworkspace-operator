@@ -32,6 +32,9 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 		DefaultRoutingClass: "basic",
 		ClusterHostSuffix:   "", // is auto discovered when running on OpenShift. Must be defined by CR on Kubernetes.
 	},
+	Webhook: &v1alpha1.WebhookConfig{
+		Replicas: pointer.Int32(2),
+	},
 	Workspace: &v1alpha1.WorkspaceConfig{
 		ImagePullPolicy:    "Always",
 		DeploymentStrategy: appsv1.RecreateDeploymentStrategyType,

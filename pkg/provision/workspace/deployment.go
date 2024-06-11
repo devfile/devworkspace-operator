@@ -154,7 +154,7 @@ func getSpecDeployment(
 	labels[constants.DevWorkspaceIDLabel] = workspace.Status.DevWorkspaceId
 	labels[constants.DevWorkspaceNameLabel] = workspace.Name
 
-	annotations, err := getAdditionalAnnotations(workspace)
+	annotations, err := getAdditionalDeploymentAnnotations(workspace)
 	if err != nil {
 		return nil, err
 	}
@@ -377,7 +377,7 @@ func needsPVCWorkaround(podAdditions *v1alpha1.PodAdditions, pvcName string) (ne
 	return false, ""
 }
 
-func getAdditionalAnnotations(workspace *common.DevWorkspaceWithConfig) (map[string]string, error) {
+func getAdditionalDeploymentAnnotations(workspace *common.DevWorkspaceWithConfig) (map[string]string, error) {
 	annotations := map[string]string{}
 
 	for _, component := range workspace.Spec.Template.Components {

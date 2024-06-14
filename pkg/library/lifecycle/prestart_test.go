@@ -56,6 +56,9 @@ func TestGetInitContainers(t *testing.T) {
 		loadPreStartTestCaseOrPanic(t, "prestart_exec_command.yaml"),
 		loadPreStartTestCaseOrPanic(t, "prestart_apply_command.yaml"),
 		loadPreStartTestCaseOrPanic(t, "init_and_main_container.yaml"),
+		loadPreStartTestCaseOrPanic(t, "persistent_home_initcontainer_first_initcontainer.yaml"),
+		loadPreStartTestCaseOrPanic(t, "persistent_home_initcontainer_second_initcontainer.yaml"),
+		loadPreStartTestCaseOrPanic(t, "persistent_home_initcontainer_only_initcontainer.yaml"),
 	}
 
 	for _, tt := range tests {

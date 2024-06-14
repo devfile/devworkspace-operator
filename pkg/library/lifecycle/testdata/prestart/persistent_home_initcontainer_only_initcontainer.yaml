@@ -1,0 +1,38 @@
+name: "Should set the init-persistent-home init container when it is the only init container"
+
+input:
+  components:
+    - name: test-container1
+      container:
+        image: my-image
+    - name: test-container2
+      container:
+        image: my-image
+    - name: init-persistent-home
+      container:
+        image: my-image
+  commands:
+    - id: test_regular_command
+      exec:
+        component: test-container1
+        command: "test_command"
+    - id: init-persistent-home
+      apply:
+        component: init-persistent-home
+  events:
+    preStart:
+      - "init-persistent-home"
+
+output:
+  initContainers:
+    - name: init-persistent-home
+      container:
+        image: my-image
+  mainContainers:
+    - name: test-container1
+      container:
+        image: my-image
+    - name: test-container2
+      container:
+        image: my-image
+  errRegexp:

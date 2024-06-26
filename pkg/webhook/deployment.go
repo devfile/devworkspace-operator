@@ -43,7 +43,7 @@ func CreateWebhookServerDeployment(
 
 	deployment, err := getSpecDeployment(webhooksSecretName, namespace)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create webhooks server deployment: %s", err)
 	}
 
 	if err := client.Create(ctx, deployment); err != nil {
@@ -74,13 +74,19 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 
 	resources, err := getWebhooksServerResources()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create webhooks server deployment: %s", err)
+		return nil, err
 	}
 
 	controllerSA, err := config.GetWorkspaceControllerSA()
 	if err != nil {
 		return nil, err
 	}
+
+	globalConfig := config.GetGlobalConfig()
+	if globalConfig.Webhook == nil || globalConfig.Webhook.Replicas == nil {
+		return nil, fmt.Errorf("the number of webhook server replicas must be specified in the global DWOC")
+	}
+	replicas := globalConfig.Webhook.Replicas
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -89,7 +95,7 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 			Labels:    server.WebhookServerAppLabels(),
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: pointer.Int32(1),
+			Replicas: replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: server.WebhookServerAppLabels(),
 			},
@@ -104,6 +110,8 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 					Annotations: server.WebhookServerAppAnnotations(),
 				},
 				Spec: corev1.PodSpec{
+					NodeSelector: globalConfig.Webhook.NodeSelector,
+					Tolerations:  globalConfig.Webhook.Tolerations,
 					Containers: []corev1.Container{
 						{
 							Name:  "kube-rbac-proxy",

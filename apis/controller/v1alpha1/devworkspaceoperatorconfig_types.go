@@ -33,6 +33,8 @@ type OperatorConfiguration struct {
 	// Workspace defines configuration options related to how DevWorkspaces are
 	// managed
 	Workspace *WorkspaceConfig `json:"workspace,omitempty"`
+	// Webhook defines configuration options for the DevWorkspace Webhook Server.
+	Webhook *WebhookConfig `json:"webhook,omitempty"`
 	// EnableExperimentalFeatures turns on in-development features of the controller.
 	// This option should generally not be enabled, as any capabilites are subject
 	// to removal without notice.
@@ -149,6 +151,25 @@ type WorkspaceConfig struct {
 	DefaultContainerResources *corev1.ResourceRequirements `json:"defaultContainerResources,omitempty"`
 	// PodAnnotations defines the metadata.annotations for DevWorkspace pods created by the DevWorkspace Operator.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+}
+
+type WebhookConfig struct {
+	// NodeSelector defines the map of Kubernetes nodeSelectors to apply to the DevWorkspace Webhook
+	// Server pod(s).
+	// No NodeSelectors are added by default.
+	// +kubebuilder:validation:Optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// Tolerations defines the array of Kubernetes pod tolerations to apply to the DevWorkspace Webhook
+	// Server pod(s).
+	// No Tolerations are added by default.
+	// +kubebuilder:validation:Optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	// Replicas defines the number of desired DevWorkspace Webhook Server pods.
+	// Defaults to 2.
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:default:=2
+	// +kubebuilder:validation:Optional
+	Replicas *int32 `json:"replicas,omitempty"`
 }
 
 type PersistentHomeConfig struct {

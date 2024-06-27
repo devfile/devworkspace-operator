@@ -51,12 +51,12 @@ output:
           - name: "projects"
             mountPath: "/testdir1"
         env:
-          - name: "DEVWORKSPACE_COMPONENT_NAME"
-            value: "testing-container-1"
           - name: "PROJECTS_ROOT"
             value: "/testdir1"
           - name: "PROJECT_SOURCE"
             value: "/testdir1/clone-path"
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-1"
       - name: testing-container-2
         image: testing-image-2
         imagePullPolicy: Always
@@ -71,12 +71,12 @@ output:
           - name: "projects"
             mountPath: "/projects"
         env:
-          - name: "DEVWORKSPACE_COMPONENT_NAME"
-            value: "testing-container-2"
           - name: "PROJECTS_ROOT"
             value: "/projects"
           - name: "PROJECT_SOURCE"
             value: "/projects/clone-path"
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-2"
       - name: testing-container-3
         image: testing-image-3
         imagePullPolicy: Always

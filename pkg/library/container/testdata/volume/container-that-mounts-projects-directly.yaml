@@ -35,9 +35,9 @@ output:
           - name: "projects"
             mountPath: "/not-source-mapping"
         env:
-          - name: "DEVWORKSPACE_COMPONENT_NAME"
-            value: "testing-container-1"
           - name: "PROJECTS_ROOT"
             value: "/not-source-mapping"
           - name: "PROJECT_SOURCE"
             value: "/not-source-mapping"
+          - name: "DEVWORKSPACE_COMPONENT_NAME"
+            value: "testing-container-1"

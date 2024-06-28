@@ -1,6 +1,9 @@
-name: "Handle mountSources correctly"
+name: "Ensures  PROJECT_ROOT and PROJECT_SOURCE env vars are first in list of env vars"
 
 input:
+  projects:
+  - name: test_project
+    clonePath: clone-path
   components:
     - name: testing-container-1
       container:
@@ -9,8 +12,12 @@ input:
         memoryLimit: "-1"  # isolate test to not include this field
         cpuRequest: "-1"  # isolate test to not include this field
         cpuLimit: "-1"  # isolate test to not include this field
-        sourceMapping: "/testdir1"
         # no mountSources defined -> should mount sources
+        env:
+          - name: user-env-var-1
+            value: value1
+          - name: user-env-var-1
+            value: value1
     - name: testing-container-2
       container:
         image: testing-image-2
@@ -20,6 +27,11 @@ input:
         cpuLimit: "-1"  # isolate test to not include this field
         # No sourceMapping -> defaults to "/projects"
         mountSources: true # mountSources: true -> should mount sources
+        env:
+          - name: user-env-var-2
+            value: value1
+          - name: user-env-var-3
+            value: value1
     - name: testing-container-3
       container:
         image: testing-image-3
@@ -29,6 +41,11 @@ input:
         cpuLimit: "-1"  # isolate test to not include this field
         sourceMapping: "/projects"
         mountSources: false # mountSources: false -> should not mount sources
+        env:
+          - name: user-env-var-4
+            value: value1
+          - name: user-env-var-5
+            value: value1
 output:
   podAdditions:
     containers:
@@ -44,14 +61,18 @@ output:
             cpu: "-1"
         volumeMounts:
           - name: "projects"
-            mountPath: "/testdir1"
+            mountPath: "/projects"
         env:
           - name: "PROJECTS_ROOT"
-            value: "/testdir1"
+            value: "/projects"
           - name: "PROJECT_SOURCE"
-            value: "/testdir1"
+            value: "/projects/clone-path"
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-1"
+          - name: user-env-var-1
+            value: value1
+          - name: user-env-var-1
+            value: value1
       - name: testing-container-2
         image: testing-image-2
         imagePullPolicy: Always
@@ -69,15 +90,23 @@ output:
           - name: "PROJECTS_ROOT"
             value: "/projects"
           - name: "PROJECT_SOURCE"
-            value: "/projects"
+            value: "/projects/clone-path"
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-2"
+          - name: user-env-var-2
+            value: value1
+          - name: user-env-var-3
+            value: value1
       - name: testing-container-3
         image: testing-image-3
         imagePullPolicy: Always
         env:
           - name: "DEVWORKSPACE_COMPONENT_NAME"
             value: "testing-container-3"
+          - name: user-env-var-4
+            value: value1
+          - name: user-env-var-5
+            value: value1
         resources:
           requests:
             memory: "-1"

@@ -81,13 +81,17 @@ func handleMountSources(k8sContainer *corev1.Container, devfileContainer *dw.Con
 		return err
 	}
 
-	k8sContainer.Env = append(k8sContainer.Env, corev1.EnvVar{
-		Name:  devfileConstants.ProjectsRootEnvVar,
-		Value: sourceMapping,
-	}, corev1.EnvVar{
-		Name:  devfileConstants.ProjectsSourceEnvVar,
-		Value: path.Join(sourceMapping, projectsSourcePath),
-	})
+	// The $PROJECT_ROOT and $PROJECT_SOURCE environment variables must be the first
+	// environment variables defined in the container so that other environment variables can reference them.
+	k8sContainer.Env = append([]corev1.EnvVar{
+		{
+			Name:  devfileConstants.ProjectsRootEnvVar,
+			Value: sourceMapping,
+		},
+		{
+			Name:  devfileConstants.ProjectsSourceEnvVar,
+			Value: path.Join(sourceMapping, projectsSourcePath),
+		}}, k8sContainer.Env...)
 
 	return nil
 }

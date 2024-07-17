@@ -67,7 +67,7 @@ func (c *workspaceConditions) setConditionTrueWithReason(conditionType dw.DevWor
 
 	c.conditions[conditionType] = dw.DevWorkspaceCondition{
 		Status:  corev1.ConditionTrue,
-		Message: capitalizeMsg(msg),
+		Message: capitalizeMessage(msg),
 		Reason:  reason,
 	}
 }
@@ -133,8 +133,9 @@ func getConditionIndexInOrder(condType dw.DevWorkspaceConditionType) int {
 	return -1
 }
 
-func capitalizeMsg(msg string) string {
-	if len(msg) == 0 {
+// Capitalizes the first character in the given string.
+func capitalizeMessage(msg string) string {
+	if msg == "" {
 		return msg
 	}
 	runes := []rune(msg)

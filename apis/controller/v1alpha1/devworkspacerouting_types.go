@@ -175,6 +175,11 @@ type Endpoint struct {
 	// +kubebuilder:pruning:PreserveUnknownFields
 	// +kubebuilder:validation:Schemaless
 	Attributes Attributes `json:"attributes,omitempty"`
+	// Map of annotations to be added to the Kubernetes Ingress or OpenShift Route associated with the endpoint.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

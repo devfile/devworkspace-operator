@@ -189,6 +189,7 @@ Prerequisites:
 ** The steps below assume the following environment variables are set:
 *** `$SSH_KEY`: path on disk to private key for SSH keypair (e.g. `~/.ssh/id_ed25519`)
 *** `$SSH_PUB_KEY`: path on disk to public key for SSH keypair (e.g. `~/.ssh/id_ed25519.pub`)
+*** `$PASSPHRASE`: ssh keypair passphrase (optional)
 *** `$NAMESPACE`: namespace where workspaces using the SSH keypair will be started.
 
 Process:
@@ -211,7 +212,8 @@ EOF
 kubectl create secret -n "$NAMESPACE" generic git-ssh-key \
   --from-file=dwo_ssh_key="$SSH_KEY" \
   --from-file=dwo_ssh_key.pub="$SSH_PUB_KEY" \
-  --from-file=ssh_config=/tmp/ssh_config
+  --from-file=ssh_config=/tmp/ssh_config \
+  --from-literal=passphrase="$PASSPHRASE"
 ----
 
 3. Annotate the secret to configure automatic mounting to DevWorkspaces

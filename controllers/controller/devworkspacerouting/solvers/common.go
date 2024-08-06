@@ -190,7 +190,7 @@ func getRouteForEndpoint(routingSuffix string, endpoint controllerv1alpha1.Endpo
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
-			Annotations: routeAnnotations(endpointName),
+			Annotations: routeAnnotations(endpointName, endpoint.Annotations),
 		},
 		Spec: routeV1.RouteSpec{
 			Host: common.WorkspaceHostname(routingSuffix, meta.DevWorkspaceId),
@@ -221,7 +221,7 @@ func getIngressForEndpoint(routingSuffix string, endpoint controllerv1alpha1.End
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
-			Annotations: nginxIngressAnnotations(endpoint.Name),
+			Annotations: nginxIngressAnnotations(endpoint.Name, endpoint.Annotations),
 		},
 		Spec: networkingv1.IngressSpec{
 			IngressClassName: pointer.String("nginx"),

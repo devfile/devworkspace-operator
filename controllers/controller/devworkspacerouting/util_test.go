@@ -78,7 +78,7 @@ func createDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspace
 		TargetPort: discoverableTargetPort,
 	}
 	machineEndpointsMap := map[string]controllerv1alpha1.EndpointList{
-		"test-machine-name": {
+		testMachineName: {
 			exposedEndpoint,
 			nonExposedEndpoint,
 			discoverableEndpoint,

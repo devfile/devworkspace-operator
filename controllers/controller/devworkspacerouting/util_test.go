@@ -48,6 +48,9 @@ const (
 	discoverableTargetPort   = 7979
 	nonExposedEndpointName   = "non-exposed-endpoint"
 	nonExposedTargetPort     = 8989
+
+	endpointAnnotationKey   = "endpoint-annotation-key"
+	endpointAnnotationValue = "endpoint-annotation-value"
 )
 
 var (
@@ -59,12 +62,14 @@ func createDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspace
 	mainAttributes.PutString("type", "main")
 	discoverableAttributes := controllerv1alpha1.Attributes{}
 	discoverableAttributes.PutBoolean(string(controllerv1alpha1.DiscoverableAttribute), true)
+	annotations := map[string]string{endpointAnnotationKey: endpointAnnotationValue}
 
 	exposedEndpoint := controllerv1alpha1.Endpoint{
-		Name:       exposedEndPointName,
-		Exposure:   controllerv1alpha1.PublicEndpointExposure,
-		Attributes: mainAttributes,
-		TargetPort: exposedTargetPort,
+		Name:        exposedEndPointName,
+		Exposure:    controllerv1alpha1.PublicEndpointExposure,
+		Attributes:  mainAttributes,
+		TargetPort:  exposedTargetPort,
+		Annotations: annotations,
 	}
 	nonExposedEndpoint := controllerv1alpha1.Endpoint{
 		Name:       nonExposedEndpointName,
@@ -72,10 +77,11 @@ func createDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspace
 		TargetPort: nonExposedTargetPort,
 	}
 	discoverableEndpoint := controllerv1alpha1.Endpoint{
-		Name:       discoverableEndpointName,
-		Exposure:   controllerv1alpha1.PublicEndpointExposure,
-		Attributes: discoverableAttributes,
-		TargetPort: discoverableTargetPort,
+		Name:        discoverableEndpointName,
+		Exposure:    controllerv1alpha1.PublicEndpointExposure,
+		Attributes:  discoverableAttributes,
+		TargetPort:  discoverableTargetPort,
+		Annotations: annotations,
 	}
 	machineEndpointsMap := map[string]controllerv1alpha1.EndpointList{
 		testMachineName: {

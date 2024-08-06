@@ -174,6 +174,7 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				expectedOwnerReference := devWorkspaceRoutingOwnerRef(createdDWR)
 				Expect(createdIngress.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Ingress should be owned by DevWorkspaceRouting")
 				Expect(createdIngress.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceEndpointNameAnnotation, exposedEndPointName), "Ingress should have endpoint name annotation")
+				Expect(createdIngress.ObjectMeta.Annotations).Should(HaveKeyWithValue(endpointAnnotationKey, endpointAnnotationValue), "Ingress should have annotation from endpoint")
 
 				By("Checking ingress points to service")
 				createdService := &corev1.Service{}
@@ -205,6 +206,7 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				Expect(discoverableEndpointIngress.Labels).Should(Equal(ExpectedLabels), "Ingress should contain DevWorkspace ID label")
 				Expect(discoverableEndpointIngress.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Ingress should be owned by DevWorkspaceRouting")
 				Expect(discoverableEndpointIngress.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceEndpointNameAnnotation, discoverableEndpointName), "Ingress should have endpoint name annotation")
+				Expect(discoverableEndpointIngress.ObjectMeta.Annotations).Should(HaveKeyWithValue(endpointAnnotationKey, endpointAnnotationValue), "Ingress should have annotation from endpoint")
 
 				By("Checking ingress for discoverable endpoint points to service")
 				Expect(len(discoverableEndpointIngress.Spec.Rules)).Should(Equal(1), "Expected only a single rule for the ingress")
@@ -306,6 +308,7 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				expectedOwnerReference := devWorkspaceRoutingOwnerRef(createdDWR)
 				Expect(createdRoute.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Route should be owned by DevWorkspaceRouting")
 				Expect(createdRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceEndpointNameAnnotation, exposedEndPointName), "Route should have endpoint name annotation")
+				Expect(createdRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(endpointAnnotationKey, endpointAnnotationValue), "Route should have annotation from endpoint")
 
 				By("Checking route points to service")
 				createdService := &corev1.Service{}
@@ -335,6 +338,7 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				Expect(discoverableRoute.Labels).Should(Equal(ExpectedLabels), "Route should contain DevWorkspace ID label")
 				Expect(discoverableRoute.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Route should be owned by DevWorkspaceRouting")
 				Expect(discoverableRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceEndpointNameAnnotation, discoverableEndpointName), "Route should have endpoint name annotation")
+				Expect(discoverableRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(endpointAnnotationKey, endpointAnnotationValue), "Route should have annotation from endpoint")
 
 				By("Checking route for discoverable endpoint points to service")
 				Expect(targetPorts).Should(ContainElement(discoverableRoute.Spec.Port.TargetPort), "Route target port should be in service target ports")

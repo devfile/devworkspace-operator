@@ -24,23 +24,21 @@ import (
 )
 
 type unsupportedWarnings struct {
-	serviceAnnotations  map[string]bool
-	endpointAnnotations map[string]bool
-	dedicatedPod        map[string]bool
-	imageComponent      map[string]bool
-	customComponent     map[string]bool
-	eventPostStop       map[string]bool
+	serviceAnnotations map[string]bool
+	dedicatedPod       map[string]bool
+	imageComponent     map[string]bool
+	customComponent    map[string]bool
+	eventPostStop      map[string]bool
 }
 
 // Returns an initialized unsupportedWarnings struct
 func newUnsupportedWarnings() *unsupportedWarnings {
 	return &unsupportedWarnings{
-		serviceAnnotations:  make(map[string]bool),
-		endpointAnnotations: make(map[string]bool),
-		dedicatedPod:        make(map[string]bool),
-		imageComponent:      make(map[string]bool),
-		customComponent:     make(map[string]bool),
-		eventPostStop:       make(map[string]bool),
+		serviceAnnotations: make(map[string]bool),
+		dedicatedPod:       make(map[string]bool),
+		imageComponent:     make(map[string]bool),
+		customComponent:    make(map[string]bool),
+		eventPostStop:      make(map[string]bool),
 	}
 }
 
@@ -50,11 +48,6 @@ func checkUnsupportedFeatures(devWorkspaceSpec dwv2.DevWorkspaceTemplateSpec) (w
 		if component.Container != nil {
 			if component.Container.Annotation != nil && component.Container.Annotation.Service != nil {
 				warnings.serviceAnnotations[component.Name] = true
-			}
-			for _, endpoint := range component.Container.Endpoints {
-				if endpoint.Annotations != nil {
-					warnings.endpointAnnotations[component.Name] = true
-				}
 			}
 			if component.Container.DedicatedPod != nil && *component.Container.DedicatedPod {
 				warnings.dedicatedPod[component.Name] = true
@@ -80,7 +73,6 @@ func checkUnsupportedFeatures(devWorkspaceSpec dwv2.DevWorkspaceTemplateSpec) (w
 
 func unsupportedWarningsPresent(warnings *unsupportedWarnings) bool {
 	return len(warnings.serviceAnnotations) > 0 ||
-		len(warnings.endpointAnnotations) > 0 ||
 		len(warnings.dedicatedPod) > 0 ||
 		len(warnings.imageComponent) > 0 ||
 		len(warnings.customComponent) > 0 ||
@@ -103,10 +95,6 @@ func formatUnsupportedFeaturesWarning(warnings *unsupportedWarnings) string {
 	if len(warnings.serviceAnnotations) > 0 {
 		serviceAnnotationsMsg := "components[].container.annotation.service, used by components: " + strings.Join(getWarningNames(warnings.serviceAnnotations), ", ")
 		msg = append(msg, serviceAnnotationsMsg)
-	}
-	if len(warnings.endpointAnnotations) > 0 {
-		endpointAnnotationsMsg := "components[].container.endpoints[].annotations, used by components: " + strings.Join(getWarningNames(warnings.endpointAnnotations), ", ")
-		msg = append(msg, endpointAnnotationsMsg)
 	}
 	if len(warnings.dedicatedPod) > 0 {
 		dedicatedPodMsg := "components[].container.dedicatedPod, used by components: " + strings.Join(getWarningNames(warnings.dedicatedPod), ", ")
@@ -145,7 +133,6 @@ func checkForAddedUnsupportedFeatures(oldWksp, newWksp *dwv2.DevWorkspace) *unsu
 	}
 
 	addedWarnings.serviceAnnotations = getAddedWarnings(oldWarnings.serviceAnnotations, newWarnings.serviceAnnotations)
-	addedWarnings.endpointAnnotations = getAddedWarnings(oldWarnings.endpointAnnotations, newWarnings.endpointAnnotations)
 	addedWarnings.dedicatedPod = getAddedWarnings(oldWarnings.dedicatedPod, newWarnings.dedicatedPod)
 	addedWarnings.imageComponent = getAddedWarnings(oldWarnings.imageComponent, newWarnings.imageComponent)
 	addedWarnings.customComponent = getAddedWarnings(oldWarnings.customComponent, newWarnings.customComponent)

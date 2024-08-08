@@ -54,8 +54,8 @@ spec:
             - "--metrics-addr=127.0.0.1:8080"
           resources:
             limits:
-              cpu: 1000m
-              memory: 1Gi
+              cpu: 3000m
+              memory: 3Gi
             requests:
               cpu: 250m
               memory: 100Mi

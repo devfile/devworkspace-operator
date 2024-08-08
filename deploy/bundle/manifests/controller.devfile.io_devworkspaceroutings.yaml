@@ -55,6 +55,11 @@ spec:
                 additionalProperties:
                   items:
                     properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Map of annotations to be added to the Kubernetes Ingress or OpenShift Route associated with the endpoint.
+                        type: object
                       attributes:
                         description: "Map of implementation-dependant string-based free-form attributes. \n Examples of Che-specific attributes: \n - cookiesAuthEnabled: \"true\" / \"false\", \n - type: \"terminal\" / \"ide\" / \"ide-dev\","
                         type: object

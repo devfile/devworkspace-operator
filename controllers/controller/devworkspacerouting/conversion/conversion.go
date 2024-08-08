@@ -46,13 +46,14 @@ func convertDevfileEndpoint(dwEndpoint dw.Endpoint) v1alpha1.Endpoint {
 	}
 
 	return v1alpha1.Endpoint{
-		Name:       dwEndpoint.Name,
-		TargetPort: dwEndpoint.TargetPort,
-		Exposure:   endpointExposure,
-		Protocol:   protocol,
-		Secure:     convertSecure(dwEndpoint.Secure),
-		Path:       dwEndpoint.Path,
-		Attributes: v1alpha1.Attributes(dwEndpoint.Attributes),
+		Name:        dwEndpoint.Name,
+		TargetPort:  dwEndpoint.TargetPort,
+		Exposure:    endpointExposure,
+		Protocol:    protocol,
+		Secure:      convertSecure(dwEndpoint.Secure),
+		Path:        dwEndpoint.Path,
+		Attributes:  v1alpha1.Attributes(dwEndpoint.Attributes),
+		Annotations: dwEndpoint.Annotations,
 	}
 }
 

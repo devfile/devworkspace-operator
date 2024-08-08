@@ -22,19 +22,25 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
-var routeAnnotations = func(endpointName string) map[string]string {
-	return map[string]string{
-		"haproxy.router.openshift.io/rewrite-target": "/",
-		constants.DevWorkspaceEndpointNameAnnotation: endpointName,
+var routeAnnotations = func(endpointName string, endpointAnnotations map[string]string) map[string]string {
+	annotations := make(map[string]string, len(endpointAnnotations))
+	for k, v := range endpointAnnotations {
+		annotations[k] = v
 	}
+	annotations["haproxy.router.openshift.io/rewrite-target"] = "/"
+	annotations[constants.DevWorkspaceEndpointNameAnnotation] = endpointName
+	return annotations
 }
 
-var nginxIngressAnnotations = func(endpointName string) map[string]string {
-	return map[string]string{
-		"nginx.ingress.kubernetes.io/rewrite-target": "/",
-		"nginx.ingress.kubernetes.io/ssl-redirect":   "false",
-		constants.DevWorkspaceEndpointNameAnnotation: endpointName,
+var nginxIngressAnnotations = func(endpointName string, endpointAnnotations map[string]string) map[string]string {
+	annotations := make(map[string]string, len(endpointAnnotations))
+	for k, v := range endpointAnnotations {
+		annotations[k] = v
 	}
+	annotations["nginx.ingress.kubernetes.io/rewrite-target"] = "/"
+	annotations["nginx.ingress.kubernetes.io/ssl-redirect"] = "false"
+	annotations[constants.DevWorkspaceEndpointNameAnnotation] = endpointName
+	return annotations
 }
 
 // Basic solver exposes endpoints without any authentication

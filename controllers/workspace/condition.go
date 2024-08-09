@@ -16,6 +16,8 @@
 package controllers
 
 import (
+	"unicode"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 
@@ -65,7 +67,7 @@ func (c *workspaceConditions) setConditionTrueWithReason(conditionType dw.DevWor
 
 	c.conditions[conditionType] = dw.DevWorkspaceCondition{
 		Status:  corev1.ConditionTrue,
-		Message: msg,
+		Message: capitalizeMessage(msg),
 		Reason:  reason,
 	}
 }
@@ -129,4 +131,14 @@ func getConditionIndexInOrder(condType dw.DevWorkspaceConditionType) int {
 		}
 	}
 	return -1
+}
+
+// Capitalizes the first character in the given string.
+func capitalizeMessage(msg string) string {
+	if msg == "" {
+		return msg
+	}
+	runes := []rune(msg)
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }

@@ -210,6 +210,7 @@ func getSpecDeployment(
 					SecurityContext:               workspace.Config.Workspace.PodSecurityContext,
 					ServiceAccountName:            saName,
 					AutomountServiceAccountToken:  nil,
+					RuntimeClassName:              workspace.Config.Workspace.RuntimeClassName,
 				},
 			},
 		},

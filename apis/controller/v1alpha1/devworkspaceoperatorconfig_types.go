@@ -151,6 +151,8 @@ type WorkspaceConfig struct {
 	DefaultContainerResources *corev1.ResourceRequirements `json:"defaultContainerResources,omitempty"`
 	// PodAnnotations defines the metadata.annotations for DevWorkspace pods created by the DevWorkspace Operator.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
+	// RuntimeClassName defines the spec.runtimeClassName for DevWorkspace pods created by the DevWorkspace Operator.
+	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
 }
 
 type WebhookConfig struct {

@@ -297,6 +297,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.StorageClassName != nil {
 			to.Workspace.StorageClassName = from.Workspace.StorageClassName
 		}
+		if from.Workspace.RuntimeClassName != nil {
+			to.Workspace.RuntimeClassName = from.Workspace.RuntimeClassName
+		}
 		if from.Workspace.PVCName != "" {
 			to.Workspace.PVCName = from.Workspace.PVCName
 		}
@@ -570,6 +573,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.StorageClassName != nil && workspace.StorageClassName != defaultConfig.Workspace.StorageClassName {
 			config = append(config, fmt.Sprintf("workspace.storageClassName=%s", *workspace.StorageClassName))
+		}
+		if workspace.RuntimeClassName != nil && workspace.RuntimeClassName != defaultConfig.Workspace.RuntimeClassName {
+			config = append(config, fmt.Sprintf("workspace.runtimeClassName=%s", *workspace.RuntimeClassName))
 		}
 		if workspace.IdleTimeout != defaultConfig.Workspace.IdleTimeout {
 			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", workspace.IdleTimeout))

@@ -44,7 +44,6 @@ var containerFailureStateReasons = []string{
 var unrecoverablePodEventReasons = map[string]int32{
 	"FailedPostStartHook":   1,
 	"FailedMount":           3,
-	"FailedScheduling":      1,
 	"FailedCreate":          1,
 	"ReplicaSetCreateError": 1,
 }

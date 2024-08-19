@@ -602,6 +602,85 @@ var _ = Describe("DevWorkspace Controller", func() {
 		})
 	})
 
+	Context("DevWorkspace deployment", func() {
+		const testURL = "test-url"
+
+		BeforeEach(func() {
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						fmt.Sprintf("%s/healthz", testURL): {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+		})
+
+		AfterEach(func() {
+			deleteDevWorkspace(devWorkspaceName)
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+		})
+
+		It("Sets the runtimeClassName from the DWOC", func() {
+			By("Creating DWOC with a runtimeClassName")
+			runtimeClassName := "test-runtime-class"
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					RuntimeClassName: &runtimeClassName,
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+			Expect(*deploy.Spec.Template.Spec.RuntimeClassName).Should(Equal("test-runtime-class"))
+		})
+
+		It("Sets the runtimeClassName from the attribute instead of the DWOC", func() {
+			By("Creating DWOC with a runtimeClassName")
+			runtimeClassName := "test-runtime-class"
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					RuntimeClassName: &runtimeClassName,
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+
+			devworkspace := &dw.DevWorkspace{}
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+
+			By("Adding runtime-class attribute to the DevWorkspace")
+			Eventually(func() error {
+				devworkspace = getExistingDevWorkspace(devWorkspaceName)
+				devworkspace.Spec.Template.Attributes.PutString(constants.RuntimeClassNameAttribute, "test-runtime-class-attribute")
+				return k8sClient.Update(ctx, devworkspace)
+			}, timeout, interval).Should(Succeed(), "DevWorkspace should get `runtime-class: test-runtime-class-attribute` attribute")
+
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+			Expect(*deploy.Spec.Template.Spec.RuntimeClassName).Should(Equal("test-runtime-class-attribute"))
+		})
+	})
+
 	Context("Stopping DevWorkspaces", func() {
 		const testURL = "test-url"
 

@@ -118,10 +118,11 @@ type WorkspaceConfig struct {
 	// "15m", "20s", "1h30m", etc. If not specified, the default value of "5m" is used.
 	ProgressTimeout string `json:"progressTimeout,omitempty"`
 	// IgnoredUnrecoverableEvents defines a list of Kubernetes event names that should
-	// be ignored when deciding to fail a DevWorkspace startup. This option should be used
-	// if a transient cluster issue is triggering false-positives (for example, if
-	// the cluster occasionally encounters FailedScheduling events). Events listed
-	// here will not trigger DevWorkspace failures.
+	// be ignored when deciding to fail a DevWorkspace startup.
+	// For example, a FailedScheduling event, that occurs when workspace cannot start
+	// due to exceeding available resources, should not fail the workspace startup, if there is
+	// an autoscaler configured on the cluster, and we want to wait until it provisions additional resources.
+	// FailedScheduling event can also occur as a false-positive, as a result of a transient cluster issue.
 	IgnoredUnrecoverableEvents []string `json:"ignoredUnrecoverableEvents,omitempty"`
 	// CleanupOnStop governs how the Operator handles stopped DevWorkspaces. If set to
 	// true, additional resources associated with a DevWorkspace (e.g. services, deployments,

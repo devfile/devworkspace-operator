@@ -76,6 +76,7 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
+		IgnoredUnrecoverableEvents: []string {"FailedScheduling"},
 	},
 }
 

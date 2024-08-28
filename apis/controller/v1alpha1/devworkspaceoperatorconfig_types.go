@@ -34,6 +34,14 @@ type OperatorConfiguration struct {
 	// managed
 	Workspace *WorkspaceConfig `json:"workspace,omitempty"`
 	// Webhook defines configuration options for the DevWorkspace Webhook Server.
+	// Note: In order for changes made to the webhook configuration to take effect:
+	//
+	// - The changes must be made in the global DevWorkspaceOperatorConfig, which has the
+	//   name 'devworkspace-operator-config' and exists in the same namespace where the 
+	//   DevWorkspaceOperator is deployed.
+	//
+	// - The devworkspace-controller-manager pod must be terminated and recreated for the
+	//   DevWorkspace Webhook Server deployment to be updated.
 	Webhook *WebhookConfig `json:"webhook,omitempty"`
 	// EnableExperimentalFeatures turns on in-development features of the controller.
 	// This option should generally not be enabled, as any capabilites are subject

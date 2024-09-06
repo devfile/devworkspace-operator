@@ -37,7 +37,7 @@ type OperatorConfiguration struct {
 	// Note: In order for changes made to the webhook configuration to take effect:
 	//
 	// - The changes must be made in the global DevWorkspaceOperatorConfig, which has the
-	//   name 'devworkspace-operator-config' and exists in the same namespace where the 
+	//   name 'devworkspace-operator-config' and exists in the same namespace where the
 	//   DevWorkspaceOperator is deployed.
 	//
 	// - The devworkspace-controller-manager pod must be terminated and recreated for the

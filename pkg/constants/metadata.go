@@ -87,6 +87,8 @@ const (
 	// in a given namespace. It is used when e.g. adding Git credentials via secret
 	GitCredentialsConfigMapName = "devworkspace-gitconfig"
 
+	SshAskPassConfigMapName = "devworkspace-ssh-askpass"
+
 	// GitCredentialsMergedSecretName is the name for the merged Git credentials secret that is mounted to workspaces
 	// when Git credentials are defined. This secret combines the values of any secrets labelled
 	// "controller.devfile.io/git-credential"

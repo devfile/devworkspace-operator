@@ -37,4 +37,6 @@ const (
 	// DevWorkspaceComponentName contains env var name which indicates from which devfile container component
 	// the container is created from. Note the flattened devfile is used to evaluate it.
 	DevWorkspaceComponentName = "DEVWORKSPACE_COMPONENT_NAME"
+	DISPLAY                   = "DISPLAY"
+	SSHAskPass                = "SSH_ASKPASS"
 )

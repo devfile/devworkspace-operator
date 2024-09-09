@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
+
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
@@ -278,6 +280,12 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		reconcileStatus.addWarning(flatten.FormatVariablesWarning(warnings))
 	}
 	workspace.Spec.Template = *flattenedWorkspace
+
+	err = ssh.AddSshAgentPostStartEvent(&workspace.Spec.Template)
+	if err != nil {
+		return r.failWorkspace(workspace, "Failed to add ssh-agent post start event", metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
+	}
+
 	reconcileStatus.setConditionTrue(conditions.DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")
 
 	// Verify that the devworkspace components are valid after flattening
@@ -350,6 +358,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Add ServiceAccount tokens into devfile containers
 	if err := wsprovision.ProvisionServiceAccountTokensInto(devfilePodAdditions, workspace); err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to mount ServiceAccount tokens to workspace: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+	}
+
+	// Add SSH ask-pass script into devfile containers
+	if err := wsprovision.ProvisionSshAskPass(clusterAPI, workspace.Namespace, devfilePodAdditions); err != nil {
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to mount SSH askpass script to workspace: %s", err), metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
 	}
 
 	// Add automount resources into devfile containers

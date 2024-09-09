@@ -44,14 +44,10 @@ COPY --from=builder /project-clone/_output/bin/project-clone /usr/local/bin/proj
 
 ENV USER_UID=1001 \
     USER_NAME=project-clone \
-    HOME=/home/user \
-    DISPLAY=":0" \
-    SSH_ASKPASS=/usr/local/bin/ssh-askpass.sh
+    HOME=/home/user
 
 COPY build/bin /usr/local/bin
-COPY project-clone/ssh-askpass.sh /usr/local/bin
 RUN  /usr/local/bin/user_setup
-RUN chmod +x /usr/local/bin/ssh-askpass.sh
 
 USER ${USER_UID}
 

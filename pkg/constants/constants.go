@@ -45,6 +45,8 @@ const (
 
 	HomeInitEventId = "init-persistent-home"
 
+	SshAgentStartEventId = "init-ssh-agent"
+
 	ServiceAccount = "devworkspace"
 
 	PVCStorageSize = "10Gi"

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
@@ -82,12 +84,26 @@ func commonEnvironmentVariables(workspaceWithConfig *common.DevWorkspaceWithConf
 		},
 	}
 
-	envvars = append(envvars, GetProxyEnvVars(workspaceWithConfig.Config.Routing.ProxyConfig)...)
+	envvars = append(envvars, getProxyEnvVars(workspaceWithConfig.Config.Routing.ProxyConfig)...)
+	envvars = append(envvars, getSshAskPassEnvVars()...)
 
 	return envvars
 }
 
-func GetProxyEnvVars(proxyConfig *v1alpha1.Proxy) []corev1.EnvVar {
+func getSshAskPassEnvVars() []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name:  constants.SSHAskPass,
+			Value: fmt.Sprintf("%s%s", workspace.SshAskPassMountPath, workspace.SshAskPassScriptFileName),
+		},
+		{
+			Name:  constants.DISPLAY,
+			Value: ":0",
+		},
+	}
+}
+
+func getProxyEnvVars(proxyConfig *v1alpha1.Proxy) []corev1.EnvVar {
 	if proxyConfig == nil {
 		return nil
 	}

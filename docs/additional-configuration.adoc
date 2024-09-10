@@ -215,6 +215,16 @@ kubectl create secret -n "$NAMESPACE" generic git-ssh-key \
   --from-file=ssh_config=/tmp/ssh_config \
   --from-literal=passphrase="$PASSPHRASE"
 ----
++
+Note: If a passphrase is provided, the DevWorkspace operator adds a postStart event that starts the SSH agent and adds the passphrase.
+The DevWorkspace operator also modifies the bashrc file to configure the `SSH_AGENT_PID` and `SSH_AUTH_SOCK` environment variables.
+If you are automatically mounting your own bashrc file with a ConfigMap (see link:additional-configuration.adoc#automatically-mounting-volumes-configmaps-and-secrets[Automatically mounting volumes, configmaps, and secrets])
+you must add the following in your bashrc file:
++
+[source,bash]
+----
+[ -f /home/user/ssh-environment ] && source /home/user/ssh-environment
+----
 
 3. Annotate the secret to configure automatic mounting to DevWorkspaces
 +

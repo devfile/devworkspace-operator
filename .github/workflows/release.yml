@@ -121,7 +121,7 @@ jobs:
         run: |
           # Need to grab goimports otherwise formatting after this step will fail
           # PR checks.
-          go install golang.org/x/tools/cmd/goimports@latest
+          go install golang.org/x/tools/cmd/goimports@v0.24.0
 
           git config --global user.name "Andrew Obuchowicz"
           git config --global user.email "aobuchow@redhat.com"

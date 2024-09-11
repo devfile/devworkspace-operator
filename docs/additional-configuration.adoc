@@ -159,7 +159,7 @@ When "file" is used, the configmap is mounted as a directory within the workspac
 ## Adding image pull secrets to workspaces
 Labelling secrets with `controller.devfile.io/devworkspace_pullsecret: true` marks a secret as the Docker pull secret for the workspace deployment. This should be applied to secrets with docker config types (`kubernetes.io/dockercfg` and `kubernetes.io/dockerconfigjson`)
 
-Note: As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to image pull secrets
+*Note:* As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to image pull secrets
 
 ## Adding git credentials to a workspace
 Labelling secrets with `controller.devfile.io/git-credential` marks the secret as containing git credentials. All git credential secrets will be merged into a single secret (leaving the original resources intact). The merged credentials secret is mounted to `/.git-credentials/credentials`. See https://git-scm.com/docs/git-credential-store#_storage_format[git documentation] for details on the file format for this configuration. For example
@@ -176,7 +176,7 @@ type: Opaque
 data:
   credentials: https://{USERNAME}:{PERSONAL_ACCESS_TOKEN}@{GIT_WEBSITE}
 ----
-Note: As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to git credentials secrets
+*Note:* As for automatically mounting secrets, it is necessary to apply the `controller.devfile.io/watch-secret` label to git credentials secrets
 
 This will mount a file `/tmp/.git-credentials/credentials` in all workspace containers, and construct a git config to use this file as a credentials store.
 
@@ -214,6 +214,16 @@ kubectl create secret -n "$NAMESPACE" generic git-ssh-key \
   --from-file=dwo_ssh_key.pub="$SSH_PUB_KEY" \
   --from-file=ssh_config=/tmp/ssh_config \
   --from-literal=passphrase="$PASSPHRASE"
+----
++
+*Note:* If a passphrase is provided, the DevWorkspace Operator adds a postStart event that starts the SSH agent and adds the passphrase.
+The DevWorkspace Operator also modifies the `~/.bashrc` to configure the `SSH_AGENT_PID` and `SSH_AUTH_SOCK` environment variables.
+If you are automatically mounting your own `~/.bashrc` with a ConfigMap (see link:additional-configuration.adoc#automatically-mounting-volumes-configmaps-and-secrets[Automatically mounting volumes, configmaps, and secrets])
+you must add the following in your `~/.bashrc`:
++
+[source,bash]
+----
+[ -f $HOME/ssh-environment ] && source $HOME/ssh-environment
 ----
 
 3. Annotate the secret to configure automatic mounting to DevWorkspaces

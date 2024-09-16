@@ -49,7 +49,7 @@ spec:
     will be available in all namespaces on the cluster. DevWorkspace creation is
     driven by the DevWorkspace custom resource, which can be created in any
     namespace to provision a full development environment. To get started, browse
-    the DevWorkspace [spec](https://docs.devfile.io/devfile/2.1.0/user-guide/api-reference.html).
+    the DevWorkspace [spec](https://devfile.io/docs/2.3.0/devfile-schema).
 
     Once a DevWorkspace is started, it can be accessed via the URL in its
     `.status.mainUrl` field.

@@ -166,6 +166,16 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	return nil
 }
 
+// Calculates the per-workspace PVC size required for the given devworkspace based on the following rules:
+//
+// 1. If all volumes in the devworkspace specify their size, the computed PVC size will be used.
+//
+// 2. If all volumes in the devworkspace either specify their size or are ephemeral, the computed PVC size will be used.
+//
+//  3. If at least one volume in the devworkspace specifies its size, and the computed PVC size is greater
+//     than the default per-workspace PVC size, the computed PVC size will be used.
+//
+// 4. Container components with mountSources enabled in the devworkspace are treated as if they were volumes with an unspecified size.
 func getPVCSize(workspace *common.DevWorkspaceWithConfig, namespacedConfig *nsconfig.NamespacedConfig) (*resource.Quantity, error) {
 	defaultPVCSize := *workspace.Config.Workspace.DefaultStorageSize.PerWorkspace
 
@@ -188,6 +198,15 @@ func getPVCSize(workspace *common.DevWorkspaceWithConfig, namespacedConfig *nsco
 				return nil, err
 			}
 			requiredPVCSize.Add(volumeSize)
+		}
+		if component.Container != nil {
+			if component.Container.MountSources != nil && *component.Container.MountSources {
+				// Edge case: If the project source code is being mounted to a container component
+				// then an undefined amount of persistent storage is required.
+				// We treat this case as if there was a volume component with no size defined.
+				allVolumeSizesDefined = false
+				continue
+			}
 		}
 	}
 

@@ -26,6 +26,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/go-logr/logr"
@@ -211,7 +212,7 @@ func checkServerStatus(workspace *common.DevWorkspaceWithConfig) (ok bool, respo
 
 	resp, err := healthCheckHttpClient.Get(healthz.String())
 	if err != nil {
-		return false, nil, err
+		return false, nil, &dwerrors.RetryError{Err: err, Message: "Failed to check server status", RequeueAfter: 1 * time.Second}
 	}
 	if (resp.StatusCode / 100) == 4 {
 		// Assume endpoint is unimplemented and/or * is covered with authentication.

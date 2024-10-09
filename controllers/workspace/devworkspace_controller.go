@@ -491,8 +491,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcileStatus.setConditionTrue(conditions.DeploymentReady, "DevWorkspace deployment ready")
 
 	serverReady, serverStatusCode, err := checkServerStatus(clusterWorkspace)
-	if err != nil {
-		return reconcile.Result{}, err
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error checking server status", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
+		reqLogger.Info("Waiting for DevWorkspace health check endpoint to become available")
+		reconcileStatus.setConditionFalse(dw.DevWorkspaceReady, "Waiting for workspace health check to become available")
+		return reconcileResult, reconcileErr
 	}
 	if !serverReady {
 		reqLogger.Info("Main URL server not ready", "status-code", serverStatusCode)

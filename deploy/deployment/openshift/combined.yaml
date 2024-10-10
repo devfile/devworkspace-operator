@@ -7495,7 +7495,6 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
-        caBundle: Cg==
         service:
           name: devworkspace-controller-manager-service
           namespace: devworkspace-controller
@@ -16750,7 +16749,6 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
-        caBundle: Cg==
         service:
           name: devworkspace-controller-manager-service
           namespace: devworkspace-controller

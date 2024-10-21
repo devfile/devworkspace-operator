@@ -45,7 +45,7 @@ const (
 
 	HomeInitEventId = "init-persistent-home"
 
-	SshAgentStartEventId = "init-ssh-agent"
+	SshAgentStartEventId = "init-ssh-agent-command"
 
 	ServiceAccount = "devworkspace"
 

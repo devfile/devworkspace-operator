@@ -14,6 +14,8 @@
 package ssh
 
 import (
+	"fmt"
+
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
@@ -38,12 +40,13 @@ func AddSshAgentPostStartEvent(spec *v1alpha2.DevWorkspaceTemplateSpec) error {
 	}
 
 	_, mainComponents, err := lifecycle.GetInitContainers(spec.DevWorkspaceTemplateSpecContent)
-	for _, component := range mainComponents {
+	for id, component := range mainComponents {
 		if component.Container == nil {
 			continue
 		}
+		commandId := fmt.Sprintf("%s-%d", constants.SshAgentStartEventId, id)
 		spec.Commands = append(spec.Commands, v1alpha2.Command{
-			Id: constants.SshAgentStartEventId,
+			Id: commandId,
 			CommandUnion: v1alpha2.CommandUnion{
 				Exec: &v1alpha2.ExecCommand{
 					CommandLine: commandLine,
@@ -51,7 +54,7 @@ func AddSshAgentPostStartEvent(spec *v1alpha2.DevWorkspaceTemplateSpec) error {
 				},
 			},
 		})
+		spec.Events.PostStart = append(spec.Events.PostStart, commandId)
 	}
-	spec.Events.PostStart = append(spec.Events.PostStart, constants.SshAgentStartEventId)
 	return err
 }

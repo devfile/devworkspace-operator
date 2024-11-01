@@ -21,12 +21,17 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
 )
 
-const commandLine = `SSH_ENV_PATH=$HOME/ssh-environment \
-&& if [ -f /etc/ssh/passphrase ] && command -v ssh-add >/dev/null; \
-then ssh-agent | sed 's/^echo/#echo/' > $SSH_ENV_PATH \
-&& chmod 600 $SSH_ENV_PATH && source $SSH_ENV_PATH \
-&& ssh-add /etc/ssh/dwo_ssh_key < /etc/ssh/passphrase \
-&& if [ -f $HOME/.bashrc ] && [ -w $HOME/.bashrc ]; then echo "source ${SSH_ENV_PATH}" >> $HOME/.bashrc; fi; fi`
+const commandLine = `(
+SSH_ENV_PATH=$HOME/ssh-environment && \
+if [ -f /etc/ssh/passphrase ] && [ -w $HOME ] && command -v ssh-add >/dev/null && command -v ssh-agent >/dev/null; then
+    ssh-agent | sed 's/^echo/#echo/' > $SSH_ENV_PATH \
+    && chmod 600 $SSH_ENV_PATH \
+    && source $SSH_ENV_PATH \
+    && if timeout 3 ssh-add /etc/ssh/dwo_ssh_key < /etc/ssh/passphrase && [ -f $HOME/.bashrc ] && [ -w $HOME/.bashrc ]; then
+        echo "source ${SSH_ENV_PATH}" >> $HOME/.bashrc
+    fi
+fi
+) || true`
 
 // AddSshAgentPostStartEvent Start ssh-agent and add the default ssh key to it, if the ssh key has a passphrase.
 // Initialise the ssh-agent session env variables in the user .bashrc file.

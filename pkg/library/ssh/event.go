@@ -19,6 +19,10 @@ import (
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 const commandLine = `(
@@ -62,4 +66,30 @@ func AddSshAgentPostStartEvent(spec *v1alpha2.DevWorkspaceTemplateSpec) error {
 		spec.Events.PostStart = append(spec.Events.PostStart, commandId)
 	}
 	return err
+}
+
+// Determines whether an SSH key with a passphrase is provided for the namespace where the workspace exists.
+// If an SSH key with a passphrase is used, then the SSH Agent Post Start event is needed for it to automatically
+// be used by the workspace's SSH agent.
+// If no SSH key is provided, or the SSH key does not provide a passphrase, then the SSH Agent Post Start event is not required.
+func NeedsSSHPostStartEvent(api sync.ClusterAPI, namespace string) (bool, error) {
+	secretNN := types.NamespacedName{
+		Name:      constants.SSHSecretName,
+		Namespace: namespace,
+	}
+	sshSecret := &corev1.Secret{}
+	if err := api.Client.Get(api.Ctx, secretNN, sshSecret); err != nil {
+		if k8sErrors.IsNotFound(err) {
+			// No SSH secret found
+			return false, nil
+		}
+		return false, err
+	}
+
+	if _, ok := sshSecret.Data[constants.SSHSecretPassphraseKey]; ok {
+		// SSH secret exists and has a passphrase set
+		return true, nil
+	}
+
+	return false, nil
 }

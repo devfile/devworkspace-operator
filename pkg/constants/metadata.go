@@ -87,6 +87,15 @@ const (
 	// in a given namespace. It is used when e.g. adding Git credentials via secret
 	GitCredentialsConfigMapName = "devworkspace-gitconfig"
 
+	// SSHSecretName is the name used for the secret that stores the SSH key data for workspaces in a given namespace.
+	// TODO: This is a workaround for https://github.com/devfile/devworkspace-operator/issues/1340.
+	// We do not enforce the SSH secret to have this name, but it is used by the Che Dashboard and this allows us
+	// to detect if the user has provided an SSH key with a passhprase.
+	SSHSecretName = "git-ssh-key"
+
+	// SSHSecretPassphraseKey is the key used to retrieve the optional passphrase stored inside the SSH secret.
+	SSHSecretPassphraseKey = "passphrase"
+
 	SshAskPassConfigMapName = "devworkspace-ssh-askpass"
 
 	// GitCredentialsMergedSecretName is the name for the merged Git credentials secret that is mounted to workspaces

@@ -286,7 +286,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			reqLogger.Error(err, "Error retrieving SSH secret")
 		} else if needsSSHAgentPostStartEvent {
 			if err = ssh.AddSshAgentPostStartEvent(&workspace.Spec.Template); err != nil {
-				return r.failWorkspace(workspace, "Failed to add ssh-agent post start event", metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
+				return r.failWorkspace(workspace, "Failed to add ssh-agent initialization postStart event", metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
 			}
 		}
 	}

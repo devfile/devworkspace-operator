@@ -225,6 +225,7 @@ you must add the following in your `~/.bashrc`:
 ----
 [ -f $HOME/ssh-environment ] && source $HOME/ssh-environment
 ----
+*Note:*  This is an experimental feature and is controlled by the `DevWorkspaceOperatorConfig.EnableExperimentalFeatures` option.
 
 3. Annotate the secret to configure automatic mounting to DevWorkspaces
 +

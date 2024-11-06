@@ -281,9 +281,12 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 	workspace.Spec.Template = *flattenedWorkspace
 
-	err = ssh.AddSshAgentPostStartEvent(&workspace.Spec.Template)
-	if err != nil {
-		return r.failWorkspace(workspace, "Failed to add ssh-agent post start event", metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
+	// Include to experimental features list because it is not clear how to handle post start events in containers without sh.
+	if *workspace.Config.EnableExperimentalFeatures {
+		err = ssh.AddSshAgentPostStartEvent(&workspace.Spec.Template)
+		if err != nil {
+			return r.failWorkspace(workspace, "Failed to add ssh-agent post start event", metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
+		}
 	}
 
 	reconcileStatus.setConditionTrue(conditions.DevWorkspaceResolved, "Resolved plugins and parents from DevWorkspace")

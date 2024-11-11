@@ -1,10 +1,42 @@
-# Dev Workspace Operator
+<p align="center"><img alt="DevWorkspace operator" src="./img/logo.png" width="150px" /></p>
+
+# DevWorkspace Operator
 
 [![codecov](https://codecov.io/gh/devfile/devworkspace-operator/branch/main/graph/badge.svg)](https://codecov.io/gh/devfile/devworkspace-operator)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/8258/badge)](https://www.bestpractices.dev/projects/8258)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/devfile/devworkspace-operator/badge)](https://securityscorecards.dev/viewer/?uri=github.com/devfile/devworkspace-operator)
 
-Dev Workspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
+DevWorkspace operator repository that contains the controller for the DevWorkspace Custom Resource. The Kubernetes API of the DevWorkspace is defined in the https://github.com/devfile/api repository.
+
+## What is the DevWorkspace Operator?
+
+A [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) to run **fast**, **repeatable**
+and **scalable** Cloud Development Environments.
+
+[Install it](#deploying-devworkspace-operator) and apply a DevWorkspace to create a Cloud Development Environment:<br/>
+![dw apply demo](img/apply-demo.gif)
+
+Get the Cloud Developent Environment URI:<br/>
+![dw get demo](img/get-demo.gif)
+
+Open the IDE:<br/>
+| Visual Studio Code  | JetBrains IntelliJ |
+| ------------- | ------------- |
+| ![vscode](img/vscode.png) | ![intellij](img/intellij.png) |
+
+## Example
+
+Here is a sample DevWorkspace to provision a Cloud Development Environment for the project
+[github.com/l0rd/outyet](https://github.com/l0rd/outyet) with Visual Studio Code as editor and 
+`quay.io/devfile/universal-developer-image:ubi8-latest` as the development tooling container image.<br/>
+
+The **template section of a DevWorkspace** is actually [a Devfile](https://devfile.io/docs/2.3.0/what-is-a-devfile): the 
+`spec.template` schema matches the [Devfile schema](https://devfile.io/docs/2.3.0/devfile-schema).
+
+**Contributions** are extra components that are added on top of the template. Contributions are used to inject editors 
+such as Visual Studio Code and JetBrains.
+
+![devworkspace](img/devworkspace.png)
 
 ## Configuration
 

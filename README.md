@@ -13,7 +13,7 @@ DevWorkspace operator repository that contains the controller for the DevWorkspa
 A [Kubernetes Operator](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/) to run **fast**, **repeatable**
 and **scalable** Cloud Development Environments.
 
-[Install it](#deploying-devworkspace-operator) and apply a DevWorkspace to create a Cloud Development Environment:<br/>
+[Install it](#devworkspace-operator-installation) and apply a DevWorkspace to create a Cloud Development Environment:<br/>
 ![dw apply demo](img/apply-demo.gif)
 
 Get the Cloud Developent Environment URI:<br/>
@@ -53,48 +53,28 @@ and the
 DevWorkspaces can be further configured through DevWorkspace `attributes`, `labels` and `annotations`. For a list of all
 options available, see [additional documentation](docs/additional-configuration.adoc).
 
-## Deploying DevWorkspace Operator
+## DevWorkspace Operator Installation
 
-### Prerequisites
-- go 1.16 or later
-- git
-- sed
-- jq
-- yq (python-yq from https://github.com/kislyuk/yq#installation, other distributions may not work)
-- skopeo (if building the OLM catalogsource)
-- podman or docker
+This section describes how to install the Operator on a cluster using the 
+[Operator Lifecycle Manager (OLM)](https://olm.operatorframework.io). The file [CONTRIBUTING.md](CONTRIBUTING.md) has 
+instructions to install the Operator, using the `Makefile`, without requiring OLM.
 
-Note: kustomize `v4.0.5` is required for most tasks. It is downloaded automatically to the `.kustomize` folder in this repo when required. This downloaded version is used regardless of whether or not kustomize is already installed on the system.
+#### Installing the Operator Lifecycle Manager
 
-### Running the controller in a cluster
+The Operator Framework website has 
+[general instructions to install OLM in your cluster](https://olm.operatorframework.io/docs/getting-started/#installing-olm-in-your-cluster).
+On [Minikube](https://minikube.sigs.k8s.io/), OLM is available as
+[an addon](https://minikube.sigs.k8s.io/docs/commands/addons/).
+OLM is pre-installed on OpenShift.
 
-#### With yaml resources
+#### Adding the DevWorkspace Operator catalog source
 
-When installing on Kubernetes clusters, the DevWorkspace Operator requires the [cert-manager](https://cert-manager.io) operator in order to properly serve webhooks. To install the latest version of cert-manager in a cluster, the Makefile rule `install_cert_manager` can be used. The minimum version of cert-manager is `v1.0.4`.
-
-The controller can be deployed to a cluster provided you are logged in with cluster-admin credentials:
+If the DevWorkspace Operator is not already available amongst the `PackageManifests` (use command
+`kubectl get packagemanifest -n olm | grep devworkspace` to check it) you should add a `CatalogSource` in the
+cluster:
 
 ```bash
-export DWO_IMG=quay.io/devfile/devworkspace-controller:next
-make install
-```
-
-By default, the controller will expose workspace servers without any authentication; this is not advisable for public clusters, as any user could access the created workspace via URL.
-
-See below for all environment variables used in the makefile.
-
-> Note: The operator requires internet access from containers to work. By default, `crc setup` may not provision this, so it's necessary to configure DNS for Docker:
-> ```
-> # /etc/docker/daemon.json
-> {
->   "dns": ["192.168.0.1"]
-> }
-> ```
-
-#### With Operator Lifecycle Manager (OLM)
-
-DevWorkspace Operator has bundle and index images which enable installation via OLM. To enable installing the DevWorkspace Operator through OLM, it may be necessary to create a CatalogSource in the cluster for this index:
-```yaml
+kubectl apply -f - <<EOF
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
@@ -108,6 +88,7 @@ spec:
   updateStrategy:
     registryPoll:
       interval: 5m
+EOF
 ```
 
 Two index images are available for installing the DevWorkspace Operator:
@@ -116,118 +97,25 @@ Two index images are available for installing the DevWorkspace Operator:
 
 Both index images allow automatic updates (to either the latest release or latest commit in main).
 
-After OLM finishes processing the created CatalogSource, DWO should appear on the Operators page in the OpenShift Console.
+#### Create the DevWorkspace Operator Subscription
 
-In order to build a custom bundle, the following environment variables should be set:
-| variable | purpose | default value |
-|---|---|---|
-| `DWO_BUNDLE_IMG` | Image used for Operator bundle image | `quay.io/devfile/devworkspace-operator-bundle:next` |
-| `DWO_INDEX_IMG` | Image used for Operator index image | `quay.io/devfile/devworkspace-operator-index:next` |
-| `DEFAULT_DWO_IMG` | Image used for controller when generating defaults | `quay.io/devfile/devworkspace-controller:next` |
-
-To build the index image and register its catalogsource to the cluster, run
-```
-make generate_olm_bundle_yaml build_bundle_and_index register_catalogsource
-```
-
-Note that setting `DEFAULT_DWO_IMG` while generating sources will result in local changes to the repo which should be `git restored` before committing. This can also be done by unsetting the `DEFAULT_DWO_IMG` env var and re-running `make generate_olm_bundle_yaml`
-
-## Development
-
-The repository contains a Makefile; building and deploying can be configured via the environment variables
-
-|variable|purpose|default value|
-|---|---|---|
-| `DWO_IMG` | Image used for controller | `quay.io/devfile/devworkspace-controller:next` |
-| `DEFAULT_DWO_IMG` | Image used for controller when generating default deployment templates. Can be used to override the controller image in the OLM bundle | `quay.io/devfile/devworkspace-controller:next` |
-| `NAMESPACE` | Namespace to use for deploying controller | `devworkspace-controller` |
-| `ROUTING_SUFFIX` | Cluster routing suffix (e.g. `$(minikube ip).nip.io`, `apps-crc.testing`). Required for Kubernetes | `192.168.99.100.nip.io` |
-| `PULL_POLICY` | Image pull policy for controller | `Always` |
-| `DEVWORKSPACE_API_VERSION` | Branch or tag of the github.com/devfile/api to depend on | `v1alpha1` |
-
-Some of the rules supported by the makefile:
-
-|rule|purpose|
-|---|---|
-| docker | build and push docker image |
-| install | install controller to cluster |
-| restart | restart cluster controller deployment |
-| install_cert_manager | installs the cert-manager to the cluster (only required for Kubernetes) |
-| uninstall | delete controller namespace `devworkspace-controller` and remove CRDs from cluster |
-| help | print all rules and variables |
-
-To see all rules supported by the makefile, run `make help`
-
-### Test run controller
-1. Take a look samples devworkspace configuration in `./samples` folder.
-2. Apply any of them by executing `kubectl apply -f ./samples/code-latest.yaml -n <namespace>`
-3. As soon as devworkspace is started you're able to get IDE url by executing `kubectl get devworkspace -n <namespace>`
-
-### Run controller locally
-```bash
-export NAMESPACE="devworkspace-controller"
-make install
-# Wait for webhook server to start
-kubectl rollout status deployment devworkspace-controller-manager -n $NAMESPACE --timeout 90s
-kubectl rollout status deployment devworkspace-webhook-server -n $NAMESPACE --timeout 90s
-# Scale on-cluster deployment to zero to avoid conflict with locally-running instance
-oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}" -n $NAMESPACE
-make run
-```
-
-### Run controller locally and debug
-Debugging the controller depends on [delve](https://github.com/go-delve/delve) being installed (`go install github.com/go-delve/delve/cmd/dlv@latest`). Note that `$GOPATH/bin` or `$GOBIN` must be added to `$PATH` in order for `make debug` to run correctly.
+To install the DevWorkspace Operator, create a OLM Subscription with the following command: 
 
 ```bash
-make install
-# Wait for webhook server to start
-kubectl rollout status deployment devworkspace-controller-manager -n $NAMESPACE --timeout 90s
-kubectl rollout status deployment devworkspace-webhook-server -n $NAMESPACE --timeout 90s
-oc patch deployment/devworkspace-controller-manager --patch "{\"spec\":{\"replicas\":0}}"
-# Scale on-cluster deployment to zero to avoid conflict with locally-running instance
-make debug
+kubectl apply -f - <<EOF
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: devworkspace-operator
+  namespace: openshift-operators
+spec:
+  channel: next                            # <--- `next` or `release`
+  installPlanApproval: Automatic
+  name: devworkspace-operator
+  source: devworkspace-operator-catalog    # <--- the catalog created in the previous step
+  sourceNamespace: openshift-marketplace
+EOF
 ```
-
-### Run webhook server locally and debug
-Debugging the webhook server depends on `telepresence` being installed (`https://www.telepresence.io/docs/latest/install/`). Teleprescence works by redirecting traffic going from the webhook-server in the cluster to the local webhook-server you will be running on your computer.
-
-```bash
-make debug-webhook-server
-```
-
-when you are done debugging you have to manually uninstall the telepresence agent
-
-```bash
-make disconnect-debug-webhook-server
-```
-
-### Updating devfile API
-
-[devfile API](https://github.com/devfile/api) is the Kube-native API for cloud development workspaces specification and the core dependency of the devworkspace-operator that should be regularly updated to the latest version. In order to do the update:
-
-1. update `DEVWORKSPACE_API_VERSION` variable in the `Makefile` and `build/scripts/generate_deployment.sh`. The variable should correspond to the commit SHA from the [devfile API](https://github.com/devfile/api) repository
-2. run the following scripts and the open pull request
-
-```bash
-make update_devworkspace_api update_devworkspace_crds # first commit
-make generate_all # second commit
-```
-Example of the devfile API update [PR](https://github.com/devfile/devworkspace-operator/pull/797)
-
-### Remove controller from your K8s/OS Cluster
-To uninstall the controller and associated CRDs, use the Makefile uninstall rule:
-```bash
-make uninstall
-```
-This will delete all custom resource definitions created for the controller, as well as the `devworkspace-controller` namespace.
-
-## CI
-
-#### GitHub actions
-
-- [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/main/.github/workflows/dockerimage-next.yml) action builds main branch and pushes it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
-
-- [Code Coverage Report](./.github/workflows/code-coverage.yml) action creates a code coverage report using [codecov.io](https://about.codecov.io/).
 
 ## Contributing
 

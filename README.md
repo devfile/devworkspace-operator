@@ -26,68 +26,32 @@ Open the IDE:<br/>
 
 ## Example
 
-Here is a sample DevWorkspace to provision a Cloud Development Environment for the project
-[github.com/l0rd/outyet](https://github.com/l0rd/outyet) with Visual Studio Code as editor and 
+Here is a sample `DevWorkspace` to provision a Cloud Development Environment for the project
+[github.com/l0rd/outyet](https://github.com/l0rd/outyet) with Visual Studio Code as the editor and
 `quay.io/devfile/universal-developer-image:ubi8-latest` as the development tooling container image.<br/>
-
-The **template section of a DevWorkspace** is actually [a Devfile](https://devfile.io/docs/2.3.0/what-is-a-devfile): the 
-`spec.template` schema matches the [Devfile schema](https://devfile.io/docs/2.3.0/devfile-schema).
-
-**Contributions** are extra components that are added on top of the template. Contributions are used to inject editors 
-such as Visual Studio Code and JetBrains.
 
 ![devworkspace](img/devworkspace.png)
 
-## Configuration
+#### DevWorkspace Template
 
-### Global configuration for the DevWorkspace Operator
+The Template section of a `DevWorkspace` is actually [a Devfile](https://devfile.io/docs/2.3.0/what-is-a-devfile): the
+`spec.template` schema matches the [Devfile schema](https://devfile.io/docs/2.3.0/devfile-schema). :warning: A few 
+`Devfile` APIs are
+[not supported yet](https://github.com/devfile/devworkspace-operator/blob/main/docs/unsupported-devfile-api.adoc).
 
-The DevWorkspace Operator installs the DevWorkspaceOperatorConfig custom resource (short name: `dwoc`). To configure global behavior of the DevWorkspace Operator, create a DevWorkspaceOperatorConfig named `devworkspace-operator-config` in the same namespace where the operator is deployed:
-```yaml
-apiVersion: controller.devfile.io/v1alpha1
-kind: DevWorkspaceOperatorConfig
-metadata:
-  name: devworkspace-operator-config
-  namespace: $OPERATOR_INSTALL_NAMESPACE
-config:
-  # Configuration fields
-```
+#### DevWorkspace Contributions
 
-To apply a configuration to specific workspaces instead of globally, an existing DevWorkspaceOperatorConfig can be referenced in a DevWorkspace's attributes:
-```yaml
-apiVersion: workspace.devfile.io/v1alpha2
-kind: DevWorkspace
-metadata:
-  name: my-devworkspace
-spec:
-  template:
-    attributes:
-      controller.devfile.io/devworkspace-config:
-        name: <name of DevWorkspaceOperatorConfig CR>
-        namespace: <namespace of DevWorkspaceOperatorConfig CR>
-```
-Configuration specified as above will be merged into the default global configuration, overriding any values present.
+Contributions are extra `Templates` that are added on top of the main `DevWorkspaceTemplate`. Contributions are used to
+inject editors such as Visual Studio Code and JetBrains. Contributions are defined as Devfile or DevWorkspace Templates.
+Examples are the
+[Visual Studio Code devfile](https://eclipse-che.github.io/che-plugin-registry/main/v3/plugins/che-incubator/che-code/latest/devfile.yaml)
+and the
+[JetBrains IntelliJ devfile](https://eclipse-che.github.io/che-plugin-registry/main/v3/plugins/che-incubator/che-idea/latest/devfile.yaml).
 
-To see all all configuration options, see `kubectl explain dwoc.config`, `kubectl explain dwoc.config.workspace`, etc.
+#### Additional configuration
 
-### Additional configuration
-
-DevWorkspaces can be further configured through DevWorkspace attributes and Kubernetes labels/annotations. For a list of all options available, see [additional documentation](docs/additional-configuration.adoc).
-
-### Restricted Access
-
-The `controller.devfile.io/restricted-access` annotation specifies that a DevWorkspace needs additional access control (in addition to RBAC). When a DevWorkspace is created with the `controller.devfile.io/restricted-access` annotation set to `true`, the webhook server will guarantee
-- Only the DevWorkspace Operator ServiceAccount or DevWorkspace creator can modify important fields in the DevWorkspace
-- Only the DevWorkspace creator can create `pods/exec` into devworkspace-related containers.
-
-This annotation should be used when a DevWorkspace is expected to contain sensitive information that should be protect above the protection provided by standard RBAC rules (e.g. if the DevWorkspace will store the user's OpenShift token in-memory).
-
-Example:
-```yaml
-metadata:
-  annotations:
-    controller.devfile.io/restricted-access: true
-```
+DevWorkspaces can be further configured through DevWorkspace `attributes`, `labels` and `annotations`. For a list of all
+options available, see [additional documentation](docs/additional-configuration.adoc).
 
 ## Deploying DevWorkspace Operator
 
@@ -249,14 +213,6 @@ make update_devworkspace_api update_devworkspace_crds # first commit
 make generate_all # second commit
 ```
 Example of the devfile API update [PR](https://github.com/devfile/devworkspace-operator/pull/797)
-
-### Controller configuration
-
-Controller behavior can be configured using the `DevWorkspaceOperatorConfig` custom resource (`dwoc` for short). To configure the controller, create a `DevWorkspaceOperatorConfig` named `devworkspace-operator-config` in the same namespace as the controller. If using the Makefile to deploy the DevWorkspaceOperator, a pre-filled config is created automatically (see `deploy/default-config.yaml`).
-
-Configuration settings in the `DevWorkspaceOperatorConfig` override default values found in [pkg/config](https://github.com/devfile/devworkspace-operator/tree/main/pkg/config). The only required configuration setting is `.routing.clusterHostSuffix`, which is required when running on Kubernetes.
-
-To see documentation on configuration settings, including default values, use `kubectl explain` or `oc explain` -- e.g. `kubectl explain dwoc.config.routing.clusterHostSuffix`
 
 ### Remove controller from your K8s/OS Cluster
 To uninstall the controller and associated CRDs, use the Makefile uninstall rule:

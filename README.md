@@ -16,7 +16,7 @@ and **scalable** Cloud Development Environments.
 [Install it](#devworkspace-operator-installation) and apply a DevWorkspace to create a Cloud Development Environment:<br/>
 ![dw apply demo](img/apply-demo.gif)
 
-Get the Cloud Developent Environment URI:<br/>
+Get the Cloud Development Environment URI:<br/>
 ![dw get demo](img/get-demo.gif)
 
 Open the IDE:<br/>

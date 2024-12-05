@@ -87,8 +87,8 @@ spec:
     - name: Devworkspace Operator
       url: https://github.com/devfile/devworkspace-operator
   maintainers:
-    - email: aobuchow@redhat.com
-      name: Andrew Obuchowicz
+    - email: dakwon@redhat.com
+      name: David Kwon
     - email: ibuziuk@redhat.com
       name: Ilya Buziuk
   maturity: alpha

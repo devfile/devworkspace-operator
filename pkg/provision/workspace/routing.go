@@ -56,6 +56,7 @@ func SyncRoutingToCluster(
 		return nil, nil, statusMsg, &dwerrors.RetryError{Message: statusMsg, RequeueAfter: 5 * time.Second}
 	}
 
+	// Configure securityContext for pod additions, for example che-gateway container
 	// https://github.com/eclipse-che/che/issues/22747
 	if clusterRouting.Status.PodAdditions != nil {
 		for i, container := range clusterRouting.Status.PodAdditions.Containers {

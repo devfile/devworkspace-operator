@@ -85,7 +85,7 @@ spec:
             - name: RELATED_IMAGE_devworkspace_webhook_server
               value: "quay.io/devfile/devworkspace-controller:next"
             - name: RELATED_IMAGE_pvc_cleanup_job
-              value: "registry.access.redhat.com/ubi8-micro:8.8-1"
+              value: "registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338"
             - name: RELATED_IMAGE_async_storage_server
               value: "quay.io/eclipse/che-workspace-data-sync-storage:0.0.1"
             - name: RELATED_IMAGE_async_storage_sidecar

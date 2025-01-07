@@ -53,6 +53,20 @@ and the
 DevWorkspaces can be further configured through DevWorkspace `attributes`, `labels` and `annotations`. For a list of all
 options available, see [additional documentation](docs/additional-configuration.adoc).
 
+## DevWorkspace Operator on Developer Sandbox 
+
+The latest version of the DevWorkspace Operator is pre-installed and available on
+[Developer Sandbox for Red Hat OpenShift](https://developers.redhat.com/developer-sandbox), which provides you with
+no-cost access to a Kubernetes cluster.
+
+![DWO on Developer Sandbox](img/dwo-on-developer-sandbox.png)
+
+You can login to the cluster using `kubectl` from your local desktop, or use the
+[Web Terminal](https://www.redhat.com/en/blog/a-deeper-look-at-the-web-terminal-operator-1) which is also pre-installed
+on the Kubernetes cluster:
+
+![WTO on Developer Sandbox](img/wto-on-developer-sandbox.png)
+
 ## DevWorkspace Operator Installation
 
 This section describes how to install the Operator on a cluster using the 

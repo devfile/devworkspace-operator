@@ -1,0 +1,151 @@
+# Installation on Minikube Without OLM
+
+## Prerequisites
+
+Before you begin, ensure you have the following tools installed:
+
+*   **kubectl:** The Kubernetes command-line tool.
+*   **minikube:** A tool for running Kubernetes locally.
+
+## Steps
+
+### 1. Start Minikube
+
+Make sure Minikube is running:
+
+```sh
+minikube start
+```
+
+### 2. Ingress Addon
+
+Enable the Ingress Addon:
+
+```sh
+minikube addons enable ingress
+```
+
+### 3. Create Namespace
+
+Create a dedicated namespace for the DevWorkspace Controller:
+
+```sh
+kubectl create namespace devworkspace-controller
+```
+
+### 4. Install cert-manager
+
+Install cert-manager using the provided manifest:
+
+```sh
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.yaml
+```
+
+Wait until cert-manager pods are ready:
+
+```sh
+kubectl wait --namespace cert-manager \
+      --timeout 90s \
+      --for=condition=ready pod \
+      --selector=app.kubernetes.io/instance=cert-manager
+```
+
+### 5. Install the DevWorkspace Operator
+
+Install the DevWorkspace Operator from the given URL:
+
+```sh
+kubectl apply -f https://github.com/devfile/devworkspace-operator/raw/refs/tags/v0.32.0/deploy/deployment/kubernetes/combined.yaml
+```
+
+Wait until the DevWorkspace Operator pods are ready:
+
+```sh
+kubectl wait --namespace devworkspace-controller \
+      --timeout 90s \
+      --for=condition=ready pod \
+      --selector=app.kubernetes.io/part-of=devworkspace-operator
+```
+
+### 6. Create the DevWorkspace Operator Config
+
+#### 6.1 Get Minikube IP
+
+Get the IP address of your Minikube cluster:
+
+```sh
+minikube ip
+```
+
+You will use this IP address in the next step. Let's denote it as <HOST_IP>.
+
+#### 6.2 Create the DevWorkspaceOperatorConfig
+
+Create the DevWorkspaceOperatorConfig resource, replacing <HOST_IP> with the IP you obtained in the previous step:
+
+```sh
+kubectl apply -f - <<EOF
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: devworkspace-controller
+config:
+  routing:
+    clusterHostSuffix: "<HOST_IP>.nip.io"
+EOF
+```
+
+### 7. Create a Sample DevWorkspace
+
+```sh
+kubectl apply -f - <<EOF
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: git-clone-sample-devworkspace
+spec:
+  started: true
+  template:
+    projects:
+      - name: web-nodejs-sample
+        git:
+          remotes:
+            origin: "https://github.com/che-samples/web-nodejs-sample.git"
+      - name: devworkspace-operator
+        git:
+          checkoutFrom:
+            remote: origin
+            revision: 0.21.x
+          remotes:
+            origin: "https://github.com/devfile/devworkspace-operator.git"
+            amisevsk: "https://github.com/amisevsk/devworkspace-operator.git"
+    commands:
+      - id: say-hello
+        exec:
+          component: che-code-runtime-description
+          commandLine: echo "Hello from $(pwd)"
+          workingDir: ${PROJECT_SOURCE}/app
+  contributions:
+    - name: che-code
+      uri: https://eclipse-che.github.io/che-plugin-registry/main/v3/plugins/che-incubator/che-code/latest/devfile.yaml
+      components:
+        - name: che-code-runtime-description
+          container:
+            env:
+              - name: CODE_HOST
+                value: 0.0.0.0
+EOF
+```
+
+**Note:** The DevWorkspace creation may fail due to timeout if some container images are large and take longer than 5 minutes to pull. If the DevWorkspace fails, you can restart it by setting spec.started to true. Use the following command to re-trigger the DevWorkspace start:
+
+```sh
+kubectl patch devworkspace git-clone-sample-devworkspace -n default --type merge -p '{"spec": {"started": true}}'
+```
+
+You can also check the DevWorkspace status by running:
+
+```sh
+kubectl get devworkspace -n default
+```

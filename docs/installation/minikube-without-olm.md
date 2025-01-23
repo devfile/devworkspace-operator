@@ -4,8 +4,8 @@
 
 Before you begin, ensure you have the following tools installed:
 
-*   **kubectl:** The Kubernetes command-line tool.
-*   **minikube:** A tool for running Kubernetes locally.
+* **kubectl:** The Kubernetes command-line tool.
+* **minikube:** A tool for running Kubernetes locally.
 
 ## Steps
 
@@ -152,7 +152,7 @@ kubectl get devworkspace -n default
 
 When the DevWorkspace is running according to the status, open the editor by accesssing the URL from the `INFO` column in a web browser. For example:
 
-```
+```sh
 NAME                            DEVWORKSPACE ID             PHASE     INFO
 git-clone-sample-devworkspace   workspace0196ce197f0b4e90   Running   <URL>
 ```

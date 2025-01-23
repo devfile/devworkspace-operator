@@ -4,8 +4,8 @@
 
 Before you begin, ensure you have the following tools installed:
 
-*   **oc:** The OpenShift command-line tool.
-*   Access to an OpenShift cluster.
+* **oc:** The OpenShift command-line tool.
+* Access to an OpenShift cluster.
 
 ## Steps
 
@@ -41,7 +41,6 @@ Create a namespace for the DevWorkspace sample:
 ```sh
 oc create namespace devworkspace-samples
 ```
-
 
 ### 4. Create a Sample DevWorkspace
 
@@ -93,14 +92,16 @@ EOF
 ```sh
 oc patch devworkspace git-clone-sample-devworkspace -n devworkspace-samples --type merge -p '{"spec": {"started": true}}'
 ```
+
 You can also check the DevWorkspace status by running:
+
 ```sh
 oc get devworkspace -n devworkspace-samples
 ```
 
 When the DevWorkspace is running according to the status, open the editor by accesssing the URL from the `INFO` column in a web browser. For example:
 
-```
+```sh
 NAME                            DEVWORKSPACE ID             PHASE     INFO
 git-clone-sample-devworkspace   workspace0196ce197f0b4e90   Running   <URL>
 ```

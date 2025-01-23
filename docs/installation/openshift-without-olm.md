@@ -97,3 +97,10 @@ You can also check the DevWorkspace status by running:
 ```sh
 oc get devworkspace -n devworkspace-samples
 ```
+
+When the DevWorkspace is running according to the status, open the editor by accesssing the URL from the `INFO` column in a web browser. For example:
+
+```
+NAME                            DEVWORKSPACE ID             PHASE     INFO
+git-clone-sample-devworkspace   workspace0196ce197f0b4e90   Running   <URL>
+```

@@ -4,9 +4,9 @@
 
 Before you begin, ensure you have the following tools installed:
 
-*   **kubectl:** The Kubernetes command-line tool.
-*   **kind:** A tool for running Kubernetes locally using Docker.
-*   **OrbStack** (as a container runtime)
+* **kubectl:** The Kubernetes command-line tool.
+* **kind:** A tool for running Kubernetes locally using Docker.
+* **OrbStack** (as a container runtime)
 
 ## Steps
 
@@ -138,6 +138,7 @@ kubectl wait --namespace devworkspace-controller \
 ### 8. Create the DevWorkspace Operator Config
 
 #### 8.1 Get Load Balancer IP
+
 Get the Load Balancer IP from the `ingress-nginx` service:
 
 ```sh
@@ -146,6 +147,7 @@ kubectl get services \
    ingress-nginx-controller \
    --output jsonpath='{.status.loadBalancer.ingress[0].ip}'
 ```
+
 Let's denote this value as `<HOST_IP>`.
 
 #### 8.2 Create the DevWorkspaceOperatorConfig
@@ -214,14 +216,16 @@ EOF
 ```bash
 kubectl patch devworkspace git-clone-sample-devworkspace -n default --type merge -p '{"spec": {"started": true}}'
 ```
+
 You can also check the DevWorkspace status by running:
+
 ```sh
 kubectl get devworkspace -n default
 ```
 
 When the DevWorkspace is running according to the status, open the editor by accesssing the URL from the `INFO` column in a web browser. For example:
 
-```
+```sh
 NAME                            DEVWORKSPACE ID             PHASE     INFO
 git-clone-sample-devworkspace   workspace0196ce197f0b4e90   Running   <URL>
 ```

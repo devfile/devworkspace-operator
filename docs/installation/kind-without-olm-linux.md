@@ -4,9 +4,9 @@
 
 Before you begin, ensure you have the following tools installed:
 
-*   **kubectl:** The Kubernetes command-line tool.
-*   **kind:** A tool for running Kubernetes locally using Docker.
-*   **Docker** (as a container runtime)
+* **kubectl:** The Kubernetes command-line tool.
+* **kind:** A tool for running Kubernetes locally using Docker.
+* **Docker** (as a container runtime)
 
 ## Steps
 
@@ -108,6 +108,7 @@ Get the internal IP address of your Kind control-plane node:
 ```sh
 kubectl get node -o wide
 ```
+
 Look for the `INTERNAL-IP` of the `kind-control-plane` node. Let's denote this as `<HOST_IP>`. You will use this IP in the next step.
 
 #### 6.2 Create the DevWorkspaceOperatorConfig
@@ -176,14 +177,16 @@ EOF
 ```bash
 kubectl patch devworkspace git-clone-sample-devworkspace -n default --type merge -p '{"spec": {"started": true}}'
 ```
+
 You can also check the DevWorkspace status by running:
+
 ```sh
 kubectl get devworkspace -n default
 ```
 
 When the DevWorkspace is running according to the status, open the editor by accesssing the URL from the `INFO` column in a web browser. For example:
 
-```
+```sh
 NAME                            DEVWORKSPACE ID             PHASE     INFO
 git-clone-sample-devworkspace   workspace0196ce197f0b4e90   Running   <URL>
 ```

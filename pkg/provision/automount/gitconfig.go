@@ -27,7 +27,7 @@ const mergedGitCredentialsMountPath = "/.git-credentials/"
 
 // ProvisionGitConfiguration takes care of mounting git credentials and a gitconfig into a devworkspace.
 func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resources, error) {
-	credentialsSecrets, tlsConfigMaps, err := getGitResources(api, namespace)
+	credentialsSecrets, extraPropertySecret, tlsConfigMaps, err := getGitResources(api, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +48,7 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 		return nil, &dwerrors.FailError{Message: "Failed to collect git credentials secrets", Err: err}
 	}
 
-	gitConfigMap, err := constructGitConfig(namespace, mergedGitCredentialsMountPath, tlsConfigMaps, baseGitConfig)
+	gitConfigMap, err := constructGitConfig(namespace, mergedGitCredentialsMountPath, tlsConfigMaps, extraPropertySecret, baseGitConfig)
 	if err != nil {
 		return nil, &dwerrors.FailError{Message: "Failed to prepare git config for workspace", Err: err}
 	}
@@ -69,7 +69,7 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 	return &resources, nil
 }
 
-func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets []corev1.Secret, tlsConfigMaps []corev1.ConfigMap, err error) {
+func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets []corev1.Secret, extraPropertiesSecret *corev1.Secret, tlsConfigMaps []corev1.ConfigMap, err error) {
 	credentialsLabelSelector := k8sclient.MatchingLabels{
 		constants.DevWorkspaceGitCredentialLabel: "true",
 	}
@@ -79,7 +79,7 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 
 	secretList := &corev1.SecretList{}
 	if err := api.Client.List(api.Ctx, secretList, k8sclient.InNamespace(namespace), credentialsLabelSelector); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var secrets []corev1.Secret
 	if len(secretList.Items) > 0 {
@@ -89,7 +89,7 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 
 	configmapList := &corev1.ConfigMapList{}
 	if err := api.Client.List(api.Ctx, configmapList, k8sclient.InNamespace(namespace), tlsLabelSelector); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	var configmaps []corev1.ConfigMap
 	if len(configmapList.Items) > 0 {
@@ -97,7 +97,15 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 	}
 	sortConfigmaps(configmaps)
 
-	return secrets, configmaps, nil
+	secretNN := types.NamespacedName{
+		Name:      constants.DevWorkspaceGitconfigExtraPropertiesSecretName,
+		Namespace: namespace,
+	}
+	secret := &corev1.Secret{}
+	if err := api.Client.Get(api.Ctx, secretNN, secret); err != nil {
+		return secrets, nil, configmaps, nil
+	}
+	return secrets, secret, configmaps, nil
 }
 
 func cleanupGitConfig(api sync.ClusterAPI, namespace string) error {

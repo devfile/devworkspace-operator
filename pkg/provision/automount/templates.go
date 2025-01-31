@@ -16,6 +16,7 @@ package automount
 import (
 	"fmt"
 	"path"
+	"regexp"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -57,7 +58,10 @@ const defaultGitServerTemplate = `[http]
     sslCAInfo = %s
 `
 
-func constructGitConfig(namespace, credentialMountPath string, certificatesConfigMaps []corev1.ConfigMap, baseGitConfig *string) (*corev1.ConfigMap, error) {
+var GitconfigSectionRegexp = regexp.MustCompile(`^[a-zA-Z0-9]*$`)
+var GitconfigPropertySetRegexp = regexp.MustCompile(`^.*=.*$`)
+
+func constructGitConfig(namespace, credentialMountPath string, certificatesConfigMaps []corev1.ConfigMap, extraPropertiesSecret *corev1.Secret, baseGitConfig *string) (*corev1.ConfigMap, error) {
 	var configSettings []string
 	configSettings = append(configSettings, gitLFSConfig)
 
@@ -90,6 +94,20 @@ func constructGitConfig(namespace, credentialMountPath string, certificatesConfi
 			defaultTLSFound = true
 		} else {
 			configSettings = append(configSettings, fmt.Sprintf(gitServerTemplate, host, certificatePath))
+		}
+	}
+
+	if extraPropertiesSecret != nil {
+		for key, value := range extraPropertiesSecret.Data {
+			if GitconfigSectionRegexp.MatchString(key) {
+				configSettings = append(configSettings, fmt.Sprintf(`[%s]`, key))
+				split := strings.Split(string(value), "\n")
+				for _, element := range split {
+					if GitconfigPropertySetRegexp.MatchString(element) {
+						configSettings = append(configSettings, fmt.Sprintf(`    %s`, element))
+					}
+				}
+			}
 		}
 	}
 

@@ -114,7 +114,7 @@ func TestOneConfigMapWithNoUserMountPath(t *testing.T) {
 		buildConfig(defaultName, mountPath, defaultData),
 	}
 
-	gitconfig, err := constructGitConfig(testNamespace, mountPath, configmaps, nil)
+	gitconfig, err := constructGitConfig(testNamespace, mountPath, configmaps, nil, nil)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -127,7 +127,7 @@ func TestOneConfigMapWithMountPathAndHostAndCert(t *testing.T) {
 		buildConfig(defaultName, mountPath, defaultData),
 	}
 
-	gitconfig, err := constructGitConfig(testNamespace, mountPath, configmaps, nil)
+	gitconfig, err := constructGitConfig(testNamespace, mountPath, configmaps, nil, nil)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -140,7 +140,7 @@ func TestOneConfigMapWithMountPathAndWithoutHostAndWithoutCert(t *testing.T) {
 		buildConfig(defaultName, mountPath, map[string]string{}),
 	}
 
-	_, err := constructGitConfig(testNamespace, mountPath, configmaps, nil)
+	_, err := constructGitConfig(testNamespace, mountPath, configmaps, nil, nil)
 	assert.Equal(t, err.Error(), fmt.Sprintf("could not find certificate field in configmap %s", defaultName))
 }
 
@@ -152,7 +152,7 @@ func TestOneConfigMapWithMountPathAndWithoutHostAndWithCert(t *testing.T) {
 		}),
 	}
 
-	gitconfig, err := constructGitConfig(testNamespace, mountPath, configmaps, nil)
+	gitconfig, err := constructGitConfig(testNamespace, mountPath, configmaps, nil, nil)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -167,7 +167,7 @@ func TestOneConfigMapWithMountPathAndWithHostAndWithoutCert(t *testing.T) {
 		}),
 	}
 
-	_, err := constructGitConfig(testNamespace, mountPath, configmaps, nil)
+	_, err := constructGitConfig(testNamespace, mountPath, configmaps, nil, nil)
 	assert.Equal(t, err.Error(), fmt.Sprintf("could not find certificate field in configmap %s", defaultName))
 }
 
@@ -177,7 +177,7 @@ func TestTwoConfigMapWithNoDefinedMountPathInAnnotation(t *testing.T) {
 		buildConfig("configmap2", "/folder2", defaultData),
 	}
 
-	gitconfig, err := constructGitConfig(testNamespace, "", configmaps, nil)
+	gitconfig, err := constructGitConfig(testNamespace, "", configmaps, nil, nil)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -196,7 +196,7 @@ func TestTwoConfigMapWithOneDefaultTLSAndOtherGithubTLS(t *testing.T) {
 		}),
 	}
 
-	gitconfig, err := constructGitConfig(testNamespace, "", configmaps, nil)
+	gitconfig, err := constructGitConfig(testNamespace, "", configmaps, nil, nil)
 	if !assert.NoError(t, err, "Should not return error") {
 		return
 	}
@@ -214,8 +214,30 @@ func TestTwoConfigMapWithBothMissingHost(t *testing.T) {
 		}),
 	}
 
-	_, err := constructGitConfig(testNamespace, "", configmaps, nil)
+	_, err := constructGitConfig(testNamespace, "", configmaps, nil, nil)
 	assert.Equal(t, err.Error(), "multiple git tls credentials do not have host specified")
+}
+
+func TestExtraProperties(t *testing.T) {
+	mountPath := "/sample/test"
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      constants.DevWorkspaceGitconfigExtraPropertiesSecretName,
+			Namespace: testNamespace,
+		},
+		Data: map[string][]byte{
+			"section": []byte("property1 = value1\nproperty2 = value2\ninvalidPropertySet"),
+		},
+	}
+
+	gitconfig, err := constructGitConfig(testNamespace, mountPath, []corev1.ConfigMap{}, &secret, nil)
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+	assert.Contains(t, gitconfig.Data[gitConfigName], `[section]
+    property1 = value1
+    property2 = value2`)
+	assert.NotContains(t, gitconfig.Data[gitConfigName], `invalidPropertySet`)
 }
 
 func buildConfig(name string, mountPath string, data map[string]string) corev1.ConfigMap {

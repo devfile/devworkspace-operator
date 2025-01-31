@@ -93,6 +93,18 @@ const (
 	// to detect if the user has provided an SSH key with a passhprase.
 	SSHSecretName = "git-ssh-key"
 
+	// DevWorkspaceGitconfigExtraPropertiesSecretName is the name of the secret that is used to define custom gitconfig
+	// properties that will be mounted to the /etc/gitconfig file. The secret's data map is parsed as a key value structure,
+	// where each key is a gitconfig section, and value is a property definition. For example, secret's data map is set to
+	// key:"http", value:"extraHeader = Basic token-content", so the gitconfig file will include next content:
+	// [http]
+	//     extraHeader = Basic token-content
+	// The 'git config list' command will reveal the property as: http.extraheader=Basic token-content.
+	// The secret's data map key must not contain any special characters and whitespaces, and the value must match the
+	// format: <property> = <value>, otherwise the custom property will be ignored.
+	// Multiple properties per section are supported, each property set must start from the new line in this case.
+	DevWorkspaceGitconfigExtraPropertiesSecretName = "devworkspace-gitconfig-extra-properties"
+
 	// SSHSecretPassphraseKey is the key used to retrieve the optional passphrase stored inside the SSH secret.
 	SSHSecretPassphraseKey = "passphrase"
 

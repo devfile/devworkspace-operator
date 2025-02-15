@@ -1,6 +1,6 @@
 module github.com/devfile/devworkspace-operator
 
-go 1.20
+go 1.22
 
 require (
 	github.com/devfile/api/v2 v2.2.2

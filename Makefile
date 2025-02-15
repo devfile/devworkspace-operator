@@ -50,8 +50,7 @@ endif
 OPERATOR_SDK_VERSION = v1.8.0
 OPM_VERSION = v1.19.5
 
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:crdVersions=v1,trivialVersions=true"
+CRD_OPTIONS ?= "crd:crdVersions=v1"
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -242,7 +241,7 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 ## Tool Binaries
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-CONTROLLER_GEN_VERSION = v0.6.1
+CONTROLLER_GEN_VERSION = v0.16.5
 ENVTEST_VERSION = v0.0.0-20240320141353-395cfc7486e6
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 ENVTEST_K8S_VERSION = 1.24.2

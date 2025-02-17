@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -164,7 +165,9 @@ func checkCanUseProjectedVolumes(volumeMounts []corev1.VolumeMount, volumeNameTo
 		for _, vm := range volumeMounts {
 			problemNames = append(problemNames, formatVolumeDescription(volumeNameToVolume[vm.Name]))
 		}
-		return fmt.Errorf("auto-mounted volumes from (%s) have the same mount path", strings.Join(problemNames, ", "))
+		return &dwerrors.FailError{
+			Message: fmt.Sprintf("auto-mounted volumes from (%s) have the same mount path", strings.Join(problemNames, ", ")),
+		}
 	}
 	return nil
 }

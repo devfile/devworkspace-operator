@@ -54,6 +54,8 @@ func mergeProjectedVolumes(resources *Resources) (*Resources, error) {
 		volumeNameToVolume[volume.Name] = volume
 	}
 
+	// Map of merged volume names -> bool, for not merging the same volume twice
+	mergedVolumeNames := map[string]bool{}
 	for _, mountPath := range mountPathOrder {
 		volumeMounts := mountPathToVolumeMounts[mountPath]
 		switch len(volumeMounts) {
@@ -63,7 +65,12 @@ func mergeProjectedVolumes(resources *Resources) (*Resources, error) {
 			// No projected volume necessary
 			mergedResources.VolumeMounts = append(mergedResources.VolumeMounts, volumeMounts[0])
 			volume := volumeNameToVolume[volumeMounts[0].Name]
-			mergedResources.Volumes = append(mergedResources.Volumes, volume)
+
+			_, isMerged := mergedVolumeNames[volume.Name]
+			if !isMerged {
+				mergedResources.Volumes = append(mergedResources.Volumes, volume)
+				mergedVolumeNames[volume.Name] = true
+			}
 		default:
 			vm, vol, err := generateProjectedVolume(mountPath, volumeMounts, volumeNameToVolume)
 			if err != nil {

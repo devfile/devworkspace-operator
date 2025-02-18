@@ -73,6 +73,19 @@ This section describes how to install the Operator on a cluster using the
 [Operator Lifecycle Manager (OLM)](https://olm.operatorframework.io). The file [CONTRIBUTING.md](CONTRIBUTING.md) has 
 instructions to install the Operator, using the `Makefile`, without requiring OLM.
 
+#### Platform-Specific Installation Guides
+
+For detailed installation instructions for specific platforms, see the following guides:
+
+- **Kind**
+  - [Installation on Kind Without OLM (Linux)](/docs/installation/kind-without-olm-linux.md)
+  - [Installation on Kind Without OLM (MacOs)](/docs/installation/kind-without-olm-macos.md)
+- **Minikube**
+  - [Installation on Minikube Without OLM](/docs/installation/minikube-without-olm.md)
+- **OpenShift**
+  - [Installation on OpenShift With OLM](/docs/installation/openshift-with-olm.md)
+  - [Installation on OpenShift Without OLM](/docs/installation/openshift-without-olm.md)
+
 #### Installing the Operator Lifecycle Manager
 
 The Operator Framework website has 

@@ -99,7 +99,7 @@ spec:
   relatedImages:
     - image: quay.io/devfile/devworkspace-controller:next
       name: devworkspace_webhook_server
-    - image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
+    - image: quay.io/brancz/kube-rbac-proxy:v0.13.1
       name: kube_rbac_proxy
     - image: quay.io/devfile/project-clone:next
       name: project_clone

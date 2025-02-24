@@ -177,7 +177,7 @@ fi
 
 # Run kustomize to build yamls
 echo "Generating config for Kubernetes"
-export RBAC_PROXY_IMAGE="${KUBE_RBAC_PROXY_IMAGE:-gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1}"
+export RBAC_PROXY_IMAGE="${KUBE_RBAC_PROXY_IMAGE:-quay.io/brancz/kube-rbac-proxy:v0.13.1}"
 ${KUSTOMIZE} build "${DEPLOY_DIR}/templates/cert-manager" \
   | envsubst "$SUBST_VARS" \
   > "${KUBERNETES_DIR}/${COMBINED_FILENAME}"
@@ -185,7 +185,7 @@ unset RBAC_PROXY_IMAGE
 echo "File saved to ${KUBERNETES_DIR}/${COMBINED_FILENAME}"
 
 echo "Generating config for OpenShift"
-export RBAC_PROXY_IMAGE="${OPENSHIFT_RBAC_PROXY_IMAGE:-gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1}"
+export RBAC_PROXY_IMAGE="${OPENSHIFT_RBAC_PROXY_IMAGE:-quay.io/brancz/kube-rbac-proxy:v0.13.1}"
 ${KUSTOMIZE} build "${DEPLOY_DIR}/templates/service-ca" \
   | envsubst "$SUBST_VARS" \
   > "${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
@@ -194,7 +194,7 @@ echo "File saved to ${OPENSHIFT_DIR}/${COMBINED_FILENAME}"
 
 if $GEN_OLM; then
   echo "Generating base deployment files for OLM"
-  export RBAC_PROXY_IMAGE="${OPENSHIFT_RBAC_PROXY_IMAGE:-gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1}"
+  export RBAC_PROXY_IMAGE="${OPENSHIFT_RBAC_PROXY_IMAGE:-quay.io/brancz/kube-rbac-proxy:v0.13.1}"
   export NAMESPACE=openshift-operators
   # Generate .spec.relatedImages for CSV based on deployment
   TMPCSV="csv.tmp.yaml"

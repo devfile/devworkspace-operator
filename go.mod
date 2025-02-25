@@ -2,6 +2,8 @@ module github.com/devfile/devworkspace-operator
 
 go 1.22
 
+toolchain go1.22.9
+
 require (
 	github.com/devfile/api/v2 v2.2.2
 	github.com/go-git/go-git/v5 v5.13.0

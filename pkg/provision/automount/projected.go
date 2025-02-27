@@ -55,6 +55,7 @@ func mergeProjectedVolumes(resources *Resources) (*Resources, error) {
 	}
 
 	// Map of merged volume names -> bool, for not merging the same volume twice
+	// This can happen due to different subpath volume mounts, where the mount path is the same. In this case, there should be only one volume.
 	mergedVolumeNames := map[string]bool{}
 	for _, mountPath := range mountPathOrder {
 		volumeMounts := mountPathToVolumeMounts[mountPath]

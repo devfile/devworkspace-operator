@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 )
@@ -53,6 +54,9 @@ func mergeProjectedVolumes(resources *Resources) (*Resources, error) {
 		volumeNameToVolume[volume.Name] = volume
 	}
 
+	// Map of merged volume names -> bool, for not merging the same volume twice
+	// This can happen due to different subpath volume mounts, where the mount path is the same. In this case, there should be only one volume.
+	mergedVolumeNames := map[string]bool{}
 	for _, mountPath := range mountPathOrder {
 		volumeMounts := mountPathToVolumeMounts[mountPath]
 		switch len(volumeMounts) {
@@ -62,7 +66,12 @@ func mergeProjectedVolumes(resources *Resources) (*Resources, error) {
 			// No projected volume necessary
 			mergedResources.VolumeMounts = append(mergedResources.VolumeMounts, volumeMounts[0])
 			volume := volumeNameToVolume[volumeMounts[0].Name]
-			mergedResources.Volumes = append(mergedResources.Volumes, volume)
+
+			_, isMerged := mergedVolumeNames[volume.Name]
+			if !isMerged {
+				mergedResources.Volumes = append(mergedResources.Volumes, volume)
+				mergedVolumeNames[volume.Name] = true
+			}
 		default:
 			vm, vol, err := generateProjectedVolume(mountPath, volumeMounts, volumeNameToVolume)
 			if err != nil {
@@ -164,7 +173,9 @@ func checkCanUseProjectedVolumes(volumeMounts []corev1.VolumeMount, volumeNameTo
 		for _, vm := range volumeMounts {
 			problemNames = append(problemNames, formatVolumeDescription(volumeNameToVolume[vm.Name]))
 		}
-		return fmt.Errorf("auto-mounted volumes from (%s) have the same mount path", strings.Join(problemNames, ", "))
+		return &dwerrors.FailError{
+			Message: fmt.Sprintf("auto-mounted volumes from (%s) have the same mount path", strings.Join(problemNames, ", ")),
+		}
 	}
 	return nil
 }

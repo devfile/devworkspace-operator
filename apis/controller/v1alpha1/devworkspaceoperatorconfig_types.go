@@ -49,6 +49,36 @@ type OperatorConfiguration struct {
 	EnableExperimentalFeatures *bool `json:"enableExperimentalFeatures,omitempty"`
 }
 
+type CleanupCronJobConfig struct {
+	// Enable determines whether the cleanup cron job is enabled.
+	// Defaults to false if not specified.
+	// +kubebuilder:validation:Optional
+	Enable *bool `json:"enable,omitempty"`
+	// Image specifies the container image to use for the cleanup cron job.
+	// If not specified, a suitable default image for the Kubernetes/OpenShift environment will be used.
+	// +kubebuilder:validation:Optional
+	Image string `json:"image,omitempty"`
+	// RetainTime specifies the minimum time (in seconds) since a DevWorkspace was last started before it is considered stale and eligible for cleanup.
+	// For example, a value of 2592000 (30 days) would mean that any DevWorkspace that has not been started in the last 30 days will be deleted.
+	// Defaults to 2592000 seconds (30 days) if not specified.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default:=2592000
+	// +kubebuilder:validation:Optional
+	RetainTime *int32 `json:"retainTime,omitempty"`
+	// DryRun determines whether the cleanup cron job should be run in dry-run mode.
+	// If set to true, the cron job will not delete any DevWorkspaces, but will log the DevWorkspaces that would have been deleted.
+	// Defaults to false if not specified.
+	// +kubebuilder:validation:Optional
+	DryRun *bool `json:"dryRun,omitempty"`
+	// CronJobScript specifies the name of a ConfigMap containing the script to be executed by the cleanup cron job.
+	// This ConfigMap must reside in the same namespace as the DevWorkspace Operator.
+	// The script is responsible for identifying and deleting stale DevWorkspaces (based on the `retainTime`).
+	// The script must be idempotent. If not specified, defaults to `devworkspace-pruner`.
+	// +kubebuilder:default:=devworkspace-pruner
+	// +kubebuilder:validation:Optional
+	CronJobScript string `json:"cronJobScript,omitempty"`
+}
+
 type RoutingConfig struct {
 	// DefaultRoutingClass specifies the routingClass to be used when a DevWorkspace
 	// specifies an empty `.spec.routingClass`. Supported routingClasses can be defined
@@ -161,6 +191,8 @@ type WorkspaceConfig struct {
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// RuntimeClassName defines the spec.runtimeClassName for DevWorkspace pods created by the DevWorkspace Operator.
 	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
+	// CleanupCronJobConfig defines configuration options for a cron job that automatically cleans up stale DevWorkspaces.
+	CleanupCronJob *CleanupCronJobConfig `json:"cleanupCronJob,omitempty"`
 }
 
 type WebhookConfig struct {

@@ -410,6 +410,27 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.PodAnnotations[key] = value
 			}
 		}
+
+		if from.Workspace.CleanupCronJob != nil {
+			if to.Workspace.CleanupCronJob == nil {
+				to.Workspace.CleanupCronJob = &controller.CleanupCronJobConfig{}
+			}
+			if from.Workspace.CleanupCronJob.Enable != nil {
+				to.Workspace.CleanupCronJob.Enable = from.Workspace.CleanupCronJob.Enable
+			}
+			if from.Workspace.CleanupCronJob.Image != "" {
+				to.Workspace.CleanupCronJob.Image = from.Workspace.CleanupCronJob.Image
+			}
+			if from.Workspace.CleanupCronJob.DryRun != nil {
+				to.Workspace.CleanupCronJob.DryRun = from.Workspace.CleanupCronJob.DryRun
+			}
+			if from.Workspace.CleanupCronJob.RetainTime != nil {
+				to.Workspace.CleanupCronJob.RetainTime = from.Workspace.CleanupCronJob.RetainTime
+			}
+			if from.Workspace.CleanupCronJob.CronJobScript != "" {
+				to.Workspace.CleanupCronJob.CronJobScript = from.Workspace.CleanupCronJob.CronJobScript
+			}
+		}
 	}
 }
 

@@ -16,6 +16,8 @@
 # Build the manager binary
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9/go-toolset
 FROM registry.access.redhat.com/ubi9/go-toolset:9.5-1739267472 as builder
+ARG TARGETARCH
+ARG TARGETOS
 ENV GOPATH=/go/
 USER root
 WORKDIR /project-clone
@@ -30,7 +32,7 @@ RUN go mod download
 COPY . .
 
 # compile workspace controller binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build \
   -a -o _output/bin/project-clone \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \

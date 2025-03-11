@@ -26,7 +26,7 @@ jobs:
     -
       name: Cache go modules
       id: cache-mod
-      uses: actions/cache@e12d46a63a90f2fae62d114769bbf2a179198b5c # v3.3.0
+      uses: actions/cache@2f8e54208210a422b2efd51efaa6bd6d7ca8920f # v3.4.3
       with:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}

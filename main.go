@@ -169,6 +169,14 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DevWorkspace")
 		os.Exit(1)
 	}
+	if err = (&workspacecontroller.PrunerReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("DevWorkspacePruner"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DevWorkspacePruner")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	// Get a config to talk to the apiserver

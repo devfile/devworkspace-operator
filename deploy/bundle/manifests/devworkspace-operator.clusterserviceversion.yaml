@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
+    operators.operatorframework.io/builder: operator-sdk-v1.8.0
     operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
   name: devworkspace-operator.v0.34.0-dev
@@ -85,6 +85,18 @@ spec:
           - create
         - apiGroups:
           - ""
+          resources:
+          - configmaps
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - ""
           resourceNames:
           - workspace-preferences-configmap
           resources:
@@ -104,6 +116,14 @@ spec:
           - serviceaccounts
           verbs:
           - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - devworkspaceoperatorconfigs
+          verbs:
+          - get
+          - list
+          - watch
         - apiGroups:
           - ""
           resources:
@@ -190,6 +210,18 @@ spec:
           - subjectaccessreviews
           verbs:
           - create
+        - apiGroups:
+          - batch
+          resources:
+          - cronjobs
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - batch
           resources:

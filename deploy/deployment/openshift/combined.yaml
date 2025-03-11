@@ -186,6 +186,44 @@ spec:
                   Workspace defines configuration options related to how DevWorkspaces are
                   managed
                 properties:
+                  cleanupCronJob:
+                    description: CleanupCronJobConfig defines configuration options
+                      for a cron job that automatically cleans up stale DevWorkspaces.
+                    properties:
+                      cronJobScript:
+                        default: devworkspace-pruner
+                        description: |-
+                          CronJobScript specifies the name of a ConfigMap containing the script to be executed by the cleanup cron job.
+                          This ConfigMap must reside in the same namespace as the DevWorkspace Operator.
+                          The script is responsible for identifying and deleting stale DevWorkspaces (based on the `retainTime`).
+                          The script must be idempotent. If not specified, defaults to `devworkspace-pruner`.
+                        type: string
+                      dryRun:
+                        description: |-
+                          DryRun determines whether the cleanup cron job should be run in dry-run mode.
+                          If set to true, the cron job will not delete any DevWorkspaces, but will log the DevWorkspaces that would have been deleted.
+                          Defaults to false if not specified.
+                        type: boolean
+                      enable:
+                        description: |-
+                          Enable determines whether the cleanup cron job is enabled.
+                          Defaults to false if not specified.
+                        type: boolean
+                      image:
+                        description: |-
+                          Image specifies the container image to use for the cleanup cron job.
+                          If not specified, a suitable default image for the Kubernetes/OpenShift environment will be used.
+                        type: string
+                      retainTime:
+                        default: 2592000
+                        description: |-
+                          RetainTime specifies the minimum time (in seconds) since a DevWorkspace was last started before it is considered stale and eligible for cleanup.
+                          For example, a value of 2592000 (30 days) would mean that any DevWorkspace that has not been started in the last 30 days will be deleted.
+                          Defaults to 2592000 seconds (30 days) if not specified.
+                        format: int32
+                        minimum: 0
+                        type: integer
+                    type: object
                   cleanupOnStop:
                     description: |-
                       CleanupOnStop governs how the Operator handles stopped DevWorkspaces. If set to
@@ -24940,6 +24978,18 @@ metadata:
 rules:
 - apiGroups:
   - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
   resourceNames:
   - workspace-preferences-configmap
   resources:
@@ -24959,6 +25009,14 @@ rules:
   - serviceaccounts
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  resources:
+  - devworkspaceoperatorconfigs
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -25045,6 +25103,18 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - batch
   resources:

@@ -141,6 +141,13 @@ var _ = BeforeSuite(func() {
 	}).SetupWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = (&workspacecontroller.PrunerReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("DevWorkspacePruner"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr)
+	Expect(err).NotTo(HaveOccurred())
+
 	// Set HTTP client to fail all requests by default; tests that require HTTP must set this up directly
 	workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
 

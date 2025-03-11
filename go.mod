@@ -15,7 +15,9 @@ require (
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.34.1
 	github.com/openshift/api v0.0.0-20200205133042-34f0ec8dab87
+	github.com/operator-framework/operator-lib v0.11.0
 	github.com/prometheus/client_golang v1.14.0
+	github.com/robfig/cron/v3 v3.0.0
 	github.com/stretchr/testify v1.10.0
 	golang.org/x/crypto v0.31.0
 	golang.org/x/net v0.33.0

@@ -49,6 +49,29 @@ type OperatorConfiguration struct {
 	EnableExperimentalFeatures *bool `json:"enableExperimentalFeatures,omitempty"`
 }
 
+type CleanupCronJobConfig struct {
+	// Enable determines whether the cleanup cron job is enabled.
+	// Defaults to false if not specified.
+	// +kubebuilder:validation:Optional
+	Enable *bool `json:"enable,omitempty"`
+	// RetainTime specifies the minimum time (in seconds) since a DevWorkspace was last started before it is considered stale and eligible for cleanup.
+	// For example, a value of 2592000 (30 days) would mean that any DevWorkspace that has not been started in the last 30 days will be deleted.
+	// Defaults to 2592000 seconds (30 days) if not specified.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default:=2592000
+	// +kubebuilder:validation:Optional
+	RetainTime *int32 `json:"retainTime,omitempty"`
+	// DryRun determines whether the cleanup cron job should be run in dry-run mode.
+	// If set to true, the cron job will not delete any DevWorkspaces, but will log the DevWorkspaces that would have been deleted.
+	// Defaults to false if not specified.
+	// +kubebuilder:validation:Optional
+	DryRun *bool `json:"dryRun,omitempty"`
+	// Schedule specifies the cron schedule for the cleanup cron job.
+	// +kubebuilder:default:="0 0 1 * *"
+	// +kubebuilder:validation:Optional
+	Schedule string `json:"schedule,omitempty"`
+}
+
 type RoutingConfig struct {
 	// DefaultRoutingClass specifies the routingClass to be used when a DevWorkspace
 	// specifies an empty `.spec.routingClass`. Supported routingClasses can be defined
@@ -161,6 +184,8 @@ type WorkspaceConfig struct {
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// RuntimeClassName defines the spec.runtimeClassName for DevWorkspace pods created by the DevWorkspace Operator.
 	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
+	// CleanupCronJobConfig defines configuration options for a cron job that automatically cleans up stale DevWorkspaces.
+	CleanupCronJob *CleanupCronJobConfig `json:"cleanupCronJob,omitempty"`
 }
 
 type WebhookConfig struct {

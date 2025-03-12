@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -119,25 +118,18 @@ func (r *DevWorkspacePrunerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}
 
-	maxConcurrentReconciles, err := config.GetMaxConcurrentReconciles()
-	if err != nil {
-		return err
-	}
-
 	// Initialize cron scheduler
 	r.cron = cron.New()
 
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
 		Named("DevWorkspacePruner").
 		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}},
 			handler.EnqueueRequestsFromMapFunc(func(object client.Object) []ctrl.Request {
-				objectNamespace := object.GetNamespace()
 				operatorNamespace, err := infrastructure.GetNamespace()
 
 				// Ignore events from other namespaces
-				if err != nil || objectNamespace != operatorNamespace {
-					log.Info("Received event from different namespace, ignoring", "namespace", objectNamespace)
+				if err != nil || object.GetNamespace() != operatorNamespace || object.GetName() != config.OperatorConfigName {
+					log.Info("Received event from different namespace, ignoring", "namespace", object.GetNamespace())
 					return []ctrl.Request{}
 				}
 
@@ -328,9 +320,6 @@ func filterByInactivityTime(objs []client.Object, retainTime time.Duration, log 
 
 		if canPrune(*devWorkspace, retainTime, log) {
 			filteredObjs = append(filteredObjs, devWorkspace)
-			log.Info(fmt.Sprintf("Adding DevWorkspace '%s/%s' to prune list", devWorkspace.Namespace, devWorkspace.Name))
-		} else {
-			log.Info(fmt.Sprintf("Skipping DevWorkspace '%s/%s': not eligible for pruning", devWorkspace.Namespace, devWorkspace.Name))
 		}
 	}
 	return filteredObjs
@@ -354,8 +343,10 @@ func canPrune(dw dwv2.DevWorkspace, retainTime time.Duration, log logr.Logger) b
 		return false
 	}
 	if time.Since(startTime.Time) <= retainTime {
-		log.Info(fmt.Sprintf("Skipping DevWorkspace '%s/%s': not eligible for pruning", dw.Namespace, dw.Name))
+		log.Info(fmt.Sprintf("Skipping DevWorkspace '%s/%s': last transition time is within retain time", dw.Namespace, dw.Name))
 		return false
 	}
+
+	log.Info(fmt.Sprintf("DevWorkspace '%s/%s' is eligible for pruning", dw.Namespace, dw.Name))
 	return true
 }

@@ -1,11 +1,24 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
+  creationTimestamp: null
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
   name: devworkspace-controller-role
 rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - ""
   resourceNames:
@@ -27,6 +40,14 @@ rules:
   - serviceaccounts
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  resources:
+  - devworkspaceoperatorconfigs
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -113,6 +134,18 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - batch
   resources:

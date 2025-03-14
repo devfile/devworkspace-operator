@@ -1,0 +1,33 @@
+header:
+  schema-version: 1.0.0
+  last-updated: '2024-03-01'
+  last-reviewed: '2024-03-01'
+  expiration-date: '2025-03-01T10:00:00.000Z'
+  project-url: https://github.com/devfile/devworkspace-operator
+  project-release: '0.26.0'
+  commit-hash: '067847d900c18a3fe0d47de920a9ce77af29e722'
+  license: 'https://github.com/devfile/devworkspace-operator/blob/main/LICENSE'
+project-lifecycle:
+  status: active
+  bug-fixes-only: false
+  core-maintainers:
+  - github:AObuchow
+  - github:dkwon17
+  release-cycle: https://github.com/devfile/devworkspace-operator/blob/main/docs/release/README.md
+security-testing:
+- tool-type: sca
+  tool-name: Dependabot
+  comment: |
+    Dependabot is enabled for this repo.
+contribution-policy:
+  accepts-pull-requests: true
+  accepts-automated-pull-requests: true
+  contributing-policy: https://github.com/devfile/devworkspace-operator/blob/main/CONTRIBUTING.md
+  code-of-conduct: https://github.com/devfile/api/blob/main/CODE_OF_CONDUCT.md
+documentation:
+- https://github.com/devfile/devworkspace-operator/blob/main/README.md
+- https://github.com/devfile/devworkspace-operator/blob/main/docs/additional-configuration.adoc
+dependencies:
+  third-party-packages: true
+  dependencies-lists:
+  - https://github.com/devfile/devworkspace-operator/blob/main/go.mod

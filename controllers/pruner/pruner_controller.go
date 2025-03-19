@@ -109,6 +109,7 @@ func (r *DevWorkspacePrunerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	err := r.Get(ctx, req.NamespacedName, dwOperatorConfig)
 	if err != nil {
 		log.Error(err, "Failed to get DevWorkspaceOperatorConfig")
+		r.stopCron(log)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -173,7 +174,16 @@ func (r *DevWorkspacePrunerReconciler) stopCron(logger logr.Logger) {
 	log := logger.WithName("cron")
 	log.Info("Stopping cron scheduler")
 
-	r.cron.Stop()
+	// remove existing cronjob tasks
+	entries := r.cron.Entries()
+	for _, entry := range entries {
+		r.cron.Remove(entry.ID)
+	}
+
+	ctx := r.cron.Stop()
+	ctx.Done()
+
+	log.Info("Cron scheduler stopped")
 }
 
 func (r *DevWorkspacePrunerReconciler) pruneDevWorkspaces(ctx context.Context, retainTime time.Duration, dryRun bool, logger logr.Logger) error {

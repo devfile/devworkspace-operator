@@ -27,7 +27,7 @@ jobs:
 
     -
       name: Cache Operator SDK ${{ env.OPERATOR_SDK_VERSION }}
-      uses: actions/cache@2f8e54208210a422b2efd51efaa6bd6d7ca8920f # v3.4.3
+      uses: actions/cache@v4
       id: cache-operator-sdk
       with:
         path: ~/cache

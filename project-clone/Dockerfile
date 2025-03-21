@@ -30,7 +30,7 @@ RUN go mod download
 COPY . .
 
 # compile workspace controller binaries
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+RUN CGO_ENABLED=0 GO111MODULE=on go build \
   -a -o _output/bin/project-clone \
   -gcflags all=-trimpath=/ \
   -asmflags all=-trimpath=/ \
@@ -43,11 +43,11 @@ WORKDIR /
 COPY --from=builder /project-clone/_output/bin/project-clone /usr/local/bin/project-clone
 
 ENV USER_UID=1001 \
-    USER_NAME=project-clone \
-    HOME=/home/user
+  USER_NAME=project-clone \
+  HOME=/home/user
 
 COPY build/bin /usr/local/bin
-RUN  /usr/local/bin/user_setup
+RUN /usr/local/bin/user_setup
 
 USER ${USER_UID}
 

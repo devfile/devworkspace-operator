@@ -410,6 +410,27 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.PodAnnotations[key] = value
 			}
 		}
+
+		if from.Workspace.CleanupCronJob != nil {
+			if to.Workspace.CleanupCronJob == nil {
+				to.Workspace.CleanupCronJob = &controller.CleanupCronJobConfig{}
+			}
+			if from.Workspace.CleanupCronJob.Enable != nil {
+				to.Workspace.CleanupCronJob.Enable = from.Workspace.CleanupCronJob.Enable
+			}
+			if from.Workspace.CleanupCronJob.Image != "" {
+				to.Workspace.CleanupCronJob.Image = from.Workspace.CleanupCronJob.Image
+			}
+			if from.Workspace.CleanupCronJob.DryRun != nil {
+				to.Workspace.CleanupCronJob.DryRun = from.Workspace.CleanupCronJob.DryRun
+			}
+			if from.Workspace.CleanupCronJob.RetainTime != nil {
+				to.Workspace.CleanupCronJob.RetainTime = from.Workspace.CleanupCronJob.RetainTime
+			}
+			if from.Workspace.CleanupCronJob.CronJobScript != "" {
+				to.Workspace.CleanupCronJob.CronJobScript = from.Workspace.CleanupCronJob.CronJobScript
+			}
+		}
 	}
 }
 
@@ -637,6 +658,23 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if !reflect.DeepEqual(workspace.PodAnnotations, defaultConfig.Workspace.PodAnnotations) {
 			config = append(config, "workspace.podAnnotations is set")
+		}
+		if workspace.CleanupCronJob != nil {
+			if workspace.CleanupCronJob.Enable != nil && *workspace.CleanupCronJob.Enable != *defaultConfig.Workspace.CleanupCronJob.Enable {
+				config = append(config, fmt.Sprintf("workspace.cleanupCronJob.enable=%t", *workspace.CleanupCronJob.Enable))
+			}
+			if workspace.CleanupCronJob.Image != defaultConfig.Workspace.CleanupCronJob.Image {
+				config = append(config, fmt.Sprintf("workspace.cleanupCronJob.image=%s", workspace.CleanupCronJob.Image))
+			}
+			if workspace.CleanupCronJob.DryRun != nil && *workspace.CleanupCronJob.DryRun != *defaultConfig.Workspace.CleanupCronJob.DryRun {
+				config = append(config, fmt.Sprintf("workspace.cleanupCronJob.dryRun=%t", *workspace.CleanupCronJob.DryRun))
+			}
+			if workspace.CleanupCronJob.RetainTime != nil && *workspace.CleanupCronJob.RetainTime != *defaultConfig.Workspace.CleanupCronJob.RetainTime {
+				config = append(config, fmt.Sprintf("workspace.cleanupCronJob.retainTime=%d", *workspace.CleanupCronJob.RetainTime))
+			}
+			if workspace.CleanupCronJob.CronJobScript != defaultConfig.Workspace.CleanupCronJob.CronJobScript {
+				config = append(config, fmt.Sprintf("workspace.cleanupCronJob.cronJobScript=%s", workspace.CleanupCronJob.CronJobScript))
+			}
 		}
 	}
 	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {

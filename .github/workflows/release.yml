@@ -23,7 +23,7 @@ jobs:
     env:
       OPERATOR_SDK_VERSION: v1.8.0
       OPM_VERSION: v1.19.5
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Set up Go 1.x
         uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0

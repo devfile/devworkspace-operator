@@ -23,7 +23,7 @@ jobs:
   
   build-devtools-img:
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     outputs:
       git-sha: ${{ steps.git-sha.outputs.sha }}

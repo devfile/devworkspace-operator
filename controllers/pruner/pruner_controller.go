@@ -112,7 +112,7 @@ func (r *DevWorkspacePrunerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 			return shouldReconcileOnUpdate(e, log)
 		},
 		CreateFunc:  func(e event.CreateEvent) bool { return true },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return false },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return true },
 		GenericFunc: func(e event.GenericEvent) bool { return false },
 	}
 
@@ -287,6 +287,7 @@ func (r *DevWorkspacePrunerReconciler) dryRunPruneStrategy(retainTime time.Durat
 		log.Info(fmt.Sprintf("Found %d DevWorkspaces to prune", len(filteredObjs)))
 
 		// Return an empty list of DevWorkspaces because this is a dry-run
+		log.Info("Dry run mode: no DevWorkspaces will be pruned")
 		return []client.Object{}, nil
 	}
 }
@@ -320,11 +321,9 @@ func canPrune(dw dwv2.DevWorkspace, retainTime time.Duration, log logr.Logger) b
 	}
 
 	var startTime *metav1.Time
-	for _, condition := range dw.Status.Conditions {
-		if condition.Type == conditions.Started {
-			startTime = &condition.LastTransitionTime
-			break
-		}
+	startedCondition := conditions.GetConditionByType(dw.Status.Conditions, conditions.Started)
+	if startedCondition != nil {
+		startTime = &startedCondition.LastTransitionTime
 	}
 	if startTime == nil {
 		log.Info(fmt.Sprintf("Skipping DevWorkspace '%s/%s': missing 'Started' condition", dw.Namespace, dw.Name))

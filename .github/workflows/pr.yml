@@ -7,7 +7,7 @@ on:
 jobs:
   go:
     name: Check sources
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     env:
       OPERATOR_SDK_VERSION: v1.8.0
     steps:

@@ -76,6 +76,13 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 				corev1.ResourceMemory: resource.MustParse("64Mi"),
 			},
 		},
+		CleanupCronJob: &v1alpha1.CleanupCronJobConfig{
+			Enable:        pointer.Bool(false),
+			Image:         "image-registry.openshift-image-registry.svc:5000/openshift/cli:latest",
+			DryRun:        pointer.Bool(false),
+			RetainTime:    pointer.Int32(2592000),
+			CronJobScript: "devworkspace-pruner",
+		},
 	},
 }
 

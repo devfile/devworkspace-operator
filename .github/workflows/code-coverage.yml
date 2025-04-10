@@ -8,7 +8,7 @@ on:
 jobs:
   coverage-report:
     name: Check Code Coverage
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
     -
       name: Set up Go 1.x

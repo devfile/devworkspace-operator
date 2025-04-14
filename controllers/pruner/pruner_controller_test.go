@@ -148,6 +148,28 @@ var _ = Describe("DevWorkspacePrunerReconciler", func() {
 			Expect(reconciler.cron.Entries()).To(BeEmpty())
 		})
 
+		It("Should not start cron if received event from different namespace", func() {
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: "other-namespace"},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						CleanupCronJob: &controllerv1alpha1.CleanupCronJobConfig{
+							Enable:   pointer.Bool(true),
+							Schedule: "* * * * *",
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{
+				Name:      nameNamespace.Name,
+				Namespace: nameNamespace.Namespace,
+			}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(reconciler.cron.Entries()).To(BeEmpty())
+		})
+
 		It("Should not start cron if CleanupCronJob is nil", func() {
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},

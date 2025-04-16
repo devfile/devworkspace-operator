@@ -14,7 +14,7 @@
 package env
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -61,7 +61,7 @@ type TestOutput struct {
 }
 
 func loadTestCaseOrPanic(t *testing.T, testFilepath string) TestCase {
-	bytes, err := ioutil.ReadFile(testFilepath)
+	bytes, err := os.ReadFile(testFilepath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func loadTestCaseOrPanic(t *testing.T, testFilepath string) TestCase {
 }
 
 func loadAllTestsOrPanic(t *testing.T, fromDir string) []TestCase {
-	files, err := ioutil.ReadDir(fromDir)
+	files, err := os.ReadDir(fromDir)
 	if err != nil {
 		t.Fatal(err)
 	}

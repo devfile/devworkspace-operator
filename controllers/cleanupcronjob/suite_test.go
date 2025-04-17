@@ -20,7 +20,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestPruner(t *testing.T) {
+func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Pruner Suite")
+	RunSpecs(t, "CleanupCronJob Controller Suite")
 }

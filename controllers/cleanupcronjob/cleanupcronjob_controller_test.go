@@ -40,11 +40,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-var _ = Describe("DevWorkspacePrunerReconciler", func() {
+var _ = Describe("CleanupCronJobReconciler", func() {
 	var (
 		ctx           context.Context
 		fakeClient    client.Client
-		reconciler    DevWorkspacePrunerReconciler
+		reconciler    CleanupCronJobReconciler
 		nameNamespace types.NamespacedName
 		log           logr.Logger
 	)
@@ -55,9 +55,9 @@ var _ = Describe("DevWorkspacePrunerReconciler", func() {
 		Expect(controllerv1alpha1.AddToScheme(scheme)).To(Succeed())
 		Expect(dwv2.AddToScheme(scheme)).To(Succeed())
 		fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
-		log = zap.New(zap.UseDevMode(true)).WithName("prunerController")
+		log = zap.New(zap.UseDevMode(true)).WithName("cleanupCronJobController")
 
-		reconciler = DevWorkspacePrunerReconciler{
+		reconciler = CleanupCronJobReconciler{
 			Client: fakeClient,
 			Log:    log,
 			Scheme: scheme,

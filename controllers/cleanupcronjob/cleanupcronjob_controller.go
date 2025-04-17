@@ -42,8 +42,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DevWorkspacePrunerReconciler reconciles DevWorkspace objects for pruning purposes.
-type DevWorkspacePrunerReconciler struct {
+// CleanupCronJobReconciler reconciles `CleanupCronJob` configuration for the purpose of pruning stale DevWorkspaces.
+type CleanupCronJobReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
@@ -105,9 +105,9 @@ func shouldReconcileOnUpdate(e event.UpdateEvent, log logr.Logger) bool {
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DevWorkspacePrunerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *CleanupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	log := r.Log.WithName("setupWithManager")
-	log.Info("Setting up DevWorkspacePrunerReconciler")
+	log.Info("Setting up CleanupCronJobReconciler")
 
 	configPredicate := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
@@ -122,7 +122,7 @@ func (r *DevWorkspacePrunerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 	r.cron = cron.New()
 
 	return ctrl.NewControllerManagedBy(mgr).
-		Named("DevWorkspacePruner").
+		Named("CleanupCronJob").
 		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}},
 			handler.EnqueueRequestsFromMapFunc(func(object client.Object) []ctrl.Request {
 				operatorNamespace, err := infrastructure.GetNamespace()
@@ -150,10 +150,10 @@ func (r *DevWorkspacePrunerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 // +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list;delete
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceoperatorconfigs,verbs=get;list;watch
 
-// Reconcile is the main reconciliation loop for the pruner controller.
-func (r *DevWorkspacePrunerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile is the main reconciliation loop for the CleanupCronJob controller.
+func (r *CleanupCronJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log
-	log.Info("Reconciling DevWorkspacePruner", "DWOC", req.NamespacedName)
+	log.Info("Reconciling CleanupCronJob", "DWOC", req.NamespacedName)
 
 	dwOperatorConfig := &controllerv1alpha1.DevWorkspaceOperatorConfig{}
 	err := r.Get(ctx, req.NamespacedName, dwOperatorConfig)
@@ -187,7 +187,7 @@ func (r *DevWorkspacePrunerReconciler) Reconcile(ctx context.Context, req ctrl.R
 	return ctrl.Result{}, nil
 }
 
-func (r *DevWorkspacePrunerReconciler) startCron(ctx context.Context, cleanupConfig *controllerv1alpha1.CleanupCronJobConfig, logger logr.Logger) {
+func (r *CleanupCronJobReconciler) startCron(ctx context.Context, cleanupConfig *controllerv1alpha1.CleanupCronJobConfig, logger logr.Logger) {
 	log := logger.WithName("cron")
 	log.Info("Starting cron scheduler")
 
@@ -224,7 +224,7 @@ func (r *DevWorkspacePrunerReconciler) startCron(ctx context.Context, cleanupCon
 	r.cron.Start()
 }
 
-func (r *DevWorkspacePrunerReconciler) stopCron(logger logr.Logger) {
+func (r *CleanupCronJobReconciler) stopCron(logger logr.Logger) {
 	log := logger.WithName("cron")
 	log.Info("Stopping cron scheduler")
 
@@ -240,7 +240,7 @@ func (r *DevWorkspacePrunerReconciler) stopCron(logger logr.Logger) {
 	log.Info("Cron scheduler stopped")
 }
 
-func (r *DevWorkspacePrunerReconciler) pruneDevWorkspaces(ctx context.Context, retainTime time.Duration, dryRun bool, logger logr.Logger) error {
+func (r *CleanupCronJobReconciler) pruneDevWorkspaces(ctx context.Context, retainTime time.Duration, dryRun bool, logger logr.Logger) error {
 	log := logger.WithName("pruner")
 
 	// create a prune strategy based on the configuration
@@ -283,7 +283,7 @@ func (r *DevWorkspacePrunerReconciler) pruneDevWorkspaces(ctx context.Context, r
 
 // pruneStrategy returns a StrategyFunc that will return a list of
 // DevWorkspaces to prune based on the lastTransitionTime of the 'Started' condition.
-func (r *DevWorkspacePrunerReconciler) pruneStrategy(retainTime time.Duration, logger logr.Logger) prune.StrategyFunc {
+func (r *CleanupCronJobReconciler) pruneStrategy(retainTime time.Duration, logger logr.Logger) prune.StrategyFunc {
 	log := logger.WithName("pruneStrategy")
 
 	return func(ctx context.Context, objs []client.Object) ([]client.Object, error) {
@@ -295,7 +295,7 @@ func (r *DevWorkspacePrunerReconciler) pruneStrategy(retainTime time.Duration, l
 
 // dryRunPruneStrategy returns a StrategyFunc that will always return an empty list of DevWorkspaces to prune.
 // This is used for dry-run mode.
-func (r *DevWorkspacePrunerReconciler) dryRunPruneStrategy(retainTime time.Duration, logger logr.Logger) prune.StrategyFunc {
+func (r *CleanupCronJobReconciler) dryRunPruneStrategy(retainTime time.Duration, logger logr.Logger) prune.StrategyFunc {
 	log := logger.WithName("dryRunPruneStrategy")
 
 	return func(ctx context.Context, objs []client.Object) ([]client.Object, error) {

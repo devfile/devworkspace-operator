@@ -14,7 +14,7 @@
 #
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9/go-toolset
-FROM registry.access.redhat.com/ubi9/go-toolset:9.5-1739267472 as builder
+FROM registry.access.redhat.com/ubi9/go-toolset:9.5-1739267472 AS builder
 ENV GOPATH=/go/
 USER root
 WORKDIR /devworkspace-operator
@@ -35,7 +35,12 @@ RUN make compile-webhook-server
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9-minimal
 FROM registry.access.redhat.com/ubi9-minimal:9.5-1739420147
-RUN microdnf -y update && microdnf clean all && rm -rf /var/cache/yum && echo "Installed Packages" && rpm -qa | sort -V && echo "End Of Installed Packages"
+RUN microdnf -y update && \
+    microdnf clean all && \
+    rm -rf /var/cache/yum && \
+    echo "Installed Packages" && \
+    rpm -qa | sort -V && \
+    echo "End Of Installed Packages"
 WORKDIR /
 COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
 COPY --from=builder /devworkspace-operator/_output/bin/webhook-server /usr/local/bin/webhook-server
@@ -49,6 +54,6 @@ RUN  /usr/local/bin/user_setup
 USER ${USER_UID}
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
-CMD /usr/local/bin/devworkspace-controller
+CMD ["/usr/local/bin/devworkspace-controller"]
 
 # append Brew metadata here

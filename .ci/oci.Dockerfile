@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-FROM registry.ci.openshift.org/openshift/release:golang-1.22
+FROM registry.ci.openshift.org/openshift/release@sha256:717d1d119c5cf8a485247bc2fb38f276f736344a06e1562d870069bf624b7646
 
 SHELL ["/bin/bash", "-c"]
 

@@ -34,6 +34,10 @@ const (
 	// DevWorkspaceNameLabel is the label key to store workspace name
 	DevWorkspaceNameLabel = "controller.devfile.io/devworkspace_name"
 
+	// DevWorkspaceWatchCronJobLabel marks a cronjob so that it is watched by the controller. This label is required on all
+	// cronjobs that should be seen by the controller
+	DevWorkspaceWatchCronJobLabel = "controller.devfile.io/watch-cronjob"
+
 	// DevWorkspaceWatchConfigMapLabel marks a configmap so that it is watched by the controller. This label is required on all
 	// configmaps that should be seen by the controller
 	DevWorkspaceWatchConfigMapLabel = "controller.devfile.io/watch-configmap"

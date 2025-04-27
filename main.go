@@ -35,6 +35,7 @@ import (
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	cleanupCronJobController "github.com/devfile/devworkspace-operator/controllers/cleanupcronjob"
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -167,6 +168,14 @@ func main() {
 		Scheme:           mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DevWorkspace")
+		os.Exit(1)
+	}
+	if err = (&cleanupCronJobController.CleanupCronJobReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("CleanupCronJob"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "CleanupCronJob")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

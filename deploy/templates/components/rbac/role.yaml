@@ -140,6 +140,14 @@ rules:
 - apiGroups:
   - controller.devfile.io
   resources:
+  - devworkspaceoperatorconfigs
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - controller.devfile.io
+  resources:
   - devworkspaceroutings
   verbs:
   - '*'
@@ -234,3 +242,11 @@ rules:
   - '*'
   verbs:
   - '*'
+- apiGroups:
+  - workspace.devfile.io
+  resources:
+  - devworkspaces
+  verbs:
+  - delete
+  - get
+  - list

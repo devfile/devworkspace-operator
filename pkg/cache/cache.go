@@ -46,6 +46,10 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 	if err != nil {
 		return nil, err
 	}
+	cronJobObjectSelector, err := labels.Parse(fmt.Sprintf("%s=true", constants.DevWorkspaceWatchCronJobLabel))
+	if err != nil {
+		return nil, err
+	}
 	rbacObjectSelector, err := labels.Parse("controller.devfile.io/workspace-rbac=true")
 	if err != nil {
 		return nil, err
@@ -69,6 +73,9 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		},
 		&networkingv1.Ingress{}: {
 			Label: devworkspaceObjectSelector,
+		},
+		&batchv1.CronJob{}: {
+			Label: cronJobObjectSelector,
 		},
 		&corev1.ConfigMap{}: {
 			Label: configmapObjectSelector,

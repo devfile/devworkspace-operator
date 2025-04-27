@@ -219,6 +219,14 @@ spec:
         - apiGroups:
           - controller.devfile.io
           resources:
+          - devworkspaceoperatorconfigs
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - controller.devfile.io
+          resources:
           - devworkspaceroutings
           verbs:
           - '*'
@@ -313,6 +321,14 @@ spec:
           - '*'
           verbs:
           - '*'
+        - apiGroups:
+          - workspace.devfile.io
+          resources:
+          - devworkspaces
+          verbs:
+          - delete
+          - get
+          - list
         serviceAccountName: devworkspace-controller-serviceaccount
       deployments:
       - name: devworkspace-controller-manager

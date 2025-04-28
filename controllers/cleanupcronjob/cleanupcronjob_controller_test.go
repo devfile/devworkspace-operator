@@ -148,6 +148,34 @@ var _ = Describe("CleanupCronJobReconciler", func() {
 			Expect(reconciler.cron.Entries()).To(BeEmpty())
 		})
 
+		It("Should not start cron if dwOperatorConfig.Config is nil", func() {
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config:     nil,
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(reconciler.cron.Entries()).To(BeEmpty())
+		})
+
+		It("Should not start cron if dwOperatorConfig.Config.Workspace is nil", func() {
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: nil,
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(reconciler.cron.Entries()).To(BeEmpty())
+		})
+
 		It("Should not start cron if received event from different namespace", func() {
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: "other-namespace"},
@@ -185,7 +213,7 @@ var _ = Describe("CleanupCronJobReconciler", func() {
 			Expect(reconciler.cron.Entries()).To(BeEmpty())
 		})
 
-		It("Should do not start cron if pruning is disabled", func() {
+		It("Should not start cron if pruning is disabled", func() {
 			enabled := false
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
@@ -205,7 +233,7 @@ var _ = Describe("CleanupCronJobReconciler", func() {
 			Expect(reconciler.cron.Entries()).To(BeEmpty())
 		})
 
-		It("Should do not start cron if schedule is missing", func() {
+		It("Should not start cron if schedule is missing", func() {
 			enabled := true
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},

@@ -22,7 +22,7 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && sed
 
 RUN yum install --assumeyes -d1 python3-pip nodejs gettext && \
     pip3 install --upgrade pip && \
-    pip3 install --upgrade setuptools && \
+    pip3 install --ignore-installed --upgrade setuptools && \
     # Install yq
     pip3 install yq && \
     # Install kubectl

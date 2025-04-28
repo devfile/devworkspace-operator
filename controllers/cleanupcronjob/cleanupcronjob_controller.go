@@ -163,14 +163,25 @@ func (r *CleanupCronJobReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	cleanupConfig := dwOperatorConfig.Config.Workspace.CleanupCronJob
-	log = log.WithValues("CleanupCronJob", cleanupConfig)
-
-	if cleanupConfig == nil {
-		log.Info("DevWorkspaceOperatorConfig does not have cleanup configuration, stopping cron schedler and skipping reconciliation")
+	if dwOperatorConfig.Config == nil {
+		log.Info("DevWorkspaceOperatorConfig does not have config, stopping cron scheduler and skipping reconciliation")
 		r.stopCron(log)
 		return ctrl.Result{}, nil
 	}
+	if dwOperatorConfig.Config.Workspace == nil {
+		log.Info("DevWorkspaceOperatorConfig does not have workspace config, stopping cron scheduler and skipping reconciliation")
+		r.stopCron(log)
+		return ctrl.Result{}, nil
+	}
+	if dwOperatorConfig.Config.Workspace.CleanupCronJob == nil {
+		log.Info("DevWorkspaceOperatorConfig does not have cleanup configuration, stopping cron scheduler and skipping reconciliation")
+		r.stopCron(log)
+		return ctrl.Result{}, nil
+	}
+
+	cleanupConfig := dwOperatorConfig.Config.Workspace.CleanupCronJob
+	log = log.WithValues("CleanupCronJob", cleanupConfig)
+
 	if cleanupConfig.Enable == nil || !*cleanupConfig.Enable {
 		log.Info("DevWorkspace pruning is disabled, stopping cron scheduler and skipping reconciliation")
 		r.stopCron(log)

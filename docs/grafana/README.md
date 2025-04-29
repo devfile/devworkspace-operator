@@ -15,12 +15,9 @@ To quickly test metrics locally (without installing Prometheus Grafana in the cl
     ```
 2. Get the serviceaccount's token to enable local access to metrics
     ```bash
-    TOKEN=$(kubectl get secrets -o=json -n ${NAMESPACE} | jq -r '[.items[] |
-      select (
-        .type == "kubernetes.io/service-account-token" and
-        .metadata.annotations."kubernetes.io/service-account.name" == "devworkspace-controller-serviceaccount")][0].data.token' \
-      | base64 --decode)
+    TOKEN=$(kubectl create token devworkspace-controller-serviceaccount -n ${NAMESPACE} --duration=1h | base64 --decode)
     ```
+      NOTE: For development purposes, a non-expiring token can be created instead: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#manually-create-a-long-lived-api-token-for-a-serviceaccount
 3. In another terminal, use `kubectl port-forward` to expose the controller's service locally
     ```bash
     kubectl port-forward service/devworkspace-controller-metrics 8443:8443 &

@@ -76,3 +76,33 @@ name `devworkspace-operator-config` and exists in the namespace where the DevWor
 not already exist on the cluster, you must create it.
 - You'll need to terminate the `devworkspace-controller-manager` pod so that the replicaset can recreate it. The new pod
 will update the `devworkspace-webhook-server` deployment.
+
+## Configuring Cleanup CronJob
+
+The DevWorkspace cleanup job helps manage resources by removing DevWorkspaces that have not been started for a configurable period of time.
+
+**Note:** By default, the DevWorkspace cleanup job is disabled.
+
+You can control the behaviour of the DevWorkspace cleanup job through the `config.workspace.cleanupCronJob` section of the global DWOC::
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    cleanupCronJob:
+      enabled: true
+      dryRun: false
+      retainTime: 2592000
+      schedule: "0 0 1 * *"
+```
+
+Cleanup CronJob configuration fields:
+
+- **`enable`**: Set to `true` to enable the cleanup job, `false` to disable it. Default: `false`.
+- **`schedule`**: A Cron expression defining how often the cleanup job runs. Default: `"0 0 1 * *"` (first day of the month at midnight).
+- **`retainTime`**: The duration time in seconds since a DevWorkspace was last started before it is considered stale and eligible for cleanup. Default: 2592000 seconds (30 days).
+- **`dryRun`**: Set to `true` to run the cleanup job in dry-run mode. In this mode, the job logs which DevWorkspaces would be removed but does not actually delete them. Set to `false` to perform the actual deletion. Default: `false`.

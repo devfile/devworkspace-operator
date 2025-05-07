@@ -96,3 +96,8 @@ const (
 	// ProjectCloneDisable specifies that project cloning should be disabled.
 	ProjectCloneDisable = "disable"
 )
+
+const (
+	// SelectedNodeAnnotation annotation is added to a PVC that is triggered by a scheduler to be dynamically provisioned. Its value is the name of the selected node.
+	SelectedNodeAnnotation = "volume.kubernetes.io/selected-node"
+)

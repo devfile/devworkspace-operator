@@ -98,6 +98,6 @@ const (
 )
 
 const (
-	// This annotation is added to a PVC that is triggered by a scheduler to be dynamically provisioned. Its value is the name of the selected node.
+	// SelectedNodeAnnotation annotation is added to a PVC that is triggered by a scheduler to be dynamically provisioned. Its value is the name of the selected node.
 	SelectedNodeAnnotation = "volume.kubernetes.io/selected-node"
 )

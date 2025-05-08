@@ -731,6 +731,11 @@ func (in *WorkspaceConfig) DeepCopyInto(out *WorkspaceConfig) {
 		*out = new(StorageSizes)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.StorageAccessMode != nil {
+		in, out := &in.StorageAccessMode, &out.StorageAccessMode
+		*out = make([]v1.PersistentVolumeAccessMode, len(*in))
+		copy(*out, *in)
+	}
 	if in.PersistUserHome != nil {
 		in, out := &in.PersistUserHome, &out.PersistUserHome
 		*out = new(PersistentHomeConfig)

@@ -107,6 +107,9 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 				*deploymentStrategy = appsv1.RecreateDeploymentStrategyType
 			}
 		},
+		func(accessModes *[]corev1.PersistentVolumeAccessMode, c fuzz.Continue) {
+			accessModes = nil
+		},
 		fuzzQuantity,
 		fuzzResourceList,
 		fuzzResourceRequirements,
@@ -428,6 +431,9 @@ func TestMergeConfigHandlesProxySettings(t *testing.T) {
 func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	f := fuzz.New().NilChance(0).Funcs(
 		func(embeddedResource *runtime.RawExtension, c fuzz.Continue) {},
+		func(accessModes *[]corev1.PersistentVolumeAccessMode, c fuzz.Continue) {
+			accessModes = nil
+		},
 		fuzzQuantity,
 		fuzzResourceList,
 		fuzzResourceRequirements,

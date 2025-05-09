@@ -109,7 +109,7 @@ jobs:
       - name: Set up yq
         uses: actions/setup-python@b64ffcaf5b410884ad320a9cfac8866006a109aa # v4.8.0
         with:
-          python-version: 3.6
+          python-version: 3.8
       - name: Setup yq
         run: |
           python -m pip install --upgrade pip

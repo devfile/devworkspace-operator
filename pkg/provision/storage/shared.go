@@ -60,7 +60,10 @@ func WorkspaceNeedsStorage(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	return containerlib.AnyMountSources(workspace.Components)
 }
 
-func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity) (*corev1.PersistentVolumeClaim, error) {
+func getPVCSpec(name, namespace string, storageClass *string, size resource.Quantity, storageAccessMode []corev1.PersistentVolumeAccessMode) (*corev1.PersistentVolumeClaim, error) {
+	if storageAccessMode == nil || len(storageAccessMode) == 0 {
+		storageAccessMode = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+	}
 
 	return &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
@@ -68,9 +71,7 @@ func getPVCSpec(name, namespace string, storageClass *string, size resource.Quan
 			Namespace: namespace,
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteOnce,
-			},
+			AccessModes: storageAccessMode,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{
 					"storage": size,
@@ -99,7 +100,7 @@ func syncCommonPVC(namespace string, config *v1alpha1.OperatorConfiguration, clu
 		}
 	}
 
-	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, config.Workspace.StorageClassName, pvcSize)
+	pvc, err := getPVCSpec(config.Workspace.PVCName, namespace, config.Workspace.StorageClassName, pvcSize, config.Workspace.StorageAccessMode)
 	if err != nil {
 		return nil, err
 	}

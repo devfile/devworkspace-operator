@@ -22,6 +22,8 @@ import (
 	"runtime"
 	"testing"
 
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -118,8 +120,10 @@ var _ = BeforeSuite(func() {
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:   scheme.Scheme,
-		Port:     9443,
 		NewCache: cacheFunc,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 	})
 	Expect(err).NotTo(HaveOccurred())
 

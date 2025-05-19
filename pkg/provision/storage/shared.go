@@ -72,7 +72,7 @@ func getPVCSpec(name, namespace string, storageClass *string, size resource.Quan
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			AccessModes: storageAccessMode,
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{
 					"storage": size,
 				},

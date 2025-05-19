@@ -53,6 +53,8 @@ import (
 	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrl_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -118,9 +120,13 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer: ctrl_webhook.NewServer(ctrl_webhook.Options{
+			Port: 9443,
+		}),
 		HealthProbeBindAddress: ":6789",
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "8d217f93.devfile.io",

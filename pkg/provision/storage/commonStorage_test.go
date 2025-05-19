@@ -172,6 +172,7 @@ func TestTerminatingPVC(t *testing.T) {
 	}
 	testTime := metav1.Now()
 	commonPVC.SetDeletionTimestamp(&testTime)
+	commonPVC.SetFinalizers([]string{"test-finalizer"})
 
 	clusterAPI := sync.ClusterAPI{
 		Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(commonPVC).Build(),

@@ -24,6 +24,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/metrics"
@@ -34,6 +35,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
+	wsDefaults "github.com/devfile/devworkspace-operator/pkg/library/defaults"
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/home"
@@ -63,10 +65,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	wsDefaults "github.com/devfile/devworkspace-operator/pkg/library/defaults"
 )
 
 const (
@@ -701,7 +699,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	var emptyMapper = func(obj client.Object) []reconcile.Request {
+	var emptyMapper = func(ctx context.Context, obj client.Object) []reconcile.Request {
 		return []reconcile.Request{}
 	}
 
@@ -722,12 +720,12 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, handler.EnqueueRequestsFromMapFunc(dwRelatedPodsHandler)).
-		Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, handler.EnqueueRequestsFromMapFunc(r.dwPVCHandler)).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
-		Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
-		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configWatcher).
+		Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(dwRelatedPodsHandler)).
+		Watches(&corev1.PersistentVolumeClaim{}, handler.EnqueueRequestsFromMapFunc(r.dwPVCHandler)).
+		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
+		Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
+		Watches(&corev1.PersistentVolumeClaim{}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).
+		Watches(&controllerv1alpha1.DevWorkspaceOperatorConfig{}, handler.EnqueueRequestsFromMapFunc(emptyMapper), configWatcher).
 		WithEventFilter(devworkspacePredicates).
 		WithEventFilter(podPredicates).
 		Complete(r)

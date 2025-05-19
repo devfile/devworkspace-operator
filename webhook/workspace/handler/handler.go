@@ -28,7 +28,7 @@ type WebhookHandler struct {
 	ControllerUID    string
 	ControllerSAName string
 	Client           client.Client
-	Decoder          *admission.Decoder
+	Decoder          admission.Decoder
 }
 
 // parse decodes the old and new objects in an admission request. Returns an error if req.OldObject is empty (the field

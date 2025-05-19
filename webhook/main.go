@@ -24,6 +24,9 @@ import (
 	"runtime"
 	"syscall"
 
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/cache"
@@ -90,19 +93,26 @@ func main() {
 		os.Exit(1)
 	}
 
-	cacheFunc, err := cache.GetWebhooksCacheFunc()
+	cacheFunc, err := cache.GetWebhooksCacheFunc(namespace)
 	if err != nil {
 		log.Error(err, "failed to set up objects cache")
 		os.Exit(1)
 	}
 
+	webhookServer := webhook.NewServer(webhook.Options{
+		CertDir: server.WebhookServerCertDir,
+		Port:    server.WebhookServerPort,
+		Host:    server.WebhookServerHost,
+	})
+
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-		Namespace:              namespace,
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: ":6789",
-		CertDir:                server.WebhookServerCertDir,
 		NewCache:               cacheFunc,
 	})
 	if err != nil {
@@ -146,7 +156,7 @@ func createWebhooks(mgr manager.Manager) error {
 	}
 
 	log.Info("Configuring Webhooks")
-	if err := workspace.Configure(context.TODO()); err != nil {
+	if err := workspace.Configure(context.TODO(), mgr); err != nil {
 		return err
 	}
 	return nil

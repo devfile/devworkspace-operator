@@ -114,26 +114,10 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 					Tolerations:  globalConfig.Webhook.Tolerations,
 					Containers: []corev1.Container{
 						{
-							Name:  "kube-rbac-proxy",
-							Image: images.GetKubeRBACProxyImage(),
-							Args: []string{
-								"--secure-listen-address=0.0.0.0:9443",
-								"--upstream=http://127.0.0.1:8080/",
-								"--logtostderr=true",
-								"--v=10",
-							},
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          server.WebhookMetricsPortName,
-									ContainerPort: 9443,
-								},
-							},
-						},
-						{
 							Name:            "webhook-server",
 							Image:           images.GetWebhookServerImage(),
 							Command:         []string{"/usr/local/bin/entrypoint"},
-							Args:            []string{"/usr/local/bin/webhook-server", "--metrics-addr=127.0.0.1:8080"},
+							Args:            []string{"/usr/local/bin/webhook-server", "--metrics-addr=0.0.0.0:9443"},
 							ImagePullPolicy: corev1.PullAlways,
 							LivenessProbe: &corev1.Probe{
 								ProbeHandler: corev1.ProbeHandler{
@@ -180,6 +164,10 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 									Name:          "liveness-port",
 									ContainerPort: 6789,
 									Protocol:      corev1.ProtocolTCP,
+								},
+								{
+									Name:          server.WebhookMetricsPortName,
+									ContainerPort: 9443,
 								},
 							},
 							Env: []corev1.EnvVar{

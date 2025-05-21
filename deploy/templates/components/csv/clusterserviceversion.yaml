@@ -99,8 +99,6 @@ spec:
   relatedImages:
     - image: quay.io/devfile/devworkspace-controller:next
       name: devworkspace_webhook_server
-    - image: quay.io/brancz/kube-rbac-proxy:v0.13.1
-      name: kube_rbac_proxy
     - image: quay.io/devfile/project-clone:next
       name: project_clone
     - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338

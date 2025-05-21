@@ -10,16 +10,6 @@ spec:
       terminationGracePeriodSeconds: 10
       serviceAccountName: $(CONTROLLER_SERVICE_ACCOUNT)
       containers:
-        - name: kube-rbac-proxy
-          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1
-          args:
-          - "--secure-listen-address=0.0.0.0:8443"
-          - "--upstream=http://127.0.0.1:8080/"
-          - "--logtostderr=true"
-          - "--v=10"
-          ports:
-          - name: metrics
-            containerPort: 8443
         - name: devworkspace-controller
           image: quay.io/devfile/devworkspace-controller:next
           ports:
@@ -28,6 +18,8 @@ spec:
             - name: conversion
               protocol: TCP
               containerPort: 9443
+            - containerPort: 8443
+              name: metrics
           livenessProbe:
             failureThreshold: 5
             httpGet:
@@ -51,7 +43,7 @@ spec:
           args:
             - /usr/local/bin/devworkspace-controller
             - --enable-leader-election
-            - "--metrics-addr=127.0.0.1:8080"
+            - "--metrics-addr=0.0.0.0:8443"
           resources:
             limits:
               cpu: 3000m
@@ -92,5 +84,3 @@ spec:
               value: "quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1"
             - name: RELATED_IMAGE_project_clone
               value: "quay.io/devfile/project-clone:next"
-            - name: RELATED_IMAGE_kube_rbac_proxy
-              value: gcr.io/kubebuilder/kube-rbac-proxy:v0.13.1

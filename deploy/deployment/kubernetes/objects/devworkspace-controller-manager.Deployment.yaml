@@ -22,14 +22,12 @@ spec:
       - args:
         - /usr/local/bin/devworkspace-controller
         - --enable-leader-election
-        - --metrics-addr=127.0.0.1:8080
+        - --metrics-addr=0.0.0.0:8443
         env:
         - name: WEBHOOK_SECRET_NAME
           value: devworkspace-operator-webhook-cert
         - name: RELATED_IMAGE_devworkspace_webhook_server
           value: quay.io/devfile/devworkspace-controller:next
-        - name: RELATED_IMAGE_kube_rbac_proxy
-          value: quay.io/brancz/kube-rbac-proxy:v0.13.1
         - name: RELATED_IMAGE_project_clone
           value: quay.io/devfile/project-clone:next
         - name: WATCH_NAMESPACE
@@ -79,6 +77,8 @@ spec:
           protocol: TCP
         - containerPort: 6789
           name: liveness-port
+        - containerPort: 8443
+          name: metrics
         readinessProbe:
           failureThreshold: 3
           httpGet:
@@ -100,16 +100,6 @@ spec:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-tls-certs
           readOnly: true
-      - args:
-        - --secure-listen-address=0.0.0.0:8443
-        - --upstream=http://127.0.0.1:8080/
-        - --logtostderr=true
-        - --v=10
-        image: quay.io/brancz/kube-rbac-proxy:v0.13.1
-        name: kube-rbac-proxy
-        ports:
-        - containerPort: 8443
-          name: metrics
       serviceAccountName: devworkspace-controller-serviceaccount
       terminationGracePeriodSeconds: 10
       volumes:

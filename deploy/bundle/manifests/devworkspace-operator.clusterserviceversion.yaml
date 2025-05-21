@@ -349,7 +349,7 @@ spec:
               - args:
                 - /usr/local/bin/devworkspace-controller
                 - --enable-leader-election
-                - --metrics-addr=127.0.0.1:8080
+                - --metrics-addr=0.0.0.0:8443
                 env:
                 - name: WEBHOOK_SECRET_NAME
                   value: devworkspace-webhookserver-tls
@@ -406,6 +406,8 @@ spec:
                   protocol: TCP
                 - containerPort: 6789
                   name: liveness-port
+                - containerPort: 8443
+                  name: metrics
                 readinessProbe:
                   failureThreshold: 3
                   httpGet:
@@ -484,8 +486,6 @@ spec:
   relatedImages:
   - image: quay.io/devfile/devworkspace-controller:next
     name: devworkspace_webhook_server
-  - image: quay.io/brancz/kube-rbac-proxy:v0.13.1
-    name: kube_rbac_proxy
   - image: quay.io/devfile/project-clone:next
     name: project_clone
   - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338

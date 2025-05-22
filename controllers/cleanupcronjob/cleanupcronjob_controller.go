@@ -20,6 +20,13 @@ import (
 	"fmt"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/conditions"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,13 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 
 	"github.com/operator-framework/operator-lib/prune"
 	"github.com/robfig/cron/v3"
@@ -123,10 +123,9 @@ func (r *CleanupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("CleanupCronJob").
-		Watches(&source.Kind{Type: &controllerv1alpha1.DevWorkspaceOperatorConfig{}},
-			handler.EnqueueRequestsFromMapFunc(func(object client.Object) []ctrl.Request {
+		Watches(&controllerv1alpha1.DevWorkspaceOperatorConfig{},
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 				operatorNamespace, err := infrastructure.GetNamespace()
-
 				// Ignore events from other namespaces
 				if err != nil || object.GetNamespace() != operatorNamespace || object.GetName() != config.OperatorConfigName {
 					log.Info("Received event from different namespace, ignoring", "namespace", object.GetNamespace())

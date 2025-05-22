@@ -26,7 +26,7 @@ import (
 )
 
 // Mapping the pod to the devworkspace
-func dwRelatedPodsHandler(obj client.Object) []reconcile.Request {
+func dwRelatedPodsHandler(ctx context.Context, obj client.Object) []reconcile.Request {
 	labels := obj.GetLabels()
 	if _, ok := labels[constants.DevWorkspaceNameLabel]; !ok {
 		return []reconcile.Request{}
@@ -47,7 +47,7 @@ func dwRelatedPodsHandler(obj client.Object) []reconcile.Request {
 	}
 }
 
-func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Request {
+func (r *DevWorkspaceReconciler) dwPVCHandler(ctx context.Context, obj client.Object) []reconcile.Request {
 	if obj.GetDeletionTimestamp() == nil {
 		// Do not reconcile unless PVC is being deleted.
 		return []reconcile.Request{}
@@ -118,7 +118,7 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(obj client.Object) []reconcile.Req
 	return reconciles
 }
 
-func (r *DevWorkspaceReconciler) runningWorkspacesHandler(obj client.Object) []reconcile.Request {
+func (r *DevWorkspaceReconciler) runningWorkspacesHandler(ctx context.Context, obj client.Object) []reconcile.Request {
 	dwList := &dw.DevWorkspaceList{}
 	if err := r.Client.List(context.Background(), dwList, &client.ListOptions{Namespace: obj.GetNamespace()}); err != nil {
 		return []reconcile.Request{}

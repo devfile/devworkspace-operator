@@ -16,6 +16,9 @@ package cache
 import (
 	"fmt"
 
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	routev1 "github.com/openshift/api/route/v1"
@@ -55,7 +58,7 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		return nil, err
 	}
 
-	selectors := cache.SelectorsByObject{
+	selectors := map[client.Object]cache.ByObject{
 		&appsv1.Deployment{}: {
 			Label: devworkspaceObjectSelector,
 		},
@@ -94,25 +97,19 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 	if infrastructure.IsOpenShift() {
 		// Annoying quirk: cache.SelectorsByObject uses an internal struct for values (internal.Selector)
 		// so we _can't_ just add Routes here since we cannot initialize the corresponding value.
-		openShiftSelectors := cache.SelectorsByObject{
-			&routev1.Route{}: {
-				Label: devworkspaceObjectSelector,
-			},
-		}
-		for k, v := range openShiftSelectors {
-			selectors[k] = v
-		}
+		selectors[&routev1.Route{}] = cache.ByObject{Label: devworkspaceObjectSelector}
 	}
 
-	return cache.BuilderWithOptions(cache.Options{
-		SelectorsByObject: selectors,
-	}), nil
+	return func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+		opts.ByObject = selectors
+		return cache.New(config, opts)
+	}, nil
 }
 
 // GetWebhooksCacheFunc returns a new cache function that restricts the cluster items we store in the webhook
 // server's internal cache. This avoids issues where the webhook server's memory usage scales with the number
 // of objects on the cluster, potentially causing out of memory errors in large clusters.
-func GetWebhooksCacheFunc() (cache.NewCacheFunc, error) {
+func GetWebhooksCacheFunc(namespace string) (cache.NewCacheFunc, error) {
 	// The webhooks server needs to read pods to validate pods/exec requests. These pods must have the DevWorkspace ID and restricted
 	// access labels (other pods are automatically approved)
 	devworkspaceObjectSelector, err := labels.Parse(constants.DevWorkspaceIDLabel)
@@ -120,13 +117,17 @@ func GetWebhooksCacheFunc() (cache.NewCacheFunc, error) {
 		return nil, err
 	}
 
-	selectors := cache.SelectorsByObject{
+	selectors := map[client.Object]cache.ByObject{
 		&corev1.Pod{}: {
 			Label: devworkspaceObjectSelector,
 		},
 	}
 
-	return cache.BuilderWithOptions(cache.Options{
-		SelectorsByObject: selectors,
-	}), nil
+	return func(config *rest.Config, opts cache.Options) (cache.Cache, error) {
+		opts.ByObject = selectors
+		opts.DefaultNamespaces = map[string]cache.Config{
+			namespace: {},
+		}
+		return cache.New(config, opts)
+	}, nil
 }

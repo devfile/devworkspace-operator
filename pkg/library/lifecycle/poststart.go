@@ -21,12 +21,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-const redirectOutputFmt = `{
-%s
-} 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
+const (
+	// `tee` both stdout and stderr to files and to the main output streams.
+	redirectOutputFmt = `{
+  # This script block ensures its exit code is preserved
+  # while its stdout and stderr are tee'd.
+  _script_to_run() {
+    %s # This will be replaced by scriptWithTimeout
+  }
+  _script_to_run
+} 1> >(tee -a "/tmp/poststart-stdout.txt") 2> >(tee -a "/tmp/poststart-stderr.txt" >&2)
 `
+)
 
-func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container) error {
+func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout *int32) error {
 	if wksp.Events == nil || len(wksp.Events.PostStart) == 0 {
 		return nil
 	}
@@ -54,7 +62,7 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
 
-		postStartHandler, err := processCommandsForPostStart(commands)
+		postStartHandler, err := processCommandsForPostStart(commands, postStartTimeout)
 		if err != nil {
 			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
@@ -79,27 +87,64 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 //	  - |
 //	    cd <workingDir>
 //	    <commandline>
-func processCommandsForPostStart(commands []dw.Command) (*corev1.LifecycleHandler, error) {
-	var dwCommands []string
+func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32) (*corev1.LifecycleHandler, error) {
+	var commandScriptLines []string
 	for _, command := range commands {
 		execCmd := command.Exec
 		if len(execCmd.Env) > 0 {
 			return nil, fmt.Errorf("env vars in postStart command %s are unsupported", command.Id)
 		}
+		var singleCommandParts []string
 		if execCmd.WorkingDir != "" {
-			dwCommands = append(dwCommands, fmt.Sprintf("cd %s", execCmd.WorkingDir))
+			// Safely quote the working directory path
+			safeWorkingDir := strings.ReplaceAll(execCmd.WorkingDir, "'", `'\''`)
+			singleCommandParts = append(singleCommandParts, fmt.Sprintf("cd '%s'", safeWorkingDir))
 		}
-		dwCommands = append(dwCommands, execCmd.CommandLine)
+		if execCmd.CommandLine != "" {
+			singleCommandParts = append(singleCommandParts, execCmd.CommandLine)
+		}
+		if len(singleCommandParts) > 0 {
+			commandScriptLines = append(commandScriptLines, strings.Join(singleCommandParts, " && "))
+		}
 	}
 
-	joinedCommands := strings.Join(dwCommands, "\n")
+	originalUserScript := strings.Join(commandScriptLines, "\n")
+
+	scriptToExecute := "set -e\n" + originalUserScript
+	escapedUserScript := strings.ReplaceAll(scriptToExecute, "'", `'\''`)
+
+	scriptWithTimeout := fmt.Sprintf(`
+export POSTSTART_TIMEOUT_DURATION="%d"
+export POSTSTART_KILL_AFTER_DURATION="5"
+
+echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} s, kill after: ${POSTSTART_KILL_AFTER_DURATION} s" >&2
+
+# Run the user's script under the 'timeout' utility.
+timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c '%s'
+exit_code=$?
+
+# Check the exit code from 'timeout'
+if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+  echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+  echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code, including 124
+  echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+else
+  echo "[postStart hook] Commands completed successfully within the time limit." >&2
+fi
+
+exit $exit_code
+`, *postStartTimeout, escapedUserScript)
+
+	finalScriptForHook := fmt.Sprintf(redirectOutputFmt, scriptWithTimeout)
 
 	handler := &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
 			Command: []string{
 				"/bin/sh",
 				"-c",
-				fmt.Sprintf(redirectOutputFmt, joinedCommands),
+				finalScriptForHook,
 			},
 		},
 	}

@@ -1,11 +1,10 @@
-# Unsupported Devfile API
+= Unsupported Devfile API
 
 The following features of the Devfile API that are not yet supported by the DevWorkspace-Operator:
 
 [options="header"]
 |================================================================================================================================================================================================
 | DevFile feature                               | Related issue                                                                                                                                  
-| `components.container.annotation.service`     | https://github.com/devfile/devworkspace-operator/issues/799[Support setting annotations on services/endpoints from DevWorkspace]               
 | `components.container.dedicatedPod`           |                                                                                                                                                
 | `components.image`                            | https://github.com/eclipse/che/issues/21186[Support Devfile v2 outer loop components of type image and kubernetes]                             
 | `components.custom`                           |                                                                                                                                                

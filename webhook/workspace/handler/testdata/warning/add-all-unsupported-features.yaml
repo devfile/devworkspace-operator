@@ -17,8 +17,6 @@ input:
           image: testing-image
           dedicatedPod: true
           annotation:
-            service:
-              key: value
       - name: projects
         volume:
           ephemeral: true
@@ -43,5 +41,5 @@ input:
         - eventF
 
 output:
-  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].container.annotation.service, used by components: testing-container-1; components[].container.dedicatedPod, used by components: testing-container-1; components[].image, used by components: image-component; components[].custom, used by components: custom-component; events.postStop: eventD, eventE, eventF"
+  expectedWarning: "Unsupported Devfile features are present in this workspace. The following features will have no effect: components[].container.dedicatedPod, used by components: testing-container-1; components[].image, used by components: image-component; components[].custom, used by components: custom-component; events.postStop: eventD, eventE, eventF"
   newWarningsPresent: true

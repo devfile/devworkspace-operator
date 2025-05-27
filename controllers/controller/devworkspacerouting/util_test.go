@@ -51,6 +51,9 @@ const (
 
 	endpointAnnotationKey   = "endpoint-annotation-key"
 	endpointAnnotationValue = "endpoint-annotation-value"
+
+	serviceAnnotationKey   = "service-annotation-key"
+	serviceAnnotationValue = "service-annotation-value"
 )
 
 var (
@@ -96,6 +99,13 @@ func createDWR(workspaceID string, name string) *controllerv1alpha1.DevWorkspace
 			DevWorkspaceId: workspaceID,
 			RoutingClass:   controllerv1alpha1.DevWorkspaceRoutingBasic,
 			Endpoints:      machineEndpointsMap,
+			Service: map[string]controllerv1alpha1.Service{
+				testMachineName: {
+					Annotations: map[string]string{
+						serviceAnnotationKey: serviceAnnotationValue,
+					},
+				},
+			},
 			PodSelector: map[string]string{
 				constants.DevWorkspaceIDLabel: workspaceID,
 			},

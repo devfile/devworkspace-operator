@@ -43,11 +43,30 @@ var nginxIngressAnnotations = func(endpointName string, endpointAnnotations map[
 	return annotations
 }
 
+func mergeServiceAnnotations(sourceAnnotations map[string]string, serviceRoutingConfig controllerv1alpha1.Service) map[string]string {
+	annotations := make(map[string]string)
+	if sourceAnnotations != nil && len(sourceAnnotations) > 0 {
+		for k, v := range sourceAnnotations {
+			annotations[k] = v
+		}
+	}
+	if serviceRoutingConfig.Annotations != nil && len(serviceRoutingConfig.Annotations) > 0 {
+		for k, v := range serviceRoutingConfig.Annotations {
+			annotations[k] = v
+		}
+	}
+	return annotations
+}
+
 // Basic solver exposes endpoints without any authentication
 // According to the current cluster there is different behavior:
 // Kubernetes: use Ingresses without TLS
 // OpenShift: use Routes with TLS enabled
 type BasicSolver struct{}
+
+var routingSuffixSupplier = func() string {
+	return config.GetGlobalConfig().Routing.ClusterHostSuffix
+}
 
 var _ RoutingSolver = (*BasicSolver)(nil)
 
@@ -63,14 +82,14 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRou
 	routingObjects := RoutingObjects{}
 
 	// TODO: Use workspace-scoped ClusterHostSuffix to allow overriding
-	routingSuffix := config.GetGlobalConfig().Routing.ClusterHostSuffix
+	routingSuffix := routingSuffixSupplier()
 	if routingSuffix == "" {
 		return routingObjects, &RoutingInvalid{"basic routing requires .config.routing.clusterHostSuffix to be set in operator config"}
 	}
 
 	spec := routing.Spec
-	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
-	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
+	services := getServicesForEndpoints(spec, workspaceMeta)
+	services = append(services, GetDiscoverableServicesForEndpoints(spec, workspaceMeta)...)
 	routingObjects.Services = services
 	if infrastructure.IsOpenShift() {
 		routingObjects.Routes = getRoutesForSpec(routingSuffix, spec.Endpoints, workspaceMeta)

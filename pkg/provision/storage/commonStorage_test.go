@@ -136,7 +136,7 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 	}
 	commonPVC.Status.Phase = corev1.ClaimBound
 	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
+		Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(commonPVC).Build(),
 		Logger: zap.New(),
 	}
 
@@ -172,9 +172,10 @@ func TestTerminatingPVC(t *testing.T) {
 	}
 	testTime := metav1.Now()
 	commonPVC.SetDeletionTimestamp(&testTime)
+	commonPVC.SetFinalizers([]string{"test-finalizer"})
 
 	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
+		Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(commonPVC).Build(),
 		Logger: zap.New(),
 	}
 	testCase := loadTestCaseOrPanic(t, "testdata/common-storage/rewrites-volumes-for-common-pvc-strategy.yaml")

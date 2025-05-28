@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	webhookServerHost    = "0.0.0.0"
+	WebhookServerHost    = "0.0.0.0"
 	WebhookServerPort    = 8443
 	WebhookServerCertDir = "/tmp/k8s-webhook-server/serving-certs"
 
@@ -49,7 +49,7 @@ const (
 )
 
 var log = logf.Log.WithName("webhook.server")
-var webhookServer *webhook.Server
+var webhookServer webhook.Server
 var CABundle []byte
 
 var WebhookServerAppLabels = func() map[string]string {
@@ -97,15 +97,11 @@ func ConfigureWebhookServer(mgr manager.Manager) error {
 
 	webhookServer = mgr.GetWebhookServer()
 
-	webhookServer.Port = WebhookServerPort
-	webhookServer.Host = webhookServerHost
-	webhookServer.CertDir = WebhookServerCertDir
-
 	return nil
 }
 
 // GetWebhookServer returns webhook server if it's configured, or nil otherwise
-func GetWebhookServer() *webhook.Server {
+func GetWebhookServer() webhook.Server {
 	return webhookServer
 }
 

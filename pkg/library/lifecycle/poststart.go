@@ -76,23 +76,18 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 	return nil
 }
 
-// processCommandsForPostStart builds a lifecycle handler that runs the provided command(s)
-// The command has the format
-//
-// exec:
-//
-//	command:
-//	  - "/bin/sh"
-//	  - "-c"
-//	  - |
-//	    cd <workingDir>
-//	    <commandline>
-func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32) (*corev1.LifecycleHandler, error) {
+// buildUserScript takes a list of DevWorkspace commands and constructs a single
+// shell script string that executes them sequentially.
+func buildUserScript(commands []dw.Command) (string, error) {
 	var commandScriptLines []string
 	for _, command := range commands {
 		execCmd := command.Exec
+		if execCmd == nil {
+			// Should be caught by earlier validation, but good to be safe
+			return "", fmt.Errorf("exec command is nil for command ID %s", command.Id)
+		}
 		if len(execCmd.Env) > 0 {
-			return nil, fmt.Errorf("env vars in postStart command %s are unsupported", command.Id)
+			return "", fmt.Errorf("env vars in postStart command %s are unsupported", command.Id)
 		}
 		var singleCommandParts []string
 		if execCmd.WorkingDir != "" {
@@ -107,17 +102,18 @@ func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32)
 			commandScriptLines = append(commandScriptLines, strings.Join(singleCommandParts, " && "))
 		}
 	}
+	return strings.Join(commandScriptLines, "\n"), nil
+}
 
-	originalUserScript := strings.Join(commandScriptLines, "\n")
-
-	scriptToExecute := "set -e\n" + originalUserScript
-	escapedUserScript := strings.ReplaceAll(scriptToExecute, "'", `'\''`)
-
-	scriptWithTimeout := fmt.Sprintf(`
+// generateScriptWithTimeout wraps a given user script with timeout logic,
+// environment variable exports, and specific exit code handling.
+// The killAfterDurationSeconds is hardcoded to 5s within this generated script.
+func generateScriptWithTimeout(escapedUserScript string, timeoutSeconds int32) string {
+	return fmt.Sprintf(`
 export POSTSTART_TIMEOUT_DURATION="%d"
 export POSTSTART_KILL_AFTER_DURATION="5"
 
-echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} s, kill after: ${POSTSTART_KILL_AFTER_DURATION} s" >&2
+echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
 
 # Run the user's script under the 'timeout' utility.
 timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c '%s'
@@ -128,16 +124,38 @@ if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
   echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
 elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
   echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
-elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code, including 124
+elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
   echo "[postStart hook] Commands failed with exit code $exit_code." >&2
 else
   echo "[postStart hook] Commands completed successfully within the time limit." >&2
 fi
 
 exit $exit_code
-`, *postStartTimeout, escapedUserScript)
+`, timeoutSeconds, escapedUserScript)
+}
 
-	finalScriptForHook := fmt.Sprintf(redirectOutputFmt, scriptWithTimeout)
+// processCommandsForPostStart processes a list of DevWorkspace commands
+// and generates a corev1.LifecycleHandler for the PostStart lifecycle hook.
+func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32) (*corev1.LifecycleHandler, error) {
+	if postStartTimeout == nil {
+		// The 'timeout' command treats 0 as "no timeout", so it is disabled by default.
+		defaultTimeout := int32(0)
+		postStartTimeout = &defaultTimeout
+	}
+
+	originalUserScript, err := buildUserScript(commands)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build aggregated user script: %w", err)
+	}
+
+	// The user script needs 'set -e' to ensure it exits on error.
+	// This script is then passed to `sh -c '...'`, so single quotes within it must be escaped.
+	scriptToExecute := "set -e\n" + originalUserScript
+	escapedUserScriptForTimeoutWrapper := strings.ReplaceAll(scriptToExecute, "'", `'\''`)
+
+	fullScriptWithTimeout := generateScriptWithTimeout(escapedUserScriptForTimeoutWrapper, *postStartTimeout)
+
+	finalScriptForHook := fmt.Sprintf(redirectOutputFmt, fullScriptWithTimeout)
 
 	handler := &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{

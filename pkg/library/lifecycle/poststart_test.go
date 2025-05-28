@@ -75,7 +75,7 @@ func TestAddPostStartLifecycleHooks(t *testing.T) {
 	tests := loadAllPostStartTestCasesOrPanic(t, "./testdata/postStart")
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.testPath), func(t *testing.T) {
-			err := AddPostStartLifecycleHooks(tt.Input.Devfile, tt.Input.Containers)
+			err := AddPostStartLifecycleHooks(tt.Input.Devfile, tt.Input.Containers, nil)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -84,6 +84,341 @@ func TestAddPostStartLifecycleHooks(t *testing.T) {
 				}
 				assert.Equal(t, tt.Output.Containers, tt.Input.Containers, "Containers should be updated to match expected output")
 			}
+		})
+	}
+}
+
+func TestBuildUserScript(t *testing.T) {
+	tests := []struct {
+		name           string
+		commands       []dw.Command
+		expectedScript string
+		expectedErr    string
+	}{
+		{
+			name:           "No commands",
+			commands:       []dw.Command{},
+			expectedScript: "",
+			expectedErr:    "",
+		},
+		{
+			name: "Single command without workingDir",
+			commands: []dw.Command{
+				{
+					Id: "cmd1",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "echo hello",
+							Component:   "tools",
+						},
+					},
+				},
+			},
+			expectedScript: "echo hello",
+			expectedErr:    "",
+		},
+		{
+			name: "Single command with workingDir",
+			commands: []dw.Command{
+				{
+					Id: "cmd1",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "ls -la",
+							WorkingDir:  "/projects/app",
+							Component:   "tools",
+						},
+					},
+				},
+			},
+			expectedScript: "cd '/projects/app' && ls -la",
+			expectedErr:    "",
+		},
+		{
+			name: "Single command with only workingDir",
+			commands: []dw.Command{
+				{
+					Id: "cmd1",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							WorkingDir: "/data",
+							Component:  "tools",
+						},
+					},
+				},
+			},
+			expectedScript: "cd '/data'",
+			expectedErr:    "",
+		},
+		{
+			name: "Single command with workingDir containing single quote",
+			commands: []dw.Command{
+				{
+					Id: "cmd1",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "cat file.txt",
+							WorkingDir:  "/projects/app's",
+							Component:   "tools",
+						},
+					},
+				},
+			},
+			expectedScript: "cd '/projects/app'\\''s' && cat file.txt",
+			expectedErr:    "",
+		},
+		{
+			name: "Multiple commands",
+			commands: []dw.Command{
+				{
+					Id: "cmd1",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "npm install",
+							WorkingDir:  "/projects/frontend",
+							Component:   "tools",
+						},
+					},
+				},
+				{
+					Id: "cmd2",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "npm start",
+							Component:   "tools",
+						},
+					},
+				},
+				{
+					Id: "cmd3",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							WorkingDir:  "/projects/backend",
+							CommandLine: "mvn spring-boot:run",
+							Component:   "tools",
+						},
+					},
+				},
+			},
+			expectedScript: "cd '/projects/frontend' && npm install\nnpm start\ncd '/projects/backend' && mvn spring-boot:run",
+			expectedErr:    "",
+		},
+		{
+			name: "Command with unsupported Env vars",
+			commands: []dw.Command{
+				{
+					Id: "cmd-with-env",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "echo $MY_VAR",
+							Component:   "tools",
+							Env: []dw.EnvVar{
+								{Name: "MY_VAR", Value: "test"},
+							},
+						},
+					},
+				},
+			},
+			expectedScript: "",
+			expectedErr:    "env vars in postStart command cmd-with-env are unsupported",
+		},
+		{
+			name: "Command with nil Exec field",
+			commands: []dw.Command{
+				{
+					Id:           "cmd-nil-exec",
+					CommandUnion: dw.CommandUnion{Exec: nil},
+				},
+			},
+			expectedScript: "",
+			expectedErr:    "exec command is nil for command ID cmd-nil-exec",
+		},
+		{
+			name: "Command with empty CommandLine and no WorkingDir",
+			commands: []dw.Command{
+				{
+					Id: "cmd-empty",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "",
+							WorkingDir:  "",
+							Component:   "tools",
+						},
+					},
+				},
+				{
+					Id: "cmd-after-empty",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "echo 'still works'",
+							Component:   "tools",
+						},
+					},
+				},
+			},
+			expectedScript: "echo 'still works'", // The empty command should result in no line
+			expectedErr:    "",
+		},
+		{
+			name: "Command with only CommandLine (empty working dir)",
+			commands: []dw.Command{
+				{
+					Id: "cmd-empty-wdir",
+					CommandUnion: dw.CommandUnion{
+						Exec: &dw.ExecCommand{
+							CommandLine: "pwd",
+							WorkingDir:  "",
+							Component:   "tools",
+						},
+					},
+				},
+			},
+			expectedScript: "pwd",
+			expectedErr:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script, err := buildUserScript(tt.commands)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedScript, script)
+			}
+		})
+	}
+}
+
+func TestGenerateScriptWithTimeout(t *testing.T) {
+	tests := []struct {
+		name              string
+		escapedUserScript string
+		timeoutSeconds    int32
+		expectedScript    string
+	}{
+		{
+			name:              "Basic script with timeout",
+			escapedUserScript: "echo 'hello world'\nsleep 1",
+			timeoutSeconds:    10,
+			expectedScript: `
+export POSTSTART_TIMEOUT_DURATION="10"
+export POSTSTART_KILL_AFTER_DURATION="5"
+
+echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+
+# Run the user's script under the 'timeout' utility.
+timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c 'echo 'hello world'
+sleep 1'
+exit_code=$?
+
+# Check the exit code from 'timeout'
+if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+  echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+  echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
+  echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+else
+  echo "[postStart hook] Commands completed successfully within the time limit." >&2
+fi
+
+exit $exit_code
+`,
+		},
+		{
+			name:              "Script with zero timeout (no timeout)",
+			escapedUserScript: "echo 'running indefinitely...'",
+			timeoutSeconds:    0,
+			expectedScript: `
+export POSTSTART_TIMEOUT_DURATION="0"
+export POSTSTART_KILL_AFTER_DURATION="5"
+
+echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+
+# Run the user's script under the 'timeout' utility.
+timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c 'echo 'running indefinitely...''
+exit_code=$?
+
+# Check the exit code from 'timeout'
+if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+  echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+  echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
+  echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+else
+  echo "[postStart hook] Commands completed successfully within the time limit." >&2
+fi
+
+exit $exit_code
+`,
+		},
+		{
+			name:              "Empty user script",
+			escapedUserScript: "",
+			timeoutSeconds:    5,
+			expectedScript: `
+export POSTSTART_TIMEOUT_DURATION="5"
+export POSTSTART_KILL_AFTER_DURATION="5"
+
+echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+
+# Run the user's script under the 'timeout' utility.
+timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c ''
+exit_code=$?
+
+# Check the exit code from 'timeout'
+if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+  echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+  echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
+  echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+else
+  echo "[postStart hook] Commands completed successfully within the time limit." >&2
+fi
+
+exit $exit_code
+`,
+		},
+		{
+			name:              "User script with already escaped single quotes",
+			escapedUserScript: "echo 'it'\\''s complex'",
+			timeoutSeconds:    30,
+			expectedScript: `
+export POSTSTART_TIMEOUT_DURATION="30"
+export POSTSTART_KILL_AFTER_DURATION="5"
+
+echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+
+# Run the user's script under the 'timeout' utility.
+timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c 'echo 'it'\''s complex''
+exit_code=$?
+
+# Check the exit code from 'timeout'
+if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+  echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+  echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
+  echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+else
+  echo "[postStart hook] Commands completed successfully within the time limit." >&2
+fi
+
+exit $exit_code
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			script := generateScriptWithTimeout(tt.escapedUserScript, tt.timeoutSeconds)
+			assert.Equal(t, tt.expectedScript, script)
 		})
 	}
 }

@@ -22,9 +22,37 @@ output:
         postStart:
           exec:
             command:
-              - "/bin/sh"
-              - "-c"
+              - /bin/sh
+              - -c
               - |
                 {
-                echo 'hello world'
-                } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
+                  # This script block ensures its exit code is preserved
+                  # while its stdout and stderr are tee'd.
+                  _script_to_run() {
+                    
+                export POSTSTART_TIMEOUT_DURATION="0"
+                export POSTSTART_KILL_AFTER_DURATION="5"
+
+                echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+
+                # Run the user's script under the 'timeout' utility.
+                timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c 'set -e
+                echo '\''hello world'\'''
+                exit_code=$?
+
+                # Check the exit code from 'timeout'
+                if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+                  echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+                elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+                  echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+                elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
+                  echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+                else
+                  echo "[postStart hook] Commands completed successfully within the time limit." >&2
+                fi
+
+                exit $exit_code
+                 # This will be replaced by scriptWithTimeout
+                  }
+                  _script_to_run
+                } 1> >(tee -a "/tmp/poststart-stdout.txt") 2> >(tee -a "/tmp/poststart-stderr.txt" >&2)

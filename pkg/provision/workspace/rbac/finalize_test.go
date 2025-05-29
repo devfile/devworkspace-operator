@@ -33,6 +33,7 @@ func TestDeletesRoleAndRolebindingWhenLastWorkspaceIsDeleted(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 	testdw := getTestDevWorkspace("test-devworkspace")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, newRole, newRolebinding)
 	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
@@ -55,6 +56,8 @@ func TestDeletesRoleAndRolebindingWhenAllWorkspacesAreDeleted(t *testing.T) {
 	testdw2 := getTestDevWorkspace("test-devworkspace2")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	testdw2.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
+	testdw2.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newRole, newRolebinding)
 
 	retryErr := &dwerrors.RetryError{}
@@ -77,6 +80,7 @@ func TestShouldRemoveWorkspaceSAFromRolebindingWhenDeleted(t *testing.T) {
 	testdw := getTestDevWorkspace("test-devworkspace")
 	testdw2 := getTestDevWorkspace("test-devworkspace2")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	testdwSAName := common.ServiceAccountName(testdw)
 	testdw2SAName := common.ServiceAccountName(testdw2)
 	testrb := newRolebinding.DeepCopy()
@@ -114,6 +118,7 @@ func TestFinalizeDoesNothingWhenRolebindingDoesNotExist(t *testing.T) {
 	testdw := getTestDevWorkspace("test-devworkspace")
 	testdw2 := getTestDevWorkspace("test-devworkspace2")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newRole)
 	err := FinalizeRBAC(testdw, api)
 	assert.NoError(t, err, "Should not return error once rolebinding is in sync")
@@ -133,6 +138,7 @@ func TestDeletesSCCRoleAndRolebindingWhenLastWorkspaceIsDeleted(t *testing.T) {
 	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw2 := getTestDevWorkspace("test-devworkspace2")
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newSCCRole, newSCCRolebinding)
 	retryErr := &dwerrors.RetryError{}
 	err := FinalizeRBAC(testdw, api)
@@ -155,6 +161,8 @@ func TestDeletesSCCRoleAndRolebindingWhenAllWorkspacesAreDeleted(t *testing.T) {
 	testdw2 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace2", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
 	testdw2.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
+	testdw2.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newSCCRole, newSCCRolebinding)
 
 	retryErr := &dwerrors.RetryError{}
@@ -177,6 +185,7 @@ func TestShouldRemoveWorkspaceSAFromSCCRolebindingWhenDeleted(t *testing.T) {
 	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw2 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace2", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	testdwSAName := common.ServiceAccountName(testdw)
 	testdw2SAName := common.ServiceAccountName(testdw2)
 	testrb := newSCCRolebinding.DeepCopy()
@@ -214,6 +223,7 @@ func TestFinalizeDoesNothingWhenSCCRolebindingDoesNotExist(t *testing.T) {
 	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw2 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace2", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
 	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, newSCCRole)
 	err := FinalizeRBAC(testdw, api)
 	assert.NoError(t, err, "Should not return error once rolebinding is in sync")

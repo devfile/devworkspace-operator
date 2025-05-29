@@ -107,6 +107,9 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 				*deploymentStrategy = appsv1.RecreateDeploymentStrategyType
 			}
 		},
+		func(accessModes *[]corev1.PersistentVolumeAccessMode, c fuzz.Continue) {
+			accessModes = nil
+		},
 		fuzzQuantity,
 		fuzzResourceList,
 		fuzzResourceRequirements,
@@ -428,6 +431,9 @@ func TestMergeConfigHandlesProxySettings(t *testing.T) {
 func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	f := fuzz.New().NilChance(0).Funcs(
 		func(embeddedResource *runtime.RawExtension, c fuzz.Continue) {},
+		func(accessModes *[]corev1.PersistentVolumeAccessMode, c fuzz.Continue) {
+			accessModes = nil
+		},
 		fuzzQuantity,
 		fuzzResourceList,
 		fuzzResourceRequirements,
@@ -438,6 +444,24 @@ func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	f.Fuzz(expectedConfig)
 	mergeConfig(expectedConfig, actualConfig)
 	assert.Equal(t, expectedConfig, actualConfig, "merging configs should merge all fields")
+}
+
+func TestMergeConfigMergesStorageAccessMode(t *testing.T) {
+	// Given
+	expectedConfig := &v1alpha1.OperatorConfiguration{
+		Workspace: &v1alpha1.WorkspaceConfig{
+			StorageAccessMode: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteMany,
+			},
+		},
+	}
+	actualConfig := &v1alpha1.OperatorConfiguration{}
+
+	// When
+	mergeConfig(expectedConfig, actualConfig)
+
+	// Then
+	assert.Equal(t, expectedConfig.Workspace.StorageAccessMode, actualConfig.Workspace.StorageAccessMode)
 }
 
 func fuzzQuantity(q *resource.Quantity, c fuzz.Continue) {

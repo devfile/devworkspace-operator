@@ -31,6 +31,23 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+var (
+	// reTerminatedSigterm matches: "[postStart hook] Commands terminated by SIGTERM (likely timed out after ...s). Exit code 143."
+	reTerminatedSigterm = regexp.MustCompile(`(\\[postStart hook\\] Commands terminated by SIGTERM \\(likely timed out after [^)]+?\\)\\. Exit code 143\\.)`)
+
+	// reKilledSigkill matches: "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ...s expired). Exit code 137."
+	reKilledSigkill = regexp.MustCompile(`(\\[postStart hook\\] Commands forcefully killed by SIGKILL \\(likely after --kill-after [^)]+?\\)\\. Exit code 137\\.)`)
+
+	// reGenericFailedExitCode matches: "[postStart hook] Commands failed with exit code ..." (for any other script-reported non-zero exit code)
+	reGenericFailedExitCode = regexp.MustCompile(`(\\[postStart hook\\] Commands failed with exit code \\d+\\.)`)
+
+	// reKubeletInternalMessage regex to capture Kubelet's explicit message field content if it exists
+	reKubeletInternalMessage = regexp.MustCompile(`message:\\s*"([^"]*)"`)
+
+	// reKubeletExitCode regex to capture Kubelet's reported exit code for the hook command
+	reKubeletExitCode = regexp.MustCompile(`exited with (\\d+):`)
+)
+
 var containerFailureStateReasons = []string{
 	"CrashLoopBackOff",
 	"ImagePullBackOff",
@@ -166,25 +183,7 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, ignoredEvents []string,
 // getConcisePostStartFailureMessage tries to parse the Kubelet's verbose message
 // for a PostStartHookError into a more user-friendly one.
 func getConcisePostStartFailureMessage(kubeletMsg string) string {
-
-	/* regexes for specific messages from our postStart script's output */
-
-	// matches: "[postStart hook] Commands terminated by SIGTERM (likely timed out after ...s). Exit code 143."
-	reTerminatedSigterm := regexp.MustCompile(`(\[postStart hook\] Commands terminated by SIGTERM \(likely timed out after [^)]+?\)\. Exit code 143\.)`)
-
-	// matches: "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ...s expired). Exit code 137."
-	reKilledSigkill := regexp.MustCompile(`(\[postStart hook\] Commands forcefully killed by SIGKILL \(likely after --kill-after [^)]+?\)\. Exit code 137\.)`)
-
-	// matches: "[postStart hook] Commands failed with exit code ..." (for any other script-reported non-zero exit code)
-	reGenericFailedExitCode := regexp.MustCompile(`(\[postStart hook\] Commands failed with exit code \d+\.)`)
-
-	// regex to capture Kubelet's explicit message field content if it exists
-	reKubeletInternalMessage := regexp.MustCompile(`message:\s*"([^"]*)"`)
-
-	// regex to capture Kubelet's reported exit code for the hook command
-	reKubeletExitCode := regexp.MustCompile(`exited with (\d+):`)
-
-	/* 1: check Kubelet's explicit `message: "..."` field for the specific output */
+	/* 1: check Kubelet's explicit 'message: "..."' field for the specific output */
 
 	kubeletInternalMsgMatch := reKubeletInternalMessage.FindStringSubmatch(kubeletMsg)
 	if len(kubeletInternalMsgMatch) > 1 && kubeletInternalMsgMatch[1] != "" {

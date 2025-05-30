@@ -33,19 +33,19 @@ import (
 
 var (
 	// reTerminatedSigterm matches: "[postStart hook] Commands terminated by SIGTERM (likely timed out after ...s). Exit code 143."
-	reTerminatedSigterm = regexp.MustCompile(`(\\[postStart hook\\] Commands terminated by SIGTERM \\(likely timed out after [^)]+?\\)\\. Exit code 143\\.)`)
+	reTerminatedSigterm = regexp.MustCompile(`\[postStart hook\] Commands terminated by SIGTERM \(likely timed out after \d+[^\)]+?\)\. Exit code 143\.`)
 
 	// reKilledSigkill matches: "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ...s expired). Exit code 137."
-	reKilledSigkill = regexp.MustCompile(`(\\[postStart hook\\] Commands forcefully killed by SIGKILL \\(likely after --kill-after [^)]+?\\)\\. Exit code 137\\.)`)
+	reKilledSigkill = regexp.MustCompile(`\[postStart hook\] Commands forcefully killed by SIGKILL \(likely after --kill-after \d+[^\)]+?\)\. Exit code 137\.`)
 
 	// reGenericFailedExitCode matches: "[postStart hook] Commands failed with exit code ..." (for any other script-reported non-zero exit code)
-	reGenericFailedExitCode = regexp.MustCompile(`(\\[postStart hook\\] Commands failed with exit code \\d+\\.)`)
+	reGenericFailedExitCode = regexp.MustCompile(`\[postStart hook\] Commands failed with exit code \d+\.`)
 
 	// reKubeletInternalMessage regex to capture Kubelet's explicit message field content if it exists
-	reKubeletInternalMessage = regexp.MustCompile(`message:\\s*"([^"]*)"`)
+	reKubeletInternalMessage = regexp.MustCompile(`message:\s*"([^"]*)"`)
 
 	// reKubeletExitCode regex to capture Kubelet's reported exit code for the hook command
-	reKubeletExitCode = regexp.MustCompile(`exited with (\\d+):`)
+	reKubeletExitCode = regexp.MustCompile(`exited with (\d+):`)
 )
 
 var containerFailureStateReasons = []string{

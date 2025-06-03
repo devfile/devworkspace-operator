@@ -119,7 +119,7 @@ _WAS_TIMEOUT_USED="false" # Use strings "true" or "false" for shell boolean
 
 if command -v timeout >/dev/null 2>&1; then
   echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
-  _TIMEOUT_COMMAND_PART="timeout --preserve-status --kill-after=\"${POSTSTART_KILL_AFTER_DURATION}\" \"${POSTSTART_TIMEOUT_DURATION}\""
+  _TIMEOUT_COMMAND_PART="timeout --preserve-status --kill-after=${POSTSTART_KILL_AFTER_DURATION} ${POSTSTART_TIMEOUT_DURATION}"
   _WAS_TIMEOUT_USED="true"
 else
   echo "[postStart hook] WARNING: 'timeout' utility not found. Executing commands without timeout." >&2

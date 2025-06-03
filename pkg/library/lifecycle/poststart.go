@@ -108,26 +108,44 @@ func buildUserScript(commands []dw.Command) (string, error) {
 // generateScriptWithTimeout wraps a given user script with timeout logic,
 // environment variable exports, and specific exit code handling.
 // The killAfterDurationSeconds is hardcoded to 5s within this generated script.
+// It conditionally prefixes the user script with the timeout command if available.
 func generateScriptWithTimeout(escapedUserScript string, timeoutSeconds int32) string {
 	return fmt.Sprintf(`
 export POSTSTART_TIMEOUT_DURATION="%d"
 export POSTSTART_KILL_AFTER_DURATION="5"
 
-echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+_TIMEOUT_COMMAND_PART=""
+_WAS_TIMEOUT_USED="false" # Use strings "true" or "false" for shell boolean
 
-# Run the user's script under the 'timeout' utility.
-timeout --preserve-status --kill-after="${POSTSTART_KILL_AFTER_DURATION}" "${POSTSTART_TIMEOUT_DURATION}" /bin/sh -c '%s'
+if command -v timeout >/dev/null 2>&1; then
+  echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+  _TIMEOUT_COMMAND_PART="timeout --preserve-status --kill-after=\"${POSTSTART_KILL_AFTER_DURATION}\" \"${POSTSTART_TIMEOUT_DURATION}\""
+  _WAS_TIMEOUT_USED="true"
+else
+  echo "[postStart hook] WARNING: 'timeout' utility not found. Executing commands without timeout." >&2
+fi
+
+# Execute the user's script
+${_TIMEOUT_COMMAND_PART} /bin/sh -c '%s'
 exit_code=$?
 
-# Check the exit code from 'timeout'
-if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
-  echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
-elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
-  echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
-elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
-  echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+# Check the exit code based on whether timeout was attempted
+if [ "$_WAS_TIMEOUT_USED" = "true" ]; then
+  if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+    echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+  elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+    echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+  elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
+    echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+  else
+    echo "[postStart hook] Commands completed successfully within the time limit." >&2
+  fi
 else
-  echo "[postStart hook] Commands completed successfully within the time limit." >&2
+  if [ $exit_code -ne 0 ]; then
+    echo "[postStart hook] Commands failed with exit code $exit_code (no timeout)." >&2
+  else
+    echo "[postStart hook] Commands completed successfully (no timeout)." >&2
+  fi
 fi
 
 exit $exit_code

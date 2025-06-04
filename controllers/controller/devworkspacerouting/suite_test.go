@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
@@ -86,7 +87,7 @@ var _ = BeforeSuite(func() {
 			filepath.Join(".", "testdata", "route.crd.yaml"),
 		},
 		ErrorIfCRDPathMissing: true,
-		BinaryAssetsDirectory: filepath.Join("..", "..", "..", "bin", "k8s", "1.24.2-linux-amd64"),
+		BinaryAssetsDirectory: filepath.Join("..", "..", "..", "bin", "k8s", "1.24.2-"+runtime.GOOS+"-"+runtime.GOARCH),
 	}
 
 	cfg, err := testEnv.Start()

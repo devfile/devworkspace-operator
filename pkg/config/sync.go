@@ -428,6 +428,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.CleanupCronJob.Schedule = from.Workspace.CleanupCronJob.Schedule
 			}
 		}
+
+		if from.Workspace.PostStartTimeout != nil {
+			to.Workspace.PostStartTimeout = from.Workspace.PostStartTimeout
+		}
 	}
 }
 

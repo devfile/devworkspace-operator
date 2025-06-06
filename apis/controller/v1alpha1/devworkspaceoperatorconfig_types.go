@@ -186,6 +186,16 @@ type WorkspaceConfig struct {
 	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
 	// CleanupCronJobConfig defines configuration options for a cron job that automatically cleans up stale DevWorkspaces.
 	CleanupCronJob *CleanupCronJobConfig `json:"cleanupCronJob,omitempty"`
+	// PostStartTimeout defines the maximum duration the PostStart hook can run
+	// before it is automatically failed. This timeout is used for the postStart lifecycle hook
+	// that is used to run commands in the workspace container. The timeout is specified in seconds.
+	// If not specified, the timeout is disabled (0 seconds).
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default:=0
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Type=integer
+	// +kubebuilder:validation:Format=int32
+	PostStartTimeout *int32 `json:"postStartTimeout,omitempty"`
 }
 
 type WebhookConfig struct {

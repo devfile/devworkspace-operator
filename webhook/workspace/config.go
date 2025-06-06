@@ -20,6 +20,8 @@ import (
 	"errors"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/webhook/server"
@@ -34,7 +36,7 @@ import (
 )
 
 // Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
-func Configure(ctx context.Context) error {
+func Configure(ctx context.Context, mgr manager.Manager) error {
 	log.Info("Configuring devworkspace webhooks")
 	c, err := createClient()
 	if err != nil {
@@ -86,7 +88,7 @@ func Configure(ctx context.Context) error {
 		log.Info("Created devworkspace mutating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID, saName)})
+	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID, saName, mgr)})
 
 	if err := c.Create(ctx, validateWebhookCfg); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -109,7 +111,7 @@ func Configure(ctx context.Context) error {
 		log.Info("Created devworkspace validating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID, saName)})
+	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID, saName, mgr)})
 
 	return nil
 }

@@ -22,6 +22,8 @@ import (
 	"os"
 	"runtime"
 
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting"
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/pkg/cache"
@@ -53,6 +55,8 @@ import (
 	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrl_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -92,7 +96,7 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-addr", ":8443", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -118,9 +122,14 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress:    metricsAddr,
+			FilterProvider: filters.WithAuthenticationAndAuthorization,
+		},
+		WebhookServer: ctrl_webhook.NewServer(ctrl_webhook.Options{
+			Port: 9443,
+		}),
 		HealthProbeBindAddress: ":6789",
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "8d217f93.devfile.io",

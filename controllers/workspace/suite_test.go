@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
@@ -87,7 +88,7 @@ var _ = BeforeSuite(func() {
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "deploy", "templates", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
-		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s", "1.24.2-linux-amd64"),
+		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s", fmt.Sprintf("1.24.2-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
 	cfg, err := testEnv.Start()

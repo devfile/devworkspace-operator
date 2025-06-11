@@ -135,6 +135,9 @@ type WorkspaceConfig struct {
 	// DefaultStorageSize defines an optional struct with fields to specify the sizes of Persistent Volume Claims for storage
 	// classes used by DevWorkspaces.
 	DefaultStorageSize *StorageSizes `json:"defaultStorageSize,omitempty"`
+	// StorageAccessMode are the desired access modes the volume should have. It defaults
+	// to ReadWriteOnce if not specified
+	StorageAccessMode []corev1.PersistentVolumeAccessMode `json:"storageAccessMode,omitempty"`
 	// PersistUserHome defines configuration options for persisting the `/home/user/`
 	// directory in workspaces.
 	PersistUserHome *PersistentHomeConfig `json:"persistUserHome,omitempty"`

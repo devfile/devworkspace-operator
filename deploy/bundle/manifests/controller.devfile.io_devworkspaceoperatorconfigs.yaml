@@ -2988,6 +2988,13 @@ spec:
                           type: object
                         type: array
                     type: object
+                  storageAccessMode:
+                    description: |-
+                      StorageAccessMode are the desired access modes the volume should have. It defaults
+                      to ReadWriteOnce if not specified
+                    items:
+                      type: string
+                    type: array
                   storageClassName:
                     description: |-
                       StorageClassName defines an optional storageClass to use for persistent

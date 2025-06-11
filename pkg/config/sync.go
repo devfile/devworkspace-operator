@@ -341,6 +341,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.ContainerSecurityContext != nil {
 			to.Workspace.ContainerSecurityContext = mergeContainerSecurityContext(to.Workspace.ContainerSecurityContext, from.Workspace.ContainerSecurityContext)
 		}
+		if from.Workspace.StorageAccessMode != nil {
+			to.Workspace.StorageAccessMode = from.Workspace.StorageAccessMode
+		}
 		if from.Workspace.DefaultStorageSize != nil {
 			if to.Workspace.DefaultStorageSize == nil {
 				to.Workspace.DefaultStorageSize = &controller.StorageSizes{}

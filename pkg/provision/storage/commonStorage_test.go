@@ -130,13 +130,13 @@ func TestUseCommonStorageProvisionerForPerUserStorageClass(t *testing.T) {
 func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 	tests := loadAllTestCasesOrPanic(t, "testdata/common-storage")
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"), nil)
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}
 	commonPVC.Status.Phase = corev1.ClaimBound
 	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
+		Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(commonPVC).Build(),
 		Logger: zap.New(),
 	}
 
@@ -166,7 +166,7 @@ func TestProvisionStorageForCommonStorageClass(t *testing.T) {
 
 func TestTerminatingPVC(t *testing.T) {
 	commonStorage := CommonStorageProvisioner{}
-	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"))
+	commonPVC, err := getPVCSpec("claim-devworkspace", "test-namespace", nil, resource.MustParse("10Gi"), nil)
 	if err != nil {
 		t.Fatalf("Failure during setup: %s", err)
 	}
@@ -174,7 +174,7 @@ func TestTerminatingPVC(t *testing.T) {
 	commonPVC.SetDeletionTimestamp(&testTime)
 
 	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewFakeClientWithScheme(scheme, commonPVC),
+		Client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(commonPVC).Build(),
 		Logger: zap.New(),
 	}
 	testCase := loadTestCaseOrPanic(t, "testdata/common-storage/rewrites-volumes-for-common-pvc-strategy.yaml")

@@ -440,6 +440,24 @@ func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	assert.Equal(t, expectedConfig, actualConfig, "merging configs should merge all fields")
 }
 
+func TestMergeConfigMergesStorageAccessMode(t *testing.T) {
+	// Given
+	expectedConfig := &v1alpha1.OperatorConfiguration{
+		Workspace: &v1alpha1.WorkspaceConfig{
+			StorageAccessMode: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteMany,
+			},
+		},
+	}
+	actualConfig := &v1alpha1.OperatorConfiguration{}
+
+	// When
+	mergeConfig(expectedConfig, actualConfig)
+
+	// Then
+	assert.Equal(t, expectedConfig.Workspace.StorageAccessMode, actualConfig.Workspace.StorageAccessMode)
+}
+
 func fuzzQuantity(q *resource.Quantity, c fuzz.Continue) {
 	q.Set(c.Int63n(999))
 	q.Format = resource.DecimalSI

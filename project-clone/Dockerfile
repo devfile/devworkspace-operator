@@ -15,7 +15,7 @@
 
 # Build the manager binary
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9/go-toolset
-FROM registry.access.redhat.com/ubi9/go-toolset:1.23.6-1745328278 as builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.23.9-1749636489 as builder
 ARG TARGETARCH
 ARG TARGETOS
 ENV GOPATH=/go/
@@ -39,7 +39,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build 
   project-clone/main.go
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9-minimal
-FROM registry.access.redhat.com/ubi9-minimal:9.5-1739420147
+FROM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
 RUN microdnf -y update && microdnf install -y time git git-lfs nc && microdnf clean all && rm -rf /var/cache/yum && echo "Installed Packages" && rpm -qa | sort -V && echo "End Of Installed Packages"
 WORKDIR /
 COPY --from=builder /project-clone/_output/bin/project-clone /usr/local/bin/project-clone

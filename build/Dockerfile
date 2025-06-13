@@ -14,7 +14,7 @@
 #
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9/go-toolset
-FROM registry.access.redhat.com/ubi9/go-toolset:1.23.6-1745328278 as builder
+FROM registry.access.redhat.com/ubi9/go-toolset:1.23.9-1749636489 as builder
 ENV GOPATH=/go/
 USER root
 WORKDIR /devworkspace-operator
@@ -34,7 +34,7 @@ RUN make compile-devworkspace-controller
 RUN make compile-webhook-server
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9-minimal
-FROM registry.access.redhat.com/ubi9-minimal:9.5-1739420147
+FROM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
 RUN microdnf -y update && \
     microdnf clean all && \
     rm -rf /var/cache/yum && \

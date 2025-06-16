@@ -44,6 +44,7 @@ export PROJECT_CLONE_IMG=quay.io/yourrepo/project-clone:prerelease
 podman build -t "$PROJECT_CLONE_IMG" -f ./project-clone/Dockerfile .
 podman push "$PROJECT_CLONE_IMG"
 # build and push DevWorkspace Operator image
+export DOCKER=podman # optional
 make docker
 # deploy DevWorkspace Operator using these images
 make install

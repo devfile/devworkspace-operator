@@ -106,3 +106,22 @@ Cleanup CronJob configuration fields:
 - **`schedule`**: A Cron expression defining how often the cleanup job runs. Default: `"0 0 1 * *"` (first day of the month at midnight).
 - **`retainTime`**: The duration time in seconds since a DevWorkspace was last started before it is considered stale and eligible for cleanup. Default: 2592000 seconds (30 days).
 - **`dryRun`**: Set to `true` to run the cleanup job in dry-run mode. In this mode, the job logs which DevWorkspaces would be removed but does not actually delete them. Set to `false` to perform the actual deletion. Default: `false`.
+
+## Configuring PVC storage access mode
+
+By default, PVCs managed by the DevWorkspace Operator are created with the `ReadWriteOnce` access mode.
+The access mode can be configured with the `config.workspace.storageAccessMode` section of the global DWOC:
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    storageAccessMode:
+    - ReadWriteMany
+```
+
+The config above will have newly created PVCs to have its access mode set to `ReadWriteMany`.

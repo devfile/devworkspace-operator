@@ -59,13 +59,13 @@ These configuration options exist in the **global** DWOC's `config.webhook`  fie
 apiVersion: controller.devfile.io/v1alpha1
 kind: DevWorkspaceOperatorConfig
 metadata:
-name: devworkspace-operator-config
-namespace: $OPERATOR_INSTALL_NAMESPACE
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
 config:
-webhook:
-nodeSelector:  <string, string>
-tolerations: <[]tolerations>
-replicas: <int32>
+  webhook:
+    nodeSelector:  <string, string>
+    tolerations: <[]tolerations>
+    replicas: <int32>
 ```
 
 **Note:** In order for the `devworkspace-webhook-server` configuration options to take effect:

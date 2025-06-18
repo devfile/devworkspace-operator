@@ -95,8 +95,6 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 	}
 
 	if infrastructure.IsOpenShift() {
-		// Annoying quirk: cache.SelectorsByObject uses an internal struct for values (internal.Selector)
-		// so we _can't_ just add Routes here since we cannot initialize the corresponding value.
 		selectors[&routev1.Route{}] = cache.ByObject{Label: devworkspaceObjectSelector}
 	}
 

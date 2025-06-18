@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.18.0
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
@@ -74,12 +74,9 @@ spec:
                         description: |-
                           Map of implementation-dependant string-based free-form attributes.
 
-
                           Examples of Che-specific attributes:
 
-
                           - cookiesAuthEnabled: "true" / "false",
-
 
                           - type: "terminal" / "ide" / "ide-dev",
                         type: object
@@ -89,19 +86,15 @@ spec:
                         description: |-
                           Describes how the endpoint should be exposed on the network.
 
-
                           - `public` means that the endpoint will be exposed on the public network, typically through
                           a K8S ingress or an OpenShift route.
-
 
                           - `internal` means that the endpoint will be exposed internally outside of the main devworkspace POD,
                           typically by K8S services, to be consumed by other elements running
                           on the same cloud internal network.
 
-
                           - `none` means that the endpoint will not be exposed and will only be accessible
                           inside the main devworkspace POD, on a local address.
-
 
                           Default value is `public`
                         enum:
@@ -121,26 +114,19 @@ spec:
                         description: |-
                           Describes the application and transport protocols of the traffic that will go through this endpoint.
 
-
                           - `http`: Endpoint will have `http` traffic, typically on a TCP connection.
                           It will be automaticaly promoted to `https` when the `secure` field is set to `true`.
 
-
                           - `https`: Endpoint will have `https` traffic, typically on a TCP connection.
-
 
                           - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection.
                           It will be automaticaly promoted to `wss` when the `secure` field is set to `true`.
 
-
                           - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection.
-
 
                           - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol.
 
-
                           - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol.
-
 
                           Default value is `http`
                         enum:
@@ -262,8 +248,9 @@ spec:
                               present in a Container.
                             properties:
                               name:
-                                description: Name of the environment variable. Must
-                                  be a C_IDENTIFIER.
+                                description: |-
+                                  Name of the environment variable.
+                                  May consist of any printable ASCII characters except '='.
                                 type: string
                               value:
                                 description: |-
@@ -294,9 +281,7 @@ spec:
                                           This field is effectively required, but due to backwards compatibility is
                                           allowed to be empty. Instances of this type with an empty value here are
                                           almost certainly wrong.
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                         type: string
                                       optional:
                                         description: Specify whether the ConfigMap
@@ -362,9 +347,7 @@ spec:
                                           This field is effectively required, but due to backwards compatibility is
                                           allowed to be empty. Instances of this type with an empty value here are
                                           almost certainly wrong.
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -385,14 +368,14 @@ spec:
                         envFrom:
                           description: |-
                             List of sources to populate environment variables in the container.
-                            The keys defined within a source must be a C_IDENTIFIER. All invalid keys
-                            will be reported as an event when the container is starting. When a key exists in multiple
+                            The keys defined within a source may consist of any printable ASCII characters except '='.
+                            When a key exists in multiple
                             sources, the value associated with the last source will take precedence.
                             Values defined by an Env with a duplicate key will take precedence.
                             Cannot be updated.
                           items:
                             description: EnvFromSource represents the source of a
-                              set of ConfigMaps
+                              set of ConfigMaps or Secrets
                             properties:
                               configMapRef:
                                 description: The ConfigMap to select from
@@ -404,9 +387,7 @@ spec:
                                       This field is effectively required, but due to backwards compatibility is
                                       allowed to be empty. Instances of this type with an empty value here are
                                       almost certainly wrong.
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                     type: string
                                   optional:
                                     description: Specify whether the ConfigMap must
@@ -415,8 +396,9 @@ spec:
                                 type: object
                                 x-kubernetes-map-type: atomic
                               prefix:
-                                description: An optional identifier to prepend to
-                                  each key in the ConfigMap. Must be a C_IDENTIFIER.
+                                description: |-
+                                  Optional text to prepend to the name of each environment variable.
+                                  May consist of any printable ASCII characters except '='.
                                 type: string
                               secretRef:
                                 description: The Secret to select from
@@ -428,9 +410,7 @@ spec:
                                       This field is effectively required, but due to backwards compatibility is
                                       allowed to be empty. Instances of this type with an empty value here are
                                       almost certainly wrong.
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                     type: string
                                   optional:
                                     description: Specify whether the Secret must be
@@ -469,7 +449,8 @@ spec:
                                 More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                               properties:
                                 exec:
-                                  description: Exec specifies the action to take.
+                                  description: Exec specifies a command to execute
+                                    in the container.
                                   properties:
                                     command:
                                       description: |-
@@ -484,7 +465,7 @@ spec:
                                       x-kubernetes-list-type: atomic
                                   type: object
                                 httpGet:
-                                  description: HTTPGet specifies the http request
+                                  description: HTTPGet specifies an HTTP GET request
                                     to perform.
                                   properties:
                                     host:
@@ -534,8 +515,8 @@ spec:
                                   - port
                                   type: object
                                 sleep:
-                                  description: Sleep represents the duration that
-                                    the container should sleep before being terminated.
+                                  description: Sleep represents a duration that the
+                                    container should sleep.
                                   properties:
                                     seconds:
                                       description: Seconds is the number of seconds
@@ -548,8 +529,8 @@ spec:
                                 tcpSocket:
                                   description: |-
                                     Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                    for the backward compatibility. There are no validation of this field and
-                                    lifecycle hooks will fail in runtime when tcp handler is specified.
+                                    for backward compatibility. There is no validation of this field and
+                                    lifecycle hooks will fail at runtime when it is specified.
                                   properties:
                                     host:
                                       description: 'Optional: Host name to connect
@@ -581,7 +562,8 @@ spec:
                                 More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                               properties:
                                 exec:
-                                  description: Exec specifies the action to take.
+                                  description: Exec specifies a command to execute
+                                    in the container.
                                   properties:
                                     command:
                                       description: |-
@@ -596,7 +578,7 @@ spec:
                                       x-kubernetes-list-type: atomic
                                   type: object
                                 httpGet:
-                                  description: HTTPGet specifies the http request
+                                  description: HTTPGet specifies an HTTP GET request
                                     to perform.
                                   properties:
                                     host:
@@ -646,8 +628,8 @@ spec:
                                   - port
                                   type: object
                                 sleep:
-                                  description: Sleep represents the duration that
-                                    the container should sleep before being terminated.
+                                  description: Sleep represents a duration that the
+                                    container should sleep.
                                   properties:
                                     seconds:
                                       description: Seconds is the number of seconds
@@ -660,8 +642,8 @@ spec:
                                 tcpSocket:
                                   description: |-
                                     Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                    for the backward compatibility. There are no validation of this field and
-                                    lifecycle hooks will fail in runtime when tcp handler is specified.
+                                    for backward compatibility. There is no validation of this field and
+                                    lifecycle hooks will fail at runtime when it is specified.
                                   properties:
                                     host:
                                       description: 'Optional: Host name to connect
@@ -680,6 +662,12 @@ spec:
                                   - port
                                   type: object
                               type: object
+                            stopSignal:
+                              description: |-
+                                StopSignal defines which signal will be sent to a container when it is being stopped.
+                                If not specified, the default is defined by the container runtime in use.
+                                StopSignal can only be set for Pods with a non-empty .spec.os.name
+                              type: string
                           type: object
                         livenessProbe:
                           description: |-
@@ -689,7 +677,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -710,8 +699,7 @@ spec:
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port.
+                              description: GRPC specifies a GRPC HealthCheckRequest.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -719,10 +707,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -730,7 +718,8 @@ spec:
                               - port
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -797,8 +786,8 @@ spec:
                               format: int32
                               type: integer
                             tcpSocket:
-                              description: TCPSocket specifies an action involving
-                                a TCP port.
+                              description: TCPSocket specifies a connection to a TCP
+                                port.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -904,7 +893,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -925,8 +915,7 @@ spec:
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port.
+                              description: GRPC specifies a GRPC HealthCheckRequest.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -934,10 +923,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -945,7 +934,8 @@ spec:
                               - port
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -1012,8 +1002,8 @@ spec:
                               format: int32
                               type: integer
                             tcpSocket:
-                              description: TCPSocket specifies an action involving
-                                a TCP port.
+                              description: TCPSocket specifies a connection to a TCP
+                                port.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -1086,10 +1076,8 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-
                                 This is an alpha field and requires enabling the
                                 DynamicResourceAllocation feature gate.
-
 
                                 This field is immutable. It can only be set for containers.
                               items:
@@ -1101,6 +1089,12 @@ spec:
                                       Name must match the name of one entry in pod.spec.resourceClaims of
                                       the Pod where this field is used. It makes that resource available
                                       inside a container.
+                                    type: string
+                                  request:
+                                    description: |-
+                                      Request is the name chosen for a request in the referenced claim.
+                                      If empty, everything from the claim is made available, otherwise
+                                      only the result of this request.
                                     type: string
                                 required:
                                 - name
@@ -1225,7 +1219,7 @@ spec:
                             procMount:
                               description: |-
                                 procMount denotes the type of proc mount to use for the containers.
-                                The default is DefaultProcMount which uses the container runtime defaults for
+                                The default value is Default which uses the container runtime defaults for
                                 readonly paths and masked paths.
                                 This requires the ProcMountType feature flag to be enabled.
                                 Note that this field cannot be set when spec.os.name is windows.
@@ -1307,7 +1301,6 @@ spec:
                                     type indicates which kind of seccomp profile will be applied.
                                     Valid options are:
 
-
                                     Localhost - a profile defined in a file on the node should be used.
                                     RuntimeDefault - the container runtime default profile should be used.
                                     Unconfined - no profile should be applied.
@@ -1359,7 +1352,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -1380,8 +1374,7 @@ spec:
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port.
+                              description: GRPC specifies a GRPC HealthCheckRequest.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -1389,10 +1382,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -1400,7 +1393,8 @@ spec:
                               - port
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -1467,8 +1461,8 @@ spec:
                               format: int32
                               type: integer
                             tcpSocket:
-                              description: TCPSocket specifies an action involving
-                                a TCP port.
+                              description: TCPSocket specifies a connection to a TCP
+                                port.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -1607,9 +1601,7 @@ spec:
                                   RecursiveReadOnly specifies whether read-only mounts should be handled
                                   recursively.
 
-
                                   If ReadOnly is false, this field has no meaning and must be unspecified.
-
 
                                   If ReadOnly is true, and this field is set to Disabled, the mount is not made
                                   recursively read-only.  If this field is set to IfPossible, the mount is made
@@ -1618,10 +1610,8 @@ spec:
                                   supported by the container runtime, otherwise the pod will not be started and
                                   an error will be generated to indicate the reason.
 
-
                                   If this field is set to IfPossible or Enabled, MountPropagation must be set to
                                   None (or be unspecified, which defaults to None).
-
 
                                   If this field is not specified, it is treated as an equivalent of Disabled.
                                 type: string
@@ -1699,8 +1689,9 @@ spec:
                               present in a Container.
                             properties:
                               name:
-                                description: Name of the environment variable. Must
-                                  be a C_IDENTIFIER.
+                                description: |-
+                                  Name of the environment variable.
+                                  May consist of any printable ASCII characters except '='.
                                 type: string
                               value:
                                 description: |-
@@ -1731,9 +1722,7 @@ spec:
                                           This field is effectively required, but due to backwards compatibility is
                                           allowed to be empty. Instances of this type with an empty value here are
                                           almost certainly wrong.
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                         type: string
                                       optional:
                                         description: Specify whether the ConfigMap
@@ -1799,9 +1788,7 @@ spec:
                                           This field is effectively required, but due to backwards compatibility is
                                           allowed to be empty. Instances of this type with an empty value here are
                                           almost certainly wrong.
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                         type: string
                                       optional:
                                         description: Specify whether the Secret or
@@ -1822,14 +1809,14 @@ spec:
                         envFrom:
                           description: |-
                             List of sources to populate environment variables in the container.
-                            The keys defined within a source must be a C_IDENTIFIER. All invalid keys
-                            will be reported as an event when the container is starting. When a key exists in multiple
+                            The keys defined within a source may consist of any printable ASCII characters except '='.
+                            When a key exists in multiple
                             sources, the value associated with the last source will take precedence.
                             Values defined by an Env with a duplicate key will take precedence.
                             Cannot be updated.
                           items:
                             description: EnvFromSource represents the source of a
-                              set of ConfigMaps
+                              set of ConfigMaps or Secrets
                             properties:
                               configMapRef:
                                 description: The ConfigMap to select from
@@ -1841,9 +1828,7 @@ spec:
                                       This field is effectively required, but due to backwards compatibility is
                                       allowed to be empty. Instances of this type with an empty value here are
                                       almost certainly wrong.
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                     type: string
                                   optional:
                                     description: Specify whether the ConfigMap must
@@ -1852,8 +1837,9 @@ spec:
                                 type: object
                                 x-kubernetes-map-type: atomic
                               prefix:
-                                description: An optional identifier to prepend to
-                                  each key in the ConfigMap. Must be a C_IDENTIFIER.
+                                description: |-
+                                  Optional text to prepend to the name of each environment variable.
+                                  May consist of any printable ASCII characters except '='.
                                 type: string
                               secretRef:
                                 description: The Secret to select from
@@ -1865,9 +1851,7 @@ spec:
                                       This field is effectively required, but due to backwards compatibility is
                                       allowed to be empty. Instances of this type with an empty value here are
                                       almost certainly wrong.
-                                      TODO: Add other useful fields. apiVersion, kind, uid?
                                       More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                      TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                     type: string
                                   optional:
                                     description: Specify whether the Secret must be
@@ -1906,7 +1890,8 @@ spec:
                                 More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                               properties:
                                 exec:
-                                  description: Exec specifies the action to take.
+                                  description: Exec specifies a command to execute
+                                    in the container.
                                   properties:
                                     command:
                                       description: |-
@@ -1921,7 +1906,7 @@ spec:
                                       x-kubernetes-list-type: atomic
                                   type: object
                                 httpGet:
-                                  description: HTTPGet specifies the http request
+                                  description: HTTPGet specifies an HTTP GET request
                                     to perform.
                                   properties:
                                     host:
@@ -1971,8 +1956,8 @@ spec:
                                   - port
                                   type: object
                                 sleep:
-                                  description: Sleep represents the duration that
-                                    the container should sleep before being terminated.
+                                  description: Sleep represents a duration that the
+                                    container should sleep.
                                   properties:
                                     seconds:
                                       description: Seconds is the number of seconds
@@ -1985,8 +1970,8 @@ spec:
                                 tcpSocket:
                                   description: |-
                                     Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                    for the backward compatibility. There are no validation of this field and
-                                    lifecycle hooks will fail in runtime when tcp handler is specified.
+                                    for backward compatibility. There is no validation of this field and
+                                    lifecycle hooks will fail at runtime when it is specified.
                                   properties:
                                     host:
                                       description: 'Optional: Host name to connect
@@ -2018,7 +2003,8 @@ spec:
                                 More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
                               properties:
                                 exec:
-                                  description: Exec specifies the action to take.
+                                  description: Exec specifies a command to execute
+                                    in the container.
                                   properties:
                                     command:
                                       description: |-
@@ -2033,7 +2019,7 @@ spec:
                                       x-kubernetes-list-type: atomic
                                   type: object
                                 httpGet:
-                                  description: HTTPGet specifies the http request
+                                  description: HTTPGet specifies an HTTP GET request
                                     to perform.
                                   properties:
                                     host:
@@ -2083,8 +2069,8 @@ spec:
                                   - port
                                   type: object
                                 sleep:
-                                  description: Sleep represents the duration that
-                                    the container should sleep before being terminated.
+                                  description: Sleep represents a duration that the
+                                    container should sleep.
                                   properties:
                                     seconds:
                                       description: Seconds is the number of seconds
@@ -2097,8 +2083,8 @@ spec:
                                 tcpSocket:
                                   description: |-
                                     Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept
-                                    for the backward compatibility. There are no validation of this field and
-                                    lifecycle hooks will fail in runtime when tcp handler is specified.
+                                    for backward compatibility. There is no validation of this field and
+                                    lifecycle hooks will fail at runtime when it is specified.
                                   properties:
                                     host:
                                       description: 'Optional: Host name to connect
@@ -2117,6 +2103,12 @@ spec:
                                   - port
                                   type: object
                               type: object
+                            stopSignal:
+                              description: |-
+                                StopSignal defines which signal will be sent to a container when it is being stopped.
+                                If not specified, the default is defined by the container runtime in use.
+                                StopSignal can only be set for Pods with a non-empty .spec.os.name
+                              type: string
                           type: object
                         livenessProbe:
                           description: |-
@@ -2126,7 +2118,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -2147,8 +2140,7 @@ spec:
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port.
+                              description: GRPC specifies a GRPC HealthCheckRequest.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -2156,10 +2148,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -2167,7 +2159,8 @@ spec:
                               - port
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -2234,8 +2227,8 @@ spec:
                               format: int32
                               type: integer
                             tcpSocket:
-                              description: TCPSocket specifies an action involving
-                                a TCP port.
+                              description: TCPSocket specifies a connection to a TCP
+                                port.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -2341,7 +2334,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -2362,8 +2356,7 @@ spec:
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port.
+                              description: GRPC specifies a GRPC HealthCheckRequest.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -2371,10 +2364,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -2382,7 +2375,8 @@ spec:
                               - port
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -2449,8 +2443,8 @@ spec:
                               format: int32
                               type: integer
                             tcpSocket:
-                              description: TCPSocket specifies an action involving
-                                a TCP port.
+                              description: TCPSocket specifies a connection to a TCP
+                                port.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -2523,10 +2517,8 @@ spec:
                                 Claims lists the names of resources, defined in spec.resourceClaims,
                                 that are used by this container.
 
-
                                 This is an alpha field and requires enabling the
                                 DynamicResourceAllocation feature gate.
-
 
                                 This field is immutable. It can only be set for containers.
                               items:
@@ -2538,6 +2530,12 @@ spec:
                                       Name must match the name of one entry in pod.spec.resourceClaims of
                                       the Pod where this field is used. It makes that resource available
                                       inside a container.
+                                    type: string
+                                  request:
+                                    description: |-
+                                      Request is the name chosen for a request in the referenced claim.
+                                      If empty, everything from the claim is made available, otherwise
+                                      only the result of this request.
                                     type: string
                                 required:
                                 - name
@@ -2662,7 +2660,7 @@ spec:
                             procMount:
                               description: |-
                                 procMount denotes the type of proc mount to use for the containers.
-                                The default is DefaultProcMount which uses the container runtime defaults for
+                                The default value is Default which uses the container runtime defaults for
                                 readonly paths and masked paths.
                                 This requires the ProcMountType feature flag to be enabled.
                                 Note that this field cannot be set when spec.os.name is windows.
@@ -2744,7 +2742,6 @@ spec:
                                     type indicates which kind of seccomp profile will be applied.
                                     Valid options are:
 
-
                                     Localhost - a profile defined in a file on the node should be used.
                                     RuntimeDefault - the container runtime default profile should be used.
                                     Unconfined - no profile should be applied.
@@ -2796,7 +2793,8 @@ spec:
                             More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
                           properties:
                             exec:
-                              description: Exec specifies the action to take.
+                              description: Exec specifies a command to execute in
+                                the container.
                               properties:
                                 command:
                                   description: |-
@@ -2817,8 +2815,7 @@ spec:
                               format: int32
                               type: integer
                             grpc:
-                              description: GRPC specifies an action involving a GRPC
-                                port.
+                              description: GRPC specifies a GRPC HealthCheckRequest.
                               properties:
                                 port:
                                   description: Port number of the gRPC service. Number
@@ -2826,10 +2823,10 @@ spec:
                                   format: int32
                                   type: integer
                                 service:
+                                  default: ""
                                   description: |-
                                     Service is the name of the service to place in the gRPC HealthCheckRequest
                                     (see https://github.com/grpc/grpc/blob/master/doc/health-checking.md).
-
 
                                     If this is not specified, the default behavior is defined by gRPC.
                                   type: string
@@ -2837,7 +2834,8 @@ spec:
                               - port
                               type: object
                             httpGet:
-                              description: HTTPGet specifies the http request to perform.
+                              description: HTTPGet specifies an HTTP GET request to
+                                perform.
                               properties:
                                 host:
                                   description: |-
@@ -2904,8 +2902,8 @@ spec:
                               format: int32
                               type: integer
                             tcpSocket:
-                              description: TCPSocket specifies an action involving
-                                a TCP port.
+                              description: TCPSocket specifies a connection to a TCP
+                                port.
                               properties:
                                 host:
                                   description: 'Optional: Host name to connect to,
@@ -3044,9 +3042,7 @@ spec:
                                   RecursiveReadOnly specifies whether read-only mounts should be handled
                                   recursively.
 
-
                                   If ReadOnly is false, this field has no meaning and must be unspecified.
-
 
                                   If ReadOnly is true, and this field is set to Disabled, the mount is not made
                                   recursively read-only.  If this field is set to IfPossible, the mount is made
@@ -3055,10 +3051,8 @@ spec:
                                   supported by the container runtime, otherwise the pod will not be started and
                                   an error will be generated to indicate the reason.
 
-
                                   If this field is set to IfPossible or Enabled, MountPropagation must be set to
                                   None (or be unspecified, which defaults to None).
-
 
                                   If this field is not specified, it is treated as an equivalent of Disabled.
                                 type: string
@@ -3112,9 +3106,7 @@ spec:
                             This field is effectively required, but due to backwards compatibility is
                             allowed to be empty. Instances of this type with an empty value here are
                             almost certainly wrong.
-                            TODO: Add other useful fields. apiVersion, kind, uid?
                             More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                            TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                           type: string
                       type: object
                       x-kubernetes-map-type: atomic
@@ -3159,9 +3151,7 @@ spec:
                             RecursiveReadOnly specifies whether read-only mounts should be handled
                             recursively.
 
-
                             If ReadOnly is false, this field has no meaning and must be unspecified.
-
 
                             If ReadOnly is true, and this field is set to Disabled, the mount is not made
                             recursively read-only.  If this field is set to IfPossible, the mount is made
@@ -3170,10 +3160,8 @@ spec:
                             supported by the container runtime, otherwise the pod will not be started and
                             an error will be generated to indicate the reason.
 
-
                             If this field is set to IfPossible or Enabled, MountPropagation must be set to
                             None (or be unspecified, which defaults to None).
-
 
                             If this field is not specified, it is treated as an equivalent of Disabled.
                           type: string
@@ -3204,6 +3192,8 @@ spec:
                           description: |-
                             awsElasticBlockStore represents an AWS Disk resource that is attached to a
                             kubelet's host machine and then exposed to the pod.
+                            Deprecated: AWSElasticBlockStore is deprecated. All operations for the in-tree
+                            awsElasticBlockStore type are redirected to the ebs.csi.aws.com CSI driver.
                             More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
                           properties:
                             fsType:
@@ -3212,7 +3202,6 @@ spec:
                                 Tip: Ensure that the filesystem type is supported by the host operating system.
                                 Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                 More info: https://kubernetes.io/docs/concepts/storage/volumes#awselasticblockstore
-                                TODO: how do we prevent errors in the filesystem from compromising the machine
                               type: string
                             partition:
                               description: |-
@@ -3236,8 +3225,10 @@ spec:
                           - volumeID
                           type: object
                         azureDisk:
-                          description: azureDisk represents an Azure Data Disk mount
-                            on the host and bind mount to the pod.
+                          description: |-
+                            azureDisk represents an Azure Data Disk mount on the host and bind mount to the pod.
+                            Deprecated: AzureDisk is deprecated. All operations for the in-tree azureDisk type
+                            are redirected to the disk.csi.azure.com CSI driver.
                           properties:
                             cachingMode:
                               description: 'cachingMode is the Host Caching mode:
@@ -3252,6 +3243,7 @@ spec:
                                 blob storage
                               type: string
                             fsType:
+                              default: ext4
                               description: |-
                                 fsType is Filesystem type to mount.
                                 Must be a filesystem type supported by the host operating system.
@@ -3265,6 +3257,7 @@ spec:
                                 to shared'
                               type: string
                             readOnly:
+                              default: false
                               description: |-
                                 readOnly Defaults to false (read/write). ReadOnly here will force
                                 the ReadOnly setting in VolumeMounts.
@@ -3274,8 +3267,10 @@ spec:
                           - diskURI
                           type: object
                         azureFile:
-                          description: azureFile represents an Azure File Service
-                            mount on the host and bind mount to the pod.
+                          description: |-
+                            azureFile represents an Azure File Service mount on the host and bind mount to the pod.
+                            Deprecated: AzureFile is deprecated. All operations for the in-tree azureFile type
+                            are redirected to the file.csi.azure.com CSI driver.
                           properties:
                             readOnly:
                               description: |-
@@ -3294,8 +3289,9 @@ spec:
                           - shareName
                           type: object
                         cephfs:
-                          description: cephFS represents a Ceph FS mount on the host
-                            that shares a pod's lifetime
+                          description: |-
+                            cephFS represents a Ceph FS mount on the host that shares a pod's lifetime.
+                            Deprecated: CephFS is deprecated and the in-tree cephfs type is no longer supported.
                           properties:
                             monitors:
                               description: |-
@@ -3332,9 +3328,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -3349,6 +3343,8 @@ spec:
                         cinder:
                           description: |-
                             cinder represents a cinder volume attached and mounted on kubelets host machine.
+                            Deprecated: Cinder is deprecated. All operations for the in-tree cinder type
+                            are redirected to the cinder.csi.openstack.org CSI driver.
                             More info: https://examples.k8s.io/mysql-cinder-pd/README.md
                           properties:
                             fsType:
@@ -3376,9 +3372,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -3451,9 +3445,7 @@ spec:
                                 This field is effectively required, but due to backwards compatibility is
                                 allowed to be empty. Instances of this type with an empty value here are
                                 almost certainly wrong.
-                                TODO: Add other useful fields. apiVersion, kind, uid?
                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                               type: string
                             optional:
                               description: optional specify whether the ConfigMap
@@ -3464,7 +3456,7 @@ spec:
                         csi:
                           description: csi (Container Storage Interface) represents
                             ephemeral storage that is handled by certain external
-                            CSI drivers (Beta feature).
+                            CSI drivers.
                           properties:
                             driver:
                               description: |-
@@ -3492,9 +3484,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -3632,7 +3622,6 @@ spec:
                             The volume's lifecycle is tied to the pod that defines it - it will be created before the pod starts,
                             and deleted when the pod is removed.
 
-
                             Use this if:
                             a) the volume is only needed while the pod runs,
                             b) features of normal volumes like restoring from snapshot or capacity
@@ -3643,16 +3632,13 @@ spec:
                                information on the connection between this volume type
                                and PersistentVolumeClaim).
 
-
                             Use PersistentVolumeClaim or one of the vendor-specific
                             APIs for volumes that persist for longer than the lifecycle
                             of an individual pod.
 
-
                             Use CSI for light-weight local ephemeral volumes if the CSI driver is meant to
                             be used that way - see the documentation of the driver for
                             more information.
-
 
                             A pod can use both types of ephemeral volumes and
                             persistent volumes at the same time.
@@ -3667,7 +3653,6 @@ spec:
                                 entry. Pod validation will reject the pod if the concatenated name
                                 is not valid for a PVC (for example, too long).
 
-
                                 An existing PVC with that name that is not owned by the pod
                                 will *not* be used for the pod to avoid using an unrelated
                                 volume by mistake. Starting the pod is then blocked until
@@ -3677,10 +3662,8 @@ spec:
                                 this should not be necessary, but it may be useful when
                                 manually reconstructing a broken cluster.
 
-
                                 This field is read-only and no changes will be made by Kubernetes
                                 to the PVC after it has been created.
-
 
                                 Required, must not be nil.
                               properties:
@@ -3884,7 +3867,7 @@ spec:
                                         set to a Pending state, as reflected by the modifyVolumeStatus field, until such as a resource
                                         exists.
                                         More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes/
-                                        (Alpha) Using this field requires the VolumeAttributesClass feature gate to be enabled.
+                                        (Beta) Using this field requires the VolumeAttributesClass feature gate to be enabled (off by default).
                                       type: string
                                     volumeMode:
                                       description: |-
@@ -3910,7 +3893,6 @@ spec:
                                 fsType is the filesystem type to mount.
                                 Must be a filesystem type supported by the host operating system.
                                 Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
-                                TODO: how do we prevent errors in the filesystem from compromising the machine
                               type: string
                             lun:
                               description: 'lun is Optional: FC target lun number'
@@ -3941,6 +3923,7 @@ spec:
                           description: |-
                             flexVolume represents a generic volume resource that is
                             provisioned/attached using an exec based plugin.
+                            Deprecated: FlexVolume is deprecated. Consider using a CSIDriver instead.
                           properties:
                             driver:
                               description: driver is the name of the driver to use
@@ -3978,9 +3961,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -3988,9 +3969,9 @@ spec:
                           - driver
                           type: object
                         flocker:
-                          description: flocker represents a Flocker volume attached
-                            to a kubelet's host machine. This depends on the Flocker
-                            control service being running
+                          description: |-
+                            flocker represents a Flocker volume attached to a kubelet's host machine. This depends on the Flocker control service being running.
+                            Deprecated: Flocker is deprecated and the in-tree flocker type is no longer supported.
                           properties:
                             datasetName:
                               description: |-
@@ -4006,6 +3987,8 @@ spec:
                           description: |-
                             gcePersistentDisk represents a GCE Disk resource that is attached to a
                             kubelet's host machine and then exposed to the pod.
+                            Deprecated: GCEPersistentDisk is deprecated. All operations for the in-tree
+                            gcePersistentDisk type are redirected to the pd.csi.storage.gke.io CSI driver.
                             More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
                           properties:
                             fsType:
@@ -4014,7 +3997,6 @@ spec:
                                 Tip: Ensure that the filesystem type is supported by the host operating system.
                                 Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                 More info: https://kubernetes.io/docs/concepts/storage/volumes#gcepersistentdisk
-                                TODO: how do we prevent errors in the filesystem from compromising the machine
                               type: string
                             partition:
                               description: |-
@@ -4042,7 +4024,7 @@ spec:
                         gitRepo:
                           description: |-
                             gitRepo represents a git repository at a particular revision.
-                            DEPRECATED: GitRepo is deprecated. To provision a container with a git repo, mount an
+                            Deprecated: GitRepo is deprecated. To provision a container with a git repo, mount an
                             EmptyDir into an InitContainer that clones the repo using git, then mount the EmptyDir
                             into the Pod's container.
                           properties:
@@ -4066,6 +4048,7 @@ spec:
                         glusterfs:
                           description: |-
                             glusterfs represents a Glusterfs mount on the host that shares a pod's lifetime.
+                            Deprecated: Glusterfs is deprecated and the in-tree glusterfs type is no longer supported.
                             More info: https://examples.k8s.io/volumes/glusterfs/README.md
                           properties:
                             endpoints:
@@ -4095,9 +4078,6 @@ spec:
                             used for system agents or other privileged things that are allowed
                             to see the host machine. Most containers will NOT need this.
                             More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
-                            ---
-                            TODO(jonesdl) We need to restrict who can use host directory mounts and who can/can not
-                            mount host directories as read/write.
                           properties:
                             path:
                               description: |-
@@ -4113,6 +4093,41 @@ spec:
                               type: string
                           required:
                           - path
+                          type: object
+                        image:
+                          description: |-
+                            image represents an OCI object (a container image or artifact) pulled and mounted on the kubelet's host machine.
+                            The volume is resolved at pod startup depending on which PullPolicy value is provided:
+
+                            - Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+                            - Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+                            - IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+
+                            The volume gets re-resolved if the pod gets deleted and recreated, which means that new remote content will become available on pod recreation.
+                            A failure to resolve or pull the image during pod startup will block containers from starting and may add significant latency. Failures will be retried using normal volume backoff and will be reported on the pod reason and message.
+                            The types of objects that may be mounted by this volume are defined by the container runtime implementation on a host machine and at minimum must include all valid types supported by the container image field.
+                            The OCI object gets mounted in a single directory (spec.containers[*].volumeMounts.mountPath) by merging the manifest layers in the same way as for container images.
+                            The volume will be mounted read-only (ro) and non-executable files (noexec).
+                            Sub path mounts for containers are not supported (spec.containers[*].volumeMounts.subpath) before 1.33.
+                            The field spec.securityContext.fsGroupChangePolicy has no effect on this volume type.
+                          properties:
+                            pullPolicy:
+                              description: |-
+                                Policy for pulling OCI objects. Possible values are:
+                                Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
+                                Never: the kubelet never pulls the reference and only uses a local image or artifact. Container creation will fail if the reference isn't present.
+                                IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
+                                Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
+                              type: string
+                            reference:
+                              description: |-
+                                Required: Image or artifact reference to be used.
+                                Behaves in the same way as pod.spec.containers[*].image.
+                                Pull secrets will be assembled in the same way as for the container image by looking up node credentials, SA image pull secrets, and pod spec image pull secrets.
+                                More info: https://kubernetes.io/docs/concepts/containers/images
+                                This field is optional to allow higher level config management to default or override
+                                container images in workload controllers like Deployments and StatefulSets.
+                              type: string
                           type: object
                         iscsi:
                           description: |-
@@ -4134,7 +4149,6 @@ spec:
                                 Tip: Ensure that the filesystem type is supported by the host operating system.
                                 Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                 More info: https://kubernetes.io/docs/concepts/storage/volumes#iscsi
-                                TODO: how do we prevent errors in the filesystem from compromising the machine
                               type: string
                             initiatorName:
                               description: |-
@@ -4146,6 +4160,7 @@ spec:
                               description: iqn is the target iSCSI Qualified Name.
                               type: string
                             iscsiInterface:
+                              default: default
                               description: |-
                                 iscsiInterface is the interface Name that uses an iSCSI transport.
                                 Defaults to 'default' (tcp).
@@ -4178,9 +4193,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -4245,9 +4258,9 @@ spec:
                           - claimName
                           type: object
                         photonPersistentDisk:
-                          description: photonPersistentDisk represents a PhotonController
-                            persistent disk attached and mounted on kubelets host
-                            machine
+                          description: |-
+                            photonPersistentDisk represents a PhotonController persistent disk attached and mounted on kubelets host machine.
+                            Deprecated: PhotonPersistentDisk is deprecated and the in-tree photonPersistentDisk type is no longer supported.
                           properties:
                             fsType:
                               description: |-
@@ -4263,8 +4276,11 @@ spec:
                           - pdID
                           type: object
                         portworxVolume:
-                          description: portworxVolume represents a portworx volume
-                            attached and mounted on kubelets host machine
+                          description: |-
+                            portworxVolume represents a portworx volume attached and mounted on kubelets host machine.
+                            Deprecated: PortworxVolume is deprecated. All operations for the in-tree portworxVolume type
+                            are redirected to the pxd.portworx.com CSI driver when the CSIMigrationPortworx feature-gate
+                            is on.
                           properties:
                             fsType:
                               description: |-
@@ -4299,23 +4315,23 @@ spec:
                               format: int32
                               type: integer
                             sources:
-                              description: sources is the list of volume projections
+                              description: |-
+                                sources is the list of volume projections. Each entry in this list
+                                handles one source.
                               items:
-                                description: Projection that may be projected along
-                                  with other supported volume types
+                                description: |-
+                                  Projection that may be projected along with other supported volume types.
+                                  Exactly one of these fields must be set.
                                 properties:
                                   clusterTrustBundle:
                                     description: |-
                                       ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field
                                       of ClusterTrustBundle objects in an auto-updating file.
 
-
                                       Alpha, gated by the ClusterTrustBundleProjection feature gate.
-
 
                                       ClusterTrustBundle objects can either be selected by name, or by the
                                       combination of signer name and a label selector.
-
 
                                       Kubelet performs aggressive normalization of the PEM contents written
                                       into the pod filesystem.  Esoteric PEM features such as inter-block
@@ -4450,9 +4466,7 @@ spec:
                                           This field is effectively required, but due to backwards compatibility is
                                           allowed to be empty. Instances of this type with an empty value here are
                                           almost certainly wrong.
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                         type: string
                                       optional:
                                         description: optional specify whether the
@@ -4591,9 +4605,7 @@ spec:
                                           This field is effectively required, but due to backwards compatibility is
                                           allowed to be empty. Instances of this type with an empty value here are
                                           almost certainly wrong.
-                                          TODO: Add other useful fields. apiVersion, kind, uid?
                                           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                          TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                         type: string
                                       optional:
                                         description: optional field specify whether
@@ -4635,8 +4647,9 @@ spec:
                               x-kubernetes-list-type: atomic
                           type: object
                         quobyte:
-                          description: quobyte represents a Quobyte mount on the host
-                            that shares a pod's lifetime
+                          description: |-
+                            quobyte represents a Quobyte mount on the host that shares a pod's lifetime.
+                            Deprecated: Quobyte is deprecated and the in-tree quobyte type is no longer supported.
                           properties:
                             group:
                               description: |-
@@ -4675,6 +4688,7 @@ spec:
                         rbd:
                           description: |-
                             rbd represents a Rados Block Device mount on the host that shares a pod's lifetime.
+                            Deprecated: RBD is deprecated and the in-tree rbd type is no longer supported.
                             More info: https://examples.k8s.io/volumes/rbd/README.md
                           properties:
                             fsType:
@@ -4683,7 +4697,6 @@ spec:
                                 Tip: Ensure that the filesystem type is supported by the host operating system.
                                 Examples: "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
                                 More info: https://kubernetes.io/docs/concepts/storage/volumes#rbd
-                                TODO: how do we prevent errors in the filesystem from compromising the machine
                               type: string
                             image:
                               description: |-
@@ -4691,6 +4704,7 @@ spec:
                                 More info: https://examples.k8s.io/volumes/rbd/README.md#how-to-use-it
                               type: string
                             keyring:
+                              default: /etc/ceph/keyring
                               description: |-
                                 keyring is the path to key ring for RBDUser.
                                 Default is /etc/ceph/keyring.
@@ -4705,6 +4719,7 @@ spec:
                               type: array
                               x-kubernetes-list-type: atomic
                             pool:
+                              default: rbd
                               description: |-
                                 pool is the rados pool name.
                                 Default is rbd.
@@ -4730,13 +4745,12 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
                             user:
+                              default: admin
                               description: |-
                                 user is the rados user name.
                                 Default is admin.
@@ -4747,10 +4761,12 @@ spec:
                           - monitors
                           type: object
                         scaleIO:
-                          description: scaleIO represents a ScaleIO persistent volume
-                            attached and mounted on Kubernetes nodes.
+                          description: |-
+                            scaleIO represents a ScaleIO persistent volume attached and mounted on Kubernetes nodes.
+                            Deprecated: ScaleIO is deprecated and the in-tree scaleIO type is no longer supported.
                           properties:
                             fsType:
+                              default: xfs
                               description: |-
                                 fsType is the filesystem type to mount.
                                 Must be a filesystem type supported by the host operating system.
@@ -4782,9 +4798,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -4793,6 +4807,7 @@ spec:
                                 with Gateway, default false
                               type: boolean
                             storageMode:
+                              default: ThinProvisioned
                               description: |-
                                 storageMode indicates whether the storage for a volume should be ThickProvisioned or ThinProvisioned.
                                 Default is ThinProvisioned.
@@ -4881,8 +4896,9 @@ spec:
                               type: string
                           type: object
                         storageos:
-                          description: storageOS represents a StorageOS volume attached
-                            and mounted on Kubernetes nodes.
+                          description: |-
+                            storageOS represents a StorageOS volume attached and mounted on Kubernetes nodes.
+                            Deprecated: StorageOS is deprecated and the in-tree storageos type is no longer supported.
                           properties:
                             fsType:
                               description: |-
@@ -4907,9 +4923,7 @@ spec:
                                     This field is effectively required, but due to backwards compatibility is
                                     allowed to be empty. Instances of this type with an empty value here are
                                     almost certainly wrong.
-                                    TODO: Add other useful fields. apiVersion, kind, uid?
                                     More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                    TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                   type: string
                               type: object
                               x-kubernetes-map-type: atomic
@@ -4929,8 +4943,10 @@ spec:
                               type: string
                           type: object
                         vsphereVolume:
-                          description: vsphereVolume represents a vSphere volume attached
-                            and mounted on kubelets host machine
+                          description: |-
+                            vsphereVolume represents a vSphere volume attached and mounted on kubelets host machine.
+                            Deprecated: VsphereVolume is deprecated. All operations for the in-tree vsphereVolume type
+                            are redirected to the csi.vsphere.vmware.com CSI driver.
                           properties:
                             fsType:
                               description: |-

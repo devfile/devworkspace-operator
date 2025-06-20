@@ -30,7 +30,9 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -120,7 +122,7 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 		pvcName = workspace.Config.Workspace.PVCName
 	}
 
-	targetNode, err := getCommonPVCTargetNode(workspace, clusterAPI)
+	targetNode, err := getTargetNodeName(workspace, clusterAPI)
 	if err != nil {
 		clusterAPI.Logger.Info("Error getting target node for PVC", "PVC", fmt.Sprintf("%s/%s", workspace.Namespace, workspace.Config.Workspace.PVCName), "error", err)
 	} else if targetNode == "" {
@@ -253,21 +255,39 @@ func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 	return true, nil
 }
 
-func getCommonPVCTargetNode(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (string, error) {
-	namespacedName := types.NamespacedName{
-		Name:      workspace.Config.Workspace.PVCName,
-		Namespace: workspace.Namespace,
-	}
-	pvc := &corev1.PersistentVolumeClaim{}
-	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, pvc)
+// If there is a running devworkspace pod that already mounts the PVC, this function
+// gets the node name of the node the devworkspace pod is running in.
+// Returns an empty string if no such pod exists.
+func getTargetNodeName(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (string, error) {
+
+	labelSelector, err := labels.Parse(constants.DevWorkspaceIDLabel)
 	if err != nil {
 		return "", err
 	}
 
-	targetNode := ""
-	if pvc.Annotations != nil {
-		targetNode = pvc.Annotations[constants.SelectedNodeAnnotation]
+	listOptions := &client.ListOptions{
+		Namespace:     workspace.Namespace,
+		LabelSelector: labelSelector,
 	}
 
-	return targetNode, nil
+	found := &corev1.PodList{}
+	err = clusterAPI.Client.List(clusterAPI.Ctx, found, listOptions)
+	if err != nil {
+		return "", err
+	}
+
+	return getNodeNameWithPVC(found, workspace.Config.Workspace.PVCName), nil
+}
+
+func getNodeNameWithPVC(list *corev1.PodList, pvcName string) string {
+	for _, pod := range list.Items {
+		if pod.Status.Phase == corev1.PodRunning {
+			for _, volume := range pod.Spec.Volumes {
+				if volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == pvcName {
+					return pod.Spec.NodeName
+				}
+			}
+		}
+	}
+	return ""
 }

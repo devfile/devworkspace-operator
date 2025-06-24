@@ -124,9 +124,9 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 
 	targetNode, err := getTargetNodeName(workspace, clusterAPI)
 	if err != nil {
-		clusterAPI.Logger.Info("Error getting target node for PVC", "PVC", fmt.Sprintf("%s/%s", workspace.Namespace, workspace.Config.Workspace.PVCName), "error", err)
+		clusterAPI.Logger.Error(err, "Error getting target node for cleanup job")
 	} else if targetNode == "" {
-		clusterAPI.Logger.Info("PVC does not have a target node annotation", "PVC", fmt.Sprintf("%s/%s", workspace.Namespace, workspace.Config.Workspace.PVCName))
+		clusterAPI.Logger.Info("No target node for cleanup job")
 	}
 
 	jobLabels := map[string]string{

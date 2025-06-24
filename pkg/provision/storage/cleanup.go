@@ -255,8 +255,8 @@ func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 	return true, nil
 }
 
-// If there is a running devworkspace pod that already mounts the PVC, this function
-// gets the node name of the node the devworkspace pod is running in.
+// getTargetNodeName returns the node name of the node a running devworkspace pod that already mounts the
+// common PVC is running in.
 // Returns an empty string if no such pod exists.
 func getTargetNodeName(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (string, error) {
 

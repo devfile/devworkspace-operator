@@ -126,7 +126,7 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 	if err != nil {
 		clusterAPI.Logger.Error(err, "Error getting target node for cleanup job")
 	} else if targetNode == "" {
-		clusterAPI.Logger.Info("No target node for cleanup job")
+		clusterAPI.Logger.Info("No target node for cleanup job, NodeAffinity will not be defined")
 	}
 
 	jobLabels := map[string]string{

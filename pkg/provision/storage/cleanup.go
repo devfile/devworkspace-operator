@@ -120,13 +120,6 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 		pvcName = workspace.Config.Workspace.PVCName
 	}
 
-	targetNode, err := getCommonPVCTargetNode(workspace, clusterAPI)
-	if err != nil {
-		clusterAPI.Logger.Info("Error getting target node for PVC", "PVC", fmt.Sprintf("%s/%s", workspace.Namespace, workspace.Config.Workspace.PVCName), "error", err)
-	} else if targetNode == "" {
-		clusterAPI.Logger.Info("PVC does not have a target node annotation", "PVC", fmt.Sprintf("%s/%s", workspace.Namespace, workspace.Config.Workspace.PVCName))
-	}
-
 	jobLabels := map[string]string{
 		constants.DevWorkspaceIDLabel:      workspaceId,
 		constants.DevWorkspaceNameLabel:    workspace.Name,
@@ -196,28 +189,9 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 							},
 						},
 					},
-					Affinity: &corev1.Affinity{},
 				},
 			},
 		},
-	}
-
-	if targetNode != "" {
-		job.Spec.Template.Spec.Affinity.NodeAffinity = &corev1.NodeAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-				NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					{
-						MatchExpressions: []corev1.NodeSelectorRequirement{
-							{
-								Key:      corev1.LabelHostname,
-								Operator: corev1.NodeSelectorOpIn,
-								Values:   []string{targetNode},
-							},
-						},
-					},
-				},
-			},
-		}
 	}
 
 	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)
@@ -251,23 +225,4 @@ func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 		return false, err
 	}
 	return true, nil
-}
-
-func getCommonPVCTargetNode(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (string, error) {
-	namespacedName := types.NamespacedName{
-		Name:      workspace.Config.Workspace.PVCName,
-		Namespace: workspace.Namespace,
-	}
-	pvc := &corev1.PersistentVolumeClaim{}
-	err := clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, pvc)
-	if err != nil {
-		return "", err
-	}
-
-	targetNode := ""
-	if pvc.Annotations != nil {
-		targetNode = pvc.Annotations[constants.SelectedNodeAnnotation]
-	}
-
-	return targetNode, nil
 }

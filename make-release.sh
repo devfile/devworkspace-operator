@@ -276,15 +276,15 @@ release() {
   git checkout "${X_BRANCH}"
 
   # Build bundle and index images
-  # $DRY_RUN build/scripts/build_index_image.sh \
-  #   --release \
-  #   --bundle-tag "$VERSION" \
-  #   --bundle-repo "$DWO_BUNDLE_QUAY_REPO" \
-  #   --index-image "$DWO_INDEX_IMAGE" \
-  #   --force
+  $DRY_RUN build/scripts/build_index_image.sh \
+    --release \
+    --bundle-tag "$VERSION" \
+    --bundle-repo "$DWO_BUNDLE_QUAY_REPO" \
+    --index-image "$DWO_INDEX_IMAGE" \
+    --force
 
-  # # Commit changes from releasing bundle
-  # git_commit_and_push "[release] Add OLM bundle for $VERSION in $X_BRANCH" "ci-add-bundle-$VERSION"
+  # Commit changes from releasing bundle
+  git_commit_and_push "[release] Add OLM bundle for $VERSION in $X_BRANCH" "ci-add-bundle-$VERSION"
 
   # Tag current commit as release version
   git tag "${VERSION}"

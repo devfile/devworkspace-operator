@@ -85,6 +85,12 @@ install: _print_vars _check_cert_manager _init_devworkspace_crds _create_namespa
 	cat deploy/default-config.yaml | envsubst > deploy/default-config.temp.yaml
 	$(K8S_CLI) apply -f deploy/default-config.temp.yaml
 	rm -rf deploy/default-config.temp.yaml
+	@if [ "$(WAIT)" = "true" ]; then \
+		echo "⌛ Waiting for DevWorkspace Operator deployments to get ready"; \
+		$(K8S_CLI) rollout status deployment devworkspace-controller-manager -n $(NAMESPACE) --timeout 90s; \
+		$(K8S_CLI) rollout status deployment devworkspace-webhook-server -n $(NAMESPACE) --timeout 90s; \
+	fi
+	@echo "✅ Installation Successful"
 
 ### install_plugin_templates: Deploys the sample plugin templates to namespace devworkspace-plugins:
 install_plugin_templates: _print_vars

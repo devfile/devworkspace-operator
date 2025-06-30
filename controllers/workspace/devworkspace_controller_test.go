@@ -1052,6 +1052,39 @@ var _ = Describe("DevWorkspace Controller", func() {
 			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
+		It("Ensures preStart initContainers are run after project-clone", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace-prestart.yaml")
+			defer deleteDevWorkspace(devWorkspaceName)
+			devWorkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devWorkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady("test-url", common.DevWorkspaceRoutingName(workspaceID))
+
+			By("Setting the deployment to have 1 ready replica")
+			markDeploymentReady(common.DeploymentName(workspaceID))
+
+			deployment := &appsv1.Deployment{}
+			err := k8sClient.Get(ctx, namespacedName(workspaceID, testNamespace), deployment)
+			Expect(err).ToNot(HaveOccurred(), "Failed to get DevWorkspace deployment")
+
+			By("Checking initContainer order in the created Deployment")
+			initContainers := deployment.Spec.Template.Spec.InitContainers
+			Expect(len(initContainers)).To(BeNumerically(">", 0), "No initContainers found")
+
+			expectedOrder := []string{
+				"project-clone",
+				"go-mod-builder",
+				"go-builder",
+			}
+
+			for i, name := range expectedOrder {
+				if i >= len(initContainers) {
+					Fail(fmt.Sprintf("Expected init container %s at position %d, but only %d containers found", name, i, len(initContainers)))
+				}
+				Expect(initContainers[i].Name).To(Equal(name), fmt.Sprintf("Init container at position %d is not %s", i, name))
+			}
+		})
 	})
 
 })

@@ -1,0 +1,50 @@
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
+metadata:
+  labels:
+    controller.devfile.io/creator: ""
+spec:
+  started: true
+  template:
+    projects:
+      - name: my-app
+        clonePath: my-app
+        git:
+          remotes:
+            origin: https://github.com/che-samples/web-nodejs-sample.git
+          checkoutFrom:
+            revision: main
+    components:
+      - name: tools
+        container:
+          image: quay.io/devfile/universal-developer-image:ubi8-latest
+          memoryLimit: 256Mi
+          mountSources: true
+          sourceMapping: /projects
+      - name: go-mod-builder
+        container:
+          image: quay.io/devfile/universal-developer-image:ubi8-latest
+          command:
+            - "go"
+            - "mod"
+            - "download"
+      - name: go-builder
+        container:
+          image: quay.io/devfile/universal-developer-image:ubi8-latest
+          command:
+            - "go"
+            - "build"
+            - "-buildvcs=false"
+            - "-o"
+            - "./main"
+    commands:
+      - id: go-mod
+        apply:
+          component: go-mod-builder
+      - id: go-build
+        apply:
+          component: go-builder
+    events:
+      preStart:
+        - go-mod
+        - go-build

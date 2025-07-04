@@ -2,7 +2,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.15.0
+    controller-gen.kubebuilder.io/version: v0.18.0
   labels:
     app.kubernetes.io/name: devworkspace-controller
     app.kubernetes.io/part-of: devworkspace-operator
@@ -63,13 +63,11 @@ spec:
                       ProxyConfig defines the proxy settings that should be used for all DevWorkspaces.
                       These values are propagated to workspace containers as environment variables.
 
-
                       On OpenShift, the operator automatically reads values from the "cluster" proxies.config.openshift.io
                       object and this value only needs to be set to override those defaults. Values for httpProxy
                       and httpsProxy override the cluster configuration directly. Entries for noProxy are merged
                       with the noProxy values in the cluster configuration. To ignore automatically read values from the cluster,
                       set values in fields to the empty string ("")
-
 
                       Changes to the proxy configuration are detected by the DevWorkspace Operator and propagated to
                       DevWorkspaces. However, changing the proxy configuration for the DevWorkspace Operator itself
@@ -113,11 +111,9 @@ spec:
                   Webhook defines configuration options for the DevWorkspace Webhook Server.
                   Note: In order for changes made to the webhook configuration to take effect:
 
-
                   - The changes must be made in the global DevWorkspaceOperatorConfig, which has the
                     name 'devworkspace-operator-config' and exists in the same namespace where the
                     DevWorkspaceOperator is deployed.
-
 
                   - The devworkspace-controller-manager pod must be terminated and recreated for the
                     DevWorkspace Webhook Server deployment to be updated.
@@ -297,7 +293,7 @@ spec:
                       procMount:
                         description: |-
                           procMount denotes the type of proc mount to use for the containers.
-                          The default is DefaultProcMount which uses the container runtime defaults for
+                          The default value is Default which uses the container runtime defaults for
                           readonly paths and masked paths.
                           This requires the ProcMountType feature flag to be enabled.
                           Note that this field cannot be set when spec.os.name is windows.
@@ -379,7 +375,6 @@ spec:
                               type indicates which kind of seccomp profile will be applied.
                               Valid options are:
 
-
                               Localhost - a profile defined in a file on the node should be used.
                               RuntimeDefault - the container runtime default profile should be used.
                               Unconfined - no profile should be applied.
@@ -432,10 +427,8 @@ spec:
                           Claims lists the names of resources, defined in spec.resourceClaims,
                           that are used by this container.
 
-
                           This is an alpha field and requires enabling the
                           DynamicResourceAllocation feature gate.
-
 
                           This field is immutable. It can only be set for containers.
                         items:
@@ -446,6 +439,12 @@ spec:
                                 Name must match the name of one entry in pod.spec.resourceClaims of
                                 the Pod where this field is used. It makes that resource available
                                 inside a container.
+                              type: string
+                            request:
+                              description: |-
+                                Request is the name chosen for a request in the referenced claim.
+                                If empty, everything from the claim is made available, otherwise
+                                only the result of this request.
                               type: string
                           required:
                           - name
@@ -525,12 +524,10 @@ spec:
                                 Command that consists in applying a given component definition,
                                 typically bound to a devworkspace event.
 
-
                                 For example, when an `apply` command is bound to a `preStart` event,
                                 and references a `container` component, it will start the container as a
                                 K8S initContainer in the devworkspace POD, unless the component has its
                                 `dedicatedPod` field set to `true`.
-
 
                                 When no `apply` command exist for a given component,
                                 it is assumed the component will be applied at devworkspace start
@@ -679,12 +676,9 @@ spec:
                                   description: |-
                                     The actual command-line string
 
-
                                     Special variables that can be used:
 
-
                                      - `$PROJECTS_ROOT`: A path where projects sources are mounted as defined by container component's sourceMapping.
-
 
                                      - `$PROJECT_SOURCE`: A path to a project source ($PROJECTS_ROOT/<project-name>). If there are multiple projects, this will point to the directory of the first one.
                                   type: string
@@ -736,7 +730,6 @@ spec:
                                     A *hotReloadCapable* `build` command is expected to be executed only once and won't be executed again.
                                     This field is taken into account only for commands `build`, `run` and `debug` with `isDefault` set to `true`.
 
-
                                     Default value is `false`
                                   type: boolean
                                 label:
@@ -748,12 +741,9 @@ spec:
                                   description: |-
                                     Working directory where the command should be executed
 
-
                                     Special variables that can be used:
 
-
                                      - `$PROJECTS_ROOT`: A path where projects sources are mounted as defined by container component's sourceMapping.
-
 
                                      - `$PROJECT_SOURCE`: A path to a project source ($PROJECTS_ROOT/<project-name>). If there are multiple projects, this will point to the directory of the first one.
                                   type: string
@@ -818,7 +808,6 @@ spec:
                                   description: |-
                                     The arguments to supply to the command running the dockerimage component. The arguments are supplied either to the default command provided in the image or to the overridden command.
 
-
                                     Defaults to an empty array, meaning use whatever is defined in the image.
                                   items:
                                     type: string
@@ -826,7 +815,6 @@ spec:
                                 command:
                                   description: |-
                                     The command to run in the dockerimage component instead of the default one provided in the image.
-
 
                                     Defaults to an empty array, meaning use whatever is defined in the image.
                                   items:
@@ -840,7 +828,6 @@ spec:
                                   description: |-
                                     Specify if a container should run in its own separated pod,
                                     instead of running as part of the main development environment pod.
-
 
                                     Default value is `false`
                                   type: boolean
@@ -857,12 +844,9 @@ spec:
                                         description: |-
                                           Map of implementation-dependant string-based free-form attributes.
 
-
                                           Examples of Che-specific attributes:
 
-
                                           - cookiesAuthEnabled: "true" / "false",
-
 
                                           - type: "terminal" / "ide" / "ide-dev",
                                         type: object
@@ -872,19 +856,15 @@ spec:
                                         description: |-
                                           Describes how the endpoint should be exposed on the network.
 
-
                                           - `public` means that the endpoint will be exposed on the public network, typically through
                                           a K8S ingress or an OpenShift route.
-
 
                                           - `internal` means that the endpoint will be exposed internally outside of the main devworkspace POD,
                                           typically by K8S services, to be consumed by other elements running
                                           on the same cloud internal network.
 
-
                                           - `none` means that the endpoint will not be exposed and will only be accessible
                                           inside the main devworkspace POD, on a local address.
-
 
                                           Default value is `public`
                                         enum:
@@ -904,26 +884,19 @@ spec:
                                         description: |-
                                           Describes the application and transport protocols of the traffic that will go through this endpoint.
 
-
                                           - `http`: Endpoint will have `http` traffic, typically on a TCP connection.
                                           It will be automaticaly promoted to `https` when the `secure` field is set to `true`.
 
-
                                           - `https`: Endpoint will have `https` traffic, typically on a TCP connection.
-
 
                                           - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection.
                                           It will be automaticaly promoted to `wss` when the `secure` field is set to `true`.
 
-
                                           - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection.
-
 
                                           - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol.
 
-
                                           - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol.
-
 
                                           Default value is `http`
                                         enum:
@@ -953,12 +926,9 @@ spec:
                                   description: |-
                                     Environment variables used in this container.
 
-
                                     The following variables are reserved and cannot be overridden via env:
 
-
                                      - `$PROJECTS_ROOT`
-
 
                                      - `$PROJECT_SOURCE`
                                   items:
@@ -982,7 +952,6 @@ spec:
                                   description: |-
                                     Toggles whether or not the project source code should
                                     be mounted in the component.
-
 
                                     Defaults to true for all component types except plugins and components that set `dedicatedPod` to true.
                                   type: boolean
@@ -1049,7 +1018,6 @@ spec:
                                 autoBuild:
                                   description: |-
                                     Defines if the image should be built during startup.
-
 
                                     Default value is `false`
                                   type: boolean
@@ -1122,7 +1090,6 @@ spec:
                                       description: |-
                                         Specify if a privileged builder pod is required.
 
-
                                         Default value is `false`
                                       type: boolean
                                     srcType:
@@ -1160,7 +1127,6 @@ spec:
                                   description: |-
                                     Defines if the component should be deployed during startup.
 
-
                                     Default value is `false`
                                   type: boolean
                                 endpoints:
@@ -1176,12 +1142,9 @@ spec:
                                         description: |-
                                           Map of implementation-dependant string-based free-form attributes.
 
-
                                           Examples of Che-specific attributes:
 
-
                                           - cookiesAuthEnabled: "true" / "false",
-
 
                                           - type: "terminal" / "ide" / "ide-dev",
                                         type: object
@@ -1191,19 +1154,15 @@ spec:
                                         description: |-
                                           Describes how the endpoint should be exposed on the network.
 
-
                                           - `public` means that the endpoint will be exposed on the public network, typically through
                                           a K8S ingress or an OpenShift route.
-
 
                                           - `internal` means that the endpoint will be exposed internally outside of the main devworkspace POD,
                                           typically by K8S services, to be consumed by other elements running
                                           on the same cloud internal network.
 
-
                                           - `none` means that the endpoint will not be exposed and will only be accessible
                                           inside the main devworkspace POD, on a local address.
-
 
                                           Default value is `public`
                                         enum:
@@ -1223,26 +1182,19 @@ spec:
                                         description: |-
                                           Describes the application and transport protocols of the traffic that will go through this endpoint.
 
-
                                           - `http`: Endpoint will have `http` traffic, typically on a TCP connection.
                                           It will be automaticaly promoted to `https` when the `secure` field is set to `true`.
 
-
                                           - `https`: Endpoint will have `https` traffic, typically on a TCP connection.
-
 
                                           - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection.
                                           It will be automaticaly promoted to `wss` when the `secure` field is set to `true`.
 
-
                                           - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection.
-
 
                                           - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol.
 
-
                                           - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol.
-
 
                                           Default value is `http`
                                         enum:
@@ -1299,7 +1251,6 @@ spec:
                                   description: |-
                                     Defines if the component should be deployed during startup.
 
-
                                     Default value is `false`
                                   type: boolean
                                 endpoints:
@@ -1315,12 +1266,9 @@ spec:
                                         description: |-
                                           Map of implementation-dependant string-based free-form attributes.
 
-
                                           Examples of Che-specific attributes:
 
-
                                           - cookiesAuthEnabled: "true" / "false",
-
 
                                           - type: "terminal" / "ide" / "ide-dev",
                                         type: object
@@ -1330,19 +1278,15 @@ spec:
                                         description: |-
                                           Describes how the endpoint should be exposed on the network.
 
-
                                           - `public` means that the endpoint will be exposed on the public network, typically through
                                           a K8S ingress or an OpenShift route.
-
 
                                           - `internal` means that the endpoint will be exposed internally outside of the main devworkspace POD,
                                           typically by K8S services, to be consumed by other elements running
                                           on the same cloud internal network.
 
-
                                           - `none` means that the endpoint will not be exposed and will only be accessible
                                           inside the main devworkspace POD, on a local address.
-
 
                                           Default value is `public`
                                         enum:
@@ -1362,26 +1306,19 @@ spec:
                                         description: |-
                                           Describes the application and transport protocols of the traffic that will go through this endpoint.
 
-
                                           - `http`: Endpoint will have `http` traffic, typically on a TCP connection.
                                           It will be automaticaly promoted to `https` when the `secure` field is set to `true`.
 
-
                                           - `https`: Endpoint will have `https` traffic, typically on a TCP connection.
-
 
                                           - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection.
                                           It will be automaticaly promoted to `wss` when the `secure` field is set to `true`.
 
-
                                           - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection.
-
 
                                           - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol.
 
-
                                           - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol.
-
 
                                           Default value is `http`
                                         enum:
@@ -1424,7 +1361,6 @@ spec:
                               description: |-
                                 Allows importing a plugin.
 
-
                                 Plugins are mainly imported devfiles that contribute components, commands
                                 and events as a consistent single unit. They are defined in either YAML files
                                 following the devfile syntax,
@@ -1441,12 +1377,10 @@ spec:
                                           Command that consists in applying a given component definition,
                                           typically bound to a devworkspace event.
 
-
                                           For example, when an `apply` command is bound to a `preStart` event,
                                           and references a `container` component, it will start the container as a
                                           K8S initContainer in the devworkspace POD, unless the component has its
                                           `dedicatedPod` field set to `true`.
-
 
                                           When no `apply` command exist for a given component,
                                           it is assumed the component will be applied at devworkspace start
@@ -1541,12 +1475,9 @@ spec:
                                             description: |-
                                               The actual command-line string
 
-
                                               Special variables that can be used:
 
-
                                                - `$PROJECTS_ROOT`: A path where projects sources are mounted as defined by container component's sourceMapping.
-
 
                                                - `$PROJECT_SOURCE`: A path to a project source ($PROJECTS_ROOT/<project-name>). If there are multiple projects, this will point to the directory of the first one.
                                             type: string
@@ -1595,7 +1526,6 @@ spec:
                                               A *hotReloadCapable* `build` command is expected to be executed only once and won't be executed again.
                                               This field is taken into account only for commands `build`, `run` and `debug` with `isDefault` set to `true`.
 
-
                                               Default value is `false`
                                             type: boolean
                                           label:
@@ -1607,12 +1537,9 @@ spec:
                                             description: |-
                                               Working directory where the command should be executed
 
-
                                               Special variables that can be used:
 
-
                                                - `$PROJECTS_ROOT`: A path where projects sources are mounted as defined by container component's sourceMapping.
-
 
                                                - `$PROJECT_SOURCE`: A path to a project source ($PROJECTS_ROOT/<project-name>). If there are multiple projects, this will point to the directory of the first one.
                                             type: string
@@ -1675,7 +1602,6 @@ spec:
                                             description: |-
                                               The arguments to supply to the command running the dockerimage component. The arguments are supplied either to the default command provided in the image or to the overridden command.
 
-
                                               Defaults to an empty array, meaning use whatever is defined in the image.
                                             items:
                                               type: string
@@ -1683,7 +1609,6 @@ spec:
                                           command:
                                             description: |-
                                               The command to run in the dockerimage component instead of the default one provided in the image.
-
 
                                               Defaults to an empty array, meaning use whatever is defined in the image.
                                             items:
@@ -1697,7 +1622,6 @@ spec:
                                             description: |-
                                               Specify if a container should run in its own separated pod,
                                               instead of running as part of the main development environment pod.
-
 
                                               Default value is `false`
                                             type: boolean
@@ -1715,12 +1639,9 @@ spec:
                                                   description: |-
                                                     Map of implementation-dependant string-based free-form attributes.
 
-
                                                     Examples of Che-specific attributes:
 
-
                                                     - cookiesAuthEnabled: "true" / "false",
-
 
                                                     - type: "terminal" / "ide" / "ide-dev",
                                                   type: object
@@ -1729,19 +1650,15 @@ spec:
                                                   description: |-
                                                     Describes how the endpoint should be exposed on the network.
 
-
                                                     - `public` means that the endpoint will be exposed on the public network, typically through
                                                     a K8S ingress or an OpenShift route.
-
 
                                                     - `internal` means that the endpoint will be exposed internally outside of the main devworkspace POD,
                                                     typically by K8S services, to be consumed by other elements running
                                                     on the same cloud internal network.
 
-
                                                     - `none` means that the endpoint will not be exposed and will only be accessible
                                                     inside the main devworkspace POD, on a local address.
-
 
                                                     Default value is `public`
                                                   enum:
@@ -1761,26 +1678,19 @@ spec:
                                                   description: |-
                                                     Describes the application and transport protocols of the traffic that will go through this endpoint.
 
-
                                                     - `http`: Endpoint will have `http` traffic, typically on a TCP connection.
                                                     It will be automaticaly promoted to `https` when the `secure` field is set to `true`.
 
-
                                                     - `https`: Endpoint will have `https` traffic, typically on a TCP connection.
-
 
                                                     - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection.
                                                     It will be automaticaly promoted to `wss` when the `secure` field is set to `true`.
 
-
                                                     - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection.
-
 
                                                     - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol.
 
-
                                                     - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol.
-
 
                                                     Default value is `http`
                                                   enum:
@@ -1809,12 +1719,9 @@ spec:
                                             description: |-
                                               Environment variables used in this container.
 
-
                                               The following variables are reserved and cannot be overridden via env:
 
-
                                                - `$PROJECTS_ROOT`
-
 
                                                - `$PROJECT_SOURCE`
                                             items:
@@ -1837,7 +1744,6 @@ spec:
                                             description: |-
                                               Toggles whether or not the project source code should
                                               be mounted in the component.
-
 
                                               Defaults to true for all component types except plugins and components that set `dedicatedPod` to true.
                                             type: boolean
@@ -1879,7 +1785,6 @@ spec:
                                           autoBuild:
                                             description: |-
                                               Defines if the image should be built during startup.
-
 
                                               Default value is `false`
                                             type: boolean
@@ -1952,7 +1857,6 @@ spec:
                                                 description: |-
                                                   Specify if a privileged builder pod is required.
 
-
                                                   Default value is `false`
                                                 type: boolean
                                               srcType:
@@ -1989,7 +1893,6 @@ spec:
                                             description: |-
                                               Defines if the component should be deployed during startup.
 
-
                                               Default value is `false`
                                             type: boolean
                                           endpoints:
@@ -2006,12 +1909,9 @@ spec:
                                                   description: |-
                                                     Map of implementation-dependant string-based free-form attributes.
 
-
                                                     Examples of Che-specific attributes:
 
-
                                                     - cookiesAuthEnabled: "true" / "false",
-
 
                                                     - type: "terminal" / "ide" / "ide-dev",
                                                   type: object
@@ -2020,19 +1920,15 @@ spec:
                                                   description: |-
                                                     Describes how the endpoint should be exposed on the network.
 
-
                                                     - `public` means that the endpoint will be exposed on the public network, typically through
                                                     a K8S ingress or an OpenShift route.
-
 
                                                     - `internal` means that the endpoint will be exposed internally outside of the main devworkspace POD,
                                                     typically by K8S services, to be consumed by other elements running
                                                     on the same cloud internal network.
 
-
                                                     - `none` means that the endpoint will not be exposed and will only be accessible
                                                     inside the main devworkspace POD, on a local address.
-
 
                                                     Default value is `public`
                                                   enum:
@@ -2052,26 +1948,19 @@ spec:
                                                   description: |-
                                                     Describes the application and transport protocols of the traffic that will go through this endpoint.
 
-
                                                     - `http`: Endpoint will have `http` traffic, typically on a TCP connection.
                                                     It will be automaticaly promoted to `https` when the `secure` field is set to `true`.
 
-
                                                     - `https`: Endpoint will have `https` traffic, typically on a TCP connection.
-
 
                                                     - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection.
                                                     It will be automaticaly promoted to `wss` when the `secure` field is set to `true`.
 
-
                                                     - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection.
-
 
                                                     - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol.
 
-
                                                     - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol.
-
 
                                                     Default value is `http`
                                                   enum:
@@ -2128,7 +2017,6 @@ spec:
                                             description: |-
                                               Defines if the component should be deployed during startup.
 
-
                                               Default value is `false`
                                             type: boolean
                                           endpoints:
@@ -2145,12 +2033,9 @@ spec:
                                                   description: |-
                                                     Map of implementation-dependant string-based free-form attributes.
 
-
                                                     Examples of Che-specific attributes:
 
-
                                                     - cookiesAuthEnabled: "true" / "false",
-
 
                                                     - type: "terminal" / "ide" / "ide-dev",
                                                   type: object
@@ -2159,19 +2044,15 @@ spec:
                                                   description: |-
                                                     Describes how the endpoint should be exposed on the network.
 
-
                                                     - `public` means that the endpoint will be exposed on the public network, typically through
                                                     a K8S ingress or an OpenShift route.
-
 
                                                     - `internal` means that the endpoint will be exposed internally outside of the main devworkspace POD,
                                                     typically by K8S services, to be consumed by other elements running
                                                     on the same cloud internal network.
 
-
                                                     - `none` means that the endpoint will not be exposed and will only be accessible
                                                     inside the main devworkspace POD, on a local address.
-
 
                                                     Default value is `public`
                                                   enum:
@@ -2191,26 +2072,19 @@ spec:
                                                   description: |-
                                                     Describes the application and transport protocols of the traffic that will go through this endpoint.
 
-
                                                     - `http`: Endpoint will have `http` traffic, typically on a TCP connection.
                                                     It will be automaticaly promoted to `https` when the `secure` field is set to `true`.
 
-
                                                     - `https`: Endpoint will have `https` traffic, typically on a TCP connection.
-
 
                                                     - `ws`: Endpoint will have `ws` traffic, typically on a TCP connection.
                                                     It will be automaticaly promoted to `wss` when the `secure` field is set to `true`.
 
-
                                                     - `wss`: Endpoint will have `wss` traffic, typically on a TCP connection.
-
 
                                                     - `tcp`: Endpoint will have traffic on a TCP connection, without specifying an application protocol.
 
-
                                                     - `udp`: Endpoint will have traffic on an UDP connection, without specifying an application protocol.
-
 
                                                     Default value is `http`
                                                   enum:
@@ -2407,6 +2281,8 @@ spec:
                                   description: Zip project's source location address.
                                     Should be file path of the archive, e.g. file://$FILE_PATH
                                   type: string
+                              required:
+                              - location
                               type: object
                           required:
                           - name
@@ -2524,6 +2400,8 @@ spec:
                                   description: Zip project's source location address.
                                     Should be file path of the archive, e.g. file://$FILE_PATH
                                   type: string
+                              required:
+                              - location
                               type: object
                           required:
                           - name
@@ -2607,6 +2485,8 @@ spec:
                                   description: Zip project's source location address.
                                     Should be file path of the archive, e.g. file://$FILE_PATH
                                   type: string
+                              required:
+                              - location
                               type: object
                           required:
                           - name
@@ -2619,15 +2499,11 @@ spec:
                           Map of key-value variables used for string replacement in the devfile. Values can be referenced via {{variable-key}}
                           to replace the corresponding value in string fields in the devfile. Replacement cannot be used for
 
-
                            - schemaVersion, metadata, parent source
-
 
                            - element identifiers, e.g. command id, component name, endpoint name, project name
 
-
                            - references to identifiers, e.g. in events, a command's component, container's volume mount name
-
 
                            - string enums, e.g. command group kind, endpoint exposure
                         type: object
@@ -2733,11 +2609,9 @@ spec:
                           Some volume types allow the Kubelet to change the ownership of that volume
                           to be owned by the pod:
 
-
                           1. The owning GID will be the FSGroup
                           2. The setgid bit is set (new files created in the volume will be owned by FSGroup)
                           3. The permission bits are OR'd with rw-rw----
-
 
                           If unset, the Kubelet will not modify the ownership and permissions of any volume.
                           Note that this field cannot be set when spec.os.name is windows.
@@ -2782,6 +2656,32 @@ spec:
                           Note that this field cannot be set when spec.os.name is windows.
                         format: int64
                         type: integer
+                      seLinuxChangePolicy:
+                        description: |-
+                          seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
+                          It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
+                          Valid values are "MountOption" and "Recursive".
+
+                          "Recursive" means relabeling of all files on all Pod volumes by the container runtime.
+                          This may be slow for large volumes, but allows mixing privileged and unprivileged Pods sharing the same volume on the same node.
+
+                          "MountOption" mounts all eligible Pod volumes with `-o context` mount option.
+                          This requires all Pods that share the same volume to use the same SELinux label.
+                          It is not possible to share the same volume among privileged and unprivileged Pods.
+                          Eligible volumes are in-tree FibreChannel and iSCSI volumes, and all CSI volumes
+                          whose CSI driver announces SELinux support by setting spec.seLinuxMount: true in their
+                          CSIDriver instance. Other volumes are always re-labelled recursively.
+                          "MountOption" value is allowed only when SELinuxMount feature gate is enabled.
+
+                          If not specified and SELinuxMount feature gate is enabled, "MountOption" is used.
+                          If not specified and SELinuxMount feature gate is disabled, "MountOption" is used for ReadWriteOncePod volumes
+                          and "Recursive" for all other volumes.
+
+                          This field affects only Pods that have SELinux label set, either in PodSecurityContext or in SecurityContext of all containers.
+
+                          All Pods that use the same volume should use the same seLinuxChangePolicy, otherwise some pods can get stuck in ContainerCreating state.
+                          Note that this field cannot be set when spec.os.name is windows.
+                        type: string
                       seLinuxOptions:
                         description: |-
                           The SELinux context to be applied to all containers.
@@ -2825,7 +2725,6 @@ spec:
                               type indicates which kind of seccomp profile will be applied.
                               Valid options are:
 
-
                               Localhost - a profile defined in a file on the node should be used.
                               RuntimeDefault - the container runtime default profile should be used.
                               Unconfined - no profile should be applied.
@@ -2835,18 +2734,28 @@ spec:
                         type: object
                       supplementalGroups:
                         description: |-
-                          A list of groups applied to the first process run in each container, in addition
-                          to the container's primary GID, the fsGroup (if specified), and group memberships
-                          defined in the container image for the uid of the container process. If unspecified,
-                          no additional groups are added to any container. Note that group memberships
-                          defined in the container image for the uid of the container process are still effective,
-                          even if they are not included in this list.
+                          A list of groups applied to the first process run in each container, in
+                          addition to the container's primary GID and fsGroup (if specified).  If
+                          the SupplementalGroupsPolicy feature is enabled, the
+                          supplementalGroupsPolicy field determines whether these are in addition
+                          to or instead of any group memberships defined in the container image.
+                          If unspecified, no additional groups are added, though group memberships
+                          defined in the container image may still be used, depending on the
+                          supplementalGroupsPolicy field.
                           Note that this field cannot be set when spec.os.name is windows.
                         items:
                           format: int64
                           type: integer
                         type: array
                         x-kubernetes-list-type: atomic
+                      supplementalGroupsPolicy:
+                        description: |-
+                          Defines how supplemental groups of the first container processes are calculated.
+                          Valid values are "Merge" and "Strict". If not specified, "Merge" is used.
+                          (Alpha) Using the field requires the SupplementalGroupsPolicy feature gate to be enabled
+                          and the container runtime must implement support for this feature.
+                          Note that this field cannot be set when spec.os.name is windows.
+                        type: string
                       sysctls:
                         description: |-
                           Sysctls hold a list of namespaced sysctls used for the pod. Pods with unsupported
@@ -2920,8 +2829,9 @@ spec:
                             in a Container.
                           properties:
                             name:
-                              description: Name of the environment variable. Must
-                                be a C_IDENTIFIER.
+                              description: |-
+                                Name of the environment variable.
+                                May consist of any printable ASCII characters except '='.
                               type: string
                             value:
                               description: |-
@@ -2952,9 +2862,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                     optional:
                                       description: Specify whether the ConfigMap or
@@ -3020,9 +2928,7 @@ spec:
                                         This field is effectively required, but due to backwards compatibility is
                                         allowed to be empty. Instances of this type with an empty value here are
                                         almost certainly wrong.
-                                        TODO: Add other useful fields. apiVersion, kind, uid?
                                         More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                                        TODO: Drop `kubebuilder:default` when controller-gen doesn't need it https://github.com/kubernetes-sigs/kubebuilder/issues/3896.
                                       type: string
                                     optional:
                                       description: Specify whether the Secret or its
@@ -3057,10 +2963,8 @@ spec:
                               Claims lists the names of resources, defined in spec.resourceClaims,
                               that are used by this container.
 
-
                               This is an alpha field and requires enabling the
                               DynamicResourceAllocation feature gate.
-
 
                               This field is immutable. It can only be set for containers.
                             items:
@@ -3071,6 +2975,12 @@ spec:
                                     Name must match the name of one entry in pod.spec.resourceClaims of
                                     the Pod where this field is used. It makes that resource available
                                     inside a container.
+                                  type: string
+                                request:
+                                  description: |-
+                                    Request is the name chosen for a request in the referenced claim.
+                                    If empty, everything from the claim is made available, otherwise
+                                    only the result of this request.
                                   type: string
                               required:
                               - name

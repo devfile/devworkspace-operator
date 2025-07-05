@@ -24,6 +24,8 @@ import (
 	"runtime"
 	"syscall"
 
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -70,7 +72,7 @@ func main() {
 	logf.SetLogger(zap.New(zap.UseDevMode(config.GetDevModeEnabled())))
 
 	var metricsAddr string
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-addr", ":9443", "The address the metric endpoint binds to.")
 	flag.Parse()
 
 	// Print versions
@@ -109,7 +111,9 @@ func main() {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
-			BindAddress: metricsAddr,
+			BindAddress:    metricsAddr,
+			FilterProvider: filters.WithAuthenticationAndAuthorization,
+			SecureServing:  true,
 		},
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: ":6789",

@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	attributes "github.com/devfile/api/v2/pkg/attributes"
+	"github.com/devfile/api/v2/pkg/attributes"
 	"github.com/google/go-cmp/cmp"
 	fuzz "github.com/google/gofuzz"
 	routev1 "github.com/openshift/api/route/v1"
@@ -458,6 +458,158 @@ func TestMergeConfigMergesStorageAccessMode(t *testing.T) {
 	assert.Equal(t, expectedConfig.Workspace.StorageAccessMode, actualConfig.Workspace.StorageAccessMode)
 }
 
+func TestMergeConfigMergesStorageClassName(t *testing.T) {
+	nonEmptyStorageClassName := "fast-ssd"
+	emptyStorageClassName := ""
+
+	tests := []struct {
+		name    string
+		message string
+		from    *v1alpha1.OperatorConfiguration
+		to      *v1alpha1.OperatorConfiguration
+		want    *v1alpha1.OperatorConfiguration
+	}{
+		{
+			name:    "Merges non-emptyStorageClassName StorageClassName",
+			message: "Non-emptyStorageClassName StorageClassName should overwrite to",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: &nonEmptyStorageClassName,
+				},
+			},
+			to: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{},
+			},
+			want: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: &nonEmptyStorageClassName,
+				},
+			},
+		},
+		{
+			name:    "Merges emptyStorageClassName StorageClassName",
+			message: "Empty StorageClassName should overwrite to",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: &emptyStorageClassName,
+				},
+			},
+			to: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: &nonEmptyStorageClassName,
+				},
+			},
+			want: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: &emptyStorageClassName,
+				},
+			},
+		},
+		{
+			name:    "Nil from StorageClassName leaves to unchanged",
+			message: "Nil in from should not overwrite to",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: nil,
+				},
+			},
+			to: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: &nonEmptyStorageClassName,
+				},
+			},
+			want: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					StorageClassName: &nonEmptyStorageClassName,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mergeConfig(tt.from, tt.to)
+			assert.Equal(t, tt.want.Workspace.StorageClassName, tt.to.Workspace.StorageClassName, tt.message)
+		})
+	}
+}
+
+func TestMergeConfigMergesRuntimeClassName(t *testing.T) {
+	nonEmptyRuntimeClassName := "kata-runtime"
+	emptyRuntimeClassName := ""
+
+	tests := []struct {
+		name    string
+		message string
+		from    *v1alpha1.OperatorConfiguration
+		to      *v1alpha1.OperatorConfiguration
+		want    *v1alpha1.OperatorConfiguration
+	}{
+		{
+			name:    "Merges non-emptyRuntimeClassName RuntimeClassName",
+			message: "Non-emptyRuntimeClassName RuntimeClassName should overwrite to",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: &nonEmptyRuntimeClassName,
+				},
+			},
+			to: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{},
+			},
+			want: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: &nonEmptyRuntimeClassName,
+				},
+			},
+		},
+		{
+			name:    "Merges emptyRuntimeClassName RuntimeClassName",
+			message: "Empty RuntimeClassName should overwrite to",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: &emptyRuntimeClassName,
+				},
+			},
+			to: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: &nonEmptyRuntimeClassName,
+				},
+			},
+			want: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: &emptyRuntimeClassName,
+				},
+			},
+		},
+		{
+			name:    "Nil from RuntimeClassName leaves to unchanged",
+			message: "Nil in from should not overwrite to",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: nil,
+				},
+			},
+			to: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: &nonEmptyRuntimeClassName,
+				},
+			},
+			want: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					RuntimeClassName: &nonEmptyRuntimeClassName,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mergeConfig(tt.from, tt.to)
+			assert.Equal(t, tt.want.Workspace.RuntimeClassName, tt.to.Workspace.RuntimeClassName, tt.message)
+		})
+	}
+}
+
 func fuzzQuantity(q *resource.Quantity, c fuzz.Continue) {
 	q.Set(c.Int63n(999))
 	q.Format = resource.DecimalSI
@@ -483,11 +635,11 @@ func fuzzResourceRequirements(req *corev1.ResourceRequirements, c fuzz.Continue)
 	req.Requests = requests
 }
 
-func fuzzStringPtr(str *string, c fuzz.Continue) {
+func fuzzStringPtr(str **string, c fuzz.Continue) {
 	randString := c.RandString()
-	// Only set string pointer if the generated string is not empty to avoid edge cases with
-	// replacing empty strings with nils in sync code. This edge case has to be tested manually.
-	if randString != "" {
-		*str = randString
+	// Ensure we never assign an empty string to avoid mergeConfig skipping updates.
+	if randString == "" {
+		randString = "default-string-by-fuzz"
 	}
+	*str = &randString
 }

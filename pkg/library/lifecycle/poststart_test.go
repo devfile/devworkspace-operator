@@ -75,7 +75,8 @@ func TestAddPostStartLifecycleHooks(t *testing.T) {
 	tests := loadAllPostStartTestCasesOrPanic(t, "./testdata/postStart")
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.testPath), func(t *testing.T) {
-			err := AddPostStartLifecycleHooks(tt.Input.Devfile, tt.Input.Containers, nil)
+			var timeout int32
+			err := AddPostStartLifecycleHooks(tt.Input.Devfile, tt.Input.Containers, &timeout)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

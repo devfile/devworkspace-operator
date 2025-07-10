@@ -32,6 +32,11 @@ const (
   _script_to_run
 } 1> >(tee -a "/tmp/poststart-stdout.txt") 2> >(tee -a "/tmp/poststart-stderr.txt" >&2)
 `
+
+	noTimeoutRedirectOutputFmt = `{
+%s
+} 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
+`
 )
 
 func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout *int32) error {
@@ -155,10 +160,9 @@ exit $exit_code
 // processCommandsForPostStart processes a list of DevWorkspace commands
 // and generates a corev1.LifecycleHandler for the PostStart lifecycle hook.
 func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32) (*corev1.LifecycleHandler, error) {
-	if postStartTimeout == nil {
-		// The 'timeout' command treats 0 as "no timeout", so it is disabled by default.
-		defaultTimeout := int32(0)
-		postStartTimeout = &defaultTimeout
+	if postStartTimeout == nil || *postStartTimeout == 0 {
+		// use the fallback if no timeout propagated
+		return processCommandsWithoutTimeoutFallback(commands)
 	}
 
 	originalUserScript, err := buildUserScript(commands)
@@ -181,6 +185,44 @@ func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32)
 				"/bin/sh",
 				"-c",
 				finalScriptForHook,
+			},
+		},
+	}
+	return handler, nil
+}
+
+// processCommandsForPostStart builds a lifecycle handler that runs the provided command(s)
+// The command has the format
+//
+// exec:
+//
+//	command:
+//	  - "/bin/sh"
+//	  - "-c"
+//	  - |
+//	    cd <workingDir>
+//	    <commandline>
+func processCommandsWithoutTimeoutFallback(commands []dw.Command) (*corev1.LifecycleHandler, error) {
+	var dwCommands []string
+	for _, command := range commands {
+		execCmd := command.Exec
+		if len(execCmd.Env) > 0 {
+			return nil, fmt.Errorf("env vars in postStart command %s are unsupported", command.Id)
+		}
+		if execCmd.WorkingDir != "" {
+			dwCommands = append(dwCommands, fmt.Sprintf("cd %s", execCmd.WorkingDir))
+		}
+		dwCommands = append(dwCommands, execCmd.CommandLine)
+	}
+
+	joinedCommands := strings.Join(dwCommands, "\n")
+
+	handler := &corev1.LifecycleHandler{
+		Exec: &corev1.ExecAction{
+			Command: []string{
+				"/bin/sh",
+				"-c",
+				fmt.Sprintf(redirectOutputFmt, joinedCommands),
 			},
 		},
 	}

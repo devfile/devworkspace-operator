@@ -605,6 +605,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		if workspace.IdleTimeout != defaultConfig.Workspace.IdleTimeout {
 			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", workspace.IdleTimeout))
 		}
+		if workspace.PostStartTimeout != nil && workspace.PostStartTimeout != defaultConfig.Workspace.PostStartTimeout {
+			config = append(config, fmt.Sprintf("workspace.postStartTimeout=%d", *workspace.PostStartTimeout))
+		}
 		if workspace.ProgressTimeout != "" && workspace.ProgressTimeout != defaultConfig.Workspace.ProgressTimeout {
 			config = append(config, fmt.Sprintf("workspace.progressTimeout=%s", workspace.ProgressTimeout))
 		}

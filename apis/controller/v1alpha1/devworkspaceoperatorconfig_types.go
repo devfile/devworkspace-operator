@@ -194,7 +194,6 @@ type WorkspaceConfig struct {
 	// that is used to run commands in the workspace container. The timeout is specified in seconds.
 	// If not specified, the timeout is disabled (0 seconds).
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default:=0
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:Type=integer
 	// +kubebuilder:validation:Format=int32

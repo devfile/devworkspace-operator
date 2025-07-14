@@ -2899,7 +2899,6 @@ spec:
                         type: object
                     type: object
                   postStartTimeout:
-                    default: 0
                     description: |-
                       PostStartTimeout defines the maximum duration the PostStart hook can run
                       before it is automatically failed. This timeout is used for the postStart lifecycle hook

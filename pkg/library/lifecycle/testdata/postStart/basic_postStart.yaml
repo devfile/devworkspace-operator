@@ -26,10 +26,5 @@ output:
               - -c
               - |
                 {
-                  # This script block ensures its exit code is preserved
-                  # while its stdout and stderr are tee'd.
-                  _script_to_run() {
-                    echo 'hello world' # This will be replaced by scriptWithTimeout
-                  }
-                  _script_to_run
-                } 1> >(tee -a "/tmp/poststart-stdout.txt") 2> >(tee -a "/tmp/poststart-stderr.txt" >&2)
+                echo 'hello world'
+                } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt

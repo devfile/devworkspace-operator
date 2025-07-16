@@ -222,7 +222,7 @@ func processCommandsWithoutTimeoutFallback(commands []dw.Command) (*corev1.Lifec
 			Command: []string{
 				"/bin/sh",
 				"-c",
-				fmt.Sprintf(redirectOutputFmt, joinedCommands),
+				fmt.Sprintf(noTimeoutRedirectOutputFmt, joinedCommands),
 			},
 		},
 	}

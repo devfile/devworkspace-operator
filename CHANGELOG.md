@@ -8,7 +8,7 @@
 
 ## Features
 ### Make workspace PVC's Access mode configurable [#1019](https://github.com/devfile/devworkspace-operator/issues/1019)
-It is now possible to configure the access mode of per-user and per-workspace PVCs from the global `DevWorkspaceOperatorConfig`. For example:
+It is now possible to configure the storage access mode of per-user and per-workspace PVCs from the global `DevWorkspaceOperatorConfig`. For example:
 ```
 apiVersion: controller.devfile.io/v1alpha1
 kind: DevWorkspaceOperatorConfig

@@ -112,6 +112,42 @@ func (w *K8sClient) GetPodNameBySelector(selector, namespace string) (string, er
 	if len(podList.Items) == 0 {
 		return "", errors.New(fmt.Sprintf("There is no pod that matches '%s' in namespace %s ", selector, namespace))
 	}
-	// we expect just 1 pod in test namespace and return the first value from the list
-	return podList.Items[0].Name, nil
+	for _, pod := range podList.Items {
+		if pod.Status.Phase == v1.PodRunning && pod.DeletionTimestamp == nil {
+			return pod.Name, nil
+		}
+	}
+
+	return "", fmt.Errorf("no running pod found for selector '%s' in namespace %s", selector, namespace)
+}
+
+func (w *K8sClient) WaitForPodContainerToReady(namespace, podName, containerName string) error {
+	timeout := time.After(6 * time.Minute)
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return fmt.Errorf("timed out waiting for container %s in pod %s to become ready", containerName, podName)
+		case <-ticker.C:
+			pod, err := w.Kube().CoreV1().Pods(namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+			if err != nil {
+				return fmt.Errorf("error waiting for pod %s to become ready : %v", podName, err)
+			}
+			if w.IsPodContainerReady(containerName, pod) {
+				return nil
+			}
+			log.Printf("Still waiting for container %s in pod %s to become ready...", containerName, podName)
+		}
+	}
+}
+
+func (w *K8sClient) IsPodContainerReady(containerName string, pod *v1.Pod) bool {
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.Name == containerName && cs.Ready {
+			return true
+		}
+	}
+	return false
 }

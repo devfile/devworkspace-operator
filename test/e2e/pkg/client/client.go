@@ -67,7 +67,9 @@ func NewK8sClientWithKubeConfig(kubeconfigFile string) (*K8sClient, error) {
 		return nil, err
 	}
 
-	crClient, err := crclient.New(cfg, crclient.Options{})
+	crClient, err := crclient.New(cfg, crclient.Options{
+		Scheme: scheme,
+	})
 	if err != nil {
 		return nil, err
 	}

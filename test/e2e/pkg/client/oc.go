@@ -45,13 +45,25 @@ func (w *K8sClient) OcApplyWorkspace(namespace string, filePath string) (command
 }
 
 // launch 'exec' oc command in the defined pod and container
-func (w *K8sClient) ExecCommandInContainer(podName string, namespace, commandInContainer string) (output string, err error) {
+func (w *K8sClient) ExecCommandInContainer(podName string, namespace, containerName, commandInContainer string) (output string, err error) {
 	cmd := exec.Command("bash", "-c", fmt.Sprintf(
-		"KUBECONFIG=%s oc exec %s -n %s -c restricted-access-container -- %s",
+		"KUBECONFIG=%s oc exec %s -n %s -c %s -- %s",
 		w.kubeCfgFile,
 		podName,
 		namespace,
+		containerName,
 		commandInContainer))
+	outBytes, err := cmd.CombinedOutput()
+	return string(outBytes), err
+}
+
+func (w *K8sClient) GetLogsForContainer(podName string, namespace, containerName string) (output string, err error) {
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(
+		"KUBECONFIG=%s oc logs %s -c %s -n %s",
+		w.kubeCfgFile,
+		podName,
+		containerName,
+		namespace))
 	outBytes, err := cmd.CombinedOutput()
 	return string(outBytes), err
 }

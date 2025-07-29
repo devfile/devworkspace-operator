@@ -36,9 +36,10 @@ type DevWorkspaceMetadata struct {
 
 // GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
 // endpoint from the list. Endpoints with the NoneEndpointExposure are ignored.
-func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []corev1.Service {
+func GetDiscoverableServicesForEndpoints(routingSpec controllerv1alpha1.DevWorkspaceRoutingSpec, meta DevWorkspaceMetadata) []corev1.Service {
 	var services []corev1.Service
-	for _, machineEndpoints := range endpoints {
+	endpoints := routingSpec.Endpoints
+	for componentName, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure == controllerv1alpha1.NoneEndpointExposure {
 				continue
@@ -61,9 +62,9 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 						Labels: map[string]string{
 							constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 						},
-						Annotations: map[string]string{
+						Annotations: mergeServiceAnnotations(map[string]string{
 							constants.DevWorkspaceDiscoverableServiceAnnotation: "true",
-						},
+						}, routingSpec.Service[componentName]),
 					},
 					Spec: corev1.ServiceSpec{
 						Ports:    []corev1.ServicePort{servicePort},
@@ -79,8 +80,9 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 
 // GetServiceForEndpoints returns a single service that exposes all endpoints of given exposure types, possibly also including the discoverable types.
 // `nil` is returned if the service would expose no ports satisfying the provided criteria.
-func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, includeDiscoverable bool, exposureType ...controllerv1alpha1.EndpointExposure) *corev1.Service {
+func GetServiceForEndpoints(routingSpec controllerv1alpha1.DevWorkspaceRoutingSpec, meta DevWorkspaceMetadata, includeDiscoverable bool, exposureType ...controllerv1alpha1.EndpointExposure) *corev1.Service {
 	// "set" of ports that are still left for exposure
+	endpoints := routingSpec.Endpoints
 	ports := map[int]bool{}
 	for _, es := range endpoints {
 		for _, endpoint := range es {
@@ -95,8 +97,9 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 
 	var exposedPorts []corev1.ServicePort
+	var annotations = make(map[string]string)
 
-	for _, es := range endpoints {
+	for componentName, es := range endpoints {
 		for _, endpoint := range es {
 			if !validExposures[endpoint.Exposure] {
 				continue
@@ -117,6 +120,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 				})
 			}
 		}
+		annotations = mergeServiceAnnotations(annotations, routingSpec.Service[componentName])
 	}
 
 	if len(exposedPorts) == 0 {
@@ -130,6 +134,7 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
 			},
+			Annotations: annotations,
 		},
 		Spec: corev1.ServiceSpec{
 			Selector: meta.PodSelector,
@@ -139,12 +144,12 @@ func GetServiceForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList
 	}
 }
 
-func getServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []corev1.Service {
-	if len(endpoints) == 0 {
+func getServicesForEndpoints(routingSpec controllerv1alpha1.DevWorkspaceRoutingSpec, meta DevWorkspaceMetadata) []corev1.Service {
+	if len(routingSpec.Endpoints) == 0 {
 		return nil
 	}
 
-	service := GetServiceForEndpoints(endpoints, meta, true, controllerv1alpha1.PublicEndpointExposure, controllerv1alpha1.InternalEndpointExposure)
+	service := GetServiceForEndpoints(routingSpec, meta, true, controllerv1alpha1.PublicEndpointExposure, controllerv1alpha1.InternalEndpointExposure)
 	if service == nil {
 		return nil
 	}

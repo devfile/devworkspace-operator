@@ -1,5 +1,15 @@
 # DevWorkspace Operator Changelog
 
+# Unreleased
+
+## Features
+- Add support for adding Service annotations from DevWorkspace component configuration to actual Service created by DevWorkspace operator [#1293](https://github.com/devfile/devworkspace-operator/issues/1293)
+
+## **Breaking Changes**
+- There are minor changes in signatures of these methods in `github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers` package
+  - `GetDiscoverableServicesForEndpoints` now expects `controllerv1alpha1.DevWorkspaceRoutingSpec` as first argument, instead of `map[string]controllerv1alpha1.EndpointList`
+  - `GetServiceForEndpoints` now expects `controllerv1alpha1.DevWorkspaceRoutingSpec` as first argument, instead of `map[string]controllerv1alpha1.EndpointList`
+
 # v0.36.0
 ## Bug Fixes & Improvements
 ### Remove `kube-rbac-proxy` from the controller Deployment [#1437](https://github.com/devfile/devworkspace-operator/pull/1437)
@@ -26,6 +36,7 @@ By default, this timeout is disabled.
 ## Bug Fixes & Improvements
 - Update golang version to 1.24 in go.mod [#1413](https://github.com/devfile/devworkspace-operator/pull/1413)
 - Update cleanup job node affinity logic [#1455](https://github.com/devfile/devworkspace-operator/pull/1455)
+
 
 # v0.35.1
 ## Bug Fixes & Improvements

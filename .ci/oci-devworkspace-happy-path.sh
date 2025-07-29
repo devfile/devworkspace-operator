@@ -42,8 +42,7 @@ deployChe() {
     -p openshift \
     --batch \
     --telemetry=off \
-    --installer=operator \
-    --workspace-engine=dev-workspace
+    --installer=operator
 }
 
 deployDWO

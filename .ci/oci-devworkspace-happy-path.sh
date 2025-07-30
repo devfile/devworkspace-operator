@@ -42,7 +42,7 @@ deployChe() {
     -p openshift \
     --batch \
     --telemetry=off \
-    --k8spodreadytimeout=180000 \
+    --k8spodreadytimeout=240000 \
     --installer=operator
 }
 

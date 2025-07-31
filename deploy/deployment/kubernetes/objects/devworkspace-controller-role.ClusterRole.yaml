@@ -25,6 +25,7 @@ rules:
   - pods
   - secrets
   - serviceaccounts
+  - services
   verbs:
   - '*'
 - apiGroups:
@@ -54,12 +55,6 @@ rules:
   - get
   - patch
 - apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - '*'
-- apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
@@ -85,27 +80,9 @@ rules:
   - extensions
   resources:
   - deployments
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - apps
-  - extensions
-  resources:
-  - deployments
   - replicasets
   verbs:
   - '*'
-- apiGroups:
-  - apps
-  - extensions
-  resources:
-  - replicasets
-  verbs:
-  - get
-  - list
-  - watch
 - apiGroups:
   - authorization.k8s.io
   resources:
@@ -137,6 +114,7 @@ rules:
   - controller.devfile.io
   resources:
   - '*'
+  - devworkspaceroutings
   verbs:
   - '*'
 - apiGroups:
@@ -147,12 +125,6 @@ rules:
   - get
   - list
   - watch
-- apiGroups:
-  - controller.devfile.io
-  resources:
-  - devworkspaceroutings
-  verbs:
-  - '*'
 - apiGroups:
   - controller.devfile.io
   resources:

@@ -132,7 +132,7 @@ func TestBuildUserScript(t *testing.T) {
 					},
 				},
 			},
-			expectedScript: "cd '/projects/app' && ls -la",
+			expectedScript: "cd \"/projects/app\" && ls -la",
 			expectedErr:    "",
 		},
 		{
@@ -148,7 +148,7 @@ func TestBuildUserScript(t *testing.T) {
 					},
 				},
 			},
-			expectedScript: "cd '/data'",
+			expectedScript: "cd \"/data\"",
 			expectedErr:    "",
 		},
 		{
@@ -165,7 +165,7 @@ func TestBuildUserScript(t *testing.T) {
 					},
 				},
 			},
-			expectedScript: "cd '/projects/app'\\''s' && cat file.txt",
+			expectedScript: "cd \"/projects/app's\" && cat file.txt",
 			expectedErr:    "",
 		},
 		{
@@ -201,11 +201,11 @@ func TestBuildUserScript(t *testing.T) {
 					},
 				},
 			},
-			expectedScript: "cd '/projects/frontend' && npm install\nnpm start\ncd '/projects/backend' && mvn spring-boot:run",
+			expectedScript: "cd \"/projects/frontend\" && npm install\nnpm start\ncd \"/projects/backend\" && mvn spring-boot:run",
 			expectedErr:    "",
 		},
 		{
-			name: "Command with unsupported Env vars",
+			name: "Command with Env vars",
 			commands: []dw.Command{
 				{
 					Id: "cmd-with-env",
@@ -220,8 +220,8 @@ func TestBuildUserScript(t *testing.T) {
 					},
 				},
 			},
-			expectedScript: "",
-			expectedErr:    "env vars in postStart command cmd-with-env are unsupported",
+			expectedScript: "export MY_VAR=\"test\" && echo $MY_VAR",
+			expectedErr:    "",
 		},
 		{
 			name: "Command with nil Exec field",

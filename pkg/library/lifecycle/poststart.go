@@ -163,14 +163,13 @@ func buildUserScript(commands []dw.Command) (string, error) {
 			// Should be caught by earlier validation, but good to be safe
 			return "", fmt.Errorf("exec command is nil for command ID %s", command.Id)
 		}
-		if len(execCmd.Env) > 0 {
-			return "", fmt.Errorf("env vars in postStart command %s are unsupported", command.Id)
-		}
 		var singleCommandParts []string
+		for _, envVar := range execCmd.Env {
+			singleCommandParts = append(singleCommandParts, fmt.Sprintf("export %s=%q", envVar.Name, envVar.Value))
+		}
+
 		if execCmd.WorkingDir != "" {
-			// Safely quote the working directory path
-			safeWorkingDir := strings.ReplaceAll(execCmd.WorkingDir, "'", `'\''`)
-			singleCommandParts = append(singleCommandParts, fmt.Sprintf("cd '%s'", safeWorkingDir))
+			singleCommandParts = append(singleCommandParts, fmt.Sprintf("cd %q", execCmd.WorkingDir))
 		}
 		if execCmd.CommandLine != "" {
 			singleCommandParts = append(singleCommandParts, execCmd.CommandLine)

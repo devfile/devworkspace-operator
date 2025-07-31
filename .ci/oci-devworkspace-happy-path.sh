@@ -44,8 +44,7 @@ deployChe() {
     --telemetry=off \
     --skip-devworkspace-operator \
     --k8spodwaittimeout=6000000 \
-    --k8spodreadytimeout=6000000 \
-    --installer=operator
+    --k8spodreadytimeout=6000000
 }
 
 deployDWO

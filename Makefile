@@ -180,6 +180,11 @@ test_e2e_debug:
 	mkdir -p /tmp/artifacts
 	dlv test --listen=:2345 --headless=true --api-version=2 ./test/e2e/cmd/workspaces_test.go -- --ginkgo.fail-fast --ginkgo.junit-report=/tmp/artifacts/junit-workspaces-operator.xml
 
+test_load:
+	@echo "Starting Load Testing Script..." && \
+	bash ./test/load/runk6.sh $(ARGS) && \
+	echo "Done"
+
 ### manager: Build manager binary
 manager: generate fmt vet
 	go build -o bin/manager main.go

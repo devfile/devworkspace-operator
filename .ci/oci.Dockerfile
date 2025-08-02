@@ -23,8 +23,8 @@ RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && sed
 RUN yum install --assumeyes -d1 python3-pip nodejs gettext jq && \
     pip3 install --upgrade pip && \
     pip3 install --ignore-installed --upgrade setuptools && \
-    # Install yq
-    pip3 install yq && \
+    # Install yq and jq
+    pip3 install yq jq && \
     # Install kubectl
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \

@@ -18,6 +18,7 @@ package status
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -28,6 +29,23 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+var (
+	// reTerminatedSigterm matches: "[postStart hook] Commands terminated by SIGTERM (likely timed out after ...s). Exit code 143."
+	reTerminatedSigterm = regexp.MustCompile(`\[postStart hook\] Commands terminated by SIGTERM \(likely timed out after \d+[^\)]+?\)\. Exit code 143\.`)
+
+	// reKilledSigkill matches: "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ...s expired). Exit code 137."
+	reKilledSigkill = regexp.MustCompile(`\[postStart hook\] Commands forcefully killed by SIGKILL \(likely after --kill-after \d+[^\)]+?\)\. Exit code 137\.`)
+
+	// reGenericFailedExitCode matches: "[postStart hook] Commands failed with exit code ..." (for any other script-reported non-zero exit code)
+	reGenericFailedExitCode = regexp.MustCompile(`\[postStart hook\] Commands failed with exit code \d+\.`)
+
+	// reKubeletInternalMessage regex to capture Kubelet's explicit message field content if it exists
+	reKubeletInternalMessage = regexp.MustCompile(`message:\s*"([^"]*)"`)
+
+	// reKubeletExitCode regex to capture Kubelet's reported exit code for the hook command
+	reKubeletExitCode = regexp.MustCompile(`exited with (\d+):`)
 )
 
 var containerFailureStateReasons = []string{
@@ -145,10 +163,15 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, ignoredEvents []string,
 		if maxCount, isUnrecoverableEvent := unrecoverablePodEventReasons[ev.Reason]; isUnrecoverableEvent {
 			if !checkIfUnrecoverableEventIgnored(ev.Reason, ignoredEvents) && getEventCount(ev) >= maxCount {
 				var msg string
+				eventMessage := ev.Message // Original Kubelet message from the event
+				if ev.Reason == "FailedPostStartHook" {
+					eventMessage = getConcisePostStartFailureMessage(ev.Message)
+				}
+
 				if getEventCount(ev) > 1 {
-					msg = fmt.Sprintf("Detected unrecoverable event %s %d times: %s.", ev.Reason, getEventCount(ev), ev.Message)
+					msg = fmt.Sprintf("Detected unrecoverable event %s %d times: %s", ev.Reason, getEventCount(ev), eventMessage)
 				} else {
-					msg = fmt.Sprintf("Detected unrecoverable event %s: %s.", ev.Reason, ev.Message)
+					msg = fmt.Sprintf("Detected unrecoverable event %s: %s", ev.Reason, eventMessage)
 				}
 				return msg, nil
 			}
@@ -157,22 +180,92 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, ignoredEvents []string,
 	return "", nil
 }
 
+// getConcisePostStartFailureMessage tries to parse the Kubelet's verbose message
+// for a PostStartHookError into a more user-friendly one.
+func getConcisePostStartFailureMessage(kubeletMsg string) string {
+	/* 1: check Kubelet's explicit 'message: "..."' field for the specific output */
+
+	kubeletInternalMsgMatch := reKubeletInternalMessage.FindStringSubmatch(kubeletMsg)
+	if len(kubeletInternalMsgMatch) > 1 && kubeletInternalMsgMatch[1] != "" {
+		internalMsg := kubeletInternalMsgMatch[1]
+		if match := reTerminatedSigterm.FindString(internalMsg); match != "" {
+			return match
+		}
+		if match := reKilledSigkill.FindString(internalMsg); match != "" {
+			return match
+		}
+		if match := reGenericFailedExitCode.FindString(internalMsg); match != "" {
+			return match
+		}
+	}
+
+	/* 2: parse Kubelet's reported exit code for the entire hook command */
+
+	matchesKubeletExitCode := reKubeletExitCode.FindStringSubmatch(kubeletMsg)
+	if len(matchesKubeletExitCode) > 1 {
+		exitCodeStr := matchesKubeletExitCode[1]
+		var exitCode int
+		fmt.Sscanf(exitCodeStr, "%d", &exitCode)
+
+		// generate messages indicating the source is Kubelet's reported exit code
+		if exitCode == 143 { // SIGTERM
+			return "[postStart hook] Commands terminated by SIGTERM due to timeout"
+		} else if exitCode == 137 { // SIGKILL
+			return "[postStart hook] Commands forcefully killed by SIGKILL due to timeout"
+		} else if exitCode != 0 { // Other non-zero exit codes (e.g., 124, 127)
+			return fmt.Sprintf("[postStart hook] Commands failed (Kubelet reported exit code %s)", exitCodeStr)
+		}
+	}
+
+	/* 3: try to match specific script outputs against the *entire* Kubelet message */
+
+	if match := reTerminatedSigterm.FindString(kubeletMsg); match != "" {
+		return match
+	}
+	if match := reKilledSigkill.FindString(kubeletMsg); match != "" {
+		return match
+	}
+	if match := reGenericFailedExitCode.FindString(kubeletMsg); match != "" {
+		return match
+	}
+
+	/* 4: fallback */
+
+	return "[postStart hook] failed with an unknown error (see pod events or container logs for more details)"
+}
+
 func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus, ignoredEvents []string) (ok bool, reason string) {
 	if containerStatus.State.Waiting != nil {
+		// Explicitly check for PostStartHookError
+		if containerStatus.State.Waiting.Reason == "PostStartHookError" { // Kubelet uses this reason
+			conciseMsg := getConcisePostStartFailureMessage(containerStatus.State.Waiting.Message)
+			return checkIfUnrecoverableEventIgnored("FailedPostStartHook", ignoredEvents), conciseMsg
+		}
+		// Check against other generic failure reasons
 		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Waiting.Reason == failureReason {
-				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason, ignoredEvents), containerStatus.State.Waiting.Reason
+				return checkIfUnrecoverableEventIgnored(containerStatus.State.Waiting.Reason, ignoredEvents),
+					containerStatus.State.Waiting.Reason
 			}
 		}
 	}
 
 	if containerStatus.State.Terminated != nil {
+		// Check if termination was due to a generic error, which might include postStart issues
+		// if the container failed to run.
+		if containerStatus.State.Terminated.Reason == "Error" || containerStatus.State.Terminated.Reason == "ContainerCannotRun" {
+			return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason, ignoredEvents),
+				fmt.Sprintf("%s: %s", containerStatus.State.Terminated.Reason, containerStatus.State.Terminated.Message)
+		}
+		// Check against other generic failure reasons for terminated state
 		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Terminated.Reason == failureReason {
-				return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason, ignoredEvents), containerStatus.State.Terminated.Reason
+				return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason, ignoredEvents),
+					containerStatus.State.Terminated.Reason
 			}
 		}
 	}
+
 	return true, ""
 }
 

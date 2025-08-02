@@ -20,11 +20,11 @@ SHELL ["/bin/bash", "-c"]
 # Temporary workaround since mirror.centos.org is down and can be replaced with vault.centos.org
 RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
 
-RUN yum install --assumeyes -d1 python3-pip nodejs gettext && \
+RUN yum install --assumeyes -d1 python3-pip nodejs gettext jq && \
     pip3 install --upgrade pip && \
     pip3 install --ignore-installed --upgrade setuptools && \
-    # Install yq and jq
-    pip3 install yq jq && \
+    # Install yq
+    pip3 install yq && \
     # Install kubectl
     curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \

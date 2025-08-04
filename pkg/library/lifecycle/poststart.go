@@ -16,9 +16,11 @@ package lifecycle
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -39,7 +41,7 @@ const (
 `
 )
 
-func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout *int32) error {
+func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout string) error {
 	if wksp.Events == nil || len(wksp.Events.PostStart) == 0 {
 		return nil
 	}
@@ -83,8 +85,8 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 
 // processCommandsForPostStart processes a list of DevWorkspace commands
 // and generates a corev1.LifecycleHandler for the PostStart lifecycle hook.
-func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32) (*corev1.LifecycleHandler, error) {
-	if postStartTimeout == nil || *postStartTimeout == 0 {
+func processCommandsForPostStart(commands []dw.Command, postStartTimeout string) (*corev1.LifecycleHandler, error) {
+	if postStartTimeout == "" {
 		// use the fallback if no timeout propagated
 		return processCommandsWithoutTimeoutFallback(commands)
 	}
@@ -99,7 +101,7 @@ func processCommandsForPostStart(commands []dw.Command, postStartTimeout *int32)
 	scriptToExecute := "set -e\n" + originalUserScript
 	escapedUserScriptForTimeoutWrapper := strings.ReplaceAll(scriptToExecute, "'", `'\''`)
 
-	fullScriptWithTimeout := generateScriptWithTimeout(escapedUserScriptForTimeoutWrapper, *postStartTimeout)
+	fullScriptWithTimeout := generateScriptWithTimeout(escapedUserScriptForTimeoutWrapper, postStartTimeout)
 
 	finalScriptForHook := fmt.Sprintf(redirectOutputFmt, fullScriptWithTimeout)
 
@@ -185,7 +187,19 @@ func buildUserScript(commands []dw.Command) (string, error) {
 // environment variable exports, and specific exit code handling.
 // The killAfterDurationSeconds is hardcoded to 5s within this generated script.
 // It conditionally prefixes the user script with the timeout command if available.
-func generateScriptWithTimeout(escapedUserScript string, timeoutSeconds int32) string {
+func generateScriptWithTimeout(escapedUserScript string, postStartTimeout string) string {
+	// Convert `postStartTimeout` into the `timeout` format
+	var timeoutSeconds int64
+	if postStartTimeout != "" && postStartTimeout != "0" {
+		duration, err := time.ParseDuration(postStartTimeout)
+		if err != nil {
+			log.Log.Error(err, "Could not parse post-start timeout, disabling timeout", "value", postStartTimeout)
+			timeoutSeconds = 0
+		} else {
+			timeoutSeconds = int64(duration.Seconds())
+		}
+	}
+
 	return fmt.Sprintf(`
 export POSTSTART_TIMEOUT_DURATION="%d"
 export POSTSTART_KILL_AFTER_DURATION="5"

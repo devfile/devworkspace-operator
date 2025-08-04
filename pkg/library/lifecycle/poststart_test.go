@@ -75,8 +75,8 @@ func TestAddPostStartLifecycleHooks(t *testing.T) {
 	tests := loadAllPostStartTestCasesOrPanic(t, "./testdata/postStart")
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.testPath), func(t *testing.T) {
-			var timeout int32
-			err := AddPostStartLifecycleHooks(tt.Input.Devfile, tt.Input.Containers, &timeout)
+			var timeout string
+			err := AddPostStartLifecycleHooks(tt.Input.Devfile, tt.Input.Containers, timeout)
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {
@@ -298,13 +298,13 @@ func TestGenerateScriptWithTimeout(t *testing.T) {
 	tests := []struct {
 		name              string
 		escapedUserScript string
-		timeoutSeconds    int32
+		timeout           string
 		expectedScript    string
 	}{
 		{
 			name:              "Basic script with timeout",
 			escapedUserScript: "echo 'hello world'\nsleep 1",
-			timeoutSeconds:    10,
+			timeout:           "10s",
 			expectedScript: `
 export POSTSTART_TIMEOUT_DURATION="10"
 export POSTSTART_KILL_AFTER_DURATION="5"
@@ -350,7 +350,7 @@ exit $exit_code
 		{
 			name:              "Script with zero timeout (no timeout)",
 			escapedUserScript: "echo 'running indefinitely...'",
-			timeoutSeconds:    0,
+			timeout:           "0s",
 			expectedScript: `
 export POSTSTART_TIMEOUT_DURATION="0"
 export POSTSTART_KILL_AFTER_DURATION="5"
@@ -395,7 +395,7 @@ exit $exit_code
 		{
 			name:              "Empty user script",
 			escapedUserScript: "",
-			timeoutSeconds:    5,
+			timeout:           "5s",
 			expectedScript: `
 export POSTSTART_TIMEOUT_DURATION="5"
 export POSTSTART_KILL_AFTER_DURATION="5"
@@ -440,7 +440,7 @@ exit $exit_code
 		{
 			name:              "User script with already escaped single quotes",
 			escapedUserScript: "echo 'it'\\''s complex'",
-			timeoutSeconds:    30,
+			timeout:           "30s",
 			expectedScript: `
 export POSTSTART_TIMEOUT_DURATION="30"
 export POSTSTART_KILL_AFTER_DURATION="5"
@@ -482,11 +482,56 @@ fi
 exit $exit_code
 `,
 		},
+		{
+			name:              "User script with minute timeout",
+			escapedUserScript: "echo 'wait for it...'",
+			timeout:           "2m",
+			expectedScript: `
+export POSTSTART_TIMEOUT_DURATION="120"
+export POSTSTART_KILL_AFTER_DURATION="5"
+
+_TIMEOUT_COMMAND_PART=""
+_WAS_TIMEOUT_USED="false" # Use strings "true" or "false" for shell boolean
+
+if command -v timeout >/dev/null 2>&1; then
+  echo "[postStart hook] Executing commands with timeout: ${POSTSTART_TIMEOUT_DURATION} seconds, kill after: ${POSTSTART_KILL_AFTER_DURATION} seconds" >&2
+  _TIMEOUT_COMMAND_PART="timeout --preserve-status --kill-after=${POSTSTART_KILL_AFTER_DURATION} ${POSTSTART_TIMEOUT_DURATION}"
+  _WAS_TIMEOUT_USED="true"
+else
+  echo "[postStart hook] WARNING: 'timeout' utility not found. Executing commands without timeout." >&2
+fi
+
+# Execute the user's script
+${_TIMEOUT_COMMAND_PART} /bin/sh -c 'echo 'wait for it...''
+exit_code=$?
+
+# Check the exit code based on whether timeout was attempted
+if [ "$_WAS_TIMEOUT_USED" = "true" ]; then
+  if [ $exit_code -eq 143 ]; then # 128 + 15 (SIGTERM)
+    echo "[postStart hook] Commands terminated by SIGTERM (likely timed out after ${POSTSTART_TIMEOUT_DURATION}s). Exit code 143." >&2
+  elif [ $exit_code -eq 137 ]; then # 128 + 9 (SIGKILL)
+    echo "[postStart hook] Commands forcefully killed by SIGKILL (likely after --kill-after ${POSTSTART_KILL_AFTER_DURATION}s expired). Exit code 137." >&2
+  elif [ $exit_code -ne 0 ]; then # Catches any other non-zero exit code
+    echo "[postStart hook] Commands failed with exit code $exit_code." >&2
+  else
+    echo "[postStart hook] Commands completed successfully within the time limit." >&2
+  fi
+else
+  if [ $exit_code -ne 0 ]; then
+    echo "[postStart hook] Commands failed with exit code $exit_code (no timeout)." >&2
+  else
+    echo "[postStart hook] Commands completed successfully (no timeout)." >&2
+  fi
+fi
+
+exit $exit_code
+`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			script := generateScriptWithTimeout(tt.escapedUserScript, tt.timeoutSeconds)
+			script := generateScriptWithTimeout(tt.escapedUserScript, tt.timeout)
 			assert.Equal(t, tt.expectedScript, script)
 		})
 	}

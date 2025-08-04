@@ -21,7 +21,7 @@ package v1alpha1
 
 import (
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -787,11 +787,6 @@ func (in *WorkspaceConfig) DeepCopyInto(out *WorkspaceConfig) {
 		in, out := &in.CleanupCronJob, &out.CleanupCronJob
 		*out = new(CleanupCronJobConfig)
 		(*in).DeepCopyInto(*out)
-	}
-	if in.PostStartTimeout != nil {
-		in, out := &in.PostStartTimeout, &out.PostStartTimeout
-		*out = new(int32)
-		**out = **in
 	}
 }
 

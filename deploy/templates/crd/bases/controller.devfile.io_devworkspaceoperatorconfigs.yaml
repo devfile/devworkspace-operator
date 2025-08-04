@@ -2903,10 +2903,9 @@ spec:
                       PostStartTimeout defines the maximum duration the PostStart hook can run
                       before it is automatically failed. This timeout is used for the postStart lifecycle hook
                       that is used to run commands in the workspace container. The timeout is specified in seconds.
-                      If not specified, the timeout is disabled (0 seconds).
-                    format: int32
-                    minimum: 0
-                    type: integer
+                      Duration should be specified in a format parseable by Go's time package, e.g. "20s", "2m".
+                      If not specified or "0", the timeout is disabled.
+                    type: string
                   progressTimeout:
                     description: |-
                       ProgressTimeout determines the maximum duration a DevWorkspace can be in

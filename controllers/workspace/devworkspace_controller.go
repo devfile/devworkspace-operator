@@ -355,7 +355,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, projectCloneOptions, workspace.Config.Routing.ProxyConfig); err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 	} else if projectClone != nil {
-		devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, *projectClone)
+		devfilePodAdditions.InitContainers = append([]corev1.Container{*projectClone}, devfilePodAdditions.InitContainers...)
 	}
 
 	// Add ServiceAccount tokens into devfile containers

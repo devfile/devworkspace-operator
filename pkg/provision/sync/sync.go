@@ -60,7 +60,8 @@ func SyncObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Ob
 		return clusterObj, nil
 	}
 
-	diffFunc := diffFuncs[objType]
+	api.Logger.Info("> Syncing object", "kind", objType.String(), "name", specObj.GetName())
+	diffFunc := getDiffFunc(clusterObj)
 	if diffFunc == nil {
 		return nil, &UnrecoverableSyncError{fmt.Errorf("attempting to sync unrecognized object %s", objType)}
 	}

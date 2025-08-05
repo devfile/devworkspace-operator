@@ -151,4 +151,9 @@ const (
 	// of a cloned project. If the bootstrap process is successful, project-clone will automatically remove this attribute
 	// from the DevWorkspace
 	BootstrapDevWorkspaceAttribute = "controller.devfile.io/bootstrap-devworkspace"
+
+	// SyncIgnoreTLSConfig instructs the controller to skip processing the TLS configuration when syncing a Route
+	// or an Ingress into the cluster. This is useful in scenarios where TLS certificates are managed externally -
+	// for example, by tools like cert-manager that automatically inject certificates.
+	SyncIgnoreTLSConfig = "controller.devfile.io/sync-ignore-tls"
 )

@@ -87,8 +87,20 @@ var routeDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(routeV1.RouteTargetReference{}, "Weight"),
 }
 
+var routeWithoutTLSDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(routeV1.Route{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(routeV1.RouteSpec{}, "WildcardPolicy", "Host", "TLS"),
+	cmpopts.IgnoreFields(routeV1.RouteTargetReference{}, "Weight"),
+}
+
 var ingressDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(networkingv1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(networkingv1.HTTPIngressPath{}, "PathType"),
+}
+
+var ingressWithoutTLSDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(networkingv1.Ingress{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(networkingv1.IngressSpec{}, "TLS"),
 	cmpopts.IgnoreFields(networkingv1.HTTPIngressPath{}, "PathType"),
 }
 

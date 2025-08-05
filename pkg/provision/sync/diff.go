@@ -14,7 +14,9 @@
 package sync
 
 import (
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"reflect"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sort"
 	"strings"
 
@@ -50,6 +52,11 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(corev1.Service{}):               allDiffFuncs(metadataDiffFunc, serviceDiffFunc),
 	reflect.TypeOf(networkingv1.Ingress{}):         allDiffFuncs(metadataDiffFunc, basicDiffFunc(ingressDiffOpts)),
 	reflect.TypeOf(routev1.Route{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(routeDiffOpts)),
+}
+
+var withoutTLSDiffFuncs = map[reflect.Type]diffFunc{
+	reflect.TypeOf(networkingv1.Ingress{}): allDiffFuncs(metadataDiffFunc, basicDiffFunc(ingressWithoutTLSDiffOpts)),
+	reflect.TypeOf(routev1.Route{}):        allDiffFuncs(metadataDiffFunc, basicDiffFunc(routeWithoutTLSDiffOpts)),
 }
 
 // basicDiffFunc returns a diffFunc that specifies an object needs an update if cmp.Equal fails
@@ -272,4 +279,17 @@ func containsOwnerRef(toCheck metav1.OwnerReference, listRefs []metav1.OwnerRefe
 		}
 	}
 	return false
+}
+
+func getDiffFunc(specObj crclient.Object) diffFunc {
+	objType := reflect.TypeOf(specObj).Elem()
+	for s, s2 := range specObj.GetAnnotations() {
+		zap.New().Info("Annotation found", "key", s, "value", s2)
+	}
+	if specObj.GetAnnotations()[constants.SyncIgnoreTLSConfig] == "true" {
+		zap.New().Info("Ignoring TLS configuration for object")
+		return withoutTLSDiffFuncs[objType]
+	} else {
+		return diffFuncs[objType]
+	}
 }

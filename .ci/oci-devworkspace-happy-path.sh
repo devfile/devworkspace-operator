@@ -42,8 +42,9 @@ deployChe() {
     -p openshift \
     --batch \
     --telemetry=off \
-    --installer=operator \
-    --workspace-engine=dev-workspace
+    --skip-devworkspace-operator \
+    --k8spodwaittimeout=6000000 \
+    --k8spodreadytimeout=6000000
 }
 
 deployDWO

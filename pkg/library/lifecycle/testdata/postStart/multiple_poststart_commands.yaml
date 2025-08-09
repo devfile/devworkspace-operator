@@ -27,8 +27,8 @@ output:
         postStart:
           exec:
             command:
-              - "/bin/sh"
-              - "-c"
+              - /bin/sh
+              - -c
               - |
                 {
                 echo 'hello world 1'

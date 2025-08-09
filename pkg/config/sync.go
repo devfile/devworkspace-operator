@@ -431,6 +431,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.CleanupCronJob.Schedule = from.Workspace.CleanupCronJob.Schedule
 			}
 		}
+
+		if from.Workspace.PostStartTimeout != "" {
+			to.Workspace.PostStartTimeout = from.Workspace.PostStartTimeout
+		}
 	}
 }
 
@@ -600,6 +604,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.IdleTimeout != defaultConfig.Workspace.IdleTimeout {
 			config = append(config, fmt.Sprintf("workspace.idleTimeout=%s", workspace.IdleTimeout))
+		}
+		if workspace.PostStartTimeout != defaultConfig.Workspace.PostStartTimeout {
+			config = append(config, fmt.Sprintf("workspace.postStartTimeout=%s", workspace.PostStartTimeout))
 		}
 		if workspace.ProgressTimeout != "" && workspace.ProgressTimeout != defaultConfig.Workspace.ProgressTimeout {
 			config = append(config, fmt.Sprintf("workspace.progressTimeout=%s", workspace.ProgressTimeout))

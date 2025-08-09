@@ -1,5 +1,18 @@
 # DevWorkspace Operator Changelog
 
+
+# Unreleased
+## Bug Fixes & Improvements
+- Remove `kube-rbac-proxy` sidecar metric proxy container from Operator deployment [#1343](https://github.com/devfile/devworkspace-operator/issues/1343)
+
+## Features
+- Add support for adding Service annotations from DevWorkspace component configuration to actual Service created by DevWorkspace operator [#1293](https://github.com/devfile/devworkspace-operator/issues/1293)
+
+## **Breaking Changes**
+- There are minor changes in signatures of these methods in `github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers` package
+  - `GetDiscoverableServicesForEndpoints` now expects `controllerv1alpha1.DevWorkspaceRoutingSpec` as first argument, instead of `map[string]controllerv1alpha1.EndpointList`
+  - `GetServiceForEndpoints` now expects `controllerv1alpha1.DevWorkspaceRoutingSpec` as first argument, instead of `map[string]controllerv1alpha1.EndpointList`
+
 # v0.35.1
 ## Bug Fixes & Improvements
 - Reverted [#1269](https://github.com/devfile/devworkspace-operator/issues/1269) due to [#1453](https://github.com/devfile/devworkspace-operator/issues/1453)

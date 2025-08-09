@@ -72,4 +72,6 @@ make install
 export CLEAN_UP_AFTER_SUITE="false"
 make test_e2e
 bumpLogs
+
+make test_load
 make uninstall

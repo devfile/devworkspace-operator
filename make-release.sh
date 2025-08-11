@@ -233,7 +233,7 @@ prerelease() {
 
   echo "[INFO] Creating ${X_BRANCH} from ${MAIN_BRANCH}"
   git checkout ${MAIN_BRANCH}
-  git checkout -b "${X_BRANCH}"
+  git checkout "${X_BRANCH}"
 
   echo "[INFO] Updating version to $VERSION"
   update_version "$VERSION"

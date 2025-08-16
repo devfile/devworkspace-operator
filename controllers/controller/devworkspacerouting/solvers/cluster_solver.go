@@ -46,7 +46,7 @@ func (s *ClusterSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error 
 
 func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
-	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
+	services := getServicesForEndpoints(spec, workspaceMeta)
 	podAdditions := &controllerv1alpha1.PodAdditions{}
 	if s.TLS {
 		readOnlyMode := int32(420)

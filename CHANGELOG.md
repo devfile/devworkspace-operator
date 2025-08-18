@@ -7,7 +7,7 @@ The `kube-rbac-proxy` container is now removed from the `devworkspace-controller
 
 This allows setting the only controller container's resource constraints using the Subscription resource as defined [here](https://github.com/operator-framework/operator-lifecycle-manager/blob/master/doc/design/subscription-config.md#example-4). The resource constraints defined in the Subscription apply the constraints to all containers in the `devworkspace-controller-manager` Deployment. As a result, previously both the controller and kube-rbac-proxy container's constraints were updated, when in most cases only the controller container was the desired container to be updated.
 
-### Execute preStart devfile events after the project-clone init-continer has run. [#1454](https://github.com/devfile/devworkspace-operator/issues/1454)
+### Execute preStart devfile events after the project-clone init-container has run. [#1454](https://github.com/devfile/devworkspace-operator/issues/1454)
 The `project-clone` init container is now the first init container for DevWorkspace Pods. This ensures that the project is already cloned when running pre-start events defined in the Devfile.
 
 ## Bug Fixes & Improvements

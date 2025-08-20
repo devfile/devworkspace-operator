@@ -17,13 +17,39 @@ package client
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+func (w *K8sClient) UpdateDevWorkspaceStarted(name, namespace string, started bool) error {
+	patch := map[string]interface{}{
+		"spec": map[string]interface{}{
+			"started": started,
+		},
+	}
+	patchData, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	target := &dw.DevWorkspace{}
+	target.ObjectMeta.Name = name
+	target.ObjectMeta.Namespace = namespace
+
+	err = w.crClient.Patch(
+		context.TODO(),
+		target,
+		client.RawPatch(types.MergePatchType, patchData),
+	)
+	return err
+}
 
 // get workspace current dev workspace status from the Custom Resource object
 func (w *K8sClient) GetDevWsStatus(name, namespace string) (*dw.DevWorkspaceStatus, error) {
@@ -54,7 +80,7 @@ func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus dw.De
 			if err != nil {
 				return false, err
 			}
-			log.Printf("Now current status of developer workspace is: %s. Message: %s", currentStatus.Phase, currentStatus.Message)
+			log.Printf("Now current status of developer workspace %s is: %s. Message: %s", name, currentStatus.Phase, currentStatus.Message)
 			if currentStatus.Phase == dw.DevWorkspaceStatusFailed {
 				return false, errors.New("workspace has been failed unexpectedly. Message: " + currentStatus.Message)
 			}

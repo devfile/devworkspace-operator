@@ -435,6 +435,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.PostStartTimeout != "" {
 			to.Workspace.PostStartTimeout = from.Workspace.PostStartTimeout
 		}
+
+		if from.Workspace.HostUsers != nil {
+			to.Workspace.HostUsers = from.Workspace.HostUsers
+		}
 	}
 }
 

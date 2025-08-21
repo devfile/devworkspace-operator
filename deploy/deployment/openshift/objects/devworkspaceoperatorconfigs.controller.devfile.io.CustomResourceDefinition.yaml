@@ -2520,6 +2520,13 @@ spec:
                     - Recreate
                     - RollingUpdate
                     type: string
+                  hostUsers:
+                    description: |-
+                      Use the host's user namespace.
+                      Optional: Default to true.
+                      If set to true or not present, the pod will be run in the host user namespace.
+                      When set to false, a new userns is created for the pod.
+                    type: boolean
                   idleTimeout:
                     description: |-
                       IdleTimeout determines how long a workspace should sit idle before being

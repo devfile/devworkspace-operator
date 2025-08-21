@@ -82,6 +82,7 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 			RetainTime: pointer.Int32(2592000),
 			Schedule:   "0 0 1 * *",
 		},
+		HostUsers: pointer.Bool(true),
 	},
 }
 

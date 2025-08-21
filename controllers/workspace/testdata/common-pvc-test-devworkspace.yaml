@@ -5,6 +5,7 @@ metadata:
     controller.devfile.io/creator: ""
 spec:
   started: true
+  hostUsers: true
   routingClass: 'basic'
   template:
     attributes:

@@ -73,5 +73,6 @@ export CLEAN_UP_AFTER_SUITE="false"
 make test_e2e
 bumpLogs
 
-make test_load ARGS="--mode operator --max-vus 250 --separate-namespaces false --test-duration-minutes 25 --dwo-namespace devworkspace-controller --logs-dir ${ARTIFACT_DIR}/load-testing-logs"
-make uninstall
+make test_load ARGS="--mode operator --max-vus 500 --max-devworkspaces 1500 --delete-devworkspace-after-ready false --separate-namespaces false --test-duration-minutes 25 --dwo-namespace devworkspace-controller --logs-dir ${ARTIFACT_DIR}/load-testing-logs"
+
+#make uninstall

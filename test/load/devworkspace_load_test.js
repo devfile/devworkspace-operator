@@ -23,10 +23,12 @@ const inCluster = __ENV.IN_CLUSTER === 'true';
 const apiServer = inCluster ? `https://kubernetes.default.svc` : __ENV.KUBE_API;
 const token = inCluster ? open('/var/run/secrets/kubernetes.io/serviceaccount/token') : __ENV.KUBE_TOKEN;
 const useSeparateNamespaces = __ENV.SEPARATE_NAMESPACES === "true";
+const deleteDevWorkspaceAfterReady = __ENV.DELETE_DEVWORKSPACE_AFTER_READY === "true";
 const operatorNamespace = __ENV.DWO_NAMESPACE || 'openshift-operators';
 const externalDevWorkspaceLink = __ENV.DEVWORKSPACE_LINK || '';
 const shouldCreateAutomountResources = (__ENV.CREATE_AUTOMOUNT_RESOURCES || 'false') === 'true';
 const maxVUs = Number(__ENV.MAX_VUS || 50);
+const maxDevWorkspaces = Number(__ENV.MAX_DEVWORKSPACES || -1);
 const devWorkspaceReadyTimeout = Number(__ENV.DEV_WORKSPACE_READY_TIMEOUT_IN_SECONDS || 600);
 const autoMountConfigMapName = 'dwo-load-test-automount-configmap';
 const autoMountSecretName = 'dwo-load-test-automount-secret';
@@ -87,6 +89,12 @@ export function setup() {
 }
 
 export default function () {
+  if (maxDevWorkspaces > 0) {
+    const totalDevWorkspaces = getDevWorkspacesFromApiServer().length;
+    if (totalDevWorkspaces > maxDevWorkspaces) {
+      return;
+    }
+  }
   const vuId = __VU;
   const iteration = __ITER;
   const crName = `dw-test-${vuId}-${iteration}`;
@@ -104,7 +112,9 @@ export default function () {
     const devWorkspaceCreated = createNewDevWorkspace(namespace, vuId, iteration);
     if (devWorkspaceCreated) {
       waitUntilDevWorkspaceIsReady(vuId, crName, namespace);
-      deleteDevWorkspace(crName, namespace);
+      if (deleteDevWorkspaceAfterReady) {
+        deleteDevWorkspace(crName, namespace);
+      }
     }
   } catch (error) {
     console.error(`Load test for ${vuId}-${iteration} failed:`, error.message);
@@ -232,7 +242,6 @@ function checkDevWorkspaceOperatorMetrics() {
   });
 
   if (res.status !== 200) {
-    console.warn(`[DWO METRICS] Unable to fetch DevWorkspace Operator metrics from Kubernetes, got ${res.status}`);
     return;
   }
 
@@ -432,6 +441,23 @@ function downloadAndParseExternalWorkspace(externalDevWorkspaceLink) {
   }
 
   return manifest;
+}
+
+function getDevWorkspacesFromApiServer() {
+  const basePath = useSeparateNamespaces
+      ? `${apiServer}/apis/workspace.devfile.io/v1alpha2/devworkspaces`
+      : `${apiServer}/apis/workspace.devfile.io/v1alpha2/namespaces/${loadTestNamespace}/devworkspaces`;
+
+  const url = `${basePath}?labelSelector=${labelKey}%3D${labelType}`;
+  const res = http.get(url, { headers });
+
+  if (res.status !== 200) {
+    console.error(`Failed to fetch DevWorkspaces: ${res.status} ${res.statusText || ''}`);
+    return [];
+  }
+
+  const body = JSON.parse(res.body);
+  return body.items.map((dw) => dw.metadata.name);
 }
 
 function generateDevWorkspaceToCreate(vuId, iteration, namespace) {

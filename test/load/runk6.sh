@@ -16,6 +16,8 @@ DEVWORKSPACE_LINK="https://gist.githubusercontent.com/rohanKanojia/ecf625afaf3fe
 MAX_VUS="100"
 DEV_WORKSPACE_READY_TIMEOUT_IN_SECONDS="1200"
 SEPARATE_NAMESPACES="false"
+DELETE_DEVWORKSPACE_AFTER_READY="true"
+MAX_DEVWORKSPACES="-1"
 CREATE_AUTOMOUNT_RESOURCES="false"
 LOGS_DIR="logs"
 TEST_DURATION_IN_MINUTES="25"
@@ -57,7 +59,9 @@ Usage: $0 [options]
 Options:
   --mode <operator|binary>                    Mode to run the script (default: operator)
   --max-vus <int>                             Number of virtual users for k6 (default: 100)
+  --max-devworkspaces <int>                   Maximum number of DevWorkspaces to create (by default, it's not specified)
   --separate-namespaces <true|false>          Use separate namespaces for workspaces (default: false)
+  --delete-devworkspace-after-ready           Delete DevWorkspace once it becomes Ready (default: true)
   --devworkspace-ready-timeout-seconds <int>  Timeout in seconds for workspace to become ready (default: 1200)
   --devworkspace-link <string>                DevWorkspace link (default: empty, opinionated DevWorkspace is created)
   --create-automount-resources <true|false>   Whether to create automount resources (default: false)
@@ -77,6 +81,10 @@ parse_arguments() {
         MAX_VUS="$2"; shift 2;;
       --separate-namespaces)
         SEPARATE_NAMESPACES="$2"; shift 2;;
+      --max-devworkspaces)
+        MAX_DEVWORKSPACES="$2"; shift 2;;
+      --delete-devworkspace-after-ready)
+        DELETE_DEVWORKSPACE_AFTER_READY="$2"; shift 2;;
       --devworkspace-ready-timeout-seconds)
         DEV_WORKSPACE_READY_TIMEOUT_IN_SECONDS="$2"; shift 2;;
       --devworkspace-link)
@@ -173,11 +181,40 @@ start_background_watchers() {
   kubectl get dw --watch --all-namespaces \
     >> "${LOGS_DIR}/${TIMESTAMP}_dw_watch.log" 2>&1 &
   PID_DW_WATCH=$!
+
+  log_failed_devworkspaces &
+  PID_FAILED_DW_POLL=$!
+}
+
+log_failed_devworkspaces() {
+  echo "📄 Starting periodic failed DevWorkspaces report (every 10s)..."
+
+  POLL_INTERVAL=10  # in seconds
+  ITERATIONS=$((((TEST_DURATION_IN_MINUTES-1) * 60) / POLL_INTERVAL))
+
+  for ((i = 0; i < ITERATIONS; i++)); do
+    OUTPUT=$(kubectl get devworkspaces --all-namespaces -o json | jq -r '
+      .items[]
+      | select(.status.phase == "Failed")
+      | [
+          .metadata.namespace,
+          .metadata.name,
+          .status.phase,
+          (.status.message // "No message")
+        ]
+      | @csv')
+
+    if [ -n "$OUTPUT" ]; then
+      echo "$OUTPUT" > "${LOGS_DIR}/dw_failure_report.csv"
+    fi
+
+    sleep "$POLL_INTERVAL"
+  done
 }
 
 stop_background_watchers() {
   echo "🛑 Stopping background watchers..."
-  kill "$PID_EVENTS_WATCH" "$PID_DW_WATCH" 2>/dev/null || true
+  kill "$PID_EVENTS_WATCH" "$PID_DW_WATCH" "$PID_FAILED_DW_POLL" 2>/dev/null || true
 }
 
 install_k6_operator() {
@@ -235,6 +272,10 @@ spec:
       value: '${TEST_DURATION_IN_MINUTES}'
     - name: DEV_WORKSPACE_READY_TIMEOUT_IN_SECONDS
       value: '${DEV_WORKSPACE_READY_TIMEOUT_IN_SECONDS}'
+    - name: DELETE_DEVWORKSPACE_AFTER_READY
+      value: '${DELETE_DEVWORKSPACE_AFTER_READY}'
+    - name: MAX_DEVWORKSPACES
+      value: '${MAX_DEVWORKSPACES}'
 EOF
 }
 
@@ -330,6 +371,8 @@ run_k6_binary_test() {
   MAX_VUS="${MAX_VUS}" \
   TEST_DURATION_IN_MINUTES="${TEST_DURATION_IN_MINUTES}" \
   DEV_WORKSPACE_READY_TIMEOUT_IN_SECONDS="${DEV_WORKSPACE_READY_TIMEOUT_IN_SECONDS}" \
+  DELETE_DEVWORKSPACE_AFTER_READY="${DELETE_DEVWORKSPACE_AFTER_READY}" \
+  MAX_DEVWORKSPACES="${MAX_DEVWORKSPACES}" \
   k6 run "${K6_SCRIPT}"
   exit_code=$?
   if [ $exit_code -ne 0 ]; then
@@ -338,4 +381,5 @@ run_k6_binary_test() {
   return 0
 }
 
+trap stop_background_watchers EXIT
 main "$@"

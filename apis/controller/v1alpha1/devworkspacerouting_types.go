@@ -31,6 +31,10 @@ type DevWorkspaceRoutingSpec struct {
 	Endpoints map[string]EndpointList `json:"endpoints"`
 	// Selector that should be used by created services to point to the devworkspace Pod
 	PodSelector map[string]string `json:"podSelector"`
+	// Machines to services map
+	// +optional
+	// +kubebuilder:validation:Optional
+	Service map[string]Service `json:"services,omitempty"`
 }
 
 type DevWorkspaceRoutingClass string
@@ -107,6 +111,14 @@ type EndpointProtocol string
 // +kubebuilder:validation:Type=object
 // +kubebuilder:validation:XPreserveUnknownFields
 type Attributes map[string]apiext.JSON
+
+type Service struct {
+	// Map of annotations to be added to the Kubernetes Service.
+	// +optional
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	Annotations map[string]string `json:"annotations,omitempty"`
+}
 
 type Endpoint struct {
 	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?$

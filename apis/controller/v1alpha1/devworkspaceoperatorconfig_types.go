@@ -200,6 +200,7 @@ type WorkspaceConfig struct {
 	// If true (or omitted), the Pod runs in the host's user namespace.
 	// If false, a new user namespace is created for the Pod.
 	// This field is only effective if the UserNamespacesSupport feature is enabled on the cluster.
+	// If the feature is disabled, setting this field may cause an endless workspace start loop.
 	// +kubebuilder:validation:Optional
 	HostUsers *bool `json:"hostUsers,omitempty"`
 }

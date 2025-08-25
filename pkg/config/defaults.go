@@ -82,6 +82,11 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 			RetainTime: pointer.Int32(2592000),
 			Schedule:   "0 0 1 * *",
 		},
+		// Do not declare a default value for this field.
+		// Setting a default leads to an endless reconcile loop when UserNamespacesSupport is disabled,
+		// because in that case the field is ignored and always set to nil.
+		// See: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/
+		// HostUsers: pointer.Bool(true),
 	},
 }
 

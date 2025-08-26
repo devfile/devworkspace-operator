@@ -58,6 +58,25 @@ Note: kustomize `v4.0.5` is required for most tasks. It is downloaded automatica
 repo when required. This downloaded version is used regardless of whether or not kustomize is already installed on the
 system.
 
+#### macOS Specific Issues
+
+On macOS, the default `make` utility might be outdated, leading to issues with some `Makefile` targets. To resolve this, it's recommended to install a newer version of `make` using Homebrew and ensure it's prioritized in your system's `$PATH`.
+
+1. **Install Homebrew `make`**:
+
+    ```bash
+    brew install make
+    ```
+
+2. **Update your `$PATH`**:
+    Add the Homebrew `make` executable to your `$PATH` by adding the following line to your shell configuration file (e.g., `~/.zshrc`, `~/.bash_profile`):
+
+    ```bash
+    export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+    ```
+
+    After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
+
 ### Makefile
 
 The repository contains a `Makefile`; building and deploying can be configured via the environment variables:

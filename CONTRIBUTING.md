@@ -76,7 +76,7 @@ On macOS, the default `make` utility might be outdated, leading to issues with s
     export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
     ```
 
-After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
+    After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
 
 ### Makefile
 

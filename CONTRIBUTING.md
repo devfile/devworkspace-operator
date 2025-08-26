@@ -29,11 +29,11 @@ Owners of the repository will watch out for and review new PRs.
 
 If comments have been given in a review, they have to be addressed before merging.
 
-After addressing review comments, don’t forget to add a comment in the PR afterward, so everyone gets notified by Github and knows to re-review.
+After addressing review comments, don't forget to add a comment in the PR afterward, so everyone gets notified by Github and knows to re-review.
 
 ## CI
 
-#### GitHub actions
+### GitHub actions
 
 - [Next Dockerimage](https://github.com/devfile/devworkspace-operator/blob/main/.github/workflows/dockerimage-next.yml) action builds main branch and pushes it to [quay.io/devfile/devworkspace-controller:next](https://quay.io/repository/devfile/devworkspace-controller?tag=latest&tab=tags)
 - [Code Coverage Report](./.github/workflows/code-coverage.yml) action creates a code coverage report using [codecov.io](https://about.codecov.io/).
@@ -50,7 +50,7 @@ To build, test and debug the DevWorkspace Operator the following development too
 - git
 - sed
 - jq
-- yq (python-yq from https://github.com/kislyuk/yq#installation, other distributions may not work)
+- yq (python-yq from <https://github.com/kislyuk/yq#installation>, other distributions may not work)
 - skopeo (if building the OLM catalogsource)
 - podman or docker
 
@@ -62,20 +62,19 @@ system.
 
 On macOS, the default `make` utility might be outdated, leading to issues with some `Makefile` targets. To resolve this, it's recommended to install a newer version of `make` using Homebrew and ensure it's prioritized in your system's `$PATH`.
 
-1. **Install Homebrew `make`**:
+1. Install Homebrew `make`:
 
     ```bash
     brew install make
     ```
 
-2. **Update your `$PATH`**:
-    Add the Homebrew `make` executable to your `$PATH` by adding the following line to your shell configuration file (e.g., `~/.zshrc`, `~/.bash_profile`):
+2. Add the Homebrew `make` executable to your `$PATH` by adding the following line to your shell configuration file (e.g., `~/.zshrc`, `~/.bash_profile`):
 
     ```bash
     export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
     ```
 
-    After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
+After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
 
 ### Makefile
 
@@ -107,13 +106,16 @@ To see all rules supported by the makefile, run `make help`
 
 1. Fork [devfile/devworkspce-operator](https://github.com/devfile/devworkspace-operator) and clone your fork locally
 2. Export the `DWO_IMG` environment variable. For example:
+
     ```bash
     export DWO_IMG=quay.io/mloriedo/devworkspace-controller:dev
     ```
+
    :warning: _You need write privileges on this container registry repository. The DevWorkspace controller image will be
 pushed there during build._
 3. If your changes include some update to the Devfile or DevWorkspace schema set some environment variables and run
 `go mod` to point to your fork instead of devfile/api:
+
     ```bash
     export DEVFILE_API_REPO=github.com/l0rd/api   # <== your devfile/api fork
     export DEVFILE_API_BRANCH=my-branch-name      # <== the branch of your fork
@@ -122,17 +124,23 @@ pushed there during build._
     go mod download && \
     go mod tidy
     ```
+
 4. Build the controller go code, build the container image and publish it to the container registry:
+
     ```bash
     make docker
     ```
+
 5. Install cert-manager (can be skipped on OpenShift):
+
     ```bash
     make install_cert_manager && \
     kubectl wait --for=condition=Available -n cert-manager deployment/cert-manager
     ```
+
 6. Finally deploys the CRDs and the controller to the current cluster:
-    ```
+
+    ```bash
     make install  # <== this command copies the CRDs definition
                   #     creates the namespace for the controller in the cluster
                   #     downloads and runs kustomize to build the manifests
@@ -159,7 +167,8 @@ make run
 ```
 
 > Note: The operator requires internet access from containers to work. By default, `crc setup` may not provision this, so it's necessary to configure DNS for Docker:
-> ```
+>
+> ```text
 > # /etc/docker/daemon.json
 > {
 >   "dns": ["192.168.0.1"]
@@ -210,18 +219,23 @@ make disconnect-debug-webhook-server
 make update_devworkspace_api update_devworkspace_crds # first commit
 make generate_all # second commit
 ```
+
 Example of the devfile API update [PR](https://github.com/devfile/devworkspace-operator/pull/797)
 
 ### Remove controller from your K8s/OS Cluster
+
 To uninstall the controller and associated CRDs, use the Makefile uninstall rule:
+
 ```bash
 make uninstall
 ```
+
 This will delete all custom resource definitions created for the controller, as well as the `devworkspace-controller` namespace.
 
 ### Build a custom OLM bundle
 
 In order to build a custom bundle, the following environment variables should be set:
+
 | variable | purpose | default value |
 |---|---|---|
 | `DWO_BUNDLE_IMG` | Image used for Operator bundle image | `quay.io/devfile/devworkspace-operator-bundle:next` |
@@ -229,7 +243,8 @@ In order to build a custom bundle, the following environment variables should be
 | `DEFAULT_DWO_IMG` | Image used for controller when generating defaults | `quay.io/devfile/devworkspace-controller:next` |
 
 To build the index image and register its catalogsource to the cluster, run
-```
+
+```bash
 make generate_olm_bundle_yaml build_bundle_and_index register_catalogsource
 ```
 

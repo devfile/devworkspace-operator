@@ -2390,6 +2390,14 @@ spec:
                     - Recreate
                     - RollingUpdate
                     type: string
+                  hostUsers:
+                    description: |-
+                      Controls whether the Pod uses the host's user namespace.
+                      If true (or omitted), the Pod runs in the host's user namespace.
+                      If false, a new user namespace is created for the Pod.
+                      This field is only used when the UserNamespacesSupport feature is enabled.
+                      If the feature is disabled, setting this field may cause an endless workspace start loop.
+                    type: boolean
                   idleTimeout:
                     description: |-
                       IdleTimeout determines how long a workspace should sit idle before being

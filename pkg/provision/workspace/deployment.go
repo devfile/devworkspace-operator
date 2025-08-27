@@ -211,6 +211,7 @@ func getSpecDeployment(
 					ServiceAccountName:            saName,
 					AutomountServiceAccountToken:  nil,
 					RuntimeClassName:              workspace.Config.Workspace.RuntimeClassName,
+					HostUsers:                     workspace.Config.Workspace.HostUsers,
 				},
 			},
 		},

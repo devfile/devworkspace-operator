@@ -62,6 +62,8 @@ system.
 
 On macOS, the default `make` utility might be outdated, leading to issues with some `Makefile` targets. To resolve this, it's recommended to install a newer version of `make` using Homebrew and ensure it's prioritized in your system's `$PATH`.
 
+> Note: `make` version `4.4.1` has been tested and confirmed to resolve these issues.
+
 1. Install Homebrew `make`:
 
     ```bash

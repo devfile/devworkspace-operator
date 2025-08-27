@@ -435,6 +435,10 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.PostStartTimeout != "" {
 			to.Workspace.PostStartTimeout = from.Workspace.PostStartTimeout
 		}
+
+		if from.Workspace.HostUsers != nil {
+			to.Workspace.HostUsers = from.Workspace.HostUsers
+		}
 	}
 }
 
@@ -679,6 +683,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			if workspace.CleanupCronJob.Schedule != defaultConfig.Workspace.CleanupCronJob.Schedule {
 				config = append(config, fmt.Sprintf("workspace.cleanupCronJob.cronJobScript=%s", workspace.CleanupCronJob.Schedule))
 			}
+		}
+		if workspace.HostUsers != nil {
+			config = append(config, fmt.Sprintf("workspace.hostUsers=%t", *workspace.HostUsers))
 		}
 	}
 	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {

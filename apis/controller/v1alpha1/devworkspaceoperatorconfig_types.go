@@ -196,6 +196,13 @@ type WorkspaceConfig struct {
 	// If not specified or "0", the timeout is disabled.
 	// +kubebuilder:validation:Optional
 	PostStartTimeout string `json:"postStartTimeout,omitempty"`
+	// Controls whether the Pod uses the host's user namespace.
+	// If true (or omitted), the Pod runs in the host's user namespace.
+	// If false, a new user namespace is created for the Pod.
+	// This field is only used when the UserNamespacesSupport feature is enabled.
+	// If the feature is disabled, setting this field may cause an endless workspace start loop.
+	// +kubebuilder:validation:Optional
+	HostUsers *bool `json:"hostUsers,omitempty"`
 }
 
 type WebhookConfig struct {

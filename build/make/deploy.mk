@@ -58,13 +58,13 @@ _gen_configuration_env:
 	cat $(CONTROLLER_ENV_FILE)
 
 _store_tls_cert:
-	mkdir -p /tmp/k8s-webhook-server/serving-certs/
+	mkdir -p $(TMPDIR)/k8s-webhook-server/serving-certs/
   ifeq ($(PLATFORM),kubernetes)
-	  $(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
-	  $(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
+	  $(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > $(TMPDIR)/k8s-webhook-server/serving-certs/tls.crt
+	  $(K8S_CLI) get secret devworkspace-operator-webhook-cert -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > $(TMPDIR)/k8s-webhook-server/serving-certs/tls.key
   else
-	  $(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.crt
-	  $(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > /tmp/k8s-webhook-server/serving-certs/tls.key
+	  $(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.crt"]' | base64 -d > $(TMPDIR)/k8s-webhook-server/serving-certs/tls.crt
+	  $(K8S_CLI) get secret devworkspace-webhookserver-tls -n $(NAMESPACE) -o json | jq -r '.data["tls.key"]' | base64 -d > $(TMPDIR)/k8s-webhook-server/serving-certs/tls.key
   endif
 
 _check_controller_running:

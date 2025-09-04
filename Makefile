@@ -52,6 +52,9 @@ OPM_VERSION = v1.19.5
 
 CRD_OPTIONS ?= "crd:crdVersions=v1"
 
+GOOS = linux
+GOARCH = amd64
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
   GOBIN=$(shell go env GOPATH)/bin
@@ -185,23 +188,48 @@ generate: controller-gen
 ### docker: Builds and pushes controller image
 docker: _print_vars docker-build docker-push
 
-### docker-build: Builds the controller image
-docker-build:
-	$(DOCKER) build . -t ${DWO_IMG} -f build/Dockerfile
+### docker-build: Builds the images and the local manifest list
+docker-build: _docker-build-amd64 _docker-build-arm64
+	# clean up any old local manifest list to avoid conflicts
+	$(DOCKER) manifest rm ${DWO_IMG} || true
+	# create a new local manifest list from the freshly built images
+	$(DOCKER) manifest create ${DWO_IMG} ${DWO_IMG}-amd64 ${DWO_IMG}-arm64
 
-### docker-push: Pushes the controller image
-docker-push:
+
+### _docker-build-amd64: Builds the amd64 image
+_docker-build-amd64:
+	$(DOCKER) build . --platform linux/amd64 -t ${DWO_IMG}-amd64 -f build/Dockerfile
+
+### _docker-build-arm64: Builds the arm64 image
+_docker-build-arm64:
+	$(DOCKER) build . --platform linux/arm64 -t ${DWO_IMG}-arm64 -f build/Dockerfile
+
+
+### docker-push: Pushes the images and manifest to the registry
+docker-push: _docker-check-push
+	# pushing architecture-specific images to the registry
+	$(DOCKER) push ${DWO_IMG}-amd64
+	$(DOCKER) push ${DWO_IMG}-arm64
+
+	# clean up any old local manifest list to avoid conflicts
+	$(DOCKER) manifest rm ${DWO_IMG} || true
+	# re-create the manifest right before pushing to ensure its state is clean
+	$(DOCKER) manifest create ${DWO_IMG} ${DWO_IMG}-amd64 ${DWO_IMG}-arm64
+	# push the manifest list and its images
+	$(DOCKER) manifest push --all ${DWO_IMG}
+
+### _docker-check-push: Asks for confirmation before pushing the image, unless running in CI
+_docker-check-push:
   ifneq ($(INITIATOR),CI)
     ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
 	    @echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
     endif
   endif
-	$(DOCKER) push ${DWO_IMG}
 
 ### compile-devworkspace-controller: Compiles the devworkspace-controller binary
 .PHONY: compile-devworkspace-controller
 compile-devworkspace-controller:
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) GO111MODULE=on go build \
 	  -a -o _output/bin/devworkspace-controller \
 	  -gcflags all=-trimpath=/ \
 	  -asmflags all=-trimpath=/ \
@@ -212,7 +240,7 @@ compile-devworkspace-controller:
 ### compile-webhook-server: Compiles the webhook-server
 .PHONY: compile-webhook-server
 compile-webhook-server:
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) GO111MODULE=on go build \
 	  -o _output/bin/webhook-server \
 	  -gcflags all=-trimpath=/ \
 	  -asmflags all=-trimpath=/ \

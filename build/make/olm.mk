@@ -46,7 +46,8 @@ build_bundle_and_index: _print_vars _check_skopeo_installed _check_opm_version
 		--bundle-repo $${DWO_BUNDLE_IMG%%:*} \
 		--bundle-tag $${DWO_BUNDLE_IMG##*:} \
 		--index-image $(DWO_INDEX_IMG) \
-		--container-tool $(DOCKER)
+		--container-tool $(DOCKER) \
+		--arch $(ARCH)
 
 ### register_catalogsource: create the catalogsource to make the operator be available on the marketplace
 register_catalogsource: _check_skopeo_installed

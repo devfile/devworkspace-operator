@@ -5,6 +5,7 @@ set -e
 PODMAN=podman
 FORCE="false"
 MULTI_ARCH="false"
+ARCH="amd64"
 ARCHITECTURES="linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
 DEBUG="false"
 
@@ -43,9 +44,11 @@ Arguments:
                             buildx will be used for building and pushing the images, instead of
                             the container tool selected with --container-tool.
   --debug                 : Don't do any normal cleanup on exit, leaving repo in dirty state
-
-Examples:
-  1. Build and push bundle and index using default image repos
+  --arch <ARCH>           : The host architecture.
+                            This flag is ignored if --multi-arch is used.
+ 
+ Examples:
+   1. Build and push bundle and index using default image repos
       $0 --force
   2. Build index and bundle using custom images
       $0 --bundle-repo <my_bundle_repo> --bundle-tag dev --index-image <my_index_image>
@@ -64,6 +67,7 @@ parse_args() {
       '--force') FORCE="true";;
       '--multi-arch') MULTI_ARCH="true";;
       '--debug') DEBUG="true";;
+      '--arch') ARCH="$2"; shift 1;;
       *) echo "[ERROR] Unknown parameter is used: $1."; usage; exit 1;;
     esac
     shift 1
@@ -202,6 +206,28 @@ yq -Y -i --argjson entry "$ENTRY_JSON" '.entries |= . + [$entry]' "$CHANNEL_FILE
 echo "Validating current index"
 opm validate "$OUTDIR"
 
+# Function to build and push an image for a specific architecture
+build_for_arch() {
+    local IMAGE=$1
+    local TARGET_ARCH=$2
+
+    local CACHE_DIR="build/opm-cache-${TARGET_ARCH}"
+    local ARCH_IMAGE="${IMAGE}-${TARGET_ARCH}"
+
+    # Check if the build is native or a cross-build
+    if [ "${ARCH}" == "${TARGET_ARCH}" ]; then
+        # NATIVE BUILD: Pre-generate the cache
+        ${PODMAN} build . --platform linux/${TARGET_ARCH} -t "$ARCH_IMAGE" -f build/index.next.Dockerfile
+    else
+        # CROSS-BUILD: Build cache at runtime
+        "${PODMAN}" build --platform "linux/${TARGET_ARCH}" \
+            -t "${ARCH_IMAGE}" \
+            -f build/index.next.no-cache.Dockerfile .
+    fi
+
+    "${PODMAN}" push "${ARCH_IMAGE}"
+}
+
 # Build index container
 echo "Building index image $INDEX_IMAGE"
 if [ "$MULTI_ARCH" == "true" ]; then
@@ -209,8 +235,14 @@ if [ "$MULTI_ARCH" == "true" ]; then
   --platform "$ARCHITECTURES" \
   --push
 else
-  $PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE"
-  $PODMAN push "$INDEX_IMAGE" 2>&1
+  build_for_arch $INDEX_IMAGE "amd64"
+  build_for_arch $INDEX_IMAGE "arm64"
+
+  # Combine the two images into a single multi-arch manifest list
+  "${PODMAN}" manifest rm "${INDEX_IMAGE}" || true
+  "${PODMAN}" rmi "${INDEX_IMAGE}" || true
+  "${PODMAN}" manifest create "${INDEX_IMAGE}" "${INDEX_IMAGE}-amd64" "${INDEX_IMAGE}-arm64"
+  "${PODMAN}" manifest push "${INDEX_IMAGE}"
 fi
 
 

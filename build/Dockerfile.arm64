@@ -13,31 +13,6 @@
 # limitations under the License.
 #
 
-# https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9/go-toolset
-# Use BUILDPLATFORM to ensure the builder always runs natively on the host machine
-FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/go-toolset:1.24.4-1753853351 AS builder
-
-# Accept TARGETARCH, which is automatically passed by the builder
-ARG TARGETARCH
-
-ENV GOPATH=/go/
-USER root
-WORKDIR /devworkspace-operator
-# Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
-# cache deps before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
-RUN go env GOPROXY && \
-    go mod download
-
-# Copy the go source
-COPY . .
-
-# Pass the target ARCH directly to make for robust cross-compilation
-RUN make GOARCH=${TARGETARCH} compile-devworkspace-controller
-RUN make GOARCH=${TARGETARCH} compile-webhook-server
-
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9-minimal
 FROM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
 RUN microdnf -y update && \
@@ -47,8 +22,8 @@ RUN microdnf -y update && \
     rpm -qa | sort -V && \
     echo "End Of Installed Packages"
 WORKDIR /
-COPY --from=builder /devworkspace-operator/_output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
-COPY --from=builder /devworkspace-operator/_output/bin/webhook-server /usr/local/bin/webhook-server
+COPY _output/bin/devworkspace-controller /usr/local/bin/devworkspace-controller
+COPY _output/bin/webhook-server /usr/local/bin/webhook-server
 
 ENV USER_UID=1001 \
     USER_NAME=devworkspace-controller
@@ -60,5 +35,3 @@ USER ${USER_UID}
 
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 CMD ["/usr/local/bin/devworkspace-controller"]
-
-# append Brew metadata here

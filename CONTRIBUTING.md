@@ -60,23 +60,30 @@ system.
 
 #### macOS Specific Issues
 
-On macOS, the default `make` utility might be outdated, leading to issues with some `Makefile` targets. To resolve this, it's recommended to install a newer version of `make` using Homebrew and ensure it's prioritized in your system's `$PATH`.
+On macOS, the default `make` utility might be outdated, leading to issues with some `Makefile` targets. To resolve this, it's recommended to install a newer version of `make` using Homebrew and ensure it's prioritized in your system's `$PATH`. Some scripts also require GNU `coreutils`.
 
 > Note: `make` version `4.4.1` has been tested and confirmed to resolve these issues.
 
-1. Install Homebrew `make`:
+1. Install Homebrew `make` and `coreutils`:
 
     ```bash
-    brew install make
+    brew install coreutils make
     ```
 
-2. Add the Homebrew `make` executable to your `$PATH` by adding the following line to your shell configuration file (e.g., `~/.zshrc`, `~/.bash_profile`):
+2. Add the Homebrew `make` and `coreutils` executables to your `$PATH`. Open a new terminal session and check if they are in your path:
+
+    ```bash
+    which make split
+    ```
+
+    If the output shows paths inside `/opt/homebrew/`, you are all set. Otherwise, add the following lines to your shell configuration file (e.g., `~/.zshrc`, `~/.bash_profile`):
 
     ```bash
     export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+    export PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
     ```
 
-After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
+    After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
 
 ### Makefile
 

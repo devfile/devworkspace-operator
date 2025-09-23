@@ -23,3 +23,8 @@ export ARCH := amd64
 else ifeq (aarch64,$(ARCH))
 export ARCH := arm64
 endif
+
+# Set GOARCH to the host architecture *only if it's not already set*
+# This allows `make GOARCH=amd64 ...` to override the default.
+GOARCH ?= $(ARCH)
+export GOARCH

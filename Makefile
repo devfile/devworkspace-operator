@@ -255,7 +255,12 @@ ifeq ($(CONTAINER_TOOL),docker)
   ifeq ($(BUILDX_AVAILABLE),false)
 	$(error Docker buildx is required for multi-arch builds. Please update Docker or enable buildx)
   endif
-	$(DOCKER) buildx build . --platform linux/amd64,linux/arm64 --load -t ${DWO_IMG} -f build/Dockerfile
+	@echo "Using Docker buildx to build multi-arch images"
+	$(MAKE) _docker-build-amd64 _docker-build-arm64
+	@echo "✅ Built multi-arch images locally:"
+	@echo "  ${DWO_IMG}-amd64"
+	@echo "  ${DWO_IMG}-arm64"
+	@echo "Note: Manifest list will be created during push to registry"
 else
 	@echo "Using Podman to build multi-arch image"
 	$(MAKE) _docker-build-amd64 _docker-build-arm64
@@ -310,7 +315,11 @@ ifeq ($(CONTAINER_TOOL),docker)
   ifeq ($(BUILDX_AVAILABLE),false)
 	$(error Docker buildx is required for multi-arch pushes. Please update Docker or enable buildx)
   endif
-	$(DOCKER) push ${DWO_IMG}
+	@echo "Using Docker buildx to push multi-arch image"
+	$(DOCKER) push ${DWO_IMG}-amd64
+	$(DOCKER) push ${DWO_IMG}-arm64
+	@echo "Creating and pushing manifest list using Docker buildx"
+	$(DOCKER) buildx imagetools create -t ${DWO_IMG} ${DWO_IMG}-amd64 ${DWO_IMG}-arm64
 else
 	@echo "Using Podman to push multi-arch image"
 	$(DOCKER) push ${DWO_IMG}-amd64

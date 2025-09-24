@@ -31,8 +31,64 @@ export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
 export DEVWORKSPACE_API_VERSION ?= a6ec0a38307b63a29fad2eea945cc69bee97a683
 
-# Enable using Podman instead of Docker
-export DOCKER ?= docker
+# Container tool detection: auto-detect running Docker or Podman, allow override
+# Skip detection if we're inside a container build (when container tools aren't needed)
+ifeq (,$(DOCKER))
+  # Check for running services first (prefer Docker for performance)
+  ifneq (,$(shell docker info >/dev/null 2>&1 && echo "running"))
+    export DOCKER := docker
+    export CONTAINER_TOOL := docker
+  else ifneq (,$(shell podman info >/dev/null 2>&1 && echo "running"))
+    export DOCKER := podman
+    export CONTAINER_TOOL := podman
+  else
+    # Fallback: check if binaries are installed but not running
+    ifneq (,$(shell which docker 2>/dev/null))
+      ifneq (,$(shell which podman 2>/dev/null))
+        # Both installed but neither running
+        ifeq ($(filter docker% _docker% build_bundle_and_index,$(MAKECMDGOALS)),)
+          export DOCKER := not-available
+          export CONTAINER_TOOL := not-available
+        else
+          $(error Both Docker and Podman are installed but neither is running. Please start Docker Desktop or Podman machine)
+        endif
+      else
+        # Only Docker installed but not running
+        ifeq ($(filter docker% _docker% build_bundle_and_index,$(MAKECMDGOALS)),)
+          export DOCKER := not-available
+          export CONTAINER_TOOL := not-available
+        else
+          $(error Docker is installed but not running. Please start Docker Desktop)
+        endif
+      endif
+    else ifneq (,$(shell which podman 2>/dev/null))
+      # Only Podman installed but not running
+      ifeq ($(filter docker% _docker% build_bundle_and_index,$(MAKECMDGOALS)),)
+        export DOCKER := not-available
+        export CONTAINER_TOOL := not-available
+      else
+        $(error Podman is installed but not running. Please start Podman machine)
+      endif
+    else
+      # Neither installed
+      ifeq ($(filter docker% _docker% build_bundle_and_index,$(MAKECMDGOALS)),)
+        export DOCKER := not-available
+        export CONTAINER_TOOL := not-available
+      else
+        $(error Neither Docker nor Podman found. Please install Docker Desktop or Podman)
+      endif
+    endif
+  endif
+else
+  export CONTAINER_TOOL := $(DOCKER)
+endif
+
+# Check if buildx is available for Docker (only if docker is available)
+ifeq ($(CONTAINER_TOOL),docker)
+  BUILDX_AVAILABLE := $(shell docker buildx version >/dev/null 2>&1 && echo true || echo false)
+else
+  BUILDX_AVAILABLE := false
+endif
 
 #internal params
 DEVWORKSPACE_CTRL_SA=devworkspace-controller-serviceaccount
@@ -51,6 +107,10 @@ OPERATOR_SDK_VERSION = v1.8.0
 OPM_VERSION = v1.19.5
 
 CRD_OPTIONS ?= "crd:crdVersions=v1"
+
+# Default to linux for container builds, but allow override
+GOOS ?= linux
+# GOARCH is set dynamically in build/make/version.mk
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -72,6 +132,9 @@ _print_vars:
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
 	@echo "    DEVWORKSPACE_API_VERSION=$(DEVWORKSPACE_API_VERSION)"
+	@echo "Container tool:"
+	@echo "    CONTAINER_TOOL=$(CONTAINER_TOOL)"
+	@echo "    BUILDX_AVAILABLE=$(BUILDX_AVAILABLE)"
 	@echo "Build environment:"
 	@echo "    Build Time:       $(BUILD_TIME)"
 	@echo "    Go Package Path:  $(GO_PACKAGE_PATH)"
@@ -185,23 +248,100 @@ generate: controller-gen
 ### docker: Builds and pushes controller image
 docker: _print_vars docker-build docker-push
 
-### docker-build: Builds the controller image
+### docker-build: Builds the multi-arch image (supports both amd64 and arm64)
 docker-build:
-	$(DOCKER) build . -t ${DWO_IMG} -f build/Dockerfile
+	@echo "Building multi-arch image ${DWO_IMG} for linux/amd64,linux/arm64 using $(CONTAINER_TOOL)"
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for multi-arch builds. Please update Docker or enable buildx)
+  endif
+	@echo "Using Docker buildx to build multi-arch images"
+	$(MAKE) _docker-build-amd64 _docker-build-arm64
+	@echo "✅ Built multi-arch images locally:"
+	@echo "  ${DWO_IMG}-amd64"
+	@echo "  ${DWO_IMG}-arm64"
+	@echo "Note: Manifest list will be created during push to registry"
+else
+	@echo "Using Podman to build multi-arch image"
+	$(MAKE) _docker-build-amd64 _docker-build-arm64
+	@echo "Creating manifest list for ${DWO_IMG} using Podman"
+	@echo "Cleaning up any existing images/manifests with the same name"
+	@$(DOCKER) manifest rm ${DWO_IMG} 2>/dev/null || echo "    (manifest not found, continuing)"
+	@$(DOCKER) rmi ${DWO_IMG} 2>/dev/null || echo "    (image not found, continuing)"
+	$(DOCKER) manifest create ${DWO_IMG} ${DWO_IMG}-amd64 ${DWO_IMG}-arm64
+endif
 
-### docker-push: Pushes the controller image
-docker-push:
+### _docker-build-amd64: Builds the amd64 image
+_docker-build-amd64:
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for platform-specific builds. Please update Docker or enable buildx)
+  endif
+	$(DOCKER) buildx build . --platform linux/amd64 --load -t ${DWO_IMG}-amd64 -f build/Dockerfile
+else
+	$(DOCKER) build . --platform linux/amd64 -t ${DWO_IMG}-amd64 -f build/Dockerfile
+endif
+
+### _docker-build-arm64: Builds the arm64 image
+_docker-build-arm64:
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for platform-specific builds. Please update Docker or enable buildx)
+  endif
+	$(DOCKER) buildx build . --platform linux/arm64 --load -t ${DWO_IMG}-arm64 -f build/Dockerfile
+else
+	$(DOCKER) build . --platform linux/arm64 -t ${DWO_IMG}-arm64 -f build/Dockerfile
+endif
+
+### docker-build-amd64: Builds only the amd64 image (for single-arch builds)
+docker-build-amd64: _docker-build-amd64
+
+### docker-build-arm64: Builds only the arm64 image (for single-arch builds)
+docker-build-arm64: _docker-build-arm64
+
+### docker-push-amd64: Pushes only the amd64 image (for single-arch workflows)
+docker-push-amd64: _docker-check-push
+	$(DOCKER) push ${DWO_IMG}-amd64
+
+### docker-push-arm64: Pushes only the arm64 image (for single-arch workflows)
+docker-push-arm64: _docker-check-push
+	$(DOCKER) push ${DWO_IMG}-arm64
+
+
+### docker-push: Pushes the multi-arch image to the registry
+docker-push: _docker-check-push
+	@echo "Pushing multi-arch image ${DWO_IMG} using $(CONTAINER_TOOL)"
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for multi-arch pushes. Please update Docker or enable buildx)
+  endif
+	@echo "Using Docker buildx to push multi-arch image"
+	$(DOCKER) push ${DWO_IMG}-amd64
+	$(DOCKER) push ${DWO_IMG}-arm64
+	@echo "Creating and pushing manifest list using Docker buildx"
+	$(DOCKER) buildx imagetools create -t ${DWO_IMG} ${DWO_IMG}-amd64 ${DWO_IMG}-arm64
+else
+	@echo "Using Podman to push multi-arch image"
+	$(DOCKER) push ${DWO_IMG}-amd64
+	$(DOCKER) push ${DWO_IMG}-arm64
+	@echo "Cleaning up any existing manifests before recreating"
+	@$(DOCKER) manifest rm ${DWO_IMG} 2>/dev/null || echo "    (manifest not found, continuing)"
+	$(DOCKER) manifest create ${DWO_IMG} ${DWO_IMG}-amd64 ${DWO_IMG}-arm64
+	$(DOCKER) manifest push ${DWO_IMG}
+endif
+
+### _docker-check-push: Asks for confirmation before pushing the image, unless running in CI
+_docker-check-push:
   ifneq ($(INITIATOR),CI)
     ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
 	    @echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
     endif
   endif
-	$(DOCKER) push ${DWO_IMG}
 
 ### compile-devworkspace-controller: Compiles the devworkspace-controller binary
 .PHONY: compile-devworkspace-controller
 compile-devworkspace-controller:
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) GO111MODULE=on go build \
 	  -a -o _output/bin/devworkspace-controller \
 	  -gcflags all=-trimpath=/ \
 	  -asmflags all=-trimpath=/ \
@@ -212,7 +352,7 @@ compile-devworkspace-controller:
 ### compile-webhook-server: Compiles the webhook-server
 .PHONY: compile-webhook-server
 compile-webhook-server:
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) GO111MODULE=on go build \
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) GO111MODULE=on go build \
 	  -o _output/bin/webhook-server \
 	  -gcflags all=-trimpath=/ \
 	  -asmflags all=-trimpath=/ \

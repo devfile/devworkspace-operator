@@ -60,23 +60,71 @@ system.
 
 #### macOS Specific Issues
 
-On macOS, the default `make` utility might be outdated, leading to issues with some `Makefile` targets. To resolve this, it's recommended to install a newer version of `make` using Homebrew and ensure it's prioritized in your system's `$PATH`.
+On macOS, the default `make` utility might be outdated, leading to issues with some `Makefile` targets. To resolve this, it's recommended to install a newer version of `make` using Homebrew and ensure it's prioritized in your system's `$PATH`. Some scripts also require GNU `coreutils`.
 
 > Note: `make` version `4.4.1` has been tested and confirmed to resolve these issues.
 
-1. Install Homebrew `make`:
+1. Install Homebrew `make` and `coreutils`:
 
     ```bash
-    brew install make
+    brew install coreutils make
     ```
 
-2. Add the Homebrew `make` executable to your `$PATH` by adding the following line to your shell configuration file (e.g., `~/.zshrc`, `~/.bash_profile`):
+2. Add the Homebrew `make` and `coreutils` executables to your `$PATH`. Open a new terminal session and check if they are in your path:
+
+    ```bash
+    which make split
+    ```
+
+    If the output shows paths inside `/opt/homebrew/`, you are all set. Otherwise, add the following lines to your shell configuration file (e.g., `~/.zshrc`, `~/.bash_profile`):
 
     ```bash
     export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+    export PATH="/opt/homebrew/opt/coreutils/libexec/gnubin:$PATH"
     ```
 
-After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
+    After adding, reload your shell configuration (e.g., `source ~/.zshrc` or `source ~/.bash_profile`) or open a new terminal session.
+
+#### Multi-Architecture Builds
+
+The DevWorkspace Operator supports building images for both amd64 and arm64 architectures. The build system automatically creates multi-architecture manifest lists that work on both platform types.
+
+**Standard multi-arch workflow:**
+
+```bash
+make docker-build  # Builds both amd64 and arm64 images and creates a manifest list
+make docker-push   # Pushes both images and the manifest list to the registry
+```
+
+**Single-architecture builds (for faster development):**
+
+```bash
+make docker-build-amd64  # Build only amd64
+make docker-push-amd64   # Push only amd64
+
+make docker-build-arm64  # Build only arm64
+make docker-push-arm64   # Push only arm64
+```
+
+#### Container Tool Selection
+
+The build system automatically detects and uses either Docker or Podman, whichever is available. You can also explicitly choose the container tool:
+
+**Using Docker:**
+
+```bash
+export DOCKER=docker
+make docker-build
+```
+
+**Using Podman:**
+
+```bash
+export DOCKER=podman
+make docker-build
+```
+
+**Note**: Docker with buildx extension provides the fastest multi-arch builds, while Podman builds architectures sequentially and combines them into manifest lists.
 
 ### Makefile
 

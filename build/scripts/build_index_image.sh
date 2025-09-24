@@ -5,6 +5,7 @@ set -e
 PODMAN=podman
 FORCE="false"
 MULTI_ARCH="false"
+ARCH="amd64"
 ARCHITECTURES="linux/amd64,linux/arm64,linux/ppc64le,linux/s390x"
 DEBUG="false"
 
@@ -43,9 +44,18 @@ Arguments:
                             buildx will be used for building and pushing the images, instead of
                             the container tool selected with --container-tool.
   --debug                 : Don't do any normal cleanup on exit, leaving repo in dirty state
+  --arch <ARCH>           : The host architecture.
+                            This flag is ignored if --multi-arch is used.
 
-Examples:
-  1. Build and push bundle and index using default image repos
+ Docker Requirements:
+   When using Docker (--container-tool docker), Docker buildx is required for multi-arch builds.
+   The script will fail if buildx is not available. Please ensure:
+   - Docker version 19.03+ with buildx plugin installed, or
+   - Docker Desktop with buildx enabled (default in recent versions)
+   For older Docker versions, use --container-tool podman instead.
+ 
+ Examples:
+   1. Build and push bundle and index using default image repos
       $0 --force
   2. Build index and bundle using custom images
       $0 --bundle-repo <my_bundle_repo> --bundle-tag dev --index-image <my_index_image>
@@ -64,6 +74,7 @@ parse_args() {
       '--force') FORCE="true";;
       '--multi-arch') MULTI_ARCH="true";;
       '--debug') DEBUG="true";;
+      '--arch') ARCH="$2"; shift 1;;
       *) echo "[ERROR] Unknown parameter is used: $1."; usage; exit 1;;
     esac
     shift 1
@@ -87,7 +98,7 @@ fi
 
 if [ "$RELEASE" == "true" ]; then
   # Set up for release and check arguments
-  BUNDLE_REPO="${BUNDLE_REPO:-DEFAULT_BUNDLE_REPO}"
+  BUNDLE_REPO="${BUNDLE_REPO:-$DEFAULT_BUNDLE_REPO}"
   if [ -z "$BUNDLE_TAG" ]; then
     error "Argument --bundle-tag is required when --release is specified (should be release version)"
   fi
@@ -95,14 +106,14 @@ if [ "$RELEASE" == "true" ]; then
   if [[ ! "$BUNDLE_TAG" =~ $TAG_REGEX ]]; then
     error "Bundle tag must be specified in the format vX.Y.Z"
   fi
-  INDEX_IMAGE="${INDEX_IMAGE:-DEFAULT_RELEASE_INDEX_IMAGE}"
+  INDEX_IMAGE="${INDEX_IMAGE:-$DEFAULT_RELEASE_INDEX_IMAGE}"
   OUTDIR="olm-catalog/release"
   DOCKERFILE="build/index.release.Dockerfile"
 else
   # Set defaults and warn if pushing to main repos in case of accident
-  BUNDLE_REPO="${BUNDLE_REPO:-DEFAULT_BUNDLE_REPO}"
-  BUNDLE_TAG="${BUNDLE_TAG:-DEFAULT_BUNDLE_TAG}"
-  INDEX_IMAGE="${INDEX_IMAGE:-DEFAULT_INDEX_IMAGE}"
+  BUNDLE_REPO="${BUNDLE_REPO:-$DEFAULT_BUNDLE_REPO}"
+  BUNDLE_TAG="${BUNDLE_TAG:-$DEFAULT_BUNDLE_TAG}"
+  INDEX_IMAGE="${INDEX_IMAGE:-$DEFAULT_INDEX_IMAGE}"
   OUTDIR="olm-catalog/next"
   DOCKERFILE="build/index.next.Dockerfile"
 fi
@@ -143,12 +154,27 @@ if [ "$MULTI_ARCH" == "true" ]; then
   --platform "$ARCHITECTURES" \
   --push
 else
-  $PODMAN build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
-  $PODMAN push "$BUNDLE_IMAGE" 2>&1
+  if [ "$PODMAN" = "docker" ]; then
+    # Use Docker for bundle build (disable attestations for OLM compatibility)
+    docker build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile --provenance=false
+    docker push "$BUNDLE_IMAGE"
+  else
+    # Use Podman for bundle build
+    "$PODMAN" build . -t "$BUNDLE_IMAGE" -f build/bundle.Dockerfile
+    "$PODMAN" push "$BUNDLE_IMAGE" 2>&1
+  fi
 fi
 
 
-BUNDLE_SHA=$(skopeo inspect "docker://${BUNDLE_IMAGE}" | jq -r '.Digest')
+# Get bundle digest using appropriate tool
+if [ "$PODMAN" = "docker" ]; then
+  # Use Docker to get the digest
+  DOCKER_DIGEST=$(docker inspect "${BUNDLE_IMAGE}" --format '{{index .RepoDigests 0}}')
+  BUNDLE_SHA=$(echo "$DOCKER_DIGEST" | cut -d'@' -f2)
+else
+  # Use skopeo for Podman (with explicit platform to avoid host OS detection issues)
+  BUNDLE_SHA=$(skopeo inspect --override-os linux --override-arch "${ARCH}" "docker://${BUNDLE_IMAGE}" | jq -r '.Digest')
+fi
 BUNDLE_DIGEST="${BUNDLE_REPO}@${BUNDLE_SHA}"
 echo "Using bundle image $BUNDLE_DIGEST for index"
 
@@ -202,6 +228,122 @@ yq -Y -i --argjson entry "$ENTRY_JSON" '.entries |= . + [$entry]' "$CHANNEL_FILE
 echo "Validating current index"
 opm validate "$OUTDIR"
 
+# Check if Docker buildx is available and supports the platform
+check_buildx_support() {
+    if [ "$PODMAN" != "docker" ]; then
+        return 1  # Not using Docker, so no buildx
+    fi
+    
+    # Check if buildx command exists
+    if ! docker buildx version >/dev/null 2>&1; then
+        return 1
+    fi
+    
+    # Check if we can inspect the builder (it's set up and working)
+    if ! docker buildx inspect >/dev/null 2>&1; then
+        return 1
+    fi
+    
+    return 0
+}
+
+# Create and push multi-arch manifest using Podman
+create_podman_manifest() {
+    local INDEX_IMAGE=$1
+    local BUILT_IMAGES=$2
+    
+    echo "  Using Podman manifest commands"
+    
+    # Clean up any existing manifest to avoid conflicts
+    if "${PODMAN}" manifest inspect "${INDEX_IMAGE}" >/dev/null 2>&1; then
+        echo "  Removing existing manifest list"
+        "${PODMAN}" manifest rm "${INDEX_IMAGE}" || echo "    (manifest not found, continuing)"
+    fi
+    
+    # Remove any local image with the same name to avoid conflicts
+    if "${PODMAN}" image inspect "${INDEX_IMAGE}" >/dev/null 2>&1; then
+        echo "  Removing existing local image"
+        "${PODMAN}" rmi "${INDEX_IMAGE}" || echo "    (image not found, continuing)"
+    fi
+    
+    echo "  Creating new manifest list with images:$BUILT_IMAGES"
+    if ! "${PODMAN}" manifest create "${INDEX_IMAGE}" $BUILT_IMAGES; then
+        echo "  ❌ Failed to create Podman manifest list"
+        exit 1
+    fi
+    
+    echo "  Pushing manifest list"
+    if ! "${PODMAN}" manifest push "${INDEX_IMAGE}"; then
+        echo "  ❌ Failed to push Podman manifest list"
+        exit 1
+    fi
+    
+    echo "  ✅ Successfully pushed Podman manifest list"
+}
+
+# Build and push using Docker buildx (multi-platform capable)
+build_with_docker_buildx() {
+    local INDEX_IMAGE=$1
+    local DOCKERFILE=$2
+    
+    echo "Building multi-arch image with Docker buildx"
+    echo "  Building ${INDEX_IMAGE} for linux/amd64,linux/arm64"
+    
+    if ! docker buildx build --platform linux/amd64,linux/arm64 \
+        -t "${INDEX_IMAGE}" \
+        -f "${DOCKERFILE}" . \
+        --provenance=false \
+        --push; then
+        echo "  ❌ Failed to build and push ${INDEX_IMAGE}"
+        exit 1
+    fi
+    
+    echo "  ✅ Successfully built and pushed multi-arch image ${INDEX_IMAGE}"
+}
+
+
+# Build and push using Podman (multi-platform capable)
+build_with_podman() {
+    local BASE_IMAGE=$1
+    local DOCKERFILE=$2
+    
+    echo "Building multi-arch images with Podman"
+    
+    for TARGET_ARCH in "amd64" "arm64"; do
+        local ARCH_IMAGE="${BASE_IMAGE}-${TARGET_ARCH}"
+        
+        # Determine the appropriate Dockerfile based on build type (native vs cross-build)
+        local BUILD_DOCKERFILE
+        if [ "${ARCH}" == "${TARGET_ARCH}" ]; then
+            # NATIVE BUILD: Pre-generate the cache - use the main dockerfile
+            echo "  Building ${ARCH_IMAGE} for linux/${TARGET_ARCH} (native build with cache)"
+            BUILD_DOCKERFILE="$DOCKERFILE"
+        else
+            # CROSS-BUILD: Build cache at runtime - use the no-cache variant
+            echo "  Building ${ARCH_IMAGE} for linux/${TARGET_ARCH} (cross-build, no cache)"
+            BUILD_DOCKERFILE="${DOCKERFILE%.Dockerfile}.no-cache.Dockerfile"
+        fi
+        
+        echo "    Using dockerfile: ${BUILD_DOCKERFILE}"
+        if ! "${PODMAN}" build --platform "linux/${TARGET_ARCH}" \
+            -t "${ARCH_IMAGE}" \
+            -f "${BUILD_DOCKERFILE}" .; then
+            echo "  ❌ Failed to build ${ARCH_IMAGE}"
+            exit 1
+        fi
+        
+        echo "  Pushing ${ARCH_IMAGE}"
+        if ! "${PODMAN}" push "${ARCH_IMAGE}"; then
+            echo "  ❌ Failed to push ${ARCH_IMAGE}"
+            exit 1
+        fi
+        
+        echo "  ✅ Successfully built and pushed ${ARCH_IMAGE}"
+    done
+    
+}
+
+
 # Build index container
 echo "Building index image $INDEX_IMAGE"
 if [ "$MULTI_ARCH" == "true" ]; then
@@ -209,8 +351,31 @@ if [ "$MULTI_ARCH" == "true" ]; then
   --platform "$ARCHITECTURES" \
   --push
 else
-  $PODMAN build . -t "$INDEX_IMAGE" -f "$DOCKERFILE"
-  $PODMAN push "$INDEX_IMAGE" 2>&1
+  # Build images using the appropriate method
+  echo ""
+  
+  if [ "$PODMAN" = "docker" ]; then
+    # Require Docker buildx for multi-arch builds
+    if ! check_buildx_support; then
+      error "Docker buildx is required but not available. Please update Docker or enable buildx."
+    fi
+    echo "Using Docker buildx for multi-arch builds"
+    build_with_docker_buildx "$INDEX_IMAGE" "$DOCKERFILE"
+    echo "✅ Published multi-arch image: $INDEX_IMAGE"
+  else
+    echo "Using Podman for multi-arch builds"
+    build_with_podman "$INDEX_IMAGE" "$DOCKERFILE"
+    
+    # Since Podman builds individual arch images, we need to create a manifest
+    BUILT_IMAGES="${INDEX_IMAGE}-amd64 ${INDEX_IMAGE}-arm64"
+    
+    echo ""
+    echo "Multi-arch build successful, creating manifest list"
+    echo "Built images:$BUILT_IMAGES"
+    
+    create_podman_manifest "$INDEX_IMAGE" "$BUILT_IMAGES"
+    echo "✅ Published multi-arch manifest: $INDEX_IMAGE"
+  fi
 fi
 
 

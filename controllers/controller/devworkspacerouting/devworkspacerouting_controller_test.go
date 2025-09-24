@@ -114,6 +114,7 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 					err := k8sClient.Get(ctx, serviceNamespacedName, createdService)
 					return err == nil
 				}, timeout, interval).Should(BeTrue(), "Service should exist in cluster")
+				Expect(createdService.ObjectMeta.Annotations).Should(HaveKeyWithValue(serviceAnnotationKey, serviceAnnotationValue), "Service should have annotation")
 				Expect(createdService.Spec.Selector).Should(Equal(createdDWR.Spec.PodSelector), "Service should have pod selector from DevWorkspace metadata")
 				Expect(createdService.Labels).Should(Equal(ExpectedLabels), "Service should contain DevWorkspace ID label")
 				expectedOwnerReference := devWorkspaceRoutingOwnerRef(createdDWR)

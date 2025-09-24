@@ -158,6 +158,18 @@ spec:
                   description: 'Class of the routing: this drives which DevWorkspaceRouting
                     controller will manage this routing'
                   type: string
+                services:
+                  additionalProperties:
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: Map of annotations to be added to the Kubernetes
+                          Service.
+                        type: object
+                    type: object
+                  description: Machines to services map
+                  type: object
               required:
                 - devworkspaceId
                 - endpoints

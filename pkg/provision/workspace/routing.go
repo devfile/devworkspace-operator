@@ -77,6 +77,7 @@ func getSpecRouting(
 	scheme *runtime.Scheme) (*v1alpha1.DevWorkspaceRouting, error) {
 
 	endpoints := map[string]v1alpha1.EndpointList{}
+	var serviceAnnotations map[string]v1alpha1.Service
 	for _, component := range workspace.Spec.Template.Components {
 		if component.Container == nil {
 			continue
@@ -84,6 +85,17 @@ func getSpecRouting(
 		componentEndpoints := component.Container.Endpoints
 		if len(componentEndpoints) > 0 {
 			endpoints[component.Name] = append(endpoints[component.Name], conversion.ConvertAllDevfileEndpoints(componentEndpoints)...)
+		}
+		if component.Container.Annotation != nil {
+			componentService := component.Container.Annotation.Service
+			if len(componentService) > 0 {
+				if serviceAnnotations == nil {
+					serviceAnnotations = map[string]v1alpha1.Service{}
+				}
+				serviceAnnotations[component.Name] = v1alpha1.Service{
+					Annotations: componentService,
+				}
+			}
 		}
 	}
 
@@ -119,6 +131,7 @@ func getSpecRouting(
 			DevWorkspaceId: workspace.Status.DevWorkspaceId,
 			RoutingClass:   v1alpha1.DevWorkspaceRoutingClass(routingClass),
 			Endpoints:      endpoints,
+			Service:        serviceAnnotations,
 			PodSelector: map[string]string{
 				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 			},

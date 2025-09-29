@@ -7,7 +7,7 @@ metadata:
     operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
     operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-  name: devworkspace-operator.v0.37.0
+  name: devworkspace-operator.v0.37.1
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -326,9 +326,9 @@ spec:
                 - name: WEBHOOK_SECRET_NAME
                   value: devworkspace-webhookserver-tls
                 - name: RELATED_IMAGE_devworkspace_webhook_server
-                  value: quay.io/devfile/devworkspace-controller:v0.37.0
+                  value: quay.io/devfile/devworkspace-controller:v0.37.1
                 - name: RELATED_IMAGE_project_clone
-                  value: quay.io/devfile/project-clone:v0.37.0
+                  value: quay.io/devfile/project-clone:v0.37.1
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -359,7 +359,7 @@ spec:
                   value: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
                 - name: RELATED_IMAGE_async_storage_sidecar
                   value: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
-                image: quay.io/devfile/devworkspace-controller:v0.37.0
+                image: quay.io/devfile/devworkspace-controller:v0.37.1
                 imagePullPolicy: Always
                 livenessProbe:
                   failureThreshold: 5
@@ -456,9 +456,9 @@ spec:
     name: Devfile
     url: https://devfile.io
   relatedImages:
-  - image: quay.io/devfile/devworkspace-controller:v0.37.0
+  - image: quay.io/devfile/devworkspace-controller:v0.37.1
     name: devworkspace_webhook_server
-  - image: quay.io/devfile/project-clone:v0.37.0
+  - image: quay.io/devfile/project-clone:v0.37.1
     name: project_clone
   - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
     name: pvc_cleanup_job
@@ -467,7 +467,7 @@ spec:
   - image: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
     name: async_storage_sidecar
   replaces: devworkspace-operator.v0.36.0
-  version: 0.37.0
+  version: 0.37.1
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

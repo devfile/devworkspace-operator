@@ -30,10 +30,10 @@ input:
         volume: {} # Size is not defined, but calculated PVC size will be greater than default 5Gi so, calculated size should be used
       - name: volume-1
         volume:
-          size: 1Gi
+          size: 2Gi
       - name: volume-2
         volume:
-          size: 4Gi
+          size: 8Gi
       - name: volume-3
         volume:
           size: 512Mi
@@ -42,7 +42,7 @@ input:
           size: 248Mi
 
 output:
-  pvcSize: 5880Mi
+  pvcSize: 11000Mi
   podAdditions:
     containers:
       - name: testing-container-1

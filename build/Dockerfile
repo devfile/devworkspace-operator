@@ -14,7 +14,13 @@
 #
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9/go-toolset
-FROM registry.access.redhat.com/ubi9/go-toolset:1.24.6-1758501173 as builder
+# Use BUILDPLATFORM to ensure the builder always runs natively on the host machine
+FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/go-toolset:1.24.6-1758501173 AS builder
+
+# Accept TARGETARCH and TARGETPLATFORM, which are automatically passed by the builder
+ARG TARGETARCH
+ARG TARGETPLATFORM
+
 ENV GOPATH=/go/
 USER root
 WORKDIR /devworkspace-operator
@@ -29,12 +35,12 @@ RUN go env GOPROXY && \
 # Copy the go source
 COPY . .
 
-# compile workspace controller binaries, then webhook binaries
-RUN make compile-devworkspace-controller
-RUN make compile-webhook-server
+# Pass the target ARCH directly to make for robust cross-compilation
+RUN make GOARCH=${TARGETARCH} compile-devworkspace-controller
+RUN make GOARCH=${TARGETARCH} compile-webhook-server
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9-minimal
-FROM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
+FROM --platform=$TARGETPLATFORM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
 RUN microdnf -y update && \
     microdnf clean all && \
     rm -rf /var/cache/yum && \

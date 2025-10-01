@@ -7,6 +7,9 @@ metadata:
     operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
     operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
   name: devworkspace-operator.v0.38.0-dev
 spec:
   apiservicedefinitions: {}

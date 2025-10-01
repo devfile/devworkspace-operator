@@ -1,5 +1,40 @@
 # DevWorkspace Operator Changelog
 
+# v0.37.0
+## Features
+### Add hostUsers field to DWOC [#1493](https://github.com/devfile/devworkspace-operator/issues/1493)
+The DevWorkspace pod's `spec.hostUsers` field can now be set in the DevWorkspaceOperatorConfig:
+```
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    hostUsers: false
+``` 
+Setting the `spec.hostUsers` field to `false` is useful when leveraging user-namespaces for pods.
+
+**Note:** This field is only respected when the UserNamespacesSupport feature is enabled in the cluster. If the feature is disabled, setting hostUsers: false may lead to an endless workspace start loop.
+
+### Provide timeout for postStart events [#1496](https://github.com/devfile/devworkspace-operator/issues/1496)
+A timeout can now be configured for postStart events to prevent workspace pods from being stuck in a terminating state:
+```
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    postStartTimeout: 30 
+```
+By default, this timeout is disabled.
+
+## Bug Fixes & Improvements
+- Add E2E test to verify that DevWorkspace contents are persisted during restarts [#1467](https://github.com/devfile/devworkspace-operator/issues/1467)
+- make run fails on m4 MacBook [#1494](https://github.com/devfile/devworkspace-operator/issues/1494)
+- Upgrade Go toolchain to 1.24.6 [#1509](https://github.com/devfile/devworkspace-operator/issues/1509)
+
 # v0.36.0
 ## Bug Fixes & Improvements
 ### Remove `kube-rbac-proxy` from the controller Deployment [#1437](https://github.com/devfile/devworkspace-operator/pull/1437)

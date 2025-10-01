@@ -17,8 +17,9 @@
 # Use BUILDPLATFORM to ensure the builder always runs natively on the host machine
 FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/go-toolset:1.24.4-1753853351 AS builder
 
-# Accept TARGETARCH, which is automatically passed by the builder
+# Accept TARGETARCH and TARGETPLATFORM, which are automatically passed by the builder
 ARG TARGETARCH
+ARG TARGETPLATFORM
 
 ENV GOPATH=/go/
 USER root
@@ -39,7 +40,7 @@ RUN make GOARCH=${TARGETARCH} compile-devworkspace-controller
 RUN make GOARCH=${TARGETARCH} compile-webhook-server
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9-minimal
-FROM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
+FROM --platform=$TARGETPLATFORM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
 RUN microdnf -y update && \
     microdnf clean all && \
     rm -rf /var/cache/yum && \

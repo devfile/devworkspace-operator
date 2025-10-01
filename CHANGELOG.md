@@ -34,6 +34,7 @@ By default, this timeout is disabled.
 - Add E2E test to verify that DevWorkspace contents are persisted during restarts [#1467](https://github.com/devfile/devworkspace-operator/issues/1467)
 - make run fails on m4 MacBook [#1494](https://github.com/devfile/devworkspace-operator/issues/1494)
 - Upgrade Go toolchain to 1.24.6 [#1509](https://github.com/devfile/devworkspace-operator/issues/1509)
+- Remove group writable permissions from container images [#1516](https://github.com/devfile/devworkspace-operator/issues/1516)
 
 # v0.36.0
 ## Bug Fixes & Improvements

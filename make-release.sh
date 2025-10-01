@@ -298,7 +298,8 @@ release() {
     --render olm-catalog/release-digest/ \
     --push "${DWO_BUNDLE_QUAY_REPO}:${VERSION}-digest" \
     --container-tool docker \
-    --debug
+    --debug \
+    --multi-arch
 
   CHANNEL_ENTRY_JSON=$(yq --arg version "$VERSION" '.entries[] | select(.name == "devworkspace-operator.\($version)")' olm-catalog/release/channel.yaml)
   yq -Y -i --argjson entry "$CHANNEL_ENTRY_JSON" '.entries |= . + [$entry]' olm-catalog/release-digest/channel.yaml

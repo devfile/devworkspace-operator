@@ -281,7 +281,8 @@ release() {
     --bundle-tag "$VERSION" \
     --bundle-repo "$DWO_BUNDLE_QUAY_REPO" \
     --index-image "$DWO_INDEX_IMAGE" \
-    --force
+    --force \
+    --multi-arch
 
   # Commit changes from releasing bundle
   git_commit_and_push "[release] Add OLM bundle for $VERSION in $X_BRANCH" "ci-add-bundle-$VERSION"
@@ -298,7 +299,8 @@ release() {
     --render olm-catalog/release-digest/ \
     --push "${DWO_BUNDLE_QUAY_REPO}:${VERSION}-digest" \
     --container-tool docker \
-    --debug
+    --debug \
+    --multi-arch
 
   CHANNEL_ENTRY_JSON=$(yq --arg version "$VERSION" '.entries[] | select(.name == "devworkspace-operator.\($version)")' olm-catalog/release/channel.yaml)
   yq -Y -i --argjson entry "$CHANNEL_ENTRY_JSON" '.entries |= . + [$entry]' olm-catalog/release-digest/channel.yaml

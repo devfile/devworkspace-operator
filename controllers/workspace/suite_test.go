@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"testing"
 
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
@@ -121,6 +122,9 @@ var _ = BeforeSuite(func() {
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:   scheme.Scheme,
 		NewCache: cacheFunc,
+		Metrics: metricsserver.Options{
+			BindAddress: "0", // Disable metrics server to avoid port conflicts
+		},
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port: 9443,
 		}),

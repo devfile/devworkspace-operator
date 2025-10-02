@@ -16,9 +16,15 @@
 package solvers
 
 import (
+	"context"
+	"fmt"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +42,7 @@ type DevWorkspaceMetadata struct {
 
 // GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
 // endpoint from the list. Endpoints with the NoneEndpointExposure are ignored.
-func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []corev1.Service {
+func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, cl client.Client, log logr.Logger) ([]corev1.Service, error) {
 	var services []corev1.Service
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
@@ -45,18 +51,36 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 			}
 
 			if endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DiscoverableAttribute), nil) {
-				// Create service with name matching endpoint
-				// TODO: This could cause a reconcile conflict if multiple workspaces define the same discoverable endpoint
-				// Also endpoint names may not be valid as service names
+				serviceName := common.EndpointName(endpoint.Name)
+				log.Info("Checking for existing service for discoverable endpoint", "serviceName", serviceName)
+				existingService := &corev1.Service{}
+				err := cl.Get(context.TODO(), client.ObjectKey{Name: serviceName, Namespace: meta.Namespace}, existingService)
+				if err != nil {
+					if !errors.IsNotFound(err) {
+						log.Error(err, "Failed to get service from cluster", "serviceName", serviceName)
+						return nil, err
+					}
+					log.Info("No existing service found", "serviceName", serviceName)
+				} else {
+					log.Info("Found existing service", "serviceName", serviceName)
+					if existingService.Labels[constants.DevWorkspaceIDLabel] != meta.DevWorkspaceId {
+						log.Info("Service conflict detected", "serviceName", serviceName, "existingWorkspaceId", existingService.Labels[constants.DevWorkspaceIDLabel], "currentWorkspaceId", meta.DevWorkspaceId)
+						return nil, &ServiceConflictError{
+							Reason: fmt.Sprintf("discoverable endpoint %s conflicts with existing service", endpoint.Name),
+						}
+					}
+					log.Info("Existing service is owned by the same workspace", "serviceName", serviceName)
+				}
+
 				servicePort := corev1.ServicePort{
-					Name:       common.EndpointName(endpoint.Name),
+					Name:       serviceName,
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(endpoint.TargetPort),
 					TargetPort: intstr.FromInt(endpoint.TargetPort),
 				}
 				services = append(services, corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      common.EndpointName(endpoint.Name),
+						Name:      serviceName,
 						Namespace: meta.Namespace,
 						Labels: map[string]string{
 							constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
@@ -74,7 +98,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 			}
 		}
 	}
-	return services
+	return services, nil
 }
 
 // GetServiceForEndpoints returns a single service that exposes all endpoints of given exposure types, possibly also including the discoverable types.

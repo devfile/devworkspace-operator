@@ -20,6 +20,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var routeAnnotations = func(endpointName string, endpointAnnotations map[string]string) map[string]string {
@@ -59,7 +61,7 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 	return nil
 }
 
-func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
+func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata, cl client.Client, log logr.Logger) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
 	// TODO: Use workspace-scoped ClusterHostSuffix to allow overriding
@@ -70,7 +72,11 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRou
 
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
-	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, cl, log)
+	if err != nil {
+		return RoutingObjects{}, err
+	}
+	services = append(services, discoverableServices...)
 	routingObjects.Services = services
 	if infrastructure.IsOpenShift() {
 		routingObjects.Routes = getRoutesForSpec(routingSuffix, spec.Endpoints, workspaceMeta)

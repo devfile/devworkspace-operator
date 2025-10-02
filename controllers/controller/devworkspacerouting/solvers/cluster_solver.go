@@ -24,6 +24,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -44,9 +46,14 @@ func (s *ClusterSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error 
 	return nil
 }
 
-func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
+func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata, cl client.Client, log logr.Logger) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, cl, log)
+	if err != nil {
+		return RoutingObjects{}, err
+	}
+	services = append(services, discoverableServices...)
 	podAdditions := &controllerv1alpha1.PodAdditions{}
 	if s.TLS {
 		readOnlyMode := int32(420)

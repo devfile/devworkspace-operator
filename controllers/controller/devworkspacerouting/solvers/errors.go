@@ -21,7 +21,34 @@ import (
 )
 
 var _ error = (*RoutingNotReady)(nil)
+
+// HostnameConflictError is an error returned when a hostname required by a DevWorkspace is already in use
+// by another resource on the cluster.
+type HostnameConflictError struct {
+	// Reason provides a textual summary of the conflict
+	Reason string
+}
+
+func (e *HostnameConflictError) Error() string {
+	return e.Reason
+}
+
 var _ error = (*RoutingInvalid)(nil)
+var _ error = (*ServiceConflictError)(nil)
+
+// ServiceConflictError is returned when a discoverable endpoint has a name that is already in use by
+// another DevWorkspace's service.
+type ServiceConflictError struct {
+	Reason string
+}
+
+func (e *ServiceConflictError) Error() string {
+	reason := "<no reason given>"
+	if len(e.Reason) > 0 {
+		reason = e.Reason
+	}
+	return "workspace routing has a service conflict: " + reason
+}
 
 // RoutingNotSupported is used by the solvers when they supported the routingclass of the workspace they've been asked to route
 var RoutingNotSupported = errors.New("routingclass not supported by this controller")

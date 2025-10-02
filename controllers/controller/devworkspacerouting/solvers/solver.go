@@ -18,6 +18,7 @@ package solvers
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -52,7 +53,7 @@ type RoutingSolver interface {
 	// The implementors can also create any additional objects not captured by the RoutingObjects struct. If that's
 	// the case they are required to set the restricted access annotation on any objects created according to the
 	// restricted access specified by the routing.
-	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error)
+	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata, client client.Client, log logr.Logger) (RoutingObjects, error)
 
 	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.
 	// Returns is a map from component ids (as defined in the devfile) to the list of endpoints for that component

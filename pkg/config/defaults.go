@@ -114,7 +114,7 @@ var (
 // Necessary variables for setting pointer values
 var (
 	commonStorageSize       = resource.MustParse("10Gi")
-	perWorkspaceStorageSize = resource.MustParse("5Gi")
+	perWorkspaceStorageSize = resource.MustParse("10Gi")
 )
 
 func setDefaultPodSecurityContext() error {

@@ -257,7 +257,7 @@ type StorageSizes struct {
 	// If not specified, the "common" and "async" Persistent Volume Claim sizes are set to 10Gi
 	Common *resource.Quantity `json:"common,omitempty"`
 	// The default Persistent Volume Claim size for the "per-workspace" storage class.
-	// If not specified, the "per-workspace" Persistent Volume Claim size is set to 5Gi
+	// If not specified, the "per-workspace" Persistent Volume Claim size is set to 10Gi
 	PerWorkspace *resource.Quantity `json:"perWorkspace,omitempty"`
 }
 

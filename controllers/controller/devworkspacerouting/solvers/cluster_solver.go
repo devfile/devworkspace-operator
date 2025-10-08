@@ -33,10 +33,21 @@ const (
 )
 
 type ClusterSolver struct {
-	TLS bool
+	TLS    bool
+	client client.Client
+	logger logr.Logger
 }
 
 var _ RoutingSolver = (*ClusterSolver)(nil)
+
+// NewClusterSolver creates a new ClusterSolver with the provided dependencies
+func NewClusterSolver(client client.Client, logger logr.Logger, tls bool) *ClusterSolver {
+	return &ClusterSolver{
+		TLS:    tls,
+		client: client,
+		logger: logger,
+	}
+}
 
 func (s *ClusterSolver) FinalizerRequired(*controllerv1alpha1.DevWorkspaceRouting) bool {
 	return false
@@ -46,10 +57,10 @@ func (s *ClusterSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error 
 	return nil
 }
 
-func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata, cl client.Client, log logr.Logger) (RoutingObjects, error) {
+func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
-	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, cl, log)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, s.client, s.logger)
 	if err != nil {
 		return RoutingObjects{}, err
 	}

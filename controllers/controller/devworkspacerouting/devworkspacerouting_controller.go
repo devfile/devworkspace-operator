@@ -93,7 +93,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, r.markRoutingFailed(instance, "DevWorkspaceRouting requires field routingClass to be set")
 	}
 
-	solver, err := r.SolverGetter.GetSolver(r.Client, instance.Spec.RoutingClass)
+	solver, err := r.SolverGetter.GetSolver(r.Client, reqLogger, instance.Spec.RoutingClass)
 	if err != nil {
 		if errors.Is(err, solvers.RoutingNotSupported) {
 			reqLogger.Info("Routing class not supported by this controller, skipping reconciliation", "routingClass", instance.Spec.RoutingClass)
@@ -132,7 +132,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]
-	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta, r.Client, reqLogger)
+	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta)
 	if err != nil {
 		var notReady *solvers.RoutingNotReady
 		if errors.As(err, &notReady) {

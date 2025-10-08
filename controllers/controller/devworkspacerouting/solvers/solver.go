@@ -53,7 +53,7 @@ type RoutingSolver interface {
 	// The implementors can also create any additional objects not captured by the RoutingObjects struct. If that's
 	// the case they are required to set the restricted access annotation on any objects created according to the
 	// restricted access specified by the routing.
-	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata, client client.Client, log logr.Logger) (RoutingObjects, error)
+	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error)
 
 	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.
 	// Returns is a map from component ids (as defined in the devfile) to the list of endpoints for that component
@@ -78,7 +78,7 @@ type RoutingSolverGetter interface {
 	// the routingClass is not recognized, and any other error if the routingClass is invalid (e.g. an OpenShift-only
 	// routingClass on a vanilla Kubernetes platform). Note that an empty routingClass is handled by the DevWorkspace controller itself,
 	// and should not be handled by external controllers.
-	GetSolver(client client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (solver RoutingSolver, err error)
+	GetSolver(client client.Client, logger logr.Logger, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (solver RoutingSolver, err error)
 }
 
 type SolverGetter struct{}
@@ -101,18 +101,19 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.DevWorkspaceRou
 	}
 }
 
-func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
+func (_ *SolverGetter) GetSolver(client client.Client, logger logr.Logger, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
 	isOpenShift := infrastructure.IsOpenShift()
+	
 	switch routingClass {
 	case controllerv1alpha1.DevWorkspaceRoutingBasic:
-		return &BasicSolver{}, nil
+		return NewBasicSolver(client, logger), nil
 	case controllerv1alpha1.DevWorkspaceRoutingCluster:
-		return &ClusterSolver{}, nil
+		return NewClusterSolver(client, logger, false), nil
 	case controllerv1alpha1.DevWorkspaceRoutingClusterTLS, controllerv1alpha1.DevWorkspaceRoutingWebTerminal:
 		if !isOpenShift {
 			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
 		}
-		return &ClusterSolver{TLS: true}, nil
+		return NewClusterSolver(client, logger, true), nil
 	default:
 		return nil, RoutingNotSupported
 	}

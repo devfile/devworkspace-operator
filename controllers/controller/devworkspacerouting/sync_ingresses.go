@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
@@ -32,14 +31,6 @@ import (
 
 func (r *DevWorkspaceRoutingReconciler) syncIngresses(routing *controllerv1alpha1.DevWorkspaceRouting, specIngresses []networkingv1.Ingress) (ok bool, clusterIngresses []networkingv1.Ingress, err error) {
 	ingressesInSync := true
-
-	for _, ingress := range specIngresses {
-		for _, rule := range ingress.Spec.Rules {
-			if err := r.checkForIngressConflict(rule.Host, routing); err != nil {
-				return false, nil, err
-			}
-		}
-	}
 
 	clusterIngresses, err = r.getClusterIngresses(routing)
 	if err != nil {
@@ -97,28 +88,6 @@ func (r *DevWorkspaceRoutingReconciler) getClusterIngresses(routing *controllerv
 		return nil, err
 	}
 	return found.Items, nil
-}
-
-func (r *DevWorkspaceRoutingReconciler) checkForIngressConflict(hostname string, owner *controllerv1alpha1.DevWorkspaceRouting) error {
-	ingresses := &networkingv1.IngressList{}
-	if err := r.List(context.TODO(), ingresses, client.InNamespace(owner.Namespace)); err != nil {
-		return err
-	}
-	for _, ingress := range ingresses.Items {
-		for _, rule := range ingress.Spec.Rules {
-			if rule.Host == hostname {
-				for _, ownerRef := range ingress.GetOwnerReferences() {
-					if ownerRef.UID == owner.UID {
-						return nil
-					}
-				}
-				return &solvers.HostnameConflictError{
-					Reason: fmt.Sprintf("hostname %s is already in use by ingress %s", hostname, ingress.Name),
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func getIngressesToDelete(clusterIngresses, specIngresses []networkingv1.Ingress) []networkingv1.Ingress {

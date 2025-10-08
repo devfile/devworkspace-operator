@@ -21,18 +21,6 @@ import (
 )
 
 var _ error = (*RoutingNotReady)(nil)
-
-// HostnameConflictError is an error returned when a hostname required by a DevWorkspace is already in use
-// by another resource on the cluster.
-type HostnameConflictError struct {
-	// Reason provides a textual summary of the conflict
-	Reason string
-}
-
-func (e *HostnameConflictError) Error() string {
-	return e.Reason
-}
-
 var _ error = (*RoutingInvalid)(nil)
 var _ error = (*ServiceConflictError)(nil)
 

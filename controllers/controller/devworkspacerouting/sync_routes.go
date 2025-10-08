@@ -19,7 +19,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	routeV1 "github.com/openshift/api/route/v1"
@@ -31,12 +30,6 @@ import (
 
 func (r *DevWorkspaceRoutingReconciler) syncRoutes(routing *controllerv1alpha1.DevWorkspaceRouting, specRoutes []routeV1.Route) (ok bool, clusterRoutes []routeV1.Route, err error) {
 	routesInSync := true
-
-	for _, route := range specRoutes {
-		if err := r.checkForRouteConflict(route.Spec.Host, routing); err != nil {
-			return false, nil, err
-		}
-	}
 
 	clusterRoutes, err = r.getClusterRoutes(routing)
 	if err != nil {
@@ -105,26 +98,6 @@ func (r *DevWorkspaceRoutingReconciler) getClusterRoutes(routing *controllerv1al
 		}
 	}
 	return routes, nil
-}
-
-func (r *DevWorkspaceRoutingReconciler) checkForRouteConflict(hostname string, owner *controllerv1alpha1.DevWorkspaceRouting) error {
-	routes := &routeV1.RouteList{}
-	if err := r.List(context.TODO(), routes, client.InNamespace(owner.Namespace)); err != nil {
-		return err
-	}
-	for _, route := range routes.Items {
-		if route.Spec.Host == hostname {
-			for _, ownerRef := range route.GetOwnerReferences() {
-				if ownerRef.UID == owner.UID {
-					return nil
-				}
-			}
-			return &solvers.HostnameConflictError{
-				Reason: fmt.Sprintf("hostname %s is already in use by route %s", hostname, route.Name),
-			}
-		}
-	}
-	return nil
 }
 
 func getRoutesToDelete(clusterRoutes, specRoutes []routeV1.Route) []routeV1.Route {

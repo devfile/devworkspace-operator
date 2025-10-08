@@ -103,7 +103,7 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.DevWorkspaceRou
 
 func (_ *SolverGetter) GetSolver(client client.Client, logger logr.Logger, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
 	isOpenShift := infrastructure.IsOpenShift()
-	
+
 	switch routingClass {
 	case controllerv1alpha1.DevWorkspaceRoutingBasic:
 		return NewBasicSolver(client, logger), nil

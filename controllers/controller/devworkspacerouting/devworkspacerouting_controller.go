@@ -215,10 +215,6 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 			if errors.As(err, &failError) {
 				return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
 			}
-			conflictErr := &solvers.HostnameConflictError{}
-			if errors.As(err, &conflictErr) {
-				return reconcile.Result{}, r.markRoutingFailed(instance, conflictErr.Error())
-			}
 			reqLogger.Error(err, "Error syncing routes")
 			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing routes")
 		} else if !routesInSync {
@@ -232,10 +228,6 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 			failError := &sync.UnrecoverableSyncError{}
 			if errors.As(err, &failError) {
 				return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
-			}
-			conflictErr := &solvers.HostnameConflictError{}
-			if errors.As(err, &conflictErr) {
-				return reconcile.Result{}, r.markRoutingFailed(instance, conflictErr.Error())
 			}
 			reqLogger.Error(err, "Error syncing ingresses")
 			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing ingresses")

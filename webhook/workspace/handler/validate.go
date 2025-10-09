@@ -115,10 +115,6 @@ func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.
 		if otherWorkspace.UID == workspace.UID {
 			continue
 		}
-		// Skip workspaces that are being deleted
-		if otherWorkspace.DeletionTimestamp != nil {
-			continue
-		}
 		for _, component := range otherWorkspace.Spec.Template.Components {
 			if component.Container != nil {
 				for _, endpoint := range component.Container.Endpoints {

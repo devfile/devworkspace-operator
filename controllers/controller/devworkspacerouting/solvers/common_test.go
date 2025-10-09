@@ -44,8 +44,9 @@ func TestGetDiscoverableServicesForEndpoints(t *testing.T) {
 	}
 
 	meta := DevWorkspaceMetadata{
-		DevWorkspaceId: "current-workspace",
-		Namespace:      "test-namespace",
+		DevWorkspaceId:   "current-workspace-id",
+		DevWorkspaceName: "current-workspace",
+		Namespace:        "test-namespace",
 	}
 
 	tests := []struct {
@@ -68,14 +69,15 @@ func TestGetDiscoverableServicesForEndpoints(t *testing.T) {
 						Name:      "test-endpoint",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							constants.DevWorkspaceIDLabel: "other-workspace",
+							constants.DevWorkspaceIDLabel:   "other-workspace-id",
+							constants.DevWorkspaceNameLabel: "other-workspace",
 						},
 					},
 				},
 			},
 			expectErr:     true,
 			expectErrType: &ServiceConflictError{},
-			expectMsg:     "conflicts with existing service",
+			expectMsg:     "discoverable endpoint 'test-endpoint' is already in use by workspace 'other-workspace'",
 		},
 		{
 			name: "Existing service with same owner (reconciliation)",
@@ -85,7 +87,8 @@ func TestGetDiscoverableServicesForEndpoints(t *testing.T) {
 						Name:      "test-endpoint",
 						Namespace: "test-namespace",
 						Labels: map[string]string{
-							constants.DevWorkspaceIDLabel: "current-workspace",
+							constants.DevWorkspaceIDLabel:   "current-workspace-id",
+							constants.DevWorkspaceNameLabel: "current-workspace",
 						},
 					},
 				},
@@ -100,7 +103,8 @@ func TestGetDiscoverableServicesForEndpoints(t *testing.T) {
 						Name:      "test-endpoint",
 						Namespace: "other-namespace",
 						Labels: map[string]string{
-							constants.DevWorkspaceIDLabel: "other-workspace",
+							constants.DevWorkspaceIDLabel:   "other-workspace-id",
+							constants.DevWorkspaceNameLabel: "other-workspace",
 						},
 					},
 				},
@@ -175,8 +179,9 @@ func TestGetDiscoverableServicesForEndpoints_MultipleEndpoints(t *testing.T) {
 	}
 
 	meta := DevWorkspaceMetadata{
-		DevWorkspaceId: "current-workspace",
-		Namespace:      "test-namespace",
+		DevWorkspaceId:   "current-workspace-id",
+		DevWorkspaceName: "current-workspace",
+		Namespace:        "test-namespace",
 		PodSelector: map[string]string{
 			constants.DevWorkspaceIDLabel: "current-workspace",
 		},
@@ -203,7 +208,8 @@ func TestGetDiscoverableServicesForEndpoints_MultipleEndpoints(t *testing.T) {
 				Name:      "postgresql",
 				Namespace: "test-namespace",
 				Labels: map[string]string{
-					constants.DevWorkspaceIDLabel: "other-workspace",
+					constants.DevWorkspaceIDLabel:   "other-workspace-id",
+					constants.DevWorkspaceNameLabel: "other-workspace",
 				},
 			},
 		}

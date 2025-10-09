@@ -126,9 +126,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	workspaceMeta := solvers.DevWorkspaceMetadata{
-		DevWorkspaceId: instance.Spec.DevWorkspaceId,
-		Namespace:      instance.Namespace,
-		PodSelector:    instance.Spec.PodSelector,
+		DevWorkspaceId:   instance.Spec.DevWorkspaceId,
+		DevWorkspaceName: instance.Name,
+		Namespace:        instance.Namespace,
+		PodSelector:      instance.Spec.PodSelector,
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]
@@ -152,7 +153,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		var conflict *solvers.ServiceConflictError
 		if errors.As(err, &conflict) {
-			reqLogger.Error(conflict, "Routing controller detected a service conflict", "serviceName", conflict.Reason)
+			reqLogger.Error(conflict, "Routing controller detected a service conflict", "endpointName", conflict.EndpointName, "workspaceName", conflict.WorkspaceName)
 			return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Unable to provision networking for DevWorkspace: %s", conflict))
 		}
 

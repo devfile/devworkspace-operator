@@ -34,9 +34,10 @@ import (
 )
 
 type DevWorkspaceMetadata struct {
-	DevWorkspaceId string
-	Namespace      string
-	PodSelector    map[string]string
+	DevWorkspaceId   string
+	DevWorkspaceName string
+	Namespace        string
+	PodSelector      map[string]string
 }
 
 // GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
@@ -61,7 +62,8 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 				} else {
 					if existingService.Labels[constants.DevWorkspaceIDLabel] != meta.DevWorkspaceId {
 						return nil, &ServiceConflictError{
-							EndpointName: endpoint.Name,
+							EndpointName:  endpoint.Name,
+							WorkspaceName: existingService.Labels[constants.DevWorkspaceNameLabel],
 						}
 					}
 				}
@@ -77,7 +79,8 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 						Name:      serviceName,
 						Namespace: meta.Namespace,
 						Labels: map[string]string{
-							constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
+							constants.DevWorkspaceIDLabel:   meta.DevWorkspaceId,
+							constants.DevWorkspaceNameLabel: meta.DevWorkspaceName,
 						},
 						Annotations: map[string]string{
 							constants.DevWorkspaceDiscoverableServiceAnnotation: "true",

@@ -113,7 +113,7 @@ func TestValidateEndpoints(t *testing.T) {
 		assert.NoError(t, err, "Did not expect an error for different endpoint names")
 	})
 
-	t.Run("No conflict when workspace is being deleted", func(t *testing.T) {
+	t.Run("Conflict detected even when workspace is being deleted", func(t *testing.T) {
 		workspace := &dwv2.DevWorkspace{}
 		err := loadObjectFromFile("workspace-1", workspace, "test-devworkspace.yaml")
 		assert.NoError(t, err, "Failed to load test workspace")
@@ -134,7 +134,8 @@ func TestValidateEndpoints(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(deletingWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		err = handler.validateEndpoints(context.TODO(), workspace)
-		assert.NoError(t, err, "Did not expect an error for workspace being deleted")
+		assert.Error(t, err, "Should detect conflict even with workspace being deleted")
+		assert.Contains(t, err.Error(), "workspace-deleting")
 	})
 
 	t.Run("No conflict when workspace has no discoverable endpoints", func(t *testing.T) {

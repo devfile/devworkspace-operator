@@ -124,7 +124,7 @@ func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.
 				for _, endpoint := range component.Container.Endpoints {
 					if discoverableEndpoints[endpoint.Name] {
 						return &solvers.ServiceConflictError{
-							EndpointName: endpoint.Name,
+							EndpointName:  endpoint.Name,
 							WorkspaceName: otherWorkspace.Name,
 						}
 					}

@@ -28,12 +28,12 @@ var _ error = (*ServiceConflictError)(nil)
 // ServiceConflictError is returned when a discoverable endpoint has a name that is already in use by
 // another DevWorkspace's service.
 type ServiceConflictError struct {
-	EndpointName string
+	EndpointName  string
 	WorkspaceName string
 }
 
 func (e *ServiceConflictError) Error() string {
-	if (e.WorkspaceName == "") {
+	if e.WorkspaceName == "" {
 		return fmt.Sprintf("discoverable endpoint '%s' is already in use by another workspace", e.EndpointName)
 	}
 	return fmt.Sprintf("discoverable endpoint '%s' is already in use by workspace '%s'", e.EndpointName, e.WorkspaceName)

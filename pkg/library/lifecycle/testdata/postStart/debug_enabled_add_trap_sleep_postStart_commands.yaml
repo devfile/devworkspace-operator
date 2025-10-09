@@ -1,7 +1,7 @@
-name: "Adds all postStart events to containers"
+name: "Debug Enabled Adds postStart events with trap and sleep to containers"
 
 input:
-  postStartDebugTrapSleepDuration: ""
+  postStartDebugTrapSleepDuration: "5m"
   devfile:
     commands:
       - id: test-postStart-1
@@ -38,6 +38,8 @@ output:
               - -c
               - |
                 {
+                set -e
+                trap 'echo "[postStart] failure encountered, sleep for debugging"; sleep 300' ERR
                 echo 'hello world 1'
                 } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
     - name: test-component-2
@@ -50,6 +52,8 @@ output:
               - -c
               - |
                 {
+                set -e
+                trap 'echo "[postStart] failure encountered, sleep for debugging"; sleep 300' ERR
                 cd /tmp/test-dir
                 echo 'hello world 2'
                 } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt

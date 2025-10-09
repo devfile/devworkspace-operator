@@ -52,7 +52,6 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 
 			if endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DiscoverableAttribute), nil) {
 				serviceName := common.EndpointName(endpoint.Name)
-				log.Info("Checking for existing service for discoverable endpoint", "serviceName", serviceName)
 				existingService := &corev1.Service{}
 				err := cl.Get(context.TODO(), client.ObjectKey{Name: serviceName, Namespace: meta.Namespace}, existingService)
 				if err != nil {
@@ -60,16 +59,12 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 						log.Error(err, "Failed to get service from cluster", "serviceName", serviceName)
 						return nil, err
 					}
-					log.Info("No existing service found", "serviceName", serviceName)
 				} else {
-					log.Info("Found existing service", "serviceName", serviceName)
 					if existingService.Labels[constants.DevWorkspaceIDLabel] != meta.DevWorkspaceId {
-						log.Info("Service conflict detected", "serviceName", serviceName, "existingWorkspaceId", existingService.Labels[constants.DevWorkspaceIDLabel], "currentWorkspaceId", meta.DevWorkspaceId)
 						return nil, &ServiceConflictError{
 							Reason: fmt.Sprintf("discoverable endpoint %s conflicts with existing service", endpoint.Name),
 						}
 					}
-					log.Info("Existing service is owned by the same workspace", "serviceName", serviceName)
 				}
 
 				servicePort := corev1.ServicePort{

@@ -24,6 +24,7 @@ import (
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
@@ -122,7 +123,9 @@ func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.
 			if component.Container != nil {
 				for _, endpoint := range component.Container.Endpoints {
 					if discoverableEndpoints[endpoint.Name] {
-						return fmt.Errorf("discoverable endpoint '%s' is already in use by workspace '%s'", endpoint.Name, otherWorkspace.Name)
+						return &solvers.ServiceConflictError{
+							Reason: fmt.Sprintf("discoverable endpoint '%s' is already in use by workspace '%s'", endpoint.Name, otherWorkspace.Name),
+						}
 					}
 				}
 			}

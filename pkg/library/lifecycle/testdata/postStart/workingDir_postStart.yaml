@@ -1,6 +1,7 @@
 name: "Should add postStart lifecycle hook for event with workingDir"
 
 input:
+  debugEnabled: false
   devfile:
     commands:
       - id: test-postStart

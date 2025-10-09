@@ -124,7 +124,8 @@ func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.
 				for _, endpoint := range component.Container.Endpoints {
 					if discoverableEndpoints[endpoint.Name] {
 						return &solvers.ServiceConflictError{
-							Reason: fmt.Sprintf("discoverable endpoint '%s' is already in use by workspace '%s'", endpoint.Name, otherWorkspace.Name),
+							EndpointName: endpoint.Name,
+							WorkspaceName: otherWorkspace.Name,
 						}
 					}
 				}

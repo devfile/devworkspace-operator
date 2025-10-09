@@ -17,7 +17,6 @@ package solvers
 
 import (
 	"context"
-	"fmt"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -62,7 +61,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 				} else {
 					if existingService.Labels[constants.DevWorkspaceIDLabel] != meta.DevWorkspaceId {
 						return nil, &ServiceConflictError{
-							Reason: fmt.Sprintf("discoverable endpoint %s conflicts with existing service", endpoint.Name),
+							EndpointName: endpoint.Name,
 						}
 					}
 				}

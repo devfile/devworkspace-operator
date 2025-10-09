@@ -45,7 +45,7 @@ import (
 // rewritten as Volumes are added to PodAdditions, in order to support e.g. using one PVC to hold all volumes
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
-func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securityContext *corev1.SecurityContext, pullPolicy string, defaultResources *corev1.ResourceRequirements, postStartTimeout string) (*v1alpha1.PodAdditions, error) {
+func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securityContext *corev1.SecurityContext, pullPolicy string, defaultResources *corev1.ResourceRequirements, postStartTimeout string, postStartDebugTrapSleepDuration string) (*v1alpha1.PodAdditions, error) {
 	if !flatten.DevWorkspaceIsFlattened(workspace, nil) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}
@@ -77,7 +77,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securi
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)
 	}
 
-	if err := lifecycle.AddPostStartLifecycleHooks(workspace, podAdditions.Containers, postStartTimeout); err != nil {
+	if err := lifecycle.AddPostStartLifecycleHooks(workspace, podAdditions.Containers, postStartTimeout, postStartDebugTrapSleepDuration); err != nil {
 		return nil, err
 	}
 

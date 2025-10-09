@@ -1,6 +1,7 @@
 name: "Returns error when postStart command requires env vars"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile:
     commands:
       - id: test-cmd

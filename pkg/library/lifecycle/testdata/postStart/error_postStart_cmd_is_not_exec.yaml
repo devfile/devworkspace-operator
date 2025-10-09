@@ -1,6 +1,7 @@
 name: "Returns error when postStart command is not exec-type"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile:
     commands:
       - id: test-command

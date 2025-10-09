@@ -1,6 +1,7 @@
 name: "Returns error when postStart command does not exist"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile:
     events:
       postStart:

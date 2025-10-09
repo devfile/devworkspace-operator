@@ -1,0 +1,38 @@
+name: "Debug Enabled But trap already exists in user script, nothing added"
+
+input:
+  postStartDebugTrapSleepDuration: "5m"
+  devfile:
+    commands:
+      - id: test-postStart-1
+        exec:
+          component: test-component-1
+          commandLine: |
+            trap 'echo "cleanup on error"' ERR
+            echo "Starting app..."
+            /app/start.sh
+    events:
+      postStart:
+        - test-postStart-1
+
+  containers:
+    - name: test-component-1
+      image: test-img
+
+output:
+  containers:
+    - name: test-component-1
+      image: test-img
+      lifecycle:
+        postStart:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - |
+                {
+                trap 'echo "cleanup on error"' ERR
+                echo "Starting app..."
+                /app/start.sh
+                
+                } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt

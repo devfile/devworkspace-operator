@@ -1,6 +1,7 @@
 name: "Should add postStart lifecycle hook for basic event"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile:
     commands:
       - id: test-postStart

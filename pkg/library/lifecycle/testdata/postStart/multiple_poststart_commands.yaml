@@ -1,6 +1,7 @@
 name: "Multiple postStart commands use same component"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile:
     commands:
       - id: test-cmd-1

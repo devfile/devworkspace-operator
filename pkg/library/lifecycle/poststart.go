@@ -15,8 +15,11 @@ package lifecycle
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
+
+	"github.com/go-logr/logr"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
@@ -41,7 +44,9 @@ const (
 `
 )
 
-func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout string) error {
+var trapErrRegex = regexp.MustCompile(`\btrap\b.*\bERR\b`)
+
+func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout string, postStartDebugTrapSleepDuration string) error {
 	if wksp.Events == nil || len(wksp.Events.PostStart) == 0 {
 		return nil
 	}
@@ -69,7 +74,7 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
 
-		postStartHandler, err := processCommandsForPostStart(commands, postStartTimeout)
+		postStartHandler, err := processCommandsForPostStart(commands, postStartTimeout, postStartDebugTrapSleepDuration)
 		if err != nil {
 			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
@@ -85,10 +90,10 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 
 // processCommandsForPostStart processes a list of DevWorkspace commands
 // and generates a corev1.LifecycleHandler for the PostStart lifecycle hook.
-func processCommandsForPostStart(commands []dw.Command, postStartTimeout string) (*corev1.LifecycleHandler, error) {
+func processCommandsForPostStart(commands []dw.Command, postStartTimeout string, postStartDebugTrapSleepDuration string) (*corev1.LifecycleHandler, error) {
 	if postStartTimeout == "" {
 		// use the fallback if no timeout propagated
-		return processCommandsWithoutTimeoutFallback(commands)
+		return processCommandsWithoutTimeoutFallback(commands, postStartDebugTrapSleepDuration)
 	}
 
 	originalUserScript, err := buildUserScript(commands)
@@ -101,7 +106,7 @@ func processCommandsForPostStart(commands []dw.Command, postStartTimeout string)
 	scriptToExecute := "set -e\n" + originalUserScript
 	escapedUserScriptForTimeoutWrapper := strings.ReplaceAll(scriptToExecute, "'", `'\''`)
 
-	fullScriptWithTimeout := generateScriptWithTimeout(escapedUserScriptForTimeoutWrapper, postStartTimeout)
+	fullScriptWithTimeout := generateScriptWithTimeout(escapedUserScriptForTimeoutWrapper, postStartTimeout, postStartDebugTrapSleepDuration)
 
 	finalScriptForHook := fmt.Sprintf(redirectOutputFmt, fullScriptWithTimeout)
 
@@ -128,8 +133,10 @@ func processCommandsForPostStart(commands []dw.Command, postStartTimeout string)
 //	  - |
 //	    cd <workingDir>
 //	    <commandline>
-func processCommandsWithoutTimeoutFallback(commands []dw.Command) (*corev1.LifecycleHandler, error) {
+func processCommandsWithoutTimeoutFallback(commands []dw.Command, postStartDebugTrapSleepDuration string) (*corev1.LifecycleHandler, error) {
 	var dwCommands []string
+	postStartFailureDebugSleepSeconds := parsePostStartFailureDebugSleepDurationToSeconds(log.Log, postStartDebugTrapSleepDuration)
+	hasErrTrapInUserScript := false
 	for _, command := range commands {
 		execCmd := command.Exec
 		if len(execCmd.Env) > 0 {
@@ -139,6 +146,21 @@ func processCommandsWithoutTimeoutFallback(commands []dw.Command) (*corev1.Lifec
 			dwCommands = append(dwCommands, fmt.Sprintf("cd %s", execCmd.WorkingDir))
 		}
 		dwCommands = append(dwCommands, execCmd.CommandLine)
+		if trapErrRegex.MatchString(execCmd.CommandLine) {
+			hasErrTrapInUserScript = true
+		}
+	}
+
+	if postStartFailureDebugSleepSeconds > 0 && !hasErrTrapInUserScript {
+		debugTrap := fmt.Sprintf(`
+trap 'echo "[postStart] failure encountered, sleep for debugging"; sleep %d' ERR
+`, postStartFailureDebugSleepSeconds)
+		debugTrapLine := strings.ReplaceAll(strings.TrimSpace(debugTrap), "\n", " ")
+
+		dwCommands = append([]string{
+			"set -e",
+			debugTrapLine,
+		}, dwCommands...)
 	}
 
 	joinedCommands := strings.Join(dwCommands, "\n")
@@ -187,7 +209,7 @@ func buildUserScript(commands []dw.Command) (string, error) {
 // environment variable exports, and specific exit code handling.
 // The killAfterDurationSeconds is hardcoded to 5s within this generated script.
 // It conditionally prefixes the user script with the timeout command if available.
-func generateScriptWithTimeout(escapedUserScript string, postStartTimeout string) string {
+func generateScriptWithTimeout(escapedUserScript string, postStartTimeout string, postStartDebugTrapSleepDuration string) string {
 	// Convert `postStartTimeout` into the `timeout` format
 	var timeoutSeconds int64
 	if postStartTimeout != "" && postStartTimeout != "0" {
@@ -199,10 +221,12 @@ func generateScriptWithTimeout(escapedUserScript string, postStartTimeout string
 			timeoutSeconds = int64(duration.Seconds())
 		}
 	}
+	postStartFailureDebugSleepSeconds := parsePostStartFailureDebugSleepDurationToSeconds(log.Log, postStartDebugTrapSleepDuration)
 
 	return fmt.Sprintf(`
 export POSTSTART_TIMEOUT_DURATION="%d"
 export POSTSTART_KILL_AFTER_DURATION="5"
+export DEBUG_ENABLED="%t"
 
 _TIMEOUT_COMMAND_PART=""
 _WAS_TIMEOUT_USED="false" # Use strings "true" or "false" for shell boolean
@@ -218,6 +242,11 @@ fi
 # Execute the user's script
 ${_TIMEOUT_COMMAND_PART} /bin/sh -c '%s'
 exit_code=$?
+
+if [ "$DEBUG_ENABLED" = "true" ] && [ $exit_code -ne 0 ]; then
+  echo "[postStart] failure encountered, sleep for debugging" >&2
+  sleep %d
+fi
 
 # Check the exit code based on whether timeout was attempted
 if [ "$_WAS_TIMEOUT_USED" = "true" ]; then
@@ -239,5 +268,19 @@ else
 fi
 
 exit $exit_code
-`, timeoutSeconds, escapedUserScript)
+`, timeoutSeconds, postStartFailureDebugSleepSeconds > 0, escapedUserScript, postStartFailureDebugSleepSeconds)
+}
+
+func parsePostStartFailureDebugSleepDurationToSeconds(logger logr.Logger, durationStr string) int {
+	if durationStr == "" {
+		return 0
+	}
+
+	d, err := time.ParseDuration(durationStr)
+	if err != nil {
+		logger.Error(err, "Failed to parse postStart failure debug sleep duration for ", "durationStr", durationStr)
+		return 0
+	}
+
+	return int(d.Seconds())
 }

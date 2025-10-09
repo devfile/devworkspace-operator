@@ -1,6 +1,7 @@
 name: "Should do nothing when devfile does not specify events"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile: {}
   containers:
     - name: test-container

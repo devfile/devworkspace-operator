@@ -1,6 +1,7 @@
 name: "Returns error when postStart command requires nonexistent container"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile:
     commands:
       - id: test-cmd

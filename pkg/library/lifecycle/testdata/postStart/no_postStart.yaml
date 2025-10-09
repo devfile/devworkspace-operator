@@ -1,6 +1,7 @@
 name: "Should do nothing when devfile does not include postStart events"
 
 input:
+  postStartDebugTrapSleepDuration: ""
   devfile:
     commands:
       - id: prestart-cmd

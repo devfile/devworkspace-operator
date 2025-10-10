@@ -1,6 +1,7 @@
 name: "Multiple postStart commands use same component"
 
 input:
+  debugEnabled: false
   devfile:
     commands:
       - id: test-cmd-1

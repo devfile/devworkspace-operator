@@ -329,6 +329,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		workspace.Config.Workspace.ImagePullPolicy,
 		workspace.Config.Workspace.DefaultContainerResources,
 		workspace.Config.Workspace.PostStartTimeout,
+		workspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true",
 	)
 	if err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil

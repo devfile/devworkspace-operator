@@ -39,9 +39,10 @@ const (
 %s
 } 1>/tmp/poststart-stdout.txt 2>/tmp/poststart-stderr.txt
 `
+	postStartFailureDebugSleepSeconds = 300
 )
 
-func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout string) error {
+func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []corev1.Container, postStartTimeout string, enableDebugStart bool) error {
 	if wksp.Events == nil || len(wksp.Events.PostStart) == 0 {
 		return nil
 	}
@@ -69,7 +70,7 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
 
-		postStartHandler, err := processCommandsForPostStart(commands, postStartTimeout)
+		postStartHandler, err := processCommandsForPostStart(commands, postStartTimeout, enableDebugStart)
 		if err != nil {
 			return fmt.Errorf("failed to process postStart event %s: %w", commands[0].Id, err)
 		}
@@ -85,10 +86,10 @@ func AddPostStartLifecycleHooks(wksp *dw.DevWorkspaceTemplateSpec, containers []
 
 // processCommandsForPostStart processes a list of DevWorkspace commands
 // and generates a corev1.LifecycleHandler for the PostStart lifecycle hook.
-func processCommandsForPostStart(commands []dw.Command, postStartTimeout string) (*corev1.LifecycleHandler, error) {
+func processCommandsForPostStart(commands []dw.Command, postStartTimeout string, enableDebugStart bool) (*corev1.LifecycleHandler, error) {
 	if postStartTimeout == "" {
 		// use the fallback if no timeout propagated
-		return processCommandsWithoutTimeoutFallback(commands)
+		return processCommandsWithoutTimeoutFallback(enableDebugStart, commands)
 	}
 
 	originalUserScript, err := buildUserScript(commands)
@@ -101,7 +102,7 @@ func processCommandsForPostStart(commands []dw.Command, postStartTimeout string)
 	scriptToExecute := "set -e\n" + originalUserScript
 	escapedUserScriptForTimeoutWrapper := strings.ReplaceAll(scriptToExecute, "'", `'\''`)
 
-	fullScriptWithTimeout := generateScriptWithTimeout(escapedUserScriptForTimeoutWrapper, postStartTimeout)
+	fullScriptWithTimeout := generateScriptWithTimeout(enableDebugStart, escapedUserScriptForTimeoutWrapper, postStartTimeout)
 
 	finalScriptForHook := fmt.Sprintf(redirectOutputFmt, fullScriptWithTimeout)
 
@@ -128,8 +129,16 @@ func processCommandsForPostStart(commands []dw.Command, postStartTimeout string)
 //	  - |
 //	    cd <workingDir>
 //	    <commandline>
-func processCommandsWithoutTimeoutFallback(commands []dw.Command) (*corev1.LifecycleHandler, error) {
+func processCommandsWithoutTimeoutFallback(debugEnabled bool, commands []dw.Command) (*corev1.LifecycleHandler, error) {
 	var dwCommands []string
+	if debugEnabled {
+		dwCommands = append(dwCommands, "set -e")
+		debugTrap := fmt.Sprintf(`
+trap 'echo "[postStart] failure encountered, sleep for debugging"; sleep %d' ERR
+`, postStartFailureDebugSleepSeconds)
+		// TODO: Make sleep configurable?
+		dwCommands = append(dwCommands, strings.ReplaceAll(strings.TrimSpace(debugTrap), "\n", " "))
+	}
 	for _, command := range commands {
 		execCmd := command.Exec
 		if len(execCmd.Env) > 0 {
@@ -142,6 +151,15 @@ func processCommandsWithoutTimeoutFallback(commands []dw.Command) (*corev1.Lifec
 	}
 
 	joinedCommands := strings.Join(dwCommands, "\n")
+	if debugEnabled {
+		joinedCommands = fmt.Sprintf(`cat << 'EOF' > /tmp/poststart.sh
+#!/bin/sh
+%s
+EOF
+chmod +x /tmp/poststart.sh
+/tmp/poststart.sh
+`, joinedCommands)
+	}
 
 	handler := &corev1.LifecycleHandler{
 		Exec: &corev1.ExecAction{
@@ -187,7 +205,7 @@ func buildUserScript(commands []dw.Command) (string, error) {
 // environment variable exports, and specific exit code handling.
 // The killAfterDurationSeconds is hardcoded to 5s within this generated script.
 // It conditionally prefixes the user script with the timeout command if available.
-func generateScriptWithTimeout(escapedUserScript string, postStartTimeout string) string {
+func generateScriptWithTimeout(debugEnabled bool, escapedUserScript string, postStartTimeout string) string {
 	// Convert `postStartTimeout` into the `timeout` format
 	var timeoutSeconds int64
 	if postStartTimeout != "" && postStartTimeout != "0" {
@@ -203,6 +221,7 @@ func generateScriptWithTimeout(escapedUserScript string, postStartTimeout string
 	return fmt.Sprintf(`
 export POSTSTART_TIMEOUT_DURATION="%d"
 export POSTSTART_KILL_AFTER_DURATION="5"
+export DEBUG_ENABLED="%t"
 
 _TIMEOUT_COMMAND_PART=""
 _WAS_TIMEOUT_USED="false" # Use strings "true" or "false" for shell boolean
@@ -218,6 +237,11 @@ fi
 # Execute the user's script
 ${_TIMEOUT_COMMAND_PART} /bin/sh -c '%s'
 exit_code=$?
+
+if [ "$DEBUG_ENABLED" = "true" ] && [ $exit_code -ne 0 ]; then
+  echo "[postStart] failure encountered, sleep for debugging" >&2
+  sleep %d
+fi
 
 # Check the exit code based on whether timeout was attempted
 if [ "$_WAS_TIMEOUT_USED" = "true" ]; then
@@ -239,5 +263,5 @@ else
 fi
 
 exit $exit_code
-`, timeoutSeconds, escapedUserScript)
+`, timeoutSeconds, debugEnabled, escapedUserScript, postStartFailureDebugSleepSeconds)
 }

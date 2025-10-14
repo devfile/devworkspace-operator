@@ -251,13 +251,6 @@ func CheckContainerStatusForFailure(containerStatus *corev1.ContainerStatus, ign
 	}
 
 	if containerStatus.State.Terminated != nil {
-		// Check if termination was due to a generic error, which might include postStart issues
-		// if the container failed to run.
-		if containerStatus.State.Terminated.Reason == "Error" || containerStatus.State.Terminated.Reason == "ContainerCannotRun" {
-			return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason, ignoredEvents),
-				fmt.Sprintf("%s: %s", containerStatus.State.Terminated.Reason, containerStatus.State.Terminated.Message)
-		}
-		// Check against other generic failure reasons for terminated state
 		for _, failureReason := range containerFailureStateReasons {
 			if containerStatus.State.Terminated.Reason == failureReason {
 				return checkIfUnrecoverableEventIgnored(containerStatus.State.Terminated.Reason, ignoredEvents),

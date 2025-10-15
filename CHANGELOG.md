@@ -26,7 +26,7 @@ metadata:
   name: devworkspace-operator-config
 config:
   workspace:
-    postStartTimeout: 30 
+    postStartTimeout: '30s'
 ```
 By default, this timeout is disabled.
 

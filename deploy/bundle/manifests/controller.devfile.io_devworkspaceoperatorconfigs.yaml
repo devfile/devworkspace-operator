@@ -181,6 +181,21 @@ spec:
                   Workspace defines configuration options related to how DevWorkspaces are
                   managed
                 properties:
+                  backupCronJob:
+                    description: BackupCronJobConfig defines configuration options for a cron job that automatically backs up workspace PVCs.
+                    properties:
+                      enable:
+                        description: |-
+                          Enable determines whether backup CronJobs should be created for workspace PVCs.
+                          Defaults to false if not specified.
+                        type: boolean
+                      schedule:
+                        default: 0 2 * * *
+                        description: |-
+                          Schedule specifies the cron schedule for the backup cron job.
+                          For example, "0 2 * * *" runs daily at 2 AM.
+                        type: string
+                    type: object
                   cleanupCronJob:
                     description: CleanupCronJobConfig defines configuration options for a cron job that automatically cleans up stale DevWorkspaces.
                     properties:

@@ -19,7 +19,6 @@ rules:
   - ""
   resources:
   - configmaps
-  - persistentvolumeclaims
   - pods
   - secrets
   - serviceaccounts
@@ -35,6 +34,12 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - '*'
 - apiGroups:
   - ""
   resources:
@@ -88,6 +93,17 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
 - apiGroups:
   - batch
   resources:

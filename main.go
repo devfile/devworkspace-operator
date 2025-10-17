@@ -37,6 +37,7 @@ import (
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	backupCronJobController "github.com/devfile/devworkspace-operator/controllers/backupcronjob"
 	cleanupCronJobController "github.com/devfile/devworkspace-operator/controllers/cleanupcronjob"
 	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
 
@@ -186,6 +187,14 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "CleanupCronJob")
+		os.Exit(1)
+	}
+	if err = (&backupCronJobController.BackupCronJobReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("BackupCronJob"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "BackupCronJob")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

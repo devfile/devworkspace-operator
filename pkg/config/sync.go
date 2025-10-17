@@ -431,6 +431,17 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.CleanupCronJob.Schedule = from.Workspace.CleanupCronJob.Schedule
 			}
 		}
+		if from.Workspace.BackupCronJob != nil {
+			if to.Workspace.BackupCronJob == nil {
+				to.Workspace.BackupCronJob = &controller.BackupCronJobConfig{}
+			}
+			if from.Workspace.BackupCronJob.Enable != nil {
+				to.Workspace.BackupCronJob.Enable = from.Workspace.BackupCronJob.Enable
+			}
+			if from.Workspace.BackupCronJob.Schedule != "" {
+				to.Workspace.BackupCronJob.Schedule = from.Workspace.BackupCronJob.Schedule
+			}
+		}
 
 		if from.Workspace.PostStartTimeout != "" {
 			to.Workspace.PostStartTimeout = from.Workspace.PostStartTimeout
@@ -682,6 +693,15 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			}
 			if workspace.CleanupCronJob.Schedule != defaultConfig.Workspace.CleanupCronJob.Schedule {
 				config = append(config, fmt.Sprintf("workspace.cleanupCronJob.cronJobScript=%s", workspace.CleanupCronJob.Schedule))
+			}
+		}
+		if workspace.BackupCronJob != nil {
+			if workspace.BackupCronJob.Enable != nil && *workspace.BackupCronJob.Enable != *defaultConfig.Workspace.BackupCronJob.Enable {
+				config = append(config, fmt.Sprintf("workspace.backupCronJob.enable=%t", *workspace.BackupCronJob.Enable))
+			}
+
+			if workspace.BackupCronJob.Schedule != defaultConfig.Workspace.BackupCronJob.Schedule {
+				config = append(config, fmt.Sprintf("workspace.backupCronJob.cronJobScript=%s", workspace.BackupCronJob.Schedule))
 			}
 		}
 		if workspace.HostUsers != nil {

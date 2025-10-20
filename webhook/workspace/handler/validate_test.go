@@ -69,7 +69,7 @@ func TestValidateEndpoints(t *testing.T) {
 		handler := &WebhookHandler{Client: fakeClient}
 		err := handler.validateEndpoints(context.TODO(), workspace)
 		assert.Error(t, err, "Expected a conflict error for workspaces in the same namespace")
-		
+
 		var conflictErr *solvers.ServiceConflictError
 		assert.ErrorAs(t, err, &conflictErr, "Error should be a ServiceConflictError")
 		assert.Equal(t, "test-endpoint", conflictErr.EndpointName, "Conflict should be on 'test-endpoint'")
@@ -116,7 +116,7 @@ func TestValidateEndpoints(t *testing.T) {
 		handler := &WebhookHandler{Client: fakeClient}
 		err := handler.validateEndpoints(context.TODO(), workspace)
 		assert.Error(t, err, "Should detect conflict even with workspace being deleted")
-		
+
 		var conflictErr *solvers.ServiceConflictError
 		assert.ErrorAs(t, err, &conflictErr, "Error should be a ServiceConflictError")
 		assert.Equal(t, "test-endpoint", conflictErr.EndpointName, "Conflict should be on 'test-endpoint'")

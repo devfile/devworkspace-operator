@@ -169,6 +169,7 @@ fi
 # Get bundle digest using appropriate tool
 if [ "$PODMAN" = "docker" ]; then
   # Use Docker to get the digest
+  docker pull "${BUNDLE_IMAGE}"
   DOCKER_DIGEST=$(docker inspect "${BUNDLE_IMAGE}" --format '{{index .RepoDigests 0}}')
   BUNDLE_SHA=$(echo "$DOCKER_DIGEST" | cut -d'@' -f2)
 else

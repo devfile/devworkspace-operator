@@ -189,6 +189,11 @@ spec:
                           Enable determines whether backup CronJobs should be created for workspace PVCs.
                           Defaults to false if not specified.
                         type: boolean
+                      registry:
+                        description: |-
+                          A registry where backup images are stored. Images are stored
+                          in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+                        type: string
                       schedule:
                         default: 0 2 * * *
                         description: |-

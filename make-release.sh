@@ -19,6 +19,7 @@ set -e
 DWO_REPO="${DWO_REPO:-git@github.com:devfile/devworkspace-operator}"
 DWO_QUAY_REPO="${DWO_QUAY_REPO:-quay.io/devfile/devworkspace-controller}"
 PROJECT_CLONE_QUAY_REPO="${PROJECT_CLONE_QUAY_REPO:-quay.io/devfile/project-clone}"
+PROJECT_BACKUP_QUAY_REPO="${PROJECT_BACKUP_QUAY_REPO:-quay.io/devfile/project-backup}"
 DWO_BUNDLE_QUAY_REPO="${DWO_BUNDLE_QUAY_REPO:-quay.io/devfile/devworkspace-operator-bundle}"
 DWO_INDEX_IMAGE="${DWO_INDEX_IMAGE:-quay.io/devfile/devworkspace-operator-index:release}"
 DWO_DIGEST_INDEX_IMAGE="${DWO_DIGEST_INDEX_IMAGE:-quay.io/devfile/devworkspace-operator-index:release-digest}"
@@ -127,12 +128,14 @@ update_images() {
   # Get image tags
   DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
   PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
+  PROJECT_BACKUP_QUAY_IMG="${PROJECT_BACKUP_QUAY_REPO}:${VERSION}"
   DWO_BUNDLE_QUAY_IMG="${DWO_BUNDLE_QUAY_REPO}:${VERSION}"
 
   # Update defaults in Makefile
   sed -i Makefile -r \
     -e "s|quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+|${DWO_QUAY_IMG}|g" \
     -e "s|quay.io/devfile/project-clone:[0-9a-zA-Z._-]+|${PROJECT_CLONE_QUAY_IMG}|g" \
+    -e "s|quay.io/devfile/project-backup:[0-9a-zA-Z._-]+|${PROJECT_BACKUP_QUAY_IMG}|g" \
     -e "s|quay.io/devfile/devworkspace-operator-bundle:[0-9a-zA-Z._-]+|${DWO_BUNDLE_QUAY_IMG}|g" \
     -e "s|quay.io/devfile/devworkspace-operator-index:[0-9a-zA-Z._-]+|${DWO_INDEX_IMAGE}|g"
 
@@ -140,12 +143,15 @@ update_images() {
   sed -i build/scripts/generate_deployment.sh -r \
     -e "s|quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+|${DWO_QUAY_IMG}|g" \
     -e "s|quay.io/devfile/project-clone:[0-9a-zA-Z._-]+|${PROJECT_CLONE_QUAY_IMG}|g"
+    -e "s|quay.io/devfile/project-backup:[0-9a-zA-Z._-]+|${PROJECT_PROJECT_BACKUP_QUAY_IMGCLONE_QUAY_IMG}|g"
 
   local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
   local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"
+  local PROJECT_BACKUP_IMG="$PROJECT_BACKUP_QUAY_IMG"
 
   export DEFAULT_DWO_IMG
   export PROJECT_CLONE_IMG
+  export PROJECT_BACKUP_IMG
   make generate_all
 }
 
@@ -157,17 +163,23 @@ update_images() {
 build_and_push_images() {
   DWO_QUAY_IMG="${DWO_QUAY_REPO}:${VERSION}"
   PROJECT_CLONE_QUAY_IMG="${PROJECT_CLONE_QUAY_REPO}:${VERSION}"
+  PROJECT_BACKUP_QUAY_IMG="${PROJECT_BACKUP_QUAY_REPO}:${VERSION}"
 
   if [ "$DRY_RUN" == "dryrun" ]; then
     docker buildx build . -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile \
     --platform "$ARCHITECTURES"
     docker buildx build . -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile \
     --platform "$ARCHITECTURES"
+    docker buildx build . -t "${PROJECT_BACKUP_QUAY_IMG}" -f ./project-backup/Containerfile \
+    --platform "$ARCHITECTURES"
   else
     docker buildx build . -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile \
     --platform "$ARCHITECTURES" \
     --push
     docker buildx build . -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile \
+    --platform "$ARCHITECTURES" \
+    --push
+    docker buildx build . -t "${PROJECT_BACKUP_QUAY_IMG}" -f ./project-backup/Containerfile \
     --platform "$ARCHITECTURES" \
     --push
   fi

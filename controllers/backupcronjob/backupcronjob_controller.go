@@ -22,6 +22,7 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -137,11 +138,10 @@ func (r *BackupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;create;update;patch;delete
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list
-// +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceoperatorconfigs,verbs=get;list;watch
-// +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceoperatorconfigs,verbs=get;list;update;patch;watch
+// +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list
 
 // Reconcile is the main reconciliation loop for the BackupCronJob controller.
 func (r *BackupCronJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -180,7 +180,7 @@ func (r *BackupCronJobReconciler) isBackupEnabled(config *controllerv1alpha1.Dev
 }
 
 // startCron starts the cron scheduler with the backup job according to the provided configuration.
-func (r *BackupCronJobReconciler) startCron(ctx context.Context, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) {
+func (r *BackupCronJobReconciler) startCron(ctx context.Context, req ctrl.Request, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) {
 	log := logger.WithName("backup cron")
 	log.Info("Starting backup cron scheduler")
 
@@ -198,7 +198,7 @@ func (r *BackupCronJobReconciler) startCron(ctx context.Context, backUpConfig *c
 		taskLog := logger.WithName("cronTask")
 
 		taskLog.Info("Starting DevWorkspace backup job")
-		if err := r.executeBackupSync(ctx, logger); err != nil {
+		if err := r.executeBackupSync(ctx, req, backUpConfig, logger); err != nil {
 			taskLog.Error(err, "Failed to execute backup job for DevWorkspaces")
 		}
 		taskLog.Info("DevWorkspace backup job finished")
@@ -231,7 +231,7 @@ func (r *BackupCronJobReconciler) stopCron(logger logr.Logger) {
 
 // executeBackupSync executes the backup job for all DevWorkspaces in the cluster that
 // have been stopped in the last N minutes.
-func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, logger logr.Logger) error {
+func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, req ctrl.Request, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) error {
 	log := logger.WithName("executeBackupSync")
 	log.Info("Executing backup sync for all DevWorkspaces")
 	devWorkspaces := &dw.DevWorkspaceList{}
@@ -248,7 +248,7 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, logger 
 		dwID := dw.Status.DevWorkspaceId
 		log.Info("Found DevWorkspace", "namespace", dw.Namespace, "devworkspace", dw.Name, "id", dwID)
 
-		if err := r.createBackupJob(&dw, ctx, logger); err != nil {
+		if err := r.createBackupJob(&dw, ctx, req, backUpConfig, logger); err != nil {
 			log.Error(err, "Failed to create backup Job for DevWorkspace", "id", dwID)
 			continue
 		}
@@ -285,8 +285,12 @@ func (r *BackupCronJobReconciler) wasStoppedInTimeRange(workspace *dw.DevWorkspa
 	return false
 }
 
+func ptrInt64(i int64) *int64 { return &i }
+func ptrInt32(i int32) *int32 { return &i }
+func ptrBool(b bool) *bool    { return &b }
+
 // createBackupJob creates a Kubernetes Job to back up the workspace's PVC data.
-func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ctx context.Context, logger logr.Logger) error {
+func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ctx context.Context, req ctrl.Request, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) error {
 	log := logger.WithName("createBackupJob")
 	dwID := workspace.Status.DevWorkspaceId
 
@@ -307,38 +311,47 @@ func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ct
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy: corev1.RestartPolicyNever,
+					SecurityContext: &corev1.PodSecurityContext{
+						FSGroup: ptrInt64(0),
+					},
 					Containers: []corev1.Container{
 						{
-							Name:    "backup",
-							Image:   defaultBackupImage,
-							Command: []string{"/bin/sh", "-c"},
+							Name: "backup-workspace",
 							Env: []corev1.EnvVar{
-								{
-									Name:  "DEVWORKSPACE_NAME",
-									Value: workspace.Name,
-								},
-								{
-									Name:  "DEVWORKSPACE_NAMESPACE",
-									Value: workspace.Namespace,
-								},
-								{
-									Name:  "WORKSPACE_ID",
-									Value: dwID,
-								},
+								{Name: "DEVWORKSPACE_NAME", Value: workspace.Name},
+								{Name: "DEVWORKSPACE_NAMESPACE", Value: workspace.Namespace},
+								{Name: "WORKSPACE_ID", Value: dwID},
 								{
 									Name:  "BACKUP_SOURCE_PATH",
 									Value: "/workspace/" + dwID + "/" + constants.DefaultProjectsSourcesRoot,
 								},
+								{Name: "STORAGE_DRIVER", Value: "overlay"},
+								{Name: "BUILDAH_ISOLATION", Value: "chroot"},
+								{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: backUpConfig.Registry},
+								{Name: "BUILDAH_PUSH_OPTIONS", Value: "--tls-verify=false"},
 							},
-							// TODO: Replace the following command with actual backup logic
+							Image: images.GetProjectBackupImage(),
+							// Image: "localhost:5001/workspace-backup-image:v3",
 							Args: []string{
-								"echo \"Starting backup for workspace $WORKSPACE_ID\" && ls -l \"$BACKUP_SOURCE_PATH\" && sleep 1 && echo Backup completed for workspace " + dwID,
+								"/workspace-recovery.sh",
+								"--backup",
 							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									MountPath: "/workspace",
 									Name:      "workspace-data",
 								},
+								{
+									MountPath: "/var/lib/containers",
+									Name:      "build-storage",
+								},
+							},
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: ptrInt64(0),
+								Capabilities: &corev1.Capabilities{
+									Add: []corev1.Capability{"SYS_ADMIN", "SYS_CHROOT"},
+								},
+								AllowPrivilegeEscalation: ptrBool(false),
 							},
 						},
 					},
@@ -349,6 +362,12 @@ func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ct
 								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
 									ClaimName: pvc.Name,
 								},
+							},
+						},
+						{
+							Name: "build-storage",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 					},

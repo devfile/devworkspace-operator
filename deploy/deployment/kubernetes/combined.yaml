@@ -191,6 +191,11 @@ spec:
                           Enable determines whether backup CronJobs should be created for workspace PVCs.
                           Defaults to false if not specified.
                         type: boolean
+                      registry:
+                        description: |-
+                          A registry where backup images are stored. Images are stored
+                          in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+                        type: string
                       schedule:
                         default: 0 2 * * *
                         description: |-
@@ -25902,17 +25907,6 @@ rules:
 - apiGroups:
   - batch
   resources:
-  - cronjobs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-- apiGroups:
-  - batch
-  resources:
   - jobs
   verbs:
   - create
@@ -25944,6 +25938,8 @@ rules:
   verbs:
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - controller.devfile.io
@@ -26189,6 +26185,8 @@ spec:
         - name: RELATED_IMAGE_devworkspace_webhook_server
           value: quay.io/devfile/devworkspace-controller:next
         - name: RELATED_IMAGE_project_clone
+          value: quay.io/devfile/project-clone:next
+        - name: RELATED_IMAGE_project_backup
           value: quay.io/devfile/project-clone:next
         - name: WATCH_NAMESPACE
           value: ""

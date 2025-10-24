@@ -130,3 +130,6 @@ jobs:
     -
       name: Check if project-clone dockerimage build is working
       run: docker build -f ./project-clone/Dockerfile .
+    -
+      name: Check if project-backup containerimage build is working
+      run: docker build -f ./project-backup/Containerfile project-backup/

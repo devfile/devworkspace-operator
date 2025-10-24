@@ -178,17 +178,6 @@ spec:
         - apiGroups:
           - batch
           resources:
-          - cronjobs
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-        - apiGroups:
-          - batch
-          resources:
           - jobs
           verbs:
           - create
@@ -220,6 +209,8 @@ spec:
           verbs:
           - get
           - list
+          - patch
+          - update
           - watch
         - apiGroups:
           - controller.devfile.io
@@ -347,6 +338,8 @@ spec:
                 - name: RELATED_IMAGE_devworkspace_webhook_server
                   value: quay.io/devfile/devworkspace-controller:next
                 - name: RELATED_IMAGE_project_clone
+                  value: quay.io/devfile/project-clone:next
+                - name: RELATED_IMAGE_project_backup
                   value: quay.io/devfile/project-clone:next
                 - name: WATCH_NAMESPACE
                   valueFrom:
@@ -481,6 +474,8 @@ spec:
     name: devworkspace_webhook_server
   - image: quay.io/devfile/project-clone:next
     name: project_clone
+  - image: quay.io/devfile/project-clone:next
+    name: project_backup
   - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
     name: pvc_cleanup_job
   - image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1

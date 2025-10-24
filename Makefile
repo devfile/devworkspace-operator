@@ -26,6 +26,7 @@ export DWO_IMG ?= quay.io/devfile/devworkspace-controller:next
 export DWO_BUNDLE_IMG ?= quay.io/devfile/devworkspace-operator-bundle:next
 export DWO_INDEX_IMG ?= quay.io/devfile/devworkspace-operator-index:next
 export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:next
+export PROJECT_BACKUP_IMG ?= quay.io/devfile/project-clone:next
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
@@ -128,6 +129,7 @@ _print_vars:
 	@echo "    DWO_BUNDLE_IMG=$(DWO_BUNDLE_IMG)"
 	@echo "    DWO_INDEX_IMG=$(DWO_INDEX_IMG)"
 	@echo "    PROJECT_CLONE_IMG=$(PROJECT_CLONE_IMG)"
+	@echo "    PROJECT_BACKUP_IMG=$(PROJECT_BACKUP_IMG)"
 	@echo "    PULL_POLICY=$(PULL_POLICY)"
 	@echo "    ROUTING_SUFFIX=$(ROUTING_SUFFIX)"
 	@echo "    DEFAULT_ROUTING=$(DEFAULT_ROUTING)"
@@ -369,6 +371,7 @@ help: Makefile
 	@echo 'Supported environment variables:'
 	@echo '    DWO_IMG                    - Image used for controller'
 	@echo '    PROJECT_CLONE_IMG          - Image used for project-clone init container'
+	@echo '    PROJECT_BACKUP_IMG         - Image used for project-backup workspace backup container'
 	@echo '    NAMESPACE                  - Namespace to use for deploying controller'
 	@echo '    KUBECONFIG                 - Kubeconfig which should be used for accessing to the cluster. Currently is: $(KUBECONFIG)'
 	@echo '    ROUTING_SUFFIX             - Cluster routing suffix (e.g. $$(minikube ip).nip.io, apps-crc.testing)'

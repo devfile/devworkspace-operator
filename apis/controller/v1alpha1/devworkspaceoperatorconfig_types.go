@@ -82,6 +82,10 @@ type BackupCronJobConfig struct {
 	// +kubebuilder:default:="0 2 * * *"
 	// +kubebuilder:validation:Optional
 	Schedule string `json:"schedule,omitempty"`
+	// A registry where backup images are stored. Images are stored
+	// in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+	// +kubebuilder:validation:Optional
+	Registry string `json:"registry,omitempty"`
 }
 
 type RoutingConfig struct {

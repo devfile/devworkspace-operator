@@ -348,6 +348,14 @@ The DevWorkspace Operator sets the `volumeMounts` by default for config files, m
 ## Debugging a failing workspace
 Normally, when a workspace fails to start, the deployment will be scaled down and the workspace will be stopped in a `Failed` state. This can make it difficult to debug misconfiguration errors, so the annotation `controller.devfile.io/debug-start: "true"` can be applied to DevWorkspaces to leave resources for failed workspaces on the cluster. This allows viewing logs from workspace containers.
 
+It also enables a specialized debug mode for `postStart` lifecycle hooks, which are often used for initial setup tasks.
+
+When a postStart command fails:
+- The container will not immediately crash or restart. It would stay in `ContainerCreating` phase.
+- The command failure is trapped, and the container is instead forced to sleep for some seconds as per configured DevWorkspace progressTimeout (by default, 5 minutes).
+
+This trap sleep pause is a critical window that allows developers to connect to the container (e.g., using `kubectl exec`), inspect the file system, and review logs `/tmp/poststart-stderr.txt` / `/tmp/poststart-stdout.txt` to diagnose the exact cause of the postStart failure before the workspace ultimately scales down. This applies to both standard and timeout-wrapped postStart scripts.
+
 ## Setting RuntimeClass for workspace pods
 To run a DevWorkspace with a specific RuntimeClass, the attribute `controller.devfile.io/runtime-class` can be set on the DevWorkspace with the name of the RuntimeClass to be used. If the specified RuntimeClass does not exist, the workspace will fail to start. For example, to run a DevWorkspace using the https://github.com/kata-containers/kata-containers[kata containers] runtime in clusters where this is enabled, the DevWorkspace can be specified:
 [source,yaml]

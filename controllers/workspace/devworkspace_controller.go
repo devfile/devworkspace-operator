@@ -323,12 +323,17 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
+	postStartDebugTrapSleepDuration := ""
+	if workspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true" {
+		postStartDebugTrapSleepDuration = workspace.Config.Workspace.ProgressTimeout
+	}
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(
 		&workspace.Spec.Template,
 		workspace.Config.Workspace.ContainerSecurityContext,
 		workspace.Config.Workspace.ImagePullPolicy,
 		workspace.Config.Workspace.DefaultContainerResources,
 		workspace.Config.Workspace.PostStartTimeout,
+		postStartDebugTrapSleepDuration,
 	)
 	if err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Error processing devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil

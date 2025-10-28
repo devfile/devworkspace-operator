@@ -22,10 +22,10 @@ ifndef VERBOSE
 endif
 
 export NAMESPACE ?= devworkspace-controller
-export DWO_IMG ?= quay.io/devfile/devworkspace-controller:v0.37.1
-export DWO_BUNDLE_IMG ?= quay.io/devfile/devworkspace-operator-bundle:v0.37.1
+export DWO_IMG ?= quay.io/devfile/devworkspace-controller:v0.37.0
+export DWO_BUNDLE_IMG ?= quay.io/devfile/devworkspace-operator-bundle:v0.37.0
 export DWO_INDEX_IMG ?= quay.io/devfile/devworkspace-operator-index:release
-export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:v0.37.1
+export PROJECT_CLONE_IMG ?= quay.io/devfile/project-clone:v0.37.0
 export PULL_POLICY ?= Always
 export DEFAULT_ROUTING ?= basic
 export KUBECONFIG ?= ${HOME}/.kube/config
@@ -192,7 +192,7 @@ docker-build:
 ### docker-push: Pushes the controller image
 docker-push:
   ifneq ($(INITIATOR),CI)
-    ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:v0.37.1)
+    ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:v0.37.0)
 	    @echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
     endif
   endif

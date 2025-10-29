@@ -349,14 +349,26 @@ type ConfigmapReference struct {
 	Namespace string `json:"namespace"`
 }
 
+type OperatorConfigurationStatus struct {
+	// Conditions represent the latest available observations of the OperatorConfiguration's state
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// LastBackupTime is the timestamp of the last successful backup. Nil if
+	// no backup is configured or no backup has yet succeeded.
+	LastBackupTime *metav1.Time `json:"lastBackupTime,omitempty"`
+}
+
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:path=devworkspaceoperatorconfigs,scope=Namespaced,shortName=dwoc
 type DevWorkspaceOperatorConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Config *OperatorConfiguration `json:"config,omitempty"`
+	// Status represents the current status of the DevWorkspaceOperatorConfig
+	// automatically managed by the DevWorkspace Operator.
+	Status *OperatorConfigurationStatus `json:"status,omitempty"`
 }
 
 // DevWorkspaceOperatorConfigList contains a list of DevWorkspaceOperatorConfig

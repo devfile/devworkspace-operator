@@ -210,7 +210,20 @@ var _ = Describe("BackupCronJobReconciler", func() {
 	})
 
 	Context("executeBackupSync", func() {
-		It("creates a Job for a DevWorkspace stopped within last 30 minutes", func() {
+		It("creates a Job for a DevWorkspace stopped with no previsou backup", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+						},
+					},
+				},
+			}
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-recent"
@@ -219,7 +232,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
 
-			Expect(reconciler.executeBackupSync(ctx, log)).To(Succeed())
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
 
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
@@ -227,6 +240,23 @@ var _ = Describe("BackupCronJobReconciler", func() {
 		})
 
 		It("does not create a Job when the DevWorkspace was stopped beyond time range", func() {
+			enabled := true
+			schedule := "* * * * *"
+			lastBackupTime := metav1.NewTime(time.Now().Add(-15 * time.Minute))
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+						},
+					},
+				},
+				Status: &controllerv1alpha1.OperatorConfigurationStatus{
+					LastBackupTime: &lastBackupTime,
+				},
+			}
 			dw := createDevWorkspace("dw-old", "ns-b", false, metav1.NewTime(time.Now().Add(-60*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-old"
@@ -235,7 +265,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
 
-			Expect(reconciler.executeBackupSync(ctx, log)).To(Succeed())
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
 
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
@@ -243,13 +273,26 @@ var _ = Describe("BackupCronJobReconciler", func() {
 		})
 
 		It("does not create a Job for a running DevWorkspace", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+						},
+					},
+				},
+			}
 			dw := createDevWorkspace("dw-running", "ns-c", true, metav1.NewTime(time.Now().Add(-5*time.Minute)))
 			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
 
 			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
 
-			Expect(reconciler.executeBackupSync(ctx, log)).To(Succeed())
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
 
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())

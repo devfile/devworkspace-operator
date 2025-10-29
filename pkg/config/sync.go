@@ -441,6 +441,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			if from.Workspace.BackupCronJob.Schedule != "" {
 				to.Workspace.BackupCronJob.Schedule = from.Workspace.BackupCronJob.Schedule
 			}
+			if from.Workspace.BackupCronJob.Registry != "" {
+				to.Workspace.BackupCronJob.Registry = from.Workspace.BackupCronJob.Registry
+			}
 		}
 
 		if from.Workspace.PostStartTimeout != "" {

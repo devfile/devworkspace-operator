@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -163,8 +164,7 @@ func (r *BackupCronJobReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
-	r.startCron(ctx, backUpConfig, log)
+	r.startCron(ctx, dwOperatorConfig, log)
 
 	return ctrl.Result{}, nil
 }
@@ -180,7 +180,7 @@ func (r *BackupCronJobReconciler) isBackupEnabled(config *controllerv1alpha1.Dev
 }
 
 // startCron starts the cron scheduler with the backup job according to the provided configuration.
-func (r *BackupCronJobReconciler) startCron(ctx context.Context, req ctrl.Request, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) {
+func (r *BackupCronJobReconciler) startCron(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, logger logr.Logger) {
 	log := logger.WithName("backup cron")
 	log.Info("Starting backup cron scheduler")
 
@@ -193,12 +193,13 @@ func (r *BackupCronJobReconciler) startCron(ctx context.Context, req ctrl.Reques
 	}
 
 	// add cronjob task
+	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
 	log.Info("Adding cronjob task", "schedule", backUpConfig.Schedule)
 	_, err := r.cron.AddFunc(backUpConfig.Schedule, func() {
 		taskLog := logger.WithName("cronTask")
 
 		taskLog.Info("Starting DevWorkspace backup job")
-		if err := r.executeBackupSync(ctx, req, backUpConfig, logger); err != nil {
+		if err := r.executeBackupSync(ctx, dwOperatorConfig, logger); err != nil {
 			taskLog.Error(err, "Failed to execute backup job for DevWorkspaces")
 		}
 		taskLog.Info("DevWorkspace backup job finished")
@@ -224,47 +225,63 @@ func (r *BackupCronJobReconciler) stopCron(logger logr.Logger) {
 	}
 
 	ctx := r.cron.Stop()
-	ctx.Done()
+	<-ctx.Done()
 
 	log.Info("Cron scheduler stopped")
 }
 
 // executeBackupSync executes the backup job for all DevWorkspaces in the cluster that
 // have been stopped in the last N minutes.
-func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, req ctrl.Request, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) error {
+func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, logger logr.Logger) error {
 	log := logger.WithName("executeBackupSync")
 	log.Info("Executing backup sync for all DevWorkspaces")
+	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
 	devWorkspaces := &dw.DevWorkspaceList{}
 	err := r.List(ctx, devWorkspaces)
 	if err != nil {
 		log.Error(err, "Failed to list DevWorkspaces")
 		return err
 	}
+	var lastBackupTime *metav1.Time
+	if dwOperatorConfig.Status != nil && dwOperatorConfig.Status.LastBackupTime != nil {
+		lastBackupTime = dwOperatorConfig.Status.LastBackupTime
+	}
 	for _, dw := range devWorkspaces.Items {
-		if !r.wasStoppedInTimeRange(&dw, 30, ctx, logger) {
+		if !r.wasStoppedSinceLastBackup(&dw, lastBackupTime, logger) {
 			log.Info("Skipping backup for DevWorkspace that wasn't stopped recently", "namespace", dw.Namespace, "name", dw.Name)
 			continue
 		}
 		dwID := dw.Status.DevWorkspaceId
 		log.Info("Found DevWorkspace", "namespace", dw.Namespace, "devworkspace", dw.Name, "id", dwID)
 
-		if err := r.createBackupJob(&dw, ctx, req, backUpConfig, logger); err != nil {
+		if err := r.createBackupJob(&dw, ctx, backUpConfig, logger); err != nil {
 			log.Error(err, "Failed to create backup Job for DevWorkspace", "id", dwID)
 			continue
 		}
 		log.Info("Backup Job created for DevWorkspace", "id", dwID)
 
 	}
+	origConfig := client.MergeFrom(dwOperatorConfig.DeepCopy())
+	if dwOperatorConfig.Status == nil {
+		dwOperatorConfig.Status = &controllerv1alpha1.OperatorConfigurationStatus{}
+	}
+	dwOperatorConfig.Status.LastBackupTime = &metav1.Time{Time: metav1.Now().Time}
+
+	err = r.Status().Patch(ctx, dwOperatorConfig, origConfig)
+	if err != nil {
+		log.Error(err, "Failed to update DevWorkspaceOperatorConfig status with last backup time")
+		// Not returning error as the backup jobs were created successfully
+	}
 	return nil
 }
 
-// wasStoppedInTimeRange checks if the DevWorkspace was stopped in the last N minutes.
-func (r *BackupCronJobReconciler) wasStoppedInTimeRange(workspace *dw.DevWorkspace, timeRangeInMinute float64, ctx context.Context, logger logr.Logger) bool {
-	log := logger.WithName("wasStoppedInTimeRange")
+// wasStoppedSinceLastBackup checks if the DevWorkspace was stopped since the last backup time.
+func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(workspace *dw.DevWorkspace, lastBackupTime *metav1.Time, logger logr.Logger) bool {
+	log := logger.WithName("wasStoppedSinceLastBackup")
 	if workspace.Status.Phase != dw.DevWorkspaceStatusStopped {
 		return false
 	}
-	log.Info("DevWorkspace is currently stopped, checking if it was stopped recently", "namespace", workspace.Namespace, "name", workspace.Name)
+	log.Info("DevWorkspace is currently stopped, checking if it was stopped since last backup", "namespace", workspace.Namespace, "name", workspace.Name)
 	// Check if the workspace was stopped in the last N minutes
 	if workspace.Status.Conditions != nil {
 		lastTimeStopped := metav1.Time{}
@@ -273,11 +290,13 @@ func (r *BackupCronJobReconciler) wasStoppedInTimeRange(workspace *dw.DevWorkspa
 				lastTimeStopped = condition.LastTransitionTime
 			}
 		}
-		// Calculate the time difference
 		if !lastTimeStopped.IsZero() {
-			timeDiff := metav1.Now().Sub(lastTimeStopped.Time)
-			if timeDiff.Minutes() <= timeRangeInMinute {
-				log.Info("DevWorkspace was stopped recently", "namespace", workspace.Namespace, "name", workspace.Name)
+			if lastBackupTime == nil {
+				// No previous backup, so consider it stopped since last backup
+				return true
+			}
+			if lastTimeStopped.Time.After(lastBackupTime.Time) {
+				log.Info("DevWorkspace was stopped since last backup", "namespace", workspace.Namespace, "name", workspace.Name)
 				return true
 			}
 		}
@@ -290,7 +309,7 @@ func ptrInt32(i int32) *int32 { return &i }
 func ptrBool(b bool) *bool    { return &b }
 
 // createBackupJob creates a Kubernetes Job to back up the workspace's PVC data.
-func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ctx context.Context, req ctrl.Request, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) error {
+func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ctx context.Context, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) error {
 	log := logger.WithName("createBackupJob")
 	dwID := workspace.Status.DevWorkspaceId
 
@@ -304,8 +323,12 @@ func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ct
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "backup-job-",
+			GenerateName: constants.DevWorkspaceBackupJobNamePrefix,
 			Namespace:    workspace.Namespace,
+			Labels: map[string]string{
+				constants.DevWorkspaceIDLabel:        dwID,
+				constants.DevWorkspaceBackupJobLabel: "true",
+			},
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
@@ -374,6 +397,9 @@ func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ct
 				},
 			},
 		},
+	}
+	if err := controllerutil.SetControllerReference(workspace, job, r.Scheme); err != nil {
+		return err
 	}
 	err = r.Create(ctx, job)
 	if err != nil {

@@ -235,7 +235,6 @@ func (r *BackupCronJobReconciler) stopCron(logger logr.Logger) {
 func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, logger logr.Logger) error {
 	log := logger.WithName("executeBackupSync")
 	log.Info("Executing backup sync for all DevWorkspaces")
-	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
 	devWorkspaces := &dw.DevWorkspaceList{}
 	err := r.List(ctx, devWorkspaces)
 	if err != nil {
@@ -254,7 +253,7 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 		dwID := dw.Status.DevWorkspaceId
 		log.Info("Found DevWorkspace", "namespace", dw.Namespace, "devworkspace", dw.Name, "id", dwID)
 
-		if err := r.createBackupJob(&dw, ctx, backUpConfig, logger); err != nil {
+		if err := r.createBackupJob(&dw, ctx, dwOperatorConfig, logger); err != nil {
 			log.Error(err, "Failed to create backup Job for DevWorkspace", "id", dwID)
 			continue
 		}
@@ -309,13 +308,18 @@ func ptrInt32(i int32) *int32 { return &i }
 func ptrBool(b bool) *bool    { return &b }
 
 // createBackupJob creates a Kubernetes Job to back up the workspace's PVC data.
-func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ctx context.Context, backUpConfig *controllerv1alpha1.BackupCronJobConfig, logger logr.Logger) error {
+func (r *BackupCronJobReconciler) createBackupJob(workspace *dw.DevWorkspace, ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, logger logr.Logger) error {
 	log := logger.WithName("createBackupJob")
 	dwID := workspace.Status.DevWorkspaceId
+	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
 
-	// Find a PVC with the name "claim-devworkspace"
+	// Find a PVC with the name "claim-devworkspace" or based on the name from the operator config
+	pvcName := "claim-devworkspace"
+	if dwOperatorConfig.Config.Workspace.PVCName != "" {
+		pvcName = dwOperatorConfig.Config.Workspace.PVCName
+	}
 	pvc := &corev1.PersistentVolumeClaim{}
-	err := r.Get(ctx, client.ObjectKey{Name: "claim-devworkspace", Namespace: workspace.Namespace}, pvc)
+	err := r.Get(ctx, client.ObjectKey{Name: pvcName, Namespace: workspace.Namespace}, pvc)
 	if err != nil {
 		log.Error(err, "Failed to get PVC for DevWorkspace", "id", dwID)
 		return err

@@ -67,3 +67,13 @@ func (w *K8sClient) GetLogsForContainer(podName string, namespace, containerName
 	outBytes, err := cmd.CombinedOutput()
 	return string(outBytes), err
 }
+
+func (w *K8sClient) OcDeleteWorkspace(name, namespace string) (commandResult string, err error) {
+	cmd := exec.Command("bash", "-c", fmt.Sprintf(
+		"KUBECONFIG=%s oc delete devworkspace %s -n %s --ignore-not-found=true",
+		w.kubeCfgFile,
+		name,
+		namespace))
+	outBytes, err := cmd.CombinedOutput()
+	return string(outBytes), err
+}

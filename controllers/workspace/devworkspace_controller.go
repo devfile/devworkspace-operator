@@ -67,6 +67,107 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+// applyHomeInitDefaults applies default values for image and command fields
+// of the init-persistent-home container.
+func applyHomeInitDefaults(c corev1.Container, workspace *common.DevWorkspaceWithConfig) (corev1.Container, error) {
+	if c.Image == "" {
+		inferred := home.InferWorkspaceImage(&workspace.Spec.Template)
+		if inferred == "" {
+			return c, fmt.Errorf("unable to infer workspace image for init-persistent-home; specify image explicitly")
+		}
+		c.Image = inferred
+	}
+	if len(c.Command) == 0 {
+		c.Command = []string{"/bin/sh", "-c"}
+	}
+	return c, nil
+}
+
+// validateNoAdvancedFields validates that the init-persistent-home container
+// does not use advanced Kubernetes container fields that could make behavior unpredictable.
+func validateNoAdvancedFields(c corev1.Container) error {
+	if len(c.Ports) > 0 {
+		return fmt.Errorf("ports are not allowed for init-persistent-home")
+	}
+
+	if c.LivenessProbe != nil || c.ReadinessProbe != nil || c.StartupProbe != nil {
+		return fmt.Errorf("probes are not allowed for init-persistent-home")
+	}
+
+	if c.Lifecycle != nil {
+		return fmt.Errorf("lifecycle hooks are not allowed for init-persistent-home")
+	}
+
+	if c.Stdin || c.StdinOnce || c.TTY {
+		return fmt.Errorf("stdin/tty fields are not allowed for init-persistent-home")
+	}
+
+	if len(c.VolumeDevices) > 0 || c.WorkingDir != "" {
+		return fmt.Errorf("volumeDevices and workingDir are not allowed for init-persistent-home")
+	}
+
+	if c.TerminationMessagePath != "" || c.TerminationMessagePolicy != "" {
+		return fmt.Errorf("termination message fields are not allowed for init-persistent-home")
+	}
+
+	if c.SecurityContext != nil {
+		return fmt.Errorf("securityContext is not allowed for init-persistent-home")
+	}
+	if c.Resources.Limits != nil || c.Resources.Requests != nil {
+		return fmt.Errorf("resource limits/requests are not allowed for init-persistent-home")
+	}
+
+	return nil
+}
+
+// validateHomeInitContainer validates all aspects of the init-persistent-home container.
+func validateHomeInitContainer(c corev1.Container) error {
+	if strings.ContainsAny(c.Image, "\n\r\t ") {
+		return fmt.Errorf("invalid image reference for init-persistent-home: image reference contains invalid whitespace characters")
+	}
+
+	if len(c.Command) != 2 || c.Command[0] != "/bin/sh" || c.Command[1] != "-c" {
+		return fmt.Errorf("command must be exactly [/bin/sh, -c]")
+	}
+
+	if len(c.Args) != 1 {
+		return fmt.Errorf("args must contain exactly one script string")
+	}
+
+	if len(c.VolumeMounts) > 0 {
+		return fmt.Errorf("volumeMounts are not allowed for init-persistent-home; persistent-home is auto-mounted at /home/user/")
+	}
+
+	if err := validateNoAdvancedFields(c); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// defaultAndValidateHomeInitContainer applies defaults and validation for a custom
+// DWOC-provided init container named init-persistent-home. It ensures a shell execution
+// model, a single script arg, injects the persistent-home mount at /home/user/, and
+// defaults image to the inferred workspace image if not provided.
+func defaultAndValidateHomeInitContainer(c corev1.Container, workspace *common.DevWorkspaceWithConfig) (corev1.Container, error) {
+	var err error
+
+	if c, err = applyHomeInitDefaults(c, workspace); err != nil {
+		return c, err
+	}
+
+	if err = validateHomeInitContainer(c); err != nil {
+		return c, err
+	}
+
+	c.VolumeMounts = []corev1.VolumeMount{{
+		Name:      constants.HomeVolumeName,
+		MountPath: constants.HomeUserDirectory,
+	}}
+
+	return c, nil
+}
+
 const (
 	startingWorkspaceRequeueInterval = 5 * time.Second
 )
@@ -366,6 +467,34 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 	} else if projectClone != nil {
 		devfilePodAdditions.InitContainers = append([]corev1.Container{*projectClone}, devfilePodAdditions.InitContainers...)
+	}
+
+	// Inject operator-configured init containers
+	if workspace.Config != nil && workspace.Config.Workspace != nil {
+		// Check if init-persistent-home should be disabled
+		disableHomeInit := workspace.Config.Workspace.PersistUserHome.DisableInitContainer != nil &&
+			*workspace.Config.Workspace.PersistUserHome.DisableInitContainer
+
+		for _, c := range workspace.Config.Workspace.InitContainers {
+			// Special handling for init-persistent-home
+			if c.Name == constants.HomeInitComponentName {
+				// Skip if persistent home is disabled
+				if !home.PersistUserHomeEnabled(workspace) {
+					continue
+				}
+				// Skip if init container is explicitly disabled
+				if disableHomeInit {
+					continue
+				}
+				// Apply defaults and validation for init-persistent-home
+				validated, err := defaultAndValidateHomeInitContainer(c, workspace)
+				if err != nil {
+					return r.failWorkspace(workspace, fmt.Sprintf("Invalid init-persistent-home container: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+				}
+				c = validated
+			}
+			devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, c)
+		}
 	}
 
 	// Add ServiceAccount tokens into devfile containers

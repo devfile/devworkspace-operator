@@ -1,0 +1,15 @@
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: openshift-operators
+config:
+  workspace:
+    initContainers:
+      - name: init-persistent-home
+        args:
+          - |
+            echo "Custom init running"
+            touch /home/user/.custom_init_complete
+    persistUserHome:
+      enabled: true

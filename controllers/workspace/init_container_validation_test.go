@@ -236,7 +236,7 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 				WorkingDir: "/tmp",
 			},
 			expectError: true,
-			errorMsg:    "volumeDevices and workingDir are not allowed",
+			errorMsg:    "workingDir is not allowed",
 		},
 		{
 			name: "Rejects image with whitespace",

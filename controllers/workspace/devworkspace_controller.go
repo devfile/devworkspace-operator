@@ -73,7 +73,7 @@ func applyHomeInitDefaults(c corev1.Container, workspace *common.DevWorkspaceWit
 	if c.Image == "" {
 		inferred := home.InferWorkspaceImage(&workspace.Spec.Template)
 		if inferred == "" {
-			return c, fmt.Errorf("unable to infer workspace image for init-persistent-home; specify image explicitly")
+			return c, fmt.Errorf("unable to infer workspace image for %s; specify image explicitly", constants.HomeInitComponentName)
 		}
 		c.Image = inferred
 	}
@@ -87,34 +87,38 @@ func applyHomeInitDefaults(c corev1.Container, workspace *common.DevWorkspaceWit
 // does not use advanced Kubernetes container fields that could make behavior unpredictable.
 func validateNoAdvancedFields(c corev1.Container) error {
 	if len(c.Ports) > 0 {
-		return fmt.Errorf("ports are not allowed for init-persistent-home")
+		return fmt.Errorf("ports are not allowed for %s", constants.HomeInitComponentName)
 	}
 
 	if c.LivenessProbe != nil || c.ReadinessProbe != nil || c.StartupProbe != nil {
-		return fmt.Errorf("probes are not allowed for init-persistent-home")
+		return fmt.Errorf("probes are not allowed for %s", constants.HomeInitComponentName)
 	}
 
 	if c.Lifecycle != nil {
-		return fmt.Errorf("lifecycle hooks are not allowed for init-persistent-home")
+		return fmt.Errorf("lifecycle hooks are not allowed for %s", constants.HomeInitComponentName)
 	}
 
 	if c.Stdin || c.StdinOnce || c.TTY {
-		return fmt.Errorf("stdin/tty fields are not allowed for init-persistent-home")
+		return fmt.Errorf("stdin/tty fields are not allowed for %s", constants.HomeInitComponentName)
 	}
 
-	if len(c.VolumeDevices) > 0 || c.WorkingDir != "" {
-		return fmt.Errorf("volumeDevices and workingDir are not allowed for init-persistent-home")
+	if len(c.VolumeDevices) > 0 {
+		return fmt.Errorf("volumeDevices are not allowed for %s", constants.HomeInitComponentName)
+	}
+
+	if c.WorkingDir != "" {
+		return fmt.Errorf("workingDir is not allowed for %s", constants.HomeInitComponentName)
 	}
 
 	if c.TerminationMessagePath != "" || c.TerminationMessagePolicy != "" {
-		return fmt.Errorf("termination message fields are not allowed for init-persistent-home")
+		return fmt.Errorf("termination message fields are not allowed for %s", constants.HomeInitComponentName)
 	}
 
 	if c.SecurityContext != nil {
-		return fmt.Errorf("securityContext is not allowed for init-persistent-home")
+		return fmt.Errorf("securityContext is not allowed for %s", constants.HomeInitComponentName)
 	}
 	if c.Resources.Limits != nil || c.Resources.Requests != nil {
-		return fmt.Errorf("resource limits/requests are not allowed for init-persistent-home")
+		return fmt.Errorf("resource limits/requests are not allowed for %s", constants.HomeInitComponentName)
 	}
 
 	return nil
@@ -123,19 +127,19 @@ func validateNoAdvancedFields(c corev1.Container) error {
 // validateHomeInitContainer validates all aspects of the init-persistent-home container.
 func validateHomeInitContainer(c corev1.Container) error {
 	if strings.ContainsAny(c.Image, "\n\r\t ") {
-		return fmt.Errorf("invalid image reference for init-persistent-home: image reference contains invalid whitespace characters")
+		return fmt.Errorf("invalid image reference for %s: image reference contains invalid whitespace characters", constants.HomeInitComponentName)
 	}
 
 	if len(c.Command) != 2 || c.Command[0] != "/bin/sh" || c.Command[1] != "-c" {
-		return fmt.Errorf("command must be exactly [/bin/sh, -c]")
+		return fmt.Errorf("command must be exactly [/bin/sh, -c] for %s", constants.HomeInitComponentName)
 	}
 
 	if len(c.Args) != 1 {
-		return fmt.Errorf("args must contain exactly one script string")
+		return fmt.Errorf("args must contain exactly one script string for %s", constants.HomeInitComponentName)
 	}
 
 	if len(c.VolumeMounts) > 0 {
-		return fmt.Errorf("volumeMounts are not allowed for init-persistent-home; persistent-home is auto-mounted at /home/user/")
+		return fmt.Errorf("volumeMounts are not allowed for %s; persistent-home is auto-mounted at /home/user/", constants.HomeInitComponentName)
 	}
 
 	if err := validateNoAdvancedFields(c); err != nil {
@@ -489,7 +493,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				// Apply defaults and validation for init-persistent-home
 				validated, err := defaultAndValidateHomeInitContainer(c, workspace)
 				if err != nil {
-					return r.failWorkspace(workspace, fmt.Sprintf("Invalid init-persistent-home container: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 				}
 				c = validated
 			}

@@ -203,7 +203,7 @@ type WorkspaceConfig struct {
 	// If the feature is disabled, setting this field may cause an endless workspace start loop.
 	// +kubebuilder:validation:Optional
 	HostUsers *bool `json:"hostUsers,omitempty"`
-	// InitContainers are injected into all workspace pods as Kubernetes init containers.
+	// InitContainers defines a list of Kubernetes init containers that are automatically injected into all workspace pods.
 	// Typical uses: injecting organization tools/configs, initializing persistent home, etc.
 	// Note: Only trusted administrators should be allowed to edit the DevWorkspaceOperatorConfig.
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`

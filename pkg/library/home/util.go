@@ -22,7 +22,8 @@ import (
 
 // InferWorkspaceImage finds the first non-imported container component image in the
 // flattened devfile template. This mirrors the selection rule used by the built-in
-// persistent-home initializer to pick a "primary" workspace image.
+// persistent-home initializer to pick a "primary" workspace image. 
+// If no such component exists, it returns an empty string.
 func InferWorkspaceImage(dwTemplate *v1alpha2.DevWorkspaceTemplateSpec) string {
 	for _, component := range dwTemplate.Components {
 		if component.Container == nil {

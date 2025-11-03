@@ -20,7 +20,6 @@ rules:
   resources:
   - configmaps
   - pods
-  - secrets
   - serviceaccounts
   - services
   verbs:
@@ -46,6 +45,12 @@ rules:
   - pods/exec
   verbs:
   - create
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - '*'
 - apiGroups:
   - ""
   resourceNames:

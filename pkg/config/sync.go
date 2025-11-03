@@ -444,6 +444,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			if from.Workspace.BackupCronJob.Registry != "" {
 				to.Workspace.BackupCronJob.Registry = from.Workspace.BackupCronJob.Registry
 			}
+			if from.Workspace.BackupCronJob.RegistryAuthSecret != "" {
+				to.Workspace.BackupCronJob.RegistryAuthSecret = from.Workspace.BackupCronJob.RegistryAuthSecret
+			}
 		}
 
 		if from.Workspace.PostStartTimeout != "" {
@@ -706,6 +709,7 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			if workspace.BackupCronJob.Schedule != defaultConfig.Workspace.BackupCronJob.Schedule {
 				config = append(config, fmt.Sprintf("workspace.backupCronJob.cronJobScript=%s", workspace.BackupCronJob.Schedule))
 			}
+
 		}
 		if workspace.HostUsers != nil {
 			config = append(config, fmt.Sprintf("workspace.hostUsers=%t", *workspace.HostUsers))

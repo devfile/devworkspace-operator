@@ -86,6 +86,11 @@ type BackupCronJobConfig struct {
 	// in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
 	// +kubebuilder:validation:Optional
 	Registry string `json:"registry,omitempty"`
+
+	// RegistryAuthSecret is the name of a Kubernetes secret of
+	// type kubernetes.io/dockerconfigjson
+	// +kubebuilder:validation:Optional
+	RegistryAuthSecret string `json:"registryAuthSecret,omitempty"`
 }
 
 type RoutingConfig struct {

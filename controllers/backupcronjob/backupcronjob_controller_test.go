@@ -60,10 +60,11 @@ var _ = Describe("BackupCronJobReconciler", func() {
 		log = zap.New(zap.UseDevMode(true)).WithName("BackupCronJobReconcilerTest")
 
 		reconciler = BackupCronJobReconciler{
-			Client: fakeClient,
-			Log:    log,
-			Scheme: scheme,
-			cron:   cron.New(),
+			Client:           fakeClient,
+			NonCachingClient: fakeClient,
+			Log:              log,
+			Scheme:           scheme,
+			cron:             cron.New(),
 		}
 
 		nameNamespace = types.NamespacedName{
@@ -298,6 +299,40 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(0))
 		})
+
+		It("creates a Job for a DevWorkspace stopped with no previsou backup and auth registry", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:             &enabled,
+							Schedule:           schedule,
+							Registry:           "my-registry:5000",
+							RegistryAuthSecret: "my-secret",
+						},
+					},
+				},
+			}
+			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-recent"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			authSecret := createAuthSecret("my-secret", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+		})
 	})
 
 })
@@ -332,6 +367,18 @@ func createDevWorkspace(name, namespace string, started bool, lastTransitionTime
 	}
 
 	return dw
+}
+
+func createAuthSecret(name, namespace string, data map[string][]byte) *corev1.Secret {
+	{
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+			},
+			Data: data,
+		}
+	}
 }
 
 var _ = Describe("DevWorkspaceOperatorConfig UpdateFunc Tests", func() {

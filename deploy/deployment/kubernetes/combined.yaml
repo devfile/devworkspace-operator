@@ -196,6 +196,11 @@ spec:
                           A registry where backup images are stored. Images are stored
                           in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
                         type: string
+                      registryAuthSecret:
+                        description: |-
+                          RegistryAuthSecret is the name of a Kubernetes secret of
+                          type kubernetes.io/dockerconfigjson
+                        type: string
                       schedule:
                         default: 0 2 * * *
                         description: |-
@@ -25903,7 +25908,6 @@ rules:
   resources:
   - configmaps
   - pods
-  - secrets
   - serviceaccounts
   - services
   verbs:
@@ -25929,6 +25933,12 @@ rules:
   - pods/exec
   verbs:
   - create
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - '*'
 - apiGroups:
   - ""
   resourceNames:

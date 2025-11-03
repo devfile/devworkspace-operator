@@ -190,9 +190,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&backupCronJobController.BackupCronJobReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("BackupCronJob"),
-		Scheme: mgr.GetScheme(),
+		Client:           mgr.GetClient(),
+		NonCachingClient: nonCachingClient,
+		Log:              ctrl.Log.WithName("controllers").WithName("BackupCronJob"),
+		Scheme:           mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BackupCronJob")
 		os.Exit(1)

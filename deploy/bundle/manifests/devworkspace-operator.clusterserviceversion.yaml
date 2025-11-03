@@ -102,7 +102,6 @@ spec:
           resources:
           - configmaps
           - pods
-          - secrets
           - serviceaccounts
           - services
           verbs:
@@ -128,6 +127,12 @@ spec:
           - pods/exec
           verbs:
           - create
+        - apiGroups:
+          - ""
+          resources:
+          - secrets
+          verbs:
+          - '*'
         - apiGroups:
           - ""
           resourceNames:

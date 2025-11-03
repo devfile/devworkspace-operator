@@ -24,10 +24,13 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/go-logr/logr"
 	"github.com/robfig/cron/v3"
 	batchv1 "k8s.io/api/batch/v1"
@@ -352,12 +355,18 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
 
 	// Find a PVC with the name "claim-devworkspace" or based on the name from the operator config
-	pvcName := "claim-devworkspace"
-	if dwOperatorConfig.Config.Workspace.PVCName != "" {
-		pvcName = dwOperatorConfig.Config.Workspace.PVCName
+	pvcName, workspacePath, err := r.getWorkspacePVCName(workspace, dwOperatorConfig, ctx, logger)
+	if err != nil {
+		log.Error(err, "Failed to get workspace PVC name", "devworkspace", workspace.Name)
+		return err
 	}
+	if pvcName == "" {
+		log.Error(err, "No PVC found for DevWorkspace", "id", dwID)
+		return err
+	}
+
 	pvc := &corev1.PersistentVolumeClaim{}
-	err := r.Get(ctx, client.ObjectKey{Name: pvcName, Namespace: workspace.Namespace}, pvc)
+	err = r.Get(ctx, client.ObjectKey{Name: pvcName, Namespace: workspace.Namespace}, pvc)
 	if err != nil {
 		log.Error(err, "Failed to get PVC for DevWorkspace", "id", dwID)
 		return err
@@ -388,7 +397,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								{Name: "WORKSPACE_ID", Value: dwID},
 								{
 									Name:  "BACKUP_SOURCE_PATH",
-									Value: "/workspace/" + dwID + "/" + constants.DefaultProjectsSourcesRoot,
+									Value: "/workspace/" + workspacePath,
 								},
 								{Name: "STORAGE_DRIVER", Value: "overlay"},
 								{Name: "BUILDAH_ISOLATION", Value: "chroot"},
@@ -473,6 +482,32 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 	log.Info("Created backup Job for DevWorkspace", "jobName", job.Name, "devworkspace", workspace.Name)
 	return nil
+}
+
+// getWorkspacePVCName determines the PVC name and workspace path based on the storage provisioner used.
+func (r *BackupCronJobReconciler) getWorkspacePVCName(workspace *dw.DevWorkspace, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, ctx context.Context, logger logr.Logger) (string, string, error) {
+	config, err := wkspConfig.ResolveConfigForWorkspace(workspace, r.Client)
+
+	workspaceWithConfig := &common.DevWorkspaceWithConfig{}
+	workspaceWithConfig.DevWorkspace = workspace
+	workspaceWithConfig.Config = config
+
+	storageProvisioner, err := storage.GetProvisioner(workspaceWithConfig)
+	if err != nil {
+		return "", "", err
+	}
+	if _, ok := storageProvisioner.(*storage.PerWorkspaceStorageProvisioner); ok {
+		pvcName := common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId)
+		return pvcName, constants.DefaultProjectsSourcesRoot, nil
+
+	} else if _, ok := storageProvisioner.(*storage.CommonStorageProvisioner); ok {
+		pvcName := "claim-devworkspace"
+		if dwOperatorConfig.Config.Workspace.PVCName != "" {
+			pvcName = dwOperatorConfig.Config.Workspace.PVCName
+		}
+		return pvcName, workspace.Status.DevWorkspaceId + "/" + constants.DefaultProjectsSourcesRoot, nil
+	}
+	return "", "", nil
 }
 
 func (r *BackupCronJobReconciler) copySecret(workspace *dw.DevWorkspace, ctx context.Context, sourceSecret *corev1.Secret, logger logr.Logger) (namespaceSecret *corev1.Secret, err error) {

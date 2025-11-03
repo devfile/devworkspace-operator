@@ -6,7 +6,6 @@ set -x
 : "${DEVWORKSPACE_BACKUP_REGISTRY:?Missing DEVWORKSPACE_BACKUP_REGISTRY}"
 : "${DEVWORKSPACE_NAMESPACE:?Missing DEVWORKSPACE_NAMESPACE}"
 : "${DEVWORKSPACE_NAME:?Missing DEVWORKSPACE_NAME}"
-: "${PROJECTS_ROOT:?Missing PROJECTS_ROOT}"
 : "${BACKUP_SOURCE_PATH:?Missing BACKUP_SOURCE_PATH}"
 
 BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}:latest"
@@ -15,6 +14,9 @@ BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY}/backup-${DEVWORKSPACE_NAMESPACE}-$
 backup() {
   local new_image
   new_image=$(buildah from scratch)
+
+  echo "Backing up workspace from path: $BACKUP_SOURCE_PATH"
+  ls -la "$BACKUP_SOURCE_PATH"
 
   buildah copy "$new_image" "$BACKUP_SOURCE_PATH" /
   buildah config --label DEVWORKSPACE="$DEVWORKSPACE_NAME" "$new_image"
@@ -29,8 +31,8 @@ restore() {
   local container_name="workspace-restore"
 
   podman create --name "$container_name" "$BACKUP_IMAGE"
-  rm -rf "${PROJECTS_ROOT:?}"/*
-  podman cp "$container_name":/. "$PROJECTS_ROOT"
+  rm -rf "${BACKUP_SOURCE_PATH:?}"/*
+  podman cp "$container_name":/. "$BACKUP_SOURCE_PATH"
   podman rm "$container_name"
 }
 

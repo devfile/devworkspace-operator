@@ -143,7 +143,7 @@ update_images() {
   sed -i build/scripts/generate_deployment.sh -r \
     -e "s|quay.io/devfile/devworkspace-controller:[0-9a-zA-Z._-]+|${DWO_QUAY_IMG}|g" \
     -e "s|quay.io/devfile/project-clone:[0-9a-zA-Z._-]+|${PROJECT_CLONE_QUAY_IMG}|g"
-    -e "s|quay.io/devfile/project-backup:[0-9a-zA-Z._-]+|${PROJECT_PROJECT_BACKUP_QUAY_IMGCLONE_QUAY_IMG}|g"
+    -e "s|quay.io/devfile/project-backup:[0-9a-zA-Z._-]+|${PROJECT_BACKUP_QUAY_IMG}|g"
 
   local DEFAULT_DWO_IMG="$DWO_QUAY_IMG"
   local PROJECT_CLONE_IMG="$PROJECT_CLONE_QUAY_IMG"

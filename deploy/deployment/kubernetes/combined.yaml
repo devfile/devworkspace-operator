@@ -26269,7 +26269,7 @@ spec:
         - name: RELATED_IMAGE_project_clone
           value: quay.io/devfile/project-clone:next
         - name: RELATED_IMAGE_project_backup
-          value: quay.io/devfile/project-clone:next
+          value: quay.io/devfile/project-backup:next
         - name: WATCH_NAMESPACE
           value: ""
         - name: POD_NAME

@@ -371,7 +371,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Add automount resources into devfile containers
-	err = automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace, home.PersistUserHomeEnabled(workspace))
+	// Determine if workspace is transitioning from stopped state
+	// This is true when the workspace phase is not Starting or Running (i.e., it's Stopped, Failed, or empty)
+	isWorkspaceStarted := workspace.Status.Phase == dw.DevWorkspaceStatusStarting || workspace.Status.Phase == dw.DevWorkspaceStatusRunning
+	err = automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace, home.PersistUserHomeEnabled(workspace), isWorkspaceStarted)
 	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Failed to process automount resources", metrics.ReasonBadRequest, reqLogger, &reconcileStatus); shouldReturn {
 		return reconcileResult, reconcileErr
 	}

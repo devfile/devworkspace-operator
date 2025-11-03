@@ -26,7 +26,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error) {
+func getAutoMountPVCs(namespace string, api sync.ClusterAPI, isWorkspaceStarted bool) (*Resources, error) {
 	pvcs := &corev1.PersistentVolumeClaimList{}
 	if err := api.Client.List(api.Ctx, pvcs, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -40,6 +40,12 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 	var volumes []corev1.Volume
 	var volumeMounts []corev1.VolumeMount
 	for _, pvc := range pvcs.Items {
+		// Skip mounting if mount-on-start-only is set to "true" and workspace has been already started
+		mountOnStartOnly := pvc.Annotations[constants.MountOnStartOnlyAttribute] == "true"
+		if isWorkspaceStarted && mountOnStartOnly {
+			continue
+		}
+
 		mountPath := pvc.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {
 			mountPath = path.Join("/tmp/", pvc.Name)

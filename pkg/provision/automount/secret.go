@@ -29,7 +29,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, error) {
+func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI, isWorkspaceStarted bool) (*Resources, error) {
 	secrets := &corev1.SecretList{}
 	if err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -41,6 +41,13 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 		if msg := checkAutomountVolumeForPotentialError(&secret); msg != "" {
 			return nil, &dwerrors.FailError{Message: msg}
 		}
+
+		// Skip mounting if mount-on-start-only is set to "true" and workspace has been already started
+		mountOnStartOnly := secret.Annotations[constants.MountOnStartOnlyAttribute] == "true"
+		if isWorkspaceStarted && mountOnStartOnly {
+			continue
+		}
+
 		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {

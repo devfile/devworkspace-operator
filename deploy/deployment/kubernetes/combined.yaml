@@ -26224,6 +26224,8 @@ spec:
           requests:
             cpu: 250m
             memory: 100Mi
+        securityContext:
+          readOnlyRootFilesystem: true
         volumeMounts:
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-tls-certs

@@ -400,6 +400,8 @@ spec:
                   requests:
                     cpu: 250m
                     memory: 100Mi
+                securityContext:
+                  readOnlyRootFilesystem: true
               serviceAccountName: devworkspace-controller-serviceaccount
               terminationGracePeriodSeconds: 10
       permissions:

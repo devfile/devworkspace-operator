@@ -187,6 +187,9 @@ func getSpecDeployment(webhooksSecretName, namespace string) (*appsv1.Deployment
 									Name: "WATCH_NAMESPACE",
 								},
 							},
+							SecurityContext: &corev1.SecurityContext{
+								ReadOnlyRootFilesystem: pointer.Bool(true),
+							},
 						},
 					},
 					RestartPolicy:                 "Always",

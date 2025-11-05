@@ -21,6 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"k8s.io/utils/ptr"
+
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -345,10 +347,6 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(workspace *dw.DevWor
 	return false
 }
 
-func ptrInt64(i int64) *int64 { return &i }
-func ptrInt32(i int32) *int32 { return &i }
-func ptrBool(b bool) *bool    { return &b }
-
 // createBackupJob creates a Kubernetes Job to back up the workspace's PVC data.
 func (r *BackupCronJobReconciler) createBackupJob(
 	workspace *dw.DevWorkspace,
@@ -394,7 +392,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 					ServiceAccountName: JobRunnerSAName,
 					RestartPolicy:      corev1.RestartPolicyNever,
 					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: ptrInt64(0),
+						FSGroup: ptr.To[int64](0),
 					},
 					Containers: []corev1.Container{
 						{
@@ -428,8 +426,8 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:                ptrInt64(0),
-								AllowPrivilegeEscalation: ptrBool(false),
+								RunAsUser:                ptr.To[int64](0),
+								AllowPrivilegeEscalation: ptr.To[bool](false),
 							},
 						},
 					},

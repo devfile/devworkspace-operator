@@ -420,10 +420,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser: ptrInt64(0),
-								Capabilities: &corev1.Capabilities{
-									Add: []corev1.Capability{"SYS_ADMIN", "SYS_CHROOT"},
-								},
+								RunAsUser:                ptrInt64(0),
 								AllowPrivilegeEscalation: ptrBool(false),
 							},
 						},

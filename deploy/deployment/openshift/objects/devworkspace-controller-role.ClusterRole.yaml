@@ -22,7 +22,6 @@ rules:
   resources:
   - configmaps
   - pods
-  - serviceaccounts
   - services
   verbs:
   - '*'
@@ -49,12 +48,6 @@ rules:
   - create
 - apiGroups:
   - ""
-  resources:
-  - secrets
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
   resourceNames:
   - workspace-credentials-secret
   resources:
@@ -64,6 +57,13 @@ rules:
   - delete
   - get
   - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - serviceaccounts
+  verbs:
+  - '*'
 - apiGroups:
   - admissionregistration.k8s.io
   resources:

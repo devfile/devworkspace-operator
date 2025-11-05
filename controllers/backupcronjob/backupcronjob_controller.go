@@ -149,8 +149,9 @@ func (r *BackupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=serviceaccounts;,verbs=get;list;create;update;patch;delete
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceoperatorconfigs,verbs=get;list;update;patch;watch
 // +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list
@@ -270,6 +271,12 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 		dwID := dw.Status.DevWorkspaceId
 		log.Info("Found DevWorkspace", "namespace", dw.Namespace, "devworkspace", dw.Name, "id", dwID)
 
+		err = r.ensureJobRunnerRBAC(ctx, &dw)
+		if err != nil {
+			log.Error(err, "Failed to ensure Job runner RBAC for DevWorkspace", "id", dwID)
+			continue
+		}
+
 		if err := r.createBackupJob(&dw, ctx, dwOperatorConfig, registyAuthSecret, logger); err != nil {
 			log.Error(err, "Failed to create backup Job for DevWorkspace", "id", dwID)
 			continue
@@ -384,7 +391,8 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
+					ServiceAccountName: JobRunnerSAName,
+					RestartPolicy:      corev1.RestartPolicyNever,
 					SecurityContext: &corev1.PodSecurityContext{
 						FSGroup: ptrInt64(0),
 					},

@@ -324,7 +324,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	postStartDebugTrapSleepDuration := ""
+	deploymentReadyConditionMessage := "Waiting for workspace deployment"
 	if workspace.Annotations[constants.DevWorkspaceDebugStartAnnotation] == "true" {
+		deploymentReadyConditionMessage = "Debug mode: failed postStart commands will be trapped; inspect logs/exec to debug"
+		reconcileStatus.setConditionTrue(conditions.Started, "DevWorkspace is starting in debug mode")
 		postStartDebugTrapSleepDuration = workspace.Config.Workspace.ProgressTimeout
 	}
 	devfilePodAdditions, err := containerlib.GetKubeContainersFromDevfile(
@@ -494,7 +497,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := wsprovision.SyncDeploymentToCluster(workspace, allPodAdditions, serviceAcctName, clusterAPI); err != nil {
 		if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error creating DevWorkspace deployment", metrics.DetermineProvisioningFailureReason(err.Error()), reqLogger, &reconcileStatus); shouldReturn {
 			reqLogger.Info("Waiting on deployment to be ready")
-			reconcileStatus.setConditionFalse(conditions.DeploymentReady, "Waiting for workspace deployment")
+			reconcileStatus.setConditionFalse(conditions.DeploymentReady, deploymentReadyConditionMessage)
 			return reconcileResult, reconcileErr
 		}
 	}

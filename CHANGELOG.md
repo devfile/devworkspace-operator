@@ -1,4 +1,17 @@
 # DevWorkspace Operator Changelog
+# v0.38.0
+## Features
+### Improved debugging for failing postStart commands [#1538](https://github.com/devfile/devworkspace-operator/issues/1538)
+Previously, if a postStart command failed, the container would often crash and enter CrashLoopBackOff loop, making it difficult to debug the reason for the postStart command failure.
+
+With this release, when the `controller.devfile.io/debug-start: "true"` annotation is set on a failing DevWorkspace, any failure in a postStart command will cause the container to sleep for a configured duration (based on `config.workspace.progressTimeout` in the DevWorkspaceOperatorConfig) instead of terminating.
+
+This gives the opportunity exec into the failing container and inspect logs in the `/tmp/poststart-stdout.txt` and `/tmp/poststart-stderr.txt` files to determine the root cause of the failure.
+
+## Bug Fixes & Improvements
+- Set readOnlyRootFilesystem for deployments to true [#1534](https://github.com/devfile/devworkspace-operator/pull/1534)
+- Make container status check less restrictive [#1528](https://github.com/devfile/devworkspace-operator/pull/1528)
+- Increase default per-workspace PVC size from 5Gi to 10Gi [#1514](https://github.com/devfile/devworkspace-operator/pull/1514)
 
 # v0.37.0
 ## Features

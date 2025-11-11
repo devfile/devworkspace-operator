@@ -179,5 +179,5 @@ const (
 	// DevWorkspaceBackupJobLabel is the label key to identify backup jobs created for DevWorkspaces
 	DevWorkspaceBackupJobLabel = "controller.devfile.io/backup-job"
 
-	DevWorkspaceBackuptAuthSecretName = "devworkspace-backup-registry-auth"
+	DevWorkspaceBackupAuthSecretName = "devworkspace-backup-registry-auth"
 )

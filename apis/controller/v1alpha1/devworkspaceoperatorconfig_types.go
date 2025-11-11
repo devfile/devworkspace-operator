@@ -84,7 +84,7 @@ type BackupCronJobConfig struct {
 	Schedule string `json:"schedule,omitempty"`
 	// A registry where backup images are stored. Images are stored
 	// in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	Registry string `json:"registry,omitempty"`
 
 	// RegistryAuthSecret is the name of a Kubernetes secret of

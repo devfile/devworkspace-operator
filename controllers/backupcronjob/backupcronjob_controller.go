@@ -46,10 +46,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-const (
-	defaultBackupImage = "registry.access.redhat.com/ubi8/ubi-minimal:latest"
-)
-
 // BackupCronJobReconciler reconciles `BackupCronJob` configuration for the purpose of backing up workspace PVCs.
 type BackupCronJobReconciler struct {
 	client.Client
@@ -76,24 +72,13 @@ func shouldReconcileOnUpdate(e event.UpdateEvent, log logr.Logger) bool {
 	oldBackup := oldConfig.Config.Workspace.BackupCronJob
 	newBackup := newConfig.Config.Workspace.BackupCronJob
 
-	differentBool := func(a, b *bool) bool {
-		switch {
-		case a == nil && b == nil:
-			return false
-		case a == nil || b == nil:
-			return true
-		default:
-			return *a != *b
-		}
-	}
-
 	if oldBackup == nil && newBackup == nil {
 		return false
 	}
 	if (oldBackup == nil && newBackup != nil) || (oldBackup != nil && newBackup == nil) {
 		return true
 	}
-	if differentBool(oldBackup.Enable, newBackup.Enable) {
+	if !ptr.Equal(oldBackup.Enable, newBackup.Enable) {
 		return true
 	}
 
@@ -517,7 +502,7 @@ func (r *BackupCronJobReconciler) copySecret(workspace *dw.DevWorkspace, ctx con
 	log := logger.WithName("copySecret")
 	existingNamespaceSecret := &corev1.Secret{}
 	err = r.NonCachingClient.Get(ctx, client.ObjectKey{
-		Name:      constants.DevWorkspaceBackuptAuthSecretName,
+		Name:      constants.DevWorkspaceBackupAuthSecretName,
 		Namespace: workspace.Namespace}, existingNamespaceSecret)
 	if client.IgnoreNotFound(err) != nil {
 		log.Error(err, "Failed to check for existing registry auth secret in workspace namespace", "namespace", workspace.Namespace)
@@ -533,7 +518,7 @@ func (r *BackupCronJobReconciler) copySecret(workspace *dw.DevWorkspace, ctx con
 	}
 	namespaceSecret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.DevWorkspaceBackuptAuthSecretName,
+			Name:      constants.DevWorkspaceBackupAuthSecretName,
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel:          workspace.Status.DevWorkspaceId,

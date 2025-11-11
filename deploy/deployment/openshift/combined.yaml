@@ -207,6 +207,8 @@ spec:
                           Schedule specifies the cron schedule for the backup cron job.
                           For example, "0 2 * * *" runs daily at 2 AM.
                         type: string
+                    required:
+                    - registry
                     type: object
                   cleanupCronJob:
                     description: CleanupCronJobConfig defines configuration options

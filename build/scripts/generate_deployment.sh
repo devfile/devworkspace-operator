@@ -52,12 +52,12 @@ Arguments:
       Controller (and webhook) image to use for the default deployment.
       Used only when '--use-defaults' is passed; otherwise, the value of
       the DWO_IMG environment variable is used. If unspecified, the default
-      value of 'quay.io/devfile/devworkspace-controller:next' is used
+      value of 'quay.io/devfile/devworkspace-controller:v0.38.0' is used
   --project-clone-image
       Image to use for the project clone init container. Used only when
       '--use-defaults' is passed; otherwise, the value of the PROJECT_CLONE_IMG
       environment variable is used. If unspecifed, the default value of
-      'quay.io/devfile/project-clone:next' is used.
+      'quay.io/devfile/project-clone:v0.38.0' is used.
   --split-yaml
       Parse output file combined.yaml into a yaml file for each record
       in combined yaml. Files are output to the 'objects' subdirectory
@@ -116,8 +116,8 @@ done
 if $USE_DEFAULT_ENV; then
   echo "Using defaults for environment variables"
   export NAMESPACE=devworkspace-controller
-  export DWO_IMG=${DEFAULT_DWO_IMG:-"quay.io/devfile/devworkspace-controller:next"}
-  export PROJECT_CLONE_IMG=${PROJECT_CLONE_IMG:-"quay.io/devfile/project-clone:next"}
+  export DWO_IMG=${DEFAULT_DWO_IMG:-"quay.io/devfile/devworkspace-controller:v0.38.0"}
+  export PROJECT_CLONE_IMG=${PROJECT_CLONE_IMG:-"quay.io/devfile/project-clone:v0.38.0"}
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic
   export DEVWORKSPACE_API_VERSION=a6ec0a38307b63a29fad2eea945cc69bee97a683

@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -125,7 +126,7 @@ func TestProvisionAutomountResourcesInto(t *testing.T) {
 			}
 			// Note: this test does not allow for returning AutoMountError with isFatal: false (i.e. no retrying)
 			// and so is not suitable for testing automount features that provision cluster resources (yet)
-			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, false)
+			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, false, false)
 			if tt.Output.ErrRegexp != nil {
 				if !assert.Error(t, err, "Expected an error but got none") {
 					return
@@ -402,4 +403,221 @@ func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
 
 	test.TestPath = testPath
 	return test
+}
+
+func TestShouldNotMountSecretWithMountOnStartOnlyIfWorkspaceStarted(t *testing.T) {
+	testSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":            "file",
+				"controller.devfile.io/mount-path":          "/test/path",
+				"controller.devfile.io/mount-on-start-only": "true",
+			},
+		},
+		Data: map[string][]byte{
+			"data": []byte("test"),
+		},
+	}
+
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	// When workspace is started (isWorkspaceStarted=true), secret with mount-on-start-only should be skipped
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, true)
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountSecretWithMountOnStartOnlyIfWorkspaceNotStarted(t *testing.T) {
+	testSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":            "file",
+				"controller.devfile.io/mount-path":          "/test/path",
+				"controller.devfile.io/mount-on-start-only": "true",
+			},
+		},
+		Data: map[string][]byte{
+			"data": []byte("test"),
+		},
+	}
+
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	// When workspace is not started (isWorkspaceStarted=false), secret with mount-on-start-only should be mounted
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, false)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
+	assert.Equal(t, "test-secret", testPodAdditions.Volumes[0].Name)
+}
+
+func TestShouldNotMountConfigMapWithMountOnStartOnlyIfWorkspaceStarted(t *testing.T) {
+	testConfigMap := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":            "file",
+				"controller.devfile.io/mount-path":          "/test/path",
+				"controller.devfile.io/mount-on-start-only": "true",
+			},
+		},
+		Data: map[string]string{
+			"data": "test",
+		},
+	}
+
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	// When workspace is started (isWorkspaceStarted=true), configmap with mount-on-start-only should be skipped
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, true)
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountConfigMapWithMountOnStartOnlyIfWorkspaceNotStarted(t *testing.T) {
+	testConfigMap := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":            "file",
+				"controller.devfile.io/mount-path":          "/test/path",
+				"controller.devfile.io/mount-on-start-only": "true",
+			},
+		},
+		Data: map[string]string{
+			"data": "test",
+		},
+	}
+
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	// When workspace is not started (isWorkspaceStarted=false), configmap with mount-on-start-only should be mounted
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, false)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
+	assert.Equal(t, "test-cm", testPodAdditions.Volumes[0].Name)
+}
+
+func TestShouldNotMountPVCWithMountOnStartOnlyIfWorkspaceStarted(t *testing.T) {
+	testPVC := corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pvc",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-path":          "/test/path",
+				"controller.devfile.io/mount-on-start-only": "true",
+			},
+		},
+	}
+
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testPVC).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	// When workspace is started (isWorkspaceStarted=true), PVC with mount-on-start-only should be skipped
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, true)
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountPVCWithMountOnStartOnlyIfWorkspaceNotStarted(t *testing.T) {
+	testPVC := corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pvc",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-path":          "/test/path",
+				"controller.devfile.io/mount-on-start-only": "true",
+			},
+		},
+	}
+
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testPVC).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	// When workspace is not started (isWorkspaceStarted=false), PVC with mount-on-start-only should be mounted
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, false)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
+	assert.Equal(t, common.AutoMountPVCVolumeName("test-pvc"), testPodAdditions.Volumes[0].Name)
 }

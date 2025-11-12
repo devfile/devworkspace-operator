@@ -1,0 +1,16 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: disabled-init-test
+spec:
+  started: true
+  routingClass: 'basic'
+  template:
+    attributes:
+      controller.devfile.io/storage-type: per-user
+    components:
+      - name: tooling
+        container:
+          image: quay.io/devfile/universal-developer-image:latest
+          memoryLimit: 2Gi
+          mountSources: true

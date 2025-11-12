@@ -114,9 +114,10 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		fuzzedConfig := &v1alpha1.OperatorConfiguration{}
 		f.Fuzz(fuzzedConfig)
-		// Skip checking these two fields as they're interface fields and hard to fuzz.
+		// Skip checking these fields as they're interface fields and hard to fuzz.
 		fuzzedConfig.Workspace.DefaultStorageSize = defaultConfig.Workspace.DefaultStorageSize.DeepCopy()
 		fuzzedConfig.Workspace.PodSecurityContext = defaultConfig.Workspace.PodSecurityContext.DeepCopy()
+		fuzzedConfig.Workspace.InitContainers = defaultConfig.Workspace.InitContainers
 		clusterConfig := buildConfig(fuzzedConfig)
 		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig).Build()
 		err := SetupControllerConfig(client)

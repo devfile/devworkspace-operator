@@ -40,9 +40,13 @@ This means that to test commits in a release branch before running the release j
 ```bash
 export DWO_IMG=quay.io/yourrepo/devworkspace-controller:prerelease
 export PROJECT_CLONE_IMG=quay.io/yourrepo/project-clone:prerelease
+export PROJECT_BACKUP_IMG=quay.io/yourrepo/project-backup:prerelease
 # build and push project clone image
 podman build -t "$PROJECT_CLONE_IMG" -f ./project-clone/Dockerfile .
 podman push "$PROJECT_CLONE_IMG"
+# build and push project backup image
+podman build -t "$PROJECT_BACKUP_IMG" -f ./project-backup/Containerfile ./project-backup/
+podman push "$PROJECT_BACKUP_IMG"
 # build and push DevWorkspace Operator image
 export DOCKER=podman # optional
 make docker

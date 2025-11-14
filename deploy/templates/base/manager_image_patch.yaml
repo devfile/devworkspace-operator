@@ -16,3 +16,5 @@ spec:
             value: ${DWO_IMG}
           - name: RELATED_IMAGE_project_clone
             value: ${PROJECT_CLONE_IMG}
+          - name: RELATED_IMAGE_project_backup
+            value: ${PROJECT_BACKUP_IMG}

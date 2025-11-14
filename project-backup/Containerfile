@@ -1,0 +1,29 @@
+FROM registry.access.redhat.com/ubi9:9.5
+
+ARG USER_HOME_DIR="/home/user"
+ARG INSTALL_PACKAGES="shadow-utils bash jq podman buildah ca-certificates fuse-overlayfs"
+
+ENV HOME=${USER_HOME_DIR}
+ENV BUILDAH_ISOLATION=chroot
+
+
+COPY --chown=0:0 entrypoint.sh /
+COPY --chown=0:0 workspace-recovery.sh /
+
+RUN set -e ; \
+  dnf install -y ${INSTALL_PACKAGES} ; \
+  dnf update -y ; \
+  dnf clean all ; \
+  mkdir -p ${USER_HOME_DIR} ; \
+  mkdir -p ${USER_HOME_DIR}/.config/containers ; \
+  (echo '[storage]';echo 'driver = "overlay"';echo 'graphroot = "/tmp/graphroot"';echo '[storage.options.overlay]';echo 'mount_program = "/usr/bin/fuse-overlayfs"') > ${USER_HOME_DIR}/.config/containers/storage.conf ; \
+  chown -R 1000:1000 ${USER_HOME_DIR} ; \
+  chmod +x /entrypoint.sh ; \
+  chmod +x /workspace-recovery.sh ; \
+  echo "user:x:1000:0:devspaces user:${USER_HOME_DIR}:/bin/bash" >> /etc/passwd ; \
+  echo "user:x:1000:" >> /etc/group
+
+
+USER 1000
+WORKDIR ${USER_HOME_DIR}
+ENTRYPOINT ["/usr/libexec/podman/catatonit","--","/entrypoint.sh"]

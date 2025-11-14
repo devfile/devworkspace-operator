@@ -19,10 +19,7 @@ rules:
   - ""
   resources:
   - configmaps
-  - persistentvolumeclaims
   - pods
-  - secrets
-  - serviceaccounts
   - services
   verbs:
   - '*'
@@ -35,6 +32,12 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumeclaims
+  verbs:
+  - '*'
 - apiGroups:
   - ""
   resources:
@@ -52,6 +55,13 @@ rules:
   - delete
   - get
   - patch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - serviceaccounts
+  verbs:
+  - '*'
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
@@ -122,6 +132,8 @@ rules:
   verbs:
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - controller.devfile.io

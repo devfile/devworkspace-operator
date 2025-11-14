@@ -31,7 +31,7 @@
 set -e
 
 # List of environment variables that will be replaced by envsubst
-SUBST_VARS='$NAMESPACE $DWO_IMG $PROJECT_CLONE_IMG $ROUTING_SUFFIX $DEFAULT_ROUTING $PULL_POLICY'
+SUBST_VARS='$NAMESPACE $DWO_IMG $PROJECT_CLONE_IMG $PROJECT_BACKUP_IMG $ROUTING_SUFFIX $DEFAULT_ROUTING $PULL_POLICY'
 
 SCRIPT_DIR=$(cd "$(dirname "$0")"; pwd)
 DEPLOY_DIR="$SCRIPT_DIR/../../deploy/"
@@ -58,6 +58,11 @@ Arguments:
       '--use-defaults' is passed; otherwise, the value of the PROJECT_CLONE_IMG
       environment variable is used. If unspecifed, the default value of
       'quay.io/devfile/project-clone:next' is used.
+  --project-backup-image
+      Image to use for the project backup workspace. Used only when
+      '--use-defaults' is passed; otherwise, the value of the PROJECT_BACKUP_IMG
+      environment variable is used. If unspecifed, the default value of
+      'quay.io/devfile/project-backup:next' is used.
   --split-yaml
       Parse output file combined.yaml into a yaml file for each record
       in combined yaml. Files are output to the 'objects' subdirectory
@@ -96,6 +101,10 @@ while [[ "$#" -gt 0 ]]; do
       PROJECT_CLONE_IMG=$2
       shift
       ;;
+      --project-backup-image)
+      PROJECT_BACKUP_IMG=$2
+      shift
+      ;;
       --split-yamls)
       SPLIT_YAMLS=true
       ;;
@@ -118,6 +127,7 @@ if $USE_DEFAULT_ENV; then
   export NAMESPACE=devworkspace-controller
   export DWO_IMG=${DEFAULT_DWO_IMG:-"quay.io/devfile/devworkspace-controller:next"}
   export PROJECT_CLONE_IMG=${PROJECT_CLONE_IMG:-"quay.io/devfile/project-clone:next"}
+  export PROJECT_BACKUP_IMG=${PROJECT_BACKUP_IMG:-"quay.io/devfile/project-backup:next"}
   export PULL_POLICY=Always
   export DEFAULT_ROUTING=basic
   export DEVWORKSPACE_API_VERSION=a6ec0a38307b63a29fad2eea945cc69bee97a683

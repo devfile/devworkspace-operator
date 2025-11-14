@@ -86,3 +86,5 @@ spec:
               value: "quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1"
             - name: RELATED_IMAGE_project_clone
               value: "quay.io/devfile/project-clone:next"
+            - name: RELATED_IMAGE_project_backup
+              value: "quay.io/devfile/project-backup:next"

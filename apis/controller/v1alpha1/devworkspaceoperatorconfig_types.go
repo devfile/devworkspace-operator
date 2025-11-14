@@ -72,6 +72,27 @@ type CleanupCronJobConfig struct {
 	Schedule string `json:"schedule,omitempty"`
 }
 
+type BackupCronJobConfig struct {
+	// Enable determines whether backup CronJobs should be created for workspace PVCs.
+	// Defaults to false if not specified.
+	// +kubebuilder:validation:Optional
+	Enable *bool `json:"enable,omitempty"`
+	// Schedule specifies the cron schedule for the backup cron job.
+	// For example, "0 2 * * *" runs daily at 2 AM.
+	// +kubebuilder:default:="0 2 * * *"
+	// +kubebuilder:validation:Optional
+	Schedule string `json:"schedule,omitempty"`
+	// A registry where backup images are stored. Images are stored
+	// in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+	// +kubebuilder:validation:Required
+	Registry string `json:"registry,omitempty"`
+
+	// RegistryAuthSecret is the name of a Kubernetes secret of
+	// type kubernetes.io/dockerconfigjson
+	// +kubebuilder:validation:Optional
+	RegistryAuthSecret string `json:"registryAuthSecret,omitempty"`
+}
+
 type RoutingConfig struct {
 	// DefaultRoutingClass specifies the routingClass to be used when a DevWorkspace
 	// specifies an empty `.spec.routingClass`. Supported routingClasses can be defined
@@ -189,6 +210,8 @@ type WorkspaceConfig struct {
 	RuntimeClassName *string `json:"runtimeClassName,omitempty"`
 	// CleanupCronJobConfig defines configuration options for a cron job that automatically cleans up stale DevWorkspaces.
 	CleanupCronJob *CleanupCronJobConfig `json:"cleanupCronJob,omitempty"`
+	// BackupCronJobConfig defines configuration options for a cron job that automatically backs up workspace PVCs.
+	BackupCronJob *BackupCronJobConfig `json:"backupCronJob,omitempty"`
 	// PostStartTimeout defines the maximum duration the PostStart hook can run
 	// before it is automatically failed. This timeout is used for the postStart lifecycle hook
 	// that is used to run commands in the workspace container. The timeout is specified in seconds.
@@ -331,14 +354,26 @@ type ConfigmapReference struct {
 	Namespace string `json:"namespace"`
 }
 
+type OperatorConfigurationStatus struct {
+	// Conditions represent the latest available observations of the OperatorConfiguration's state
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// LastBackupTime is the timestamp of the last successful backup. Nil if
+	// no backup is configured or no backup has yet succeeded.
+	LastBackupTime *metav1.Time `json:"lastBackupTime,omitempty"`
+}
+
 // DevWorkspaceOperatorConfig is the Schema for the devworkspaceoperatorconfigs API
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:path=devworkspaceoperatorconfigs,scope=Namespaced,shortName=dwoc
 type DevWorkspaceOperatorConfig struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Config *OperatorConfiguration `json:"config,omitempty"`
+	// Status represents the current status of the DevWorkspaceOperatorConfig
+	// automatically managed by the DevWorkspace Operator.
+	Status *OperatorConfigurationStatus `json:"status,omitempty"`
 }
 
 // DevWorkspaceOperatorConfigList contains a list of DevWorkspaceOperatorConfig

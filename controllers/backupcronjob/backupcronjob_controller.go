@@ -347,7 +347,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					ServiceAccountName: JobRunnerSAName,
+					ServiceAccountName: JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId,
 					RestartPolicy:      corev1.RestartPolicyNever,
 					SecurityContext: &corev1.PodSecurityContext{
 						FSGroup: ptr.To[int64](0),

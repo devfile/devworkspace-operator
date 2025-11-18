@@ -37,7 +37,7 @@ func (r *BackupCronJobReconciler) ensureJobRunnerRBAC(ctx context.Context, works
 	)
 
 	sa := &corev1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{Name: JobRunnerSAName, Namespace: workspace.Namespace, Labels: map[string]string{
+		ObjectMeta: metav1.ObjectMeta{Name: JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId, Namespace: workspace.Namespace, Labels: map[string]string{
 			constants.DevWorkspaceIDLabel:          workspace.Status.DevWorkspaceId,
 			constants.DevWorkspaceWatchSecretLabel: "true",
 		}},
@@ -47,6 +47,7 @@ func (r *BackupCronJobReconciler) ensureJobRunnerRBAC(ctx context.Context, works
 	if err := controllerutil.SetControllerReference(workspace, sa, r.Scheme); err != nil {
 		return err
 	}
+
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error { return nil }); err != nil {
 		return fmt.Errorf("ensuring ServiceAccount: %w", err)
 	}

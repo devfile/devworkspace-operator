@@ -12,19 +12,19 @@ BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY}/backup-${DEVWORKSPACE_NAMESPACE}-$
 
 # --- Functions ---
 backup() {
-  local new_image
-  new_image=$(buildah from scratch)
 
-  echo "Backing up workspace from path: $BACKUP_SOURCE_PATH"
-  ls -la "$BACKUP_SOURCE_PATH"
+  cat <<EOF > /home/podman/Dockerfile.backup
+FROM scratch
+COPY "$BACKUP_SOURCE_PATH" /
+LABEL DEVWORKSPACE="$DEVWORKSPACE_NAME"
+LABEL NAMESPACE="$DEVWORKSPACE_NAMESPACE"
+EOF
+  podman build \
+  --file /home/podman/Dockerfile.backup \
+  --tag "$BACKUP_IMAGE" /
 
-  buildah copy "$new_image" "$BACKUP_SOURCE_PATH" /
-  buildah config --label DEVWORKSPACE="$DEVWORKSPACE_NAME" "$new_image"
-  buildah config --label NAMESPACE="$DEVWORKSPACE_NAMESPACE" "$new_image"
-  buildah commit "$new_image" "$BACKUP_IMAGE"
+  podman push ${PODMAN_PUSH_OPTIONS:-} "$BACKUP_IMAGE"
 
-  buildah umount "$new_image"
-  buildah push ${BUILDAH_PUSH_OPTIONS:-} "$BACKUP_IMAGE"
 }
 
 restore() {

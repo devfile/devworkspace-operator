@@ -22,8 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"k8s.io/utils/ptr"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/images"
@@ -40,6 +38,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -253,7 +252,7 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 	}
 	dwOperatorConfig.Status.LastBackupTime = &metav1.Time{Time: metav1.Now().Time}
 
-	err = r.Status().Patch(ctx, dwOperatorConfig, origConfig)
+	err = r.NonCachingClient.Status().Patch(ctx, dwOperatorConfig, origConfig)
 	if err != nil {
 		log.Error(err, "Failed to update DevWorkspaceOperatorConfig status with last backup time")
 		// Not returning error as the backup jobs were created successfully
@@ -346,12 +345,14 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"io.kubernetes.cri-o.Devices": "/dev/fuse",
+					},
+				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId,
 					RestartPolicy:      corev1.RestartPolicyNever,
-					SecurityContext: &corev1.PodSecurityContext{
-						FSGroup: ptr.To[int64](0),
-					},
 					Containers: []corev1.Container{
 						{
 							Name: "backup-workspace",
@@ -363,10 +364,8 @@ func (r *BackupCronJobReconciler) createBackupJob(
 									Name:  "BACKUP_SOURCE_PATH",
 									Value: "/workspace/" + workspacePath,
 								},
-								{Name: "STORAGE_DRIVER", Value: "overlay"},
-								{Name: "BUILDAH_ISOLATION", Value: "chroot"},
 								{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: backUpConfig.Registry.Path},
-								{Name: "BUILDAH_PUSH_OPTIONS", Value: "--tls-verify=false"},
+								{Name: "PODMAN_PUSH_OPTIONS", Value: "--tls-verify=false"},
 							},
 							Image: images.GetProjectBackupImage(),
 							Args: []string{
@@ -384,8 +383,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:                ptr.To[int64](0),
-								AllowPrivilegeEscalation: ptr.To[bool](false),
+								RunAsUser: ptr.To[int64](1000),
 							},
 						},
 					},
@@ -424,12 +422,12 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		})
 		job.Spec.Template.Spec.Containers[0].VolumeMounts = append(job.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      "registry-auth-secret",
-			MountPath: "/home/user/.docker",
+			MountPath: "/home/podman/.docker",
 			ReadOnly:  true,
 		})
 		job.Spec.Template.Spec.Containers[0].Env = append(job.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  "REGISTRY_AUTH_FILE",
-			Value: "/home/user/.docker/.dockerconfigjson",
+			Value: "/home/podman/.docker/.dockerconfigjson",
 		})
 
 	}

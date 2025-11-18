@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"reflect"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -72,27 +73,7 @@ func shouldReconcileOnUpdate(e event.UpdateEvent, log logr.Logger) bool {
 	oldBackup := oldConfig.Config.Workspace.BackupCronJob
 	newBackup := newConfig.Config.Workspace.BackupCronJob
 
-	if oldBackup == nil && newBackup == nil {
-		return false
-	}
-	if (oldBackup == nil && newBackup != nil) || (oldBackup != nil && newBackup == nil) {
-		return true
-	}
-	if !ptr.Equal(oldBackup.Enable, newBackup.Enable) {
-		return true
-	}
-
-	if oldBackup.Schedule != newBackup.Schedule {
-		return true
-	}
-	if oldBackup.Registry != newBackup.Registry {
-		return true
-	}
-	if oldBackup.RegistryAuthSecret != newBackup.RegistryAuthSecret {
-		return true
-	}
-
-	return false
+	return !reflect.DeepEqual(oldBackup, newBackup)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -282,16 +263,16 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 
 func (r *BackupCronJobReconciler) getRegistryAuthSecret(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger) (*corev1.Secret, error) {
 	registryAuthSecret := &corev1.Secret{}
-	if dwOperatorConfig.Config.Workspace.BackupCronJob.RegistryAuthSecret != "" {
+	if dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret != "" {
 		err := r.NonCachingClient.Get(ctx, client.ObjectKey{
-			Name:      dwOperatorConfig.Config.Workspace.BackupCronJob.RegistryAuthSecret,
+			Name:      dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret,
 			Namespace: dwOperatorConfig.Namespace,
 		}, registryAuthSecret)
 		if err != nil {
-			log.Error(err, "Failed to get registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.RegistryAuthSecret)
+			log.Error(err, "Failed to get registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
 			return nil, err
 		}
-		log.Info("Successfully retrieved registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.RegistryAuthSecret)
+		log.Info("Successfully retrieved registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
 		return registryAuthSecret, nil
 	}
 	return nil, nil
@@ -384,7 +365,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								},
 								{Name: "STORAGE_DRIVER", Value: "overlay"},
 								{Name: "BUILDAH_ISOLATION", Value: "chroot"},
-								{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: backUpConfig.Registry},
+								{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: backUpConfig.Registry.Path},
 								{Name: "BUILDAH_PUSH_OPTIONS", Value: "--tls-verify=false"},
 							},
 							Image: images.GetProjectBackupImage(),

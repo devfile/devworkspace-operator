@@ -72,25 +72,30 @@ type CleanupCronJobConfig struct {
 	Schedule string `json:"schedule,omitempty"`
 }
 
+type RegistryConfig struct {
+	// A registry where backup images are stored. Images are stored
+	// in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+	// +kubebuilder:validation:Required
+	Path string `json:"path,omitempty"`
+	// AuthSecret is the name of a Kubernetes secret of
+	// type kubernetes.io/dockerconfigjson
+	// +kubebuilder:validation:Optional
+	AuthSecret string `json:"authSecret,omitempty"`
+}
+
 type BackupCronJobConfig struct {
 	// Enable determines whether backup CronJobs should be created for workspace PVCs.
 	// Defaults to false if not specified.
 	// +kubebuilder:validation:Optional
 	Enable *bool `json:"enable,omitempty"`
+	// RegistryConfig defines the registry configuration where backup images are stored.
+	// +kubebuilder:validation:Required
+	Registry *RegistryConfig `json:"registry,omitempty"`
 	// Schedule specifies the cron schedule for the backup cron job.
 	// For example, "0 2 * * *" runs daily at 2 AM.
 	// +kubebuilder:default:="0 2 * * *"
 	// +kubebuilder:validation:Optional
 	Schedule string `json:"schedule,omitempty"`
-	// A registry where backup images are stored. Images are stored
-	// in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
-	// +kubebuilder:validation:Required
-	Registry string `json:"registry,omitempty"`
-
-	// RegistryAuthSecret is the name of a Kubernetes secret of
-	// type kubernetes.io/dockerconfigjson
-	// +kubebuilder:validation:Optional
-	RegistryAuthSecret string `json:"registryAuthSecret,omitempty"`
 }
 
 type RoutingConfig struct {

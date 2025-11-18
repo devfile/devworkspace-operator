@@ -441,11 +441,11 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			if from.Workspace.BackupCronJob.Schedule != "" {
 				to.Workspace.BackupCronJob.Schedule = from.Workspace.BackupCronJob.Schedule
 			}
-			if from.Workspace.BackupCronJob.Registry != "" {
-				to.Workspace.BackupCronJob.Registry = from.Workspace.BackupCronJob.Registry
+			if from.Workspace.BackupCronJob.Registry.Path != "" {
+				to.Workspace.BackupCronJob.Registry.Path = from.Workspace.BackupCronJob.Registry.Path
 			}
-			if from.Workspace.BackupCronJob.RegistryAuthSecret != "" {
-				to.Workspace.BackupCronJob.RegistryAuthSecret = from.Workspace.BackupCronJob.RegistryAuthSecret
+			if from.Workspace.BackupCronJob.Registry.AuthSecret != "" {
+				to.Workspace.BackupCronJob.Registry.AuthSecret = from.Workspace.BackupCronJob.Registry.AuthSecret
 			}
 		}
 

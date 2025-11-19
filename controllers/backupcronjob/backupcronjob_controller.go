@@ -464,7 +464,7 @@ func (r *BackupCronJobReconciler) getWorkspacePVCName(workspace *dw.DevWorkspace
 		if dwOperatorConfig.Config.Workspace.PVCName != "" {
 			pvcName = dwOperatorConfig.Config.Workspace.PVCName
 		}
-		return pvcName, workspace.Status.DevWorkspaceId + "/" + constants.DefaultProjectsSourcesRoot, nil
+		return pvcName, workspace.Status.DevWorkspaceId + constants.DefaultProjectsSourcesRoot, nil
 	}
 	return "", "", nil
 }

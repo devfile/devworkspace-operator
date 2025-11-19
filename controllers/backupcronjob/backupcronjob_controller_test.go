@@ -38,6 +38,7 @@ import (
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 var _ = Describe("BackupCronJobReconciler", func() {
@@ -152,6 +153,39 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(reconciler.cron.Entries()).To(HaveLen(1))
 		})
 
+		It("Should stop cron if cron is disabled", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(reconciler.cron.Entries()).To(HaveLen(1))
+
+			disabled := false
+			dwoc.Config.Workspace.BackupCronJob.Enable = &disabled
+			Expect(fakeClient.Update(ctx, dwoc)).To(Succeed())
+			result, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(reconciler.cron.Entries()).To(HaveLen(0))
+		})
+
 		It("Should update cron schedule if DevWorkspaceOperatorConfig is updated", func() {
 			enabled := true
 			schedule1 := "* * * * *"
@@ -186,6 +220,32 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(result).To(Equal(ctrl.Result{}))
 			Expect(reconciler.cron.Entries()).To(HaveLen(1))
 			Expect(reconciler.cron.Entries()[0].ID).NotTo(Equal(entryID))
+		})
+
+		It("Should stop cron schedule if cron value is invalid", func() {
+			enabled := true
+			schedule1 := "invalid schedule"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule1,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+
+			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(reconciler.cron.Entries()).To(HaveLen(0))
+
 		})
 
 		It("Should stop cron if DevWorkspaceOperatorConfig is deleted", func() {
@@ -223,6 +283,32 @@ var _ = Describe("BackupCronJobReconciler", func() {
 	})
 
 	Context("executeBackupSync", func() {
+		It("should fail if registry secret does not exist", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path:       "fake-registry",
+								AuthSecret: "non-existent",
+							},
+						},
+					},
+				},
+			}
+			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-recent"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(HaveOccurred())
+		})
+
 		It("creates a Job for a DevWorkspace stopped with no previous backup", func() {
 			enabled := true
 			schedule := "* * * * *"
@@ -253,6 +339,25 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(1))
+			job := jobList.Items[0]
+			Expect(job.Labels[constants.DevWorkspaceIDLabel]).To(Equal("id-recent"))
+			Expect(job.Spec.Template.Spec.ServiceAccountName).To(Equal("devworkspace-job-runner-id-recent"))
+			container := job.Spec.Template.Spec.Containers[0]
+			expectedEnvs := []corev1.EnvVar{
+				{Name: "DEVWORKSPACE_NAME", Value: "dw-recent"},
+				{Name: "DEVWORKSPACE_NAMESPACE", Value: "ns-a"},
+				{Name: "WORKSPACE_ID", Value: "id-recent"},
+				{Name: "BACKUP_SOURCE_PATH", Value: "/workspace/id-recent/projects"},
+				{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: "fake-registry"},
+				{Name: "PODMAN_PUSH_OPTIONS", Value: "--tls-verify=false"},
+			}
+			Expect(container.Env).Should(ContainElements(expectedEnvs), "container env vars should include vars neeeded for backup")
+
+			expectedVolumeMounts := []corev1.VolumeMount{
+				{MountPath: "/workspace", Name: "workspace-data"},
+				{MountPath: "/var/lib/containers", Name: "build-storage"},
+			}
+			Expect(container.VolumeMounts).Should(ContainElements(expectedVolumeMounts), "container volume mounts should include mounts needed for backup")
 		})
 
 		It("does not create a Job when the DevWorkspace was stopped beyond time range", func() {
@@ -357,6 +462,58 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(jobList.Items).To(HaveLen(1))
 		})
 	})
+	Context("ensureJobRunnerRBAC", func() {
+		It("creates ServiceAccount for Job runner", func() {
+			dw := createDevWorkspace("dw-rbac", "ns-rbac", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.DevWorkspaceId = "id-rbac"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			err := reconciler.ensureJobRunnerRBAC(ctx, dw)
+			Expect(err).ToNot(HaveOccurred())
+
+			sa := &corev1.ServiceAccount{}
+			err = fakeClient.Get(ctx, types.NamespacedName{
+				Name:      "devworkspace-job-runner-id-rbac",
+				Namespace: dw.Namespace,
+			}, sa)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(sa.Labels).To(HaveKeyWithValue(constants.DevWorkspaceIDLabel, "id-rbac"))
+			Expect(sa.Labels).To(HaveKeyWithValue(constants.DevWorkspaceWatchSecretLabel, "true"))
+
+			// Calling again should be idempotent
+			err = reconciler.ensureJobRunnerRBAC(ctx, dw)
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+	Context("wasStoppedSinceLastBackup", func() {
+		It("returns true if DevWorkspace was stopped since last backup", func() {
+			lastBackupTime := metav1.NewTime(time.Now().Add(-30 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+			dw := createDevWorkspace("dw-test", "ns-test", false, workspaceStoppedTime)
+			result := reconciler.wasStoppedSinceLastBackup(dw, &lastBackupTime, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("returns false if DevWorkspace was stopped before last backup", func() {
+			lastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+			dw := createDevWorkspace("dw-test", "ns-test", false, workspaceStoppedTime)
+			result := reconciler.wasStoppedSinceLastBackup(dw, &lastBackupTime, log)
+			Expect(result).To(BeFalse())
+		})
+		It("returns true if there is no last backup time", func() {
+			dw := createDevWorkspace("dw-test", "ns-test", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			result := reconciler.wasStoppedSinceLastBackup(dw, nil, log)
+			Expect(result).To(BeTrue())
+		})
+		It("returns false if DevWorkspace is running", func() {
+			lastBackupTime := metav1.NewTime(time.Now().Add(-30 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+			dw := createDevWorkspace("dw-test", "ns-test", true, workspaceStoppedTime)
+			result := reconciler.wasStoppedSinceLastBackup(dw, &lastBackupTime, log)
+			Expect(result).To(BeFalse())
+		})
+	})
 
 })
 
@@ -385,6 +542,7 @@ func createDevWorkspace(name, namespace string, started bool, lastTransitionTime
 		}
 		if !started {
 			condition.Status = corev1.ConditionFalse
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 		}
 		dw.Status.Conditions = append(dw.Status.Conditions, condition)
 	}

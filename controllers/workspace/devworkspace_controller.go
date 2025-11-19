@@ -490,30 +490,30 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	// Inject operator-configured init containers
 	if workspace.Config != nil && workspace.Config.Workspace != nil && len(workspace.Config.Workspace.InitContainers) > 0 {
 		// Check if init-persistent-home should be disabled
-		disableHomeInit := workspace.Config.Workspace.PersistUserHome.DisableInitContainer != nil &&
-			*workspace.Config.Workspace.PersistUserHome.DisableInitContainer
+		disableHomeInit := pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.DisableInitContainer, false)
 
 		// Prepare patches: filter and preprocess init containers from config
 		patches := []corev1.Container{}
-		for _, c := range workspace.Config.Workspace.InitContainers {
+		for _, container := range workspace.Config.Workspace.InitContainers {
 			// Special handling for init-persistent-home
-			if c.Name == constants.HomeInitComponentName {
+			if container.Name == constants.HomeInitComponentName {
 				// Skip if persistent home is disabled
 				if !home.PersistUserHomeEnabled(workspace) {
+					reqLogger.Info("Skipping init-persistent-home container: persistent home is disabled")
 					continue
 				}
 				// Skip if init container is explicitly disabled
 				if disableHomeInit {
+					reqLogger.Info("Skipping init-persistent-home container: DisableInitContainer is true")
 					continue
 				}
 				// Apply defaults and validation for init-persistent-home
-				validated, err := defaultAndValidateHomeInitContainer(c, workspace)
+				container, err = defaultAndValidateHomeInitContainer(container, workspace)
 				if err != nil {
 					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 				}
-				c = validated
 			}
-			patches = append(patches, c)
+			patches = append(patches, container)
 		}
 
 		// Perform strategic merge

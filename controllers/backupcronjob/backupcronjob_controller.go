@@ -210,7 +210,7 @@ func (r *BackupCronJobReconciler) stopCron(log logr.Logger) {
 func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger) error {
 	log.Info("Executing backup sync for all DevWorkspaces")
 
-	registyAuthSecret, err := r.getRegistryAuthSecret(ctx, dwOperatorConfig, log)
+	registryAuthSecret, err := r.getRegistryAuthSecret(ctx, dwOperatorConfig, log)
 	if err != nil {
 		log.Error(err, "Failed to get registry auth secret for backup job")
 		return err
@@ -239,7 +239,7 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 			continue
 		}
 
-		if err := r.createBackupJob(&dw, ctx, dwOperatorConfig, registyAuthSecret, log); err != nil {
+		if err := r.createBackupJob(&dw, ctx, dwOperatorConfig, registryAuthSecret, log); err != nil {
 			log.Error(err, "Failed to create backup Job for DevWorkspace", "id", dwID)
 			continue
 		}
@@ -310,7 +310,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	workspace *dw.DevWorkspace,
 	ctx context.Context,
 	dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig,
-	registyAuthSecret *corev1.Secret,
+	registryAuthSecret *corev1.Secret,
 	log logr.Logger,
 ) error {
 	dwID := workspace.Status.DevWorkspaceId
@@ -407,8 +407,8 @@ func (r *BackupCronJobReconciler) createBackupJob(
 			},
 		},
 	}
-	if registyAuthSecret != nil {
-		secret, err := r.copySecret(workspace, ctx, registyAuthSecret, log)
+	if registryAuthSecret != nil {
+		secret, err := r.copySecret(workspace, ctx, registryAuthSecret, log)
 		if err != nil {
 			return err
 		}

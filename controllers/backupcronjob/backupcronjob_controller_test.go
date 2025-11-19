@@ -111,7 +111,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   pointer.Bool(true),
 							Schedule: "* * * * *",
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registy",
+								Path: "fake-registry",
 							},
 						},
 					},
@@ -138,7 +138,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registy",
+								Path: "fake-registry",
 							},
 						},
 					},
@@ -163,7 +163,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule1,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registy",
+								Path: "fake-registry",
 							},
 						},
 					},
@@ -199,7 +199,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registy",
+								Path: "fake-registry",
 							},
 						},
 					},
@@ -223,7 +223,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 	})
 
 	Context("executeBackupSync", func() {
-		It("creates a Job for a DevWorkspace stopped with no previsou backup", func() {
+		It("creates a Job for a DevWorkspace stopped with no previous backup", func() {
 			enabled := true
 			schedule := "* * * * *"
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
@@ -234,7 +234,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registy",
+								Path: "fake-registry",
 							},
 						},
 					},
@@ -267,7 +267,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registy",
+								Path: "fake-registry",
 							},
 						},
 					},
@@ -302,7 +302,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registy",
+								Path: "fake-registry",
 							},
 						},
 					},
@@ -321,7 +321,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(jobList.Items).To(HaveLen(0))
 		})
 
-		It("creates a Job for a DevWorkspace stopped with no previsou backup and auth registry", func() {
+		It("creates a Job for a DevWorkspace stopped with no previous backup and auth registry", func() {
 			enabled := true
 			schedule := "* * * * *"
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
@@ -393,14 +393,12 @@ func createDevWorkspace(name, namespace string, started bool, lastTransitionTime
 }
 
 func createAuthSecret(name, namespace string, data map[string][]byte) *corev1.Secret {
-	{
-		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
-			},
-			Data: data,
-		}
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Data: data,
 	}
 }
 

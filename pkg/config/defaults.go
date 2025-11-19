@@ -85,9 +85,6 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 		BackupCronJob: &v1alpha1.BackupCronJobConfig{
 			Enable:   pointer.Bool(false),
 			Schedule: "0 0 1 * *",
-			Registry: &v1alpha1.RegistryConfig{
-				Path: "sample.com",
-			},
 		},
 		// Do not declare a default value for this field.
 		// Setting a default leads to an endless reconcile loop when UserNamespacesSupport is disabled,

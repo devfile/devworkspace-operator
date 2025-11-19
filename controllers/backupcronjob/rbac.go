@@ -31,11 +31,6 @@ const (
 )
 
 func (r *BackupCronJobReconciler) ensureJobRunnerRBAC(ctx context.Context, workspace *dw.DevWorkspace) error {
-	const (
-		roleName = "devworkspace-job-runner-role"
-		rbName   = "devworkspace-job-runner-rolebinding"
-	)
-
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId, Namespace: workspace.Namespace, Labels: map[string]string{
 			constants.DevWorkspaceIDLabel:          workspace.Status.DevWorkspaceId,

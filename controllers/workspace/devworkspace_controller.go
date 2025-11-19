@@ -150,6 +150,20 @@ func validateHomeInitContainer(c corev1.Container) error {
 	return nil
 }
 
+// ensureHomeInitContainerFields ensures that an init-persistent-home container has
+// the correct Command, Args, and VolumeMounts.
+func ensureHomeInitContainerFields(c *corev1.Container) error {
+	c.Command = []string{"/bin/sh", "-c"}
+	if len(c.Args) != 1 {
+		return fmt.Errorf("args must contain exactly one script string for %s", constants.HomeInitComponentName)
+	}
+	c.VolumeMounts = []corev1.VolumeMount{{
+		Name:      constants.HomeVolumeName,
+		MountPath: constants.HomeUserDirectory,
+	}}
+	return nil
+}
+
 // defaultAndValidateHomeInitContainer applies defaults and validation for a custom
 // DWOC-provided init container named init-persistent-home. It ensures a shell execution
 // model, a single script arg, injects the persistent-home mount at /home/user/, and
@@ -165,10 +179,9 @@ func defaultAndValidateHomeInitContainer(c corev1.Container, workspace *common.D
 		return c, err
 	}
 
-	c.VolumeMounts = []corev1.VolumeMount{{
-		Name:      constants.HomeVolumeName,
-		MountPath: constants.HomeUserDirectory,
-	}}
+	if err = ensureHomeInitContainerFields(&c); err != nil {
+		return c, err
+	}
 
 	return c, nil
 }
@@ -512,17 +525,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Ensure init-persistent-home container have correct fields after merge
 		for i := range merged {
 			if merged[i].Name == constants.HomeInitComponentName {
-				// Ensure Command is correct (should be set by defaultAndValidateHomeInitContainer, but enforce after merge)
-				merged[i].Command = []string{"/bin/sh", "-c"}
-				// Args should be set by patch validation, but ensure it has exactly one element
-				if len(merged[i].Args) != 1 {
-					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: args must contain exactly one script string", constants.HomeInitComponentName), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+				if err := ensureHomeInitContainerFields(&merged[i]); err != nil {
+					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 				}
-				// Ensure VolumeMounts are correct
-				merged[i].VolumeMounts = []corev1.VolumeMount{{
-					Name:      constants.HomeVolumeName,
-					MountPath: constants.HomeUserDirectory,
-				}}
 			}
 		}
 

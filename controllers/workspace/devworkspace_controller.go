@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/initcontainers"
 	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -474,11 +475,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	}
 
 	// Inject operator-configured init containers
-	if workspace.Config != nil && workspace.Config.Workspace != nil {
+	if workspace.Config != nil && workspace.Config.Workspace != nil && len(workspace.Config.Workspace.InitContainers) > 0 {
 		// Check if init-persistent-home should be disabled
 		disableHomeInit := workspace.Config.Workspace.PersistUserHome.DisableInitContainer != nil &&
 			*workspace.Config.Workspace.PersistUserHome.DisableInitContainer
 
+		// Prepare patches: filter and preprocess init containers from config
+		patches := []corev1.Container{}
 		for _, c := range workspace.Config.Workspace.InitContainers {
 			// Special handling for init-persistent-home
 			if c.Name == constants.HomeInitComponentName {
@@ -497,8 +500,33 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				}
 				c = validated
 			}
-			devfilePodAdditions.InitContainers = append(devfilePodAdditions.InitContainers, c)
+			patches = append(patches, c)
 		}
+
+		// Perform strategic merge
+		merged, err := initcontainers.MergeInitContainers(devfilePodAdditions.InitContainers, patches)
+		if err != nil {
+			return r.failWorkspace(workspace, fmt.Sprintf("Failed to merge init containers: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+		}
+
+		// Ensure init-persistent-home container have correct fields after merge
+		for i := range merged {
+			if merged[i].Name == constants.HomeInitComponentName {
+				// Ensure Command is correct (should be set by defaultAndValidateHomeInitContainer, but enforce after merge)
+				merged[i].Command = []string{"/bin/sh", "-c"}
+				// Args should be set by patch validation, but ensure it has exactly one element
+				if len(merged[i].Args) != 1 {
+					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: args must contain exactly one script string", constants.HomeInitComponentName), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+				}
+				// Ensure VolumeMounts are correct
+				merged[i].VolumeMounts = []corev1.VolumeMount{{
+					Name:      constants.HomeVolumeName,
+					MountPath: constants.HomeUserDirectory,
+				}}
+			}
+		}
+
+		devfilePodAdditions.InitContainers = merged
 	}
 
 	// Add ServiceAccount tokens into devfile containers

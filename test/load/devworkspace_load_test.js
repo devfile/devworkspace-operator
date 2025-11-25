@@ -16,6 +16,7 @@
 import http from 'k6/http';
 import {check, sleep} from 'k6';
 import {Trend, Counter} from 'k6/metrics';
+import { test } from 'k6/execution';
 import {htmlReport} from "https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js";
 import {textSummary} from "https://jslib.k6.io/k6-summary/0.0.1/index.js";
 
@@ -90,8 +91,23 @@ export function setup() {
 
 export default function () {
   if (maxDevWorkspaces > 0) {
-    const totalDevWorkspaces = getDevWorkspacesFromApiServer().length;
-    if (totalDevWorkspaces > maxDevWorkspaces) {
+    const devWorkspaces = getDevWorkspacesFromApiServer();
+    const totalDevWorkspaces = devWorkspaces.length;
+
+    const runningDevWorkspaces = devWorkspaces.filter(
+        (dw) => dw.status && dw.status.phase === 'Running'
+    ).length;
+    const startingDevWorkspaces = devWorkspaces.filter(
+        (dw) => dw.status && dw.status.phase === 'Starting'
+    ).length;
+
+    if (startingDevWorkspaces === 0 && runningDevWorkspaces >= maxDevWorkspaces) {
+      test.abort(
+          'Max concurrent DevWorkspaces target achieved (no Starting workspaces), stopping test gracefully',
+          { abortOnFail: false }
+      );
+    } else if (totalDevWorkspaces >= maxDevWorkspaces) {
+      // stop further creation, but don’t abort the test
       return;
     }
   }
@@ -457,7 +473,7 @@ function getDevWorkspacesFromApiServer() {
   }
 
   const body = JSON.parse(res.body);
-  return body.items.map((dw) => dw.metadata.name);
+  return body.items;
 }
 
 function generateDevWorkspaceToCreate(vuId, iteration, namespace) {

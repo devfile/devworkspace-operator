@@ -28,7 +28,6 @@ func TestMergeInitContainers(t *testing.T) {
 		base    []corev1.Container
 		patches []corev1.Container
 		want    []corev1.Container
-		wantErr bool
 	}{
 		{
 			name: "empty base",
@@ -39,7 +38,6 @@ func TestMergeInitContainers(t *testing.T) {
 			want: []corev1.Container{
 				{Name: "new-container", Image: "new-image"},
 			},
-			wantErr: false,
 		},
 		{
 			name: "empty patches",
@@ -50,7 +48,6 @@ func TestMergeInitContainers(t *testing.T) {
 			want: []corev1.Container{
 				{Name: "base-container", Image: "base-image"},
 			},
-			wantErr: false,
 		},
 		{
 			name: "multiple containers",
@@ -69,7 +66,6 @@ func TestMergeInitContainers(t *testing.T) {
 				{Name: "third", Image: "third-image"},
 				{Name: "new-container", Image: "new-image"},
 			},
-			wantErr: false,
 		},
 		{
 			name: "partial field merge",
@@ -97,19 +93,52 @@ func TestMergeInitContainers(t *testing.T) {
 					Env:     []corev1.EnvVar{{Name: "BASE_VAR", Value: "base-value"}},
 				},
 			},
-			wantErr: false,
+		},
+		{
+			name: "preserve user-configured init-persistent-home content",
+			base: []corev1.Container{
+				{
+					Name:    "init-persistent-home",
+					Image:   "workspace-image:latest",
+					Command: []string{"/bin/sh", "-c"},
+					Args:    []string{"default stow script"},
+				},
+			},
+			patches: []corev1.Container{
+				{
+					Name:  "init-persistent-home",
+					Image: "custom-image:latest",
+					Args:  []string{"echo 'custom init'"},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CUSTOM_VAR",
+							Value: "custom-value",
+						},
+					},
+				},
+			},
+			want: []corev1.Container{
+				{
+					Name:    "init-persistent-home",
+					Image:   "custom-image:latest",
+					Command: []string{"/bin/sh", "-c"},
+					Args:    []string{"echo 'custom init'"},
+					Env: []corev1.EnvVar{
+						{
+							Name:  "CUSTOM_VAR",
+							Value: "custom-value",
+						},
+					},
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := MergeInitContainers(tt.base, tt.patches)
-			if tt.wantErr {
-				assert.Error(t, err, "should return error")
-			} else {
-				assert.NoError(t, err, "should not return error")
-				assert.Equal(t, tt.want, got, "should return merged containers")
-			}
+			assert.NoError(t, err, "should not return error")
+			assert.Equal(t, tt.want, got, "should return merged containers")
 		})
 	}
 }

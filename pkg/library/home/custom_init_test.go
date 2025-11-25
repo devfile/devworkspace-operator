@@ -19,13 +19,13 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	attributes "github.com/devfile/api/v2/pkg/attributes"
+	"github.com/devfile/api/v2/pkg/attributes"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 )
 
 func TestCustomInitPersistentHome(t *testing.T) {
@@ -61,7 +61,7 @@ func TestCustomInitPersistentHome(t *testing.T) {
 				Config: &v1alpha1.OperatorConfiguration{
 					Workspace: &v1alpha1.WorkspaceConfig{
 						PersistUserHome: &v1alpha1.PersistentHomeConfig{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 						InitContainers: []corev1.Container{
 							{
@@ -100,7 +100,7 @@ func TestCustomInitPersistentHome(t *testing.T) {
 				Config: &v1alpha1.OperatorConfiguration{
 					Workspace: &v1alpha1.WorkspaceConfig{
 						PersistUserHome: &v1alpha1.PersistentHomeConfig{
-							Enabled: pointer.Bool(true),
+							Enabled: ptr.To(true),
 						},
 						InitContainers: []corev1.Container{
 							{
@@ -140,8 +140,8 @@ func TestCustomInitPersistentHome(t *testing.T) {
 				Config: &v1alpha1.OperatorConfiguration{
 					Workspace: &v1alpha1.WorkspaceConfig{
 						PersistUserHome: &v1alpha1.PersistentHomeConfig{
-							Enabled:              pointer.Bool(true),
-							DisableInitContainer: pointer.Bool(false),
+							Enabled:              ptr.To(true),
+							DisableInitContainer: ptr.To(false),
 						},
 						InitContainers: []corev1.Container{},
 					},
@@ -175,8 +175,8 @@ func TestCustomInitPersistentHome(t *testing.T) {
 				Config: &v1alpha1.OperatorConfiguration{
 					Workspace: &v1alpha1.WorkspaceConfig{
 						PersistUserHome: &v1alpha1.PersistentHomeConfig{
-							Enabled:              pointer.Bool(true),
-							DisableInitContainer: pointer.Bool(true),
+							Enabled:              ptr.To(true),
+							DisableInitContainer: ptr.To(true),
 						},
 					},
 				},

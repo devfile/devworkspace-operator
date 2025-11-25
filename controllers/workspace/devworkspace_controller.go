@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -127,8 +128,8 @@ func validateNoAdvancedFields(c corev1.Container) error {
 
 // validateHomeInitContainer validates all aspects of the init-persistent-home container.
 func validateHomeInitContainer(c corev1.Container) error {
-	if strings.ContainsAny(c.Image, "\n\r\t ") {
-		return fmt.Errorf("invalid image reference for %s: image reference contains invalid whitespace characters", constants.HomeInitComponentName)
+	if err := validateImageReference(c.Image); err != nil {
+		return fmt.Errorf("invalid image reference for %s: %w", constants.HomeInitComponentName, err)
 	}
 
 	if len(c.Command) != 2 || c.Command[0] != "/bin/sh" || c.Command[1] != "-c" {
@@ -145,6 +146,50 @@ func validateHomeInitContainer(c corev1.Container) error {
 
 	if err := validateNoAdvancedFields(c); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func validateImageReference(image string) error {
+	if image == "" {
+		return fmt.Errorf("image reference cannot be empty")
+	}
+
+	// whitespace and control characters
+	if strings.ContainsAny(image, "\n\r\t ") {
+		return fmt.Errorf("contains invalid whitespace characters")
+	}
+
+	// other control characters
+	for _, r := range image {
+		if r < 0x20 || r == 0x7F {
+			return fmt.Errorf("contains invalid control characters")
+		}
+	}
+
+	// format: [registry[:port]/]repository[:tag][@digest]
+	imagePattern := regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])*|\[?[0-9a-fA-F:]+]?)(:\d{1,5})?(/[a-zA-Z0-9]([a-zA-Z0-9._/-]*[a-zA-Z0-9])*)*(:[a-zA-Z0-9_.-]+)?(@sha256:[a-f0-9]{64})?$`)
+	if !imagePattern.MatchString(image) {
+		return fmt.Errorf("invalid format: should match regex: %s", imagePattern.String())
+	}
+
+	// port range
+	portMatch := regexp.MustCompile(`:(\d{1,5})(/|:|@|$)`)
+	matches := portMatch.FindStringSubmatch(image)
+	if len(matches) > 1 {
+		port, err := strconv.Atoi(matches[1])
+		if err != nil {
+			return fmt.Errorf("invalid port format: %w", err)
+		}
+		if port < 1 || port > 65535 {
+			return fmt.Errorf("invalid port number: %d (must be 1-65535)", port)
+		}
+	}
+
+	// length check
+	if len(image) > 4096 {
+		return fmt.Errorf("length exceeds 4096 characters")
 	}
 
 	return nil

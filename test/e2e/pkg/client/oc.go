@@ -16,11 +16,15 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os/exec"
 	"strings"
 	"time"
+
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (w *K8sClient) OcApplyWorkspace(namespace string, filePath string) (commandResult string, err error) {
@@ -68,12 +72,15 @@ func (w *K8sClient) GetLogsForContainer(podName string, namespace, containerName
 	return string(outBytes), err
 }
 
+// function returns an empty string as `commandResult` to match the existing signature.
 func (w *K8sClient) OcDeleteWorkspace(name, namespace string) (commandResult string, err error) {
-	cmd := exec.Command("bash", "-c", fmt.Sprintf(
-		"KUBECONFIG=%s oc delete devworkspace %s -n %s --ignore-not-found=true",
-		w.kubeCfgFile,
-		name,
-		namespace))
-	outBytes, err := cmd.CombinedOutput()
-	return string(outBytes), err
+	workspace := &dw.DevWorkspace{}
+	workspace.ObjectMeta.Name = name
+	workspace.ObjectMeta.Namespace = namespace
+
+	err = w.crClient.Delete(context.TODO(), workspace)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return "", err
+	}
+	return "", nil
 }

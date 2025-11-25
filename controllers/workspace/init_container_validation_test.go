@@ -16,6 +16,7 @@
 package controllers
 
 import (
+	"strings"
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -300,4 +301,50 @@ func TestDefaultAndValidateHomeInitContainer_NoWorkspaceImage(t *testing.T) {
 	_, err := defaultAndValidateHomeInitContainer(container, workspaceNoImage)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unable to infer workspace image")
+}
+
+func TestValidateImageReference(t *testing.T) {
+	tests := []struct {
+		name        string
+		image       string
+		expectError bool
+		errorMsg    string
+	}{
+		// Valid images
+		{"simple image", "nginx", false, ""},
+		{"image with tag", "nginx:latest", false, ""},
+		{"image with version tag", "nginx:1.21", false, ""},
+		{"registry image", "docker.io/nginx", false, ""},
+		{"registry with tag", "docker.io/nginx:latest", false, ""},
+		{"registry with port", "localhost:5000/nginx", false, ""},
+		{"registry port with tag", "localhost:5000/nginx:latest", false, ""},
+		{"multi-level path", "registry.example.com/team/project/app", false, ""},
+		{"with digest", "nginx@sha256:abc123def4567890abcdef1234567890abcdef1234567890abcdef1234567890", false, ""},
+		{"full reference", "registry.example.com:8080/team/app:v1.2.3@sha256:abc123def4567890abcdef1234567890abcdef1234567890abcdef1234567890", false, ""},
+
+		// Invalid images
+		{"empty image", "", true, "cannot be empty"},
+		{"whitespace", "nginx latest", true, "whitespace"},
+		{"newline", "nginx\nlatest", true, "whitespace"},
+		{"tab", "nginx\tlatest", true, "whitespace"},
+		{"control char", "nginx\x00latest", true, "control characters"},
+		{"invalid port 0", "registry:0/image", true, "port number"},
+		{"invalid port 65536", "registry:65536/image", true, "port number"},
+		{"invalid format", "-nginx", true, "invalid format: should match regex: ^([a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])*|\\[?[0-9a-fA-F:]+]?)(:\\d{1,5})?(/[a-zA-Z0-9]([a-zA-Z0-9._/-]*[a-zA-Z0-9])*)*(:[a-zA-Z0-9_.-]+)?(@sha256:[a-f0-9]{64})?$"},
+		{"too long", strings.Repeat("a", 4097), true, "exceeds 4096"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateImageReference(tt.image)
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err, "Image %q should be valid", tt.image)
+			}
+		})
+	}
 }

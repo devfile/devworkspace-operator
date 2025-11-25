@@ -4,4 +4,3 @@ set -x
 set -e
 
 exec "$@"
-

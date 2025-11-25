@@ -12,19 +12,34 @@ BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY}/backup-${DEVWORKSPACE_NAMESPACE}-$
 
 # --- Functions ---
 backup() {
+  TARBALL_NAME="devworkspace-backup.tar.gz"
+  cd /tmp
+  echo "Backing up devworkspace '$DEVWORKSPACE_NAME' in namespace '$DEVWORKSPACE_NAMESPACE' to image '$BACKUP_IMAGE'"
 
-  cat <<EOF > /home/podman/Dockerfile.backup
-FROM scratch
-COPY "$BACKUP_SOURCE_PATH" /
-LABEL DEVWORKSPACE="$DEVWORKSPACE_NAME"
-LABEL NAMESPACE="$DEVWORKSPACE_NAMESPACE"
-EOF
-  podman build \
-  --file /home/podman/Dockerfile.backup \
-  --tag "$BACKUP_IMAGE" /
+  # Create tarball of the backup source path
+  tar -czvf "$TARBALL_NAME" -C "$BACKUP_SOURCE_PATH" .
 
-  podman push ${PODMAN_PUSH_OPTIONS:-} "$BACKUP_IMAGE"
+  # Push the tarball to the OCI registry using oras as a custom artifact
+  oras_args=(
+    push
+    "$BACKUP_IMAGE"
+    --artifact-type application/vnd.devworkspace.backup.artifact.v1+json
+    --annotation devworkspace.name="$DEVWORKSPACE_NAME"
+    --annotation devworkspace.namespace="$DEVWORKSPACE_NAMESPACE"
+    --disable-path-validation
+  )
+  if [[ -n "${REGISTRY_AUTH_FILE:-}" ]]; then
+    oras_args+=(--registry-config "$REGISTRY_AUTH_FILE")
+  fi
+  if [[ -n "${ORAS_EXTRA_ARGS:-}" ]]; then
+    extra_args=( ${ORAS_EXTRA_ARGS} )
+    oras_args+=("${extra_args[@]}")
+  fi
+  oras_args+=("$TARBALL_NAME")
+  oras "${oras_args[@]}"
+  rm -f "$TARBALL_NAME"
 
+  echo "Backup completed successfully."
 }
 
 restore() {

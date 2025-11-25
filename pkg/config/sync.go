@@ -451,6 +451,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				if from.Workspace.BackupCronJob.Registry.AuthSecret != "" {
 					to.Workspace.BackupCronJob.Registry.AuthSecret = from.Workspace.BackupCronJob.Registry.AuthSecret
 				}
+				if from.Workspace.BackupCronJob.Registry.ExtraArgs != "" {
+					to.Workspace.BackupCronJob.Registry.ExtraArgs = from.Workspace.BackupCronJob.Registry.ExtraArgs
+				}
 			}
 		}
 

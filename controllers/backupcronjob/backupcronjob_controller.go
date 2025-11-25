@@ -365,9 +365,10 @@ func (r *BackupCronJobReconciler) createBackupJob(
 									Value: "/workspace/" + workspacePath,
 								},
 								{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: backUpConfig.Registry.Path},
-								{Name: "PODMAN_PUSH_OPTIONS", Value: "--tls-verify=false"},
+								{Name: "ORAS_EXTRA_ARGS", Value: backUpConfig.Registry.ExtraArgs},
 							},
-							Image: images.GetProjectBackupImage(),
+							Image:           images.GetProjectBackupImage(),
+							ImagePullPolicy: "Always",
 							Args: []string{
 								"/workspace-recovery.sh",
 								"--backup",
@@ -383,7 +384,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								},
 							},
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser: ptr.To[int64](1000),
+								AllowPrivilegeEscalation: ptr.To[bool](false),
 							},
 						},
 					},
@@ -422,12 +423,12 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		})
 		job.Spec.Template.Spec.Containers[0].VolumeMounts = append(job.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
 			Name:      "registry-auth-secret",
-			MountPath: "/home/podman/.docker",
+			MountPath: "/tmp/.docker",
 			ReadOnly:  true,
 		})
 		job.Spec.Template.Spec.Containers[0].Env = append(job.Spec.Template.Spec.Containers[0].Env, corev1.EnvVar{
 			Name:  "REGISTRY_AUTH_FILE",
-			Value: "/home/podman/.docker/.dockerconfigjson",
+			Value: "/tmp/.docker/.dockerconfigjson",
 		})
 
 	}

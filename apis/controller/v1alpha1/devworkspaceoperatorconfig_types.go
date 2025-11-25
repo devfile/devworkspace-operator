@@ -78,9 +78,15 @@ type RegistryConfig struct {
 	// +kubebuilder:validation:Required
 	Path string `json:"path,omitempty"`
 	// AuthSecret is the name of a Kubernetes secret of
-	// type kubernetes.io/dockerconfigjson
+	// type kubernetes.io/dockerconfigjson.
+	// The secret is expected to be in the same namespace
+	// as the DevWorkspaceOperatorCongfig.
 	// +kubebuilder:validation:Optional
 	AuthSecret string `json:"authSecret,omitempty"`
+
+	// ExtraArgs are additional arguments passed to the oras CLI
+	// +kubebuilder:validation:Optional
+	ExtraArgs string `json:"extraArgs,omitempty"`
 }
 
 type BackupCronJobConfig struct {

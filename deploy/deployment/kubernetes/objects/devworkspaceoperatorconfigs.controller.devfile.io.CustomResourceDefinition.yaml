@@ -198,7 +198,13 @@ spec:
                           authSecret:
                             description: |-
                               AuthSecret is the name of a Kubernetes secret of
-                              type kubernetes.io/dockerconfigjson
+                              type kubernetes.io/dockerconfigjson.
+                              The secret is expected to be in the same namespace
+                              as the DevWorkspaceOperatorCongfig.
+                            type: string
+                          extraArgs:
+                            description: ExtraArgs are additional arguments passed
+                              to the oras CLI
                             type: string
                           path:
                             description: |-

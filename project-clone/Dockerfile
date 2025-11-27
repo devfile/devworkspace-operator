@@ -40,7 +40,14 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} GO111MODULE=on go build 
 
 # https://access.redhat.com/containers/?tab=tags#/registry.access.redhat.com/ubi9-minimal
 FROM registry.access.redhat.com/ubi9-minimal:9.6-1749489516
-RUN microdnf -y update && microdnf install -y time git git-lfs nc && microdnf clean all && rm -rf /var/cache/yum && echo "Installed Packages" && rpm -qa | sort -V && echo "End Of Installed Packages"
+RUN microdnf -y update  \
+    && microdnf install -y time git git-lfs nc  \
+    && microdnf clean all  \
+    && rm -rf /var/cache/yum  \
+    && echo "Installed Packages"  \
+    && rpm -qa | sort -V  \
+    && echo "End Of Installed Packages" \
+    && echo "user:x:1234:0::/:/bin/sh" > /etc/passwd
 WORKDIR /
 COPY --from=builder /project-clone/_output/bin/project-clone /usr/local/bin/project-clone
 

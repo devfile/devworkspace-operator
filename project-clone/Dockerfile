@@ -47,11 +47,11 @@ RUN microdnf -y update  \
     && echo "Installed Packages"  \
     && rpm -qa | sort -V  \
     && echo "End Of Installed Packages" \
-    && echo "user:x:1234:0::/:/bin/sh" > /etc/passwd
+    && echo "project-clone:x:1234:0::/home/user:/bin/sh" >> /etc/passwd
 WORKDIR /
 COPY --from=builder /project-clone/_output/bin/project-clone /usr/local/bin/project-clone
 
-ENV USER_UID=1001 \
+ENV USER_UID=1234 \
     USER_NAME=project-clone \
     HOME=/home/user
 

@@ -57,10 +57,10 @@ var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
 
 		ginkgo.BeforeEach(func() {
 			dwocFile := filepath.Join(getProjectRoot(), "test", "resources", "dwoc-custom-init.yaml")
-			cmd := exec.Command("kubectl", "apply", "-f", dwocFile)
+			cmd := exec.Command("kubectl", "apply", "-f", dwocFile, "-n", config.OperatorNamespace)
 			output, err := cmd.CombinedOutput()
 			if err != nil {
-				ginkgo.Fail(fmt.Sprintf("Failed to apply DWOC: %s. Output: %s", err, string(output)))
+				ginkgo.Fail(fmt.Sprintf("Failed to apply DWOC to namespace %s: %s. Output: %s", config.OperatorNamespace, err, string(output)))
 			}
 		})
 
@@ -78,7 +78,7 @@ var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
 				ginkgo.Fail(fmt.Sprintf("Workspace didn't start properly. Error: %s", err))
 			}
 
-			// Wait for pod to be running (may take a while for large image pulls)
+			// Wait for pod to be running
 			podSelector := fmt.Sprintf("controller.devfile.io/devworkspace_name=%s", workspaceName)
 			var podName string
 			gomega.Eventually(func() error {
@@ -105,10 +105,10 @@ var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
 
 		ginkgo.BeforeEach(func() {
 			dwocFile := filepath.Join(getProjectRoot(), "test", "resources", "dwoc-disabled-init.yaml")
-			cmd := exec.Command("kubectl", "apply", "-f", dwocFile)
+			cmd := exec.Command("kubectl", "apply", "-f", dwocFile, "-n", config.OperatorNamespace)
 			output, err := cmd.CombinedOutput()
 			if err != nil {
-				ginkgo.Fail(fmt.Sprintf("Failed to apply DWOC: %s. Output: %s", err, string(output)))
+				ginkgo.Fail(fmt.Sprintf("Failed to apply DWOC to namespace %s: %s. Output: %s", config.OperatorNamespace, err, string(output)))
 			}
 		})
 

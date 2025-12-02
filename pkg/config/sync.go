@@ -451,8 +451,13 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				if from.Workspace.BackupCronJob.Registry.AuthSecret != "" {
 					to.Workspace.BackupCronJob.Registry.AuthSecret = from.Workspace.BackupCronJob.Registry.AuthSecret
 				}
-				if from.Workspace.BackupCronJob.Registry.ExtraArgs != "" {
-					to.Workspace.BackupCronJob.Registry.ExtraArgs = from.Workspace.BackupCronJob.Registry.ExtraArgs
+			}
+			if from.Workspace.BackupCronJob.OrasConfig != nil {
+				if to.Workspace.BackupCronJob.OrasConfig == nil {
+					to.Workspace.BackupCronJob.OrasConfig = &controller.OrasConfig{}
+				}
+				if from.Workspace.BackupCronJob.OrasConfig.ExtraArgs != "" {
+					to.Workspace.BackupCronJob.OrasConfig.ExtraArgs = from.Workspace.BackupCronJob.OrasConfig.ExtraArgs
 				}
 			}
 		}

@@ -14,10 +14,10 @@
 #
 
 FROM quay.io/konflux-ci/oras:3d83c68 AS oras
-FROM registry.access.redhat.com/ubi10/ubi@sha256:8405dd7146117f019670429f93ce044f0839f47ff81ec45bb53cf528f1f6ce11
-
+FROM quay.io/devfile/base-developer-image:ubi10-latest
 LABEL project="devworkspace-operator"
 
+USER 0
 RUN dnf update -y && \
   dnf clean all
 
@@ -32,5 +32,7 @@ RUN chmod +x /entrypoint.sh ; \
   chmod +x /workspace-recovery.sh
 
 COPY --from=oras /usr/bin/oras /usr/bin/oras
+
+USER 1000
 
 ENTRYPOINT ["/entrypoint.sh"]

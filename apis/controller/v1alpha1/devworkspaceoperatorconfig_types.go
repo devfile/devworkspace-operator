@@ -83,7 +83,9 @@ type RegistryConfig struct {
 	// as the DevWorkspaceOperatorCongfig.
 	// +kubebuilder:validation:Optional
 	AuthSecret string `json:"authSecret,omitempty"`
+}
 
+type OrasConfig struct {
 	// ExtraArgs are additional arguments passed to the oras CLI
 	// +kubebuilder:validation:Optional
 	ExtraArgs string `json:"extraArgs,omitempty"`
@@ -97,9 +99,12 @@ type BackupCronJobConfig struct {
 	// RegistryConfig defines the registry configuration where backup images are stored.
 	// +kubebuilder:validation:Required
 	Registry *RegistryConfig `json:"registry,omitempty"`
+	// OrasConfig defines additional configuration options for the oras CLI used to
+	// push and pull backup images.
+	OrasConfig *OrasConfig `json:"oras,omitempty"`
 	// Schedule specifies the cron schedule for the backup cron job.
-	// For example, "0 2 * * *" runs daily at 2 AM.
-	// +kubebuilder:default:="0 2 * * *"
+	// For example, "0 1 * * *" runs daily at 1 AM.
+	// +kubebuilder:default:="0 1 * * *"
 	// +kubebuilder:validation:Optional
 	Schedule string `json:"schedule,omitempty"`
 }

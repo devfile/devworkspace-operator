@@ -320,8 +320,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path:      "fake-registry",
-								ExtraArgs: "--exta-arg1",
+								Path: "fake-registry",
+							},
+							OrasConfig: &controllerv1alpha1.OrasConfig{
+								ExtraArgs: "--extra-arg1",
 							},
 						},
 					},
@@ -350,7 +352,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				{Name: "WORKSPACE_ID", Value: "id-recent"},
 				{Name: "BACKUP_SOURCE_PATH", Value: "/workspace/id-recent/projects"},
 				{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: "fake-registry"},
-				{Name: "ORAS_EXTRA_ARGS", Value: "--exta-arg1"},
+				{Name: "ORAS_EXTRA_ARGS", Value: "--extra-arg1"},
 			}
 			Expect(container.Env).Should(ContainElements(expectedEnvs), "container env vars should include vars neeeded for backup")
 

@@ -21,8 +21,7 @@ const (
 	defaultSidecarPullPolicy = "Always"
 
 	// workspacePVCName config property handles the PVC name that should be created and used for all workspaces within one kubernetes namespace
-	workspacePVCName        = "devworkspace.pvc.name"
-	defaultWorkspacePVCName = "claim-devworkspace"
+	workspacePVCName = "devworkspace.pvc.name"
 
 	workspacePVCStorageClassName = "devworkspace.pvc.storage_class.name"
 

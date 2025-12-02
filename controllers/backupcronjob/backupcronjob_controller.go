@@ -333,6 +333,10 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		log.Error(err, "Failed to get PVC for DevWorkspace", "id", dwID)
 		return err
 	}
+	orasExtraArgs := ""
+	if backUpConfig.OrasConfig != nil {
+		orasExtraArgs = backUpConfig.OrasConfig.ExtraArgs
+	}
 
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -365,7 +369,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 									Value: "/workspace/" + workspacePath,
 								},
 								{Name: "DEVWORKSPACE_BACKUP_REGISTRY", Value: backUpConfig.Registry.Path},
-								{Name: "ORAS_EXTRA_ARGS", Value: backUpConfig.Registry.ExtraArgs},
+								{Name: "ORAS_EXTRA_ARGS", Value: orasExtraArgs},
 							},
 							Image:           images.GetProjectBackupImage(),
 							ImagePullPolicy: "Always",
@@ -461,7 +465,7 @@ func (r *BackupCronJobReconciler) getWorkspacePVCName(workspace *dw.DevWorkspace
 		return pvcName, constants.DefaultProjectsSourcesRoot, nil
 
 	} else if _, ok := storageProvisioner.(*storage.CommonStorageProvisioner); ok {
-		pvcName := "claim-devworkspace"
+		pvcName := constants.DefaultWorkspacePVCName
 		if dwOperatorConfig.Config.Workspace.PVCName != "" {
 			pvcName = dwOperatorConfig.Config.Workspace.PVCName
 		}

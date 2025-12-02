@@ -79,7 +79,9 @@ type RegistryConfig struct {
 	Path string `json:"path,omitempty"`
 	// AuthSecret is the name of a Kubernetes secret of
 	// type kubernetes.io/dockerconfigjson.
-	// The secret is expected to be in the same namespace
+	// The secret is expected to be in the same namespace the workspace is running in.
+	// If secret is not found in the workspace namespace, the operator will look for the secret
+	// in the namespace where the operator is running in.
 	// as the DevWorkspaceOperatorCongfig.
 	// +kubebuilder:validation:Optional
 	AuthSecret string `json:"authSecret,omitempty"`

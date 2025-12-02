@@ -210,13 +210,8 @@ func (r *BackupCronJobReconciler) stopCron(log logr.Logger) {
 func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger) error {
 	log.Info("Executing backup sync for all DevWorkspaces")
 
-	registryAuthSecret, err := r.getRegistryAuthSecret(ctx, dwOperatorConfig, log)
-	if err != nil {
-		log.Error(err, "Failed to get registry auth secret for backup job")
-		return err
-	}
 	devWorkspaces := &dw.DevWorkspaceList{}
-	err = r.List(ctx, devWorkspaces)
+	err := r.List(ctx, devWorkspaces)
 	if err != nil {
 		log.Error(err, "Failed to list DevWorkspaces")
 		return err
@@ -239,7 +234,7 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 			continue
 		}
 
-		if err := r.createBackupJob(&dw, ctx, dwOperatorConfig, registryAuthSecret, log); err != nil {
+		if err = r.createBackupJob(&dw, ctx, dwOperatorConfig, log); err != nil {
 			log.Error(err, "Failed to create backup Job for DevWorkspace", "id", dwID)
 			continue
 		}
@@ -258,23 +253,6 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 		// Not returning error as the backup jobs were created successfully
 	}
 	return nil
-}
-
-func (r *BackupCronJobReconciler) getRegistryAuthSecret(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger) (*corev1.Secret, error) {
-	registryAuthSecret := &corev1.Secret{}
-	if dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret != "" {
-		err := r.NonCachingClient.Get(ctx, client.ObjectKey{
-			Name:      dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret,
-			Namespace: dwOperatorConfig.Namespace,
-		}, registryAuthSecret)
-		if err != nil {
-			log.Error(err, "Failed to get registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
-			return nil, err
-		}
-		log.Info("Successfully retrieved registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
-		return registryAuthSecret, nil
-	}
-	return nil, nil
 }
 
 // wasStoppedSinceLastBackup checks if the DevWorkspace was stopped since the last backup time.
@@ -310,11 +288,16 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	workspace *dw.DevWorkspace,
 	ctx context.Context,
 	dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig,
-	registryAuthSecret *corev1.Secret,
 	log logr.Logger,
 ) error {
 	dwID := workspace.Status.DevWorkspaceId
 	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
+
+	registryAuthSecret, err := r.handleRegistryAuthSecret(workspace, ctx, dwOperatorConfig, log)
+	if err != nil {
+		log.Error(err, "Failed to handle registry auth secret for DevWorkspace", "devworkspace", workspace.Name)
+		return err
+	}
 
 	// Find a PVC with the name "claim-devworkspace" or based on the name from the operator config
 	pvcName, workspacePath, err := r.getWorkspacePVCName(workspace, dwOperatorConfig, ctx, log)
@@ -413,15 +396,11 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		},
 	}
 	if registryAuthSecret != nil {
-		secret, err := r.copySecret(workspace, ctx, registryAuthSecret, log)
-		if err != nil {
-			return err
-		}
 		job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: "registry-auth-secret",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: secret.Name,
+					SecretName: registryAuthSecret.Name,
 				},
 			},
 		})
@@ -474,6 +453,47 @@ func (r *BackupCronJobReconciler) getWorkspacePVCName(workspace *dw.DevWorkspace
 	return "", "", nil
 }
 
+func (r *BackupCronJobReconciler) handleRegistryAuthSecret(workspace *dw.DevWorkspace,
+	ctx context.Context,
+	dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger,
+) (*corev1.Secret, error) {
+	if dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret == "" {
+		// No auth secret configured - anonymous access to registry
+		return nil, nil
+	}
+	secretName := dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret
+
+	// First check the workspace namespace for the secret
+	registryAuthSecret := &corev1.Secret{}
+	err := r.NonCachingClient.Get(ctx, client.ObjectKey{
+		Name:      secretName,
+		Namespace: workspace.Namespace}, registryAuthSecret)
+	if err == nil {
+		log.Info("Successfully retrieved registry auth secret for backup from workspace namespace", "secretName", secretName)
+		return registryAuthSecret, nil
+	}
+	if client.IgnoreNotFound(err) != nil {
+		return nil, err
+	}
+
+	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace", "secretName", secretName)
+
+	// If the secret is not found in the workspace namespace, check the operator namespace as fallback
+	if dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret != "" {
+		err := r.NonCachingClient.Get(ctx, client.ObjectKey{
+			Name:      dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret,
+			Namespace: dwOperatorConfig.Namespace,
+		}, registryAuthSecret)
+		if err != nil {
+			log.Error(err, "Failed to get registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
+			return nil, err
+		}
+		log.Info("Successfully retrieved registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
+		return r.copySecret(workspace, ctx, registryAuthSecret, log)
+	}
+	return nil, nil
+}
+
 func (r *BackupCronJobReconciler) copySecret(workspace *dw.DevWorkspace, ctx context.Context, sourceSecret *corev1.Secret, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
 	existingNamespaceSecret := &corev1.Secret{}
 	err = r.NonCachingClient.Get(ctx, client.ObjectKey{
@@ -484,12 +504,10 @@ func (r *BackupCronJobReconciler) copySecret(workspace *dw.DevWorkspace, ctx con
 		return nil, err
 	}
 	if err == nil {
-		log.Info("Deleting existing registry auth secret in workspace namespace", "namespace", workspace.Namespace)
 		err = r.Delete(ctx, existingNamespaceSecret)
 		if err != nil {
 			return nil, err
 		}
-		log.Info("Successfully deleted existing registry auth secret in workspace namespace", "namespace", workspace.Namespace)
 	}
 	namespaceSecret = &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -507,5 +525,8 @@ func (r *BackupCronJobReconciler) copySecret(workspace *dw.DevWorkspace, ctx con
 		return nil, err
 	}
 	err = r.Create(ctx, namespaceSecret)
+	if err == nil {
+		log.Info("Sucesfully created secret", "name", namespaceSecret.Name, "namespace", workspace.Namespace)
+	}
 	return namespaceSecret, err
 }

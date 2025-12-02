@@ -306,7 +306,12 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			dw.Status.DevWorkspaceId = "id-recent"
 			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
 
-			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(HaveOccurred())
+			err := reconciler.executeBackupSync(ctx, dwoc, log)
+			Expect(err).ToNot(HaveOccurred())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(0))
 		})
 
 		It("creates a Job for a DevWorkspace stopped with no previous backup", func() {
@@ -429,7 +434,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(jobList.Items).To(HaveLen(0))
 		})
 
-		It("creates a Job for a DevWorkspace stopped with no previous backup and auth registry", func() {
+		It("creates a Job for a DevWorkspace stopped with no previous backup and global auth registry", func() {
 			enabled := true
 			schedule := "* * * * *"
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
@@ -456,6 +461,41 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
 
 			authSecret := createAuthSecret("my-secret", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+		})
+		It("creates a Job for a DevWorkspace stopped with no previous backup and local auth registry", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path:       "my-registry:5000",
+								AuthSecret: "my-secret",
+							},
+						},
+					},
+				},
+			}
+			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-recent"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			authSecret := createAuthSecret("my-secret", "ns-a", map[string][]byte{})
 			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
 
 			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())

@@ -69,22 +69,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// applyHomeInitDefaults applies default values for image and command fields
-// of the init-persistent-home container.
-func applyHomeInitDefaults(c corev1.Container, workspace *common.DevWorkspaceWithConfig) (corev1.Container, error) {
-	if c.Image == "" {
-		inferred := home.InferWorkspaceImage(&workspace.Spec.Template)
-		if inferred == "" {
-			return c, fmt.Errorf("unable to infer workspace image for %s; specify image explicitly", constants.HomeInitComponentName)
-		}
-		c.Image = inferred
-	}
-	if len(c.Command) == 0 {
-		c.Command = []string{"/bin/sh", "-c"}
-	}
-	return c, nil
-}
-
 // validateNoAdvancedFields validates that the init-persistent-home container
 // does not use advanced Kubernetes container fields that could make behavior unpredictable.
 func validateNoAdvancedFields(c corev1.Container) error {
@@ -127,23 +111,36 @@ func validateNoAdvancedFields(c corev1.Container) error {
 }
 
 // validateHomeInitContainer validates all aspects of the init-persistent-home container.
+// It only validates fields that are present, as missing fields will be filled by
+// the strategic merge with the default init container.
 func validateHomeInitContainer(c corev1.Container) error {
-	if err := validateImageReference(c.Image); err != nil {
-		return fmt.Errorf("invalid image reference for %s: %w", constants.HomeInitComponentName, err)
+	// Only validate if present
+	if c.Image != "" {
+		if err := validateImageReference(c.Image); err != nil {
+			return fmt.Errorf("invalid image reference for %s: %w", constants.HomeInitComponentName, err)
+		}
 	}
 
-	if len(c.Command) != 2 || c.Command[0] != "/bin/sh" || c.Command[1] != "-c" {
-		return fmt.Errorf("command must be exactly [/bin/sh, -c] for %s", constants.HomeInitComponentName)
+	// Only validate if present
+	if c.Command != nil {
+		if len(c.Command) != 2 || c.Command[0] != "/bin/sh" || c.Command[1] != "-c" {
+			return fmt.Errorf("command must be exactly [/bin/sh, -c] for %s", constants.HomeInitComponentName)
+		}
 	}
 
-	if len(c.Args) != 1 {
-		return fmt.Errorf("args must contain exactly one script string for %s", constants.HomeInitComponentName)
+	// Only validate if present
+	if c.Args != nil {
+		if len(c.Args) != 1 {
+			return fmt.Errorf("args must contain exactly one script string for %s", constants.HomeInitComponentName)
+		}
 	}
 
+	// Always validate - should not be provided
 	if len(c.VolumeMounts) > 0 {
 		return fmt.Errorf("volumeMounts are not allowed for %s; persistent-home is auto-mounted at /home/user/", constants.HomeInitComponentName)
 	}
 
+	// Always validate - should not be provided
 	if err := validateNoAdvancedFields(c); err != nil {
 		return err
 	}
@@ -207,28 +204,6 @@ func ensureHomeInitContainerFields(c *corev1.Container) error {
 		MountPath: constants.HomeUserDirectory,
 	}}
 	return nil
-}
-
-// defaultAndValidateHomeInitContainer applies defaults and validation for a custom
-// DWOC-provided init container named init-persistent-home. It ensures a shell execution
-// model, a single script arg, injects the persistent-home mount at /home/user/, and
-// defaults image to the inferred workspace image if not provided.
-func defaultAndValidateHomeInitContainer(c corev1.Container, workspace *common.DevWorkspaceWithConfig) (corev1.Container, error) {
-	var err error
-
-	if c, err = applyHomeInitDefaults(c, workspace); err != nil {
-		return c, err
-	}
-
-	if err = validateHomeInitContainer(c); err != nil {
-		return c, err
-	}
-
-	if err = ensureHomeInitContainerFields(&c); err != nil {
-		return c, err
-	}
-
-	return c, nil
 }
 
 const (
@@ -552,9 +527,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					reqLogger.Info("Skipping init-persistent-home container: DisableInitContainer is true")
 					continue
 				}
-				// Apply defaults and validation for init-persistent-home
-				container, err = defaultAndValidateHomeInitContainer(container, workspace)
-				if err != nil {
+				// Validate custom home init container
+				if err := validateHomeInitContainer(container); err != nil {
 					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 				}
 			}

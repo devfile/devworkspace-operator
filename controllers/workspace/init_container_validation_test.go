@@ -19,71 +19,34 @@ import (
 	"strings"
 	"testing"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
-	workspace := &common.DevWorkspaceWithConfig{
-		DevWorkspace: &dw.DevWorkspace{
-			Spec: dw.DevWorkspaceSpec{
-				Template: dw.DevWorkspaceTemplateSpec{
-					DevWorkspaceTemplateSpecContent: dw.DevWorkspaceTemplateSpecContent{
-						Components: []dw.Component{
-							{
-								Name: "main-container",
-								ComponentUnion: dw.ComponentUnion{
-									Container: &dw.ContainerComponent{
-										Container: dw.Container{
-											Image: "test-image:latest",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Config: &v1alpha1.OperatorConfiguration{
-			Workspace: &v1alpha1.WorkspaceConfig{},
-		},
-	}
-
+func TestValidateInitContainer(t *testing.T) {
 	tests := []struct {
 		name        string
 		container   corev1.Container
 		expectError bool
 		errorMsg    string
-		validate    func(t *testing.T, result corev1.Container)
 	}{
 		{
-			name: "Defaults image when empty",
+			name: "Accepts container with only args (image and command will be filled by merge)",
 			container: corev1.Container{
 				Name: constants.HomeInitComponentName,
 				Args: []string{"echo 'test'"},
 			},
 			expectError: false,
-			validate: func(t *testing.T, result corev1.Container) {
-				assert.Equal(t, "test-image:latest", result.Image)
-			},
 		},
 		{
-			name: "Defaults command when empty",
+			name: "Accepts container with only image (command and args will be filled by merge)",
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
 				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
 			},
 			expectError: false,
-			validate: func(t *testing.T, result corev1.Container) {
-				assert.Equal(t, []string{"/bin/sh", "-c"}, result.Command)
-			},
 		},
 		{
 			name: "Accepts valid command",
@@ -100,7 +63,18 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			container: corev1.Container{
 				Name:    constants.HomeInitComponentName,
 				Image:   "custom-image:latest",
-				Command: []string{"/bin/bash"},
+				Command: []string{"/bin/sh"},
+				Args:    []string{"echo 'test'"},
+			},
+			expectError: true,
+			errorMsg:    "command must be exactly [/bin/sh, -c]",
+		},
+		{
+			name: "Rejects empty command",
+			container: corev1.Container{
+				Name:    constants.HomeInitComponentName,
+				Image:   "custom-image:latest",
+				Command: []string{},
 				Args:    []string{"echo 'test'"},
 			},
 			expectError: true,
@@ -131,7 +105,6 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
 				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
 				VolumeMounts: []corev1.VolumeMount{
 					{
 						Name:      "custom-volume",
@@ -143,43 +116,28 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			errorMsg:    "volumeMounts are not allowed for init-persistent-home",
 		},
 		{
-			name: "Injects persistent-home volumeMount",
-			container: corev1.Container{
-				Name:  constants.HomeInitComponentName,
-				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
-			},
-			expectError: false,
-			validate: func(t *testing.T, result corev1.Container) {
-				assert.Len(t, result.VolumeMounts, 1)
-				assert.Equal(t, constants.HomeVolumeName, result.VolumeMounts[0].Name)
-				assert.Equal(t, constants.HomeUserDirectory, result.VolumeMounts[0].MountPath)
-			},
-		},
-		{
 			name: "Allows env variables",
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
 				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
 				Env: []corev1.EnvVar{
-					{Name: "TEST_VAR", Value: "test-value"},
+					{
+						Name:  "TEST_VAR",
+						Value: "test-var",
+					},
 				},
 			},
 			expectError: false,
-			validate: func(t *testing.T, result corev1.Container) {
-				assert.Len(t, result.Env, 1)
-				assert.Equal(t, "TEST_VAR", result.Env[0].Name)
-			},
 		},
 		{
 			name: "Rejects ports",
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
 				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
 				Ports: []corev1.ContainerPort{
-					{ContainerPort: 8080},
+					{
+						ContainerPort: 8080,
+					},
 				},
 			},
 			expectError: true,
@@ -190,10 +148,11 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
 				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
 				LivenessProbe: &corev1.Probe{
 					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{Path: "/health"},
+						HTTPGet: &corev1.HTTPGetAction{
+							Path: "/health",
+						},
 					},
 				},
 			},
@@ -205,7 +164,6 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
 				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
 				SecurityContext: &corev1.SecurityContext{
 					RunAsUser: new(int64),
 				},
@@ -218,7 +176,6 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
 				Image: "custom-image:latest",
-				Args:  []string{"echo 'test'"},
 				Resources: corev1.ResourceRequirements{
 					Limits: corev1.ResourceList{
 						corev1.ResourceMemory: resource.MustParse("128Mi"),
@@ -233,7 +190,6 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			container: corev1.Container{
 				Name:       constants.HomeInitComponentName,
 				Image:      "custom-image:latest",
-				Args:       []string{"echo 'test'"},
 				WorkingDir: "/tmp",
 			},
 			expectError: true,
@@ -243,8 +199,7 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 			name: "Rejects image with whitespace",
 			container: corev1.Container{
 				Name:  constants.HomeInitComponentName,
-				Image: "nginx\nmalicious",
-				Args:  []string{"echo 'test'"},
+				Image: "nginx\tmalicious",
 			},
 			expectError: true,
 			errorMsg:    "invalid image reference",
@@ -253,7 +208,7 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := defaultAndValidateHomeInitContainer(tt.container, workspace)
+			err := validateHomeInitContainer(tt.container)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -262,45 +217,9 @@ func TestDefaultAndValidateHomeInitContainer(t *testing.T) {
 				}
 			} else {
 				assert.NoError(t, err)
-				if tt.validate != nil {
-					tt.validate(t, result)
-				}
 			}
 		})
 	}
-}
-
-func TestDefaultAndValidateHomeInitContainer_NoWorkspaceImage(t *testing.T) {
-	workspaceNoImage := &common.DevWorkspaceWithConfig{
-		DevWorkspace: &dw.DevWorkspace{
-			Spec: dw.DevWorkspaceSpec{
-				Template: dw.DevWorkspaceTemplateSpec{
-					DevWorkspaceTemplateSpecContent: dw.DevWorkspaceTemplateSpecContent{
-						Components: []dw.Component{
-							{
-								Name: "volume-component",
-								ComponentUnion: dw.ComponentUnion{
-									Volume: &dw.VolumeComponent{},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Config: &v1alpha1.OperatorConfiguration{
-			Workspace: &v1alpha1.WorkspaceConfig{},
-		},
-	}
-
-	container := corev1.Container{
-		Name: constants.HomeInitComponentName,
-		Args: []string{"echo 'test'"},
-	}
-
-	_, err := defaultAndValidateHomeInitContainer(container, workspaceNoImage)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unable to infer workspace image")
 }
 
 func TestValidateImageReference(t *testing.T) {

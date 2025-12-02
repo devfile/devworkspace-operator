@@ -62,19 +62,8 @@ func AddPersistentHomeVolume(workspace *common.DevWorkspaceWithConfig) (*v1alpha
 		Path: constants.HomeUserDirectory,
 	}
 
-	// Determine if a custom home init container is configured via DWOC
-	hasCustomHomeInit := false
-	if workspace.Config != nil && workspace.Config.Workspace != nil {
-		for _, c := range workspace.Config.Workspace.InitContainers {
-			if c.Name == constants.HomeInitComponentName {
-				hasCustomHomeInit = true
-				break
-			}
-		}
-	}
-
 	// Add default init container only if not disabled and no custom init is configured
-	if (workspace.Config.Workspace.PersistUserHome.DisableInitContainer == nil || !*workspace.Config.Workspace.PersistUserHome.DisableInitContainer) && !hasCustomHomeInit {
+	if workspace.Config.Workspace.PersistUserHome.DisableInitContainer == nil || !*workspace.Config.Workspace.PersistUserHome.DisableInitContainer {
 		err := addInitContainer(dwTemplateSpecCopy)
 		if err != nil {
 			return nil, fmt.Errorf("failed to add init container for home persistence setup: %w", err)

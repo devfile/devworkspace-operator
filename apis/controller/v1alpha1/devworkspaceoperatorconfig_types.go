@@ -204,7 +204,7 @@ type WorkspaceConfig struct {
 	// +kubebuilder:validation:Optional
 	HostUsers *bool `json:"hostUsers,omitempty"`
 	// InitContainers defines a list of Kubernetes init containers that are automatically injected into all workspace pods.
-	// Typical uses: injecting organization tools/configs, initializing persistent home, etc.
+	// Typical uses cases include injecting organization tools/configs, initializing persistent home, etc.
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
 }
 

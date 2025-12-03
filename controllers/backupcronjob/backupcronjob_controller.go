@@ -250,7 +250,7 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 	err = r.NonCachingClient.Status().Patch(ctx, dwOperatorConfig, origConfig)
 	if err != nil {
 		log.Error(err, "Failed to update DevWorkspaceOperatorConfig status with last backup time")
-		// Not returning error as the backup jobs were created successfully
+		return err
 	}
 	return nil
 }
@@ -299,7 +299,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		return err
 	}
 
-	// Find a PVC with the name "claim-devworkspace" or based on the name from the operator config
+	// Find a PVC with used by the workspace
 	pvcName, workspacePath, err := r.getWorkspacePVCName(workspace, dwOperatorConfig, ctx, log)
 	if err != nil {
 		log.Error(err, "Failed to get workspace PVC name", "devworkspace", workspace.Name)

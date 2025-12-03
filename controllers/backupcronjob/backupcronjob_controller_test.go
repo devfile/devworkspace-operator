@@ -57,7 +57,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 		Expect(dwv2.AddToScheme(scheme)).To(Succeed())
 		Expect(corev1.AddToScheme(scheme)).To(Succeed())
 		Expect(batchv1.AddToScheme(scheme)).To(Succeed())
-		fakeClient = fake.NewClientBuilder().WithScheme(scheme).Build()
+		fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&controllerv1alpha1.DevWorkspaceOperatorConfig{}).Build()
 		log = zap.New(zap.UseDevMode(true)).WithName("BackupCronJobReconcilerTest")
 
 		reconciler = BackupCronJobReconciler{
@@ -301,6 +301,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-recent"
@@ -334,6 +335,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-recent"
@@ -389,6 +391,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					LastBackupTime: &lastBackupTime,
 				},
 			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-old", "ns-b", false, metav1.NewTime(time.Now().Add(-60*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-old"
@@ -421,6 +424,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-running", "ns-c", true, metav1.NewTime(time.Now().Add(-5*time.Minute)))
 			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
 
@@ -452,6 +456,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-recent"
@@ -487,6 +492,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-recent"

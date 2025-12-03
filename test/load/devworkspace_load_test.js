@@ -45,17 +45,18 @@ const headers = {
 export const options = {
   scenarios: {
     create_and_delete_devworkspaces: {
-      executor: 'ramping-vus',
-      startVUs: 0,
-      stages: generateLoadTestStages(maxVUs),
-      gracefulRampDown: '1m',
+      executor: 'shared-iterations',
+      vus: maxVUs,
+      iterations: maxDevWorkspaces,
+      maxDuration: '3h',
     },
     final_cleanup: {
       executor: 'per-vu-iterations',
       vus: 1,
       iterations: 1,
-      startTime: `${loadTestDurationInMinutes}m`,
       exec: 'final_cleanup',
+      startTime: '0s',
+      maxDuration: '3h',
     },
   }, thresholds: {
     'checks': ['rate>0.95'],
@@ -91,7 +92,10 @@ export function setup() {
 
 export default function () {
   if (maxDevWorkspaces > 0) {
-    const devWorkspaces = getDevWorkspacesFromApiServer();
+    const { error, devWorkspaces } = getDevWorkspacesFromApiServer();
+    if (error) {
+      return;
+    }
     const totalDevWorkspaces = devWorkspaces.length;
 
     const runningDevWorkspaces = devWorkspaces.filter(
@@ -468,12 +472,21 @@ function getDevWorkspacesFromApiServer() {
   const res = http.get(url, { headers });
 
   if (res.status !== 200) {
-    console.error(`Failed to fetch DevWorkspaces: ${res.status} ${res.statusText || ''}`);
-    return [];
+    const errorMsg = `Failed to fetch DevWorkspaces: ${res.status} ${res.statusText || ''}`;
+    console.error(errorMsg);
+
+    return {
+      error: errorMsg,
+      devWorkspaces: null,
+    };
   }
 
   const body = JSON.parse(res.body);
-  return body.items;
+
+  return {
+    error: null,
+    devWorkspaces: body.items,
+  };
 }
 
 function generateDevWorkspaceToCreate(vuId, iteration, namespace) {

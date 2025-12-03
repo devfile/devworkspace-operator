@@ -74,7 +74,7 @@ type CleanupCronJobConfig struct {
 
 type RegistryConfig struct {
 	// A registry where backup images are stored. Images are stored
-	// in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+	// in {path}/${DEVWORKSPACE_NAMESPACE}:${DEVWORKSPACE_NAME}
 	// +kubebuilder:validation:Required
 	Path string `json:"path,omitempty"`
 	// AuthSecret is the name of a Kubernetes secret of

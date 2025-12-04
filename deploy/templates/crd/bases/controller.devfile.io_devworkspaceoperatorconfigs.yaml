@@ -215,7 +215,7 @@ spec:
                           path:
                             description: |-
                               A registry where backup images are stored. Images are stored
-                              in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+                              in {path}/${DEVWORKSPACE_NAMESPACE}/${DEVWORKSPACE_NAME}:latest
                             type: string
                         required:
                         - path

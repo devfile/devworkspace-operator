@@ -39,6 +39,7 @@ import (
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
 var _ = Describe("BackupCronJobReconciler", func() {
@@ -52,6 +53,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 
 	BeforeEach(func() {
 		ctx = context.Background()
+
+		// Initialize infrastructure for testing (defaults to Kubernetes)
+		infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+
 		scheme := runtime.NewScheme()
 		Expect(controllerv1alpha1.AddToScheme(scheme)).To(Succeed())
 		Expect(dwv2.AddToScheme(scheme)).To(Succeed())

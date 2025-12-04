@@ -205,13 +205,15 @@ spec:
                             description: |-
                               AuthSecret is the name of a Kubernetes secret of
                               type kubernetes.io/dockerconfigjson.
-                              The secret is expected to be in the same namespace
+                              The secret is expected to be in the same namespace the workspace is running in.
+                              If secret is not found in the workspace namespace, the operator will look for the secret
+                              in the namespace where the operator is running in.
                               as the DevWorkspaceOperatorCongfig.
                             type: string
                           path:
                             description: |-
                               A registry where backup images are stored. Images are stored
-                              in {registry}/backup-${DEVWORKSPACE_NAMESPACE}-${DEVWORKSPACE_NAME}
+                              in {path}/${DEVWORKSPACE_NAMESPACE}/${DEVWORKSPACE_NAME}:latest
                             type: string
                         required:
                         - path

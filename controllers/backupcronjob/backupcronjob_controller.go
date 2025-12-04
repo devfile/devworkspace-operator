@@ -122,6 +122,15 @@ func (r *BackupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceoperatorconfigs,verbs=get;list;update;patch;watch
 // +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=builds,verbs=get
+// +kubebuilder:rbac:groups="",resources=builds/details,verbs=update
+// +kubebuilder:rbac:groups="",resources=imagestreams,verbs=create
+// +kubebuilder:rbac:groups="",resources=imagestreams/layers,verbs=get;update
+// +kubebuilder:rbac:groups=build.openshift.io,resources=builds,verbs=get
+// +kubebuilder:rbac:groups=build.openshift.io,resources=builds/details,verbs=update
+// +kubebuilder:rbac:groups=image.openshift.io,resources=imagestreams,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups=image.openshift.io,resources=imagestreams/layers,verbs=get;update
 
 // Reconcile is the main reconciliation loop for the BackupCronJob controller.
 func (r *BackupCronJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -456,11 +465,11 @@ func (r *BackupCronJobReconciler) getWorkspacePVCName(ctx context.Context, works
 func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, workspace *dw.DevWorkspace,
 	dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger,
 ) (*corev1.Secret, error) {
-	if dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret == "" {
+	secretName := dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret
+	if secretName == "" {
 		// No auth secret configured - anonymous access to registry
 		return nil, nil
 	}
-	secretName := dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret
 
 	// First check the workspace namespace for the secret
 	registryAuthSecret := &corev1.Secret{}
@@ -478,21 +487,18 @@ func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, 
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace", "secretName", secretName)
 
 	// If the secret is not found in the workspace namespace, check the operator namespace as fallback
-	if dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret != "" {
-		err := r.NonCachingClient.Get(ctx, client.ObjectKey{
-			Name:      dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret,
-			Namespace: dwOperatorConfig.Namespace,
-		}, registryAuthSecret)
-		if err != nil {
-			log.Error(err, "Failed to get registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
-			return nil, err
-		}
-		log.Info("Successfully retrieved registry auth secret for backup job", "secretName", dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret)
-		return r.copySecret(ctx, workspace, registryAuthSecret, log)
+	err = r.NonCachingClient.Get(ctx, client.ObjectKey{
+		Name:      secretName,
+		Namespace: dwOperatorConfig.Namespace}, registryAuthSecret)
+	if err != nil {
+		log.Error(err, "Failed to get registry auth secret for backup job", "secretName", secretName)
+		return nil, err
 	}
-	return nil, nil
+	log.Info("Successfully retrieved registry auth secret for backup job", "secretName", secretName)
+	return r.copySecret(ctx, workspace, registryAuthSecret, log)
 }
 
+// copySecret copies the given secret from the operator namespace to the workspace namespace.
 func (r *BackupCronJobReconciler) copySecret(ctx context.Context, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
 	existingNamespaceSecret := &corev1.Secret{}
 	err = r.NonCachingClient.Get(ctx, client.ObjectKey{

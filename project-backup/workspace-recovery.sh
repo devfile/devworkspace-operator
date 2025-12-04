@@ -23,7 +23,7 @@ set -x
 : "${DEVWORKSPACE_NAME:?Missing DEVWORKSPACE_NAME}"
 : "${BACKUP_SOURCE_PATH:?Missing BACKUP_SOURCE_PATH}"
 
-BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY}/${DEVWORKSPACE_NAMESPACE}:${DEVWORKSPACE_NAME}"
+BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY}/${DEVWORKSPACE_NAMESPACE}/${DEVWORKSPACE_NAME}:latest"
 
 # --- Functions ---
 backup() {
@@ -44,6 +44,36 @@ backup() {
     --disable-path-validation
   )
   if [[ -n "${REGISTRY_AUTH_FILE:-}" ]]; then
+    # If REGISTRY_AUTH_FILE is provided, use it for authentication
+    oras_args+=(--registry-config "$REGISTRY_AUTH_FILE")
+  elif [[ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]]; then
+    echo "Using mounted service account token for registry authentication"
+    TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+    REGISTRY_HOST=$(echo "$BACKUP_IMAGE" | cut -d'/' -f1)
+
+    # Create temporary auth config for oras
+    REGISTRY_AUTH_FILE="/tmp/registry_auth.json"
+
+    # For OpenShift internal registry, use service account token as password with 'serviceaccount' username
+    if [[ "$REGISTRY_HOST" == *"openshift"* ]] || [[ "$REGISTRY_HOST" == *"svc.cluster.local"* ]]; then
+      # OpenShift internal registry authentication
+      # Use the service account CA for TLS verification
+      if [[ -f /var/run/secrets/kubernetes.io/serviceaccount/ca.crt ]]; then
+        oras login --password-stdin \
+          --ca-file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
+          -u serviceaccount \
+          --registry-config "$REGISTRY_AUTH_FILE" \
+          "$REGISTRY_HOST" <<< "$TOKEN"
+      else
+        # Fallback to insecure if CA cert is not available
+        oras login --password-stdin \
+        --insecure \
+        -u serviceaccount \
+        --registry-config "$REGISTRY_AUTH_FILE" \
+        "$REGISTRY_HOST" <<< "$TOKEN"
+      fi
+    fi
+
     oras_args+=(--registry-config "$REGISTRY_AUTH_FILE")
   fi
   if [[ -n "${ORAS_EXTRA_ARGS:-}" ]]; then
@@ -53,6 +83,11 @@ backup() {
   oras_args+=("$TARBALL_NAME")
   oras "${oras_args[@]}"
   rm -f "$TARBALL_NAME"
+
+  # Clean up temporary auth file if created
+  if [[ -f /tmp/registry_auth.json ]]; then
+    rm -f /tmp/registry_auth.json
+  fi
 
   echo "Backup completed successfully."
 }

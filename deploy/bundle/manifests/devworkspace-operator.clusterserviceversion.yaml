@@ -117,15 +117,16 @@ spec:
         - apiGroups:
           - ""
           resources:
-          - persistentvolumeclaims
-          verbs:
-          - '*'
-        - apiGroups:
-          - ""
-          resources:
+          - imagestreams
           - pods/exec
           verbs:
           - create
+        - apiGroups:
+          - ""
+          resources:
+          - persistentvolumeclaims
+          verbs:
+          - '*'
         - apiGroups:
           - ""
           resourceNames:
@@ -144,6 +145,28 @@ spec:
           - serviceaccounts
           verbs:
           - '*'
+        - apiGroups:
+          - ""
+          - build.openshift.io
+          resources:
+          - builds
+          verbs:
+          - get
+        - apiGroups:
+          - ""
+          - build.openshift.io
+          resources:
+          - builds/details
+          verbs:
+          - update
+        - apiGroups:
+          - ""
+          - image.openshift.io
+          resources:
+          - imagestreams/layers
+          verbs:
+          - get
+          - update
         - apiGroups:
           - admissionregistration.k8s.io
           resources:
@@ -234,6 +257,17 @@ spec:
           - get
           - update
         - apiGroups:
+          - image.openshift.io
+          resources:
+          - imagestreams
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+        - apiGroups:
           - metrics.k8s.io
           resources:
           - pods
@@ -271,6 +305,17 @@ spec:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
           - clusterroles
           verbs:
           - create

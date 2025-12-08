@@ -83,6 +83,8 @@ type RegistryConfig struct {
 	// If secret is not found in the workspace namespace, the operator will look for the secret
 	// in the namespace where the operator is running in.
 	// as the DevWorkspaceOperatorCongfig.
+	// The secret must contain "controller.devfile.io/watch-secret=true" label so that it can be
+	// recognized by the operator.
 	// +kubebuilder:validation:Optional
 	AuthSecret string `json:"authSecret,omitempty"`
 }

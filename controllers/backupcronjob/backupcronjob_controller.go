@@ -256,7 +256,7 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 	}
 	dwOperatorConfig.Status.LastBackupTime = &metav1.Time{Time: metav1.Now().Time}
 
-	err = r.NonCachingClient.Status().Patch(ctx, dwOperatorConfig, origConfig)
+	err = r.Status().Patch(ctx, dwOperatorConfig, origConfig)
 	if err != nil {
 		log.Error(err, "Failed to update DevWorkspaceOperatorConfig status with last backup time")
 		return err
@@ -340,6 +340,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 			},
 		},
 		Spec: batchv1.JobSpec{
+			TTLSecondsAfterFinished: ptr.To[int32](120),
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -473,7 +474,7 @@ func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, 
 
 	// First check the workspace namespace for the secret
 	registryAuthSecret := &corev1.Secret{}
-	err := r.NonCachingClient.Get(ctx, client.ObjectKey{
+	err := r.Get(ctx, client.ObjectKey{
 		Name:      secretName,
 		Namespace: workspace.Namespace}, registryAuthSecret)
 	if err == nil {
@@ -487,7 +488,7 @@ func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, 
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace", "secretName", secretName)
 
 	// If the secret is not found in the workspace namespace, check the operator namespace as fallback
-	err = r.NonCachingClient.Get(ctx, client.ObjectKey{
+	err = r.Get(ctx, client.ObjectKey{
 		Name:      secretName,
 		Namespace: dwOperatorConfig.Namespace}, registryAuthSecret)
 	if err != nil {
@@ -501,7 +502,7 @@ func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, 
 // copySecret copies the given secret from the operator namespace to the workspace namespace.
 func (r *BackupCronJobReconciler) copySecret(ctx context.Context, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
 	existingNamespaceSecret := &corev1.Secret{}
-	err = r.NonCachingClient.Get(ctx, client.ObjectKey{
+	err = r.Get(ctx, client.ObjectKey{
 		Name:      constants.DevWorkspaceBackupAuthSecretName,
 		Namespace: workspace.Namespace}, existingNamespaceSecret)
 	if client.IgnoreNotFound(err) != nil {

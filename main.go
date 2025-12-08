@@ -192,7 +192,7 @@ func main() {
 	if err = (&backupCronJobController.BackupCronJobReconciler{
 		Client:           mgr.GetClient(),
 		NonCachingClient: nonCachingClient,
-		Log:              ctrl.Log.WithName("controllers").WithName("BackupCronJob"),
+		Log:              ctrl.Log.WithName("controllers").WithName("BackupCronJob").V(1),
 		Scheme:           mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BackupCronJob")

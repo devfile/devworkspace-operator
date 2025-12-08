@@ -15,7 +15,6 @@
 #
 
 set -euo pipefail
-set -x
 
 # --- Configuration ---
 : "${DEVWORKSPACE_BACKUP_REGISTRY:?Missing DEVWORKSPACE_BACKUP_REGISTRY}"

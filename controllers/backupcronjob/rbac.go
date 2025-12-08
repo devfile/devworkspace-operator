@@ -22,6 +22,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,8 +39,7 @@ func (r *BackupCronJobReconciler) ensureJobRunnerRBAC(ctx context.Context, works
 	saName := JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{Name: saName, Namespace: workspace.Namespace, Labels: map[string]string{
-			constants.DevWorkspaceIDLabel:          workspace.Status.DevWorkspaceId,
-			constants.DevWorkspaceWatchSecretLabel: "true",
+			constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 		}},
 	}
 
@@ -48,17 +48,27 @@ func (r *BackupCronJobReconciler) ensureJobRunnerRBAC(ctx context.Context, works
 		return err
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, sa, func() error { return nil }); err != nil {
-		return fmt.Errorf("ensuring ServiceAccount: %w", err)
+	clusterAPI := sync.ClusterAPI{
+		Client: r.Client,
+		Scheme: r.Scheme,
+		Logger: r.Log,
+		Ctx:    ctx,
+	}
+
+	_, err := sync.SyncObjectWithCluster(sa, clusterAPI)
+	if err != nil {
+		if _, ok := err.(*sync.NotInSyncError); !ok {
+			return fmt.Errorf("synchronizing ServiceAccount: %w", err)
+		}
 	}
 
 	if infrastructure.IsOpenShift() {
 		// Create ClusterRoleBinding for image push role
-		if err := r.ensureImagePushRoleBinding(ctx, saName, workspace); err != nil {
+		if err := r.ensureImagePushRoleBinding(ctx, saName, workspace, clusterAPI); err != nil {
 			return fmt.Errorf("ensuring image push ClusterRoleBinding: %w", err)
 		}
 		// Create ImageStream for backup images
-		if err := r.ensureImageStreamForBackup(ctx, workspace); err != nil {
+		if err := r.ensureImageStreamForBackup(ctx, workspace, clusterAPI); err != nil {
 			return fmt.Errorf("ensuring ImageStream for backup: %w", err)
 		}
 	}
@@ -69,11 +79,12 @@ func (r *BackupCronJobReconciler) ensureJobRunnerRBAC(ctx context.Context, works
 
 // ensureImagePushRoleBinding creates a ClusterRoleBinding to allow the given ServiceAccount to push images
 // to the OpenShift internal registry.
-func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(ctx context.Context, saName string, workspace *dw.DevWorkspace) error {
+func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(ctx context.Context, saName string, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
 	// Create ClusterRoleBinding for system:image-builder role
-	clusterRoleBinding := &rbacv1.ClusterRoleBinding{
+	clusterRoleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "devworkspace-image-builder-" + workspace.Status.DevWorkspaceId,
+			Name:      "devworkspace-image-builder-" + workspace.Status.DevWorkspaceId,
+			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel: workspace.Status.DevWorkspaceId,
 			},
@@ -92,15 +103,19 @@ func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(ctx context.Context
 		},
 	}
 
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, clusterRoleBinding, func() error { return nil }); err != nil {
-		return fmt.Errorf("ensuring ClusterRoleBinding: %w", err)
+	_, err := sync.SyncObjectWithCluster(clusterRoleBinding, clusterAPI)
+	if err != nil {
+		if _, ok := err.(*sync.NotInSyncError); !ok {
+			return fmt.Errorf("ensuring ClusterRoleBinding: %w", err)
+		}
 	}
+
 	return nil
 }
 
 // ensureImageStreamForBackup creates an ImageStream for the backup images in OpenShift in case user
 // selects to use the internal registry. Push to non-existing ImageStream fails, so we need to create it first.
-func (r *BackupCronJobReconciler) ensureImageStreamForBackup(ctx context.Context, workspace *dw.DevWorkspace) error {
+func (r *BackupCronJobReconciler) ensureImageStreamForBackup(ctx context.Context, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
 	// Create ImageStream for backup images using unstructured to avoid scheme conflicts
 	imageStream := &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -120,18 +135,19 @@ func (r *BackupCronJobReconciler) ensureImageStreamForBackup(ctx context.Context
 			},
 		},
 	}
+	if err := controllerutil.SetControllerReference(workspace, imageStream, r.Scheme); err != nil {
+		return err
+	}
+
 	imageStream.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "image.openshift.io",
 		Version: "v1",
 		Kind:    "ImageStream",
 	})
 
-	if err := controllerutil.SetControllerReference(workspace, imageStream, r.Scheme); err != nil {
-		return err
-	}
-
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, imageStream, func() error { return nil }); err != nil {
 		return fmt.Errorf("ensuring ImageStream: %w", err)
 	}
+
 	return nil
 }

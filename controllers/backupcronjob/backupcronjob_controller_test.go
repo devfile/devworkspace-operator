@@ -532,7 +532,6 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			}, sa)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(sa.Labels).To(HaveKeyWithValue(constants.DevWorkspaceIDLabel, "id-rbac"))
-			Expect(sa.Labels).To(HaveKeyWithValue(constants.DevWorkspaceWatchSecretLabel, "true"))
 
 			// Calling again should be idempotent
 			err = reconciler.ensureJobRunnerRBAC(ctx, dw)

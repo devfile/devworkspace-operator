@@ -80,8 +80,8 @@ func (r *BackupCronJobReconciler) ensureJobRunnerRBAC(ctx context.Context, works
 // ensureImagePushRoleBinding creates a ClusterRoleBinding to allow the given ServiceAccount to push images
 // to the OpenShift internal registry.
 func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(ctx context.Context, saName string, workspace *dw.DevWorkspace, clusterAPI sync.ClusterAPI) error {
-	// Create ClusterRoleBinding for system:image-builder role
-	clusterRoleBinding := &rbacv1.RoleBinding{
+	// Create RoleBinding for system:image-builder role
+	roleBinding := &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "devworkspace-image-builder-" + workspace.Status.DevWorkspaceId,
 			Namespace: workspace.Namespace,
@@ -103,10 +103,10 @@ func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(ctx context.Context
 		},
 	}
 
-	_, err := sync.SyncObjectWithCluster(clusterRoleBinding, clusterAPI)
+	_, err := sync.SyncObjectWithCluster(roleBinding, clusterAPI)
 	if err != nil {
 		if _, ok := err.(*sync.NotInSyncError); !ok {
-			return fmt.Errorf("ensuring ClusterRoleBinding: %w", err)
+			return fmt.Errorf("ensuring RoleBinding: %w", err)
 		}
 	}
 

@@ -76,6 +76,8 @@ const devworkspaceReadyDuration = new Trend('devworkspace_ready_duration');
 const devworkspaceReadyFailed = new Counter('devworkspace_ready_failed');
 const operatorCpu = new Trend('average_operator_cpu'); // in milli cores
 const operatorMemory = new Trend('average_operator_memory'); // in Mi
+const etcdCpu = new Trend('average_etcd_cpu'); // in milli cores
+const etcdMemory = new Trend('average_etcd_memory'); // in Mi
 const devworkspacesCreated = new Counter('devworkspace_create_count');
 const operatorCpuViolations = new Counter('operator_cpu_violations');
 const operatorMemViolations = new Counter('operator_mem_violations');
@@ -83,7 +85,32 @@ const operatorMemViolations = new Counter('operator_mem_violations');
 const maxCpuMillicores = 250;
 const maxMemoryBytes = 200 * 1024 * 1024;
 
+let etcdNamespace = 'openshift-etcd';
+let etcdPodNamePattern = 'etcd';
+
+function detectClusterType() {
+  const apiGroupsUrl = `${apiServer}/apis`;
+  const res = http.get(apiGroupsUrl, {headers});
+  
+  if (res.status === 200) {
+    try {
+      const data = JSON.parse(res.body);
+      const groups = data.groups || [];
+      const hasOpenShiftRoutes = groups.some(g => g.name === 'route.openshift.io');
+      
+      if (!hasOpenShiftRoutes) {
+        etcdNamespace = __ENV.ETCD_NAMESPACE || 'kube-system';
+        etcdPodNamePattern = __ENV.ETCD_POD_NAME_PATTERN || 'kube-proxy';
+        console.log('Detected Kubernetes cluster - using kube-system namespace with kube-proxy');
+      }
+    } catch (e) {
+      console.warn(`Failed to detect cluster type: ${e.message}, using defaults`);
+    }
+  }
+}
+
 export function setup() {
+  detectClusterType();
   if (shouldCreateAutomountResources) {
     createNewAutomountConfigMap();
     createNewAutomountSecret();
@@ -155,7 +182,7 @@ export function final_cleanup() {
 }
 
 export function handleSummary(data) {
-  const allowed = ['devworkspace_create_count', 'devworkspace_create_duration', 'devworkspace_delete_duration', 'devworkspace_ready_duration', 'devworkspace_ready', 'devworkspace_ready_failed', 'operator_cpu_violations', 'operator_mem_violations', 'average_operator_cpu', 'average_operator_memory'];
+  const allowed = ['devworkspace_create_count', 'devworkspace_create_duration', 'devworkspace_delete_duration', 'devworkspace_ready_duration', 'devworkspace_ready', 'devworkspace_ready_failed', 'operator_cpu_violations', 'operator_mem_violations', 'average_operator_cpu', 'average_operator_memory', 'etcd_cpu_violations', 'etcd_mem_violations', 'average_etcd_cpu', 'average_etcd_memory'];
 
   const filteredData = JSON.parse(JSON.stringify(data));
   for (const key of Object.keys(filteredData.metrics)) {
@@ -227,6 +254,7 @@ function waitUntilDevWorkspaceIsReady(vuId, crName, namespace) {
     }
 
     checkDevWorkspaceOperatorMetrics();
+    checkEtcdMetrics();
     sleep(pollWaitInterval);
     attempts++;
   }
@@ -292,6 +320,57 @@ function checkDevWorkspaceOperatorMetrics() {
       [`[${name}] CPU < ${maxCpuMillicores}m`]: () => cpuOk,
       [`[${name}] Memory < ${Math.round(maxMemoryBytes / 1024 / 1024)}Mi`]: () => memOk,
     });
+  }
+}
+
+function checkEtcdMetrics() {
+  if (!etcdNamespace || !etcdPodNamePattern) {
+    console.warn(`[ETCD METRICS] Variables not initialized: etcdNamespace=${etcdNamespace}, etcdPodNamePattern=${etcdPodNamePattern}`);
+    return;
+  }
+
+  const metricsUrl = `${apiServer}/apis/metrics.k8s.io/v1beta1/namespaces/${etcdNamespace}/pods`;
+  const res = http.get(metricsUrl, {headers});
+
+  check(res, {
+    'Fetched etcd pod metrics successfully': (r) => r.status === 200,
+  });
+
+  if (res.status !== 200) {
+    return;
+  }
+
+  const data = JSON.parse(res.body);
+  const etcdPods = data.items.filter(p => p.metadata.name.includes(etcdPodNamePattern));
+
+  if (etcdPods.length === 0) {
+    if (data.items && data.items.length > 0) {
+      const podNames = data.items.map(p => p.metadata.name).join(', ');
+      console.warn(`[ETCD METRICS] No pods found matching pattern '${etcdPodNamePattern}' in namespace '${etcdNamespace}'. Available pods: ${podNames}`);
+    } else {
+      console.warn(`[ETCD METRICS] No pods found in namespace '${etcdNamespace}'`);
+    }
+    return;
+  }
+
+  for (const pod of etcdPods) {
+    if (!pod.containers || pod.containers.length === 0) {
+      console.warn(`[ETCD METRICS] Pod ${pod.metadata.name} has no containers`);
+      continue;
+    }
+    const container = pod.containers[0];
+    const name = pod.metadata.name;
+
+    if (!container.usage || !container.usage.cpu || !container.usage.memory) {
+      console.warn(`[ETCD METRICS] Pod ${name} has no usage data:`, JSON.stringify(container.usage));
+      continue;
+    }
+
+    const cpu = parseCpuToMillicores(container.usage.cpu);
+    const memory = parseMemoryToBytes(container.usage.memory);
+
+    etcdCpu.add(cpu);
+    etcdMemory.add(memory / 1024 / 1024);
   }
 }
 

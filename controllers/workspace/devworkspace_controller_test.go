@@ -150,6 +150,14 @@ var _ = Describe("DevWorkspace Controller", func() {
 				return err == nil
 			}, timeout, interval).Should(BeTrue(), "DevWorkspace should exist in cluster")
 
+			By("Waiting for the first DevWorkspace to have its ID set")
+			Eventually(func() (string, error) {
+				if err := k8sClient.Get(ctx, dwNamespacedName, createdDW); err != nil {
+					return "", err
+				}
+				return createdDW.Status.DevWorkspaceId, nil
+			}, timeout, interval).Should(Equal("test-workspace-id"), "First DevWorkspace should have ID set from override annotation")
+
 			By("Creating a DevWorkspace that duplicates the workspace ID of the first")
 			Expect(k8sClient.Create(ctx, devworkspace2)).Should(Succeed())
 			defer deleteDevWorkspace(devworkspace2.Name)
@@ -406,6 +414,13 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 			createObject(gitCredentials)
 			defer deleteObject(gitCredentials)
+
+			By("Waiting for DevWorkspaceRouting to be created")
+			dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+			dwrName := common.DevWorkspaceRoutingName(workspaceID)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName(dwrName, testNamespace), dwr)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting should be created")
 
 			By("Manually making Routing ready to continue")
 			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))

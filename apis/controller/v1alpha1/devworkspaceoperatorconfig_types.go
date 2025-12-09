@@ -183,6 +183,11 @@ type WorkspaceConfig struct {
 	// the value "0" should be used. By default, the memory limit is 128Mi and the memory request is 64Mi.
 	// No CPU limit or request is added by default.
 	DefaultContainerResources *corev1.ResourceRequirements `json:"defaultContainerResources,omitempty"`
+	// ContainerResourceCaps defines the maximum resource requirements enforced for all
+	// workspace containers. If a container specifies higher limits or requests, they
+	// will be capped at these maximum values. This is not applied to initContainers or
+	// the projectClone container.
+	ContainerResourceCaps *corev1.ResourceRequirements `json:"containerResourceCaps,omitempty"`
 	// PodAnnotations defines the metadata.annotations for DevWorkspace pods created by the DevWorkspace Operator.
 	PodAnnotations map[string]string `json:"podAnnotations,omitempty"`
 	// RuntimeClassName defines the spec.runtimeClassName for DevWorkspace pods created by the DevWorkspace Operator.

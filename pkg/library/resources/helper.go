@@ -166,21 +166,21 @@ func ApplyDefaults(resources, defaults *corev1.ResourceRequirements) *corev1.Res
 	}
 
 	// Set default limits if not present
-	for resource, quantity := range defaults.Limits {
+	for resourceName, quantity := range defaults.Limits {
 		if result.Limits == nil {
 			result.Limits = corev1.ResourceList{}
 		}
-		if _, ok := result.Limits[resource]; !ok && !quantity.IsZero() {
-			result.Limits[resource] = quantity
+		if _, ok := result.Limits[resourceName]; !ok && !quantity.IsZero() {
+			result.Limits[resourceName] = quantity
 		}
 	}
 	// Set default requests if not present
-	for resource, quantity := range defaults.Requests {
+	for resourceName, quantity := range defaults.Requests {
 		if result.Requests == nil {
 			result.Requests = corev1.ResourceList{}
 		}
-		if _, ok := result.Requests[resource]; !ok && !quantity.IsZero() {
-			result.Requests[resource] = quantity
+		if _, ok := result.Requests[resourceName]; !ok && !quantity.IsZero() {
+			result.Requests[resourceName] = quantity
 		}
 	}
 
@@ -214,6 +214,101 @@ func ApplyDefaults(resources, defaults *corev1.ResourceRequirements) *corev1.Res
 			result.Requests[corev1.ResourceCPU] = originalCPULimit
 		default: // Invalid resources is not a result of applying defaults, do nothing
 			break
+		}
+	}
+
+	return result
+}
+
+func ApplyCaps(resources, caps *corev1.ResourceRequirements) *corev1.ResourceRequirements {
+	result := resources.DeepCopy()
+	if caps == nil {
+		return result
+	}
+
+	// Apply caps limits as maximum values (use the smaller of existing and caps)
+	for resourceName, capLimit := range caps.Limits {
+		if capLimit.IsZero() {
+			continue
+		}
+		if result.Limits == nil {
+			result.Limits = corev1.ResourceList{}
+		}
+		existingLimit, hasExisting := result.Limits[resourceName]
+		if !hasExisting || existingLimit.IsZero() {
+			// No existing limit, use caps as maximum
+			result.Limits[resourceName] = capLimit
+		} else if existingLimit.Cmp(capLimit) > 0 {
+			// Existing limit is higher than caps, apply caps maximum
+			result.Limits[resourceName] = capLimit
+		}
+		// Otherwise, keep existing limit (it's already lower than or equal to caps)
+	}
+
+	// Apply caps requests as maximum values (use the smaller of existing and caps)
+	for resourceName, capRequest := range caps.Requests {
+		if capRequest.IsZero() {
+			continue
+		}
+		if result.Requests == nil {
+			result.Requests = corev1.ResourceList{}
+		}
+		existingRequest, hasExisting := result.Requests[resourceName]
+		if !hasExisting || existingRequest.IsZero() {
+			// No existing request, use caps as maximum
+			result.Requests[resourceName] = capRequest
+		} else if existingRequest.Cmp(capRequest) > 0 {
+			// Existing request is higher than caps, apply caps maximum
+			result.Requests[resourceName] = capRequest
+		}
+		// Otherwise, keep existing request (it's already lower than or equal to caps)
+	}
+
+	// Edge cases: after applying caps, we might create invalid resources (limit < request).
+	// We need to adjust to ensure the result is still valid.
+	memLimit := result.Limits[corev1.ResourceMemory]
+	memRequest := result.Requests[corev1.ResourceMemory]
+	if !memLimit.IsZero() && !memRequest.IsZero() && memLimit.Cmp(memRequest) < 0 {
+		capMemLimit := caps.Limits[corev1.ResourceMemory]
+		capMemRequest := caps.Requests[corev1.ResourceMemory]
+		switch {
+		case !capMemLimit.IsZero() && capMemRequest.IsZero():
+			// Cap limit caused the issue, adjust request down to match limit
+			result.Requests[corev1.ResourceMemory] = capMemLimit
+		case capMemLimit.IsZero() && !capMemRequest.IsZero():
+			// Cap request as maximum shouldn't cause limit < request, but adjust request down to match limit
+			result.Requests[corev1.ResourceMemory] = memLimit
+		default:
+			// Both caps or neither caps - use caps limit for both to ensure validity
+			if !capMemLimit.IsZero() {
+				result.Limits[corev1.ResourceMemory] = capMemLimit
+				result.Requests[corev1.ResourceMemory] = capMemLimit
+			} else {
+				result.Requests[corev1.ResourceMemory] = memLimit
+			}
+		}
+	}
+
+	cpuLimit := result.Limits[corev1.ResourceCPU]
+	cpuRequest := result.Requests[corev1.ResourceCPU]
+	if !cpuLimit.IsZero() && !cpuRequest.IsZero() && cpuLimit.Cmp(cpuRequest) < 0 {
+		capCPULimit := caps.Limits[corev1.ResourceCPU]
+		capCPURequest := caps.Requests[corev1.ResourceCPU]
+		switch {
+		case !capCPULimit.IsZero() && capCPURequest.IsZero():
+			// Cap limit caused the issue, adjust request down to match limit
+			result.Requests[corev1.ResourceCPU] = capCPULimit
+		case capCPULimit.IsZero() && !capCPURequest.IsZero():
+			// Cap request as maximum shouldn't cause limit < request, but adjust request down to match limit
+			result.Requests[corev1.ResourceCPU] = cpuLimit
+		default:
+			// Both caps or neither caps - use caps limit for both to ensure validity
+			if !capCPULimit.IsZero() {
+				result.Limits[corev1.ResourceCPU] = capCPULimit
+				result.Requests[corev1.ResourceCPU] = capCPULimit
+			} else {
+				result.Requests[corev1.ResourceCPU] = cpuLimit
+			}
 		}
 	}
 

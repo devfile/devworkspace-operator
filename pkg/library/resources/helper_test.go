@@ -304,6 +304,105 @@ func TestApplyDefaults(t *testing.T) {
 	}
 }
 
+func TestApplyCaps(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     *corev1.ResourceRequirements
+		caps     *corev1.ResourceRequirements
+		expected *corev1.ResourceRequirements
+	}{
+		{
+			name:     "Applies all caps values to empty resources",
+			base:     &corev1.ResourceRequirements{},
+			caps:     getResourceRequirements("2000Mi", "200Mi", "2000m", "200m"),
+			expected: getResourceRequirements("2000Mi", "200Mi", "2000m", "200m"),
+		},
+		{
+			name:     "Caps maximum limits and maximum requests",
+			base:     getResourceRequirements("3000Mi", "50Mi", "3000m", "50m"),
+			caps:     getResourceRequirements("2000Mi", "200Mi", "2000m", "200m"),
+			expected: getResourceRequirements("2000Mi", "50Mi", "2000m", "50m"),
+		},
+		{
+			name:     "Keeps existing values when within caps bounds",
+			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+			caps:     getResourceRequirements("2000Mi", "200Mi", "2000m", "200m"),
+			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+		},
+		{
+			name:     "Does not apply empty caps fields",
+			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+			caps:     getResourceRequirements("2000Mi", "", "2000m", ""),
+			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+		},
+		{
+			name:     "Handles nil caps",
+			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+			caps:     nil,
+			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+		},
+		{
+			name:     "Ignores '0' fields in caps",
+			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+			caps:     getResourceRequirements("0", "0", "0", "0"),
+			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+		},
+		{
+			name:     "Caps maximum limit (existing higher than caps)",
+			base:     getResourceRequirements("5000Mi", "100Mi", "5000m", "100m"),
+			caps:     getResourceRequirements("2000Mi", "", "2000m", ""),
+			expected: getResourceRequirements("2000Mi", "100Mi", "2000m", "100m"),
+		},
+		{
+			name:     "Caps maximum request (existing higher than caps)",
+			base:     getResourceRequirements("5000Mi", "500Mi", "5000m", "500m"),
+			caps:     getResourceRequirements("", "200Mi", "", "200m"),
+			expected: getResourceRequirements("5000Mi", "200Mi", "5000m", "200m"),
+		},
+		{
+			name:     "Adjusts memory request when caps limit creates conflict",
+			base:     getResourceRequirements("", "1000Mi", "", ""),
+			caps:     getResourceRequirements("500Mi", "", "", ""),
+			expected: getResourceRequirements("500Mi", "500Mi", "", ""),
+		},
+		{
+			name:     "Adjusts memory request when caps request creates conflict",
+			base:     getResourceRequirements("100Mi", "200Mi", "", ""),
+			caps:     getResourceRequirements("", "500Mi", "", ""),
+			expected: getResourceRequirements("100Mi", "100Mi", "", ""),
+		},
+		{
+			name:     "Adjusts CPU request when caps limit creates conflict",
+			base:     getResourceRequirements("", "", "", "1000m"),
+			caps:     getResourceRequirements("", "", "500m", ""),
+			expected: getResourceRequirements("", "", "500m", "500m"),
+		},
+		{
+			name:     "Adjusts CPU request when caps request creates conflict",
+			base:     getResourceRequirements("", "", "100m", "200m"),
+			caps:     getResourceRequirements("", "", "", "500m"),
+			expected: getResourceRequirements("", "", "100m", "100m"),
+		},
+		{
+			name:     "Handles conflicting caps values (both limit and request capped, request > limit)",
+			base:     getResourceRequirements("100Mi", "1000Mi", "100m", "1000m"),
+			caps:     getResourceRequirements("500Mi", "1000Mi", "500m", "1000m"),
+			expected: getResourceRequirements("500Mi", "500Mi", "500m", "500m"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := ApplyCaps(tt.base, tt.caps)
+			if !assert.Equal(t, tt.expected, actual) {
+				// Print more useful diff since quantity is not a simple struct
+				expectedYaml, _ := yaml.Marshal(tt.expected)
+				actualYaml, _ := yaml.Marshal(actual)
+				t.Logf("\nExpected:\n%s\nActual:\n%s", expectedYaml, actualYaml)
+			}
+		})
+	}
+}
+
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name      string

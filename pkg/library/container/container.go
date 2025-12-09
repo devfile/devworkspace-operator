@@ -45,7 +45,15 @@ import (
 // rewritten as Volumes are added to PodAdditions, in order to support e.g. using one PVC to hold all volumes
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
-func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securityContext *corev1.SecurityContext, pullPolicy string, defaultResources *corev1.ResourceRequirements, postStartTimeout string, postStartDebugTrapSleepDuration string) (*v1alpha1.PodAdditions, error) {
+func GetKubeContainersFromDevfile(
+	workspace *dw.DevWorkspaceTemplateSpec,
+	securityContext *corev1.SecurityContext,
+	pullPolicy string,
+	defaultResources *corev1.ResourceRequirements,
+	resourceCaps *corev1.ResourceRequirements,
+	postStartTimeout string,
+	postStartDebugTrapSleepDuration string,
+) (*v1alpha1.PodAdditions, error) {
 	if !flatten.DevWorkspaceIsFlattened(workspace, nil) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}
@@ -60,7 +68,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securi
 		if component.Container == nil {
 			continue
 		}
-		k8sContainer, err := convertContainerToK8s(component, securityContext, pullPolicy, defaultResources)
+		k8sContainer, err := convertContainerToK8s(component, securityContext, pullPolicy, defaultResources, resourceCaps)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +94,7 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securi
 	}
 
 	for _, initComponent := range initComponents {
-		k8sContainer, err := convertContainerToK8s(initComponent, securityContext, pullPolicy, defaultResources)
+		k8sContainer, err := convertContainerToK8s(initComponent, securityContext, pullPolicy, defaultResources, nil)
 		if err != nil {
 			return nil, err
 		}

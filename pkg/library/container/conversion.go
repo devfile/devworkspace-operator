@@ -25,7 +25,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func convertContainerToK8s(devfileComponent dw.Component, securityContext *corev1.SecurityContext, pullPolicy string, defaultResources *corev1.ResourceRequirements) (*corev1.Container, error) {
+func convertContainerToK8s(
+	devfileComponent dw.Component,
+	securityContext *corev1.SecurityContext,
+	pullPolicy string,
+	defaultResources *corev1.ResourceRequirements,
+	resourceCaps *corev1.ResourceRequirements,
+) (*corev1.Container, error) {
 	if devfileComponent.Container == nil {
 		return nil, fmt.Errorf("cannot get k8s container from non-container component")
 	}
@@ -36,6 +42,7 @@ func convertContainerToK8s(devfileComponent dw.Component, securityContext *corev
 		return nil, fmt.Errorf("failed to get resources for container %s: %s", devfileComponent.Name, err)
 	}
 	containerResources = dwResources.ApplyDefaults(containerResources, defaultResources)
+	containerResources = dwResources.ApplyCaps(containerResources, resourceCaps)
 	if err := dwResources.ValidateResources(containerResources); err != nil {
 		return nil, fmt.Errorf("container resources are invalid for component %s: %w", devfileComponent.Name, err)
 	}

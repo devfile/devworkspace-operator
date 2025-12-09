@@ -96,7 +96,7 @@ var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
 
 		ginkgo.AfterEach(func() {
 			// Cleanup workspace
-			_, _ = config.DevK8sClient.OcDeleteWorkspace(workspaceName, config.DevWorkspaceNamespace)
+			_ = config.DevK8sClient.DeleteDevWorkspace(workspaceName, config.DevWorkspaceNamespace)
 		})
 	})
 
@@ -150,7 +150,7 @@ var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
 
 		ginkgo.AfterEach(func() {
 			// Cleanup workspace
-			_, _ = config.DevK8sClient.OcDeleteWorkspace(workspaceName, config.DevWorkspaceNamespace)
+			_ = config.DevK8sClient.DeleteDevWorkspace(workspaceName, config.DevWorkspaceNamespace)
 		})
 	})
 })

@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -89,4 +90,18 @@ func (w *K8sClient) WaitDevWsStatus(name, namespace string, expectedStatus dw.De
 			}
 		}
 	}
+}
+
+// DeleteDevWorkspace deletes a DevWorkspace using the Kubernetes client.
+// Returns an error if the deletion fails (ignoring NotFound errors).
+func (w *K8sClient) DeleteDevWorkspace(name, namespace string) error {
+	workspace := &dw.DevWorkspace{}
+	workspace.ObjectMeta.Name = name
+	workspace.ObjectMeta.Namespace = namespace
+
+	err := w.crClient.Delete(context.TODO(), workspace)
+	if err != nil && !k8sErrors.IsNotFound(err) {
+		return err
+	}
+	return nil
 }

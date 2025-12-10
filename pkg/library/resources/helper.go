@@ -273,19 +273,26 @@ func ApplyCaps(resources, caps *corev1.ResourceRequirements) *corev1.ResourceReq
 		capMemRequest := caps.Requests[corev1.ResourceMemory]
 		switch {
 		case !capMemLimit.IsZero() && capMemRequest.IsZero():
-			// Cap limit caused the issue, adjust request down to match limit
-			result.Requests[corev1.ResourceMemory] = capMemLimit
-		case capMemLimit.IsZero() && !capMemRequest.IsZero():
-			// Cap request as maximum shouldn't cause limit < request, but adjust request down to match limit
-			result.Requests[corev1.ResourceMemory] = memLimit
-		default:
-			// Both caps or neither caps - use caps limit for both to ensure validity
-			if !capMemLimit.IsZero() {
-				result.Limits[corev1.ResourceMemory] = capMemLimit
+			// Only a memory limit cap was set, and it caused the limit to be lower than the request.
+			// Adjust the request down to match the capped limit.
+			if memLimit.Equal(capMemLimit) {
 				result.Requests[corev1.ResourceMemory] = capMemLimit
 			} else {
-				result.Requests[corev1.ResourceMemory] = memLimit
+				// The invalid state (limit < request) existed in the original resources before caps were applied.
 			}
+		case capMemLimit.IsZero() && !capMemRequest.IsZero():
+			// Only a memory request cap was set, and it's higher than the existing limit.
+			// Adjust the limit up to match the capped request.
+			if memRequest.Equal(capMemRequest) {
+				result.Limits[corev1.ResourceMemory] = capMemRequest
+			} else {
+				// The invalid state (limit < request) existed in the original resources before caps were applied.
+				break
+			}
+		default:
+			// Both limit and request caps were set (or neither was set), so the invalid state was present
+			// in the original resources.
+			break
 		}
 	}
 
@@ -296,19 +303,27 @@ func ApplyCaps(resources, caps *corev1.ResourceRequirements) *corev1.ResourceReq
 		capCPURequest := caps.Requests[corev1.ResourceCPU]
 		switch {
 		case !capCPULimit.IsZero() && capCPURequest.IsZero():
-			// Cap limit caused the issue, adjust request down to match limit
-			result.Requests[corev1.ResourceCPU] = capCPULimit
-		case capCPULimit.IsZero() && !capCPURequest.IsZero():
-			// Cap request as maximum shouldn't cause limit < request, but adjust request down to match limit
-			result.Requests[corev1.ResourceCPU] = cpuLimit
-		default:
-			// Both caps or neither caps - use caps limit for both to ensure validity
-			if !capCPULimit.IsZero() {
-				result.Limits[corev1.ResourceCPU] = capCPULimit
+			// Only a CPU limit cap was set, and it caused the limit to be lower than the request.
+			// Adjust the request down to match the capped limit.
+			if cpuLimit.Equal(capCPULimit) {
 				result.Requests[corev1.ResourceCPU] = capCPULimit
 			} else {
-				result.Requests[corev1.ResourceCPU] = cpuLimit
+				// The invalid state (limit < request) existed in the original resources before caps were applied.
+				break
 			}
+		case capCPULimit.IsZero() && !capCPURequest.IsZero():
+			// Only a CPU request cap was set, and it's higher than the existing limit.
+			// Adjust the limit up to match the capped request.
+			if cpuRequest.Equal(capCPURequest) {
+				result.Limits[corev1.ResourceCPU] = capCPURequest
+			} else {
+				// The invalid state (limit < request) existed in the original resources before caps were applied.
+				break
+			}
+		default:
+			// Both limit and request caps were set (or neither was set), so the invalid state was present
+			// in the original resources.
+			break
 		}
 	}
 

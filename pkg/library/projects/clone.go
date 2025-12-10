@@ -38,7 +38,6 @@ type Options struct {
 	Image      string
 	PullPolicy corev1.PullPolicy
 	Resources  *corev1.ResourceRequirements
-	Caps       *corev1.ResourceRequirements
 	Env        []corev1.EnvVar
 }
 

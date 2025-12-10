@@ -50,7 +50,6 @@ type ResolverTools struct {
 	K8sClient                   client.Client
 	HttpClient                  network.HTTPGetter
 	DefaultResourceRequirements *corev1.ResourceRequirements
-	ResourceCaps                *corev1.ResourceRequirements
 }
 
 // ResolveDevWorkspace takes a devworkspace and returns a "resolved" version of it -- i.e. one where all plugins and parents
@@ -68,7 +67,7 @@ func ResolveDevWorkspace(workspace *dw.DevWorkspaceTemplateSpec, contributions [
 	}
 
 	if needsMerge, err := needsContainerContributionMerge(resolvedDW); needsMerge {
-		if err := mergeContainerContributions(resolvedDW, tooling.DefaultResourceRequirements, tooling.ResourceCaps); err != nil {
+		if err := mergeContainerContributions(resolvedDW, tooling.DefaultResourceRequirements); err != nil {
 			return nil, nil, err
 		}
 	} else if err != nil {

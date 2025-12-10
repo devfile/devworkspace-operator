@@ -86,6 +86,9 @@ func GetKubeContainersFromDevfile(
 
 		// applying caps only after overrides
 		resources := dwResources.ApplyCaps(&k8sContainer.Resources, resourceCaps)
+		if err := dwResources.ValidateResources(resources); err != nil {
+			return nil, fmt.Errorf("container resources are invalid for component %s: %w", component.Name, err)
+		}
 		k8sContainer.Resources = *resources
 
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)

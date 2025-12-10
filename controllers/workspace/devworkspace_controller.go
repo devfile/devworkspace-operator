@@ -264,7 +264,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		K8sClient:                   r.Client,
 		HttpClient:                  httpClient,
 		DefaultResourceRequirements: workspace.Config.Workspace.DefaultContainerResources,
-		ResourceCaps:                workspace.Config.Workspace.ContainerResourceCaps,
 	}
 
 	if wsDefaults.NeedsDefaultTemplate(workspace) {
@@ -358,7 +357,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		Image:     workspace.Config.Workspace.ProjectCloneConfig.Image,
 		Env:       env.GetEnvironmentVariablesForProjectClone(workspace),
 		Resources: workspace.Config.Workspace.ProjectCloneConfig.Resources,
-		Caps:      workspace.Config.Workspace.ContainerResourceCaps,
 	}
 	if workspace.Config.Workspace.ProjectCloneConfig.ImagePullPolicy != "" {
 		projectCloneOptions.PullPolicy = config.Workspace.ProjectCloneConfig.ImagePullPolicy

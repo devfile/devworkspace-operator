@@ -166,21 +166,21 @@ func ApplyDefaults(resources, defaults *corev1.ResourceRequirements) *corev1.Res
 	}
 
 	// Set default limits if not present
-	for resourceName, quantity := range defaults.Limits {
+	for resource, quantity := range defaults.Limits {
 		if result.Limits == nil {
 			result.Limits = corev1.ResourceList{}
 		}
-		if _, ok := result.Limits[resourceName]; !ok && !quantity.IsZero() {
-			result.Limits[resourceName] = quantity
+		if _, ok := result.Limits[resource]; !ok && !quantity.IsZero() {
+			result.Limits[resource] = quantity
 		}
 	}
 	// Set default requests if not present
-	for resourceName, quantity := range defaults.Requests {
+	for resource, quantity := range defaults.Requests {
 		if result.Requests == nil {
 			result.Requests = corev1.ResourceList{}
 		}
-		if _, ok := result.Requests[resourceName]; !ok && !quantity.IsZero() {
-			result.Requests[resourceName] = quantity
+		if _, ok := result.Requests[resource]; !ok && !quantity.IsZero() {
+			result.Requests[resource] = quantity
 		}
 	}
 

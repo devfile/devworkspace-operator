@@ -167,8 +167,8 @@ A specially-named init container `init-persistent-home` can be used to override 
 
 - **Name:** Must be exactly `init-persistent-home`
 - **Image:** Optional. If omitted, defaults to the first non-imported workspace container's image. If no suitable image can be inferred, the workspace will fail to start with an error.
-- **Command:** Optional. If omitted, defaults to `["/bin/sh", "-c"]`. If provided, must exactly match this value.
-- **Args:** Required. Must contain exactly one string with the initialization script.
+- **Command:** Optional. If omitted, defaults to `["/bin/sh", "-c"]`. If provided, can be any valid command array.
+- **Args:** Optional. If omitted and command is also omitted, defaults to a single script string. If provided, can be any valid args array.
 - **VolumeMounts:** Forbidden. The operator automatically mounts the `persistent-home` volume at `/home/user/`.
 - **Env:** Optional. Environment variables are allowed.
 - **Other fields:** Not allowed. Fields such as `ports`, `probes`, `lifecycle`, `securityContext`, `resources`, `volumeDevices`, `stdin`, `tty`, and `workingDir` are rejected to keep behavior predictable.

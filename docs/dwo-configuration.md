@@ -163,7 +163,7 @@ config:
 
 A specially-named init container `init-persistent-home` can be used to override the built-in persistent home directory initialization logic when `config.workspace.persistUserHome.enabled: true`. This is useful for enterprises using customized UDI images that require different home directory setup logic.
 
-**Contract for `init-persistent-home`:**
+**Prerequisites for `init-persistent-home`:**
 
 - **Name:** Must be exactly `init-persistent-home`
 - **Image:** Optional. If omitted, defaults to the first non-imported workspace container's image. If no suitable image can be inferred, the workspace will fail to start with an error.

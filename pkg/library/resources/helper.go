@@ -264,58 +264,36 @@ func ApplyCaps(resources, caps *corev1.ResourceRequirements) *corev1.ResourceReq
 		// Otherwise, keep existing request (it's already lower than or equal to caps)
 	}
 
+	result = handleCapsEdgeCase(result, caps, corev1.ResourceMemory)
+	result = handleCapsEdgeCase(result, caps, corev1.ResourceCPU)
+
+	return result
+}
+
+func handleCapsEdgeCase(resources, caps *corev1.ResourceRequirements, resourceName corev1.ResourceName) *corev1.ResourceRequirements {
+	result := resources.DeepCopy()
+
 	// Edge cases: after applying caps, we might create invalid resources (limit < request).
 	// We need to adjust to ensure the result is still valid.
-	memLimit := result.Limits[corev1.ResourceMemory]
-	memRequest := result.Requests[corev1.ResourceMemory]
-	if !memLimit.IsZero() && !memRequest.IsZero() && memLimit.Cmp(memRequest) < 0 {
-		capMemLimit := caps.Limits[corev1.ResourceMemory]
-		capMemRequest := caps.Requests[corev1.ResourceMemory]
+	resLimit := resources.Limits[resourceName]
+	resRequest := resources.Requests[resourceName]
+	if !resLimit.IsZero() && !resRequest.IsZero() && resLimit.Cmp(resRequest) < 0 {
+		capResLimit := caps.Limits[resourceName]
+		capResRequest := caps.Requests[resourceName]
 		switch {
-		case !capMemLimit.IsZero() && capMemRequest.IsZero():
-			// Only a memory limit cap was set, and it caused the limit to be lower than the request.
+		case !capResLimit.IsZero() && capResRequest.IsZero():
+			// Only a resource limit cap was set, and it caused the limit to be lower than the request.
 			// Adjust the request down to match the capped limit.
-			if memLimit.Equal(capMemLimit) {
-				result.Requests[corev1.ResourceMemory] = capMemLimit
+			if resLimit.Equal(capResLimit) {
+				result.Requests[resourceName] = capResLimit
 			} else {
 				// The invalid state (limit < request) existed in the original resources before caps were applied.
 			}
-		case capMemLimit.IsZero() && !capMemRequest.IsZero():
-			// Only a memory request cap was set, and it's higher than the existing limit.
+		case capResLimit.IsZero() && !capResRequest.IsZero():
+			// Only a resource request cap was set, and it's higher than the existing limit.
 			// Adjust the limit up to match the capped request.
-			if memRequest.Equal(capMemRequest) {
-				result.Limits[corev1.ResourceMemory] = capMemRequest
-			} else {
-				// The invalid state (limit < request) existed in the original resources before caps were applied.
-				break
-			}
-		default:
-			// Both limit and request caps were set (or neither was set), so the invalid state was present
-			// in the original resources.
-			break
-		}
-	}
-
-	cpuLimit := result.Limits[corev1.ResourceCPU]
-	cpuRequest := result.Requests[corev1.ResourceCPU]
-	if !cpuLimit.IsZero() && !cpuRequest.IsZero() && cpuLimit.Cmp(cpuRequest) < 0 {
-		capCPULimit := caps.Limits[corev1.ResourceCPU]
-		capCPURequest := caps.Requests[corev1.ResourceCPU]
-		switch {
-		case !capCPULimit.IsZero() && capCPURequest.IsZero():
-			// Only a CPU limit cap was set, and it caused the limit to be lower than the request.
-			// Adjust the request down to match the capped limit.
-			if cpuLimit.Equal(capCPULimit) {
-				result.Requests[corev1.ResourceCPU] = capCPULimit
-			} else {
-				// The invalid state (limit < request) existed in the original resources before caps were applied.
-				break
-			}
-		case capCPULimit.IsZero() && !capCPURequest.IsZero():
-			// Only a CPU request cap was set, and it's higher than the existing limit.
-			// Adjust the limit up to match the capped request.
-			if cpuRequest.Equal(capCPURequest) {
-				result.Limits[corev1.ResourceCPU] = capCPURequest
+			if resRequest.Equal(capResRequest) {
+				result.Limits[resourceName] = capResRequest
 			} else {
 				// The invalid state (limit < request) existed in the original resources before caps were applied.
 				break

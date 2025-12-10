@@ -312,7 +312,6 @@ func mergeContributionsInto(
 			return nil, err
 		}
 		totalResources = dwResources.AddResourceRequirements(totalResources, componentResources)
-		totalResources = dwResources.ApplyCaps(totalResources, resourceCaps)
 
 		component.Container.MemoryLimit = ""
 		component.Container.MemoryRequest = ""

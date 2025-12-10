@@ -32,6 +32,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
+	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -68,7 +69,7 @@ func GetKubeContainersFromDevfile(
 		if component.Container == nil {
 			continue
 		}
-		k8sContainer, err := convertContainerToK8s(component, securityContext, pullPolicy, defaultResources, resourceCaps)
+		k8sContainer, err := convertContainerToK8s(component, securityContext, pullPolicy, defaultResources)
 		if err != nil {
 			return nil, err
 		}
@@ -82,6 +83,11 @@ func GetKubeContainersFromDevfile(
 			}
 			k8sContainer = patchedContainer
 		}
+
+		// applying caps only after overrides
+		resources := dwResources.ApplyCaps(&k8sContainer.Resources, resourceCaps)
+		k8sContainer.Resources = *resources
+
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)
 	}
 
@@ -94,7 +100,7 @@ func GetKubeContainersFromDevfile(
 	}
 
 	for _, initComponent := range initComponents {
-		k8sContainer, err := convertContainerToK8s(initComponent, securityContext, pullPolicy, defaultResources, nil)
+		k8sContainer, err := convertContainerToK8s(initComponent, securityContext, pullPolicy, defaultResources)
 		if err != nil {
 			return nil, err
 		}

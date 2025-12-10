@@ -393,12 +393,7 @@ func TestApplyCaps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actual := ApplyCaps(tt.base, tt.caps)
-			if !assert.Equal(t, tt.expected, actual) {
-				// Print more useful diff since quantity is not a simple struct
-				expectedYaml, _ := yaml.Marshal(tt.expected)
-				actualYaml, _ := yaml.Marshal(actual)
-				t.Logf("\nExpected:\n%s\nActual:\n%s", expectedYaml, actualYaml)
-			}
+			assert.Equal(t, tt.expected, actual)
 		})
 	}
 }

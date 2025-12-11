@@ -1,0 +1,38 @@
+#
+# Copyright (c) 2019-2025 Red Hat, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+FROM quay.io/konflux-ci/oras:3d83c68 AS oras
+FROM quay.io/devfile/base-developer-image:ubi10-latest
+LABEL project="devworkspace-operator"
+
+USER 0
+RUN dnf update -y && \
+  dnf clean all
+
+RUN useradd -u 1000 -g 0 -m oras && \
+  mkdir -p /home/oras/ && \
+  chown -R oras:0 /home/oras
+
+COPY --chown=1000:0 entrypoint.sh /
+COPY --chown=1000:0 workspace-recovery.sh /
+
+RUN chmod +x /entrypoint.sh ; \
+  chmod +x /workspace-recovery.sh
+
+COPY --from=oras /usr/bin/oras /usr/bin/oras
+
+USER 1000
+
+ENTRYPOINT ["/entrypoint.sh"]

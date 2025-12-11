@@ -69,6 +69,9 @@ const (
 	// PVCCleanupPodCPURequest is the cpu request used for PVC clean up pods
 	PVCCleanupPodCPURequest = "5m"
 
+	// DefaultWorkspacePVCName is the default name of the PVC used for workspaces
+	DefaultWorkspacePVCName = "claim-devworkspace"
+
 	// Constants describing storage classes supported by the controller
 
 	// CommonStorageClassType defines the 'common' storage policy, which is an alias of the 'per-user' storage policy, and operates in the same fashion as the 'per-user' storage policy.

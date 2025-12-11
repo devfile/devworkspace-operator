@@ -104,6 +104,8 @@ spec:
       name: devworkspace_webhook_server
     - image: quay.io/devfile/project-clone:next
       name: project_clone
+    - image: quay.io/devfile/project-backup:next
+      name: project_backup
     - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
       name: pvc_cleanup_job
     - image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1

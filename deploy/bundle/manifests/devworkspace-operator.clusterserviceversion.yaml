@@ -101,10 +101,7 @@ spec:
           - ""
           resources:
           - configmaps
-          - persistentvolumeclaims
           - pods
-          - secrets
-          - serviceaccounts
           - services
           verbs:
           - '*'
@@ -120,9 +117,16 @@ spec:
         - apiGroups:
           - ""
           resources:
+          - imagestreams
           - pods/exec
           verbs:
           - create
+        - apiGroups:
+          - ""
+          resources:
+          - persistentvolumeclaims
+          verbs:
+          - '*'
         - apiGroups:
           - ""
           resourceNames:
@@ -134,6 +138,35 @@ spec:
           - delete
           - get
           - patch
+        - apiGroups:
+          - ""
+          resources:
+          - secrets
+          - serviceaccounts
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          - build.openshift.io
+          resources:
+          - builds
+          verbs:
+          - get
+        - apiGroups:
+          - ""
+          - build.openshift.io
+          resources:
+          - builds/details
+          verbs:
+          - update
+        - apiGroups:
+          - ""
+          - image.openshift.io
+          resources:
+          - imagestreams/layers
+          verbs:
+          - get
+          - update
         - apiGroups:
           - admissionregistration.k8s.io
           resources:
@@ -204,6 +237,8 @@ spec:
           verbs:
           - get
           - list
+          - patch
+          - update
           - watch
         - apiGroups:
           - controller.devfile.io
@@ -220,6 +255,17 @@ spec:
           verbs:
           - create
           - get
+          - update
+        - apiGroups:
+          - image.openshift.io
+          resources:
+          - imagestreams
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
           - update
         - apiGroups:
           - metrics.k8s.io
@@ -259,6 +305,17 @@ spec:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
           - clusterroles
           verbs:
           - create
@@ -332,6 +389,8 @@ spec:
                   value: quay.io/devfile/devworkspace-controller:next
                 - name: RELATED_IMAGE_project_clone
                   value: quay.io/devfile/project-clone:next
+                - name: RELATED_IMAGE_project_backup
+                  value: quay.io/devfile/project-backup:next
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -465,6 +524,8 @@ spec:
     name: devworkspace_webhook_server
   - image: quay.io/devfile/project-clone:next
     name: project_clone
+  - image: quay.io/devfile/project-backup:next
+    name: project_backup
   - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
     name: pvc_cleanup_job
   - image: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1

@@ -38,6 +38,7 @@ const (
 	asyncStorageServerImageEnvVar  = "RELATED_IMAGE_async_storage_server"
 	asyncStorageSidecarImageEnvVar = "RELATED_IMAGE_async_storage_sidecar"
 	projectCloneImageEnvVar        = "RELATED_IMAGE_project_clone"
+	projectBackupImageEnvVar       = "RELATED_IMAGE_project_backup"
 )
 
 // GetWebhookServerImage returns the image reference for the webhook server image. Returns
@@ -84,6 +85,15 @@ func GetProjectCloneImage() string {
 	val, ok := os.LookupEnv(projectCloneImageEnvVar)
 	if !ok {
 		log.Info(fmt.Sprintf("Could not get initial project clone image: environment variable %s is not set", projectCloneImageEnvVar))
+		return ""
+	}
+	return val
+}
+
+func GetProjectBackupImage() string {
+	val, ok := os.LookupEnv(projectBackupImageEnvVar)
+	if !ok {
+		log.Info(fmt.Sprintf("Could not get project backup image: environment variable %s is not set", projectBackupImageEnvVar))
 		return ""
 	}
 	return val

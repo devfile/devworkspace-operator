@@ -182,6 +182,57 @@ spec:
                   Workspace defines configuration options related to how DevWorkspaces are
                   managed
                 properties:
+                  backupCronJob:
+                    description: BackupCronJobConfig defines configuration options
+                      for a cron job that automatically backs up workspace PVCs.
+                    properties:
+                      enable:
+                        description: |-
+                          Enable determines whether backup CronJobs should be created for workspace PVCs.
+                          Defaults to false if not specified.
+                        type: boolean
+                      oras:
+                        description: |-
+                          OrasConfig defines additional configuration options for the oras CLI used to
+                          push and pull backup images.
+                        properties:
+                          extraArgs:
+                            description: ExtraArgs are additional arguments passed
+                              to the oras CLI
+                            type: string
+                        type: object
+                      registry:
+                        description: RegistryConfig defines the registry configuration
+                          where backup images are stored.
+                        properties:
+                          authSecret:
+                            description: |-
+                              AuthSecret is the name of a Kubernetes secret of
+                              type kubernetes.io/dockerconfigjson.
+                              The secret is expected to be in the same namespace the workspace is running in.
+                              If secret is not found in the workspace namespace, the operator will look for the secret
+                              in the namespace where the operator is running in.
+                              as the DevWorkspaceOperatorCongfig.
+                              The secret must contain "controller.devfile.io/watch-secret=true" label so that it can be
+                              recognized by the operator.
+                            type: string
+                          path:
+                            description: |-
+                              A registry where backup images are stored. Images are stored
+                              in {path}/${DEVWORKSPACE_NAMESPACE}/${DEVWORKSPACE_NAME}:latest
+                            type: string
+                        required:
+                        - path
+                        type: object
+                      schedule:
+                        default: 0 1 * * *
+                        description: |-
+                          Schedule specifies the cron schedule for the backup cron job.
+                          For example, "0 1 * * *" runs daily at 1 AM.
+                        type: string
+                    required:
+                    - registry
+                    type: object
                   cleanupCronJob:
                     description: CleanupCronJobConfig defines configuration options
                       for a cron job that automatically cleans up stale DevWorkspaces.
@@ -3181,6 +3232,78 @@ spec:
             type: string
           metadata:
             type: object
+          status:
+            description: |-
+              Status represents the current status of the DevWorkspaceOperatorConfig
+              automatically managed by the DevWorkspace Operator.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the OperatorConfiguration's state
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastBackupTime:
+                description: |-
+                  LastBackupTime is the timestamp of the last successful backup. Nil if
+                  no backup is configured or no backup has yet succeeded.
+                format: date-time
+                type: string
+            type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

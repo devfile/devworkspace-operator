@@ -172,4 +172,12 @@ const (
 	// NamespaceNodeSelectorAnnotation is an annotation applied to a namespace to configure the node selector for all workspaces
 	// in that namespace. Value should be json-encoded map[string]string
 	NamespaceNodeSelectorAnnotation = "controller.devfile.io/node-selector"
+
+	// DevWorkspaceBackupJobNamePrefix is the prefix used for backup jobs created for DevWorkspaces
+	DevWorkspaceBackupJobNamePrefix = "devworkspace-backup-"
+
+	// DevWorkspaceBackupJobLabel is the label key to identify backup jobs created for DevWorkspaces
+	DevWorkspaceBackupJobLabel = "controller.devfile.io/backup-job"
+
+	DevWorkspaceBackupAuthSecretName = "devworkspace-backup-registry-auth"
 )

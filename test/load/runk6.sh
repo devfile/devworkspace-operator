@@ -1,6 +1,8 @@
 #!/bin/bash
 
-#!/bin/bash
+source test/load/provision-che-workspace-namespace.sh
+source test/load/che-cert-bundle-utils.sh
+
 
 MODE="binary"  # or 'operator'
 LOAD_TEST_NAMESPACE="loadtest-devworkspaces"
@@ -19,17 +21,26 @@ SEPARATE_NAMESPACES="false"
 DELETE_DEVWORKSPACE_AFTER_READY="true"
 MAX_DEVWORKSPACES="-1"
 CREATE_AUTOMOUNT_RESOURCES="false"
+RUN_WITH_ECLIPSE_CHE="false"
 LOGS_DIR="logs"
 TEST_DURATION_IN_MINUTES="25"
 MIN_KUBECTL_VERSION="1.24.0"
 MIN_CURL_VERSION="7.0.0"
 MIN_K6_VERSION="1.1.0"
+CHE_NAMESPACE="eclipse-che"
+CHE_CLUSTER_NAME="eclipse-che"
+TEST_CERTIFICATES_COUNT="500"
 
 # ----------- Main Execution Flow -----------
 main() {
   parse_arguments "$@"
   check_prerequisites
-  create_namespace
+  if [[ "$RUN_WITH_ECLIPSE_CHE" == "false" ]]; then
+    create_namespace
+  else
+    provision_che_workspace_namespace "$LOAD_TEST_NAMESPACE" "$CHE_NAMESPACE" "$CHE_CLUSTER_NAME"
+    run_che_ca_bundle_e2e "$CHE_NAMESPACE" "$LOAD_TEST_NAMESPACE" "test-devworkspace" "$TEST_CERTIFICATES_COUNT"
+  fi
   create_rbac
   start_background_watchers
 
@@ -68,6 +79,9 @@ Options:
   --dwo-namespace <string>                    DevWorkspace Operator namespace (default: loadtest-devworkspaces)
   --logs-dir <string>                         Directory name where DevWorkspace and event logs would be dumped
   --test-duration-minutes <int>               Duration in minutes for which to run load tests (default: 25 minutes)
+  --run-with-eclipse-che <true|false>         Whether these tests are supposed to be run with Eclipse Che (If yes additional certificates are mounted)
+  --che-cluster-name <string>                 Applicable if running on Eclipse Che, defaults to 'eclipse-che'
+  --che-namespace <string>                    Applicable if running on Eclipse Che, defaults to 'eclipse-che'
   -h, --help                                  Show this help message
 EOF
 }
@@ -97,6 +111,12 @@ parse_arguments() {
         LOGS_DIR="$2"; shift 2;;
       --test-duration-minutes)
         TEST_DURATION_IN_MINUTES="$2"; shift 2;;
+      --run-with-eclipse-che)
+        RUN_WITH_ECLIPSE_CHE="$2"; shift 2;;
+      --che-cluster-name)
+        CHE_CLUSTER_NAME="$2"; shift 2;;
+      --che-namespace)
+        CHE_NAMESPACE="$2"; shift 2;;
       -h|--help)
         print_help; exit 0;;
       *)

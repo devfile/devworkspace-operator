@@ -50,14 +50,6 @@ export const options = {
       iterations: maxDevWorkspaces,
       maxDuration: '3h',
     },
-    final_cleanup: {
-      executor: 'per-vu-iterations',
-      vus: 1,
-      iterations: 1,
-      exec: 'final_cleanup',
-      startTime: '0s',
-      maxDuration: '3h',
-    },
   }, thresholds: {
     'checks': ['rate>0.95'],
     'devworkspace_create_duration': ['p(95)<15000'],
@@ -203,6 +195,11 @@ export function handleSummary(data) {
   return loadTestSummaryReport;
 }
 
+export function teardown(data) {
+  console.log("Running final cleanup after all DevWorkspace creation finished...");
+  final_cleanup();
+}
+
 function createNewDevWorkspace(namespace, vuId, iteration) {
   const baseUrl = `${apiServer}/apis/workspace.devfile.io/v1alpha2/namespaces/${namespace}/devworkspaces`;
 
@@ -257,6 +254,13 @@ function waitUntilDevWorkspaceIsReady(vuId, crName, namespace) {
     checkEtcdMetrics();
     sleep(pollWaitInterval);
     attempts++;
+  }
+
+  if (!isReady && attempts >= maxAttempts) {
+    console.error(
+        `GET [VU ${vuId}] Timed out waiting for DevWorkspace '${crName}' in namespace '${namespace}' ` +
+        `after ${attempts} attempts (${devWorkspaceReadyTimeout}s). Last known phase: '${lastPhase}'`
+    );
   }
 
   if (res.status === 200) {

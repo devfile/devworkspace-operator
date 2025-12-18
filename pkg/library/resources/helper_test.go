@@ -312,10 +312,34 @@ func TestApplyCaps(t *testing.T) {
 		expected *corev1.ResourceRequirements
 	}{
 		{
-			name:     "Applies all caps values to empty resources",
+			name:     "Doesn't apply all caps values to empty resources",
 			base:     &corev1.ResourceRequirements{},
 			caps:     getResourceRequirements("2000Mi", "200Mi", "2000m", "200m"),
-			expected: getResourceRequirements("2000Mi", "200Mi", "2000m", "200m"),
+			expected: &corev1.ResourceRequirements{},
+		},
+		{
+			name:     "Doesn't apply all caps values to '0' resources",
+			base:     getResourceRequirements("0", "0", "0", "0"),
+			caps:     getResourceRequirements("2000Mi", "200Mi", "2000m", "200m"),
+			expected: getResourceRequirements("0", "0", "0", "0"),
+		},
+		{
+			name:     "Does not apply empty caps fields",
+			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+			caps:     getResourceRequirements("", "", "", ""),
+			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+		},
+		{
+			name:     "Does not apply nil caps",
+			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+			caps:     nil,
+			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+		},
+		{
+			name:     "Does not apply '0' caps",
+			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
+			caps:     getResourceRequirements("0", "0", "0", "0"),
+			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
 		},
 		{
 			name:     "Applies all caps values",
@@ -330,34 +354,16 @@ func TestApplyCaps(t *testing.T) {
 			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
 		},
 		{
-			name:     "Does not apply empty caps fields",
-			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
-			caps:     getResourceRequirements("", "", "", ""),
-			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
-		},
-		{
-			name:     "Handles nil caps",
-			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
-			caps:     nil,
-			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
-		},
-		{
-			name:     "Ignores '0' fields in caps",
-			base:     getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
-			caps:     getResourceRequirements("0", "0", "0", "0"),
-			expected: getResourceRequirements("1000Mi", "100Mi", "1000m", "100m"),
-		},
-		{
 			name:     "Adjusts request when caps limit creates conflict",
-			base:     getResourceRequirements("2000Mi", "1000Mi", "", "1000m"),
+			base:     getResourceRequirements("2000Mi", "1000Mi", "2000m", "1000m"),
 			caps:     getResourceRequirements("500Mi", "", "500m", ""),
 			expected: getResourceRequirements("500Mi", "500Mi", "500m", "500m"),
 		},
 		{
 			name:     "Adjusts limit when caps request creates conflict",
-			base:     getResourceRequirements("500Mi", "", "500m", ""),
-			caps:     getResourceRequirements("", "1000Mi", "", "1000m"),
-			expected: getResourceRequirements("1000Mi", "1000Mi", "1000m", "1000m"),
+			base:     getResourceRequirements("1000Mi", "2000Mi", "1000m", "2000m"),
+			caps:     getResourceRequirements("", "1500Mi", "", "1500m"),
+			expected: getResourceRequirements("1500Mi", "1500Mi", "1500m", "1500m"),
 		},
 	}
 	for _, tt := range tests {

@@ -220,10 +220,11 @@ spec:
                     type: boolean
                   containerResourceCaps:
                     description: |-
-                      ContainerResourceCaps defines the maximum resource requirements enforced for all
-                      workspace containers. If a container specifies higher limits or requests, they
-                      will be capped at these maximum values. This is not applied to initContainers or
-                      the projectClone container.
+                      ContainerResourceCaps defines the maximum resource requirements enforced for workspace
+                      containers. If a container specifies limits or requests that exceed these values, they
+                      will be capped at the maximum. Note: Caps only apply when resources are already specified
+                      on a container. For containers without resource specifications, use DefaultContainerResources
+                      instead. These resource caps do not apply to initContainers or the projectClone container.
                     properties:
                       claims:
                         description: |-

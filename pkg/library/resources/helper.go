@@ -231,18 +231,10 @@ func ApplyCaps(resources, caps *corev1.ResourceRequirements) *corev1.ResourceReq
 		if capLimit.IsZero() {
 			continue
 		}
-		if result.Limits == nil {
-			result.Limits = corev1.ResourceList{}
-		}
 		existingLimit, hasExisting := result.Limits[resourceName]
-		if !hasExisting || existingLimit.IsZero() {
-			// No existing limit, use caps as maximum
-			result.Limits[resourceName] = capLimit
-		} else if existingLimit.Cmp(capLimit) > 0 {
-			// Existing limit is higher than caps, apply caps maximum
+		if hasExisting && existingLimit.Cmp(capLimit) > 0 {
 			result.Limits[resourceName] = capLimit
 		}
-		// Otherwise, keep existing limit (it's already lower than or equal to caps)
 	}
 
 	// Apply caps requests as maximum values (use the smaller of existing and caps)
@@ -250,18 +242,10 @@ func ApplyCaps(resources, caps *corev1.ResourceRequirements) *corev1.ResourceReq
 		if capRequest.IsZero() {
 			continue
 		}
-		if result.Requests == nil {
-			result.Requests = corev1.ResourceList{}
-		}
 		existingRequest, hasExisting := result.Requests[resourceName]
-		if !hasExisting || existingRequest.IsZero() {
-			// No existing request, use caps as maximum
-			result.Requests[resourceName] = capRequest
-		} else if existingRequest.Cmp(capRequest) > 0 {
-			// Existing request is higher than caps, apply caps maximum
+		if hasExisting && existingRequest.Cmp(capRequest) > 0 {
 			result.Requests[resourceName] = capRequest
 		}
-		// Otherwise, keep existing request (it's already lower than or equal to caps)
 	}
 
 	result = handleCapsEdgeCase(result, caps, corev1.ResourceMemory)
@@ -291,7 +275,8 @@ func handleCapsEdgeCase(resources, caps *corev1.ResourceRequirements, resourceNa
 			}
 		case capResLimit.IsZero() && !capResRequest.IsZero():
 			// Only a resource request cap was set, and it's higher than the existing limit.
-			// Adjust the limit up to match the capped request.
+			// It means, that invalid state (limit < request) existed in the original resources before caps were applied.
+			// Since the request is adjusted by the caps, we also adjust the limit up to match the capped request.
 			if resRequest.Equal(capResRequest) {
 				result.Limits[resourceName] = capResRequest
 			} else {

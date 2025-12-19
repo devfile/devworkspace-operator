@@ -335,6 +335,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		workspace.Config.Workspace.ContainerSecurityContext,
 		workspace.Config.Workspace.ImagePullPolicy,
 		workspace.Config.Workspace.DefaultContainerResources,
+		workspace.Config.Workspace.ContainerResourceCaps,
 		workspace.Config.Workspace.PostStartTimeout,
 		postStartDebugTrapSleepDuration,
 	)

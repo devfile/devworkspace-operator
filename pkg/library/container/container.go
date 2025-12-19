@@ -32,6 +32,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/lifecycle"
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
+	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -45,7 +46,15 @@ import (
 // rewritten as Volumes are added to PodAdditions, in order to support e.g. using one PVC to hold all volumes
 //
 // Note: Requires DevWorkspace to be flattened (i.e. the DevWorkspace contains no Parent or Components of type Plugin)
-func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securityContext *corev1.SecurityContext, pullPolicy string, defaultResources *corev1.ResourceRequirements, postStartTimeout string, postStartDebugTrapSleepDuration string) (*v1alpha1.PodAdditions, error) {
+func GetKubeContainersFromDevfile(
+	workspace *dw.DevWorkspaceTemplateSpec,
+	securityContext *corev1.SecurityContext,
+	pullPolicy string,
+	defaultResources *corev1.ResourceRequirements,
+	resourceCaps *corev1.ResourceRequirements,
+	postStartTimeout string,
+	postStartDebugTrapSleepDuration string,
+) (*v1alpha1.PodAdditions, error) {
 	if !flatten.DevWorkspaceIsFlattened(workspace, nil) {
 		return nil, fmt.Errorf("devfile is not flattened")
 	}
@@ -74,6 +83,14 @@ func GetKubeContainersFromDevfile(workspace *dw.DevWorkspaceTemplateSpec, securi
 			}
 			k8sContainer = patchedContainer
 		}
+
+		// applying caps only after overrides
+		resources := dwResources.ApplyCaps(&k8sContainer.Resources, resourceCaps)
+		if err := dwResources.ValidateResources(resources); err != nil {
+			return nil, fmt.Errorf("container resources are invalid for component %s: %w", component.Name, err)
+		}
+		k8sContainer.Resources = *resources
+
 		podAdditions.Containers = append(podAdditions.Containers, *k8sContainer)
 	}
 

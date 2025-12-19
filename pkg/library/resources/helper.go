@@ -220,6 +220,79 @@ func ApplyDefaults(resources, defaults *corev1.ResourceRequirements) *corev1.Res
 	return result
 }
 
+func ApplyCaps(resources, caps *corev1.ResourceRequirements) *corev1.ResourceRequirements {
+	result := resources.DeepCopy()
+	if caps == nil {
+		return result
+	}
+
+	// Apply caps limits as maximum values (use the smaller of existing and caps)
+	for resourceName, capLimit := range caps.Limits {
+		if capLimit.IsZero() {
+			continue
+		}
+		existingLimit, hasExisting := result.Limits[resourceName]
+		if hasExisting && existingLimit.Cmp(capLimit) > 0 {
+			result.Limits[resourceName] = capLimit
+		}
+	}
+
+	// Apply caps requests as maximum values (use the smaller of existing and caps)
+	for resourceName, capRequest := range caps.Requests {
+		if capRequest.IsZero() {
+			continue
+		}
+		existingRequest, hasExisting := result.Requests[resourceName]
+		if hasExisting && existingRequest.Cmp(capRequest) > 0 {
+			result.Requests[resourceName] = capRequest
+		}
+	}
+
+	result = handleCapsEdgeCase(result, caps, corev1.ResourceMemory)
+	result = handleCapsEdgeCase(result, caps, corev1.ResourceCPU)
+
+	return result
+}
+
+func handleCapsEdgeCase(resources, caps *corev1.ResourceRequirements, resourceName corev1.ResourceName) *corev1.ResourceRequirements {
+	result := resources.DeepCopy()
+
+	// Edge cases: after applying caps, we might create invalid resources (limit < request).
+	// We need to adjust to ensure the result is still valid.
+	resLimit := resources.Limits[resourceName]
+	resRequest := resources.Requests[resourceName]
+	if !resLimit.IsZero() && !resRequest.IsZero() && resLimit.Cmp(resRequest) < 0 {
+		capResLimit := caps.Limits[resourceName]
+		capResRequest := caps.Requests[resourceName]
+		switch {
+		case !capResLimit.IsZero() && capResRequest.IsZero():
+			// Only a resource limit cap was set, and it caused the limit to be lower than the request.
+			// Adjust the request down to match the capped limit.
+			if resLimit.Equal(capResLimit) {
+				result.Requests[resourceName] = capResLimit
+			} else {
+				// The invalid state (limit < request) existed in the original resources before caps were applied.
+			}
+		case capResLimit.IsZero() && !capResRequest.IsZero():
+			// Only a resource request cap was set, and it's higher than the existing limit.
+			// It means, that invalid state (limit < request) existed in the original resources before caps were applied.
+			// Since the request is adjusted by the caps, we also adjust the limit up to match the capped request.
+			if resRequest.Equal(capResRequest) {
+				result.Limits[resourceName] = capResRequest
+			} else {
+				// The invalid state (limit < request) existed in the original resources before caps were applied.
+				break
+			}
+		default:
+			// Both limit and request caps were set (or neither was set), so the invalid state was present
+			// in the original resources.
+			break
+		}
+	}
+
+	return result
+}
+
 // ValidateResources validates that a corev1.ResourceRequirements is valid, i.e. that (if specified), limits are greater than or equal to requests
 func ValidateResources(resources *corev1.ResourceRequirements) error {
 	memLimit, hasMemLimit := resources.Limits[corev1.ResourceMemory]

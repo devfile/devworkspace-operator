@@ -863,6 +863,11 @@ func (in *WorkspaceConfig) DeepCopyInto(out *WorkspaceConfig) {
 		*out = new(v1.ResourceRequirements)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.ContainerResourceCaps != nil {
+		in, out := &in.ContainerResourceCaps, &out.ContainerResourceCaps
+		*out = new(v1.ResourceRequirements)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.PodAnnotations != nil {
 		in, out := &in.PodAnnotations, &out.PodAnnotations
 		*out = make(map[string]string, len(*in))

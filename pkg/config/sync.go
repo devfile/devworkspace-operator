@@ -404,6 +404,12 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 			}
 			to.Workspace.DefaultContainerResources = mergeResources(from.Workspace.DefaultContainerResources, to.Workspace.DefaultContainerResources)
 		}
+		if from.Workspace.ContainerResourceCaps != nil {
+			if to.Workspace.ContainerResourceCaps == nil {
+				to.Workspace.ContainerResourceCaps = &corev1.ResourceRequirements{}
+			}
+			to.Workspace.ContainerResourceCaps = mergeResources(from.Workspace.ContainerResourceCaps, to.Workspace.ContainerResourceCaps)
+		}
 
 		if from.Workspace.PodAnnotations != nil {
 			if to.Workspace.PodAnnotations == nil {
@@ -696,6 +702,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if !reflect.DeepEqual(workspace.DefaultContainerResources, defaultConfig.Workspace.DefaultContainerResources) {
 			config = append(config, "workspace.defaultContainerResources is set")
+		}
+		if workspace.ContainerResourceCaps != nil {
+			config = append(config, "workspace.containerResourceCaps is set")
 		}
 		if !reflect.DeepEqual(workspace.PodAnnotations, defaultConfig.Workspace.PodAnnotations) {
 			config = append(config, "workspace.podAnnotations is set")

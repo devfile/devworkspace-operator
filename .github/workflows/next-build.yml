@@ -82,7 +82,7 @@ jobs:
         tags: |
           quay.io/devfile/project-backup:next
           quay.io/devfile/project-backup:sha-${{ steps.git-sha.outputs.sha }}
-        file: ./project-backup/Dockerfile
+        file: ./project-backup/Containerfile
 
   build-next-olm-imgs:
     runs-on: ubuntu-latest

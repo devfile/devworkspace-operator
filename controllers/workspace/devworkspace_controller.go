@@ -18,11 +18,9 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/initcontainers"
 	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
@@ -70,212 +68,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	// Validation limits for init-persistent-home container Command field
-	maxCommandElements      = 10
-	maxCommandElementLength = 1024
-
-	// Validation limits for init-persistent-home container Args field
-	maxArgsElements      = 50
-	maxArgsElementLength = 256 * 1024 // 256KB
-)
-
-// validateNoAdvancedFields validates that the init-persistent-home container
-// does not use advanced Kubernetes container fields that could make behavior unpredictable.
-func validateNoAdvancedFields(c corev1.Container) error {
-	if len(c.Ports) > 0 {
-		return fmt.Errorf("ports are not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	if c.LivenessProbe != nil || c.ReadinessProbe != nil || c.StartupProbe != nil {
-		return fmt.Errorf("probes are not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	if c.Lifecycle != nil {
-		return fmt.Errorf("lifecycle hooks are not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	if c.Stdin || c.StdinOnce || c.TTY {
-		return fmt.Errorf("stdin/tty fields are not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	if len(c.VolumeDevices) > 0 {
-		return fmt.Errorf("volumeDevices are not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	if c.WorkingDir != "" {
-		return fmt.Errorf("workingDir is not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	if c.TerminationMessagePath != "" || c.TerminationMessagePolicy != "" {
-		return fmt.Errorf("termination message fields are not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	if c.SecurityContext != nil {
-		return fmt.Errorf("securityContext is not allowed for %s", constants.HomeInitComponentName)
-	}
-	if c.Resources.Limits != nil || c.Resources.Requests != nil {
-		return fmt.Errorf("resource limits/requests are not allowed for %s", constants.HomeInitComponentName)
-	}
-
-	return nil
-}
-
-// validateHomeInitContainer validates all aspects of the init-persistent-home container.
-// It only validates fields that are present, as missing fields will be filled by
-// the strategic merge with the default init container.
-func validateHomeInitContainer(c corev1.Container) error {
-	// Only validate if present
-	if c.Image != "" {
-		if err := validateImageReference(c.Image); err != nil {
-			return fmt.Errorf("invalid image reference for %s: %w", constants.HomeInitComponentName, err)
-		}
-	}
-
-	// Validate Command for security and resource limits (only if present)
-	if len(c.Command) > 0 {
-		if err := validateCommand(c.Command); err != nil {
-			return fmt.Errorf("invalid command for %s: %w", constants.HomeInitComponentName, err)
-		}
-	}
-
-	// Validate Args for security and resource limits (only if present)
-	if len(c.Args) > 0 {
-		if err := validateArgs(c.Args); err != nil {
-			return fmt.Errorf("invalid args for %s: %w", constants.HomeInitComponentName, err)
-		}
-	}
-
-	// Always validate - should not be provided
-	if len(c.VolumeMounts) > 0 {
-		return fmt.Errorf("volumeMounts are not allowed for %s; persistent-home is auto-mounted at /home/user/", constants.HomeInitComponentName)
-	}
-
-	// Always validate - should not be provided
-	if err := validateNoAdvancedFields(c); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func validateImageReference(image string) error {
-	if image == "" {
-		return fmt.Errorf("image reference cannot be empty")
-	}
-
-	// whitespace and control characters
-	if strings.ContainsAny(image, "\n\r\t ") {
-		return fmt.Errorf("contains invalid whitespace characters")
-	}
-
-	// other control characters
-	for _, r := range image {
-		if r < 0x20 || r == 0x7F {
-			return fmt.Errorf("contains invalid control characters")
-		}
-	}
-
-	// format: [registry[:port]/]repository[:tag][@digest]
-	imagePattern := regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])*|\[?[0-9a-fA-F:]+]?)(:\d{1,5})?(/[a-zA-Z0-9]([a-zA-Z0-9._/-]*[a-zA-Z0-9])*)*(:[a-zA-Z0-9_.-]+)?(@sha256:[a-f0-9]{64})?$`)
-	if !imagePattern.MatchString(image) {
-		return fmt.Errorf("invalid format: should match regex: %s", imagePattern.String())
-	}
-
-	// port range
-	portMatch := regexp.MustCompile(`:(\d{1,5})(/|:|@|$)`)
-	matches := portMatch.FindStringSubmatch(image)
-	if len(matches) > 1 {
-		port, err := strconv.Atoi(matches[1])
-		if err != nil {
-			return fmt.Errorf("invalid port format: %w", err)
-		}
-		if port < 1 || port > 65535 {
-			return fmt.Errorf("invalid port number: %d (must be 1-65535)", port)
-		}
-	}
-
-	// length check
-	if len(image) > 4096 {
-		return fmt.Errorf("length exceeds 4096 characters")
-	}
-
-	return nil
-}
-
-// validateCommand validates the Command field for the init-persistent-home container.
-// This validation prevents resource exhaustion and data corruption while allowing flexibility
-// for enterprise customization.
-// Generated by Claude Sonnet 4.5
-func validateCommand(command []string) error {
-	if len(command) > maxCommandElements {
-		return fmt.Errorf("command cannot exceed %d elements (got %d)", maxCommandElements, len(command))
-	}
-	for i, cmd := range command {
-		if len(cmd) > maxCommandElementLength {
-			return fmt.Errorf("command[%d] exceeds %d characters (got %d)", i, maxCommandElementLength, len(cmd))
-		}
-		if err := validateStringContent(cmd, fmt.Sprintf("command[%d]", i)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateArgs validates the Args field for the init-persistent-home container.
-// This validation prevents resource exhaustion and data corruption while allowing flexibility
-// for enterprise customization.
-// Generated by Claude Sonnet 4.5
-func validateArgs(args []string) error {
-	if len(args) > maxArgsElements {
-		return fmt.Errorf("args cannot exceed %d elements (got %d)", maxArgsElements, len(args))
-	}
-	for i, arg := range args {
-		if len(arg) > maxArgsElementLength {
-			return fmt.Errorf("args[%d] exceeds %d bytes (got %d bytes)", i, maxArgsElementLength, len(arg))
-		}
-		if err := validateStringContent(arg, fmt.Sprintf("args[%d]", i)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// validateStringContent validates the content of command/args strings to prevent
-// data corruption and ensure valid UTF-8 encoding.
-// Generated by Claude Sonnet 4.5
-func validateStringContent(s, fieldName string) error {
-	// No null bytes (breaks JSON marshaling and container runtime)
-	if strings.Contains(s, "\x00") {
-		return fmt.Errorf("%s contains null bytes", fieldName)
-	}
-
-	// Check for invalid control characters (allow \n, \t which are common in scripts)
-	for _, r := range s {
-		if r < 0x20 && r != '\n' && r != '\t' {
-			return fmt.Errorf("%s contains invalid control character (U+%04X)", fieldName, r)
-		}
-		if r == 0x7F {
-			return fmt.Errorf("%s contains DEL control character", fieldName)
-		}
-	}
-
-	// Must be valid UTF-8
-	if !utf8.ValidString(s) {
-		return fmt.Errorf("%s contains invalid UTF-8", fieldName)
-	}
-
-	return nil
-}
-
 // ensureHomeInitContainerFields ensures that an init-persistent-home container has
-// the correct Command, Args, and VolumeMounts.
+// the correct Command and VolumeMounts.
 func ensureHomeInitContainerFields(c *corev1.Container) error {
 	// Set default command only if not provided
 	if len(c.Command) == 0 {
 		c.Command = []string{"/bin/sh", "-c"}
 	}
-	// Args are validated separately in validateCommandAndArgs
 	c.VolumeMounts = []corev1.VolumeMount{{
 		Name:      constants.HomeVolumeName,
 		MountPath: constants.HomeUserDirectory,
@@ -589,7 +388,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Check if init-persistent-home should be disabled
 		disableHomeInit := pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.DisableInitContainer, constants.DefaultDisableHomeInitContainer)
 
-		// Prepare patches: filter and preprocess init containers from config
+		// Filter init containers from config based on workspace settings
 		patches := []corev1.Container{}
 		for _, container := range workspace.Config.Workspace.InitContainers {
 			// Special handling for init-persistent-home
@@ -604,10 +403,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					reqLogger.Info("Skipping init-persistent-home container: DisableInitContainer is true")
 					continue
 				}
-				// Validate custom home init container
-				if err := validateHomeInitContainer(container); err != nil {
-					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
-				}
 			}
 			patches = append(patches, container)
 		}
@@ -618,11 +413,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return r.failWorkspace(workspace, fmt.Sprintf("Failed to merge init containers: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 		}
 
-		// Ensure init-persistent-home container have correct fields after merge
+		// Ensure init-persistent-home container has correct fields after merge
 		for i := range merged {
 			if merged[i].Name == constants.HomeInitComponentName {
 				if err := ensureHomeInitContainerFields(&merged[i]); err != nil {
-					return r.failWorkspace(workspace, fmt.Sprintf("Invalid %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+					return r.failWorkspace(workspace, fmt.Sprintf("Failed to configure %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 				}
 			}
 		}

@@ -361,6 +361,8 @@ spec:
           - delete
           - get
           - list
+          - patch
+          - update
         serviceAccountName: devworkspace-controller-serviceaccount
       deployments:
       - name: devworkspace-controller-manager

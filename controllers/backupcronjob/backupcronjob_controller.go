@@ -18,6 +18,7 @@ package controllers
 import (
 	"context"
 	"reflect"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -40,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -93,7 +95,8 @@ func (r *BackupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("BackupCronJob").
-		Watches(&controllerv1alpha1.DevWorkspaceOperatorConfig{},
+		Watches(
+			&controllerv1alpha1.DevWorkspaceOperatorConfig{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 				operatorNamespace, err := infrastructure.GetNamespace()
 				// Ignore events from other namespaces
@@ -111,17 +114,22 @@ func (r *BackupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 					},
 				}
 			}),
+			builder.WithPredicates(configPredicate),
 		).
-		WithEventFilter(configPredicate).
+		Watches(
+			&batchv1.Job{},
+			r.getBackupJobEventHandler(),
+			builder.WithPredicates(r.getBackupJobPredicate()),
+		).
 		Complete(r)
 }
 
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;,verbs=get;list;create;update;patch;delete
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;create;update;patch;delete;watch
 // +kubebuilder:rbac:groups=controller.devfile.io,resources=devworkspaceoperatorconfigs,verbs=get;list;update;patch;watch
-// +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list
+// +kubebuilder:rbac:groups=workspace.devfile.io,resources=devworkspaces,verbs=get;list;update;patch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=get;list;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=builds,verbs=get
 // +kubebuilder:rbac:groups="",resources=builds/details,verbs=update
@@ -215,7 +223,7 @@ func (r *BackupCronJobReconciler) stopCron(log logr.Logger) {
 }
 
 // executeBackupSync executes the backup job for all DevWorkspaces in the cluster that
-// have been stopped in the last N minutes.
+// have been stopped since their last backup.
 func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger) error {
 	log.Info("Executing backup sync for all DevWorkspaces")
 
@@ -264,13 +272,49 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 	return nil
 }
 
-// wasStoppedSinceLastBackup checks if the DevWorkspace was stopped since the last backup time.
-func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(workspace *dw.DevWorkspace, lastBackupTime *metav1.Time, log logr.Logger) bool {
+// wasStoppedSinceLastBackup checks if the DevWorkspace was stopped since its last backup.
+// It reads the last backup time from the DevWorkspace annotation, or falls back to the
+// provided globalLastBackupTime if the annotation doesn't exist.
+func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
+	workspace *dw.DevWorkspace,
+	globalLastBackupTime *metav1.Time,
+	log logr.Logger,
+) bool {
 	if workspace.Status.Phase != dw.DevWorkspaceStatusStopped {
 		return false
 	}
 	log.Info("DevWorkspace is currently stopped, checking if it was stopped since last backup", "namespace", workspace.Namespace, "name", workspace.Name)
-	// Check if the workspace was stopped in the last N minutes
+
+	// Get the last backup time and success status from the workspace annotations
+	var lastBackupTime *metav1.Time
+	var lastBackupSuccessful bool
+	if workspace.Annotations != nil {
+		if lastBackupTimeStr, ok := workspace.Annotations[constants.DevWorkspaceLastBackupTimeAnnotation]; ok {
+			parsedTime, err := time.Parse(time.RFC3339Nano, lastBackupTimeStr)
+			if err != nil {
+				log.Error(err, "Failed to parse last backup time annotation, treating as no previous backup", "value", lastBackupTimeStr)
+			} else {
+				lastBackupTime = &metav1.Time{Time: parsedTime}
+			}
+		}
+
+		lastBackupSuccessful = workspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] == "true"
+	}
+
+	// Fall back to globalLastBackupTime if annotation doesn't exist
+	if lastBackupTime == nil && globalLastBackupTime != nil {
+		lastBackupTime = globalLastBackupTime
+	}
+
+	if lastBackupTime == nil {
+		return true
+	}
+
+	if !lastBackupSuccessful {
+		return true
+	}
+
+	// Check if the workspace was stopped since the last successful backup
 	if workspace.Status.Conditions != nil {
 		lastTimeStopped := metav1.Time{}
 		for _, condition := range workspace.Status.Conditions {
@@ -278,17 +322,15 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(workspace *dw.DevWor
 				lastTimeStopped = condition.LastTransitionTime
 			}
 		}
+
 		if !lastTimeStopped.IsZero() {
-			if lastBackupTime == nil {
-				// No previous backup, so consider it stopped since last backup
-				return true
-			}
 			if lastTimeStopped.Time.After(lastBackupTime.Time) {
-				log.Info("DevWorkspace was stopped since last backup", "namespace", workspace.Namespace, "name", workspace.Name)
+				log.Info("DevWorkspace was stopped since last successful backup", "namespace", workspace.Namespace, "name", workspace.Name)
 				return true
 			}
 		}
 	}
+
 	return false
 }
 
@@ -336,6 +378,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 			Namespace:    workspace.Namespace,
 			Labels: map[string]string{
 				constants.DevWorkspaceIDLabel:        dwID,
+				constants.DevWorkspaceNameLabel:      workspace.Name,
 				constants.DevWorkspaceBackupJobLabel: "true",
 			},
 		},
@@ -532,7 +575,7 @@ func (r *BackupCronJobReconciler) copySecret(ctx context.Context, workspace *dw.
 	}
 	err = r.Create(ctx, namespaceSecret)
 	if err == nil {
-		log.Info("Sucesfully created secret", "name", namespaceSecret.Name, "namespace", workspace.Namespace)
+		log.Info("Successfully created secret", "name", namespaceSecret.Name, "namespace", workspace.Namespace)
 	}
 	return namespaceSecret, err
 }

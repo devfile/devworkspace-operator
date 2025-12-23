@@ -21,8 +21,8 @@ import (
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
-	"k8s.io/utils/pointer"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"

@@ -22,6 +22,7 @@ import (
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"k8s.io/utils/pointer"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -225,5 +226,19 @@ func inferInitContainer(dwTemplateSpec *v1alpha2.DevWorkspaceTemplateSpec) *v1al
 			Args:    []string{initScript},
 		}
 	}
+	return nil
+}
+
+// EnsureHomeInitContainerFields ensures that an init-persistent-home container has
+// the correct Command and VolumeMounts.
+func EnsureHomeInitContainerFields(c *corev1.Container) error {
+	// Set default command only if not provided
+	if len(c.Command) == 0 {
+		c.Command = []string{"/bin/sh", "-c"}
+	}
+	c.VolumeMounts = []corev1.VolumeMount{{
+		Name:      constants.HomeVolumeName,
+		MountPath: constants.HomeUserDirectory,
+	}}
 	return nil
 }

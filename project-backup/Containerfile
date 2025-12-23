@@ -14,7 +14,7 @@
 #
 
 FROM quay.io/konflux-ci/oras:3d83c68 AS oras
-FROM quay.io/devfile/base-developer-image:ubi10-latest
+FROM registry.access.redhat.com/ubi10:latest
 LABEL project="devworkspace-operator"
 
 USER 0

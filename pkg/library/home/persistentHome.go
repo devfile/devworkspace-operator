@@ -21,6 +21,7 @@ import (
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -62,6 +63,7 @@ func AddPersistentHomeVolume(workspace *common.DevWorkspaceWithConfig) (*v1alpha
 		Path: constants.HomeUserDirectory,
 	}
 
+	// Add default init container only if not disabled and no custom init is configured
 	if workspace.Config.Workspace.PersistUserHome.DisableInitContainer == nil || !*workspace.Config.Workspace.PersistUserHome.DisableInitContainer {
 		err := addInitContainer(dwTemplateSpecCopy)
 		if err != nil {
@@ -216,27 +218,27 @@ func addInitContainerComponent(dwTemplateSpec *v1alpha2.DevWorkspaceTemplateSpec
 }
 
 func inferInitContainer(dwTemplateSpec *v1alpha2.DevWorkspaceTemplateSpec) *v1alpha2.Container {
-	var nonImportedComponent v1alpha2.Component
-	for _, component := range dwTemplateSpec.Components {
-		if component.Container == nil {
-			continue
-		}
-
-		pluginSource := component.Attributes.GetString(constants.PluginSourceAttribute, nil)
-		if pluginSource == "" || pluginSource == "parent" {
-			// First non-imported container component is selected
-			nonImportedComponent = component
-			break
-		}
-	}
-
-	if nonImportedComponent.Name != "" {
-		image := nonImportedComponent.Container.Image
+	image := InferWorkspaceImage(dwTemplateSpec)
+	if image != "" {
 		return &v1alpha2.Container{
 			Image:   image,
 			Command: []string{"/bin/sh", "-c"},
 			Args:    []string{initScript},
 		}
 	}
+	return nil
+}
+
+// EnsureHomeInitContainerFields ensures that an init-persistent-home container has
+// the correct Command and VolumeMounts.
+func EnsureHomeInitContainerFields(c *corev1.Container) error {
+	// Set default command only if not provided
+	if len(c.Command) == 0 {
+		c.Command = []string{"/bin/sh", "-c"}
+	}
+	c.VolumeMounts = []corev1.VolumeMount{{
+		Name:      constants.HomeVolumeName,
+		MountPath: constants.HomeUserDirectory,
+	}}
 	return nil
 }

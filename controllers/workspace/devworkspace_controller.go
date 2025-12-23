@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/initcontainers"
 	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -367,6 +368,48 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 	} else if projectClone != nil {
 		devfilePodAdditions.InitContainers = append([]corev1.Container{*projectClone}, devfilePodAdditions.InitContainers...)
+	}
+
+	// Inject operator-configured init containers
+	if workspace.Config != nil && workspace.Config.Workspace != nil && len(workspace.Config.Workspace.InitContainers) > 0 {
+		// Check if init-persistent-home should be disabled
+		disableHomeInit := pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.DisableInitContainer, constants.DefaultDisableHomeInitContainer)
+
+		// Filter init containers from config based on workspace settings
+		patches := []corev1.Container{}
+		for _, container := range workspace.Config.Workspace.InitContainers {
+			// Special handling for init-persistent-home
+			if container.Name == constants.HomeInitComponentName {
+				// Skip if persistent home is disabled
+				if !home.PersistUserHomeEnabled(workspace) {
+					reqLogger.Info("Skipping init-persistent-home container: persistent home is disabled")
+					continue
+				}
+				// Skip if init container is explicitly disabled
+				if disableHomeInit {
+					reqLogger.Info("Skipping init-persistent-home container: DisableInitContainer is true")
+					continue
+				}
+			}
+			patches = append(patches, container)
+		}
+
+		// Perform strategic merge
+		merged, err := initcontainers.MergeInitContainers(devfilePodAdditions.InitContainers, patches)
+		if err != nil {
+			return r.failWorkspace(workspace, fmt.Sprintf("Failed to merge init containers: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+		}
+
+		// Ensure init-persistent-home container has correct fields after merge
+		for i := range merged {
+			if merged[i].Name == constants.HomeInitComponentName {
+				if err := home.EnsureHomeInitContainerFields(&merged[i]); err != nil {
+					return r.failWorkspace(workspace, fmt.Sprintf("Failed to configure %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
+				}
+			}
+		}
+
+		devfilePodAdditions.InitContainers = merged
 	}
 
 	// Add ServiceAccount tokens into devfile containers

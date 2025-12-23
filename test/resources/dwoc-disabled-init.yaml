@@ -1,0 +1,9 @@
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    persistUserHome:
+      enabled: true
+      disableInitContainer: true

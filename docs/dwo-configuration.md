@@ -125,3 +125,83 @@ config:
 ```
 
 The config above will have newly created PVCs to have its access mode set to `ReadWriteMany`.
+
+## Configuring Custom Init Containers
+
+The DevWorkspace Operator allows cluster administrators to inject custom init containers into all workspace pods via the `config.workspace.initContainers` field in the global DWOC. This feature enables use cases such as:
+
+- Injecting organization-specific tools or configurations
+- Customizing the persistent home directory initialization logic
+- Extracting cluster utilities (e.g., `oc` CLI) to ensure version compatibility
+
+**Security Note:** Only trusted administrators should have RBAC permissions to edit the `DevWorkspaceOperatorConfig`, as custom init containers run in every workspace and can execute arbitrary code.
+
+### Basic Example: Injecting Custom Tools
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    initContainers:
+      - name: inject-oc-cli
+        image: registry.redhat.io/openshift4/ose-cli:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            cp /usr/bin/oc /home/user/bin/oc
+            cp /usr/bin/kubectl /home/user/bin/kubectl
+        volumeMounts:
+          - name: persistent-home
+            mountPath: /home/user/
+```
+
+### Special Container: `init-persistent-home`
+
+A specially-named init container `init-persistent-home` can be used to override the built-in persistent home directory initialization logic when `config.workspace.persistUserHome.enabled: true`. This is useful for enterprises using customized UDI images that require different home directory setup logic.
+
+**Prerequisites for `init-persistent-home`:**
+
+- **Name:** Must be exactly `init-persistent-home`
+- **Image:** Optional. If omitted, defaults to the first non-imported workspace container's image. If no suitable image can be inferred, the workspace will fail to start with an error.
+- **Command:** Optional. If omitted, defaults to `["/bin/sh", "-c"]`. If provided, can be any valid command array.
+- **Args:** Optional. If omitted and command is also omitted, defaults to a single script string. If provided, can be any valid args array.
+- **VolumeMounts:** Forbidden. The operator automatically mounts the `persistent-home` volume at `/home/user/`.
+- **Env:** Optional. Environment variables are allowed.
+- **Other fields:** Not allowed. Fields such as `ports`, `probes`, `lifecycle`, `securityContext`, `resources`, `volumeDevices`, `stdin`, `tty`, and `workingDir` are rejected to keep behavior predictable.
+
+**Note:** If `persistUserHome.enabled` is `false`, any `init-persistent-home` container is ignored.
+
+### Example: Custom Persistent Home Initialization
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    persistUserHome:
+      enabled: true
+    initContainers:
+      - name: init-persistent-home
+        # image: optional - defaults to workspace image
+        # command: optional - defaults to ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Enterprise home init"
+            # Custom logic for enterprise UDI
+            rsync -a --ignore-existing /home/tooling/ /home/user/ || true
+            touch /home/user/.home_initialized
+        env:
+          - name: CUSTOM_VAR
+            value: "custom-value"
+```
+
+### Execution Order
+
+Custom init containers are injected after the project-clone init container in the order they are defined in the configuration. The `init-persistent-home` container runs in this sequence along with other custom init containers.

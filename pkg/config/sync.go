@@ -475,6 +475,14 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.HostUsers != nil {
 			to.Workspace.HostUsers = from.Workspace.HostUsers
 		}
+
+		if from.Workspace.InitContainers != nil {
+			initContainersCopy := make([]corev1.Container, len(from.Workspace.InitContainers))
+			for i, container := range from.Workspace.InitContainers {
+				initContainersCopy[i] = *container.DeepCopy()
+			}
+			to.Workspace.InitContainers = initContainersCopy
+		}
 	}
 }
 
@@ -735,6 +743,13 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.HostUsers != nil {
 			config = append(config, fmt.Sprintf("workspace.hostUsers=%t", *workspace.HostUsers))
+		}
+		if len(workspace.InitContainers) > 0 {
+			initContainerNames := make([]string, len(workspace.InitContainers))
+			for i, container := range workspace.InitContainers {
+				initContainerNames[i] = container.Name
+			}
+			config = append(config, fmt.Sprintf("workspace.initContainers=[%s]", strings.Join(initContainerNames, ", ")))
 		}
 	}
 	if currConfig.EnableExperimentalFeatures != nil && *currConfig.EnableExperimentalFeatures {

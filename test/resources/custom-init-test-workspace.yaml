@@ -1,0 +1,15 @@
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: custom-init-test
+spec:
+  started: true
+  routingClass: 'basic'
+  template:
+    attributes:
+      controller.devfile.io/storage-type: per-user
+    components:
+      - name: tooling
+        container:
+          image: quay.io/wto/web-terminal-tooling:latest
+          args: ["tail", "-f", "/dev/null"]

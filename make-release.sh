@@ -170,7 +170,7 @@ build_and_push_images() {
     --platform "$ARCHITECTURES"
     docker buildx build . -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile \
     --platform "$ARCHITECTURES"
-    docker buildx build . -t "${PROJECT_BACKUP_QUAY_IMG}" -f ./project-backup/Containerfile \
+    docker buildx build ./project-backup/ -t "${PROJECT_BACKUP_QUAY_IMG}" -f ./project-backup/Containerfile \
     --platform "$ARCHITECTURES"
   else
     docker buildx build . -t "${DWO_QUAY_IMG}" -f ./build/Dockerfile \
@@ -179,7 +179,7 @@ build_and_push_images() {
     docker buildx build . -t "${PROJECT_CLONE_QUAY_IMG}" -f ./project-clone/Dockerfile \
     --platform "$ARCHITECTURES" \
     --push
-    docker buildx build . -t "${PROJECT_BACKUP_QUAY_IMG}" -f ./project-backup/Containerfile \
+    docker buildx build ./project-backup/ -t "${PROJECT_BACKUP_QUAY_IMG}" -f ./project-backup/Containerfile \
     --platform "$ARCHITECTURES" \
     --push
   fi

@@ -167,6 +167,24 @@ import (
 - `controllerv1alpha1` - Controller API types
 - `wkspConfig` - Workspace configuration package
 
+### File Formatting
+
+**AI Agent Note**: ALWAYS ensure every file (except generated files) ends with a trailing newline.
+
+All source files MUST end with a single trailing newline character (POSIX standard).
+
+- ✅ **DO** ensure files end with `\n` (newline character)
+- ✅ **DO** verify this when creating or editing files
+- ❌ **DON'T** add trailing newlines to generated files (e.g., `zz_generated.*`, CRD manifests)
+- ❌ **DON'T** add multiple trailing newlines (only one)
+
+**Why**: Trailing newlines are part of the POSIX definition of a text file and help with:
+- Version control diffs (Git shows "No newline at end of file" warnings without it)
+- File concatenation and text processing tools
+- Standard compliance and editor compatibility
+
+**Note**: Most modern editors handle this automatically, but when using Write or Edit tools, always ensure the final character is `\n`.
+
 ### Naming Conventions
 
 - **Packages**: lowercase, descriptive (`workspace`, `library`, `provision`)
@@ -488,6 +506,7 @@ if err := r.Update(ctx, workspaceCopy); err != nil {
 - ❌ Don't modify objects from cache directly (always DeepCopy first)
 - ❌ Don't perform long-running operations in reconcile - keep reconciliation fast
 - ❌ Don't save state between reconciles - always read from cluster
+- ❌ Don't forget to add trailing newline at end of files (except generated files)
 
 ### Error Handling
 
@@ -672,4 +691,4 @@ kubectl patch dw <name> --type merge -p "{\"metadata\": {\"annotations\": {\"for
 
 ---
 
-**Last Updated**: 2025-12-11
+**Last Updated**: 2025-12-24

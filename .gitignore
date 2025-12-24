@@ -34,3 +34,4 @@ bin
 *.swo
 *~
 vendor/
+.claude/settings.local.json

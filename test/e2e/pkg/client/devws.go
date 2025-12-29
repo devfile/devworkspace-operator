@@ -26,7 +26,9 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 func (w *K8sClient) UpdateDevWorkspaceStarted(name, namespace string, started bool) error {
@@ -104,4 +106,36 @@ func (w *K8sClient) DeleteDevWorkspace(name, namespace string) error {
 		return err
 	}
 	return nil
+}
+
+// WaitForPVCDeleted waits for a PVC to be fully deleted from the cluster.
+// Returns true if deleted successfully, false if timeout occurred.
+func (w *K8sClient) WaitForPVCDeleted(pvcName, namespace string, timeout time.Duration) (bool, error) {
+	deleted := false
+	err := wait.PollImmediate(2*time.Second, timeout, func() (bool, error) {
+		_, err := w.Kube().CoreV1().PersistentVolumeClaims(namespace).
+			Get(context.TODO(), pvcName, metav1.GetOptions{})
+
+		if k8sErrors.IsNotFound(err) {
+			deleted = true
+			return true, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		return false, nil
+	})
+	return deleted, err
+}
+
+// DeleteDevWorkspaceAndWait deletes a workspace and waits for its PVC to be fully removed.
+// This ensures proper cleanup and prevents PVC conflicts in subsequent tests.
+func (w *K8sClient) DeleteDevWorkspaceAndWait(name, namespace string) error {
+	if err := w.DeleteDevWorkspace(name, namespace); err != nil {
+		return err
+	}
+
+	// Wait for shared PVC to be deleted (may take time in cloud environments)
+	_, err := w.WaitForPVCDeleted("claim-devworkspace", namespace, 2*time.Minute)
+	return err
 }

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,8 +22,16 @@ import (
 	"github.com/onsi/ginkgo/v2"
 )
 
-var _ = ginkgo.Describe("[DevWorkspace Debug Start Mode]", func() {
+var _ = ginkgo.Describe("[DevWorkspace Debug Start Mode]", ginkgo.Ordered, func() {
 	defer ginkgo.GinkgoRecover()
+
+	const workspaceName = "code-latest-with-debug-start"
+
+	ginkgo.AfterAll(func() {
+		// Clean up workspace and wait for PVC to be fully deleted
+		// This prevents PVC conflicts in subsequent tests, especially in CI environments
+		_ = config.DevK8sClient.DeleteDevWorkspaceAndWait(workspaceName, config.DevWorkspaceNamespace)
+	})
 
 	ginkgo.It("Wait DevWorkspace Webhook Server Pod", func() {
 		controllerLabel := "app.kubernetes.io/name=devworkspace-webhook-server"
@@ -39,26 +47,26 @@ var _ = ginkgo.Describe("[DevWorkspace Debug Start Mode]", func() {
 		}
 	})
 
-	ginkgo.It("Add Debug DevWorkspace to cluster and wait starting status", func() {
+	ginkgo.It("Add Debug DevWorkspace to cluster and wait running status", func() {
 		commandResult, err := config.DevK8sClient.OcApplyWorkspace(config.DevWorkspaceNamespace, "test/resources/simple-devworkspace-debug-start-annotation.yaml")
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Failed to create DevWorkspace: %s %s", err.Error(), commandResult))
 			return
 		}
 
-		deploy, err := config.DevK8sClient.WaitDevWsStatus("code-latest-with-debug-start", config.DevWorkspaceNamespace, dw.DevWorkspaceStatusStarting)
+		deploy, err := config.DevK8sClient.WaitDevWsStatus(workspaceName, config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
 		if !deploy {
 			ginkgo.Fail(fmt.Sprintf("DevWorkspace didn't start properly. Error: %s", err))
 		}
 	})
 
 	ginkgo.It("Check DevWorkspace Conditions for Debug Start message", func() {
-		devWorkspaceStatus, err := config.DevK8sClient.GetDevWsStatus("code-latest-with-debug-start", config.DevWorkspaceNamespace)
+		devWorkspaceStatus, err := config.DevK8sClient.GetDevWsStatus(workspaceName, config.DevWorkspaceNamespace)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("Failure in fetching DevWorkspace status. Error: %s", err))
 		}
 
-		expectedSubstring := "Debug mode: failed postStart commands will be trapped; inspect logs/exec to debug"
+		expectedSubstring := "DevWorkspace is starting in debug mode"
 
 		found := false
 		for _, cond := range devWorkspaceStatus.Conditions {

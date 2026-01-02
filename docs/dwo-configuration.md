@@ -139,6 +139,9 @@ To enable the backup use following configuration in the global DWOC:
 ```yaml
 apiVersion: controller.devfile.io/v1alpha1
 kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
 config:
   routing:
     defaultRoutingClass: basic
@@ -153,12 +156,12 @@ config:
 
 **Note:** The `path` field must contain the URL to your OpenShift integrated registry given by the cluster.
 
-Once the backup job is finished the backup archives will be available in the DevWorkspace namespace under a repository
-with matching Devworkspace name.
+Once the backup job is finished, the backup archives will be available in the DevWorkspace namespace under a repository
+with a matching Devworkspace name.
 
-### Regular OCI compatible registry
-To use a regular OCI compatible registry for backups, you need to provide registry credentials. Depending on your
-RBAC policy the token can be provided via a secret in the operator namespace or in each DevWorkspace namespace.
+### Regular OCI-compatible registry
+To use a regular OCI-compatible registry for backups, you need to provide registry credentials. Depending on your
+RBAC policy, the token can be provided via a secret in the operator namespace or in each DevWorkspace namespace.
 Having the secret in the DevWorkspace namespace allows for using different registry accounts per namespace with more
 granular access control.
 
@@ -166,6 +169,9 @@ granular access control.
 ```yaml
 kind: DevWorkspaceOperatorConfig
 apiVersion: controller.devfile.io/v1alpha1
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
 config:
   routing:
     defaultRoutingClass: basic
@@ -178,7 +184,7 @@ config:
       schedule: '0 */4 * * *'
     imagePullPolicy: Always
 ```
-The `authSecret` must point to real Kubernetes Secret of type `kubernetes.io/dockerconfigjson` containing credentials to access the registry.
+The `authSecret` must point to a real Kubernetes Secret of type `kubernetes.io/dockerconfigjson` containing credentials to access the registry.
 
 To create one you can use following command:
 

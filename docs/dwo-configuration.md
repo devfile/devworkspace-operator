@@ -107,6 +107,107 @@ Cleanup CronJob configuration fields:
 - **`retainTime`**: The duration time in seconds since a DevWorkspace was last started before it is considered stale and eligible for cleanup. Default: 2592000 seconds (30 days).
 - **`dryRun`**: Set to `true` to run the cleanup job in dry-run mode. In this mode, the job logs which DevWorkspaces would be removed but does not actually delete them. Set to `false` to perform the actual deletion. Default: `false`.
 
+## Configuring Backup CronJob
+
+The DevWorkspace backup job allows for periodic backups of DevWorkspace data to a specified backup location.
+Once enabled and configured, the backup job will run at defined intervals to create backups of DevWorkspace data.
+The backup controller depends on an OCI-compatible registry e.g., [quay.io](https://quay.io/) used as an image artifact storage for backup archives.
+
+The backup makes a snapshot of Workspace PVCs and stores them as tar.gz archives in the specified OCI registry.
+**Note:** By default, the DevWorkspace backup job is disabled.
+
+
+Backup CronJob configuration fields:
+
+- **`enable`**: Set to `true` to enable the backup job, `false` to disable it. Default: `false`.
+- **`schedule`**: A Cron expression defining how often the backup job runs. Default: `"0 1 * * *"`.
+- **`registry.path`**: A base registry location where the backup archives will be pushed.
+The value provided for registry.path is only the first segment of the final location. The full registry path is assembled dynamically, incorporating the name of the workspace and the :latest tag, following this pattern:
+`<registry.path>/<devworkspace-name>:latest`
+
+- **`registry.authSecret`**: (Optional) The name of the Kubernetes Secret containing credentials to access the OCI registry. If not provided, it is assumed that the registry is public or uses integrated OpenShift registry.
+- **`oras.extraArgs`**: (Optional) Additional arguments to pass to the `oras` CLI tool during push and pull operations.
+
+
+There are several configuration options to customize the logic:
+
+### Integrated OpenShift container registry
+This option is available only on OpenShift clusters with integrated container registry enabled and requires no additional configuration.
+
+To enable the backup use following configuration in the global DWOC:
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  routing:
+    defaultRoutingClass: basic
+  workspace:
+    backupCronJob:
+      enable: true
+      registry:
+        path: default-route-openshift-image-registry.apps.{cluster ID}.openshiftapps.com
+      schedule: '0 */4 * * *' # cron expression with backup frequency
+    imagePullPolicy: Always
+```
+
+**Note:** The `path` field must contain the URL to your OpenShift integrated registry given by the cluster.
+
+Once the backup job is finished, the backup archives will be available in the DevWorkspace namespace under a repository
+with a matching Devworkspace name.
+
+### Regular OCI-compatible registry
+To use a regular OCI-compatible registry for backups, you need to provide registry credentials. Depending on your
+RBAC policy, the token can be provided via a secret in the operator namespace or in each DevWorkspace namespace.
+Having the secret in the DevWorkspace namespace allows for using different registry accounts per namespace with more
+granular access control.
+
+
+```yaml
+kind: DevWorkspaceOperatorConfig
+apiVersion: controller.devfile.io/v1alpha1
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  routing:
+    defaultRoutingClass: basic
+  workspace:
+    backupCronJob:
+      enable: true
+      registry:
+        authSecret: my-secret
+        path: quay.io/my-company-org
+      schedule: '0 */4 * * *'
+    imagePullPolicy: Always
+```
+The `authSecret` must point to a real Kubernetes Secret of type `kubernetes.io/dockerconfigjson` containing credentials to access the registry.
+
+To create one you can use following command:
+
+```bash
+kubectl create secret docker-registry my-secret --from-file=config.json -n devworkspace-controller
+```
+The secret must contain a label `controller.devfile.io/watch-secret=true` to be recognized by the DevWorkspace Operator.
+```bash
+kubectl label secret my-secret controller.devfile.io/watch-secret=true -n devworkspace-controller
+```
+
+### Restore from backup
+We are aiming to provide automated restore functionality in future releases. But for now you can still
+manually restore the data from the backup archives created by the backup job.
+
+Since the backup archive is available in OCI registry you can use any OCI compatible tool to pull
+the archive locally. For example using [oras](https://github.com/oras-project/oras) cli tool:
+
+```bash
+oras pull <registry-path>/<devworkspace-name>:latest
+```
+The archive will be downloaded as a `devworkspace-backup.tar.gz` file which you can extract and restore the data.
+
 ## Configuring PVC storage access mode
 
 By default, PVCs managed by the DevWorkspace Operator are created with the `ReadWriteOnce` access mode.

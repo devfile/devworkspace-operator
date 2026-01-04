@@ -474,7 +474,7 @@ func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, 
 
 	// First check the workspace namespace for the secret
 	registryAuthSecret := &corev1.Secret{}
-	err := r.Get(ctx, client.ObjectKey{
+	err := r.NonCachingClient.Get(ctx, client.ObjectKey{
 		Name:      secretName,
 		Namespace: workspace.Namespace}, registryAuthSecret)
 	if err == nil {
@@ -488,7 +488,7 @@ func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, 
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace", "secretName", secretName)
 
 	// If the secret is not found in the workspace namespace, check the operator namespace as fallback
-	err = r.Get(ctx, client.ObjectKey{
+	err = r.NonCachingClient.Get(ctx, client.ObjectKey{
 		Name:      secretName,
 		Namespace: dwOperatorConfig.Namespace}, registryAuthSecret)
 	if err != nil {

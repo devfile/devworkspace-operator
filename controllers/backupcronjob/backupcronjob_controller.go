@@ -289,7 +289,7 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
 	var lastBackupTime *metav1.Time
 	var lastBackupSuccessful bool
 	if workspace.Annotations != nil {
-		if lastBackupTimeStr, ok := workspace.Annotations[constants.DevWorkspaceLastBackupTimeAnnotation]; ok {
+		if lastBackupTimeStr, ok := workspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation]; ok {
 			parsedTime, err := time.Parse(time.RFC3339Nano, lastBackupTimeStr)
 			if err != nil {
 				log.Error(err, "Failed to parse last backup time annotation, treating as no previous backup", "value", lastBackupTimeStr)

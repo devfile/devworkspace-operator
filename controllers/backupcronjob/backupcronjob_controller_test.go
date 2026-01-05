@@ -1,3 +1,4 @@
+//
 // Copyright (c) 2019-2025 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -10,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 package controllers
 
@@ -562,8 +564,9 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				Status: batchv1.JobStatus{
 					Conditions: []batchv1.JobCondition{
 						{
-							Type:   batchv1.JobComplete,
-							Status: corev1.ConditionTrue,
+							Type:               batchv1.JobComplete,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
 						},
 					},
 				},
@@ -577,7 +580,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: dw.Name, Namespace: dw.Namespace}, updatedDw)).To(Succeed())
 			Expect(updatedDw.Annotations).ToNot(BeNil())
 			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation]).To(Equal("true"))
-			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupTimeAnnotation]).ToNot(BeEmpty())
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation]).ToNot(BeEmpty())
 			Expect(updatedDw.Annotations).ToNot(HaveKey(constants.DevWorkspaceLastBackupErrorAnnotation))
 		})
 
@@ -600,9 +603,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				Status: batchv1.JobStatus{
 					Conditions: []batchv1.JobCondition{
 						{
-							Type:    batchv1.JobFailed,
-							Status:  corev1.ConditionTrue,
-							Message: errorMessage,
+							Type:               batchv1.JobFailed,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+							Message:            errorMessage,
 						},
 					},
 				},
@@ -616,7 +620,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: dw.Name, Namespace: dw.Namespace}, updatedDw)).To(Succeed())
 			Expect(updatedDw.Annotations).ToNot(BeNil())
 			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation]).To(Equal("false"))
-			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupTimeAnnotation]).ToNot(BeEmpty())
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation]).ToNot(BeEmpty())
 			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupErrorAnnotation]).To(Equal(errorMessage))
 		})
 
@@ -644,9 +648,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				Status: batchv1.JobStatus{
 					Conditions: []batchv1.JobCondition{
 						{
-							Type:    batchv1.JobFailed,
-							Status:  corev1.ConditionTrue,
-							Message: longErrorMessage,
+							Type:               batchv1.JobFailed,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+							Message:            longErrorMessage,
 						},
 					},
 				},
@@ -706,8 +711,9 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				Status: batchv1.JobStatus{
 					Conditions: []batchv1.JobCondition{
 						{
-							Type:   batchv1.JobComplete,
-							Status: corev1.ConditionTrue,
+							Type:               batchv1.JobComplete,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
 						},
 					},
 				},
@@ -730,8 +736,9 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				Status: batchv1.JobStatus{
 					Conditions: []batchv1.JobCondition{
 						{
-							Type:   batchv1.JobComplete,
-							Status: corev1.ConditionTrue,
+							Type:               batchv1.JobComplete,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
 						},
 					},
 				},
@@ -860,7 +867,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			annotationBackupTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
 			dw := createDevWorkspace("dw-test-annotation", "ns-test-annotation", false, workspaceStoppedTime)
 			dw.Annotations = map[string]string{
-				constants.DevWorkspaceLastBackupTimeAnnotation:       annotationBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: annotationBackupTime.Format(time.RFC3339Nano),
 				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
 			}
 
@@ -873,7 +880,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			annotationBackupTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
 			dw := createDevWorkspace("dw-test-unsuccessful", "ns-test-unsuccessful", false, workspaceStoppedTime)
 			dw.Annotations = map[string]string{
-				constants.DevWorkspaceLastBackupTimeAnnotation:       annotationBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: annotationBackupTime.Format(time.RFC3339Nano),
 				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "false",
 			}
 
@@ -885,7 +892,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
 			dw := createDevWorkspace("dw-test-invalid-time", "ns-test-invalid-time", false, workspaceStoppedTime)
 			dw.Annotations = map[string]string{
-				constants.DevWorkspaceLastBackupTimeAnnotation:       "invalid-time-format",
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: "invalid-time-format",
 				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
 			}
 
@@ -901,7 +908,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 
 			dw := createDevWorkspace("dw-test-prefer-annotation", "ns-test-prefer-annotation", false, workspaceStoppedTime)
 			dw.Annotations = map[string]string{
-				constants.DevWorkspaceLastBackupTimeAnnotation:       annotationBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: annotationBackupTime.Format(time.RFC3339Nano),
 				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
 			}
 

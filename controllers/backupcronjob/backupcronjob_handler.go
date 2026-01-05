@@ -1,5 +1,4 @@
 //
-//
 // Copyright (c) 2019-2025 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -8,8 +7,7 @@
 //     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
-// distributed under the Licens
-//e is distributed on an "AS IS" BASIS,
+// distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
@@ -76,11 +74,20 @@ func (r *BackupCronJobReconciler) handleBackupJobStatus(ctx context.Context, job
 			continue
 		}
 
+		if condition.Type != batchv1.JobComplete && condition.Type != batchv1.JobFailed {
+			continue
+		}
+
+		devWorkspace, err := r.getWorkspaceFromJob(ctx, job)
+		if err != nil {
+			return err
+		}
+
 		switch condition.Type {
 		case batchv1.JobComplete:
-			return r.recordBackupSuccess(ctx, job)
+			return r.recordBackupSuccess(ctx, devWorkspace, condition)
 		case batchv1.JobFailed:
-			return r.recordBackupFailure(ctx, job, condition.Message)
+			return r.recordBackupFailure(ctx, devWorkspace, condition)
 		}
 	}
 
@@ -89,13 +96,9 @@ func (r *BackupCronJobReconciler) handleBackupJobStatus(ctx context.Context, job
 
 func (r *BackupCronJobReconciler) recordBackupSuccess(
 	ctx context.Context,
-	job *batchv1.Job,
+	devWorkspace *dw.DevWorkspace,
+	condition batchv1.JobCondition,
 ) error {
-	devWorkspace, err := r.getWorkspaceFromJob(ctx, job)
-	if err != nil {
-		return err
-	}
-
 	origDevWorkspace := devWorkspace.DeepCopy()
 
 	if devWorkspace.Annotations == nil {
@@ -103,7 +106,7 @@ func (r *BackupCronJobReconciler) recordBackupSuccess(
 	}
 
 	devWorkspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] = "true"
-	devWorkspace.Annotations[constants.DevWorkspaceLastBackupTimeAnnotation] = metav1.Now().Format(metav1.RFC3339Micro)
+	devWorkspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation] = condition.LastTransitionTime.Format(metav1.RFC3339Micro)
 	delete(devWorkspace.Annotations, constants.DevWorkspaceLastBackupErrorAnnotation)
 
 	return r.Patch(ctx, devWorkspace, client.MergeFrom(origDevWorkspace))
@@ -111,14 +114,9 @@ func (r *BackupCronJobReconciler) recordBackupSuccess(
 
 func (r *BackupCronJobReconciler) recordBackupFailure(
 	ctx context.Context,
-	job *batchv1.Job,
-	errorMsg string,
+	devWorkspace *dw.DevWorkspace,
+	condition batchv1.JobCondition,
 ) error {
-	devWorkspace, err := r.getWorkspaceFromJob(ctx, job)
-	if err != nil {
-		return err
-	}
-
 	origDevWorkspace := devWorkspace.DeepCopy()
 
 	if devWorkspace.Annotations == nil {
@@ -126,13 +124,14 @@ func (r *BackupCronJobReconciler) recordBackupFailure(
 	}
 
 	// Truncate error message if it's too long (max 1024 chars for annotation values)
+	errorMsg := condition.Message
 	const maxLength = 1024
 	if len(errorMsg) > maxLength {
 		errorMsg = errorMsg[:maxLength-3] + "..."
 	}
 
 	devWorkspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] = "false"
-	devWorkspace.Annotations[constants.DevWorkspaceLastBackupTimeAnnotation] = metav1.Now().Format(metav1.RFC3339Micro)
+	devWorkspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation] = condition.LastTransitionTime.Format(metav1.RFC3339Micro)
 	devWorkspace.Annotations[constants.DevWorkspaceLastBackupErrorAnnotation] = errorMsg
 
 	return r.Patch(ctx, devWorkspace, client.MergeFrom(origDevWorkspace))
@@ -144,12 +143,12 @@ func (r *BackupCronJobReconciler) getWorkspaceFromJob(
 ) (*dw.DevWorkspace, error) {
 	devWorkspaceName, ok := job.Labels[constants.DevWorkspaceNameLabel]
 	if !ok || devWorkspaceName == "" {
+		// Should not happen since we already checked this in the predicate
 		return nil, fmt.Errorf("DevWorkspace name label not found for job %s in namespace %s", job.Name, job.Namespace)
 	}
 
 	devWorkspace := &dw.DevWorkspace{}
 	devWorkspaceKey := types.NamespacedName{Name: devWorkspaceName, Namespace: job.Namespace}
-
 	if err := r.Get(ctx, devWorkspaceKey, devWorkspace); err != nil {
 		return nil, err
 	}

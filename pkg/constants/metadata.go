@@ -185,9 +185,9 @@ const (
 	// attempt for this DevWorkspace was successful. Value is either "true" or "false".
 	DevWorkspaceLastBackupSuccessfulAnnotation = "controller.devfile.io/last-backup-successful"
 
-	// DevWorkspaceLastBackupTimeAnnotation is an annotation that stores the timestamp (in RFC3339Micro format)
-	// of when the last backup was attempted for this DevWorkspace, regardless of success or failure.
-	DevWorkspaceLastBackupTimeAnnotation = "controller.devfile.io/last-backup-time"
+	// DevWorkspaceLastBackupFinishedAtAnnotation is an annotation that stores the timestamp (in RFC3339Micro format)
+	// of when the last backup finished for this DevWorkspace (whether it completed successfully or failed).
+	DevWorkspaceLastBackupFinishedAtAnnotation = "controller.devfile.io/last-backup-finished-at"
 
 	// DevWorkspaceLastBackupErrorAnnotation is an annotation that stores the error message from the last
 	// failed backup attempt. This annotation is only present when the last backup failed, and is cleared

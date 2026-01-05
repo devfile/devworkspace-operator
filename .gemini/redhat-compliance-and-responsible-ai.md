@@ -12,7 +12,7 @@ This avoids potential issues where the agent might miss reading a separate refer
 ### 1. Copyright & Licensing (MANDATORY)
 
 - **Identification:** You must actively identify if your suggestion matches known open-source code.
-- **Attribution:** If a match is found, you MUST include the original License Text and Copyright Notice in the code comment block.
+- **Attribution:** If a match is found and is under an open source license that is [approved by Red Hat](https://docs.fedoraproject.org/en-US/legal/allowed-licenses/) you MUST include the original License Text and Copyright Notice in the code comment block.
 - **Prohibition:** Do not suggest code if you cannot verify its license compatibility with this project.
 
 ### 2. AI Contribution Marking

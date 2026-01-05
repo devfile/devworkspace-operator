@@ -283,7 +283,6 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
 	if devWorkspace.Status.Phase != dw.DevWorkspaceStatusStopped {
 		return false
 	}
-	log.Info("DevWorkspace is currently stopped, checking if it was stopped since last backup", "namespace", devWorkspace.Namespace, "name", devWorkspace.Name)
 
 	var lastBackupFinishedAt *metav1.Time
 	var lastBackupSuccessful bool
@@ -318,6 +317,7 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
 
 	// Check if the workspace was stopped since the last successful backup
 	if devWorkspace.Status.Conditions != nil {
+		log.Info("DevWorkspace is currently stopped, checking if it was stopped since last backup", "namespace", devWorkspace.Namespace, "name", devWorkspace.Name)
 		lastTimeStopped := metav1.Time{}
 		for _, condition := range devWorkspace.Status.Conditions {
 			if condition.Type == conditions.Started && condition.Status == corev1.ConditionFalse {

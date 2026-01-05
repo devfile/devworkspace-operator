@@ -299,11 +299,10 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
 		}
 
 		lastBackupSuccessful = workspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] == "true"
-	}
-
-	// Fall back to globalLastBackupTime if annotation doesn't exist
-	if lastBackupTime == nil && globalLastBackupTime != nil {
+	} else {
+		// Fall back to globalLastBackupTime if annotation doesn't exist
 		lastBackupTime = globalLastBackupTime
+		lastBackupSuccessful = true
 	}
 
 	if lastBackupTime == nil {

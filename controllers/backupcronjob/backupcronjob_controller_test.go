@@ -402,8 +402,9 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			dw := createDevWorkspace("dw-old", "ns-b", false, metav1.NewTime(time.Now().Add(-60*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-old"
-			// Set successful annotation so the time-based logic is checked
+			// Set successful annotation and backup time so the time-based logic is checked
 			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: lastBackupTime.Format(time.RFC3339Nano),
 				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
 			}
 			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
@@ -842,11 +843,12 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			lastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
 			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
 			dw := createDevWorkspace("dw-test", "ns-test", false, workspaceStoppedTime)
-			// Set successful annotation so the time-based logic is checked
+			// Set successful annotation and backup time so the time-based logic is checked
 			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: lastBackupTime.Format(time.RFC3339Nano),
 				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
 			}
-			result := reconciler.wasStoppedSinceLastBackup(dw, &lastBackupTime, log)
+			result := reconciler.wasStoppedSinceLastBackup(dw, nil, log)
 			Expect(result).To(BeFalse())
 		})
 		It("returns true if there is no last backup time", func() {
@@ -916,6 +918,33 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			// With global time (-5min), workspace stopped at -10min, so would return false
 			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
 			Expect(result).To(BeTrue())
+		})
+
+		It("falls back to global last backup time when annotations are nil", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-nil-annotations", "ns-test-nil-annotations", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is nil
+			dw.Annotations = nil
+
+			// With global time (-20min), workspace stopped at -10min, should return true
+			// lastBackupSuccessful should be treated as true when falling back
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("returns false when annotations are nil and workspace stopped before global backup time", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-nil-old-stop", "ns-test-nil-old-stop", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is nil
+			dw.Annotations = nil
+
+			// With global time (-5min), workspace stopped at -10min, should return false
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeFalse())
 		})
 	})
 

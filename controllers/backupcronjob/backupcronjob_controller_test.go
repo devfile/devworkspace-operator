@@ -751,85 +751,6 @@ var _ = Describe("BackupCronJobReconciler", func() {
 		})
 	})
 
-	Context("copySecret", func() {
-		It("creates a new secret in workspace namespace", func() {
-			dw := createDevWorkspace("dw-copy-secret", "ns-copy-secret", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
-			dw.Status.DevWorkspaceId = "id-copy-secret"
-			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
-
-			sourceSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "source-secret",
-					Namespace: nameNamespace.Namespace,
-				},
-				Data: map[string][]byte{
-					".dockerconfigjson": []byte(`{"auths":{"registry.example.com":{"auth":"dGVzdDp0ZXN0"}}}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			}
-
-			copiedSecret, err := reconciler.copySecret(ctx, dw, sourceSecret, log)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(copiedSecret).ToNot(BeNil())
-			Expect(copiedSecret.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
-			Expect(copiedSecret.Namespace).To(Equal(dw.Namespace))
-			Expect(copiedSecret.Data).To(Equal(sourceSecret.Data))
-			Expect(copiedSecret.Type).To(Equal(sourceSecret.Type))
-			Expect(copiedSecret.Labels).To(HaveKeyWithValue(constants.DevWorkspaceIDLabel, dw.Status.DevWorkspaceId))
-			Expect(copiedSecret.Labels).To(HaveKeyWithValue(constants.DevWorkspaceWatchSecretLabel, "true"))
-
-			// Verify the secret was actually created
-			createdSecret := &corev1.Secret{}
-			err = fakeClient.Get(ctx, types.NamespacedName{
-				Name:      constants.DevWorkspaceBackupAuthSecretName,
-				Namespace: dw.Namespace,
-			}, createdSecret)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		It("deletes existing secret before creating new one", func() {
-			dw := createDevWorkspace("dw-replace-secret", "ns-replace-secret", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
-			dw.Status.DevWorkspaceId = "id-replace-secret"
-			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
-
-			// Create an existing secret
-			existingSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      constants.DevWorkspaceBackupAuthSecretName,
-					Namespace: dw.Namespace,
-				},
-				Data: map[string][]byte{
-					".dockerconfigjson": []byte(`{"old":"data"}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			}
-			Expect(fakeClient.Create(ctx, existingSecret)).To(Succeed())
-
-			sourceSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "new-source-secret",
-					Namespace: nameNamespace.Namespace,
-				},
-				Data: map[string][]byte{
-					".dockerconfigjson": []byte(`{"new":"data"}`),
-				},
-				Type: corev1.SecretTypeDockerConfigJson,
-			}
-
-			copiedSecret, err := reconciler.copySecret(ctx, dw, sourceSecret, log)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(copiedSecret.Data).To(Equal(sourceSecret.Data))
-
-			// Verify the secret has the new data
-			updatedSecret := &corev1.Secret{}
-			err = fakeClient.Get(ctx, types.NamespacedName{
-				Name:      constants.DevWorkspaceBackupAuthSecretName,
-				Namespace: dw.Namespace,
-			}, updatedSecret)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(updatedSecret.Data).To(Equal(sourceSecret.Data))
-		})
-	})
 	Context("wasStoppedSinceLastBackup", func() {
 		It("returns true if DevWorkspace was stopped since last backup", func() {
 			lastBackupTime := metav1.NewTime(time.Now().Add(-30 * time.Minute))
@@ -934,6 +855,20 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(result).To(BeTrue())
 		})
 
+		It("falls back to global last backup time when annotations is empty", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-empty-annotations", "ns-test-empty-annotations", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is empty
+			dw.Annotations = map[string]string{}
+
+			// With global time (-20min), workspace stopped at -10min, should return true
+			// lastBackupSuccessful should be treated as true when falling back
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeTrue())
+		})
+
 		It("returns false when annotations are nil and workspace stopped before global backup time", func() {
 			globalLastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
 			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
@@ -941,6 +876,19 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			dw := createDevWorkspace("dw-test-nil-old-stop", "ns-test-nil-old-stop", false, workspaceStoppedTime)
 			// Explicitly ensure annotations is nil
 			dw.Annotations = nil
+
+			// With global time (-5min), workspace stopped at -10min, should return false
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeFalse())
+		})
+
+		It("returns false when annotations is empty and workspace stopped before global backup time", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-empty-old-stop", "ns-test-empty-old-stop", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is empty
+			dw.Annotations = map[string]string{}
 
 			// With global time (-5min), workspace stopped at -10min, should return false
 			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)

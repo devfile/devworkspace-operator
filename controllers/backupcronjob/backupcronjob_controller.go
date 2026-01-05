@@ -276,36 +276,39 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 // It reads the last backup time from the DevWorkspace annotation, or falls back to the
 // provided globalLastBackupTime if the annotation doesn't exist.
 func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
-	workspace *dw.DevWorkspace,
+	devWorkspace *dw.DevWorkspace,
 	globalLastBackupTime *metav1.Time,
 	log logr.Logger,
 ) bool {
-	if workspace.Status.Phase != dw.DevWorkspaceStatusStopped {
+	if devWorkspace.Status.Phase != dw.DevWorkspaceStatusStopped {
 		return false
 	}
-	log.Info("DevWorkspace is currently stopped, checking if it was stopped since last backup", "namespace", workspace.Namespace, "name", workspace.Name)
+	log.Info("DevWorkspace is currently stopped, checking if it was stopped since last backup", "namespace", devWorkspace.Namespace, "name", devWorkspace.Name)
+
+	var lastBackupFinishedAt *metav1.Time
+	var lastBackupSuccessful bool
 
 	// Get the last backup time and success status from the workspace annotations
-	var lastBackupTime *metav1.Time
-	var lastBackupSuccessful bool
-	if workspace.Annotations != nil {
-		if lastBackupTimeStr, ok := workspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation]; ok {
-			parsedTime, err := time.Parse(time.RFC3339Nano, lastBackupTimeStr)
+	if devWorkspace.Annotations != nil {
+		if lastBackupFinishedAtStr, ok := devWorkspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation]; ok {
+			parsedTime, err := time.Parse(time.RFC3339Nano, lastBackupFinishedAtStr)
 			if err != nil {
-				log.Error(err, "Failed to parse last backup time annotation, treating as no previous backup", "value", lastBackupTimeStr)
+				log.Error(err, "Failed to parse last backup time annotation, treating as no previous backup", "value", lastBackupFinishedAtStr)
 			} else {
-				lastBackupTime = &metav1.Time{Time: parsedTime}
+				lastBackupFinishedAt = &metav1.Time{Time: parsedTime}
 			}
 		}
 
-		lastBackupSuccessful = workspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] == "true"
-	} else {
+		lastBackupSuccessful = devWorkspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] == "true"
+	}
+
+	if lastBackupFinishedAt == nil {
 		// Fall back to globalLastBackupTime if annotation doesn't exist
-		lastBackupTime = globalLastBackupTime
+		lastBackupFinishedAt = globalLastBackupTime
 		lastBackupSuccessful = true
 	}
 
-	if lastBackupTime == nil {
+	if lastBackupFinishedAt == nil {
 		return true
 	}
 
@@ -314,17 +317,17 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
 	}
 
 	// Check if the workspace was stopped since the last successful backup
-	if workspace.Status.Conditions != nil {
+	if devWorkspace.Status.Conditions != nil {
 		lastTimeStopped := metav1.Time{}
-		for _, condition := range workspace.Status.Conditions {
+		for _, condition := range devWorkspace.Status.Conditions {
 			if condition.Type == conditions.Started && condition.Status == corev1.ConditionFalse {
 				lastTimeStopped = condition.LastTransitionTime
 			}
 		}
 
 		if !lastTimeStopped.IsZero() {
-			if lastTimeStopped.Time.After(lastBackupTime.Time) {
-				log.Info("DevWorkspace was stopped since last successful backup", "namespace", workspace.Namespace, "name", workspace.Name)
+			if lastTimeStopped.Time.After(lastBackupFinishedAt.Time) {
+				log.Info("DevWorkspace was stopped since last successful backup", "namespace", devWorkspace.Namespace, "name", devWorkspace.Name)
 				return true
 			}
 		}

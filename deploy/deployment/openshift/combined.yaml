@@ -27933,11 +27933,11 @@ spec:
         - name: WEBHOOK_SECRET_NAME
           value: devworkspace-webhookserver-tls
         - name: RELATED_IMAGE_devworkspace_webhook_server
-          value: quay.io/devfile/devworkspace-controller:v0.39.0
+          value: quay.io/devfile/devworkspace-controller:v0.39.1
         - name: RELATED_IMAGE_project_clone
-          value: quay.io/devfile/project-clone:v0.39.0
+          value: quay.io/devfile/project-clone:v0.39.1
         - name: RELATED_IMAGE_project_backup
-          value: quay.io/devfile/project-backup:v0.39.0
+          value: quay.io/devfile/project-backup:v0.39.1
         - name: WATCH_NAMESPACE
           value: ""
         - name: POD_NAME
@@ -27966,7 +27966,7 @@ spec:
           value: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
         - name: RELATED_IMAGE_async_storage_sidecar
           value: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
-        image: quay.io/devfile/devworkspace-controller:v0.39.0
+        image: quay.io/devfile/devworkspace-controller:v0.39.1
         imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 5

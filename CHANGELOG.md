@@ -1,4 +1,66 @@
 # DevWorkspace Operator Changelog
+# v0.39.0
+## Features
+### Implement backup feature for DevWorkspaces [#1524](https://github.com/devfile/devworkspace-operator/issues/1524)
+An automated backup mechanism is now available for non-ephemeral DevWorkspaces. The backup feature can be configured through the DevWorkspaceOperatorConfig to periodically backup workspace `/project` content.
+
+The backup process:
+- Identifies stopped DevWorkspaces from a configurable time period
+- Creates a Job in the user's namespace to generate a container image containing `/projects` from the DevWorkspace's PVC
+- Pushes the backup image to an external image registry
+
+See [docs/dwo-configuration.md](docs/dwo-configuration.md#configuring-backup-cronjob) for configuration details.
+
+### Add the ability to configure custom init containers [#1559](https://github.com/devfile/devworkspace-operator/issues/1559)
+Cluster administrators can now configure custom init containers for DevWorkspaces in the DevWorkspaceOperatorConfig.
+
+Example use cases are:
+- Injecting custom configuration and tools
+- Overriding the built-in `init-persistent-home` logic by providing a custom container with the same name
+
+Example configuration:
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    initContainers:
+      - name: install-tools
+        image: custom-image:latest
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            echo "Setting up custom tools"
+            mkdir -p /home/user/custom-tools
+```
+See [docs/dwo-configuration.md](docs/dwo-configuration.md#configuring-custom-init-containers) for configuration details.
+### Add container resource caps enforcement [#1561](https://github.com/devfile/devworkspace-operator/issues/1561)
+Administrators can now set maximum resource limits and requests for workspace containers through the DevWorkspaceOperatorConfig. This prevents users from creating DevWorkspaces with excessive CPU or memory requirements.
+
+Example configuration:
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    containerResourceCaps:
+      limits:
+        cpu: "1"
+        memory: 2Gi
+      requests:
+        cpu: "0.1"
+        memory: 100Mi
+```
+
+When a container specifies resource requirements exceeding the caps, they will be limited to the configured maximum values. 
+
+## Bug Fixes & Improvements
+- Fix project clone image missing UID 1234 in /etc/passwd [#1560](https://github.com/devfile/devworkspace-operator/issues/1560)
+
 # v0.38.0
 ## Features
 ### Improved debugging for failing postStart commands [#1538](https://github.com/devfile/devworkspace-operator/issues/1538)

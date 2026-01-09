@@ -18,12 +18,12 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -106,7 +106,7 @@ func (r *BackupCronJobReconciler) recordBackupSuccess(
 	}
 
 	devWorkspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] = "true"
-	devWorkspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation] = condition.LastTransitionTime.Format(metav1.RFC3339Micro)
+	devWorkspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation] = condition.LastTransitionTime.Format(time.RFC3339Nano)
 	delete(devWorkspace.Annotations, constants.DevWorkspaceLastBackupErrorAnnotation)
 
 	return r.Patch(ctx, devWorkspace, client.MergeFrom(origDevWorkspace))
@@ -131,7 +131,7 @@ func (r *BackupCronJobReconciler) recordBackupFailure(
 	}
 
 	devWorkspace.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation] = "false"
-	devWorkspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation] = condition.LastTransitionTime.Format(metav1.RFC3339Micro)
+	devWorkspace.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation] = condition.LastTransitionTime.Format(time.RFC3339Nano)
 	devWorkspace.Annotations[constants.DevWorkspaceLastBackupErrorAnnotation] = errorMsg
 
 	return r.Patch(ctx, devWorkspace, client.MergeFrom(origDevWorkspace))

@@ -1,3 +1,4 @@
+//
 // Copyright (c) 2019-2025 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -10,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
 
 package controllers
 
@@ -400,6 +402,11 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			dw := createDevWorkspace("dw-old", "ns-b", false, metav1.NewTime(time.Now().Add(-60*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
 			dw.Status.DevWorkspaceId = "id-old"
+			// Set successful annotation and backup time so the time-based logic is checked
+			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: lastBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
+			}
 			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
 
 			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
@@ -538,6 +545,212 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
+
+	Context("handleBackupJobStatus", func() {
+		It("updates DevWorkspace annotations on successful backup job", func() {
+			dw := createDevWorkspace("dw-success", "ns-success", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.DevWorkspaceId = "id-success"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job-success",
+					Namespace: dw.Namespace,
+					Labels: map[string]string{
+						constants.DevWorkspaceIDLabel:        dw.Status.DevWorkspaceId,
+						constants.DevWorkspaceNameLabel:      dw.Name,
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{
+						{
+							Type:               batchv1.JobComplete,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, job)).To(Succeed())
+
+			err := reconciler.handleBackupJobStatus(ctx, job)
+			Expect(err).ToNot(HaveOccurred())
+
+			updatedDw := &dwv2.DevWorkspace{}
+			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: dw.Name, Namespace: dw.Namespace}, updatedDw)).To(Succeed())
+			Expect(updatedDw.Annotations).ToNot(BeNil())
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation]).To(Equal("true"))
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation]).ToNot(BeEmpty())
+			Expect(updatedDw.Annotations).ToNot(HaveKey(constants.DevWorkspaceLastBackupErrorAnnotation))
+		})
+
+		It("updates DevWorkspace annotations on failed backup job", func() {
+			dw := createDevWorkspace("dw-fail", "ns-fail", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.DevWorkspaceId = "id-fail"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			errorMessage := "Backup failed due to network issue"
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job-fail",
+					Namespace: dw.Namespace,
+					Labels: map[string]string{
+						constants.DevWorkspaceIDLabel:        dw.Status.DevWorkspaceId,
+						constants.DevWorkspaceNameLabel:      dw.Name,
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{
+						{
+							Type:               batchv1.JobFailed,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+							Message:            errorMessage,
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, job)).To(Succeed())
+
+			err := reconciler.handleBackupJobStatus(ctx, job)
+			Expect(err).ToNot(HaveOccurred())
+
+			updatedDw := &dwv2.DevWorkspace{}
+			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: dw.Name, Namespace: dw.Namespace}, updatedDw)).To(Succeed())
+			Expect(updatedDw.Annotations).ToNot(BeNil())
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupSuccessfulAnnotation]).To(Equal("false"))
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupFinishedAtAnnotation]).ToNot(BeEmpty())
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupErrorAnnotation]).To(Equal(errorMessage))
+		})
+
+		It("truncates error message if it exceeds maximum length", func() {
+			dw := createDevWorkspace("dw-long-error", "ns-long-error", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.DevWorkspaceId = "id-long-error"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			// Create an error message longer than 1024 characters
+			longErrorMessage := ""
+			for i := 0; i < 1100; i++ {
+				longErrorMessage += "x"
+			}
+
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job-long-error",
+					Namespace: dw.Namespace,
+					Labels: map[string]string{
+						constants.DevWorkspaceIDLabel:        dw.Status.DevWorkspaceId,
+						constants.DevWorkspaceNameLabel:      dw.Name,
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{
+						{
+							Type:               batchv1.JobFailed,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+							Message:            longErrorMessage,
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, job)).To(Succeed())
+
+			err := reconciler.handleBackupJobStatus(ctx, job)
+			Expect(err).ToNot(HaveOccurred())
+
+			updatedDw := &dwv2.DevWorkspace{}
+			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: dw.Name, Namespace: dw.Namespace}, updatedDw)).To(Succeed())
+			Expect(updatedDw.Annotations).ToNot(BeNil())
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupErrorAnnotation]).To(HaveLen(1024))
+			Expect(updatedDw.Annotations[constants.DevWorkspaceLastBackupErrorAnnotation]).To(HaveSuffix("..."))
+		})
+
+		It("does nothing when job has no completed or failed conditions", func() {
+			dw := createDevWorkspace("dw-pending", "ns-pending", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.DevWorkspaceId = "id-pending"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job-pending",
+					Namespace: dw.Namespace,
+					Labels: map[string]string{
+						constants.DevWorkspaceIDLabel:        dw.Status.DevWorkspaceId,
+						constants.DevWorkspaceNameLabel:      dw.Name,
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{},
+				},
+			}
+			Expect(fakeClient.Create(ctx, job)).To(Succeed())
+
+			err := reconciler.handleBackupJobStatus(ctx, job)
+			Expect(err).ToNot(HaveOccurred())
+
+			updatedDw := &dwv2.DevWorkspace{}
+			Expect(fakeClient.Get(ctx, types.NamespacedName{Name: dw.Name, Namespace: dw.Namespace}, updatedDw)).To(Succeed())
+			Expect(updatedDw.Annotations).To(BeNil())
+		})
+
+		It("returns error when DevWorkspace is not found", func() {
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job-no-workspace",
+					Namespace: "ns-no-workspace",
+					Labels: map[string]string{
+						constants.DevWorkspaceIDLabel:        "id-no-workspace",
+						constants.DevWorkspaceNameLabel:      "dw-no-workspace",
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{
+						{
+							Type:               batchv1.JobComplete,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			}
+
+			err := reconciler.handleBackupJobStatus(ctx, job)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("returns error when DevWorkspace name label is missing from job", func() {
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job-no-label",
+					Namespace: "ns-no-label",
+					Labels: map[string]string{
+						constants.DevWorkspaceIDLabel:        "id-no-label",
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
+				},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{
+						{
+							Type:               batchv1.JobComplete,
+							Status:             corev1.ConditionTrue,
+							LastTransitionTime: metav1.Now(),
+						},
+					},
+				},
+			}
+
+			err := reconciler.handleBackupJobStatus(ctx, job)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("DevWorkspace name label not found"))
+		})
+	})
+
 	Context("wasStoppedSinceLastBackup", func() {
 		It("returns true if DevWorkspace was stopped since last backup", func() {
 			lastBackupTime := metav1.NewTime(time.Now().Add(-30 * time.Minute))
@@ -551,7 +764,12 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			lastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
 			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
 			dw := createDevWorkspace("dw-test", "ns-test", false, workspaceStoppedTime)
-			result := reconciler.wasStoppedSinceLastBackup(dw, &lastBackupTime, log)
+			// Set successful annotation and backup time so the time-based logic is checked
+			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: lastBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
+			}
+			result := reconciler.wasStoppedSinceLastBackup(dw, nil, log)
 			Expect(result).To(BeFalse())
 		})
 		It("returns true if there is no last backup time", func() {
@@ -564,6 +782,116 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
 			dw := createDevWorkspace("dw-test", "ns-test", true, workspaceStoppedTime)
 			result := reconciler.wasStoppedSinceLastBackup(dw, &lastBackupTime, log)
+			Expect(result).To(BeFalse())
+		})
+
+		It("uses workspace annotation for last backup time if present", func() {
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+			annotationBackupTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+			dw := createDevWorkspace("dw-test-annotation", "ns-test-annotation", false, workspaceStoppedTime)
+			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: annotationBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
+			}
+
+			result := reconciler.wasStoppedSinceLastBackup(dw, nil, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("returns true if last backup was unsuccessful", func() {
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-30 * time.Minute))
+			annotationBackupTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+			dw := createDevWorkspace("dw-test-unsuccessful", "ns-test-unsuccessful", false, workspaceStoppedTime)
+			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: annotationBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "false",
+			}
+
+			result := reconciler.wasStoppedSinceLastBackup(dw, nil, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("handles invalid time format in annotation gracefully", func() {
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+			dw := createDevWorkspace("dw-test-invalid-time", "ns-test-invalid-time", false, workspaceStoppedTime)
+			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: "invalid-time-format",
+				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
+			}
+
+			// Should fall back to treating as no previous backup
+			result := reconciler.wasStoppedSinceLastBackup(dw, nil, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("prefers workspace annotation over global last backup time", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+			annotationBackupTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-prefer-annotation", "ns-test-prefer-annotation", false, workspaceStoppedTime)
+			dw.Annotations = map[string]string{
+				constants.DevWorkspaceLastBackupFinishedAtAnnotation: annotationBackupTime.Format(time.RFC3339Nano),
+				constants.DevWorkspaceLastBackupSuccessfulAnnotation: "true",
+			}
+
+			// With annotation time (-20min), workspace stopped at -10min, so should return true
+			// With global time (-5min), workspace stopped at -10min, so would return false
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("falls back to global last backup time when annotations are nil", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-nil-annotations", "ns-test-nil-annotations", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is nil
+			dw.Annotations = nil
+
+			// With global time (-20min), workspace stopped at -10min, should return true
+			// lastBackupSuccessful should be treated as true when falling back
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("falls back to global last backup time when annotations is empty", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-20 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-empty-annotations", "ns-test-empty-annotations", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is empty
+			dw.Annotations = map[string]string{}
+
+			// With global time (-20min), workspace stopped at -10min, should return true
+			// lastBackupSuccessful should be treated as true when falling back
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeTrue())
+		})
+
+		It("returns false when annotations are nil and workspace stopped before global backup time", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-nil-old-stop", "ns-test-nil-old-stop", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is nil
+			dw.Annotations = nil
+
+			// With global time (-5min), workspace stopped at -10min, should return false
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
+			Expect(result).To(BeFalse())
+		})
+
+		It("returns false when annotations is empty and workspace stopped before global backup time", func() {
+			globalLastBackupTime := metav1.NewTime(time.Now().Add(-5 * time.Minute))
+			workspaceStoppedTime := metav1.NewTime(time.Now().Add(-10 * time.Minute))
+
+			dw := createDevWorkspace("dw-test-empty-old-stop", "ns-test-empty-old-stop", false, workspaceStoppedTime)
+			// Explicitly ensure annotations is empty
+			dw.Annotations = map[string]string{}
+
+			// With global time (-5min), workspace stopped at -10min, should return false
+			result := reconciler.wasStoppedSinceLastBackup(dw, &globalLastBackupTime, log)
 			Expect(result).To(BeFalse())
 		})
 	})
@@ -612,6 +940,125 @@ func createAuthSecret(name, namespace string, data map[string][]byte) *corev1.Se
 		Data: data,
 	}
 }
+
+var _ = Describe("getBackupJobPredicate Tests", func() {
+	var (
+		reconciler         BackupCronJobReconciler
+		backupJobPredicate predicate.Funcs
+	)
+
+	BeforeEach(func() {
+		scheme := runtime.NewScheme()
+		Expect(batchv1.AddToScheme(scheme)).To(Succeed())
+
+		reconciler = BackupCronJobReconciler{
+			Log:    zap.New(zap.UseDevMode(true)).WithName("BackupJobPredicateTest"),
+			Scheme: scheme,
+		}
+		backupJobPredicate = reconciler.getBackupJobPredicate()
+	})
+
+	Context("UpdateFunc", func() {
+		It("returns true for backup job with required labels", func() {
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						constants.DevWorkspaceBackupJobLabel: "true",
+						constants.DevWorkspaceNameLabel:      "test-workspace",
+					},
+				},
+			}
+
+			updateEvent := event.UpdateEvent{
+				ObjectOld: job,
+				ObjectNew: job,
+			}
+
+			result := backupJobPredicate.Update(updateEvent)
+			Expect(result).To(BeTrue())
+		})
+
+		It("returns false for job without backup label", func() {
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "regular-job",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						constants.DevWorkspaceNameLabel: "test-workspace",
+					},
+				},
+			}
+
+			updateEvent := event.UpdateEvent{
+				ObjectOld: job,
+				ObjectNew: job,
+			}
+
+			result := backupJobPredicate.Update(updateEvent)
+			Expect(result).To(BeFalse())
+		})
+
+		It("returns false for job without workspace name label", func() {
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
+				},
+			}
+
+			updateEvent := event.UpdateEvent{
+				ObjectOld: job,
+				ObjectNew: job,
+			}
+
+			result := backupJobPredicate.Update(updateEvent)
+			Expect(result).To(BeFalse())
+		})
+
+		It("returns false for job with empty workspace name label", func() {
+			job := &batchv1.Job{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "backup-job",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						constants.DevWorkspaceBackupJobLabel: "true",
+						constants.DevWorkspaceNameLabel:      "",
+					},
+				},
+			}
+
+			updateEvent := event.UpdateEvent{
+				ObjectOld: job,
+				ObjectNew: job,
+			}
+
+			result := backupJobPredicate.Update(updateEvent)
+			Expect(result).To(BeFalse())
+		})
+
+		It("returns false for non-job objects", func() {
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-pod",
+					Namespace: "test-namespace",
+				},
+			}
+
+			updateEvent := event.UpdateEvent{
+				ObjectOld: pod,
+				ObjectNew: pod,
+			}
+
+			result := backupJobPredicate.Update(updateEvent)
+			Expect(result).To(BeFalse())
+		})
+	})
+})
 
 var _ = Describe("DevWorkspaceOperatorConfig UpdateFunc Tests", func() {
 	var configPredicate predicate.Funcs

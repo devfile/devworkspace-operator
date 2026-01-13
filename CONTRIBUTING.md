@@ -53,6 +53,7 @@ To build, test and debug the DevWorkspace Operator the following development too
 - yq (python-yq from <https://github.com/kislyuk/yq#installation>, other distributions may not work)
 - skopeo (if building the OLM catalogsource)
 - podman or docker
+- ginkgo (required for running tests locally)
 
 Note: kustomize `v4.0.5` is required for most tasks. It is downloaded automatically to the `.kustomize` folder in this
 repo when required. This downloaded version is used regardless of whether or not kustomize is already installed on the
@@ -257,6 +258,24 @@ when you are done debugging you have to manually uninstall the telepresence agen
 ```bash
 make disconnect-debug-webhook-server
 ```
+
+### Running Tests
+
+To run tests locally, you need to have `ginkgo` installed. Install it using:
+
+```bash
+go install github.com/onsi/ginkgo/v2/ginkgo@latest
+```
+
+Ensure that `$GOPATH/bin` or `$GOBIN` is added to your `$PATH` so that `ginkgo` can be found.
+
+Then run the tests:
+
+```bash
+make test
+```
+
+This will run all unit tests and controller tests. The Makefile will automatically use `ginkgo` if it's available in your `$PATH`, otherwise it will fall back to `go test` (though `ginkgo` is recommended for the full test suite).
 
 ### Updating devfile API
 

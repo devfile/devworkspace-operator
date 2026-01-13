@@ -26,13 +26,11 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/images"
-	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
+	"github.com/devfile/devworkspace-operator/pkg/library/storage"
 	"github.com/go-logr/logr"
 	"github.com/robfig/cron/v3"
 	batchv1 "k8s.io/api/batch/v1"
@@ -353,7 +351,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 
 	// Find a PVC with used by the workspace
-	pvcName, workspacePath, err := r.getWorkspacePVCName(ctx, workspace, dwOperatorConfig, log)
+	pvcName, workspacePath, err := storage.GetWorkspacePVCInfo(ctx, workspace, dwOperatorConfig.Config, r.Client, log)
 	if err != nil {
 		log.Error(err, "Failed to get workspace PVC name", "devworkspace", workspace.Name)
 		return err
@@ -480,32 +478,6 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 	log.Info("Created backup Job for DevWorkspace", "jobName", job.Name, "devworkspace", workspace.Name)
 	return nil
-}
-
-// getWorkspacePVCName determines the PVC name and workspace path based on the storage provisioner used.
-func (r *BackupCronJobReconciler) getWorkspacePVCName(ctx context.Context, workspace *dw.DevWorkspace, dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger) (string, string, error) {
-	config, err := wkspConfig.ResolveConfigForWorkspace(workspace, r.Client)
-
-	workspaceWithConfig := &common.DevWorkspaceWithConfig{}
-	workspaceWithConfig.DevWorkspace = workspace
-	workspaceWithConfig.Config = config
-
-	storageProvisioner, err := storage.GetProvisioner(workspaceWithConfig)
-	if err != nil {
-		return "", "", err
-	}
-	if _, ok := storageProvisioner.(*storage.PerWorkspaceStorageProvisioner); ok {
-		pvcName := common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId)
-		return pvcName, constants.DefaultProjectsSourcesRoot, nil
-
-	} else if _, ok := storageProvisioner.(*storage.CommonStorageProvisioner); ok {
-		pvcName := constants.DefaultWorkspacePVCName
-		if dwOperatorConfig.Config.Workspace.PVCName != "" {
-			pvcName = dwOperatorConfig.Config.Workspace.PVCName
-		}
-		return pvcName, workspace.Status.DevWorkspaceId + constants.DefaultProjectsSourcesRoot, nil
-	}
-	return "", "", nil
 }
 
 func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, workspace *dw.DevWorkspace,

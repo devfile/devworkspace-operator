@@ -522,6 +522,39 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(1))
 		})
+		It("It doesn't create a Job for a DevWorkspace with no PVC", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+							OrasConfig: &controllerv1alpha1.OrasConfig{
+								ExtraArgs: "--extra-arg1",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Spec.Template.Components = []dwv2.Component{} // No volume component, so no PVC
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-recent"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(0))
+		})
 	})
 	Context("ensureJobRunnerRBAC", func() {
 		It("creates ServiceAccount for Job runner", func() {
@@ -907,6 +940,28 @@ func createDevWorkspace(name, namespace string, started bool, lastTransitionTime
 		},
 		Spec: dwv2.DevWorkspaceSpec{
 			Started: started,
+			Template: dwv2.DevWorkspaceTemplateSpec{
+				DevWorkspaceTemplateSpecContent: dwv2.DevWorkspaceTemplateSpecContent{
+					Components: []dwv2.Component{
+						{
+							Name: "test-container",
+							ComponentUnion: dwv2.ComponentUnion{
+								Container: &dwv2.ContainerComponent{
+									Container: dwv2.Container{
+										Image: "test-image:latest",
+									},
+								},
+								Volume: &dwv2.VolumeComponent{
+									Volume: dwv2.Volume{
+										Ephemeral: pointer.BoolPtr(true),
+										Size:      "1Mi",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		Status: dwv2.DevWorkspaceStatus{
 			Conditions: []dwv2.DevWorkspaceCondition{},

@@ -357,8 +357,9 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		return err
 	}
 	if pvcName == "" {
-		log.Error(err, "No PVC found for DevWorkspace", "id", dwID)
-		return err
+		// No PVC to back up
+		log.Info("No workspace PVC found, skipping backup", "devworkspace", workspace.Name)
+		return nil
 	}
 
 	pvc := &corev1.PersistentVolumeClaim{}

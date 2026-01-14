@@ -42,6 +42,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/library/home"
 	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
+	"github.com/devfile/devworkspace-operator/pkg/library/restore"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
@@ -353,21 +354,40 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := projects.ValidateAllProjects(&workspace.Spec.Template); err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Invalid devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
-	// Add init container to clone projects
-	projectCloneOptions := projects.Options{
-		Image:     workspace.Config.Workspace.ProjectCloneConfig.Image,
-		Env:       env.GetEnvironmentVariablesForProjectClone(workspace),
-		Resources: workspace.Config.Workspace.ProjectCloneConfig.Resources,
+	// Add init container to restore workspace from backup if requested
+	restoreOptions := restore.Options{
+		Env: env.GetErnvinmentVariablesForProjectRestore(workspace),
 	}
-	if workspace.Config.Workspace.ProjectCloneConfig.ImagePullPolicy != "" {
-		projectCloneOptions.PullPolicy = config.Workspace.ProjectCloneConfig.ImagePullPolicy
+	if config.Workspace.ImagePullPolicy != "" {
+		restoreOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
 	} else {
-		projectCloneOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
+		restoreOptions.PullPolicy = corev1.PullIfNotPresent
 	}
-	if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, projectCloneOptions, workspace.Config.Routing.ProxyConfig); err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
-	} else if projectClone != nil {
-		devfilePodAdditions.InitContainers = append([]corev1.Container{*projectClone}, devfilePodAdditions.InitContainers...)
+	var workspaceRestoreCreated bool
+	if workspaceRestore, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, clusterAPI.Client, restoreOptions, reqLogger); err != nil {
+		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up workspace-restore init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
+	} else if workspaceRestore != nil {
+		devfilePodAdditions.InitContainers = append([]corev1.Container{*workspaceRestore}, devfilePodAdditions.InitContainers...)
+		workspaceRestoreCreated = true
+	}
+
+	// Add init container to clone projects only if restore container wasn't created
+	if !workspaceRestoreCreated {
+		projectCloneOptions := projects.Options{
+			Image:     workspace.Config.Workspace.ProjectCloneConfig.Image,
+			Env:       env.GetEnvironmentVariablesForProjectClone(workspace),
+			Resources: workspace.Config.Workspace.ProjectCloneConfig.Resources,
+		}
+		if workspace.Config.Workspace.ProjectCloneConfig.ImagePullPolicy != "" {
+			projectCloneOptions.PullPolicy = config.Workspace.ProjectCloneConfig.ImagePullPolicy
+		} else {
+			projectCloneOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
+		}
+		if projectClone, err := projects.GetProjectCloneInitContainer(&workspace.Spec.Template, projectCloneOptions, workspace.Config.Routing.ProxyConfig); err != nil {
+			return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up project-clone init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
+		} else if projectClone != nil {
+			devfilePodAdditions.InitContainers = append([]corev1.Container{*projectClone}, devfilePodAdditions.InitContainers...)
+		}
 	}
 
 	// Inject operator-configured init containers

@@ -151,4 +151,24 @@ const (
 	// of a cloned project. If the bootstrap process is successful, project-clone will automatically remove this attribute
 	// from the DevWorkspace
 	BootstrapDevWorkspaceAttribute = "controller.devfile.io/bootstrap-devworkspace"
+
+	// WorkspaceRestoreAttribute defines whether workspace restore should be performed when creating a DevWorkspace.
+	// If this attribute is present, the restore process will be performed during workspace
+	// initialization before the workspace containers start.
+
+	// The backup source is automatically determined from the cluster configuration or can be overridden
+	// by specifying the WorkspaceRestoreSourceImageAttribute.
+	WorkspaceRestoreAttribute = "controller.devfile.io/restore-workspace"
+
+	// WorkspaceRestoreSourceImageAttribute defines the backup image source to restore from when creating a DevWorkspace.
+	// The value should be a container image reference containing a workspace backup created by the backup functionality.
+	// The restore will be performed during workspace initialization before the workspace containers start.
+	// For example:
+	//
+	//     spec:
+	//       template:
+	//         attributes:
+	//           controller.devfile.io/restore-source-image: "registry.example.com/backups/my-workspace:20241111-123456"
+	//
+	WorkspaceRestoreSourceImageAttribute = "controller.devfile.io/restore-source-image"
 )

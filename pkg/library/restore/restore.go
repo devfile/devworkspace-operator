@@ -23,6 +23,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -98,12 +99,18 @@ func GetWorkspaceRestoreInitContainer(
 		{Name: "BACKUP_IMAGE", Value: restoreSourceImage},
 	}...)
 
+	resources := dwResources.FilterResources(options.Resources)
+	if err := dwResources.ValidateResources(resources); err != nil {
+		return nil, fmt.Errorf("invalid resources for project clone container: %w", err)
+	}
+
 	return &corev1.Container{
-		Name:    WorkspaceRestoreContainerName,
-		Image:   restoreImage,
-		Command: []string{"/workspace-recovery.sh"},
-		Args:    []string{"--restore"},
-		Env:     env,
+		Name:      WorkspaceRestoreContainerName,
+		Image:     restoreImage,
+		Command:   []string{"/workspace-recovery.sh"},
+		Args:      []string{"--restore"},
+		Env:       env,
+		Resources: *resources,
 		VolumeMounts: []corev1.VolumeMount{
 			{
 				Name:      devfileConstants.ProjectsVolumeName,

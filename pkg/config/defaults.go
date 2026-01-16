@@ -68,6 +68,18 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 				},
 			},
 		},
+		RestoreConfig: &v1alpha1.RestoreConfig{
+			Resources: &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
+					corev1.ResourceCPU:    resource.MustParse("500m"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+				},
+			},
+		},
 		DefaultContainerResources: &corev1.ResourceRequirements{
 			Limits: corev1.ResourceList{
 				corev1.ResourceMemory: resource.MustParse("128Mi"),

@@ -144,6 +144,9 @@ type WorkspaceConfig struct {
 	// ProjectCloneConfig defines configuration related to the project clone init container
 	// that is used to clone git projects into the DevWorkspace.
 	ProjectCloneConfig *ProjectCloneConfig `json:"projectClone,omitempty"`
+	// RestoreConfig defines configuration related to the workspace restore init container
+	// that is used to restore workspace data from a backup image.
+	RestoreConfig *RestoreConfig `json:"restore,omitempty"`
 	// ImagePullPolicy defines the imagePullPolicy used for containers in a DevWorkspace
 	// For additional information, see Kubernetes documentation for imagePullPolicy. If
 	// not specified, the default value of "Always" is used.
@@ -373,6 +376,16 @@ type ProjectCloneConfig struct {
 	// quantity as zero ('0')
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
 	// Env allows defining additional environment variables for the project clone container.
+	Env []corev1.EnvVar `json:"env,omitempty"`
+}
+
+type RestoreConfig struct {
+	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
+	// Resources defines the resource (cpu, memory) limits and requests for the restore
+	// container. To explicitly not specify a limit or request, define the resource
+	// quantity as zero ('0')
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+	// Env allows defining additional environment variables for the restore container.
 	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 

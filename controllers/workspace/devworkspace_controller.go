@@ -357,7 +357,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if restore.IsWorkspaceRestoreRequested(&workspace.Spec.Template) {
 		// Add init container to restore workspace from backup if requested
 		restoreOptions := restore.Options{
-			Env: env.GetEnvironmentVariablesForProjectRestore(workspace),
+			Env:       env.GetEnvironmentVariablesForProjectRestore(workspace),
+			Resources: workspace.Config.Workspace.RestoreConfig.Resources,
 		}
 		if config.Workspace.ImagePullPolicy != "" {
 			restoreOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)

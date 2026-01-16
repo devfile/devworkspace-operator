@@ -10,7 +10,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: devworkspace-operator.v0.39.1
+  name: devworkspace-operator.v0.39.0
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -386,11 +386,11 @@ spec:
                 - name: WEBHOOK_SECRET_NAME
                   value: devworkspace-webhookserver-tls
                 - name: RELATED_IMAGE_devworkspace_webhook_server
-                  value: quay.io/devfile/devworkspace-controller:v0.39.1
+                  value: quay.io/devfile/devworkspace-controller:v0.39.0
                 - name: RELATED_IMAGE_project_clone
-                  value: quay.io/devfile/project-clone:v0.39.1
+                  value: quay.io/devfile/project-clone:v0.39.0
                 - name: RELATED_IMAGE_project_backup
-                  value: quay.io/devfile/project-backup:v0.39.1
+                  value: quay.io/devfile/project-backup:v0.39.0
                 - name: WATCH_NAMESPACE
                   valueFrom:
                     fieldRef:
@@ -421,7 +421,7 @@ spec:
                   value: quay.io/eclipse/che-workspace-data-sync-storage:0.0.1
                 - name: RELATED_IMAGE_async_storage_sidecar
                   value: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
-                image: quay.io/devfile/devworkspace-controller:v0.39.1
+                image: quay.io/devfile/devworkspace-controller:v0.39.0
                 imagePullPolicy: Always
                 livenessProbe:
                   failureThreshold: 5
@@ -520,11 +520,11 @@ spec:
     name: Devfile
     url: https://devfile.io
   relatedImages:
-  - image: quay.io/devfile/devworkspace-controller:v0.39.1
+  - image: quay.io/devfile/devworkspace-controller:v0.39.0
     name: devworkspace_webhook_server
-  - image: quay.io/devfile/project-clone:v0.39.1
+  - image: quay.io/devfile/project-clone:v0.39.0
     name: project_clone
-  - image: quay.io/devfile/project-backup:v0.39.1
+  - image: quay.io/devfile/project-backup:v0.39.0
     name: project_backup
   - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
     name: pvc_cleanup_job
@@ -533,7 +533,7 @@ spec:
   - image: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
     name: async_storage_sidecar
   replaces: devworkspace-operator.v0.38.0
-  version: 0.39.1
+  version: 0.39.0
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	workspaceRestoreContainerName = "workspace-restore"
+	WorkspaceRestoreContainerName = "workspace-restore"
 )
 
 type Options struct {
@@ -103,7 +103,7 @@ func GetWorkspaceRestoreInitContainer(
 	}...)
 
 	return &corev1.Container{
-		Name:    workspaceRestoreContainerName,
+		Name:    WorkspaceRestoreContainerName,
 		Image:   restoreImage,
 		Command: []string{"/workspace-recovery.sh"},
 		Args:    []string{"--restore"},

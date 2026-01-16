@@ -49,7 +49,7 @@ func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterD
 	return nil
 }
 
-func GetErnvinmentVariablesForProjectRestore(workspace *common.DevWorkspaceWithConfig) []corev1.EnvVar {
+func GetEnvironmentVariablesForProjectRestore(workspace *common.DevWorkspaceWithConfig) []corev1.EnvVar {
 	var restoreEnv []corev1.EnvVar
 	restoreEnv = append(restoreEnv, commonEnvironmentVariables(workspace)...)
 	restoreEnv = append(restoreEnv, corev1.EnvVar{

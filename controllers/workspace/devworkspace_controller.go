@@ -354,25 +354,23 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if err := projects.ValidateAllProjects(&workspace.Spec.Template); err != nil {
 		return r.failWorkspace(workspace, fmt.Sprintf("Invalid devfile: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 	}
-	// Add init container to restore workspace from backup if requested
-	restoreOptions := restore.Options{
-		Env: env.GetErnvinmentVariablesForProjectRestore(workspace),
-	}
-	if config.Workspace.ImagePullPolicy != "" {
-		restoreOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
+	if restore.IsWorkspaceRestoreRequested(&workspace.Spec.Template) {
+		// Add init container to restore workspace from backup if requested
+		restoreOptions := restore.Options{
+			Env: env.GetEnvironmentVariablesForProjectRestore(workspace),
+		}
+		if config.Workspace.ImagePullPolicy != "" {
+			restoreOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
+		} else {
+			restoreOptions.PullPolicy = corev1.PullIfNotPresent
+		}
+		if workspaceRestore, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, clusterAPI.Client, restoreOptions, reqLogger); err != nil {
+			return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up workspace-restore init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
+		} else if workspaceRestore != nil {
+			devfilePodAdditions.InitContainers = append([]corev1.Container{*workspaceRestore}, devfilePodAdditions.InitContainers...)
+		}
 	} else {
-		restoreOptions.PullPolicy = corev1.PullIfNotPresent
-	}
-	var workspaceRestoreCreated bool
-	if workspaceRestore, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, clusterAPI.Client, restoreOptions, reqLogger); err != nil {
-		return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up workspace-restore init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
-	} else if workspaceRestore != nil {
-		devfilePodAdditions.InitContainers = append([]corev1.Container{*workspaceRestore}, devfilePodAdditions.InitContainers...)
-		workspaceRestoreCreated = true
-	}
-
-	// Add init container to clone projects only if restore container wasn't created
-	if !workspaceRestoreCreated {
+		// Add init container to clone projects only if restore container wasn't created
 		projectCloneOptions := projects.Options{
 			Image:     workspace.Config.Workspace.ProjectCloneConfig.Image,
 			Env:       env.GetEnvironmentVariablesForProjectClone(workspace),

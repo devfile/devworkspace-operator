@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,7 +23,6 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
-	"github.com/devfile/devworkspace-operator/pkg/library/storage"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +42,15 @@ type Options struct {
 	Env        []corev1.EnvVar
 }
 
+func IsWorkspaceRestoreRequested(workspace *dw.DevWorkspaceTemplateSpec) bool {
+	if !workspace.Attributes.Exists(constants.WorkspaceRestoreAttribute) {
+		return false
+	}
+	enableRecovery := workspace.Attributes.GetBoolean(constants.WorkspaceRestoreAttribute, nil)
+	return enableRecovery
+
+}
+
 // GetWorkspaceRestoreInitContainer creates an init container that restores workspace data from a backup image.
 // The restore container uses the existing workspace-recovery.sh script to extract backup content.
 func GetWorkspaceRestoreInitContainer(
@@ -53,21 +61,9 @@ func GetWorkspaceRestoreInitContainer(
 	log logr.Logger,
 ) (*corev1.Container, error) {
 	wokrspaceTempplate := &workspace.Spec.Template
-	// Check if restore is requested via workspace attribute
-	if !wokrspaceTempplate.Attributes.Exists(constants.WorkspaceRestoreAttribute) {
-		return nil, nil
-	}
-
-	// Get workspace PVC information for mounting into the restore container
-	pvcName, _, err := storage.GetWorkspacePVCInfo(ctx, workspace.DevWorkspace, workspace.Config, k8sClient, log)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve workspace PVC info for restore: %w", err)
-	}
-	if pvcName == "" {
-		return nil, fmt.Errorf("no PVC found for workspace %s during restore", workspace.Name)
-	}
 
 	// Determine the source image for restore
+	var err error
 	var restoreSourceImage string
 	if wokrspaceTempplate.Attributes.Exists(constants.WorkspaceRestoreSourceImageAttribute) {
 		// User choose custom image specified in the attribute
@@ -115,7 +111,6 @@ func GetWorkspaceRestoreInitContainer(
 			},
 		},
 		ImagePullPolicy: options.PullPolicy,
-		// },
 	}, nil
 }
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,8 +21,16 @@ import (
 	"github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("[Create DevWorkspace and ensure data is persisted during restarts]", func() {
+var _ = ginkgo.Describe("[Create DevWorkspace and ensure data is persisted during restarts]", ginkgo.Ordered, func() {
 	defer ginkgo.GinkgoRecover()
+
+	const workspaceName = "code-latest"
+
+	ginkgo.AfterAll(func() {
+		// Cleanup workspace and wait for PVC to be fully deleted
+		// This prevents PVC conflicts in subsequent tests, especially in CI environments
+		_ = config.DevK8sClient.DeleteDevWorkspaceAndWait(workspaceName, config.DevWorkspaceNamespace)
+	})
 
 	ginkgo.It("Wait DevWorkspace Webhook Server Pod", func() {
 		controllerLabel := "app.kubernetes.io/name=devworkspace-webhook-server"
@@ -45,7 +53,7 @@ var _ = ginkgo.Describe("[Create DevWorkspace and ensure data is persisted durin
 			return
 		}
 
-		deploy, err := config.DevK8sClient.WaitDevWsStatus("code-latest", config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
+		deploy, err := config.DevK8sClient.WaitDevWsStatus(workspaceName, config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
 		if !deploy {
 			ginkgo.Fail(fmt.Sprintf("DevWorkspace didn't start properly. Error: %s", err))
 		}
@@ -74,22 +82,22 @@ var _ = ginkgo.Describe("[Create DevWorkspace and ensure data is persisted durin
 	})
 
 	ginkgo.It("Stop DevWorkspace", func() {
-		err := config.AdminK8sClient.UpdateDevWorkspaceStarted("code-latest", config.DevWorkspaceNamespace, false)
+		err := config.AdminK8sClient.UpdateDevWorkspaceStarted(workspaceName, config.DevWorkspaceNamespace, false)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("failed to stop DevWorkspace container, returned: %s", err))
 		}
-		deploy, err := config.DevK8sClient.WaitDevWsStatus("code-latest", config.DevWorkspaceNamespace, dw.DevWorkspaceStatusStopped)
+		deploy, err := config.DevK8sClient.WaitDevWsStatus(workspaceName, config.DevWorkspaceNamespace, dw.DevWorkspaceStatusStopped)
 		if !deploy {
 			ginkgo.Fail(fmt.Sprintf("DevWorkspace didn't start properly. Error: %s", err))
 		}
 	})
 
 	ginkgo.It("Start DevWorkspace", func() {
-		err := config.AdminK8sClient.UpdateDevWorkspaceStarted("code-latest", config.DevWorkspaceNamespace, true)
+		err := config.AdminK8sClient.UpdateDevWorkspaceStarted(workspaceName, config.DevWorkspaceNamespace, true)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("failed to start DevWorkspace container"))
 		}
-		deploy, err := config.DevK8sClient.WaitDevWsStatus("code-latest", config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
+		deploy, err := config.DevK8sClient.WaitDevWsStatus(workspaceName, config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
 		if !deploy {
 			ginkgo.Fail(fmt.Sprintf("DevWorkspace didn't start properly. Error: %s", err))
 		}

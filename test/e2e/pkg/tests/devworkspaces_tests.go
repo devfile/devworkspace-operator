@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -25,8 +25,16 @@ import (
 	"github.com/onsi/gomega"
 )
 
-var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
+var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", ginkgo.Ordered, func() {
 	defer ginkgo.GinkgoRecover()
+
+	const workspaceName = "restricted-access"
+
+	ginkgo.AfterAll(func() {
+		// Cleanup workspace and wait for PVC to be fully deleted
+		// This prevents PVC conflicts in subsequent tests, especially in CI environments
+		_ = config.DevK8sClient.DeleteDevWorkspaceAndWait(workspaceName, config.DevWorkspaceNamespace)
+	})
 
 	ginkgo.It("Wait DewWorkspace Webhook Server Pod", func() {
 		controllerLabel := "app.kubernetes.io/name=devworkspace-webhook-server"
@@ -49,7 +57,7 @@ var _ = ginkgo.Describe("[Create OpenShift Web Terminal Workspace]", func() {
 			return
 		}
 
-		deploy, err := config.DevK8sClient.WaitDevWsStatus("restricted-access", config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
+		deploy, err := config.DevK8sClient.WaitDevWsStatus(workspaceName, config.DevWorkspaceNamespace, dw.DevWorkspaceStatusRunning)
 		if !deploy {
 			ginkgo.Fail(fmt.Sprintf("OpenShift Web terminal workspace didn't start properly. Error: %s", err))
 		}

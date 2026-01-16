@@ -398,6 +398,26 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.ProjectCloneConfig.Env = from.Workspace.ProjectCloneConfig.Env
 			}
 		}
+		if from.Workspace.RestoreConfig != nil {
+			if to.Workspace.RestoreConfig == nil {
+				to.Workspace.RestoreConfig = &controller.RestoreConfig{}
+			}
+			if from.Workspace.RestoreConfig.ImagePullPolicy != "" {
+				to.Workspace.RestoreConfig.ImagePullPolicy = from.Workspace.RestoreConfig.ImagePullPolicy
+			}
+			if from.Workspace.RestoreConfig.Resources != nil {
+				if to.Workspace.RestoreConfig.Resources == nil {
+					to.Workspace.RestoreConfig.Resources = &corev1.ResourceRequirements{}
+				}
+				to.Workspace.RestoreConfig.Resources = mergeResources(from.Workspace.RestoreConfig.Resources, to.Workspace.RestoreConfig.Resources)
+			}
+
+			// Overwrite env instead of trying to merge, don't want to bother merging lists when
+			// the default is empty
+			if from.Workspace.RestoreConfig.Env != nil {
+				to.Workspace.RestoreConfig.Env = from.Workspace.RestoreConfig.Env
+			}
+		}
 		if from.Workspace.DefaultContainerResources != nil {
 			if to.Workspace.DefaultContainerResources == nil {
 				to.Workspace.DefaultContainerResources = &corev1.ResourceRequirements{}

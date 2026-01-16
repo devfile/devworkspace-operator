@@ -152,7 +152,7 @@ const (
 	// from the DevWorkspace
 	BootstrapDevWorkspaceAttribute = "controller.devfile.io/bootstrap-devworkspace"
 
-	// WorkspaceRestoreAttribute defines whether workspace restore should be performed when creating a DevWorkspace.
+	// WorkspaceRestoreAttribute defines whether workspace restore should be performed for a DevWorkspace.
 	// If this attribute is present, the restore process will be performed during workspace
 	// initialization before the workspace containers start.
 
@@ -160,7 +160,7 @@ const (
 	// by specifying the WorkspaceRestoreSourceImageAttribute.
 	WorkspaceRestoreAttribute = "controller.devfile.io/restore-workspace"
 
-	// WorkspaceRestoreSourceImageAttribute defines the backup image source to restore from when creating a DevWorkspace.
+	// WorkspaceRestoreSourceImageAttribute defines the backup image source to restore from for a DevWorkspace.
 	// The value should be a container image reference containing a workspace backup created by the backup functionality.
 	// The restore will be performed during workspace initialization before the workspace containers start.
 	// For example:

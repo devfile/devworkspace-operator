@@ -1094,7 +1094,6 @@ var _ = Describe("DevWorkspace Controller", func() {
 					cloneInitContainer = container
 				}
 			}
-			// Expect(initContainers).To(BeEmpty(), "Init containers should be present in deployment")
 			Expect(cloneInitContainer.Name).To(BeEmpty(), "Project clone init container should be omitted when restoring from backup")
 			Expect(restoreInitContainer).ToNot(BeNil(), "Workspace restore init container should not be nil")
 			Expect(restoreInitContainer.Name).To(Equal(restore.WorkspaceRestoreContainerName), "Workspace restore init container should be present in deployment")
@@ -1157,7 +1156,6 @@ var _ = Describe("DevWorkspace Controller", func() {
 					cloneInitContainer = container
 				}
 			}
-			// Expect(initContainers).To(BeEmpty(), "Init containers should be present in deployment")
 			Expect(cloneInitContainer.Name).To(BeEmpty(), "Project clone init container should be omitted when restoring from backup")
 			Expect(restoreInitContainer).ToNot(BeNil(), "Workspace restore init container should not be nil")
 			Expect(restoreInitContainer.Name).To(Equal(restore.WorkspaceRestoreContainerName), "Workspace restore init container should be present in deployment")
@@ -1171,6 +1169,57 @@ var _ = Describe("DevWorkspace Controller", func() {
 				SubPath:     "projects",
 				SubPathExpr: "",
 			}), "Restore init container should have workspace storage volume mounted at correct path")
+
+		})
+		It("Doesn't restore workspace from backup if restore is disabled", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+						Enable: ptr.To[bool](true),
+						Registry: &controllerv1alpha1.RegistryConfig{
+							Path: "localhost:5000",
+						},
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+			By("Reading DevWorkspace with restore configuration from testdata file")
+			createDevWorkspace(devWorkspaceName, "restore-workspace-disabled.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Waiting for DevWorkspaceRouting to be created")
+			dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+			dwrName := common.DevWorkspaceRoutingName(workspaceID)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName(dwrName, testNamespace), dwr)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting should be created")
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			By("Setting the deployment to have 1 ready replica")
+			markDeploymentReady(common.DeploymentName(devworkspace.Status.DevWorkspaceId))
+
+			deployment := &appsv1.Deployment{}
+			err := k8sClient.Get(ctx, namespacedName(devworkspace.Status.DevWorkspaceId, devworkspace.Namespace), deployment)
+			Expect(err).ToNot(HaveOccurred(), "Failed to get DevWorkspace deployment")
+
+			initContainers := deployment.Spec.Template.Spec.InitContainers
+			Expect(len(initContainers)).To(BeNumerically(">", 0), "No initContainers found in deployment")
+
+			var restoreInitContainer corev1.Container
+			var cloneInitContainer corev1.Container
+			for _, container := range initContainers {
+				if container.Name == restore.WorkspaceRestoreContainerName {
+					restoreInitContainer = container
+				}
+				if container.Name == projects.ProjectClonerContainerName {
+					cloneInitContainer = container
+				}
+			}
+			Expect(restoreInitContainer.Name).To(BeEmpty(), "Workspace restore init container should be omitted when restore is disabled")
+			Expect(cloneInitContainer).ToNot(BeNil(), "Project clone init container should not be nil")
 
 		})
 

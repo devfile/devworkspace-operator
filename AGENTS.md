@@ -109,6 +109,9 @@ Use this as a quick reference for common decision points. When you encounter a s
 - **IF** testing internal/private functions **THEN** use `package controllers` (internal)
 - **IF** test needs async wait **THEN** use `Eventually()`, not `time.Sleep()`
 - **IF** documenting test steps **THEN** use `By("step description")`
+- **IF** e2e test creates DevWorkspace **THEN** MUST use `DeleteDevWorkspaceAndWait` in cleanup (AfterAll or AfterEach)
+- **IF** e2e test suite is `ginkgo.Ordered` **THEN** use `AfterAll` for cleanup
+- **IF** e2e test runs multiple times **THEN** use `AfterEach` for cleanup
 
 ### Workspace Bootstrapping Decisions
 
@@ -430,6 +433,70 @@ var _ = Describe("DevWorkspace Controller", func() {
 })
 ```
 
+### E2E Test Cleanup Pattern
+
+**AI Agent Note**: ALWAYS add PVC cleanup to e2e tests to prevent conflicts between test runs, especially in CI environments.
+
+**Critical**: DevWorkspaces use a shared PVC (`claim-devworkspace`) that persists after workspace deletion. Without proper cleanup, subsequent tests can fail due to PVC conflicts or stale data.
+
+**Pattern**: Use `DeleteDevWorkspaceAndWait` in cleanup blocks:
+
+```go
+var _ = ginkgo.Describe("[Test Suite Name]", ginkgo.Ordered, func() {
+  defer ginkgo.GinkgoRecover()
+
+  const workspaceName = "test-workspace"
+
+  ginkgo.AfterAll(func() {
+    // Cleanup workspace and wait for PVC to be fully deleted
+    // This prevents PVC conflicts in subsequent tests, especially in CI environments
+    _ = config.DevK8sClient.DeleteDevWorkspaceAndWait(workspaceName, config.DevWorkspaceNamespace)
+  })
+
+  ginkgo.It("Test case", func() {
+    // Test implementation
+  })
+})
+```
+
+**Decision Tree for Cleanup**:
+- **IF** test suite runs multiple times with different workspaces **THEN** use `AfterEach`
+- **IF** test suite uses `ginkgo.Ordered` (sequential tests on same workspace) **THEN** use `AfterAll`
+- **IF** test creates workspace **THEN** MUST include cleanup with `DeleteDevWorkspaceAndWait`
+
+**Available Helper Functions** (in `test/e2e/pkg/client/devws.go`):
+- `DeleteDevWorkspace(name, namespace)` - Deletes workspace only (fast, may leave PVC)
+- `WaitForPVCDeleted(pvcName, namespace, timeout)` - Waits for PVC deletion
+- `DeleteDevWorkspaceAndWait(name, namespace)` - Deletes workspace and waits for PVC cleanup (RECOMMENDED)
+
+**Example: AfterEach Pattern** (for tests running multiple times):
+
+```go
+ginkgo.Context("Test context", func() {
+  const workspaceName = "test-workspace"
+
+  ginkgo.BeforeEach(func() {
+    // Setup
+  })
+
+  ginkgo.It("Test case", func() {
+    // Test implementation
+  })
+
+  ginkgo.AfterEach(func() {
+    // Cleanup workspace and wait for PVC to be fully deleted
+    // This prevents PVC conflicts in subsequent tests, especially in CI environments
+    _ = config.DevK8sClient.DeleteDevWorkspaceAndWait(workspaceName, config.DevWorkspaceNamespace)
+  })
+})
+```
+
+**Why This Matters**:
+- **CI Flakiness**: Without PVC cleanup, tests can fail intermittently in CI with "PVC already exists" errors
+- **Stale Data**: Old PVC data can affect test results and cause false positives/negatives
+- **Cloud Environments**: PVC deletion can be slow (30-60+ seconds), requiring explicit wait
+- **Test Isolation**: Each test should start with a clean state
+
 ### Deep Copy Pattern
 
 **AI Agent Note**: Always DeepCopy objects from cache before modifying to avoid race conditions.
@@ -540,6 +607,8 @@ if err := r.Update(ctx, workspaceCopy); err != nil {
 - ❌ Don't commit disabled tests without tracking issues
 - ❌ Don't write tests that depend on timing (use Eventually/Consistently)
 - ❌ Don't leave test resources unmanaged (always clean up)
+- ❌ Don't forget PVC cleanup in e2e tests (use `DeleteDevWorkspaceAndWait`)
+- ❌ Don't use `DeleteDevWorkspace` alone in e2e tests (PVC may persist and cause conflicts)
 
 ## Debugging
 

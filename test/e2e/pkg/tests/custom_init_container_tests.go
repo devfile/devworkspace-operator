@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,10 +23,13 @@ import (
 	"runtime"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/test/e2e/pkg/config"
 )
 
 // getProjectRoot returns the project root directory by navigating up from this file.
@@ -35,8 +38,48 @@ func getProjectRoot() string {
 	return filepath.Join(filepath.Dir(filename), "..", "..", "..", "..")
 }
 
-var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
+var _ = ginkgo.Describe("[Custom Init Container Tests]", ginkgo.Ordered, func() {
 	defer ginkgo.GinkgoRecover()
+
+	var originalConfig *controllerv1alpha1.OperatorConfiguration
+
+	ginkgo.BeforeAll(func() {
+		// Save original DWOC configuration to restore after tests
+		ctx := context.Background()
+		dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{}
+		err := config.AdminK8sClient.ControllerRuntimeClient().Get(ctx, types.NamespacedName{
+			Name:      "devworkspace-operator-config",
+			Namespace: config.OperatorNamespace,
+		}, dwoc)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Failed to get original DWOC: %s", err))
+		}
+		// Deep copy the config to save it
+		if dwoc.Config != nil {
+			originalConfig = dwoc.Config.DeepCopy()
+		}
+	})
+
+	ginkgo.AfterAll(func() {
+		// Restore original DWOC configuration to prevent config leaks between test runs
+		ctx := context.Background()
+		dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{}
+		err := config.AdminK8sClient.ControllerRuntimeClient().Get(ctx, types.NamespacedName{
+			Name:      "devworkspace-operator-config",
+			Namespace: config.OperatorNamespace,
+		}, dwoc)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Failed to get current DWOC for restoration: %s", err))
+		}
+
+		// Restore the original config
+		dwoc.Config = originalConfig
+
+		err = config.AdminK8sClient.ControllerRuntimeClient().Update(ctx, dwoc)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Failed to restore original DWOC configuration: %s", err))
+		}
+	})
 
 	ginkgo.It("Wait DevWorkspace Webhook Server Pod", func() {
 		controllerLabel := "app.kubernetes.io/name=devworkspace-webhook-server"
@@ -95,8 +138,9 @@ var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
 		})
 
 		ginkgo.AfterEach(func() {
-			// Cleanup workspace
-			_ = config.DevK8sClient.DeleteDevWorkspace(workspaceName, config.DevWorkspaceNamespace)
+			// Clean up workspace and wait for PVC to be fully deleted
+			// This prevents PVC conflicts in subsequent tests, especially in CI environments
+			_ = config.DevK8sClient.DeleteDevWorkspaceAndWait(workspaceName, config.DevWorkspaceNamespace)
 		})
 	})
 
@@ -149,8 +193,9 @@ var _ = ginkgo.Describe("[Custom Init Container Tests]", func() {
 		})
 
 		ginkgo.AfterEach(func() {
-			// Cleanup workspace
-			_ = config.DevK8sClient.DeleteDevWorkspace(workspaceName, config.DevWorkspaceNamespace)
+			// Clean up workspace and wait for PVC to be fully deleted
+			// This prevents PVC conflicts in subsequent tests, especially in CI environments
+			_ = config.DevK8sClient.DeleteDevWorkspaceAndWait(workspaceName, config.DevWorkspaceNamespace)
 		})
 	})
 })

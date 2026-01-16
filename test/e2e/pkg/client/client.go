@@ -17,21 +17,21 @@ package client
 
 import (
 	"fmt"
-	"os"
-
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
 	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"time"
 
+	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
 var (
@@ -41,6 +41,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dw.AddToScheme(scheme))
+	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
 }
 
 type K8sClient struct {
@@ -122,6 +123,11 @@ func NewK8sClientWithToken(baseKubeConfig, token string) (*K8sClient, error) {
 // Kube returns the clientset for Kubernetes upstream.
 func (c *K8sClient) Kube() kubernetes.Interface {
 	return c.kubeClient
+}
+
+// ControllerRuntimeClient returns the controller-runtime client for accessing custom resources.
+func (c *K8sClient) ControllerRuntimeClient() crclient.Client {
+	return c.crClient
 }
 
 // read a source file and copy to the selected path

@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	projectClonerContainerName = "project-clone"
+	ProjectClonerContainerName = "project-clone"
 )
 
 type Options struct {
@@ -118,7 +118,7 @@ func GetProjectCloneInitContainer(workspace *dw.DevWorkspaceTemplateSpec, option
 	}
 
 	return &corev1.Container{
-		Name:      projectClonerContainerName,
+		Name:      ProjectClonerContainerName,
 		Image:     cloneImage,
 		Env:       options.Env,
 		Resources: *resources,

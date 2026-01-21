@@ -24,9 +24,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
-	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -47,8 +45,7 @@ func IsWorkspaceRestoreRequested(workspace *dw.DevWorkspaceTemplateSpec) bool {
 	if !workspace.Attributes.Exists(constants.WorkspaceRestoreAttribute) {
 		return false
 	}
-	enableRecovery := workspace.Attributes.GetBoolean(constants.WorkspaceRestoreAttribute, nil)
-	return enableRecovery
+	return workspace.Attributes.GetBoolean(constants.WorkspaceRestoreAttribute, nil)
 
 }
 
@@ -57,18 +54,16 @@ func IsWorkspaceRestoreRequested(workspace *dw.DevWorkspaceTemplateSpec) bool {
 func GetWorkspaceRestoreInitContainer(
 	ctx context.Context,
 	workspace *common.DevWorkspaceWithConfig,
-	k8sClient client.Client,
 	options Options,
-	log logr.Logger,
 ) (*corev1.Container, error) {
-	wokrspaceTempplate := &workspace.Spec.Template
+	workspaceTemplate := &workspace.Spec.Template
 
 	// Determine the source image for restore
 	var err error
 	var restoreSourceImage string
-	if wokrspaceTempplate.Attributes.Exists(constants.WorkspaceRestoreSourceImageAttribute) {
+	if workspaceTemplate.Attributes.Exists(constants.WorkspaceRestoreSourceImageAttribute) {
 		// User choose custom image specified in the attribute
-		restoreSourceImage = wokrspaceTempplate.Attributes.GetString(constants.WorkspaceRestoreSourceImageAttribute, &err)
+		restoreSourceImage = workspaceTemplate.Attributes.GetString(constants.WorkspaceRestoreSourceImageAttribute, &err)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read %s attribute on workspace: %w", constants.WorkspaceRestoreSourceImageAttribute, err)
 		}
@@ -86,7 +81,7 @@ func GetWorkspaceRestoreInitContainer(
 		return nil, fmt.Errorf("empty value for attribute %s is invalid", constants.WorkspaceRestoreSourceImageAttribute)
 	}
 
-	if !hasContainerComponents(wokrspaceTempplate) {
+	if !hasContainerComponents(workspaceTemplate) {
 		// Avoid adding restore init container when DevWorkspace does not define any containers
 		return nil, nil
 	}
@@ -101,7 +96,7 @@ func GetWorkspaceRestoreInitContainer(
 
 	resources := dwResources.FilterResources(options.Resources)
 	if err := dwResources.ValidateResources(resources); err != nil {
-		return nil, fmt.Errorf("invalid resources for project clone container: %w", err)
+		return nil, fmt.Errorf("invalid resources for workspace restore container: %w", err)
 	}
 
 	return &corev1.Container{

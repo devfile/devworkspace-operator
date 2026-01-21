@@ -4660,7 +4660,9 @@ spec:
                           type: object
                         type: array
                       imagePullPolicy:
-                        description: PullPolicy describes a policy for if/when to pull a container image
+                        description: |-
+                          ImagePullPolicy configures the imagePullPolicy for the restore container.
+                          If undefined, the general setting .config.workspace.imagePullPolicy is used instead.
                         type: string
                       resources:
                         description: |-

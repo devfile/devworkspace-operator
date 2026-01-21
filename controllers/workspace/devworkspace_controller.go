@@ -365,7 +365,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		} else {
 			restoreOptions.PullPolicy = corev1.PullIfNotPresent
 		}
-		if workspaceRestore, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, clusterAPI.Client, restoreOptions, reqLogger); err != nil {
+		if workspaceRestore, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, restoreOptions); err != nil {
 			return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up workspace-restore init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 		} else if workspaceRestore != nil {
 			devfilePodAdditions.InitContainers = append([]corev1.Container{*workspaceRestore}, devfilePodAdditions.InitContainers...)

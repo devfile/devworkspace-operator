@@ -31,6 +31,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/storage"
+	"github.com/devfile/devworkspace-operator/pkg/secrets"
 	"github.com/go-logr/logr"
 	"github.com/robfig/cron/v3"
 	batchv1 "k8s.io/api/batch/v1"
@@ -344,7 +345,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	dwID := workspace.Status.DevWorkspaceId
 	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
 
-	registryAuthSecret, err := r.handleRegistryAuthSecret(ctx, workspace, dwOperatorConfig, log)
+	registryAuthSecret, err := secrets.HandleRegistryAuthSecret(ctx, r.Client, workspace, dwOperatorConfig.Config, dwOperatorConfig.Namespace, r.Scheme, log)
 	if err != nil {
 		log.Error(err, "Failed to handle registry auth secret for DevWorkspace", "devworkspace", workspace.Name)
 		return err
@@ -479,78 +480,4 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 	log.Info("Created backup Job for DevWorkspace", "jobName", job.Name, "devworkspace", workspace.Name)
 	return nil
-}
-
-func (r *BackupCronJobReconciler) handleRegistryAuthSecret(ctx context.Context, workspace *dw.DevWorkspace,
-	dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig, log logr.Logger,
-) (*corev1.Secret, error) {
-	secretName := dwOperatorConfig.Config.Workspace.BackupCronJob.Registry.AuthSecret
-	if secretName == "" {
-		// No auth secret configured - anonymous access to registry
-		return nil, nil
-	}
-
-	// First check the workspace namespace for the secret
-	registryAuthSecret := &corev1.Secret{}
-	err := r.Get(ctx, client.ObjectKey{
-		Name:      secretName,
-		Namespace: workspace.Namespace}, registryAuthSecret)
-	if err == nil {
-		log.Info("Successfully retrieved registry auth secret for backup from workspace namespace", "secretName", secretName)
-		return registryAuthSecret, nil
-	}
-	if client.IgnoreNotFound(err) != nil {
-		return nil, err
-	}
-
-	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace", "secretName", secretName)
-
-	// If the secret is not found in the workspace namespace, check the operator namespace as fallback
-	err = r.Get(ctx, client.ObjectKey{
-		Name:      secretName,
-		Namespace: dwOperatorConfig.Namespace}, registryAuthSecret)
-	if err != nil {
-		log.Error(err, "Failed to get registry auth secret for backup job", "secretName", secretName)
-		return nil, err
-	}
-	log.Info("Successfully retrieved registry auth secret for backup job", "secretName", secretName)
-	return r.copySecret(ctx, workspace, registryAuthSecret, log)
-}
-
-// copySecret copies the given secret from the operator namespace to the workspace namespace.
-func (r *BackupCronJobReconciler) copySecret(ctx context.Context, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
-	existingNamespaceSecret := &corev1.Secret{}
-	err = r.Get(ctx, client.ObjectKey{
-		Name:      constants.DevWorkspaceBackupAuthSecretName,
-		Namespace: workspace.Namespace}, existingNamespaceSecret)
-	if client.IgnoreNotFound(err) != nil {
-		log.Error(err, "Failed to check for existing registry auth secret in workspace namespace", "namespace", workspace.Namespace)
-		return nil, err
-	}
-	if err == nil {
-		err = r.Delete(ctx, existingNamespaceSecret)
-		if err != nil {
-			return nil, err
-		}
-	}
-	namespaceSecret = &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.DevWorkspaceBackupAuthSecretName,
-			Namespace: workspace.Namespace,
-			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel:          workspace.Status.DevWorkspaceId,
-				constants.DevWorkspaceWatchSecretLabel: "true",
-			},
-		},
-		Data: sourceSecret.Data,
-		Type: sourceSecret.Type,
-	}
-	if err := controllerutil.SetControllerReference(workspace, namespaceSecret, r.Scheme); err != nil {
-		return nil, err
-	}
-	err = r.Create(ctx, namespaceSecret)
-	if err == nil {
-		log.Info("Successfully created secret", "name", namespaceSecret.Name, "namespace", workspace.Namespace)
-	}
-	return namespaceSecret, err
 }

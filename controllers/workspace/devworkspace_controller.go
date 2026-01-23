@@ -365,10 +365,22 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		} else {
 			restoreOptions.PullPolicy = corev1.PullIfNotPresent
 		}
-		if workspaceRestore, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, restoreOptions); err != nil {
+		if workspaceRestore, registryAuthSecret, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, r.Client, restoreOptions, r.Scheme, reqLogger); err != nil {
 			return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up workspace-restore init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil
 		} else if workspaceRestore != nil {
 			devfilePodAdditions.InitContainers = append([]corev1.Container{*workspaceRestore}, devfilePodAdditions.InitContainers...)
+			if registryAuthSecret != nil {
+				// Add the registry auth secret volume
+				devfilePodAdditions.Volumes = append(devfilePodAdditions.Volumes, corev1.Volume{
+					Name: "registry-auth-secret",
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName: registryAuthSecret.Name, // You may want to make this configurable
+						},
+					},
+				})
+			}
+
 		}
 	} else {
 		// Add init container to clone projects only if restore container wasn't created

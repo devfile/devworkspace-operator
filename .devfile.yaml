@@ -43,6 +43,6 @@ commands:
         make generate_olm_bundle_yaml build_bundle_and_index
         read -p "Run register_catalogsource? (y/n) " -n 1 -r
         echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then if [[ ! "$(oc whoami)" =~ ^kube:admin$ ]]; then echo "You need to login as kubeadmin" && exit 1; fi && make register_catalogsource; fi
+        if [[ $REPLY =~ ^[Yy]$ ]]; then if [[ ! "$(oc whoami)" =~ ^kube:admin$ ]]; then echo "You need to login as kubeadmin" && exit 1; fi && make register_catalogsource; else make view_catalogsource; fi
       group:
         kind: build

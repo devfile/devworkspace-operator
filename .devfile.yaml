@@ -1,4 +1,4 @@
-schemaVersion: 2.2.0
+schemaVersion: 2.3.0
 metadata:
   name: devworkspace-operator
 components:
@@ -9,17 +9,24 @@ components:
       memoryLimit: 16Gi
       cpuLimit: '4'
       cpuRequest: '0.5'
+      volumeMounts:
+        - name: graphroot
+          path: /home/user/.local/share/containers/storage
+  - name: graphroot
+    volume:
+      ephemeral: true
 commands:
   - id: build-and-push-controller
     exec:
       label: "1. Build and push DWO controller image"
       component: tools
       commandLine: |
-        read -p "ENTER a container registry org to push the devworkspace-controller image (e.g. quay.io/janedoe): " DWO_IMG_REPO &&
-        read -p "ENTER the tag for the image (e.g. dev): " DWO_IMG_TAG &&
-        export DWO_IMG=${DWO_IMG_REPO}/devworkspace-controller:${DWO_IMG_TAG} &&
-        export DOCKER=podman &&
-        make docker
+        read -p "ENTER a container registry org to push the devworkspace-controller image (e.g. quay.io/janedoe): " DWO_IMG_REPO
+        read -p "ENTER the tag for the image (e.g. dev): " DWO_IMG_TAG
+        export DWO_IMG=${DWO_IMG_REPO}/devworkspace-controller:${DWO_IMG_TAG}
+        export DOCKER=podman
+        make docker-build-amd64
+        make docker-push-amd64 
       group:
         kind: build
   - id: make-olm-bundle-index-catalogsource
@@ -27,13 +34,15 @@ commands:
       label: "2. Build and push OLM bundle, index image and create a CatalogueSource"
       component: tools
       commandLine: |
-        [[ "$(oc whoami)" =~ ^kube:admin$ ]] || (echo "You need to login as kubeadmin" && false) &&
-        read -p "ENTER a container registry org to push the devworkspace images (e.g. quay.io/janedoe): " DWO_IMG_REPO &&
-        read -p "ENTER a tag for the image (e.g. dev): " DWO_IMG_TAG &&
-        export DWO_BUNDLE_IMG=${DWO_IMG_REPO}/devworkspace-operator-bundle:${DWO_IMG_TAG} &&
-        export DWO_INDEX_IMG=${DWO_IMG_REPO}/devworkspace-operator-index:${DWO_IMG_TAG} &&
-        export DEFAULT_DWO_IMG=${DWO_IMG_REPO}/devworkspace-controller:${DWO_IMG_TAG} &&
-        export DOCKER=podman &&
-        make generate_olm_bundle_yaml build_bundle_and_index register_catalogsource
+        read -p "ENTER a container registry org to push the devworkspace images (e.g. quay.io/janedoe): " DWO_IMG_REPO
+        read -p "ENTER a tag for the image (e.g. dev): " DWO_IMG_TAG
+        export DWO_BUNDLE_IMG=${DWO_IMG_REPO}/devworkspace-operator-bundle:${DWO_IMG_TAG}
+        export DWO_INDEX_IMG=${DWO_IMG_REPO}/devworkspace-operator-index:${DWO_IMG_TAG}
+        export DEFAULT_DWO_IMG=${DWO_IMG_REPO}/devworkspace-controller:${DWO_IMG_TAG}-amd64
+        export DOCKER=podman
+        make generate_olm_bundle_yaml build_bundle_and_index
+        read -p "Run register_catalogsource? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then if [[ ! "$(oc whoami)" =~ ^kube:admin$ ]]; then echo "You need to login as kubeadmin" && exit 1; fi && make register_catalogsource; fi
       group:
         kind: build

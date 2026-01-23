@@ -16,11 +16,55 @@
 
 set -euo pipefail
 
-# --- Configuration ---
-
-
-
 # --- Functions ---
+
+# Setup registry authentication and return auth arguments for oras
+# Args: $1 - registry image (e.g., "registry.example.com/namespace/image:tag")
+# Returns: Sets ORAS_AUTH_ARGS array with authentication arguments
+setup_registry_auth() {
+  local image="$1"
+  ORAS_AUTH_ARGS=()
+
+  if [[ -n "${REGISTRY_AUTH_FILE:-}" ]]; then
+    # If REGISTRY_AUTH_FILE is provided, use it for authentication
+    ORAS_AUTH_ARGS+=(--registry-config "$REGISTRY_AUTH_FILE")
+  elif [[ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]]; then
+    echo "Using mounted service account token for registry authentication"
+    TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+    REGISTRY_HOST=$(echo "$image" | cut -d'/' -f1)
+
+    # Create temporary auth config for oras
+    REGISTRY_AUTH_FILE="/tmp/registry_auth.json"
+
+    # For OpenShift internal registry, use service account token as password with 'serviceaccount' username
+    if [[ "$REGISTRY_HOST" == *"openshift"* ]] || [[ "$REGISTRY_HOST" == *"svc.cluster.local"* ]]; then
+      # OpenShift internal registry authentication
+      # Use the service account CA for TLS verification
+      ORAS_LOGIN_ARGS=(
+        login
+        --password-stdin
+        -u serviceaccount
+        --registry-config "$REGISTRY_AUTH_FILE"
+
+      )
+      if [[ -n "${ORAS_EXTRA_ARGS:-}" ]]; then
+        extra_args=( ${ORAS_EXTRA_ARGS} )
+        ORAS_LOGIN_ARGS+=("${extra_args[@]}")
+      fi
+
+      if [[ -f /var/run/secrets/kubernetes.io/serviceaccount/ca.crt ]]; then
+        ORAS_LOGIN_ARGS+=(--ca-file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
+      else
+        ORAS_LOGIN_ARGS+=(--insecure)
+      fi
+
+      oras "${ORAS_LOGIN_ARGS[@]}" "$REGISTRY_HOST" <<< "$TOKEN"
+    fi
+
+    ORAS_AUTH_ARGS+=(--registry-config "$REGISTRY_AUTH_FILE")
+  fi
+}
+
 backup() {
   : "${BACKUP_SOURCE_PATH:?Missing BACKUP_SOURCE_PATH}"
   : "${DEVWORKSPACE_BACKUP_REGISTRY:?Missing DEVWORKSPACE_BACKUP_REGISTRY}"
@@ -43,39 +87,10 @@ backup() {
     --annotation devworkspace.namespace="$DEVWORKSPACE_NAMESPACE"
     --disable-path-validation
   )
-  if [[ -n "${REGISTRY_AUTH_FILE:-}" ]]; then
-    # If REGISTRY_AUTH_FILE is provided, use it for authentication
-    oras_args+=(--registry-config "$REGISTRY_AUTH_FILE")
-  elif [[ -f /var/run/secrets/kubernetes.io/serviceaccount/token ]]; then
-    echo "Using mounted service account token for registry authentication"
-    TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
-    REGISTRY_HOST=$(echo "$BACKUP_IMAGE" | cut -d'/' -f1)
 
-    # Create temporary auth config for oras
-    REGISTRY_AUTH_FILE="/tmp/registry_auth.json"
-
-    # For OpenShift internal registry, use service account token as password with 'serviceaccount' username
-    if [[ "$REGISTRY_HOST" == *"openshift"* ]] || [[ "$REGISTRY_HOST" == *"svc.cluster.local"* ]]; then
-      # OpenShift internal registry authentication
-      # Use the service account CA for TLS verification
-      if [[ -f /var/run/secrets/kubernetes.io/serviceaccount/ca.crt ]]; then
-        oras login --password-stdin \
-          --ca-file /var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-          -u serviceaccount \
-          --registry-config "$REGISTRY_AUTH_FILE" \
-          "$REGISTRY_HOST" <<< "$TOKEN"
-      else
-        # Fallback to insecure if CA cert is not available
-        oras login --password-stdin \
-        --insecure \
-        -u serviceaccount \
-        --registry-config "$REGISTRY_AUTH_FILE" \
-        "$REGISTRY_HOST" <<< "$TOKEN"
-      fi
-    fi
-
-    oras_args+=(--registry-config "$REGISTRY_AUTH_FILE")
-  fi
+  # Setup registry authentication
+  setup_registry_auth "$BACKUP_IMAGE"
+  oras_args+=("${ORAS_AUTH_ARGS[@]}")
   if [[ -n "${ORAS_EXTRA_ARGS:-}" ]]; then
     extra_args=( ${ORAS_EXTRA_ARGS} )
     oras_args+=("${extra_args[@]}")
@@ -93,14 +108,19 @@ backup() {
 }
 
 restore() {
+  : "${BACKUP_IMAGE:?Missing BACKUP_IMAGE}"
   : "${PROJECTS_ROOT:?Missing PROJECTS_ROOT}"
 
   echo "Restoring devworkspace from image '$BACKUP_IMAGE' to path '$PROJECTS_ROOT'"
   oras_args=(
     pull
-    $BACKUP_IMAGE
+    "$BACKUP_IMAGE"
     --output /tmp
   )
+
+  # Setup registry authentication
+  setup_registry_auth "$BACKUP_IMAGE"
+  oras_args+=("${ORAS_AUTH_ARGS[@]}")
 
   if [[ -n "${ORAS_EXTRA_ARGS:-}" ]]; then
     extra_args=( ${ORAS_EXTRA_ARGS} )

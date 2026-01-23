@@ -135,9 +135,6 @@ func (r *BackupCronJobReconciler) ensureImageStreamForBackup(ctx context.Context
 			},
 		},
 	}
-	if err := controllerutil.SetControllerReference(workspace, imageStream, r.Scheme); err != nil {
-		return err
-	}
 
 	imageStream.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "image.openshift.io",

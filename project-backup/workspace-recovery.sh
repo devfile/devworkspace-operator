@@ -118,6 +118,12 @@ restore() {
     --output /tmp
   )
 
+  # Check if $PROJECTS_ROOT is empty and exit if not
+  if [[ -n "$(ls -A "$PROJECTS_ROOT")" ]]; then
+    echo "PROJECTS_ROOT '$PROJECTS_ROOT' is not empty. Skipping restore action."
+    exit 0
+  fi
+
   # Setup registry authentication
   setup_registry_auth "$BACKUP_IMAGE"
   oras_args+=("${ORAS_AUTH_ARGS[@]}")

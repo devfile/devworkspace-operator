@@ -20,6 +20,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
 
   build-project-backup-imgs:
@@ -44,7 +47,7 @@ jobs:
           password: ${{ secrets.QUAY_PASSWORD }}
           registry: quay.io
 
-      - uses: oras-project/setup-oras@v1.2.4
+      - uses: oras-project/setup-oras@22ce207df3b08e061f537244349aac6ae1d214f6 #v1.2.4
       - run: |
             cd project-backup/test-data
             make run

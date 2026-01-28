@@ -117,7 +117,7 @@ func GetWorkspaceRestoreInitContainer(
 	}
 	if registryAuthSecret != nil {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "registry-auth-secret",
+			Name:      constants.RegistryAuthVolumeName,
 			MountPath: "/tmp/.docker",
 			ReadOnly:  true,
 		})

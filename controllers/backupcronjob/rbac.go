@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
@@ -97,8 +98,8 @@ func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(ctx context.Context
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     "system:image-builder",
+			Kind:     constants.ClusterRole,
+			Name:     common.RegistryImagePullerRoleName(),
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}

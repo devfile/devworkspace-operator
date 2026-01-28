@@ -106,6 +106,14 @@ const (
 	// Kubernetes creates a dedicated user namespace for the pod (requires user namespace support).
 	// See: https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/
 	DefaultHostUsers = true
+
+	// RegistryAuthVolumeName is the name of the volume where registry auth secrets are mounted
+	RegistryAuthVolumeName = "registry-auth-secret"
+
+	//Role kinds
+	Role = "Role"
+	// ClusterRole kind
+	ClusterRole = "ClusterRole"
 )
 
 const (

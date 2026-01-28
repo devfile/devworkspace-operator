@@ -1,0 +1,56 @@
+#
+# Copyright (c) 2019-2026 Red Hat, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Devtools backup build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+
+  build-project-backup-imgs:
+
+    runs-on: ubuntu-latest
+
+    outputs:
+      git-sha: ${{ steps.git-sha.outputs.sha }}
+
+    steps:
+      - name: Checkout devworkspace-operator source code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Set output for Git short SHA
+        id: git-sha
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Login to quay.io
+        uses: docker/login-action@465a07811f14bebb1938fbed4728c6a1ff8901fc #v2.2.0
+        with:
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+          registry: quay.io
+
+      - uses: oras-project/setup-oras@v1.2.4
+      - run: |
+            cd project-backup/test-data
+            make run
+            oras push quay.io/devfile/project-backup-test:latest \
+                --artifact-type application/vnd.devworkspace.backup.artifact.v1+json \
+                --annotation devworkspace.name="sample" \
+                --annotation devworkspace.namespace="sample" \
+                --disable-path-validation \
+                devworkspace-backup.tar.gz

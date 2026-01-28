@@ -49,16 +49,16 @@ func GetWorkspacePVCInfo(
 	if err != nil {
 		return "", "", err
 	}
-	if !storageProvisioner.NeedsStorage(&workspace.Spec.Template) {
-		// No storage provisioned for this workspace
-		return "", "", nil
-	}
 
 	if _, ok := storageProvisioner.(*storage.PerWorkspaceStorageProvisioner); ok {
 		pvcName := common.PerWorkspacePVCName(workspace.Status.DevWorkspaceId)
 		return pvcName, constants.DefaultProjectsSourcesRoot, nil
 
 	} else if _, ok := storageProvisioner.(*storage.CommonStorageProvisioner); ok {
+		if !storageProvisioner.NeedsStorage(&workspace.Spec.Template) {
+			// No storage provisioned for this workspace
+			return "", "", nil
+		}
 		pvcName := constants.DefaultWorkspacePVCName
 		if config.Workspace != nil && config.Workspace.PVCName != "" {
 			pvcName = config.Workspace.PVCName

@@ -372,7 +372,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			if registryAuthSecret != nil {
 				// Add the registry auth secret volume
 				devfilePodAdditions.Volumes = append(devfilePodAdditions.Volumes, corev1.Volume{
-					Name: "registry-auth-secret",
+					Name: constants.RegistryAuthVolumeName,
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
 							SecretName: registryAuthSecret.Name, // You may want to make this configurable

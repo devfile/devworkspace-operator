@@ -452,7 +452,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 	if registryAuthSecret != nil {
 		job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
-			Name: "registry-auth-secret",
+			Name: constants.RegistryAuthVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: registryAuthSecret.Name,
@@ -460,7 +460,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 			},
 		})
 		job.Spec.Template.Spec.Containers[0].VolumeMounts = append(job.Spec.Template.Spec.Containers[0].VolumeMounts, corev1.VolumeMount{
-			Name:      "registry-auth-secret",
+			Name:      constants.RegistryAuthVolumeName,
 			MountPath: "/tmp/.docker",
 			ReadOnly:  true,
 		})

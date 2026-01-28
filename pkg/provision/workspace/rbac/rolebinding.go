@@ -32,14 +32,14 @@ func syncRolebindings(workspace *common.DevWorkspaceWithConfig, api sync.Cluster
 	saName := common.ServiceAccountName(workspace)
 	defaultRoleName := common.WorkspaceRoleName()
 	defaultRolebindingName := common.WorkspaceRolebindingName()
-	if err := addServiceAccountToRolebinding(saName, workspace.Namespace, defaultRoleName, defaultRolebindingName, "Role", api); err != nil {
+	if err := addServiceAccountToRolebinding(saName, workspace.Namespace, defaultRoleName, defaultRolebindingName, constants.Role, api); err != nil {
 		return err
 	}
 	if workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
 		sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
 		sccRoleName := common.WorkspaceSCCRoleName(sccName)
 		sccRolebindingName := common.WorkspaceSCCRolebindingName(sccName)
-		if err := addServiceAccountToRolebinding(saName, workspace.Namespace, sccRoleName, sccRolebindingName, "Role", api); err != nil {
+		if err := addServiceAccountToRolebinding(saName, workspace.Namespace, sccRoleName, sccRolebindingName, constants.Role, api); err != nil {
 			return err
 		}
 	}
@@ -53,7 +53,7 @@ func syncRolebindings(workspace *common.DevWorkspaceWithConfig, api sync.Cluster
 			workspace.Namespace,
 			registryRoleName,
 			registryRolebindingName,
-			"ClusterRole",
+			constants.ClusterRole,
 			api); err != nil {
 			return err
 		}

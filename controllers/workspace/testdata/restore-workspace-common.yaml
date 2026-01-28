@@ -10,6 +10,7 @@ spec:
     attributes:
       controller.devfile.io/storage-type: common
       controller.devfile.io/restore-workspace: 'true'
+      controller.devfile.io/restore-source-image: quay.io/devfile/project-backup-test:latest
     projects:
       - name: web-nodejs-sample
         git:

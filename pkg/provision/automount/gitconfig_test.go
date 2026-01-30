@@ -52,7 +52,7 @@ func TestUserCredentialsAreMountedWithOneCredential(t *testing.T) {
 	// ProvisionGitConfiguration has to be called multiple times since it stops after creating each configmap/secret
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, false)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -78,7 +78,7 @@ func TestUserCredentialsAreOnlyMountedOnceWithMultipleCredentials(t *testing.T) 
 	// ProvisionGitConfiguration has to be called multiple times since it stops after creating each configmap/secret
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, false)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -98,7 +98,7 @@ func TestGitConfigIsFullyMounted(t *testing.T) {
 	// ProvisionGitConfiguration has to be called multiple times since it stops after creating each configmap/secret
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, false)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -218,6 +218,97 @@ func TestTwoConfigMapWithBothMissingHost(t *testing.T) {
 	assert.Equal(t, err.Error(), "multiple git tls credentials do not have host specified")
 }
 
+func TestShouldNotMountGitCredentialWhenSecretWithMountOnStartOnlyIfWorkspaceStarted(t *testing.T) {
+	mountPath := "/sample/test"
+	// Create a secret with mount-on-start-only annotation
+	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
+		gitCredentialsSecretKey: []byte("my_credentials"),
+	}, map[string]string{
+		constants.MountOnStartOnlyAttribute: "true",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+	}
+
+	// When workspace is already started (isWorkspaceStarted=true), the secret should be skipped
+	resources, err := ProvisionGitConfiguration(clusterAPI, testNamespace, true)
+	assert.NoError(t, err)
+	assert.Nil(t, resources)
+}
+
+func TestMountGitCredentialWhenSecretWithMountOnStartOnlyIfWorkspaceNotStarted(t *testing.T) {
+	mountPath := "/sample/test"
+	// Create a secret with mount-on-start-only annotation
+	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
+		gitCredentialsSecretKey: []byte("my_credentials"),
+	}, map[string]string{
+		constants.MountOnStartOnlyAttribute: "true",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+	}
+
+	var resources *Resources
+	// When workspace is not started (isWorkspaceStarted=false), the secret should be mounted
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, false)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+	if ok {
+		// devworkspace-gitconfig
+		// devworkspace-merged-git-credentials
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+	}
+}
+
+func TestShouldNotMountGitCredentialWhenConfigMapWithMountOnStartOnlyIfWorkspaceStarted(t *testing.T) {
+	mountPath := "/sample/test"
+	// Create a configmap with mount-on-start-only annotation
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.MountOnStartOnlyAttribute: "true",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+	}
+
+	// When workspace is already started (isWorkspaceStarted=true), the configmap should be skipped
+	resources, err := ProvisionGitConfiguration(clusterAPI, testNamespace, true)
+	assert.NoError(t, err)
+	assert.Nil(t, resources)
+}
+
+func TestMountGitCredentialWhenConfigMapWithMountOnStartOnlyIfWorkspaceNotStarted(t *testing.T) {
+	mountPath := "/sample/test"
+	// Create a configmap with mount-on-start-only annotation
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.MountOnStartOnlyAttribute: "true",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	// When workspace is not started (isWorkspaceStarted=false), the configmap should be mounted
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, false)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+	}
+}
+
 func buildConfig(name string, mountPath string, data map[string]string) corev1.ConfigMap {
 	return corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -248,4 +339,20 @@ func buildSecret(name string, mountPath string, data map[string][]byte) corev1.S
 		},
 		Data: data,
 	}
+}
+
+func buildSecretWithAnnotations(name string, mountPath string, data map[string][]byte, annotations map[string]string) corev1.Secret {
+	secret := buildSecret(name, mountPath, data)
+	for k, v := range annotations {
+		secret.Annotations[k] = v
+	}
+	return secret
+}
+
+func buildConfigWithAnnotations(name string, mountPath string, data map[string]string, annotations map[string]string) corev1.ConfigMap {
+	cm := buildConfig(name, mountPath, data)
+	for k, v := range annotations {
+		cm.Annotations[k] = v
+	}
+	return cm
 }

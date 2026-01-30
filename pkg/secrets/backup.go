@@ -27,6 +27,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
 // GetRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
@@ -78,21 +80,8 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 
 // CopySecret copies the given secret from the operator namespace to the workspace namespace.
 func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, scheme *runtime.Scheme, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
-	existingNamespaceSecret := &corev1.Secret{}
-	err = c.Get(ctx, client.ObjectKey{
-		Name:      constants.DevWorkspaceBackupAuthSecretName,
-		Namespace: workspace.Namespace}, existingNamespaceSecret)
-	if client.IgnoreNotFound(err) != nil {
-		log.Error(err, "Failed to check for existing registry auth secret in workspace namespace", "namespace", workspace.Namespace)
-		return nil, err
-	}
-	if err == nil {
-		err = c.Delete(ctx, existingNamespaceSecret)
-		if err != nil {
-			return nil, err
-		}
-	}
-	namespaceSecret = &corev1.Secret{
+	// Construct the desired secret state
+	desiredSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.DevWorkspaceBackupAuthSecretName,
 			Namespace: workspace.Namespace,
@@ -104,12 +93,32 @@ func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace
 		Data: sourceSecret.Data,
 		Type: sourceSecret.Type,
 	}
-	if err := controllerutil.SetControllerReference(workspace, namespaceSecret, scheme); err != nil {
+
+	if err := controllerutil.SetControllerReference(workspace, desiredSecret, scheme); err != nil {
 		return nil, err
 	}
-	err = c.Create(ctx, namespaceSecret)
-	if err == nil {
-		log.Info("Successfully created secret", "name", namespaceSecret.Name, "namespace", workspace.Namespace)
+
+	// Use the sync mechanism
+	clusterAPI := sync.ClusterAPI{
+		Client: c,
+		Scheme: scheme,
+		Logger: log,
+		Ctx:    ctx,
 	}
-	return namespaceSecret, err
+
+	syncedObj, err := sync.SyncObjectWithCluster(desiredSecret, clusterAPI)
+	if err != nil {
+		if _, ok := err.(*sync.NotInSyncError); !ok {
+			return nil, err
+		}
+		// NotInSyncError means the sync operation was successful but triggered a change
+		log.Info("Successfully synced secret", "name", desiredSecret.Name, "namespace", workspace.Namespace)
+	}
+
+	// If syncedObj is nil (due to NotInSyncError), return the desired object
+	if syncedObj == nil {
+		return desiredSecret, nil
+	}
+
+	return syncedObj.(*corev1.Secret), nil
 }

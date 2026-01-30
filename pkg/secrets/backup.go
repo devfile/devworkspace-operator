@@ -29,6 +29,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+// GetRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
+// based on the operator configuration.
+func GetNamespaceRegistryAuthSecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace,
+	dwOperatorConfig *controllerv1alpha1.OperatorConfiguration, scheme *runtime.Scheme, log logr.Logger,
+) (*corev1.Secret, error) {
+	return HandleRegistryAuthSecret(ctx, c, workspace, dwOperatorConfig, "", scheme, log)
+}
+
 func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace,
 	dwOperatorConfig *controllerv1alpha1.OperatorConfiguration, operatorConfigNamespace string, scheme *runtime.Scheme, log logr.Logger,
 ) (*corev1.Secret, error) {

@@ -111,7 +111,7 @@ func GetWorkspaceRestoreInitContainer(
 			MountPath: constants.DefaultProjectsSourcesRoot,
 		},
 	}
-	registryAuthSecret, err := secrets.HandleRegistryAuthSecret(ctx, k8sClient, workspace.DevWorkspace, workspace.Config, "", scheme, log)
+	registryAuthSecret, err := secrets.GetNamespaceRegistryAuthSecret(ctx, k8sClient, workspace.DevWorkspace, workspace.Config, scheme, log)
 	if err != nil {
 		return nil, nil, fmt.Errorf("handling registry auth secret for workspace restore: %w", err)
 	}

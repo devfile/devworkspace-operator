@@ -118,12 +118,6 @@ restore() {
     --output /tmp
   )
 
-  # Check if $PROJECTS_ROOT is empty and exit if not
-  if [[ -n "$(ls -A "$PROJECTS_ROOT")" ]]; then
-    echo "PROJECTS_ROOT '$PROJECTS_ROOT' is not empty. Skipping restore action."
-    exit 0
-  fi
-
   # Setup registry authentication
   setup_registry_auth "$BACKUP_IMAGE"
   oras_args+=("${ORAS_AUTH_ARGS[@]}")
@@ -137,6 +131,12 @@ restore() {
   oras "${oras_args[@]}"
   mkdir /tmp/extracted-backup
   tar -xzvf /tmp/devworkspace-backup.tar.gz -C /tmp/extracted-backup
+
+  # Check if $PROJECTS_ROOT is empty and exit if not
+  if [[ -n "$(ls -A "$PROJECTS_ROOT")" ]]; then
+    echo "PROJECTS_ROOT '$PROJECTS_ROOT' is not empty. Skipping restore action."
+    exit 0
+  fi
 
   cp -r /tmp/extracted-backup/* "$PROJECTS_ROOT"
 

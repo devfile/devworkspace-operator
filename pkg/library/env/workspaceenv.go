@@ -57,7 +57,8 @@ func GetEnvironmentVariablesForProjectRestore(workspace *common.DevWorkspaceWith
 		Name:  devfileConstants.ProjectsRootEnvVar,
 		Value: constants.DefaultProjectsSourcesRoot,
 	})
-	if workspace.Config.Workspace.BackupCronJob.OrasConfig != nil {
+	if workspace.Config.Workspace.BackupCronJob != nil &&
+		workspace.Config.Workspace.BackupCronJob.OrasConfig != nil {
 		restoreEnv = append(restoreEnv, corev1.EnvVar{
 			Name:  "ORAS_EXTRA_ARGS",
 			Value: workspace.Config.Workspace.BackupCronJob.OrasConfig.ExtraArgs,

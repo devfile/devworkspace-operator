@@ -93,6 +93,10 @@ func TestCreatesSCCRolebindingIfNotExists(t *testing.T) {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
 	}
 	err = syncRolebindings(testdw, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that registry rolebinding was created") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+	err = syncRolebindings(testdw, api)
 	assert.NoError(t, err, "Should not return error if rolebindings are in sync")
 	actualRB := &rbacv1.RoleBinding{}
 	err = api.Client.Get(api.Ctx, types.NamespacedName{
@@ -120,13 +124,21 @@ func TestAddsMultipleSubjectsToSCCRolebinding(t *testing.T) {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
 	}
 	err = syncRolebindings(testdw, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that registry rolebinding was created") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+	err = syncRolebindings(testdw, api)
 	assert.NoError(t, err, "Should not return error if rolebindings are in sync")
 	err = syncRolebindings(testdw2, api)
-	if assert.Error(t, err, "Should return RetryError to indicate that default rolebinding was created") {
+	if assert.Error(t, err, "Should return RetryError to indicate that default rolebinding was updated") {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
 	}
 	err = syncRolebindings(testdw2, api)
-	if assert.Error(t, err, "Should return RetryError to indicate that SCC rolebinding was created") {
+	if assert.Error(t, err, "Should return RetryError to indicate that SCC rolebinding was updated") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+	err = syncRolebindings(testdw2, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that registry rolebinding was updated") {
 		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
 	}
 	err = syncRolebindings(testdw2, api)
@@ -143,6 +155,70 @@ func TestAddsMultipleSubjectsToSCCRolebinding(t *testing.T) {
 	assert.True(t, testHasSubject(expectedSAName, testNamespace, actualRB), "Created SCC rolebinding should have both workspace SAs as subjects")
 	expectedSAName2 := common.ServiceAccountName(testdw2)
 	assert.True(t, testHasSubject(expectedSAName2, testNamespace, actualRB), "Created SCC rolebinding should have both workspace SAs as subjects")
+}
+
+func TestCreatesRegistryImagePullerRolebindingOnOpenShift(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+	testdw := getTestDevWorkspace("test-devworkspace")
+	api := getTestClusterAPI(t, testdw.DevWorkspace)
+	retryErr := &dwerrors.RetryError{}
+
+	// First call should create default rolebinding
+	err := syncRolebindings(testdw, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that default rolebinding was created") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+
+	// Second call should create registry image puller rolebinding
+	err = syncRolebindings(testdw, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that registry rolebinding was created") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+
+	// Third call should succeed with no errors
+	err = syncRolebindings(testdw, api)
+	assert.NoError(t, err, "Should not return error if rolebindings are in sync")
+
+	// Verify the registry image puller rolebinding was created correctly
+	actualRB := &rbacv1.RoleBinding{}
+	err = api.Client.Get(api.Ctx, types.NamespacedName{
+		Name:      common.RegistryImagePullerRolebindingName(testNamespace),
+		Namespace: testNamespace,
+	}, actualRB)
+	assert.NoError(t, err, "Registry image puller rolebinding should be created")
+
+	// Verify it references the correct ClusterRole
+	assert.Equal(t, "ClusterRole", actualRB.RoleRef.Kind, "Rolebinding should reference ClusterRole")
+	assert.Equal(t, common.RegistryImagePullerRoleName(), actualRB.RoleRef.Name, "Rolebinding should reference system:image-puller ClusterRole")
+
+	// Verify it has the workspace service account as subject
+	expectedSAName := common.ServiceAccountName(testdw)
+	assert.True(t, testHasSubject(expectedSAName, testNamespace, actualRB), "Registry rolebinding should have workspace SA as subject")
+}
+
+func TestDoesNotCreateRegistryImagePullerRolebindingOnKubernetes(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+	testdw := getTestDevWorkspace("test-devworkspace")
+	api := getTestClusterAPI(t, testdw.DevWorkspace)
+	retryErr := &dwerrors.RetryError{}
+
+	// First call should create default rolebinding
+	err := syncRolebindings(testdw, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that default rolebinding was created") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+
+	// Second call should succeed with no errors (no registry rolebinding on Kubernetes)
+	err = syncRolebindings(testdw, api)
+	assert.NoError(t, err, "Should not return error if rolebindings are in sync")
+
+	// Verify the registry image puller rolebinding was NOT created
+	actualRB := &rbacv1.RoleBinding{}
+	err = api.Client.Get(api.Ctx, types.NamespacedName{
+		Name:      common.RegistryImagePullerRolebindingName(testNamespace),
+		Namespace: testNamespace,
+	}, actualRB)
+	assert.Error(t, err, "Registry image puller rolebinding should NOT be created on Kubernetes")
 }
 
 func testHasSubject(subjName, namespace string, rolebinding *rbacv1.RoleBinding) bool {

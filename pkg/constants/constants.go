@@ -100,6 +100,14 @@ const (
 
 	// ProjectCloneDisable specifies that project cloning should be disabled.
 	ProjectCloneDisable = "disable"
+
+	// RegistryAuthVolumeName is the name of the volume where registry auth secrets are mounted
+	RegistryAuthVolumeName = "registry-auth-secret"
+
+	//Role kinds
+	Role = "Role"
+	// ClusterRole kind
+	ClusterRole = "ClusterRole"
 )
 
 const (

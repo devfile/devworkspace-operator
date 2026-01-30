@@ -54,6 +54,14 @@ register_catalogsource: _check_skopeo_installed
 	sed -e "s|quay.io/devfile/devworkspace-operator-index:next|$(DWO_INDEX_IMG)|g" ./catalog-source.yaml \
 	  | oc apply -f -
 
+### view_catalogsource: prints the catalog source to standard output
+view_catalogsource:
+	@echo "To apply the CatalogSource, run:"
+	@echo ""
+	@echo "oc apply -f - <<EOF"
+	@sed -e "s|quay.io/devfile/devworkspace-operator-index:next|$(DWO_INDEX_IMG)|g" ./catalog-source.yaml
+	@echo "EOF"
+
 ### unregister_catalogsource: unregister the catalogsource and delete the imageContentSourcePolicy
 unregister_catalogsource:
 	oc delete catalogsource devworkspace-operator-catalog -n openshift-marketplace --ignore-not-found

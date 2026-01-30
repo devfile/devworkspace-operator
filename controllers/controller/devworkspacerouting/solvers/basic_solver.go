@@ -20,6 +20,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var routeAnnotations = func(endpointName string, endpointAnnotations map[string]string) map[string]string {
@@ -47,9 +49,20 @@ var nginxIngressAnnotations = func(endpointName string, endpointAnnotations map[
 // According to the current cluster there is different behavior:
 // Kubernetes: use Ingresses without TLS
 // OpenShift: use Routes with TLS enabled
-type BasicSolver struct{}
+type BasicSolver struct {
+	client client.Client
+	logger logr.Logger
+}
 
 var _ RoutingSolver = (*BasicSolver)(nil)
+
+// NewBasicSolver creates a new BasicSolver with the provided dependencies
+func NewBasicSolver(client client.Client, logger logr.Logger) *BasicSolver {
+	return &BasicSolver{
+		client: client,
+		logger: logger,
+	}
+}
 
 func (s *BasicSolver) FinalizerRequired(*controllerv1alpha1.DevWorkspaceRouting) bool {
 	return false
@@ -70,7 +83,11 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRou
 
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
-	services = append(services, GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta)...)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, s.client, s.logger)
+	if err != nil {
+		return RoutingObjects{}, err
+	}
+	services = append(services, discoverableServices...)
 	routingObjects.Services = services
 	if infrastructure.IsOpenShift() {
 		routingObjects.Routes = getRoutesForSpec(routingSuffix, spec.Endpoints, workspaceMeta)

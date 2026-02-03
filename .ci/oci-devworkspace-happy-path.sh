@@ -69,7 +69,6 @@ deployDWO() {
 deployChe() {
   echo "======== Deploying Eclipse Che (attempt $1/$MAX_RETRIES) ========"
 
-  # Deploy Che with extended timeouts
   if ! chectl server:deploy \
     -p openshift \
     --batch \

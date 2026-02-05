@@ -36,6 +36,7 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 	}); err != nil {
 		return nil, err
 	}
+	sortConfigmaps(configmaps.Items)
 	var allAutoMountResouces []Resources
 	for _, configmap := range configmaps.Items {
 		if msg := checkAutomountVolumeForPotentialError(&configmap); msg != "" {

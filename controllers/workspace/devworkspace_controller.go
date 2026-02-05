@@ -375,7 +375,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					Name: constants.RegistryAuthVolumeName,
 					VolumeSource: corev1.VolumeSource{
 						Secret: &corev1.SecretVolumeSource{
-							SecretName: registryAuthSecret.Name, // You may want to make this configurable
+							SecretName:  registryAuthSecret.Name,
+							DefaultMode: pointer.Int32(0640),
 						},
 					},
 				})

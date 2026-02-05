@@ -13,7 +13,8 @@
 # limitations under the License.
 #
 
-FROM registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.24-openshift-4.20
+# Image pinned by SHA256 to address GitHub security bot warnings about unpinned dependencies
+FROM registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.25-openshift-4.20@sha256:cd5c68457b9da02df266e32f9e26d9c323d808acaadc35126c50a526051c1d89
 
 SHELL ["/bin/bash", "-c"]
 

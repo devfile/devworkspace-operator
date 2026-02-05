@@ -15,12 +15,15 @@ This script deploys and validates the full DevWorkspace Operator + Eclipse Che s
 - **Cleanup**: Deletes failed Che deployment before retry
 
 ### Health Checks
+- **OLM**: Verifies `catalog-operator` and `olm-operator` are available before Che deployment (2-minute timeout each)
 - **DWO**: Waits for `deployment condition=available` (5-minute timeout)
 - **Che**: Waits for `CheCluster condition=Available` (10-minute timeout)
 - **Pods**: Verifies all Che pods are ready
 
 ### Artifact Collection
 On each failure, collects:
+- OLM diagnostics (Subscription, InstallPlan, CSV, CatalogSource)
+- CatalogSource pod logs
 - Che operator logs (last 1000 lines)
 - CheCluster CR status (full YAML)
 - All pod logs from Che namespace
@@ -105,6 +108,15 @@ export ARTIFACT_DIR="/tmp/my-test-artifacts"
 
 ## Common Failures
 
+### OLM Infrastructure Not Ready
+**Symptoms**: "ERROR: OLM infrastructure is not healthy, cannot proceed with Che deployment"
+**Check**: `$ARTIFACT_DIR/olm-diagnostics-olm-check.yaml`
+**Common causes**:
+- OLM operators not running (`catalog-operator`, `olm-operator`)
+- Cluster provisioning issues during bootstrap
+- Resource constraints preventing OLM operator scheduling
+**Resolution**: This indicates a fundamental cluster infrastructure issue. Check cluster health and OLM operator logs before retrying.
+
 ### DWO Deployment Fails
 **Symptoms**: "ERROR: DWO controller is not ready"
 **Check**: `$ARTIFACT_DIR/devworkspace-controller-info/`
@@ -112,13 +124,26 @@ export ARTIFACT_DIR="/tmp/my-test-artifacts"
 
 ### Che Deployment Timeout
 **Symptoms**: "ERROR: CheCluster did not become available within 10 minutes"
-**Check**: `$ARTIFACT_DIR/che-operator-logs-attempt-*.log`
-**Common causes**: Database connection issues, image pull failures, operator reconciliation errors
+**Check**: `$ARTIFACT_DIR/che-operator-logs-attempt-*.log`, `$ARTIFACT_DIR/olm-diagnostics-attempt-*.yaml`
+**Common causes**:
+- OLM subscription timeout (check `olm-diagnostics` for subscription state)
+- Database connection issues
+- Image pull failures
+- Operator reconciliation errors
 
 ### Pod CrashLoopBackOff
 **Symptoms**: "ERROR: chectl server:deploy failed"
 **Check**: `$ARTIFACT_DIR/eclipse-che-info/` for pod logs
 **Common causes**: Configuration errors, resource limits, TLS certificate issues
+
+### OLM Subscription Stuck
+**Symptoms**: Subscription timeout after 120 seconds with no resources created
+**Check**: `$ARTIFACT_DIR/olm-diagnostics-attempt-*.yaml`, `$ARTIFACT_DIR/catalogsource-logs-attempt-*.log`
+**Common causes**:
+- CatalogSource pod not pulling/running
+- InstallPlan not created (subscription cannot resolve dependencies)
+- Cluster resource exhaustion preventing operator pod scheduling
+**Resolution**: Check OLM operator logs and CatalogSource pod status. See "Advanced Troubleshooting" section for monitoring and alternative deployment options.
 
 ## Artifact Locations
 
@@ -135,6 +160,10 @@ $ARTIFACT_DIR/
 ├── che-operator-logs-attempt-2.log
 ├── checluster-status-attempt-1.yaml
 ├── checluster-status-attempt-2.yaml
+├── olm-diagnostics-attempt-1.yaml
+├── olm-diagnostics-attempt-2.yaml
+├── catalogsource-logs-attempt-1.log
+├── catalogsource-logs-attempt-2.log
 ├── chectl-logs-attempt-1/
 └── chectl-logs-attempt-2/
 ```
@@ -146,9 +175,91 @@ $ARTIFACT_DIR/
 - `chectl` - Eclipse Che CLI (v7.114.0+)
 - `jq` - JSON processor (for chectl)
 
+## Advanced Troubleshooting
+
+### OLM Infrastructure Issues
+
+If you experience persistent OLM subscription timeouts (see `olm-diagnostics-*.yaml` artifacts):
+
+#### Option 1: OLM Health Check (Implemented)
+The script now verifies OLM infrastructure health before deploying Che:
+- Checks `catalog-operator` is available
+- Checks `olm-operator` is available
+- Verifies `openshift-marketplace` is accessible
+
+If OLM is unhealthy, the test fails fast with diagnostic artifacts instead of waiting through timeouts.
+
+#### Option 2: Monitor Subscription Progress (Advanced)
+For debugging stuck subscriptions, you can add active monitoring to detect zero-progress scenarios earlier:
+
+```bash
+# Example: Monitor subscription state every 10 seconds
+while [ $elapsed -lt 300 ]; do
+  state=$(kubectl get subscription eclipse-che -n eclipse-che \
+    -o jsonpath='{.status.state}' 2>/dev/null)
+  echo "[$elapsed/300s] Subscription state: ${state:-unknown}"
+  if [ "$state" = "AtLatestKnown" ]; then
+    break
+  fi
+  sleep 10
+  elapsed=$((elapsed + 10))
+done
+```
+
+This helps identify whether subscriptions are progressing slowly vs. completely stuck.
+
+#### Option 3: Skip OLM Installation (Alternative Approach)
+For CI environments with persistent OLM issues, consider deploying Che operator directly instead of via OLM:
+
+```bash
+chectl server:deploy \
+  --installer=operator \  # Uses direct YAML deployment
+  -p openshift \
+  --batch \
+  --telemetry=off \
+  --skip-devworkspace-operator \
+  --chenamespace="$CHE_NAMESPACE"
+```
+
+**Trade-offs**:
+- ✅ Bypasses OLM infrastructure entirely
+- ✅ More reliable in resource-constrained CI environments
+- ❌ Doesn't test OLM integration path (used by production OperatorHub)
+- ❌ May miss OLM-specific issues
+
+**When to use**: Temporary workaround for CI infrastructure issues while OLM problems are being resolved.
+
+### Subscription Timeout Issues
+
+If OLM subscriptions consistently timeout (visible in `olm-diagnostics-*.yaml`):
+
+1. **Check OLM operator logs**:
+   ```bash
+   kubectl logs -n openshift-operator-lifecycle-manager \
+     deployment/catalog-operator --tail=100
+   kubectl logs -n openshift-operator-lifecycle-manager \
+     deployment/olm-operator --tail=100
+   ```
+
+2. **Verify CatalogSource pod is running**:
+   ```bash
+   kubectl get pods -n openshift-marketplace \
+     -l olm.catalogSource=eclipse-che
+   kubectl logs -n openshift-marketplace \
+     -l olm.catalogSource=eclipse-che
+   ```
+
+3. **Check InstallPlan creation**:
+   ```bash
+   kubectl get installplan -n eclipse-che -o yaml
+   ```
+   - If no InstallPlan exists, OLM couldn't resolve the subscription
+   - If InstallPlan exists but isn't complete, check its status conditions
+
 ## Related Documentation
 
 - [Eclipse Che Documentation](https://eclipse.dev/che/docs/)
 - [chectl GitHub Repository](https://github.com/che-incubator/chectl)
+- [OLM Troubleshooting Guide](https://olm.operatorframework.io/docs/troubleshooting/)
 - [DevWorkspace Operator README](../README.md)
 - [Contributing Guidelines](../CONTRIBUTING.md)

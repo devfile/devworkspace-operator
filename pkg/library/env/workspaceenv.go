@@ -19,12 +19,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/pointer"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -82,6 +82,14 @@ func commonEnvironmentVariables(workspaceWithConfig *common.DevWorkspaceWithConf
 			Name:  constants.DevWorkspaceIdleTimeout,
 			Value: workspaceWithConfig.Config.Workspace.IdleTimeout,
 		},
+	}
+
+	hostUsers := pointer.BoolDeref(workspaceWithConfig.Config.Workspace.HostUsers, constants.DefaultHostUsers)
+	if !hostUsers {
+		envvars = append(envvars, corev1.EnvVar{
+			Name:  constants.DevWorkspaceHostUsers,
+			Value: "false",
+		})
 	}
 
 	envvars = append(envvars, getProxyEnvVars(workspaceWithConfig.Config.Routing.ProxyConfig)...)

@@ -19,6 +19,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -31,18 +32,33 @@ func syncRolebindings(workspace *common.DevWorkspaceWithConfig, api sync.Cluster
 	saName := common.ServiceAccountName(workspace)
 	defaultRoleName := common.WorkspaceRoleName()
 	defaultRolebindingName := common.WorkspaceRolebindingName()
-	if err := addServiceAccountToRolebinding(saName, workspace.Namespace, defaultRoleName, defaultRolebindingName, api); err != nil {
+	if err := addServiceAccountToRolebinding(saName, workspace.Namespace, defaultRoleName, defaultRolebindingName, constants.RbacRoleKind, api); err != nil {
 		return err
 	}
-	if !workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
-		return nil
+	if workspace.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
+		sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
+		sccRoleName := common.WorkspaceSCCRoleName(sccName)
+		sccRolebindingName := common.WorkspaceSCCRolebindingName(sccName)
+		if err := addServiceAccountToRolebinding(saName, workspace.Namespace, sccRoleName, sccRolebindingName, constants.RbacRoleKind, api); err != nil {
+			return err
+		}
 	}
-	sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
-	sccRoleName := common.WorkspaceSCCRoleName(sccName)
-	sccRolebindingName := common.WorkspaceSCCRolebindingName(sccName)
-	if err := addServiceAccountToRolebinding(saName, workspace.Namespace, sccRoleName, sccRolebindingName, api); err != nil {
-		return err
+	if infrastructure.IsOpenShift() {
+		// On OpenShift, add the workspace ServiceAccount to the cluster rolebinding that allows pulling images from
+		// the internal registry
+		registryRoleName := common.RegistryImagePullerRoleName()
+		registryRolebindingName := common.RegistryImagePullerRolebindingName(workspace.Namespace)
+		if err := addServiceAccountToRolebinding(
+			saName,
+			workspace.Namespace,
+			registryRoleName,
+			registryRolebindingName,
+			constants.RbacClusterRoleKind,
+			api); err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -67,7 +83,7 @@ func deleteRolebinding(name, namespace string, api sync.ClusterAPI) error {
 	}
 }
 
-func addServiceAccountToRolebinding(saName, namespace, roleName, rolebindingName string, api sync.ClusterAPI) error {
+func addServiceAccountToRolebinding(saName, namespace, roleName, rolebindingName string, roleKind string, api sync.ClusterAPI) error {
 	rolebinding := &rbacv1.RoleBinding{}
 	namespacedName := types.NamespacedName{
 		Name:      rolebindingName,
@@ -80,7 +96,7 @@ func addServiceAccountToRolebinding(saName, namespace, roleName, rolebindingName
 		break
 	case k8sErrors.IsNotFound(err):
 		// Rolebinding not created yet, initiailize default rolebinding and add SA to it
-		rolebinding = generateDefaultRolebinding(rolebindingName, namespace, roleName)
+		rolebinding = generateDefaultRolebinding(rolebindingName, namespace, roleName, roleKind)
 	default:
 		return err
 	}
@@ -132,7 +148,7 @@ func removeServiceAccountFromRolebinding(saName, namespace, roleBindingName stri
 	return nil
 }
 
-func generateDefaultRolebinding(name, namespace, roleName string) *rbacv1.RoleBinding {
+func generateDefaultRolebinding(name, namespace, roleName string, roleKind string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -140,7 +156,7 @@ func generateDefaultRolebinding(name, namespace, roleName string) *rbacv1.RoleBi
 			Labels:    rbacLabels,
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind: "Role",
+			Kind: roleKind,
 			Name: roleName,
 		},
 		// Subjects added for each workspace ServiceAccount

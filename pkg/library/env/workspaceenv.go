@@ -49,6 +49,25 @@ func AddCommonEnvironmentVariables(podAdditions *v1alpha1.PodAdditions, clusterD
 	return nil
 }
 
+func GetEnvironmentVariablesForProjectRestore(workspace *common.DevWorkspaceWithConfig) []corev1.EnvVar {
+	var restoreEnv []corev1.EnvVar
+	restoreEnv = append(restoreEnv, workspace.Config.Workspace.RestoreConfig.Env...)
+	restoreEnv = append(restoreEnv, commonEnvironmentVariables(workspace)...)
+	restoreEnv = append(restoreEnv, corev1.EnvVar{
+		Name:  devfileConstants.ProjectsRootEnvVar,
+		Value: constants.DefaultProjectsSourcesRoot,
+	})
+	if workspace.Config.Workspace.BackupCronJob != nil &&
+		workspace.Config.Workspace.BackupCronJob.OrasConfig != nil {
+		restoreEnv = append(restoreEnv, corev1.EnvVar{
+			Name:  "ORAS_EXTRA_ARGS",
+			Value: workspace.Config.Workspace.BackupCronJob.OrasConfig.ExtraArgs,
+		})
+	}
+
+	return restoreEnv
+}
+
 func GetEnvironmentVariablesForProjectClone(workspace *common.DevWorkspaceWithConfig) []corev1.EnvVar {
 	var cloneEnv []corev1.EnvVar
 	cloneEnv = append(cloneEnv, workspace.Config.Workspace.ProjectCloneConfig.Env...)

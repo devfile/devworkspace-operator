@@ -17,6 +17,7 @@ package secrets
 
 import (
 	"context"
+	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -42,6 +43,11 @@ func GetNamespaceRegistryAuthSecret(ctx context.Context, c client.Client, worksp
 func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace,
 	dwOperatorConfig *controllerv1alpha1.OperatorConfiguration, operatorConfigNamespace string, scheme *runtime.Scheme, log logr.Logger,
 ) (*corev1.Secret, error) {
+	if dwOperatorConfig.Workspace == nil ||
+		dwOperatorConfig.Workspace.BackupCronJob == nil ||
+		dwOperatorConfig.Workspace.BackupCronJob.Registry == nil {
+		return nil, fmt.Errorf("backup/restore configuration not properly set in DevWorkspaceOperatorConfig")
+	}
 	secretName := dwOperatorConfig.Workspace.BackupCronJob.Registry.AuthSecret
 	if secretName == "" {
 		// No auth secret configured - anonymous access to registry
@@ -86,7 +92,6 @@ func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace
 			Name:      constants.DevWorkspaceBackupAuthSecretName,
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel:          workspace.Status.DevWorkspaceId,
 				constants.DevWorkspaceWatchSecretLabel: "true",
 			},
 		},

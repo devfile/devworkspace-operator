@@ -110,10 +110,10 @@ const (
 	// RegistryAuthVolumeName is the name of the volume where registry auth secrets are mounted
 	RegistryAuthVolumeName = "registry-auth-secret"
 
-	//Role kinds
-	Role = "Role"
+	//Role kind
+	RbacRoleKind = "Role"
 	// ClusterRole kind
-	ClusterRole = "ClusterRole"
+	RbacClusterRoleKind = "ClusterRole"
 )
 
 const (

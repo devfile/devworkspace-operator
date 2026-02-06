@@ -98,7 +98,7 @@ func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(ctx context.Context
 			},
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind:     constants.ClusterRole,
+			Kind:     constants.RbacClusterRoleKind,
 			Name:     common.RegistryImagePullerRoleName(),
 			APIGroup: "rbac.authorization.k8s.io",
 		},

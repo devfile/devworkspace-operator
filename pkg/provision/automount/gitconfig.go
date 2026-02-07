@@ -26,8 +26,8 @@ import (
 const mergedGitCredentialsMountPath = "/.git-credentials/"
 
 // ProvisionGitConfiguration takes care of mounting git credentials and a gitconfig into a devworkspace.
-func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resources, error) {
-	credentialsSecrets, tlsConfigMaps, err := getGitResources(api, namespace)
+func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string, isWorkspaceStarted bool) (*Resources, error) {
+	credentialsSecrets, tlsConfigMaps, err := getGitResources(api, namespace, isWorkspaceStarted)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func ProvisionGitConfiguration(api sync.ClusterAPI, namespace string) (*Resource
 	return &resources, nil
 }
 
-func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets []corev1.Secret, tlsConfigMaps []corev1.ConfigMap, err error) {
+func getGitResources(api sync.ClusterAPI, namespace string, isWorkspaceStarted bool) (credentialSecrets []corev1.Secret, tlsConfigMaps []corev1.ConfigMap, err error) {
 	credentialsLabelSelector := k8sclient.MatchingLabels{
 		constants.DevWorkspaceGitCredentialLabel: "true",
 	}
@@ -82,8 +82,13 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 		return nil, nil, err
 	}
 	var secrets []corev1.Secret
-	if len(secretList.Items) > 0 {
-		secrets = secretList.Items
+	for _, secret := range secretList.Items {
+		// Skip mounting if mount-on-start-only is set to "true" and workspace has been already started
+		mountOnStartOnly := secret.Annotations[constants.MountOnStartOnlyAttribute] == "true"
+		if isWorkspaceStarted && mountOnStartOnly {
+			continue
+		}
+		secrets = append(secrets, secret)
 	}
 	sortSecrets(secrets)
 
@@ -92,8 +97,13 @@ func getGitResources(api sync.ClusterAPI, namespace string) (credentialSecrets [
 		return nil, nil, err
 	}
 	var configmaps []corev1.ConfigMap
-	if len(configmapList.Items) > 0 {
-		configmaps = configmapList.Items
+	for _, configmap := range configmapList.Items {
+		// Skip mounting if mount-on-start-only is set to "true" and workspace has been already started
+		mountOnStartOnly := configmap.Annotations[constants.MountOnStartOnlyAttribute] == "true"
+		if isWorkspaceStarted && mountOnStartOnly {
+			continue
+		}
+		configmaps = append(configmaps, configmap)
 	}
 	sortConfigmaps(configmaps)
 

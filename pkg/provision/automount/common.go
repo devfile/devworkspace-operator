@@ -42,8 +42,14 @@ type Resources struct {
 	EnvFromSource []corev1.EnvFromSource
 }
 
-func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string, persistentHome bool) error {
-	resources, err := getAutomountResources(api, namespace)
+func ProvisionAutoMountResourcesInto(
+	podAdditions *v1alpha1.PodAdditions,
+	api sync.ClusterAPI,
+	namespace string,
+	persistentHome bool,
+	isWorkspaceStarted bool,
+) error {
+	resources, err := getAutomountResources(api, namespace, isWorkspaceStarted)
 
 	if err != nil {
 		return err
@@ -76,18 +82,18 @@ func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sy
 	return nil
 }
 
-func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, error) {
-	gitCMAutoMountResources, err := ProvisionGitConfiguration(api, namespace)
+func getAutomountResources(api sync.ClusterAPI, namespace string, isWorkspaceStarted bool) (*Resources, error) {
+	gitCMAutoMountResources, err := ProvisionGitConfiguration(api, namespace, isWorkspaceStarted)
 	if err != nil {
 		return nil, err
 	}
 
-	cmAutoMountResources, err := getDevWorkspaceConfigmaps(namespace, api)
+	cmAutoMountResources, err := getDevWorkspaceConfigmaps(namespace, api, isWorkspaceStarted)
 	if err != nil {
 		return nil, err
 	}
 
-	secretAutoMountResources, err := getDevWorkspaceSecrets(namespace, api)
+	secretAutoMountResources, err := getDevWorkspaceSecrets(namespace, api, isWorkspaceStarted)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +110,7 @@ func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, e
 	}
 	dropItemsFieldFromVolumes(mergedResources.Volumes)
 
-	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api)
+	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api, isWorkspaceStarted)
 	if err != nil {
 		return nil, err
 	}

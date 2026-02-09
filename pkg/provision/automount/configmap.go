@@ -29,7 +29,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resources, error) {
+func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI, isWorkspaceStarted bool) (*Resources, error) {
 	configmaps := &corev1.ConfigMapList{}
 	if err := api.Client.List(api.Ctx, configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -41,6 +41,13 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 		if msg := checkAutomountVolumeForPotentialError(&configmap); msg != "" {
 			return nil, &dwerrors.FailError{Message: msg}
 		}
+
+		// Skip mounting if mount-on-start-only is set to "true" and workspace has been already started
+		mountOnStartOnly := configmap.Annotations[constants.MountOnStartOnlyAttribute] == "true"
+		if isWorkspaceStarted && mountOnStartOnly {
+			continue
+		}
+
 		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {

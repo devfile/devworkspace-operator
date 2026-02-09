@@ -151,4 +151,10 @@ const (
 	// of a cloned project. If the bootstrap process is successful, project-clone will automatically remove this attribute
 	// from the DevWorkspace
 	BootstrapDevWorkspaceAttribute = "controller.devfile.io/bootstrap-devworkspace"
+
+	// MountOnStartOnlyAttribute is an attribute applied to Kubernetes resources to indicate that they should only
+	// be mounted to a workspace when it starts from a stopped state. When this attribute is set to "true", newly created
+	// or updated resources will not be automatically mounted to running workspaces, preventing unwanted workspace
+	// restarts.
+	MountOnStartOnlyAttribute = "controller.devfile.io/mount-on-start-only"
 )

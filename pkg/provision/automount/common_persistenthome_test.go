@@ -56,7 +56,7 @@ func TestProvisionAutomountResourcesIntoPersistentHomeEnabled(t *testing.T) {
 				Client: fake.NewClientBuilder().WithObjects(tt.Input.allObjects...).Build(),
 			}
 
-			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, true)
+			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, true, false)
 
 			if !assert.NoError(t, err, "Unexpected error") {
 				return

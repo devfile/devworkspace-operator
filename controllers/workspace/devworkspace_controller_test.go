@@ -580,6 +580,264 @@ var _ = Describe("DevWorkspace Controller", func() {
 			}
 		})
 
+		It("Sorts automount secrets in consistent order", func() {
+			By("Creating automount secrets in non-sorted order")
+			secretZ := generateSecret("secret-z", corev1.SecretTypeOpaque)
+			secretZ.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secretZ.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/z"
+			createObject(secretZ)
+			defer deleteObject(secretZ)
+
+			secretA := generateSecret("secret-a", corev1.SecretTypeOpaque)
+			secretA.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secretA.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/a"
+			createObject(secretA)
+			defer deleteObject(secretA)
+
+			secretM := generateSecret("secret-m", corev1.SecretTypeOpaque)
+			secretM.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secretM.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/m"
+			createObject(secretM)
+			defer deleteObject(secretM)
+
+			// Create secrets with numeric suffixes to test numeric sorting
+			secret15 := generateSecret("automount-secret-15", corev1.SecretTypeOpaque)
+			secret15.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secret15.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/15"
+			createObject(secret15)
+			defer deleteObject(secret15)
+
+			secret02 := generateSecret("automount-secret-02", corev1.SecretTypeOpaque)
+			secret02.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secret02.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/02"
+			createObject(secret02)
+			defer deleteObject(secret02)
+
+			secret08 := generateSecret("automount-secret-08", corev1.SecretTypeOpaque)
+			secret08.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secret08.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/08"
+			createObject(secret08)
+			defer deleteObject(secret08)
+
+			By("Creating DevWorkspace")
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			By("Verifying secrets are sorted in deployment volumes")
+
+			expectedSecretNames := []string{"secret-a", "secret-m", "secret-z", "automount-secret-02", "automount-secret-08", "automount-secret-15"}
+			var automountVolumes []corev1.Volume
+			for _, vol := range deploy.Spec.Template.Spec.Volumes {
+				if vol.Secret != nil {
+					for _, name := range expectedSecretNames {
+						if vol.Name == name && vol.Secret.SecretName == name {
+							automountVolumes = append(automountVolumes, vol)
+							break
+						}
+					}
+				}
+			}
+
+			// Verify we found all expected volumes
+			Expect(automountVolumes).Should(HaveLen(6), "Should have 6 automount secret volumes")
+
+			// Verify volumes are in sorted order (alphabetically by volume name, which matches secret name)
+			expectedOrder := []string{
+				"automount-secret-02",
+				"automount-secret-08",
+				"automount-secret-15",
+				"secret-a",
+				"secret-m",
+				"secret-z",
+			}
+
+			actualOrder := make([]string, len(automountVolumes))
+			for i, vol := range automountVolumes {
+				actualOrder[i] = vol.Name
+			}
+
+			Expect(actualOrder).Should(Equal(expectedOrder), "Automount secret volumes should be sorted alphabetically by volume name")
+		})
+
+		It("Sorts automount configmaps in consistent order", func() {
+			By("Creating automount configmaps in non-sorted order")
+			configmapZ := generateConfigMap("configmap-z")
+			configmapZ.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmapZ.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/z"
+			createObject(configmapZ)
+			defer deleteObject(configmapZ)
+
+			configmapA := generateConfigMap("configmap-a")
+			configmapA.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmapA.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/a"
+			createObject(configmapA)
+			defer deleteObject(configmapA)
+
+			configmapM := generateConfigMap("configmap-m")
+			configmapM.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmapM.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/m"
+			createObject(configmapM)
+			defer deleteObject(configmapM)
+
+			// Create configmaps with numeric suffixes to test numeric sorting
+			configmap15 := generateConfigMap("automount-cm-15")
+			configmap15.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmap15.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/15"
+			createObject(configmap15)
+			defer deleteObject(configmap15)
+
+			configmap02 := generateConfigMap("automount-cm-02")
+			configmap02.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmap02.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/02"
+			createObject(configmap02)
+			defer deleteObject(configmap02)
+
+			configmap08 := generateConfigMap("automount-cm-08")
+			configmap08.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmap08.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/08"
+			createObject(configmap08)
+			defer deleteObject(configmap08)
+
+			By("Creating DevWorkspace")
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			By("Verifying configmaps are sorted in deployment volumes")
+
+			expectedConfigMapNames := []string{"configmap-a", "configmap-m", "configmap-z", "automount-cm-02", "automount-cm-08", "automount-cm-15"}
+			var automountVolumes []corev1.Volume
+			for _, vol := range deploy.Spec.Template.Spec.Volumes {
+				if vol.ConfigMap != nil {
+					for _, name := range expectedConfigMapNames {
+						if vol.Name == name && vol.ConfigMap.Name == name {
+							automountVolumes = append(automountVolumes, vol)
+							break
+						}
+					}
+				}
+			}
+
+			// Verify we found all expected volumes
+			Expect(automountVolumes).Should(HaveLen(6), "Should have 6 automount configmap volumes")
+
+			// Verify volumes are in sorted order (alphabetically by volume name, which matches configmap name)
+			expectedOrder := []string{
+				"automount-cm-02",
+				"automount-cm-08",
+				"automount-cm-15",
+				"configmap-a",
+				"configmap-m",
+				"configmap-z",
+			}
+
+			actualOrder := make([]string, len(automountVolumes))
+			for i, vol := range automountVolumes {
+				actualOrder[i] = vol.Name
+			}
+
+			Expect(actualOrder).Should(Equal(expectedOrder), "Automount configmap volumes should be sorted alphabetically by volume name")
+		})
+
+		It("Sorts mixed automount secrets and configmaps together", func() {
+			By("Creating automount secrets and configmaps in non-sorted order")
+			secretB := generateSecret("secret-b", corev1.SecretTypeOpaque)
+			secretB.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secretB.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/b"
+			createObject(secretB)
+			defer deleteObject(secretB)
+
+			secretD := generateSecret("secret-d", corev1.SecretTypeOpaque)
+			secretD.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secretD.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/secret/d"
+			createObject(secretD)
+			defer deleteObject(secretD)
+
+			configmapA := generateConfigMap("configmap-a")
+			configmapA.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmapA.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/a"
+			createObject(configmapA)
+			defer deleteObject(configmapA)
+
+			configmapC := generateConfigMap("configmap-c")
+			configmapC.Labels[constants.DevWorkspaceMountLabel] = "true"
+			configmapC.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/configmap/c"
+			createObject(configmapC)
+			defer deleteObject(configmapC)
+
+			By("Creating DevWorkspace")
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			By("Verifying secrets and configmaps are sorted together")
+			expectedNames := []string{"configmap-a", "configmap-c", "secret-b", "secret-d"}
+			var automountVolumes []corev1.Volume
+			for _, vol := range deploy.Spec.Template.Spec.Volumes {
+				if vol.Secret != nil {
+					for _, name := range expectedNames {
+						if vol.Name == name && vol.Secret.SecretName == name {
+							automountVolumes = append(automountVolumes, vol)
+							break
+						}
+					}
+				}
+				if vol.ConfigMap != nil {
+					for _, name := range expectedNames {
+						if vol.Name == name && vol.ConfigMap.Name == name {
+							automountVolumes = append(automountVolumes, vol)
+							break
+						}
+					}
+				}
+			}
+
+			Expect(automountVolumes).Should(HaveLen(4), "Should have 4 automount volumes (2 secrets + 2 configmaps)")
+
+			// All volumes should be sorted together alphabetically
+			expectedOrder := []string{
+				"configmap-a",
+				"configmap-c",
+				"secret-b",
+				"secret-d",
+			}
+
+			actualOrder := make([]string, len(automountVolumes))
+			for i, vol := range automountVolumes {
+				actualOrder[i] = vol.Name
+			}
+
+			Expect(actualOrder).Should(Equal(expectedOrder), "Automount volumes (secrets and configmaps) should be sorted together alphabetically")
+		})
+
 		It("Detects changes to automount resources and reconciles", func() {
 			// NOTE: timeout for this test is reduced, as eventually DWO will reconcile the workspace by coincidence and notice
 			// the automount secret.

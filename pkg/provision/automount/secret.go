@@ -36,6 +36,7 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 	}); err != nil {
 		return nil, err
 	}
+	sortSecrets(secrets.Items)
 	var allAutoMountResouces []Resources
 	for _, secret := range secrets.Items {
 		if msg := checkAutomountVolumeForPotentialError(&secret); msg != "" {

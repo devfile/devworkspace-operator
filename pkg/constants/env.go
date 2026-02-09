@@ -34,6 +34,12 @@ const (
 	// DevWorkspaceIdleTimeout contains env var name which value is the suggested idle timeout
 	DevWorkspaceIdleTimeout = "DEVWORKSPACE_IDLE_TIMEOUT"
 
+	// DevWorkspaceHostUsers contains the env var name whose value indicates whether the container
+	// runs in the host's user namespace. When set to "false", container images should adjust their
+	// logic to work in a dedicated user namespace (e.g., file permissions, UID/GID handling).
+	// See: https://github.com/devfile/developer-images/pull/232
+	DevWorkspaceHostUsers = "HOST_USERS"
+
 	// DevWorkspaceComponentName contains env var name which indicates from which devfile container component
 	// the container is created from. Note the flattened devfile is used to evaluate it.
 	DevWorkspaceComponentName = "DEVWORKSPACE_COMPONENT_NAME"

@@ -159,6 +159,18 @@ func WorkspaceSCCRolebindingName(sccName string) string {
 	return fmt.Sprintf("devworkspace-use-%s", sccName)
 }
 
+func RegistryImagePullerRoleName() string {
+	return "system:image-puller"
+}
+
+func RegistryImageBuilderRoleName() string {
+	return "system:image-builder"
+}
+
+func RegistryImagePullerRolebindingName(namespace string) string {
+	return fmt.Sprintf("devworkspace-registry-image-puller-%s-binding", namespace)
+}
+
 // OldWorkspaceRoleName returns the name used for the workspace serviceaccount role
 //
 // Deprecated: use WorkspaceRoleName() instead.

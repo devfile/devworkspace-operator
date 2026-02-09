@@ -25,6 +25,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
@@ -104,6 +105,7 @@ var (
 )
 
 func TestSyncRBAC(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 	testdw1 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw2 := getTestDevWorkspaceWithAttributes(t, "test-devworkspace2", constants.WorkspaceSCCAttribute, testSCCName)
 	testdw1SAName := common.ServiceAccountName(testdw1)

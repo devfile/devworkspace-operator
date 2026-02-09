@@ -28,6 +28,8 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/library/projects"
+	"github.com/devfile/devworkspace-operator/pkg/library/restore"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
@@ -36,6 +38,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -1022,6 +1025,204 @@ var _ = Describe("DevWorkspace Controller", func() {
 				return err != nil && k8sErrors.IsNotFound(err)
 			}, timeout, interval).Should(BeTrue(), "Finalizer should be cleared and workspace should be deleted")
 		})
+	})
+
+	Context("Workspace Restore", func() {
+		const testURL = "test-url"
+
+		BeforeEach(func() {
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						fmt.Sprintf("%s/healthz", testURL): {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+		})
+
+		AfterEach(func() {
+			deleteDevWorkspace(devWorkspaceName)
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+		})
+
+		It("Restores workspace from backup with common PVC", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+						Enable: ptr.To[bool](true),
+						Registry: &controllerv1alpha1.RegistryConfig{
+							Path: "localhost:5000",
+						},
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+			By("Reading DevWorkspace with restore configuration from testdata file")
+			createDevWorkspace(devWorkspaceName, "restore-workspace-common.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Waiting for DevWorkspaceRouting to be created")
+			dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+			dwrName := common.DevWorkspaceRoutingName(workspaceID)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName(dwrName, testNamespace), dwr)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting should be created")
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			By("Setting the deployment to have 1 ready replica")
+			markDeploymentReady(common.DeploymentName(devworkspace.Status.DevWorkspaceId))
+
+			deployment := &appsv1.Deployment{}
+			err := k8sClient.Get(ctx, namespacedName(devworkspace.Status.DevWorkspaceId, devworkspace.Namespace), deployment)
+			Expect(err).ToNot(HaveOccurred(), "Failed to get DevWorkspace deployment")
+
+			initContainers := deployment.Spec.Template.Spec.InitContainers
+			Expect(len(initContainers)).To(BeNumerically(">", 0), "No initContainers found in deployment")
+
+			var restoreInitContainer corev1.Container
+			var cloneInitContainer corev1.Container
+			for _, container := range initContainers {
+				if container.Name == restore.WorkspaceRestoreContainerName {
+					restoreInitContainer = container
+				}
+				if container.Name == projects.ProjectClonerContainerName {
+					cloneInitContainer = container
+				}
+			}
+			Expect(cloneInitContainer.Name).To(BeEmpty(), "Project clone init container should be omitted when restoring from backup")
+			Expect(restoreInitContainer).ToNot(BeNil(), "Workspace restore init container should not be nil")
+			Expect(restoreInitContainer.Name).To(Equal(restore.WorkspaceRestoreContainerName), "Workspace restore init container should be present in deployment")
+
+			Expect(restoreInitContainer.Command).To(Equal([]string{"/workspace-recovery.sh"}), "Restore init container should have correct command")
+			Expect(restoreInitContainer.Args).To(Equal([]string{"--restore"}), "Restore init container should have correct args")
+			Expect(restoreInitContainer.VolumeMounts).To(ContainElement(corev1.VolumeMount{
+				Name:        "claim-devworkspace", // PVC name for common storage
+				MountPath:   constants.DefaultProjectsSourcesRoot,
+				ReadOnly:    false,
+				SubPath:     workspaceID + "/projects", // Dynamic workspace ID + projects
+				SubPathExpr: "",
+			}), "Restore init container should have workspace storage volume mounted at correct path")
+
+		})
+		It("Restores workspace from backup with per-workspace PVC", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+						Enable: ptr.To[bool](true),
+						Registry: &controllerv1alpha1.RegistryConfig{
+							Path: "localhost:5000",
+						},
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+			By("Reading DevWorkspace with restore configuration from testdata file")
+			createDevWorkspace(devWorkspaceName, "restore-workspace-perworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Waiting for DevWorkspaceRouting to be created")
+			dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+			dwrName := common.DevWorkspaceRoutingName(workspaceID)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName(dwrName, testNamespace), dwr)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting should be created")
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			By("Setting the deployment to have 1 ready replica")
+			markDeploymentReady(common.DeploymentName(devworkspace.Status.DevWorkspaceId))
+
+			deployment := &appsv1.Deployment{}
+			err := k8sClient.Get(ctx, namespacedName(devworkspace.Status.DevWorkspaceId, devworkspace.Namespace), deployment)
+			Expect(err).ToNot(HaveOccurred(), "Failed to get DevWorkspace deployment")
+
+			initContainers := deployment.Spec.Template.Spec.InitContainers
+			Expect(len(initContainers)).To(BeNumerically(">", 0), "No initContainers found in deployment")
+
+			var restoreInitContainer corev1.Container
+			var cloneInitContainer corev1.Container
+			for _, container := range initContainers {
+				if container.Name == restore.WorkspaceRestoreContainerName {
+					restoreInitContainer = container
+				}
+				if container.Name == projects.ProjectClonerContainerName {
+					cloneInitContainer = container
+				}
+			}
+			Expect(cloneInitContainer.Name).To(BeEmpty(), "Project clone init container should be omitted when restoring from backup")
+			Expect(restoreInitContainer).ToNot(BeNil(), "Workspace restore init container should not be nil")
+			Expect(restoreInitContainer.Name).To(Equal(restore.WorkspaceRestoreContainerName), "Workspace restore init container should be present in deployment")
+
+			Expect(restoreInitContainer.Command).To(Equal([]string{"/workspace-recovery.sh"}), "Restore init container should have correct command")
+			Expect(restoreInitContainer.Args).To(Equal([]string{"--restore"}), "Restore init container should have correct args")
+			Expect(restoreInitContainer.VolumeMounts).To(ContainElement(corev1.VolumeMount{
+				Name:        common.PerWorkspacePVCName(workspaceID),
+				MountPath:   constants.DefaultProjectsSourcesRoot,
+				ReadOnly:    false,
+				SubPath:     "projects",
+				SubPathExpr: "",
+			}), "Restore init container should have workspace storage volume mounted at correct path")
+
+		})
+		It("Doesn't restore workspace from backup if restore is disabled", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+						Enable: ptr.To[bool](true),
+						Registry: &controllerv1alpha1.RegistryConfig{
+							Path: "localhost:5000",
+						},
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+			By("Reading DevWorkspace with restore configuration from testdata file")
+			createDevWorkspace(devWorkspaceName, "restore-workspace-disabled.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Waiting for DevWorkspaceRouting to be created")
+			dwr := &controllerv1alpha1.DevWorkspaceRouting{}
+			dwrName := common.DevWorkspaceRoutingName(workspaceID)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, namespacedName(dwrName, testNamespace), dwr)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting should be created")
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			By("Setting the deployment to have 1 ready replica")
+			markDeploymentReady(common.DeploymentName(devworkspace.Status.DevWorkspaceId))
+
+			deployment := &appsv1.Deployment{}
+			err := k8sClient.Get(ctx, namespacedName(devworkspace.Status.DevWorkspaceId, devworkspace.Namespace), deployment)
+			Expect(err).ToNot(HaveOccurred(), "Failed to get DevWorkspace deployment")
+
+			initContainers := deployment.Spec.Template.Spec.InitContainers
+			Expect(len(initContainers)).To(BeNumerically(">", 0), "No initContainers found in deployment")
+
+			var restoreInitContainer corev1.Container
+			var cloneInitContainer corev1.Container
+			for _, container := range initContainers {
+				if container.Name == restore.WorkspaceRestoreContainerName {
+					restoreInitContainer = container
+				}
+				if container.Name == projects.ProjectClonerContainerName {
+					cloneInitContainer = container
+				}
+			}
+			Expect(restoreInitContainer.Name).To(BeEmpty(), "Workspace restore init container should be omitted when restore is disabled")
+			Expect(cloneInitContainer).ToNot(BeNil(), "Project clone init container should not be nil")
+
+		})
+
 	})
 
 	Context("Edge cases", func() {

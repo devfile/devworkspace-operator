@@ -160,7 +160,11 @@ func WorkspaceSCCRolebindingName(sccName string) string {
 }
 
 func RegistryImagePullerRoleName() string {
-	return fmt.Sprintf("system:image-puller")
+	return "system:image-puller"
+}
+
+func RegistryImageBuilderRoleName() string {
+	return "system:image-builder"
 }
 
 func RegistryImagePullerRolebindingName(namespace string) string {

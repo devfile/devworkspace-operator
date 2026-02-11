@@ -38,9 +38,7 @@ files within that branch to reflect the new version. This branch should then be
 tested, with additional commits cherry-picked as necessary to prepare for
 release. Once the HEAD commit of the '0.<VERSION>.x' branch is ready for
 release, use the '--release' from the release branch to create the release tag
-and build and push release container images to the Quay repo. Running with the
-release flag will also update versions in the release branch to reflect the next
-bugfix release (e.g. will update from v0.8.0 to v0.8.1).
+and build and push release container images to the Quay repo.
 
 To issue a bugfix release, cherry-pick commits into the existing release branch
 as necessary and run this script with the '--release' flag for the given bugfix
@@ -324,19 +322,6 @@ release() {
 
   # Commit changes from rendering digests bundle
   git_commit_and_push "[post-release] Add OLM digest bundle for $VERSION in $X_BRANCH" "ci-add-digest-bundle-$VERSION"
-
-  # Update ${X_BRANCH} to the new rc version
-  git checkout "${X_BRANCH}"
-
-  # bump the z digit
-  [[ ${VERSION#v} =~ ^([0-9]+)\.([0-9]+)\.([0-9]+) ]] \
-    && BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}";  \
-    NEXT="${BASH_REMATCH[3]}"; (( NEXT=NEXT+1 )) # for VERSION=0.1.2, get BASE=0.1, NEXT=3
-  NEXT_VERSION_Z="v${BASE}.${NEXT}"
-
-  update_version "$NEXT_VERSION_Z"
-  update_images "$NEXT_VERSION_Z"
-  git_commit_and_push "chore: release: bump to ${NEXT_VERSION_Z} in $X_BRANCH" "ci-bump-$X_BRANCH-$NEXT_VERSION_Z"
 
   echo "[INFO] Release is done"
 }

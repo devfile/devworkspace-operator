@@ -486,6 +486,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 					to.Workspace.BackupCronJob.OrasConfig.ExtraArgs = from.Workspace.BackupCronJob.OrasConfig.ExtraArgs
 				}
 			}
+			if from.Workspace.BackupCronJob.BackoffLimit != nil {
+				to.Workspace.BackupCronJob.BackoffLimit = from.Workspace.BackupCronJob.BackoffLimit
+			}
 		}
 
 		if from.Workspace.PostStartTimeout != "" {

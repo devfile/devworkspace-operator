@@ -228,29 +228,3 @@ func getSourceForComponent(component dw.Component) string {
 	}
 	return fmt.Sprintf("component %s", component.Name)
 }
-
-// MergeEnvVars merges two slices of environment variables, with variables in
-// 'toAdd' taking precedence over those in 'existing' when names conflict.
-// The order of variables in the result is non-deterministic due to map usage.
-// Returns a new slice without modifying the input slices.
-func MergeEnvVars(existing, toAdd []corev1.EnvVar) []corev1.EnvVar {
-	envMap := make(map[string]corev1.EnvVar, len(existing)+len(toAdd))
-
-	// Add existing env vars first
-	for _, env := range existing {
-		envMap[env.Name] = env
-	}
-
-	// Add new env vars (overrides existing with same name)
-	for _, env := range toAdd {
-		envMap[env.Name] = env
-	}
-
-	// Convert map back to slice
-	result := make([]corev1.EnvVar, 0, len(envMap))
-	for _, env := range envMap {
-		result = append(result, env)
-	}
-
-	return result
-}

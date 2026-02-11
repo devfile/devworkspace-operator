@@ -82,6 +82,8 @@ var _ = BeforeSuite(func() {
 	Expect(setupEnvVars()).To(Succeed())
 
 	By("bootstrapping test environment")
+	k8sVersion := os.Getenv("ENVTEST_K8S_VERSION")
+
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
 			filepath.Join("..", "..", "..", "deploy", "templates", "crd", "bases"),
@@ -89,7 +91,7 @@ var _ = BeforeSuite(func() {
 			filepath.Join(".", "testdata", "route.crd.yaml"),
 		},
 		ErrorIfCRDPathMissing: true,
-		BinaryAssetsDirectory: filepath.Join("..", "..", "..", "bin", "k8s", fmt.Sprintf("1.24.2-%s-%s", runtime.GOOS, runtime.GOARCH)),
+		BinaryAssetsDirectory: filepath.Join("..", "..", "..", "bin", "k8s", fmt.Sprintf("%s-%s-%s", k8sVersion, runtime.GOOS, runtime.GOARCH)),
 	}
 
 	cfg, err := testEnv.Start()

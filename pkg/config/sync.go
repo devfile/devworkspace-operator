@@ -486,6 +486,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 					to.Workspace.BackupCronJob.OrasConfig.ExtraArgs = from.Workspace.BackupCronJob.OrasConfig.ExtraArgs
 				}
 			}
+			if from.Workspace.BackupCronJob.BackoffLimit != nil {
+				to.Workspace.BackupCronJob.BackoffLimit = from.Workspace.BackupCronJob.BackoffLimit
+			}
 		}
 
 		if from.Workspace.PostStartTimeout != "" {
@@ -755,11 +758,21 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 			if workspace.BackupCronJob.Enable != nil && *workspace.BackupCronJob.Enable != *defaultConfig.Workspace.BackupCronJob.Enable {
 				config = append(config, fmt.Sprintf("workspace.backupCronJob.enable=%t", *workspace.BackupCronJob.Enable))
 			}
-
 			if workspace.BackupCronJob.Schedule != defaultConfig.Workspace.BackupCronJob.Schedule {
-				config = append(config, fmt.Sprintf("workspace.backupCronJob.cronJobScript=%s", workspace.BackupCronJob.Schedule))
+				config = append(config, fmt.Sprintf("workspace.backupCronJob.schedule=%s", workspace.BackupCronJob.Schedule))
 			}
-
+			if workspace.BackupCronJob.Registry != nil {
+				config = append(config, fmt.Sprintf("workspace.backupCronJob.registry.path=%s", workspace.BackupCronJob.Registry.Path))
+				config = append(config, fmt.Sprintf("workspace.backupCronJob.registry.authSecret=%s", workspace.BackupCronJob.Registry.AuthSecret))
+			}
+			if workspace.BackupCronJob.OrasConfig != nil {
+				if workspace.BackupCronJob.OrasConfig.ExtraArgs != "" {
+					config = append(config, fmt.Sprintf("workspace.backupCronJob.orasConfig.extraArgs=%s", workspace.BackupCronJob.OrasConfig.ExtraArgs))
+				}
+			}
+			if workspace.BackupCronJob.BackoffLimit != nil && *workspace.BackupCronJob.BackoffLimit != *defaultConfig.Workspace.BackupCronJob.BackoffLimit {
+				config = append(config, fmt.Sprintf("workspace.backupCronJob.backoffLimit=%d", *workspace.BackupCronJob.BackoffLimit))
+			}
 		}
 		if workspace.HostUsers != nil {
 			config = append(config, fmt.Sprintf("workspace.hostUsers=%t", *workspace.HostUsers))

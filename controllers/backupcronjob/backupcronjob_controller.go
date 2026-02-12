@@ -386,6 +386,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		},
 		Spec: batchv1.JobSpec{
 			TTLSecondsAfterFinished: ptr.To[int32](120),
+			BackoffLimit:            backUpConfig.BackoffLimit,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{

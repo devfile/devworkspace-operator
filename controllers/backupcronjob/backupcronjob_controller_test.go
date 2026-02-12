@@ -377,6 +377,43 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(container.VolumeMounts).Should(ContainElements(expectedVolumeMounts), "container volume mounts should include mounts needed for backup")
 		})
 
+		It("creates a Job with configured backoffLimit", func() {
+			enabled := true
+			schedule := "* * * * *"
+			backoffLimit := int32(1)
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:       &enabled,
+							Schedule:     schedule,
+							BackoffLimit: &backoffLimit,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-backoff", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-backoff"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+			Expect(jobList.Items[0].Spec.BackoffLimit).ToNot(BeNil())
+			Expect(*jobList.Items[0].Spec.BackoffLimit).To(Equal(int32(1)))
+		})
+
 		It("does not create a Job when the DevWorkspace was stopped beyond time range", func() {
 			enabled := true
 			schedule := "* * * * *"

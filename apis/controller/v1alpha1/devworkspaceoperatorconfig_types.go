@@ -111,6 +111,12 @@ type BackupCronJobConfig struct {
 	// +kubebuilder:default:="0 1 * * *"
 	// +kubebuilder:validation:Optional
 	Schedule string `json:"schedule,omitempty"`
+	// BackoffLimit specifies the number of retries before marking a backup job as failed.
+	// Defaults to 3 if not specified.
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:default:=3
+	// +kubebuilder:validation:Optional
+	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
 }
 
 type RoutingConfig struct {

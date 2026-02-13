@@ -104,6 +104,15 @@ func (r *BackupCronJobReconciler) ensureImagePushRoleBinding(saName string, work
 		},
 	}
 
+	if err := controllerutil.SetControllerReference(workspace, roleBinding, r.Scheme); err != nil {
+		return fmt.Errorf(
+			"failed to set controller reference for RoleBinding %s/%s: %w",
+			roleBinding.Namespace,
+			roleBinding.Name,
+			err,
+		)
+	}
+
 	_, err := sync.SyncObjectWithCluster(roleBinding, clusterAPI)
 	if err != nil {
 		if _, ok := err.(*sync.NotInSyncError); !ok {

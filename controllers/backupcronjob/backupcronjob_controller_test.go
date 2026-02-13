@@ -26,6 +26,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -64,6 +65,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 		Expect(dwv2.AddToScheme(scheme)).To(Succeed())
 		Expect(corev1.AddToScheme(scheme)).To(Succeed())
 		Expect(batchv1.AddToScheme(scheme)).To(Succeed())
+		Expect(rbacv1.AddToScheme(scheme)).To(Succeed())
 		fakeClient = fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(&controllerv1alpha1.DevWorkspaceOperatorConfig{}).Build()
 		log = zap.New(zap.UseDevMode(true)).WithName("BackupCronJobReconcilerTest")
 
@@ -613,6 +615,29 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			// Calling again should be idempotent
 			err = reconciler.ensureJobRunnerRBAC(ctx, dw)
 			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("creates RoleBinding with OwnerReference on OpenShift", func() {
+			infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+
+			dw := createDevWorkspace("dw-rbac-os", "ns-rbac-os", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.DevWorkspaceId = "id-rbac-os"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			err := reconciler.ensureJobRunnerRBAC(ctx, dw)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Check RoleBinding
+			rb := &rbacv1.RoleBinding{}
+			err = fakeClient.Get(ctx, types.NamespacedName{
+				Name:      "devworkspace-image-builder-id-rbac-os",
+				Namespace: dw.Namespace,
+			}, rb)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(rb.OwnerReferences).To(HaveLen(1))
+			Expect(rb.OwnerReferences[0].Name).To(Equal(dw.Name))
+			Expect(rb.OwnerReferences[0].Kind).To(Equal("DevWorkspace"))
 		})
 	})
 

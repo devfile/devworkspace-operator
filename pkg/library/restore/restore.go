@@ -19,6 +19,7 @@ package restore
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
@@ -82,7 +83,9 @@ func GetWorkspaceRestoreInitContainer(
 			return nil, nil, fmt.Errorf("workspace restore requested but backup cron job registry is not configured")
 		}
 		// Use default backup image location based on workspace info
-		restoreSourceImage = workspace.Config.Workspace.BackupCronJob.Registry.Path + "/" + workspace.Namespace + "/" + workspace.Name + ":latest"
+		// Remove trailing slash from registry path to avoid double slashes in image reference
+		registryPath := strings.TrimRight(workspace.Config.Workspace.BackupCronJob.Registry.Path, "/")
+		restoreSourceImage = registryPath + "/" + workspace.Namespace + "/" + workspace.Name + ":latest"
 	}
 	if restoreSourceImage == "" {
 		return nil, nil, fmt.Errorf("empty value for attribute %s is invalid", constants.WorkspaceRestoreSourceImageAttribute)

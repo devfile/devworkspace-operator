@@ -70,7 +70,8 @@ backup() {
   : "${DEVWORKSPACE_BACKUP_REGISTRY:?Missing DEVWORKSPACE_BACKUP_REGISTRY}"
   : "${DEVWORKSPACE_NAMESPACE:?Missing DEVWORKSPACE_NAMESPACE}"
   : "${DEVWORKSPACE_NAME:?Missing DEVWORKSPACE_NAME}"
-  BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY}/${DEVWORKSPACE_NAMESPACE}/${DEVWORKSPACE_NAME}:latest"
+  # Remove trailing slash from registry path to avoid double slashes in image reference
+  BACKUP_IMAGE="${DEVWORKSPACE_BACKUP_REGISTRY%/}/${DEVWORKSPACE_NAMESPACE}/${DEVWORKSPACE_NAME}:latest"
   TARBALL_NAME="devworkspace-backup.tar.gz"
   cd /tmp
   echo "Backing up devworkspace '$DEVWORKSPACE_NAME' in namespace '$DEVWORKSPACE_NAMESPACE' to image '$BACKUP_IMAGE'"

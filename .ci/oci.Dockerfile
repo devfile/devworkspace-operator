@@ -30,7 +30,9 @@ RUN export ARCH="$(uname -m)" && if [[ ${ARCH} == "x86_64" ]]; then export ARCH=
     curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" -o go.tar.gz && \
     rm -rf /usr/local/go && \
     tar -C /usr/local -xzf go.tar.gz && \
-    rm go.tar.gz
+    rm go.tar.gz && \
+    ln -sf /usr/local/go/bin/go /usr/bin/go.real && \
+    ln -sf /usr/local/go/bin/gofmt /usr/bin/gofmt
 RUN go version
 
 # Temporary workaround since mirror.centos.org is down and can be replaced with vault.centos.org

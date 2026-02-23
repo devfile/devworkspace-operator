@@ -1,0 +1,30 @@
+name: Provisions automount PVC with subPath
+
+input:
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: test-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: /data
+          controller.devfile.io/mount-sub-path: my/subdirectory
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output:
+  volumes:
+  - name: test-pvc
+    persistentVolumeClaim:
+      claimName: test-pvc
+  volumeMounts:
+  - name: test-pvc
+    mountPath: /data
+    subPath: my/subdirectory

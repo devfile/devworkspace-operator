@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -41,6 +41,7 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 	var volumeMounts []corev1.VolumeMount
 	for _, pvc := range pvcs.Items {
 		mountPath := pvc.Annotations[constants.DevWorkspaceMountPathAnnotation]
+		subPath := pvc.Annotations[constants.DevWorkspaceMountSubPathAnnotation]
 		if mountPath == "" {
 			mountPath = path.Join("/tmp/", pvc.Name)
 		}
@@ -62,6 +63,7 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      common.AutoMountPVCVolumeName(pvc.Name),
 			MountPath: mountPath,
+			SubPath:   subPath,
 		})
 	}
 	return &Resources{

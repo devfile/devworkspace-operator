@@ -1,0 +1,28 @@
+name: Provisions automount PVC without subPath
+
+input:
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: test-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: /data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output:
+  volumes:
+  - name: test-pvc
+    persistentVolumeClaim:
+      claimName: test-pvc
+  volumeMounts:
+  - name: test-pvc
+    mountPath: /data

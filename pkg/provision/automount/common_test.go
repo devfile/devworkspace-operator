@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -51,10 +51,11 @@ const (
 type testCase struct {
 	Name  string `json:"name"`
 	Input struct {
-		// Secrets and Configmaps are necessary for deserialization from a testcase
-		Secrets    []corev1.Secret    `json:"secrets"`
-		ConfigMaps []corev1.ConfigMap `json:"configmaps"`
-		// allObjects contains all Secrets and Configmaps defined above, for convenience
+		// Secrets, Configmaps, and PVCs are necessary for deserialization from a testcase
+		Secrets    []corev1.Secret                `json:"secrets"`
+		ConfigMaps []corev1.ConfigMap             `json:"configmaps"`
+		PVCs       []corev1.PersistentVolumeClaim `json:"pvcs"`
+		// allObjects contains all Secrets, Configmaps, and PVCs defined above, for convenience
 		allObjects []client.Object
 	} `json:"input"`
 	Output struct {
@@ -381,6 +382,9 @@ func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
 	}
 	for idx := range test.Input.Secrets {
 		test.Input.allObjects = append(test.Input.allObjects, &test.Input.Secrets[idx])
+	}
+	for idx := range test.Input.PVCs {
+		test.Input.allObjects = append(test.Input.allObjects, &test.Input.PVCs[idx])
 	}
 
 	// Overwrite namespace for convenience

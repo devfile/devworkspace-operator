@@ -14,7 +14,6 @@
 #
 
 FROM registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.24-openshift-4.20
-FROM registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.24-openshift-4.20
 
 ENV GO_VERSION=1.25.7
 ENV GOROOT=/usr/local/go

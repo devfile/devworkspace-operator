@@ -1,4 +1,60 @@
 # DevWorkspace Operator Changelog
+
+# v0.40.0
+
+## Features
+
+### Per-workspace backup status tracking [#1549](https://github.com/devfile/devworkspace-operator/issues/1549)
+
+The backup controller now tracks backup status individually for each DevWorkspace using annotations. When a backup job completes or fails, the following annotations are set on the DevWorkspace:
+
+- `controller.devfile.io/last-backup-time`: timestamp of the last backup attempt
+- `controller.devfile.io/last-backup-successful`: whether the last backup succeeded
+
+This allows the controller to determine when each workspace needs a new backup based on its own backup history rather than a global timestamp.
+
+### Restore workspace from backup [#1525](https://github.com/devfile/devworkspace-operator/issues/1525)
+
+DevWorkspaces can now be restored from a backup by setting the `controller.devfile.io/restore-workspace: 'true'` attribute. When this attribute is set, the workspace deployment includes a restore init container that pulls the backed-up `/projects` content from an OCI registry instead of cloning from Git.
+
+By default, the restore source is derived from the admin-configured registry at `<registry>/<namespace>/<workspace>:latest`. Users can optionally specify a custom source image using the `controller.devfile.io/restore-source-image` attribute.
+
+```yaml
+kind: DevWorkspace
+spec:
+  template:
+    attributes:
+      controller.devfile.io/restore-workspace: 'true'
+      # Optional: restore from a specific image instead of the default backup registry
+      controller.devfile.io/restore-source-image: 'registry.example.com/my-backup:latest'
+```
+
+### Configurable backup job retry limit [#1579](https://github.com/devfile/devworkspace-operator/issues/1579)
+
+Administrators can now configure the maximum number of retries for backup jobs in the DevWorkspaceOperatorConfig via the `backoffLimit` field. The default value is 3.
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    backupCronJob:
+      backoffLimit: 5
+```
+
+### Inject HOST_USERS environment variable for user namespace configuration [#1582](https://github.com/devfile/devworkspace-operator/pull/1582)
+
+When `hostUsers` is set to `false` in the workspace configuration, the `HOST_USERS=false` environment variable is now automatically injected into workspace containers. This allows container images to detect that they are running in a dedicated user namespace and adjust their behavior accordingly.
+
+## Bug Fixes & Improvements
+
+- Sort automount configmaps and secrets to ensure deterministic ordering [#1578](https://github.com/devfile/devworkspace-operator/pull/1578)
+- Set owner reference for image-builder rolebindings to enable cleanup on DevWorkspace deletion [#1590](https://github.com/devfile/devworkspace-operator/pull/1590)
+- Fix trailing slashes in registry path causing malformed image references [#1592](https://github.com/devfile/devworkspace-operator/pull/1592)
+- Update Go to 1.25.7 [#1574](https://github.com/devfile/devworkspace-operator/pull/1574)
+
 # v0.39.0
 ## Features
 ### Implement backup feature for DevWorkspaces [#1524](https://github.com/devfile/devworkspace-operator/issues/1524)

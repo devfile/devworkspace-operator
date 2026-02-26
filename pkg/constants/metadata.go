@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -120,6 +120,12 @@ const (
 	// as read-only. If "true", the volume is mounted as read-only. PersistentVolumeClaims are by default mounted
 	// read-write. Automounted configmaps and secrets are always mounted read-only and this annotation is ignored.
 	DevWorkspaceMountReadyOnlyAnnotation = "controller.devfile.io/read-only"
+
+	// DevWorkspaceMountSubPathAnnotation is an annotation to configure a subPath for a mounted PVC volume.
+	// When set on a PVC with the automount label, the volume mount will use the specified subPath,
+	// allowing a subdirectory within the PVC to be mounted instead of the root.
+	// This annotation is only used for PersistentVolumeClaims.
+	DevWorkspaceMountSubPathAnnotation = "controller.devfile.io/mount-sub-path"
 
 	// DevWorkspaceRestrictedAccessAnnotation marks the intention that devworkspace access is restricted to only the creator; setting this
 	// annotation will cause devworkspace start to fail if webhooks are disabled.

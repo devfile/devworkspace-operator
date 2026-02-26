@@ -93,9 +93,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, r.markRoutingFailed(instance, "DevWorkspaceRouting requires field routingClass to be set")
 	}
 
-	solver, err := r.SolverGetter.GetSolver(r.Client, instance.Spec.RoutingClass)
+	solver, err := r.SolverGetter.GetSolver(r.Client, reqLogger, instance.Spec.RoutingClass)
 	if err != nil {
 		if errors.Is(err, solvers.RoutingNotSupported) {
+			reqLogger.Info("Routing class not supported by this controller, skipping reconciliation", "routingClass", instance.Spec.RoutingClass)
 			return reconcile.Result{}, nil
 		}
 		return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Invalid routingClass for DevWorkspace: %s", err))
@@ -125,9 +126,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	workspaceMeta := solvers.DevWorkspaceMetadata{
-		DevWorkspaceId: instance.Spec.DevWorkspaceId,
-		Namespace:      instance.Namespace,
-		PodSelector:    instance.Spec.PodSelector,
+		DevWorkspaceId:   instance.Spec.DevWorkspaceId,
+		DevWorkspaceName: instance.Name,
+		Namespace:        instance.Namespace,
+		PodSelector:      instance.Spec.PodSelector,
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]
@@ -147,6 +149,12 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		if errors.As(err, &invalid) {
 			reqLogger.Error(invalid, "routing controller considers routing invalid")
 			return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Unable to provision networking for DevWorkspace: %s", invalid))
+		}
+
+		var conflict *solvers.ServiceConflictError
+		if errors.As(err, &conflict) {
+			reqLogger.Error(conflict, "Routing controller detected a service conflict", "endpointName", conflict.EndpointName, "workspaceName", conflict.WorkspaceName)
+			return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Unable to provision networking for DevWorkspace: %s", conflict))
 		}
 
 		// generic error, just fail the reconciliation

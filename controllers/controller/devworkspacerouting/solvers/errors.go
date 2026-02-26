@@ -17,11 +17,27 @@ package solvers
 
 import (
 	"errors"
+	"fmt"
 	"time"
 )
 
 var _ error = (*RoutingNotReady)(nil)
 var _ error = (*RoutingInvalid)(nil)
+var _ error = (*ServiceConflictError)(nil)
+
+// ServiceConflictError is returned when a discoverable endpoint has a name that is already in use by
+// another DevWorkspace's service.
+type ServiceConflictError struct {
+	EndpointName  string
+	WorkspaceName string
+}
+
+func (e *ServiceConflictError) Error() string {
+	if e.WorkspaceName == "" {
+		return fmt.Sprintf("discoverable endpoint '%s' is already in use by another workspace", e.EndpointName)
+	}
+	return fmt.Sprintf("discoverable endpoint '%s' is already in use by workspace '%s'", e.EndpointName, e.WorkspaceName)
+}
 
 // RoutingNotSupported is used by the solvers when they supported the routingclass of the workspace they've been asked to route
 var RoutingNotSupported = errors.New("routingclass not supported by this controller")

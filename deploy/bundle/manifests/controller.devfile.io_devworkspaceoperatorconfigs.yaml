@@ -229,7 +229,7 @@ spec:
                         - path
                         type: object
                       schedule:
-                        default: 0 1 * * *
+                        default: 0 0 1 * *
                         description: |-
                           Schedule specifies the cron schedule for the backup cron job.
                           For example, "0 1 * * *" runs daily at 1 AM.

@@ -108,7 +108,7 @@ type BackupCronJobConfig struct {
 	OrasConfig *OrasConfig `json:"oras,omitempty"`
 	// Schedule specifies the cron schedule for the backup cron job.
 	// For example, "0 1 * * *" runs daily at 1 AM.
-	// +kubebuilder:default:="0 1 * * *"
+	// +kubebuilder:default:="0 0 1 * *"
 	// +kubebuilder:validation:Optional
 	Schedule string `json:"schedule,omitempty"`
 	// BackoffLimit specifies the number of retries before marking a backup job as failed.

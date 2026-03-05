@@ -16,15 +16,50 @@
 package automount
 
 import (
+	"encoding/json"
+	"fmt"
 	"path"
+	"strings"
 
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
+
+type mountPathEntry struct {
+	Path    string `json:"path"`
+	SubPath string `json:"subPath,omitempty"`
+}
+
+func parseMountPathAnnotation(annotation string, pvcName string) ([]mountPathEntry, error) {
+	if annotation == "" {
+		return []mountPathEntry{{Path: path.Join("/tmp/", pvcName)}}, nil
+	}
+
+	if !strings.HasPrefix(annotation, "[") {
+		return []mountPathEntry{{Path: annotation}}, nil
+	}
+
+	var entries []mountPathEntry
+	if err := json.Unmarshal([]byte(annotation), &entries); err != nil {
+		return nil, fmt.Errorf("failed to parse mount-path annotation on PVC %s: %w", pvcName, err)
+	}
+
+	if len(entries) == 0 {
+		return []mountPathEntry{{Path: path.Join("/tmp/", pvcName)}}, nil
+	}
+
+	for i, entry := range entries {
+		if entry.Path == "" {
+			return nil, fmt.Errorf("mount-path annotation on PVC %s: entry %d is missing required field 'path'", pvcName, i)
+		}
+	}
+
+	return entries, nil
+}
 
 func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error) {
 	pvcs := &corev1.PersistentVolumeClaimList{}
@@ -40,16 +75,7 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 	var volumes []corev1.Volume
 	var volumeMounts []corev1.VolumeMount
 	for _, pvc := range pvcs.Items {
-		mountPath := pvc.Annotations[constants.DevWorkspaceMountPathAnnotation]
-		subPath := pvc.Annotations[constants.DevWorkspaceMountSubPathAnnotation]
-		if mountPath == "" {
-			mountPath = path.Join("/tmp/", pvc.Name)
-		}
-
-		mountReadOnly := false
-		if pvc.Annotations[constants.DevWorkspaceMountReadyOnlyAnnotation] == "true" {
-			mountReadOnly = true
-		}
+		mountReadOnly := pvc.Annotations[constants.DevWorkspaceMountReadyOnlyAnnotation] == "true"
 
 		volumes = append(volumes, corev1.Volume{
 			Name: common.AutoMountPVCVolumeName(pvc.Name),
@@ -60,11 +86,19 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 				},
 			},
 		})
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      common.AutoMountPVCVolumeName(pvc.Name),
-			MountPath: mountPath,
-			SubPath:   subPath,
-		})
+
+		mountPathEntries, err := parseMountPathAnnotation(pvc.Annotations[constants.DevWorkspaceMountPathAnnotation], pvc.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, entry := range mountPathEntries {
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{
+				Name:      common.AutoMountPVCVolumeName(pvc.Name),
+				MountPath: entry.Path,
+				SubPath:   entry.SubPath,
+			})
+		}
 	}
 	return &Resources{
 		Volumes:      volumes,

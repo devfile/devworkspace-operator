@@ -1,4 +1,4 @@
-name: Provisions automount PVC with subPath
+name: Returns error for invalid JSON in mount-path annotation
 
 input:
   pvcs:
@@ -10,8 +10,7 @@ input:
         labels:
           controller.devfile.io/mount-to-devworkspace: "true"
         annotations:
-          controller.devfile.io/mount-path: /data
-          controller.devfile.io/mount-sub-path: my/subdirectory
+          controller.devfile.io/mount-path: '[{"path":"/data"'
       spec:
         accessModes:
           - ReadWriteOnce
@@ -20,11 +19,4 @@ input:
             storage: 1Gi
 
 output:
-  volumes:
-  - name: test-pvc
-    persistentVolumeClaim:
-      claimName: test-pvc
-  volumeMounts:
-  - name: test-pvc
-    mountPath: /data
-    subPath: my/subdirectory
+  errRegexp: "failed to parse mount-path annotation on PVC test-pvc"

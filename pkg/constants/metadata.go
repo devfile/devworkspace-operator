@@ -121,12 +121,6 @@ const (
 	// read-write. Automounted configmaps and secrets are always mounted read-only and this annotation is ignored.
 	DevWorkspaceMountReadyOnlyAnnotation = "controller.devfile.io/read-only"
 
-	// DevWorkspaceMountSubPathAnnotation is an annotation to configure a subPath for a mounted PVC volume.
-	// When set on a PVC with the automount label, the volume mount will use the specified subPath,
-	// allowing a subdirectory within the PVC to be mounted instead of the root.
-	// This annotation is only used for PersistentVolumeClaims.
-	DevWorkspaceMountSubPathAnnotation = "controller.devfile.io/mount-sub-path"
-
 	// DevWorkspaceRestrictedAccessAnnotation marks the intention that devworkspace access is restricted to only the creator; setting this
 	// annotation will cause devworkspace start to fail if webhooks are disabled.
 	// Operator also propagates it to the devworkspace-related objects to perform authorization.

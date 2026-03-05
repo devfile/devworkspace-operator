@@ -1,4 +1,4 @@
-name: Provisions automount PVC without subPath
+name: Provisions automount PVC with single entry JSON array
 
 input:
   pvcs:
@@ -10,7 +10,7 @@ input:
         labels:
           controller.devfile.io/mount-to-devworkspace: "true"
         annotations:
-          controller.devfile.io/mount-path: /data
+          controller.devfile.io/mount-path: '[{"path":"/data","subPath":"mydir"}]'
       spec:
         accessModes:
           - ReadWriteOnce
@@ -26,3 +26,4 @@ output:
   volumeMounts:
   - name: test-pvc
     mountPath: /data
+    subPath: mydir

@@ -1,0 +1,32 @@
+name: Provisions automount PVC with multiple subpath mounts via JSON array
+
+input:
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: test-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: '[{"path":"/var/logs","subPath":"data/logs"},{"path":"/etc/config","subPath":"data/config"}]'
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output:
+  volumes:
+  - name: test-pvc
+    persistentVolumeClaim:
+      claimName: test-pvc
+  volumeMounts:
+  - name: test-pvc
+    mountPath: /var/logs
+    subPath: data/logs
+  - name: test-pvc
+    mountPath: /etc/config
+    subPath: data/config

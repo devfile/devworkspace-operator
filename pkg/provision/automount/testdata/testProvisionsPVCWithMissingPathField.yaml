@@ -1,0 +1,22 @@
+name: Returns error when path field is missing in mount-path JSON entry
+
+input:
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: test-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: '[{"subPath":"data/logs"}]'
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output:
+  errRegexp: "mount-path annotation on PVC test-pvc: entry 0 is missing required field 'path'"

@@ -213,10 +213,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv1.DevWorkspace{}).Complete(); err != nil {
+	if err := ctrl.NewWebhookManagedBy(mgr, &dwv1.DevWorkspace{}).Complete(); err != nil {
 		setupLog.Error(err, "failed creating conversion webhook for DevWorkspaces v1alpha1")
 	}
-	if err := ctrl.NewWebhookManagedBy(mgr).For(&dwv2.DevWorkspace{}).Complete(); err != nil {
+	if err := ctrl.NewWebhookManagedBy(mgr, &dwv2.DevWorkspace{}).Complete(); err != nil {
 		setupLog.Error(err, "failed creating conversion webhook for DevWorkspaces v1alpha2")
 	}
 

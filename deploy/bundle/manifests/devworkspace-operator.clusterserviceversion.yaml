@@ -10,7 +10,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: devworkspace-operator.v0.40.0-dev
+  name: devworkspace-operator.v0.41.0-dev
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -534,7 +534,7 @@ spec:
     name: async_storage_server
   - image: quay.io/eclipse/che-sidecar-workspace-data-sync:0.0.1
     name: async_storage_sidecar
-  version: 0.40.0-dev
+  version: 0.41.0-dev
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

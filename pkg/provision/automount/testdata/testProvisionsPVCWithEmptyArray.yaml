@@ -1,0 +1,28 @@
+name: Provisions automount PVC with empty array falls back to default mount path
+
+input:
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: test-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: '[]'
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output:
+  volumes:
+  - name: test-pvc
+    persistentVolumeClaim:
+      claimName: test-pvc
+  volumeMounts:
+  - name: test-pvc
+    mountPath: /tmp/test-pvc

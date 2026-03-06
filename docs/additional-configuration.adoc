@@ -141,6 +141,16 @@ By default, resources will be mounted based on the resource name:
 Mounting resources can be additionally configured via **annotations**:
 
 * `controller.devfile.io/mount-path`: configure where the resource should be mounted
++
+For persistent volume claims, `controller.devfile.io/mount-path` also supports a JSON array to mount multiple subdirectories at different paths:
++
+[source,yaml]
+----
+annotations:
+  controller.devfile.io/mount-path: '[{"path":"/var/logs","subPath":"data/logs"},{"path":"/etc/config","subPath":"data/config"}]'
+----
++
+Each entry requires a `path` field (the container mount path) and an optional `subPath` field (the subdirectory within the PVC). An empty or missing annotation falls back to `/tmp/<pvc-name>`.
 * `controller.devfile.io/mount-access-mode`: for secrets and configmaps only, configure file permissions on files mounted from this configmap/secret. Permissions can be specified in decimal (e.g. `"511"`) or octal notation by prefixing with a "0" (e.g. `"0777"`)
 * `controller.devfile.io/mount-as`: for secrets and configmaps only, configure how the resource should be mounted to the workspace
 +

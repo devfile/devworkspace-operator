@@ -196,17 +196,21 @@ The secret must contain a label `controller.devfile.io/watch-secret=true` to be 
 kubectl label secret my-secret controller.devfile.io/watch-secret=true -n devworkspace-controller
 ```
 
-### Restore from backup
-We are aiming to provide automated restore functionality in future releases. But for now you can still
-manually restore the data from the backup archives created by the backup job.
+### Restore workspace from backup
 
-Since the backup archive is available in OCI registry you can use any OCI compatible tool to pull
-the archive locally. For example using [oras](https://github.com/oras-project/oras) cli tool:
+DevWorkspaces can be restored from a backup by setting the `controller.devfile.io/restore-workspace: 'true'` attribute. When this attribute is set, the workspace deployment includes a restore init container that pulls the backed-up `/projects` content from an OCI registry instead of cloning from Git.
 
-```bash
-oras pull <registry-path>/<devworkspace-name>:latest
+By default, the restore source is derived from the admin-configured registry at `<registry>/<namespace>/<workspace>:latest`. Users can optionally specify a custom source image using the `controller.devfile.io/restore-source-image` attribute.
+
+```yaml
+kind: DevWorkspace
+spec:
+  template:
+    attributes:
+      controller.devfile.io/restore-workspace: 'true'
+      # Optional: restore from a specific image instead of the default backup registry
+      controller.devfile.io/restore-source-image: 'registry.example.com/my-backup:latest'
 ```
-The archive will be downloaded as a `devworkspace-backup.tar.gz` file which you can extract and restore the data.
 
 ## Configuring PVC storage access mode
 

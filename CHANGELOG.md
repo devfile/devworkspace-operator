@@ -31,7 +31,7 @@ spec:
 
 ### Configurable backup job retry limit [#1579](https://github.com/devfile/devworkspace-operator/issues/1579)
 
-Administrators can now configure the maximum number of retries for backup jobs in the DevWorkspaceOperatorConfig via the `backoffLimit` field. The default value is 3.
+Administrators can now configure the maximum number of retries for backup jobs in the DevWorkspaceOperatorConfig via the `backoffLimit` field. The default value is 1.
 
 ```yaml
 apiVersion: controller.devfile.io/v1alpha1

@@ -382,7 +382,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 		It("creates a Job with configured backoffLimit", func() {
 			enabled := true
 			schedule := "* * * * *"
-			backoffLimit := int32(1)
+			backoffLimit := int32(2)
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
 				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
 				Config: &controllerv1alpha1.OperatorConfiguration{
@@ -413,7 +413,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(1))
 			Expect(jobList.Items[0].Spec.BackoffLimit).ToNot(BeNil())
-			Expect(*jobList.Items[0].Spec.BackoffLimit).To(Equal(int32(1)))
+			Expect(*jobList.Items[0].Spec.BackoffLimit).To(Equal(int32(2)))
 		})
 
 		It("does not create a Job when the DevWorkspace was stopped beyond time range", func() {

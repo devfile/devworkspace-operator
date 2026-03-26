@@ -10,15 +10,14 @@ This script deploys and validates the full DevWorkspace Operator + Eclipse Che s
 ## Features
 
 ### Retry Logic
-- **Max retries**: 2 (3 total attempts)
-- **Exponential backoff**: 60s base delay with 0-15s jitter
-- **Cleanup**: Deletes failed Che deployment before retry
+- **Che deployment**: 2 attempts with exponential backoff (60s base + jitter)
+- **Cleanup**: Waits for CheCluster CR deletion before retry
+- **Happy-path test retry**: 1 retry with 30s delay if Selenium test fails
 
 ### Health Checks
 - **OLM**: Verifies `catalog-operator` and `olm-operator` are available before Che deployment (2-minute timeout each)
 - **DWO**: Waits for `deployment condition=available` (5-minute timeout)
-- **Che**: Waits for `CheCluster condition=Available` (10-minute timeout)
-- **Pods**: Verifies all Che pods are ready
+- **Che**: chectl's built-in readiness checks ensure deployment is healthy
 
 ### Artifact Collection
 On each failure, collects:
@@ -82,14 +81,14 @@ export ARTIFACT_DIR="/tmp/my-test-artifacts"
 
 2. **Deploy Che** (with retry)
    - Runs `chectl server:deploy` with extended timeouts (24h)
-   - Waits for CheCluster condition=Available
-   - Verifies all pods are ready
+   - chectl handles readiness checks internally
    - Collects artifacts on failure
    - Cleans up and retries if needed
 
 3. **Run Happy-Path Test**
    - Downloads test script from Eclipse Che repository
    - Executes Che happy-path workflow
+   - Retries once after 30s if test fails
    - Collects artifacts on failure
 
 ## Exit Codes
@@ -102,8 +101,6 @@ export ARTIFACT_DIR="/tmp/my-test-artifacts"
 | Component | Timeout | Purpose |
 |-----------|---------|---------|
 | DWO deployment | 5 minutes | Pod becomes available |
-| CheCluster Available | 10 minutes | Che fully deployed |
-| Che pods ready | 5 minutes | All pods running |
 | chectl pod wait/ready | 24 hours | Generous for slow environments |
 
 ## Common Failures
@@ -123,13 +120,14 @@ export ARTIFACT_DIR="/tmp/my-test-artifacts"
 **Common causes**: Image pull errors, resource constraints, webhook conflicts
 
 ### Che Deployment Timeout
-**Symptoms**: "ERROR: CheCluster did not become available within 10 minutes"
-**Check**: `$ARTIFACT_DIR/che-operator-logs-attempt-*.log`, `$ARTIFACT_DIR/olm-diagnostics-attempt-*.yaml`
+**Symptoms**: "ERROR: chectl server:deploy failed" with timeout-related messages
+**Check**: `$ARTIFACT_DIR/che-operator-logs-attempt-*.log`, `$ARTIFACT_DIR/olm-diagnostics-attempt-*.yaml`, `$ARTIFACT_DIR/chectl-logs-attempt-*/`
 **Common causes**:
 - OLM subscription timeout (check `olm-diagnostics` for subscription state)
 - Database connection issues
 - Image pull failures
 - Operator reconciliation errors
+- chectl timeout waiting for pods/resources to become ready
 
 ### Pod CrashLoopBackOff
 **Symptoms**: "ERROR: chectl server:deploy failed"
@@ -150,6 +148,9 @@ export ARTIFACT_DIR="/tmp/my-test-artifacts"
 After a failed test run:
 ```
 $ARTIFACT_DIR/
+├── attempt-log.txt
+├── failure-report.json
+├── failure-report.md
 ├── devworkspace-controller-info/
 │   ├── <pod-name>-<container>.log
 │   └── events.log
@@ -255,6 +256,42 @@ If OLM subscriptions consistently timeout (visible in `olm-diagnostics-*.yaml`):
    ```
    - If no InstallPlan exists, OLM couldn't resolve the subscription
    - If InstallPlan exists but isn't complete, check its status conditions
+
+## CI Failure Reports
+
+The script automatically generates failure reports and posts them as PR comments after each run (both failures and successes with retries). **Do not delete these comments** — they are used to track flakiness patterns across PRs.
+
+### What gets reported
+
+Each report includes a table of all attempts with:
+- **Attempt**: Which attempt number (e.g., `1/2`, `2/2`)
+- **Stage**: Which function failed (`deployChe`, `runHappyPathTest`, etc.)
+- **Result**: `PASSED` or `FAILED`
+- **Reason**: Classified failure reason (e.g., "Che operator reconciliation failure")
+
+### Failure categories
+
+| Category | Meaning | Retryable? |
+|----------|---------|------------|
+| `INFRA` | Infrastructure issue (OLM, image pull, operator reconciliation) | Yes — `/retest` |
+| `TEST` | Test execution issue (Dashboard UI timeout, workspace start) | Maybe |
+| `MIXED` | Both infrastructure and test issues across attempts | Yes — `/retest` |
+| `UNKNOWN` | Could not classify — check artifacts | Investigate |
+
+### Report artifacts
+
+Reports are always saved to `$ARTIFACT_DIR/` regardless of whether PR commenting succeeds:
+- `failure-report.json` — structured data for programmatic analysis
+- `failure-report.md` — human-readable markdown (same as the PR comment)
+- `attempt-log.txt` — raw attempt tracking log
+
+### Why these comments matter
+
+Over time, these reports reveal:
+- Which failure categories are most common
+- Whether flakiness is improving or worsening
+- Which infrastructure components are least reliable
+- Whether retry logic is effective (passed-on-retry patterns)
 
 ## Related Documentation
 

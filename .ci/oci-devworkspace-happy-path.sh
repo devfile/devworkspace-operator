@@ -248,6 +248,10 @@ runHappyPathTest() {
   local attempt="${1:-1}"
   echo "======== Running Che Happy Path Test (attempt $attempt) ========"
   export CHE_REPO_BRANCH="${CHE_REPO_BRANCH:-main}"
+  if ! [[ "$CHE_REPO_BRANCH" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+    echo "ERROR: Invalid CHE_REPO_BRANCH format: $CHE_REPO_BRANCH. Alphanumeric, dots, hyphens and slashes only."
+    return 1
+  fi
 
   # Download and run the remote test script
   if ! bash <(curl -s "https://raw.githubusercontent.com/eclipse/che/${CHE_REPO_BRANCH}/tests/devworkspace-happy-path/remote-launch.sh"); then

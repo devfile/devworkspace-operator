@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -21,6 +21,8 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
+	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/constants"
 	gittransport "github.com/go-git/go-git/v5/plumbing/transport"
@@ -30,14 +32,18 @@ import (
 )
 
 const (
-	credentialsMountPath = "/.git-credentials/credentials"
-	sshConfigMountPath   = "/etc/ssh/ssh_config"
-	publicCertsDir       = "/public-certs"
+	credentialsMountPath      = "/.git-credentials/credentials"
+	sshConfigMountPath        = "/etc/ssh/ssh_config"
+	publicCertsDir            = "/public-certs"
+	cloneRetriesEnvVar        = "PROJECT_CLONE_RETRIES"
+	defaultCloneRetries       = 3
+	BaseRetryDelay            = 1 * time.Second
 )
 
 var (
 	ProjectsRoot     string
 	CloneTmpDir      string
+	CloneRetries     int
 	tokenAuthMethod  map[string]*githttp.BasicAuth
 	credentialsRegex = regexp.MustCompile(`https://(.+):(.+)@(.+)`)
 )
@@ -58,6 +64,16 @@ func init() {
 	}
 	log.Printf("Using temporary directory %s", tmpDir)
 	CloneTmpDir = tmpDir
+
+	CloneRetries = defaultCloneRetries
+	if val := os.Getenv(cloneRetriesEnvVar); val != "" {
+		parsed, err := strconv.Atoi(val)
+		if err != nil || parsed < 0 {
+			log.Printf("Invalid value for %s: %q, using default (%d)", cloneRetriesEnvVar, val, defaultCloneRetries)
+		} else {
+			CloneRetries = parsed
+		}
+	}
 
 	setupAuth()
 }

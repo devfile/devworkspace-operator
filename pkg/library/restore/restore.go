@@ -22,17 +22,18 @@ import (
 	"strings"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
-	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
-	"github.com/devfile/devworkspace-operator/pkg/secrets"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
+	dwResources "github.com/devfile/devworkspace-operator/pkg/library/resources"
+	"github.com/devfile/devworkspace-operator/pkg/secrets"
 )
 
 const (
@@ -114,7 +115,11 @@ func GetWorkspaceRestoreInitContainer(
 			MountPath: constants.DefaultProjectsSourcesRoot,
 		},
 	}
-	registryAuthSecret, err := secrets.GetNamespaceRegistryAuthSecret(ctx, k8sClient, workspace.DevWorkspace, workspace.Config, scheme, log)
+	operatorNamespace, err := infrastructure.GetNamespace()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get operator namespace for workspace restore: %w", err)
+	}
+	registryAuthSecret, err := secrets.GetNamespaceRegistryAuthSecret(ctx, k8sClient, workspace.DevWorkspace, workspace.Config, operatorNamespace, scheme, log)
 	if err != nil {
 		return nil, nil, fmt.Errorf("handling registry auth secret for workspace restore: %w", err)
 	}

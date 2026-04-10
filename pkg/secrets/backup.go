@@ -32,12 +32,13 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
-// GetRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
-// based on the operator configuration.
+// GetNamespaceRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
+// based on the operator configuration. operatorConfigNamespace is the namespace where the operator is
+// running; if non-empty, the secret is also looked up there and copied to the workspace namespace when found.
 func GetNamespaceRegistryAuthSecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace,
-	dwOperatorConfig *controllerv1alpha1.OperatorConfiguration, scheme *runtime.Scheme, log logr.Logger,
+	dwOperatorConfig *controllerv1alpha1.OperatorConfiguration, operatorConfigNamespace string, scheme *runtime.Scheme, log logr.Logger,
 ) (*corev1.Secret, error) {
-	return HandleRegistryAuthSecret(ctx, c, workspace, dwOperatorConfig, "", scheme, log)
+	return HandleRegistryAuthSecret(ctx, c, workspace, dwOperatorConfig, operatorConfigNamespace, scheme, log)
 }
 
 func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace,
@@ -81,15 +82,16 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 		return nil, err
 	}
 	log.Info("Successfully retrieved registry auth secret for backup job", "secretName", secretName)
-	return CopySecret(ctx, c, workspace, registryAuthSecret, scheme, log)
+	return CopySecret(ctx, c, workspace, registryAuthSecret, secretName, scheme, log)
 }
 
-// CopySecret copies the given secret from the operator namespace to the workspace namespace.
-func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, scheme *runtime.Scheme, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
+// CopySecret copies the given secret from the operator namespace to the workspace namespace,
+// naming the copy secretName (the configured auth secret name from the operator config).
+func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, secretName string, scheme *runtime.Scheme, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
 	// Construct the desired secret state
 	desiredSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      constants.DevWorkspaceBackupAuthSecretName,
+			Name:      secretName,
 			Namespace: workspace.Namespace,
 			Labels: map[string]string{
 				constants.DevWorkspaceWatchSecretLabel: "true",

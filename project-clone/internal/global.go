@@ -32,13 +32,13 @@ import (
 )
 
 const (
-	credentialsMountPath      = "/.git-credentials/credentials"
-	sshConfigMountPath        = "/etc/ssh/ssh_config"
-	publicCertsDir            = "/public-certs"
-	cloneRetriesEnvVar        = "PROJECT_CLONE_RETRIES"
-	defaultCloneRetries       = 3
-	maxCloneRetries           = 10
-	BaseRetryDelay            = 1 * time.Second
+	credentialsMountPath = "/.git-credentials/credentials"
+	sshConfigMountPath   = "/etc/ssh/ssh_config"
+	publicCertsDir       = "/public-certs"
+	cloneRetriesEnvVar   = "PROJECT_CLONE_RETRIES"
+	defaultCloneRetries  = 3
+	maxCloneRetries      = 10
+	BaseRetryDelay       = 1 * time.Second
 )
 
 var (

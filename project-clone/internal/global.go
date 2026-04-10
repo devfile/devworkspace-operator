@@ -37,6 +37,7 @@ const (
 	publicCertsDir            = "/public-certs"
 	cloneRetriesEnvVar        = "PROJECT_CLONE_RETRIES"
 	defaultCloneRetries       = 3
+	maxCloneRetries           = 10
 	BaseRetryDelay            = 1 * time.Second
 )
 
@@ -70,6 +71,9 @@ func init() {
 		parsed, err := strconv.Atoi(val)
 		if err != nil || parsed < 0 {
 			log.Printf("Invalid value for %s: %q, using default (%d)", cloneRetriesEnvVar, val, defaultCloneRetries)
+		} else if parsed > maxCloneRetries {
+			log.Printf("Value for %s (%d) exceeds maximum (%d), using maximum", cloneRetriesEnvVar, parsed, maxCloneRetries)
+			CloneRetries = maxCloneRetries
 		} else {
 			CloneRetries = parsed
 		}

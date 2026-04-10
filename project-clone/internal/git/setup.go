@@ -64,7 +64,7 @@ func doInitialGitClone(project *dw.Project) error {
 		}
 	}
 	if cloneErr != nil {
-		return fmt.Errorf("failed to clone project: %s", cloneErr)
+		return fmt.Errorf("failed to clone project: %w", cloneErr)
 	}
 
 	if project.Attributes.Exists(internal.ProjectSparseCheckout) {

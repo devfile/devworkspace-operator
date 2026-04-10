@@ -179,8 +179,6 @@ const (
 	// DevWorkspaceBackupJobLabel is the label key to identify backup jobs created for DevWorkspaces
 	DevWorkspaceBackupJobLabel = "controller.devfile.io/backup-job"
 
-	DevWorkspaceBackupAuthSecretName = "devworkspace-backup-registry-auth"
-
 	// DevWorkspaceLastBackupSuccessfulAnnotation is an annotation that indicates whether the last backup
 	// attempt for this DevWorkspace was successful. Value is either "true" or "false".
 	DevWorkspaceLastBackupSuccessfulAnnotation = "controller.devfile.io/last-backup-successful"

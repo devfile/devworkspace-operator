@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"time"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	projectslib "github.com/devfile/devworkspace-operator/pkg/library/projects"
@@ -46,9 +47,24 @@ func doInitialGitClone(project *dw.Project) error {
 	// Clone into a temp dir and then move set up project to PROJECTS_ROOT to try and make clone atomic in case
 	// project-clone container is terminated
 	tmpClonePath := path.Join(internal.CloneTmpDir, projectslib.GetClonePath(project))
-	err := CloneProject(project, tmpClonePath)
-	if err != nil {
-		return fmt.Errorf("failed to clone project: %s", err)
+	var cloneErr error
+	for attempt := 0; attempt <= internal.CloneRetries; attempt++ {
+		if attempt > 0 {
+			delayBeforeRetry(project.Name, attempt)
+			if err := os.RemoveAll(tmpClonePath); err != nil {
+				log.Printf("Warning: cleanup before retry failed: %s", err)
+			}
+		}
+		cloneErr = CloneProject(project, tmpClonePath)
+		if cloneErr == nil {
+			break
+		}
+		if attempt < internal.CloneRetries {
+			log.Printf("Failed git clone for project %s (attempt %d/%d): %s", project.Name, attempt+1, internal.CloneRetries+1, cloneErr)
+		}
+	}
+	if cloneErr != nil {
+		return fmt.Errorf("failed to clone project: %w", cloneErr)
 	}
 
 	if project.Attributes.Exists(internal.ProjectSparseCheckout) {
@@ -81,6 +97,12 @@ func doInitialGitClone(project *dw.Project) error {
 	}
 
 	return nil
+}
+
+func delayBeforeRetry(projectName string, attempt int) {
+	delay := internal.BaseRetryDelay * (1 << (attempt - 1))
+	log.Printf("Retrying git clone for project %s (attempt %d/%d) after %s", projectName, attempt+1, internal.CloneRetries+1, delay)
+	time.Sleep(delay)
 }
 
 func setupRemotesForExistingProject(project *dw.Project) error {

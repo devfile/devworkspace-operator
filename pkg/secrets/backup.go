@@ -54,7 +54,7 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 		return nil, nil
 	}
 
-	// On the restore path (operatorConfigNamespace == ""), look for the canonical name
+	// On the restore path (operatorConfigNamespace == ""), look for the predefined name
 	// that CopySecret always uses. On the backup path, look for the configured name
 	// because the secret may exist directly in the workspace namespace under that name.
 	lookupName := secretName

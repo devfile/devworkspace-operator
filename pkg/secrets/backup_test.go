@@ -101,11 +101,11 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 		scheme = buildScheme()
 	})
 
-	It("returns the canonical secret when it exists in the workspace namespace", func() {
-		By("creating the canonical DevWorkspaceBackupAuthSecretName secret in the workspace namespace")
-		canonicalSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, workspaceNS)
+	It("returns the predefined secret when it exists in the workspace namespace", func() {
+		By("creating the predefined DevWorkspaceBackupAuthSecretName secret in the workspace namespace")
+		predefinedSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, workspaceNS)
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(canonicalSecret).Build()
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(predefinedSecret).Build()
 		workspace := makeWorkspace(workspaceNS)
 		config := makeConfig("quay-backup-auth")
 
@@ -115,7 +115,7 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
 	})
 
-	It("returns nil when the canonical secret does not exist in the workspace namespace", func() {
+	It("returns nil when the predefined secret does not exist in the workspace namespace", func() {
 		By("using a fake client with no secrets")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
@@ -127,7 +127,7 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 	})
 
 	It("propagates a non-NotFound error from the workspace namespace lookup", func() {
-		By("wrapping a fake client so that the canonical name lookup returns a server error")
+		By("wrapping a fake client so that the predefined name lookup returns a server error")
 		errClient := &errorOnNameClient{
 			Client:   fake.NewClientBuilder().WithScheme(scheme).Build(),
 			failName: constants.DevWorkspaceBackupAuthSecretName,

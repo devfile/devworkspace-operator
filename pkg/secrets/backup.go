@@ -54,42 +54,23 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 		return nil, nil
 	}
 
-	// First check the workspace namespace for the secret
+	// First check the workspace namespace for the secret.
+	// CopySecret always writes the copy under DevWorkspaceBackupAuthSecretName,
+	// so look it up by that canonical name.
 	registryAuthSecret := &corev1.Secret{}
 	err := c.Get(ctx, client.ObjectKey{
-		Name:      secretName,
+		Name:      constants.DevWorkspaceBackupAuthSecretName,
 		Namespace: workspace.Namespace}, registryAuthSecret)
 	if err == nil {
-		log.Info("Successfully retrieved registry auth secret for backup from workspace namespace", "secretName", secretName)
+		log.Info("Successfully retrieved registry auth secret for backup from workspace namespace",
+			"secretName", constants.DevWorkspaceBackupAuthSecretName)
 		return registryAuthSecret, nil
 	}
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
 	// If we don't provide an operator namespace, don't attempt to look there.
-	// However, CopySecret always writes the secret under DevWorkspaceBackupAuthSecretName,
-	// regardless of the configured name. If the configured name differs, attempt a fallback
-	// lookup under the canonical name so that the restore path can find it.
 	if operatorConfigNamespace == "" {
-		if secretName == constants.DevWorkspaceBackupAuthSecretName {
-			// The configured name IS the canonical name; it was already looked up and not
-			// found above, so there is nothing else to try.
-			return nil, nil
-		}
-		fallbackSecret := &corev1.Secret{}
-		fallbackErr := c.Get(ctx, client.ObjectKey{
-			Name:      constants.DevWorkspaceBackupAuthSecretName,
-			Namespace: workspace.Namespace,
-		}, fallbackSecret)
-		if fallbackErr == nil {
-			log.Info("Registry auth secret not found under configured name in workspace namespace; using canonical backup auth secret as fallback",
-				"configuredName", secretName,
-				"fallbackName", constants.DevWorkspaceBackupAuthSecretName)
-			return fallbackSecret, nil
-		}
-		if client.IgnoreNotFound(fallbackErr) != nil {
-			return nil, fallbackErr
-		}
 		return nil, nil
 	}
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace", "secretName", secretName)

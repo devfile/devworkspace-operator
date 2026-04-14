@@ -29,7 +29,6 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -102,38 +101,22 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 		scheme = buildScheme()
 	})
 
-	It("returns the secret directly when the configured name is present in the workspace namespace", func() {
-		By("creating a workspace-namespace secret whose name matches the configured auth secret name")
-		configuredName := "quay-backup-auth"
-		secret := makeSecret(configuredName, workspaceNS)
-
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
-		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig(configuredName)
-
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(result).NotTo(BeNil())
-		Expect(result.Name).To(Equal(configuredName))
-	})
-
-	It("returns the canonical backup auth secret as fallback when configured name is absent (the bug fix case)", func() {
-		By("creating only the canonical DevWorkspaceBackupAuthSecretName secret in the workspace namespace")
+	It("returns the canonical secret when it exists in the workspace namespace", func() {
+		By("creating the canonical DevWorkspaceBackupAuthSecretName secret in the workspace namespace")
 		canonicalSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, workspaceNS)
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(canonicalSecret).Build()
 		workspace := makeWorkspace(workspaceNS)
-		// Configured name is something like "quay-backup-auth" — different from the canonical name.
 		config := makeConfig("quay-backup-auth")
 
 		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result).NotTo(BeNil(), "should fall back to the canonical secret copied by CopySecret")
+		Expect(result).NotTo(BeNil())
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
 	})
 
-	It("returns nil, nil when neither the configured name nor the canonical name exists in the workspace namespace", func() {
-		By("using a fake client with no secrets at all")
+	It("returns nil when the canonical secret does not exist in the workspace namespace", func() {
+		By("using a fake client with no secrets")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
 		config := makeConfig("quay-backup-auth")
@@ -143,25 +126,8 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 		Expect(result).To(BeNil())
 	})
 
-	It("returns the secret on the first lookup when the configured name IS the canonical name (no duplicate query)", func() {
-		By("creating the canonical secret in the workspace namespace and configuring the same name")
-		canonicalSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, workspaceNS)
-
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(canonicalSecret).Build()
-		workspace := makeWorkspace(workspaceNS)
-		// Configured name equals the canonical constant — must be found on the first Get.
-		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
-
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(result).NotTo(BeNil())
-		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
-	})
-
-	It("propagates a real (non-NotFound) error from the fallback lookup", func() {
-		By("wrapping a fake client so that the fallback lookup returns a server error")
-		// The configured name differs from the canonical name, so the code will attempt the fallback
-		// lookup. We simulate that lookup returning a non-NotFound error.
+	It("propagates a non-NotFound error from the workspace namespace lookup", func() {
+		By("wrapping a fake client so that the canonical name lookup returns a server error")
 		errClient := &errorOnNameClient{
 			Client:   fake.NewClientBuilder().WithScheme(scheme).Build(),
 			failName: constants.DevWorkspaceBackupAuthSecretName,
@@ -196,6 +162,3 @@ func (e *errorOnNameClient) Get(ctx context.Context, key client.ObjectKey, obj c
 
 // Ensure errorOnNameClient satisfies client.Client at compile time.
 var _ client.Client = &errorOnNameClient{}
-
-// secretGR is the GroupResource for secrets, used when constructing test errors.
-var secretGR = schema.GroupResource{Group: "", Resource: "secrets"} //nolint:unused

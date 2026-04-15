@@ -285,6 +285,34 @@ release() {
   git fetch origin "${X_BRANCH}:${X_BRANCH}" || true
   git checkout "${X_BRANCH}"
 
+  # Bugfix release (patch != 0, e.g. v0.40.1): bump the z digit from version/version.go, then
+  # sync CSV and image tags before building OLM bundles. --version must match the incremented
+  # SemVer (e.g. branch at v0.40.0 -> v0.40.1). If the branch is already bumped to VERSION, skip.
+  if [[ "${VERSION##*.}" != "0" ]]; then
+    echo "[INFO] Bugfix release: preparing ${X_BRANCH} for ${VERSION}"
+    SOURCE_VER=$(grep '^[[:space:]]*Version = ' version/version.go | sed -n 's/.*"\(v[0-9]*\.[0-9]*\.[0-9]*\)".*/\1/p')
+    if [[ "${SOURCE_VER}" == "${VERSION}" ]]; then
+      echo "[INFO] Branch already at ${VERSION}; skipping version bump"
+    else
+      if [[ "${SOURCE_VER#v}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+        BASE="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+        NEXT="${BASH_REMATCH[3]}"
+        (( NEXT=NEXT+1 ))
+      else
+        echo "[ERROR] Could not parse Version in version/version.go: ${SOURCE_VER}"
+        exit 1
+      fi
+      NEXT_VERSION_Z="v${BASE}.${NEXT}"
+      if [[ "${NEXT_VERSION_Z}" != "${VERSION}" ]]; then
+        echo "[ERROR] Bugfix version mismatch: version.go has ${SOURCE_VER} (next patch would be ${NEXT_VERSION_Z}); release --version is ${VERSION}"
+        exit 1
+      fi
+      update_version "${NEXT_VERSION_Z}"
+      update_images "${NEXT_VERSION_Z}"
+      git_commit_and_push "chore: release: bump to ${NEXT_VERSION_Z} in ${X_BRANCH}" "ci-bump-${X_BRANCH}-${NEXT_VERSION_Z}"
+    fi
+  fi
+
   # Build bundle and index images
   $DRY_RUN build/scripts/build_index_image.sh \
     --release \

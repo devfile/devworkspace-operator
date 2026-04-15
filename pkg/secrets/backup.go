@@ -54,19 +54,27 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 		return nil, nil
 	}
 
-	// First check the workspace namespace for the secret
+	// On the restore path (operatorConfigNamespace == ""), look for the predefined name
+	// that CopySecret always uses. On the backup path, look for the configured name
+	// because the secret may exist directly in the workspace namespace under that name.
+	lookupName := secretName
+	if operatorConfigNamespace == "" {
+		lookupName = constants.DevWorkspaceBackupAuthSecretName
+	}
+
 	registryAuthSecret := &corev1.Secret{}
 	err := c.Get(ctx, client.ObjectKey{
-		Name:      secretName,
+		Name:      lookupName,
 		Namespace: workspace.Namespace}, registryAuthSecret)
 	if err == nil {
-		log.Info("Successfully retrieved registry auth secret for backup from workspace namespace", "secretName", secretName)
+		log.Info("Successfully retrieved registry auth secret for backup from workspace namespace",
+			"secretName", lookupName)
 		return registryAuthSecret, nil
 	}
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
-	// If we don't provide an operator namespace, don't attempt to look there
+	// If we don't provide an operator namespace, don't attempt to look there.
 	if operatorConfigNamespace == "" {
 		return nil, nil
 	}

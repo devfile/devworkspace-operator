@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -395,4 +395,19 @@ func getAdditionalDeploymentAnnotations(workspace *common.DevWorkspaceWithConfig
 	}
 
 	return annotations, nil
+}
+
+func GetClusterDeployment(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) (*appsv1.Deployment, error) {
+	workspaceDeployment := &appsv1.Deployment{}
+	workspaceKey := types.NamespacedName{Name: common.DeploymentName(workspace.Status.DevWorkspaceId), Namespace: workspace.Namespace}
+
+	err := clusterAPI.Client.Get(clusterAPI.Ctx, workspaceKey, workspaceDeployment)
+	if err != nil {
+		if k8sErrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	return workspaceDeployment, nil
 }

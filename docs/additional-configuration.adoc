@@ -166,6 +166,17 @@ When "file" is used, the configmap is mounted as a directory within the workspac
 
 * `controller.devfile.io/read-only`: for persistent volume claims, mount the resource as read-only
 
+* `controller.devfile.io/mount-on-start`: when set to `"true"`, the resource will only be mounted when a workspace starts. If the resource is created while a workspace is already running, it will not be automatically mounted until the workspace is restarted. This prevents unwanted workspace restarts caused by newly created automount resources. This annotation can be applied to configmaps, secrets, and persistent volume claims.
++
+For git credential secrets (labelled with `controller.devfile.io/git-credential`) and git TLS configmaps (labelled with `controller.devfile.io/git-tls-credential`), the annotation works similarly but applies collectively: since all git credentials are merged into a single mounted secret, if at least one git credential secret (or TLS configmap) lacks the `controller.devfile.io/mount-on-start` annotation, all git credentials (or TLS configmaps) will be mounted, including those marked with `mount-on-start`.
++
+[source,yaml]
+----
+metadata:
+  annotations:
+    controller.devfile.io/mount-on-start: "true"
+----
+
 ## Adding image pull secrets to workspaces
 Labelling secrets with `controller.devfile.io/devworkspace_pullsecret: true` marks a secret as the Docker pull secret for the workspace deployment. This should be applied to secrets with docker config types (`kubernetes.io/dockercfg` and `kubernetes.io/dockerconfigjson`)
 

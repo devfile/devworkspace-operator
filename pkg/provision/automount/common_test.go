@@ -25,7 +25,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -126,7 +128,7 @@ func TestProvisionAutomountResourcesInto(t *testing.T) {
 			}
 			// Note: this test does not allow for returning AutoMountError with isFatal: false (i.e. no retrying)
 			// and so is not suitable for testing automount features that provision cluster resources (yet)
-			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, false)
+			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, false, nil)
 			if tt.Output.ErrRegexp != nil {
 				if !assert.Error(t, err, "Expected an error but got none") {
 					return
@@ -406,4 +408,418 @@ func loadTestCaseOrPanic(t *testing.T, testPath string) testCase {
 
 	test.TestPath = testPath
 	return test
+}
+
+func TestShouldNotMountSecretWithMountOnStartIfWorkspaceStarted(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartSecretAsFile()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountSecretWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartSecretAsFile()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, nil)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
+	assert.Equal(t, common.AutoMountSecretVolumeName("test-secret"), testPodAdditions.Volumes[0].Name)
+}
+
+func TestShouldNotMountConfigMapWithMountOnStartIfWorkspaceStarted(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartConfigMapAsFile()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountConfigMapWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartConfigMapAsFile()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, nil)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
+	assert.Equal(t, common.AutoMountConfigMapVolumeName("test-cm"), testPodAdditions.Volumes[0].Name)
+}
+
+func TestShouldNotMountPVCWithMountOnStartIfWorkspaceStarted(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartPVC()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountPVCWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartPVC()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, nil)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
+	assert.Equal(t, common.AutoMountPVCVolumeName("test-pvc"), testPodAdditions.Volumes[0].Name)
+}
+
+func TestShouldNotMountConfigMapWithMountOnStartWhenRunningAndNotInDeployment(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartConfigMapAsFile()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountOnStartConfigMapAsEnvAllowedWhenEnvFromExistsInDeployment(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartConfigMapAsEnv()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name: "test-container",
+						EnvFrom: []corev1.EnvFromSource{{
+							ConfigMapRef: &corev1.ConfigMapEnvSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm"},
+							},
+						}},
+					}},
+				},
+			},
+		},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Containers[0].EnvFrom, 1)
+	assert.Equal(t, common.AutoMountConfigMapVolumeName("test-cm"), testPodAdditions.Containers[0].EnvFrom[0].ConfigMapRef.Name)
+}
+
+func TestMountOnStartConfigMapAsFileAllowedWhenVolumeExistsInDeployment(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartConfigMapAsFile()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "test-container"}},
+					Volumes:    []corev1.Volume{{Name: "test-cm"}},
+				},
+			},
+		},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Equal(t, common.AutoMountConfigMapVolumeName("test-cm"), testPodAdditions.Volumes[0].Name)
+}
+
+func TestMountOnStartSecretAsEnvAllowedWhenEnvFromExistsInDeployment(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartSecretAsEnv()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{
+						Name: "test-container",
+						EnvFrom: []corev1.EnvFromSource{{
+							SecretRef: &corev1.SecretEnvSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
+							},
+						}},
+					}},
+				},
+			},
+		},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Containers[0].EnvFrom, 1)
+	assert.Equal(t, common.AutoMountSecretVolumeName("test-secret"), testPodAdditions.Containers[0].EnvFrom[0].SecretRef.Name)
+}
+
+func TestMountOnStartSecretAsFileAllowedWhenVolumeExistsInDeployment(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartSecretAsFile()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "test-container"}},
+					Volumes:    []corev1.Volume{{Name: "test-secret"}},
+				},
+			},
+		},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Equal(t, common.AutoMountSecretVolumeName("test-secret"), testPodAdditions.Volumes[0].Name)
+}
+
+func TestShouldNotMountPVCWithMountOnStartWhenRunningAndNotInDeployment(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartPVC()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	assert.NoError(t, err)
+	assert.Empty(t, testPodAdditions.Volumes)
+	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
+}
+
+func TestMountOnStartPVCAllowedWhenVolumeExistsInDeployment(t *testing.T) {
+	testAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(mountOnStartPVC()).Build(),
+	}
+
+	testPodAdditions := &v1alpha1.PodAdditions{
+		Containers: []corev1.Container{{
+			Name:  "test-container",
+			Image: "test-image",
+		}},
+	}
+
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "test-container"}},
+					Volumes:    []corev1.Volume{{Name: common.AutoMountPVCVolumeName("test-pvc")}},
+				},
+			},
+		},
+	}
+
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	assert.NoError(t, err)
+	assert.Len(t, testPodAdditions.Volumes, 1)
+	assert.Equal(t, common.AutoMountPVCVolumeName("test-pvc"), testPodAdditions.Volumes[0].Name)
+}
+
+func emptyDeployment() *appsv1.Deployment {
+	return &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "test-container"}},
+				},
+			},
+		},
+	}
+}
+
+func mountOnStartSecretAsFile() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+				"controller.devfile.io/watch-secret":          "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":       "file",
+				"controller.devfile.io/mount-path":     "/test/path",
+				"controller.devfile.io/mount-on-start": "true",
+			},
+		},
+		Data: map[string][]byte{
+			"data": []byte("test"),
+		},
+	}
+}
+
+func mountOnStartSecretAsEnv() *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+				"controller.devfile.io/watch-secret":          "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":       "env",
+				"controller.devfile.io/mount-on-start": "true",
+			},
+		},
+		Data: map[string][]byte{
+			"data": []byte("test"),
+		},
+	}
+}
+
+func mountOnStartConfigMapAsFile() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+				"controller.devfile.io/watch-configmap":       "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":       "file",
+				"controller.devfile.io/mount-path":     "/test/path",
+				"controller.devfile.io/mount-on-start": "true",
+			},
+		},
+		Data: map[string]string{
+			"data": "test",
+		},
+	}
+}
+
+func mountOnStartConfigMapAsEnv() *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-cm",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+				"controller.devfile.io/watch-configmap":       "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-as":       "env",
+				"controller.devfile.io/mount-on-start": "true",
+			},
+		},
+		Data: map[string]string{
+			"data": "test",
+		},
+	}
+}
+
+func mountOnStartPVC() *corev1.PersistentVolumeClaim {
+	return &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-pvc",
+			Namespace: testNamespace,
+			Labels: map[string]string{
+				"controller.devfile.io/mount-to-devworkspace": "true",
+			},
+			Annotations: map[string]string{
+				"controller.devfile.io/mount-path":     "/test/path",
+				"controller.devfile.io/mount-on-start": "true",
+			},
+		},
+	}
 }

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -24,6 +24,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	appsv1 "k8s.io/api/apps/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -42,8 +43,14 @@ type Resources struct {
 	EnvFromSource []corev1.EnvFromSource
 }
 
-func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sync.ClusterAPI, namespace string, persistentHome bool) error {
-	resources, err := getAutomountResources(api, namespace)
+func ProvisionAutoMountResourcesInto(
+	podAdditions *v1alpha1.PodAdditions,
+	api sync.ClusterAPI,
+	namespace string,
+	persistentHome bool,
+	workspaceDeployment *appsv1.Deployment,
+) error {
+	resources, err := getAutomountResources(api, namespace, workspaceDeployment)
 
 	if err != nil {
 		return err
@@ -76,18 +83,22 @@ func ProvisionAutoMountResourcesInto(podAdditions *v1alpha1.PodAdditions, api sy
 	return nil
 }
 
-func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, error) {
-	gitCMAutoMountResources, err := ProvisionGitConfiguration(api, namespace)
+func getAutomountResources(
+	api sync.ClusterAPI,
+	namespace string,
+	workspaceDeployment *appsv1.Deployment,
+) (*Resources, error) {
+	gitCMAutoMountResources, err := ProvisionGitConfiguration(api, namespace, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
 
-	cmAutoMountResources, err := getDevWorkspaceConfigmaps(namespace, api)
+	cmAutoMountResources, err := getDevWorkspaceConfigmaps(namespace, api, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
 
-	secretAutoMountResources, err := getDevWorkspaceSecrets(namespace, api)
+	secretAutoMountResources, err := getDevWorkspaceSecrets(namespace, api, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +115,7 @@ func getAutomountResources(api sync.ClusterAPI, namespace string) (*Resources, e
 	}
 	dropItemsFieldFromVolumes(mergedResources.Volumes)
 
-	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api)
+	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
@@ -353,4 +364,76 @@ func sortConfigmaps(cms []corev1.ConfigMap) {
 	sort.Slice(cms, func(i, j int) bool {
 		return cms[i].Name < cms[j].Name
 	})
+}
+
+func isMountOnStart(obj k8sclient.Object) bool {
+	return obj.GetAnnotations()[constants.MountOnStartAttribute] == "true"
+}
+
+// isAllowedToMount checks whether an automount resource can be added to the workspace pod.
+// Resources marked with mount-on-start are only allowed when
+// the workspace is not yet running or when they are already present in the current deployment.
+func isAllowedToMount(
+	obj k8sclient.Object,
+	automountResource Resources,
+	workspaceDeployment *appsv1.Deployment,
+) bool {
+	// No existing deployment — workspace is not yet running, allow everything
+	if workspaceDeployment == nil {
+		return true
+	}
+
+	// Resource without mount-on-start is always eligible
+	if !isMountOnStart(obj) {
+		return true
+	}
+
+	// Workspace is already running — only allow if already present in the deployment
+	return existsInDeployment(automountResource, workspaceDeployment)
+}
+
+func existsInDeployment(automountResource Resources, workspaceDeployment *appsv1.Deployment) bool {
+	return isVolumeMountExistsInDeployment(automountResource, workspaceDeployment) ||
+		isEnvFromSourceExistsInDeployment(automountResource, workspaceDeployment)
+}
+
+// isVolumeMountExistsInDeployment returns true if any volume from the automount resource
+// is already present in the workspace deployment's pod spec. Comparison is by name only,
+// ignoring VolumeSource — if a name is reused after deleting the old resource, the deletion
+// triggers reconciliation and a workspace restart before the new resource is mounted.
+func isVolumeMountExistsInDeployment(automountResource Resources, workspaceDeployment *appsv1.Deployment) bool {
+	for _, automountVolume := range automountResource.Volumes {
+		for _, deploymentVolume := range workspaceDeployment.Spec.Template.Spec.Volumes {
+			if automountVolume.Name == deploymentVolume.Name {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// isEnvFromSourceExistsInDeployment returns true if any EnvFromSource from the automount resource
+// is already referenced in a container of the workspace deployment, matched by ConfigMap or Secret name.
+func isEnvFromSourceExistsInDeployment(automountResource Resources, workspaceDeployment *appsv1.Deployment) bool {
+	for _, container := range workspaceDeployment.Spec.Template.Spec.Containers {
+
+		for _, automountEnvFrom := range automountResource.EnvFromSource {
+			for _, containerEnvFrom := range container.EnvFrom {
+				if automountEnvFrom.ConfigMapRef != nil && containerEnvFrom.ConfigMapRef != nil &&
+					automountEnvFrom.ConfigMapRef.Name == containerEnvFrom.ConfigMapRef.Name {
+
+					return true
+				}
+
+				if automountEnvFrom.SecretRef != nil && containerEnvFrom.SecretRef != nil &&
+					automountEnvFrom.SecretRef.Name == containerEnvFrom.SecretRef.Name {
+
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }

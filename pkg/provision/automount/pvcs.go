@@ -21,6 +21,7 @@ import (
 	"path"
 	"strings"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -61,7 +62,11 @@ func parseMountPathAnnotation(annotation string, pvcName string) ([]mountPathEnt
 	return entries, nil
 }
 
-func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error) {
+func getAutoMountPVCs(
+	namespace string,
+	api sync.ClusterAPI,
+	workspaceDeployment *appsv1.Deployment,
+) (*Resources, error) {
 	pvcs := &corev1.PersistentVolumeClaimList{}
 	if err := api.Client.List(api.Ctx, pvcs, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -72,12 +77,11 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 		return nil, nil
 	}
 
-	var volumes []corev1.Volume
-	var volumeMounts []corev1.VolumeMount
+	var allAutoMountResources []Resources
 	for _, pvc := range pvcs.Items {
 		mountReadOnly := pvc.Annotations[constants.DevWorkspaceMountReadyOnlyAnnotation] == "true"
 
-		volumes = append(volumes, corev1.Volume{
+		volume := corev1.Volume{
 			Name: common.AutoMountPVCVolumeName(pvc.Name),
 			VolumeSource: corev1.VolumeSource{
 				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
@@ -85,13 +89,14 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 					ReadOnly:  mountReadOnly,
 				},
 			},
-		})
+		}
 
 		mountPathEntries, err := parseMountPathAnnotation(pvc.Annotations[constants.DevWorkspaceMountPathAnnotation], pvc.Name)
 		if err != nil {
 			return nil, err
 		}
 
+		var volumeMounts []corev1.VolumeMount
 		for _, entry := range mountPathEntries {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				Name:      common.AutoMountPVCVolumeName(pvc.Name),
@@ -99,9 +104,19 @@ func getAutoMountPVCs(namespace string, api sync.ClusterAPI) (*Resources, error)
 				SubPath:   entry.SubPath,
 			})
 		}
+
+		automountPVC := Resources{
+			Volumes:      []corev1.Volume{volume},
+			VolumeMounts: volumeMounts,
+		}
+
+		if !isAllowedToMount(&pvc, automountPVC, workspaceDeployment) {
+			continue
+		}
+
+		allAutoMountResources = append(allAutoMountResources, automountPVC)
 	}
-	return &Resources{
-		Volumes:      volumes,
-		VolumeMounts: volumeMounts,
-	}, nil
+
+	automountResources := flattenAutomountResources(allAutoMountResources)
+	return &automountResources, nil
 }

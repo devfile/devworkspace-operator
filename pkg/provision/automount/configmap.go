@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,16 +20,17 @@ import (
 	"path"
 	"sort"
 
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
-func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resources, error) {
+func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI, workspaceDeployment *appsv1.Deployment) (*Resources, error) {
 	configmaps := &corev1.ConfigMapList{}
 	if err := api.Client.List(api.Ctx, configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -37,11 +38,10 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 		return nil, err
 	}
 	sortConfigmaps(configmaps.Items)
-	var allAutoMountResouces []Resources
+
+	var allAutoMountResources []Resources
+
 	for _, configmap := range configmaps.Items {
-		if msg := checkAutomountVolumeForPotentialError(&configmap); msg != "" {
-			return nil, &dwerrors.FailError{Message: msg}
-		}
 		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {
@@ -55,9 +55,19 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI) (*Resource
 			}
 		}
 
-		allAutoMountResouces = append(allAutoMountResouces, getAutomountConfigmap(mountPath, mountAs, accessMode, &configmap))
+		automountCM := getAutomountConfigmap(mountPath, mountAs, accessMode, &configmap)
+		if !isAllowedToMount(&configmap, automountCM, workspaceDeployment) {
+			continue
+		}
+
+		if msg := checkAutomountVolumeForPotentialError(&configmap); msg != "" {
+			return nil, &dwerrors.FailError{Message: msg}
+		}
+
+		allAutoMountResources = append(allAutoMountResources, automountCM)
 	}
-	automountResources := flattenAutomountResources(allAutoMountResouces)
+
+	automountResources := flattenAutomountResources(allAutoMountResources)
 	return &automountResources, nil
 }
 

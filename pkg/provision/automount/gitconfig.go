@@ -158,41 +158,30 @@ func cleanupGitConfig(api sync.ClusterAPI, namespace string) error {
 }
 
 func isGitCredentialsAllowedToMount(secrets []corev1.Secret, workspaceDeployment *appsv1.Deployment) bool {
-	// No deployment exists yet — workspace is not running, no restart risk
-	if workspaceDeployment == nil {
-		return true
-	}
-
-	// At least one object lacks mount-on-start
-	if !allItemsMountOnStart(secrets) {
-		return true
-	}
-
-	automountSecret := Resources{Volumes: []corev1.Volume{{Name: common.AutoMountSecretVolumeName(constants.GitCredentialsMergedSecretName)}}}
-
-	// Volume is already mounted in the deployment, updating it won't cause a restart
-	if isVolumeMountExistsInDeployment(automountSecret, workspaceDeployment) {
-		return true
-	}
-
-	return false
+	volumeName := common.AutoMountSecretVolumeName(constants.GitCredentialsMergedSecretName)
+	return isGitObjectsAllowedToMount(secrets, volumeName, workspaceDeployment)
 }
 
 func isGitConfigsAllowedToMount(configMaps []corev1.ConfigMap, workspaceDeployment *appsv1.Deployment) bool {
+	volumeName := common.AutoMountConfigMapVolumeName(constants.GitCredentialsConfigMapName)
+	return isGitObjectsAllowedToMount(configMaps, volumeName, workspaceDeployment)
+}
+
+func isGitObjectsAllowedToMount[T any](objs []T, volumeName string, workspaceDeployment *appsv1.Deployment) bool {
 	// No deployment exists yet — workspace is not running, no restart risk
 	if workspaceDeployment == nil {
 		return true
 	}
 
 	// At least one object lacks mount-on-start
-	if !allItemsMountOnStart(configMaps) {
+	if !allItemsMountOnStart(objs) {
 		return true
 	}
 
-	automountConfigMap := Resources{Volumes: []corev1.Volume{{Name: common.AutoMountConfigMapVolumeName(constants.GitCredentialsConfigMapName)}}}
+	automountResource := Resources{Volumes: []corev1.Volume{{Name: volumeName}}}
 
 	// Volume is already mounted in the deployment, updating it won't cause a restart
-	if isVolumeMountExistsInDeployment(automountConfigMap, workspaceDeployment) {
+	if isVolumeMountExistsInDeployment(automountResource, workspaceDeployment) {
 		return true
 	}
 

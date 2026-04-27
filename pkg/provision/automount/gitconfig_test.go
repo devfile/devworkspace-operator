@@ -14,11 +14,14 @@
 package automount
 
 import (
+	"context"
 	"fmt"
+	"path"
 	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -26,6 +29,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
@@ -220,7 +224,7 @@ func TestTwoConfigMapWithBothMissingHost(t *testing.T) {
 	assert.Equal(t, err.Error(), "multiple git tls credentials do not have host specified")
 }
 
-func TestShouldNotMergeGitCredentialWhenSecretWithMountOnStartIfWorkspaceStarted(t *testing.T) {
+func TestShouldNotMountGitCredentialSecretWithMountOnStartIfWorkspaceStarted(t *testing.T) {
 	mountPath := "/sample/test"
 	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
 		gitCredentialsSecretKey: []byte("my_credentials"),
@@ -245,7 +249,7 @@ func TestShouldNotMergeGitCredentialWhenSecretWithMountOnStartIfWorkspaceStarted
 	}
 }
 
-func TestMountGitCredentialWhenSecretWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
+func TestMountGitCredentialSecretWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
 	mountPath := "/sample/test"
 	// Create a secret with mount-on-start-only annotation
 	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
@@ -266,58 +270,11 @@ func TestMountGitCredentialWhenSecretWithMountOnStartIfWorkspaceNotStarted(t *te
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
 	if ok {
-		// devworkspace-gitconfig
-		// devworkspace-merged-git-credentials
 		assert.Len(t, resources.Volumes, 2)
 		assert.Len(t, resources.VolumeMounts, 2)
-	}
-}
 
-func TestShouldNotIncludeGitTLSConfigMapWithMountOnStartIfWorkspaceStarted(t *testing.T) {
-	mountPath := "/sample/test"
-	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
-		constants.MountOnStartAttribute: "true",
-	})
-
-	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
-		Logger: zap.New(),
-	}
-
-	var resources *Resources
-	ok := assert.Eventually(t, func() bool {
-		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, emptyDeployment())
-		t.Log(err)
-		return err == nil
-	}, 100*time.Millisecond, 10*time.Millisecond)
-	if ok {
-		assert.Nil(t, resources)
-	}
-}
-
-func TestMountGitCredentialWhenConfigMapWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
-	mountPath := "/sample/test"
-	// Create a configmap with mount-on-start-only annotation
-	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
-		constants.MountOnStartAttribute: "true",
-	})
-
-	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
-		Logger: zap.New(),
-	}
-
-	var resources *Resources
-	ok := assert.Eventually(t, func() bool {
-		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
-		t.Log(err)
-		return err == nil
-	}, 100*time.Millisecond, 10*time.Millisecond)
-	if ok {
-		assert.Len(t, resources.Volumes, 2)
-		assert.Len(t, resources.VolumeMounts, 2)
+		assertGitCredentialsSecret("my_credentials", clusterAPI, t)
+		assertGitCredentialsConfigMap(clusterAPI, t)
 	}
 }
 
@@ -339,7 +296,7 @@ func TestMountGitCredentialSecretWithMountOnStartWhenVolumeExistsInDeployment(t 
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{{Name: "test-container"}},
-					Volumes:    []corev1.Volume{{Name: constants.GitCredentialsMergedSecretName}},
+					Volumes:    []corev1.Volume{{Name: common.AutoMountSecretVolumeName(constants.GitCredentialsMergedSecretName)}},
 				},
 			},
 		},
@@ -355,45 +312,13 @@ func TestMountGitCredentialSecretWithMountOnStartWhenVolumeExistsInDeployment(t 
 	if ok {
 		assert.Len(t, resources.Volumes, 2)
 		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsSecret("my_credentials", clusterAPI, t)
+		assertGitCredentialsConfigMap(clusterAPI, t)
 	}
 }
 
-func TestMountGitTLSConfigMapWithMountOnStartWhenVolumeExistsInDeployment(t *testing.T) {
-	mountPath := "/sample/test"
-	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
-		constants.MountOnStartAttribute: "true",
-	})
-
-	clusterAPI := sync.ClusterAPI{
-		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
-		Logger: zap.New(),
-	}
-
-	deployment := &appsv1.Deployment{
-		Spec: appsv1.DeploymentSpec{
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Name: "test-container"}},
-					Volumes:    []corev1.Volume{{Name: constants.GitCredentialsConfigMapName}},
-				},
-			},
-		},
-	}
-
-	var resources *Resources
-	ok := assert.Eventually(t, func() bool {
-		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, deployment)
-		t.Log(err)
-		return err == nil
-	}, 100*time.Millisecond, 10*time.Millisecond)
-	if ok {
-		assert.Len(t, resources.Volumes, 2)
-		assert.Len(t, resources.VolumeMounts, 2)
-	}
-}
-
-func TestMountGitCredentialWhenMixedMountOnStartSecrets(t *testing.T) {
+func TestMountGitCredentialSecretWithMixedMountOnStart(t *testing.T) {
 	mountPath := "/sample/test"
 	secretWithMountOnStart := buildSecretWithAnnotations("test-secret-1", mountPath, map[string][]byte{
 		gitCredentialsSecretKey: []byte("my_credentials_1"),
@@ -419,6 +344,126 @@ func TestMountGitCredentialWhenMixedMountOnStartSecrets(t *testing.T) {
 	if ok {
 		assert.Len(t, resources.Volumes, 2)
 		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsSecret("my_credentials_1\nmy_credentials_2", clusterAPI, t)
+		assertGitCredentialsConfigMap(clusterAPI, t)
+	}
+}
+
+func TestShouldNotMountGitConfigWithMountOnStartIfWorkspaceStarted(t *testing.T) {
+	mountPath := "/sample/test"
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.MountOnStartAttribute: "true",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, emptyDeployment())
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestMountGitConfigWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
+	mountPath := "/sample/test"
+	// Create a configmap with mount-on-start-only annotation
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.MountOnStartAttribute: "true",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsConfigMapWithSslCAInfo(mountPath, clusterAPI, t)
+	}
+}
+
+func TestMountGitConfigWithMountOnStartWhenVolumeExistsInDeployment(t *testing.T) {
+	mountPath := "/sample/test"
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.MountOnStartAttribute: "true",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	deployment := &appsv1.Deployment{
+		Spec: appsv1.DeploymentSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "test-container"}},
+					Volumes:    []corev1.Volume{{Name: common.AutoMountConfigMapVolumeName(constants.GitCredentialsConfigMapName)}},
+				},
+			},
+		},
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, deployment)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsConfigMapWithSslCAInfo(mountPath, clusterAPI, t)
+	}
+}
+
+func TestMountGitConfigWithMixedMountOnStart(t *testing.T) {
+	mountPath1 := "/sample/test-1"
+	testConfigMapWithMountOnStart := buildConfigWithAnnotations("test-cm", mountPath1, defaultData, map[string]string{
+		constants.MountOnStartAttribute: "true",
+	})
+
+	mountPath2 := "/sample/test-2"
+	testConfigMapWithoutMountOnStart := buildConfigWithAnnotations("test-cm-2", mountPath2, defaultData, map[string]string{})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMapWithMountOnStart, &testConfigMapWithoutMountOnStart).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsConfigMapWithSslCAInfo(mountPath1, clusterAPI, t)
+		assertGitCredentialsConfigMapWithSslCAInfo(mountPath2, clusterAPI, t)
 	}
 }
 
@@ -468,4 +513,52 @@ func buildConfigWithAnnotations(name string, mountPath string, data map[string]s
 		cm.Annotations[k] = v
 	}
 	return cm
+}
+
+func assertGitCredentialsSecret(expectedCredentials string, clusterAPI sync.ClusterAPI, t *testing.T) {
+	secret := &corev1.Secret{}
+	err := clusterAPI.Client.Get(
+		context.Background(),
+		types.NamespacedName{
+			Name:      constants.GitCredentialsMergedSecretName,
+			Namespace: testNamespace,
+		},
+		secret,
+	)
+
+	assert.NoError(t, err)
+	assert.Equal(t, expectedCredentials, string(secret.Data[gitCredentialsSecretKey]))
+}
+
+func assertGitCredentialsConfigMap(clusterAPI sync.ClusterAPI, t *testing.T) {
+	cm := &corev1.ConfigMap{}
+	err := clusterAPI.Client.Get(
+		context.Background(),
+		types.NamespacedName{
+			Name:      constants.GitCredentialsConfigMapName,
+			Namespace: testNamespace,
+		},
+		cm,
+	)
+
+	assert.NoError(t, err)
+	assert.Contains(t, cm.Data[gitConfigName], gitLFSConfig)
+	assert.Contains(t, cm.Data[gitConfigName], fmt.Sprintf(credentialTemplate, path.Join(mergedGitCredentialsMountPath, gitCredentialsSecretKey)))
+}
+
+func assertGitCredentialsConfigMapWithSslCAInfo(mountPath string, clusterAPI sync.ClusterAPI, t *testing.T) {
+	cm := &corev1.ConfigMap{}
+	err := clusterAPI.Client.Get(
+		context.Background(),
+		types.NamespacedName{
+			Name:      constants.GitCredentialsConfigMapName,
+			Namespace: testNamespace,
+		},
+		cm,
+	)
+
+	assert.NoError(t, err)
+	assert.Contains(t, cm.Data[gitConfigName], gitLFSConfig)
+	assert.Contains(t, cm.Data[gitConfigName], fmt.Sprintf(credentialTemplate, path.Join(mergedGitCredentialsMountPath, gitCredentialsSecretKey)))
+	assert.Contains(t, cm.Data[gitConfigName], fmt.Sprintf(gitServerTemplate, "github.com", path.Join(mountPath, "certificate")))
 }

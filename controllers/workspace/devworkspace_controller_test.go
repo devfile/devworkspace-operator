@@ -876,6 +876,78 @@ var _ = Describe("DevWorkspace Controller", func() {
 				return fmt.Errorf("Secret not found in volumes")
 			}, 1*time.Second, interval).Should(Succeed(), "Merged credentials secret is added to deployment")
 		})
+
+		It("Removes mount-on-start volume from deployment when secret is deleted and does not remount recreated secret", func() {
+			By("Creating a mount-on-start automount secret")
+			secret := generateSecret("mount-on-start-secret", corev1.SecretTypeOpaque)
+			secret.Labels[constants.DevWorkspaceMountLabel] = "true"
+			secret.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/test/mount"
+			secret.Annotations[constants.MountOnStartAttribute] = "true"
+			secret.Data["data"] = []byte("original-content")
+			createObject(secret)
+
+			By("Creating and starting workspace")
+			createStartedDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			expectedVolumeName := common.AutoMountSecretVolumeName("mount-on-start-secret")
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+
+			By("Checking that mount-on-start secret volume is in the deployment")
+			Eventually(func() error {
+				deploy := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, deployNN, deploy); err != nil {
+					return err
+				}
+				for _, volume := range deploy.Spec.Template.Spec.Volumes {
+					if volume.Name == expectedVolumeName {
+						return nil
+					}
+				}
+				return fmt.Errorf("volume %s not found in deployment", expectedVolumeName)
+			}, timeout, interval).Should(Succeed(), "Mount-on-start secret should be mounted in deployment")
+
+			By("Deleting the original secret")
+			deleteObject(secret)
+
+			By("Checking that volume is removed from deployment after secret deletion (triggers workspace restart)")
+			Eventually(func() bool {
+				deploy := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, deployNN, deploy); err != nil {
+					return false
+				}
+				for _, volume := range deploy.Spec.Template.Spec.Volumes {
+					if volume.Name == expectedVolumeName {
+						return false
+					}
+				}
+				return true
+			}, 30*time.Second, interval).Should(BeTrue(), "Volume should be removed from deployment after secret deletion")
+
+			By("Creating a new secret with the same name but different data")
+			newSecret := generateSecret("mount-on-start-secret", corev1.SecretTypeOpaque)
+			newSecret.Labels[constants.DevWorkspaceMountLabel] = "true"
+			newSecret.Annotations[constants.DevWorkspaceMountPathAnnotation] = "/test/mount"
+			newSecret.Annotations[constants.MountOnStartAttribute] = "true"
+			newSecret.Data["data"] = []byte("new-content")
+			createObject(newSecret)
+			defer deleteObject(newSecret)
+
+			By("Checking that the recreated mount-on-start secret is NOT mounted while workspace is already running")
+			Consistently(func() bool {
+				deploy := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, deployNN, deploy); err != nil {
+					return false
+				}
+				for _, volume := range deploy.Spec.Template.Spec.Volumes {
+					if volume.Name == expectedVolumeName {
+						return false
+					}
+				}
+				return true
+			}, 2*time.Second, interval).Should(BeTrue(), "Recreated mount-on-start secret should NOT be mounted while workspace is already running")
+		})
 	})
 
 	Context("DevWorkspace deployment", func() {

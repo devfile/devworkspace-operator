@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -171,4 +171,10 @@ const (
 	//           controller.devfile.io/restore-source-image: "registry.example.com/backups/my-workspace:20241111-123456"
 	//
 	WorkspaceRestoreSourceImageAttribute = "controller.devfile.io/restore-source-image"
+
+	// MountOnStartAttribute is an attribute applied to Kubernetes resources to indicate that they should only
+	// be mounted to a workspace when it starts. When this attribute is set to "true", newly created
+	// resources will not be automatically mounted to running workspaces, preventing unwanted workspace
+	// restarts.
+	MountOnStartAttribute = "controller.devfile.io/mount-on-start"
 )

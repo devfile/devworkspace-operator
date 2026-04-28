@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -454,8 +454,18 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return r.failWorkspace(workspace, fmt.Sprintf("Failed to mount SSH askpass script to workspace: %s", err), metrics.ReasonWorkspaceEngineFailure, reqLogger, &reconcileStatus), nil
 	}
 
-	// Add automount resources into devfile containers
-	err = automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace, home.PersistUserHomeEnabled(workspace))
+	var workspaceDeployment *appsv1.Deployment
+
+	if workspace.Status.Phase == dw.DevWorkspaceStatusRunning {
+		// Fetch the existing deployment to determine whether automount resources with
+		// `controller.devfile.io/mount-on-start=true` can be mounted without a restart.
+		// Only needed when the workspace is already running; skip otherwise to reduce API calls.
+		if workspaceDeployment, err = wsprovision.GetClusterDeployment(workspace, clusterAPI); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	err = automount.ProvisionAutoMountResourcesInto(devfilePodAdditions, clusterAPI, workspace.Namespace, home.PersistUserHomeEnabled(workspace), workspaceDeployment)
 	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Failed to process automount resources", metrics.ReasonBadRequest, reqLogger, &reconcileStatus); shouldReturn {
 		return reconcileResult, reconcileErr
 	}

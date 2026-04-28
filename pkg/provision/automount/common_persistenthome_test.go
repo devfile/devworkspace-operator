@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -56,7 +56,7 @@ func TestProvisionAutomountResourcesIntoPersistentHomeEnabled(t *testing.T) {
 				Client: fake.NewClientBuilder().WithObjects(tt.Input.allObjects...).Build(),
 			}
 
-			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, true)
+			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, true, nil)
 
 			if !assert.NoError(t, err, "Unexpected error") {
 				return

@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,16 +20,17 @@ import (
 	"path"
 	"sort"
 
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
-func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, error) {
+func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI, workspaceDeployment *appsv1.Deployment) (*Resources, error) {
 	secrets := &corev1.SecretList{}
 	if err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
@@ -37,11 +38,8 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 		return nil, err
 	}
 	sortSecrets(secrets.Items)
-	var allAutoMountResouces []Resources
+	var allAutoMountResources []Resources
 	for _, secret := range secrets.Items {
-		if msg := checkAutomountVolumeForPotentialError(&secret); msg != "" {
-			return nil, &dwerrors.FailError{Message: msg}
-		}
 		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {
@@ -55,9 +53,19 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI) (*Resources, 
 			}
 		}
 
-		allAutoMountResouces = append(allAutoMountResouces, getAutomountSecret(mountPath, mountAs, accessMode, &secret))
+		automountSecret := getAutomountSecret(mountPath, mountAs, accessMode, &secret)
+		if !isAllowedToMount(&secret, automountSecret, workspaceDeployment) {
+			log.V(1).Info("Not allowed to mount Secret", "namespace", secret.Namespace, "name", secret.Name)
+			continue
+		}
+
+		if msg := checkAutomountVolumeForPotentialError(&secret); msg != "" {
+			return nil, &dwerrors.FailError{Message: msg}
+		}
+
+		allAutoMountResources = append(allAutoMountResources, automountSecret)
 	}
-	automountResources := flattenAutomountResources(allAutoMountResouces)
+	automountResources := flattenAutomountResources(allAutoMountResources)
 	return &automountResources, nil
 }
 

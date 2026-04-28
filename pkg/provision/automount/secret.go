@@ -55,6 +55,7 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI, workspaceDepl
 
 		automountSecret := getAutomountSecret(mountPath, mountAs, accessMode, &secret)
 		if !isAllowedToMount(&secret, automountSecret, workspaceDeployment) {
+			log.V(1).Info("Not allowed to mount Secret", "namespace", secret.Namespace, "name", secret.Name)
 			continue
 		}
 

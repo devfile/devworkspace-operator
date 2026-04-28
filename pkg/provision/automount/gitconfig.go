@@ -97,6 +97,8 @@ func getGitResources(
 		if len(secretList.Items) > 0 {
 			secrets = secretList.Items
 		}
+	} else {
+		log.V(1).Info("Not allowed to mount Git credentials secret", "namespace", namespace)
 	}
 	sortSecrets(secrets)
 
@@ -111,6 +113,8 @@ func getGitResources(
 		if len(configmapList.Items) > 0 {
 			configmaps = configmapList.Items
 		}
+	} else {
+		log.V(1).Info("Not allowed to mount Git configs", "namespace", namespace)
 	}
 	sortConfigmaps(configmaps)
 

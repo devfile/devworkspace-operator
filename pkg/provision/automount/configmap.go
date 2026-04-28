@@ -57,6 +57,7 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI, workspaceD
 
 		automountCM := getAutomountConfigmap(mountPath, mountAs, accessMode, &configmap)
 		if !isAllowedToMount(&configmap, automountCM, workspaceDeployment) {
+			log.V(1).Info("Not allowed to mount ConfigMap", "namespace", configmap.Namespace, "name", configmap.Name)
 			continue
 		}
 

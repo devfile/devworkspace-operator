@@ -23,11 +23,16 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
+)
+
+var (
+	log = ctrl.Log.WithName("automount")
 )
 
 type mountPathEntry struct {
@@ -111,6 +116,7 @@ func getAutoMountPVCs(
 		}
 
 		if !isAllowedToMount(&pvc, automountPVC, workspaceDeployment) {
+			log.V(1).Info("Not allowed to mount PVC", "namespace", pvc.Namespace, "name", pvc.Name)
 			continue
 		}
 

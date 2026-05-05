@@ -21,6 +21,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	configv1 "github.com/openshift/api/config/v1"
 	routev1 "github.com/openshift/api/route/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -119,6 +120,11 @@ func GetWebhooksCacheFunc(namespace string) (cache.NewCacheFunc, error) {
 		&corev1.Pod{}: {
 			Label: devworkspaceObjectSelector,
 		},
+	}
+
+	if infrastructure.IsOpenShift() {
+		// configv1.APIServer is cluster-scoped; ByObject.Namespaces must not be set for cluster-scoped resources.
+		selectors[&configv1.APIServer{}] = cache.ByObject{}
 	}
 
 	return func(config *rest.Config, opts cache.Options) (cache.Cache, error) {

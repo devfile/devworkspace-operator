@@ -126,6 +126,33 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 					"create",
 				},
 			},
+			{
+				// list and watch are collection-level verbs and cannot be restricted by resourceNames
+				APIGroups: []string{
+					"config.openshift.io",
+				},
+				Resources: []string{
+					"apiservers",
+				},
+				Verbs: []string{
+					"list",
+					"watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"config.openshift.io",
+				},
+				Resources: []string{
+					"apiservers",
+				},
+				ResourceNames: []string{
+					"cluster",
+				},
+				Verbs: []string{
+					"get",
+				},
+			},
 		},
 	}
 

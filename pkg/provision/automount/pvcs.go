@@ -68,12 +68,13 @@ func parseMountPathAnnotation(annotation string, pvcName string) ([]mountPathEnt
 }
 
 func getAutoMountPVCs(
-	namespace string,
+	workspaceNamespace string,
+	workspaceName string,
 	api sync.ClusterAPI,
 	workspaceDeployment *appsv1.Deployment,
 ) (*Resources, error) {
 	pvcs := &corev1.PersistentVolumeClaimList{}
-	if err := api.Client.List(api.Ctx, pvcs, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, pvcs, k8sclient.InNamespace(workspaceNamespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, err
@@ -84,6 +85,12 @@ func getAutoMountPVCs(
 
 	var allAutoMountResources []Resources
 	for _, pvc := range pvcs.Items {
+		// Filter resources by workspace name
+		if !MatchesWorkspaceTarget(&pvc, workspaceName) {
+			log.V(1).Info("Skipping PVC mount, workspace does not match include/exclude annotations", "namespace", pvc.Namespace, "name", pvc.Name, "workspace", workspaceName)
+			continue
+		}
+
 		mountReadOnly := pvc.Annotations[constants.DevWorkspaceMountReadyOnlyAnnotation] == "true"
 
 		volume := corev1.Volume{
@@ -115,8 +122,8 @@ func getAutoMountPVCs(
 			VolumeMounts: volumeMounts,
 		}
 
-		if !isAllowedToMount(&pvc, automountPVC, workspaceDeployment) {
-			log.V(1).Info("Not allowed to mount PVC", "namespace", pvc.Namespace, "name", pvc.Name)
+		if !canMountWithoutRestart(&pvc, automountPVC, workspaceDeployment) {
+			log.V(1).Info("Skipping PVC mount: resource requires workspace restart to be mounted", "namespace", pvc.Namespace, "name", pvc.Name, "workspace", workspaceName)
 			continue
 		}
 

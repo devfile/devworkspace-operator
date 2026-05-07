@@ -30,9 +30,14 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
-func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI, workspaceDeployment *appsv1.Deployment) (*Resources, error) {
+func getDevWorkspaceSecrets(
+	workspaceNamespace string,
+	workspaceName string,
+	api sync.ClusterAPI,
+	workspaceDeployment *appsv1.Deployment,
+) (*Resources, error) {
 	secrets := &corev1.SecretList{}
-	if err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, secrets, k8sclient.InNamespace(workspaceNamespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, err
@@ -40,6 +45,12 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI, workspaceDepl
 	sortSecrets(secrets.Items)
 	var allAutoMountResources []Resources
 	for _, secret := range secrets.Items {
+		// Filter resources by workspace name
+		if !MatchesWorkspaceTarget(&secret, workspaceName) {
+			log.V(1).Info("Skipping Secret mount, workspace does not match include/exclude annotations", "namespace", secret.Namespace, "name", secret.Name, "workspace", workspaceName)
+			continue
+		}
+
 		mountAs := secret.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {
@@ -54,8 +65,8 @@ func getDevWorkspaceSecrets(namespace string, api sync.ClusterAPI, workspaceDepl
 		}
 
 		automountSecret := getAutomountSecret(mountPath, mountAs, accessMode, &secret)
-		if !isAllowedToMount(&secret, automountSecret, workspaceDeployment) {
-			log.V(1).Info("Not allowed to mount Secret", "namespace", secret.Namespace, "name", secret.Name)
+		if !canMountWithoutRestart(&secret, automountSecret, workspaceDeployment) {
+			log.V(1).Info("Skipping Secret mount: resource requires workspace restart to be mounted", "namespace", secret.Namespace, "name", secret.Name, "workspace", workspaceName)
 			continue
 		}
 

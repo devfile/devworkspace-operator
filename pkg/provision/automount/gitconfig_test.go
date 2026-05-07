@@ -58,7 +58,7 @@ func TestUserCredentialsAreMountedWithOneCredential(t *testing.T) {
 	// ProvisionGitConfiguration has to be called multiple times since it stops after creating each configmap/secret
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -84,7 +84,7 @@ func TestUserCredentialsAreOnlyMountedOnceWithMultipleCredentials(t *testing.T) 
 	// ProvisionGitConfiguration has to be called multiple times since it stops after creating each configmap/secret
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -104,7 +104,7 @@ func TestGitConfigIsFullyMounted(t *testing.T) {
 	// ProvisionGitConfiguration has to be called multiple times since it stops after creating each configmap/secret
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -240,7 +240,7 @@ func TestShouldNotMountGitCredentialSecretWithMountOnStartIfWorkspaceStarted(t *
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, emptyDeployment())
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", emptyDeployment())
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -265,7 +265,7 @@ func TestMountGitCredentialSecretWithMountOnStartIfWorkspaceNotStarted(t *testin
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -305,7 +305,7 @@ func TestMountGitCredentialSecretWithMountOnStartWhenVolumeExistsInDeployment(t 
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, deployment)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", deployment)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -337,7 +337,7 @@ func TestMountGitCredentialSecretWithMixedMountOnStart(t *testing.T) {
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, emptyDeployment())
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", emptyDeployment())
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -364,7 +364,7 @@ func TestShouldNotMountGitConfigWithMountOnStartIfWorkspaceStarted(t *testing.T)
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, emptyDeployment())
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", emptyDeployment())
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -388,7 +388,7 @@ func TestMountGitConfigWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -425,7 +425,7 @@ func TestMountGitConfigWithMountOnStartWhenVolumeExistsInDeployment(t *testing.T
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, deployment)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", deployment)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -454,7 +454,7 @@ func TestMountGitConfigWithMixedMountOnStart(t *testing.T) {
 	var resources *Resources
 	ok := assert.Eventually(t, func() bool {
 		var err error
-		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, nil)
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
 		t.Log(err)
 		return err == nil
 	}, 100*time.Millisecond, 10*time.Millisecond)
@@ -465,6 +465,446 @@ func TestMountGitConfigWithMixedMountOnStart(t *testing.T) {
 		assertGitCredentialsConfigMapWithSslCAInfo(mountPath1, clusterAPI, t)
 		assertGitCredentialsConfigMapWithSslCAInfo(mountPath2, clusterAPI, t)
 	}
+}
+
+func TestMountGitCredentialSecretWithIncludeAnnotationMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
+		gitCredentialsSecretKey: []byte("my_credentials"),
+	}, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsSecret("my_credentials", clusterAPI, t)
+		assertGitCredentialsConfigMap(clusterAPI, t)
+	}
+}
+
+func TestSkipGitCredentialSecretWithIncludeAnnotationNotMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
+		gitCredentialsSecretKey: []byte("my_credentials"),
+	}, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestSkipGitCredentialSecretWithExcludeAnnotationMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
+		gitCredentialsSecretKey: []byte("my_credentials"),
+	}, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestMountGitCredentialSecretWithExcludeAnnotationNotMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testSecret := buildSecretWithAnnotations("test-secret", mountPath, map[string][]byte{
+		gitCredentialsSecretKey: []byte("my_credentials"),
+	}, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testSecret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsSecret("my_credentials", clusterAPI, t)
+		assertGitCredentialsConfigMap(clusterAPI, t)
+	}
+}
+
+func TestMountGitTLSConfigMapWithIncludeAnnotationMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsConfigMapWithSslCAInfo(mountPath, clusterAPI, t)
+	}
+}
+
+func TestSkipGitTLSConfigMapWithIncludeAnnotationNotMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestSkipGitTLSConfigMapWithExcludeAnnotationMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestMountGitTLSConfigMapWithExcludeAnnotationNotMatching(t *testing.T) {
+	mountPath := "/sample/test"
+	testConfigMap := buildConfigWithAnnotations("test-cm", mountPath, defaultData, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&testConfigMap).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Len(t, resources.Volumes, 2)
+		assert.Len(t, resources.VolumeMounts, 2)
+
+		assertGitCredentialsConfigMapWithSslCAInfo(mountPath, clusterAPI, t)
+	}
+}
+
+func TestFindGitconfigAutomountConfigMapIncludeMatches(t *testing.T) {
+	gitconfigContent := "[user]\n\tname = Test User"
+	cm := buildAutomountGitConfigMap("gitconfig-cm", "/etc", map[string]string{
+		"gitconfig": gitconfigContent,
+	}, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&cm).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.NotNil(t, resources)
+		assertGitConfigContains(gitconfigContent, clusterAPI, t)
+	}
+}
+
+func TestFindGitconfigAutomountConfigMapIncludeDoesNotMatch(t *testing.T) {
+	cm := buildAutomountGitConfigMap("gitconfig-cm", "/etc", map[string]string{
+		"gitconfig": "[user]\n\tname = Test User",
+	}, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&cm).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestFindGitconfigAutomountConfigMapExcludeMatches(t *testing.T) {
+	cm := buildAutomountGitConfigMap("gitconfig-cm", "/etc", map[string]string{
+		"gitconfig": "[user]\n\tname = Test User",
+	}, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&cm).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestFindGitconfigAutomountConfigMapExcludeDoesNotMatch(t *testing.T) {
+	gitconfigContent := "[user]\n\tname = Test User"
+	cm := buildAutomountGitConfigMap("gitconfig-cm", "/etc", map[string]string{
+		"gitconfig": gitconfigContent,
+	}, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&cm).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.NotNil(t, resources)
+		assertGitConfigContains(gitconfigContent, clusterAPI, t)
+	}
+}
+
+func TestFindGitconfigAutomountSecretIncludeMatches(t *testing.T) {
+	gitconfigContent := "[user]\n\tname = Test User"
+	secret := buildAutomountGitSecret("gitconfig-secret", "/etc", map[string][]byte{
+		"gitconfig": []byte(gitconfigContent),
+	}, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&secret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.NotNil(t, resources)
+		assertGitConfigContains(gitconfigContent, clusterAPI, t)
+	}
+}
+
+func TestFindGitconfigAutomountSecretIncludeDoesNotMatch(t *testing.T) {
+	secret := buildAutomountGitSecret("gitconfig-secret", "/etc", map[string][]byte{
+		"gitconfig": []byte("[user]\n\tname = Test User"),
+	}, map[string]string{
+		constants.DevWorkspaceMountIncludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&secret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestFindGitconfigAutomountSecretExcludeMatches(t *testing.T) {
+	secret := buildAutomountGitSecret("gitconfig-secret", "/etc", map[string][]byte{
+		"gitconfig": []byte("[user]\n\tname = Test User"),
+	}, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "test-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&secret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.Nil(t, resources)
+	}
+}
+
+func TestFindGitconfigAutomountSecretExcludeDoesNotMatch(t *testing.T) {
+	gitconfigContent := "[user]\n\tname = Test User"
+	secret := buildAutomountGitSecret("gitconfig-secret", "/etc", map[string][]byte{
+		"gitconfig": []byte(gitconfigContent),
+	}, map[string]string{
+		constants.DevWorkspaceMountExcludeAnnotation: "other-workspace",
+	})
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fake.NewClientBuilder().WithObjects(&secret).Build(),
+		Logger: zap.New(),
+	}
+
+	var resources *Resources
+	ok := assert.Eventually(t, func() bool {
+		var err error
+		resources, err = ProvisionGitConfiguration(clusterAPI, testNamespace, "test-workspace", nil)
+		t.Log(err)
+		return err == nil
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	if ok {
+		assert.NotNil(t, resources)
+		assertGitConfigContains(gitconfigContent, clusterAPI, t)
+	}
+}
+
+func buildAutomountGitConfigMap(name, mountPath string, data map[string]string, extraAnnotations map[string]string) corev1.ConfigMap {
+	extraAnnotations[constants.DevWorkspaceMountAsAnnotation] = constants.DevWorkspaceMountAsSubpath
+	cm := buildConfigWithAnnotations(name, mountPath, data, extraAnnotations)
+	cm.Labels = map[string]string{
+		constants.DevWorkspaceMountLabel: "true",
+	}
+	return cm
+}
+
+func buildAutomountGitSecret(name, mountPath string, data map[string][]byte, extraAnnotations map[string]string) corev1.Secret {
+	extraAnnotations[constants.DevWorkspaceMountAsAnnotation] = constants.DevWorkspaceMountAsSubpath
+	secret := buildSecretWithAnnotations(name, mountPath, data, extraAnnotations)
+	secret.Labels = map[string]string{
+		constants.DevWorkspaceMountLabel: "true",
+	}
+	return secret
 }
 
 func buildConfig(name string, mountPath string, data map[string]string) corev1.ConfigMap {
@@ -513,6 +953,21 @@ func buildConfigWithAnnotations(name string, mountPath string, data map[string]s
 		cm.Annotations[k] = v
 	}
 	return cm
+}
+
+func assertGitConfigContains(expectedContent string, clusterAPI sync.ClusterAPI, t *testing.T) {
+	cm := &corev1.ConfigMap{}
+	err := clusterAPI.Client.Get(
+		context.Background(),
+		types.NamespacedName{
+			Name:      constants.GitCredentialsConfigMapName,
+			Namespace: testNamespace,
+		},
+		cm,
+	)
+
+	assert.NoError(t, err)
+	assert.Contains(t, cm.Data[gitConfigName], expectedContent)
 }
 
 func assertGitCredentialsSecret(expectedCredentials string, clusterAPI sync.ClusterAPI, t *testing.T) {

@@ -1,0 +1,52 @@
+name: Does not provision configmap, secret, or PVC when include annotation does not match workspace name
+
+input:
+  configmaps:
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: non-targeted-configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: 'true'
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/non-targeted
+          controller.devfile.io/mount-to-devworkspace-include: "other-ws, staging-*"
+      data:
+        config-key: "config-value"
+  secrets:
+    -
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: non-targeted-secret
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-secret: 'true'
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/non-targeted-secret
+          controller.devfile.io/mount-to-devworkspace-include: "other-ws, staging-*"
+      stringData:
+        secret-key: "secret-value"
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: non-targeted-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: /tmp/non-targeted-pvc
+          controller.devfile.io/mount-to-devworkspace-include: "other-ws, staging-*"
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output: {}

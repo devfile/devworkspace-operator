@@ -1,0 +1,52 @@
+name: Does not provision configmap, secret, or PVC when exclude annotation matches workspace name
+
+input:
+  configmaps:
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: excluded-configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: 'true'
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/excluded-cm
+          controller.devfile.io/mount-to-devworkspace-exclude: "test-*"
+      data:
+        config-key: "config-value"
+  secrets:
+    -
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: excluded-secret
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-secret: 'true'
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/excluded
+          controller.devfile.io/mount-to-devworkspace-exclude: "test-*"
+      stringData:
+        secret-key: "secret-value"
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: excluded-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: /tmp/excluded-pvc
+          controller.devfile.io/mount-to-devworkspace-exclude: "test-*"
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output: {}

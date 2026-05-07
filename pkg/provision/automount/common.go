@@ -46,11 +46,12 @@ type Resources struct {
 func ProvisionAutoMountResourcesInto(
 	podAdditions *v1alpha1.PodAdditions,
 	api sync.ClusterAPI,
-	namespace string,
+	workspaceNamespace string,
+	workspaceName string,
 	persistentHome bool,
 	workspaceDeployment *appsv1.Deployment,
 ) error {
-	resources, err := getAutomountResources(api, namespace, workspaceDeployment)
+	resources, err := getAutomountResources(api, workspaceNamespace, workspaceName, workspaceDeployment)
 
 	if err != nil {
 		return err
@@ -85,20 +86,21 @@ func ProvisionAutoMountResourcesInto(
 
 func getAutomountResources(
 	api sync.ClusterAPI,
-	namespace string,
+	workspaceNamespace string,
+	workspaceName string,
 	workspaceDeployment *appsv1.Deployment,
 ) (*Resources, error) {
-	gitCMAutoMountResources, err := ProvisionGitConfiguration(api, namespace, workspaceDeployment)
+	gitCMAutoMountResources, err := ProvisionGitConfiguration(api, workspaceNamespace, workspaceName, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
 
-	cmAutoMountResources, err := getDevWorkspaceConfigmaps(namespace, api, workspaceDeployment)
+	cmAutoMountResources, err := getDevWorkspaceConfigmaps(workspaceNamespace, workspaceName, api, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
 
-	secretAutoMountResources, err := getDevWorkspaceSecrets(namespace, api, workspaceDeployment)
+	secretAutoMountResources, err := getDevWorkspaceSecrets(workspaceNamespace, workspaceName, api, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +117,7 @@ func getAutomountResources(
 	}
 	dropItemsFieldFromVolumes(mergedResources.Volumes)
 
-	pvcAutoMountResources, err := getAutoMountPVCs(namespace, api, workspaceDeployment)
+	pvcAutoMountResources, err := getAutoMountPVCs(workspaceNamespace, workspaceName, api, workspaceDeployment)
 	if err != nil {
 		return nil, err
 	}
@@ -214,12 +216,17 @@ func flattenAutomountResources(resources []Resources) Resources {
 	return flattened
 }
 
-// findGitconfigAutomount searches a namespace for a automount resource (configmap or secret) that contains
+// findGitconfigAutomount searches a namespace for an automount resource (configmap or secret) that contains
 // a system-wide gitconfig (i.e. the mountpath is `/etc/gitconfig`). Only objects with mount type "subpath"
-// are considered. If a suitable object is found, the contents of the gitconfig defined there is returned.
-func findGitconfigAutomount(api sync.ClusterAPI, namespace string) (gitconfig *string, err error) {
+// are considered. Resources that do not match the workspace's include/exclude annotations are skipped.
+// If a suitable object is found, the contents of the gitconfig defined there is returned.
+func findGitconfigAutomount(
+	api sync.ClusterAPI,
+	workspaceNamespace string,
+	workspaceName string,
+) (gitconfig *string, err error) {
 	configmapList := &corev1.ConfigMapList{}
-	if err := api.Client.List(api.Ctx, configmapList, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, configmapList, k8sclient.InNamespace(workspaceNamespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, err
@@ -228,6 +235,13 @@ func findGitconfigAutomount(api sync.ClusterAPI, namespace string) (gitconfig *s
 		if cm.Annotations[constants.DevWorkspaceMountAsAnnotation] != constants.DevWorkspaceMountAsSubpath {
 			continue
 		}
+
+		// Filter resources by workspace name
+		if !MatchesWorkspaceTarget(&cm, workspaceName) {
+			log.V(1).Info("Skipping ConfigMap, workspace does not match include/exclude annotations", "namespace", cm.Namespace, "name", cm.Name, "workspace", workspaceName)
+			continue
+		}
+
 		mountPath := cm.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		for key, value := range cm.Data {
 			if path.Join(mountPath, key) == "/etc/gitconfig" {
@@ -240,7 +254,7 @@ func findGitconfigAutomount(api sync.ClusterAPI, namespace string) (gitconfig *s
 	}
 
 	secretList := &corev1.SecretList{}
-	if err := api.Client.List(api.Ctx, secretList, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, secretList, k8sclient.InNamespace(workspaceNamespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, err
@@ -249,6 +263,13 @@ func findGitconfigAutomount(api sync.ClusterAPI, namespace string) (gitconfig *s
 		if secret.Annotations[constants.DevWorkspaceMountAsAnnotation] != constants.DevWorkspaceMountAsSubpath {
 			continue
 		}
+
+		// Filter resources by workspace name
+		if !MatchesWorkspaceTarget(&secret, workspaceName) {
+			log.V(1).Info("Skipping Secret, workspace does not match include/exclude annotations", "namespace", secret.Namespace, "name", secret.Name, "workspace", workspaceName)
+			continue
+		}
+
 		mountPath := secret.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		for key, value := range secret.Data {
 			if path.Join(mountPath, key) == "/etc/gitconfig" {
@@ -370,10 +391,10 @@ func isMountOnStart(obj k8sclient.Object) bool {
 	return obj.GetAnnotations()[constants.MountOnStartAttribute] == "true"
 }
 
-// isAllowedToMount checks whether an automount resource can be added to the workspace pod.
+// canMountWithoutRestart checks whether an automount resource can be added to the workspace pod.
 // Resources marked with mount-on-start are only allowed when
 // the workspace is not yet running or when they are already present in the current deployment.
-func isAllowedToMount(
+func canMountWithoutRestart(
 	obj k8sclient.Object,
 	automountResource Resources,
 	workspaceDeployment *appsv1.Deployment,
@@ -435,5 +456,57 @@ func isEnvFromSourceExistsInDeployment(automountResource Resources, workspaceDep
 		}
 	}
 
+	return false
+}
+
+// MatchesWorkspaceTarget checks whether a resource should be mounted to a given workspace
+// based on include/exclude annotations. Both annotations can be used together: the resource
+// is mounted when it matches the include pattern (or no include is set) and does not match the exclude pattern.
+func MatchesWorkspaceTarget(
+	obj k8sclient.Object,
+	workspaceName string,
+) bool {
+	annotations := obj.GetAnnotations()
+
+	includePatterns := strings.TrimSpace(annotations[constants.DevWorkspaceMountIncludeAnnotation])
+	excludePatterns := strings.TrimSpace(annotations[constants.DevWorkspaceMountExcludeAnnotation])
+
+	included := includePatterns == "" || matchesAnyPattern(includePatterns, workspaceName)
+	excluded := excludePatterns != "" && matchesAnyPattern(excludePatterns, workspaceName)
+
+	return included && !excluded
+}
+
+func matchesAnyPattern(patternsStr string, workspaceName string) bool {
+	patterns := strings.Split(patternsStr, ",")
+	for _, pattern := range patterns {
+		pattern = strings.TrimSpace(pattern)
+		if pattern == "" {
+			continue
+		}
+
+		if pattern == "*" {
+			return true
+		}
+
+		startsWithWildcard := strings.HasPrefix(pattern, "*")
+		endsWithWildcard := strings.HasSuffix(pattern, "*")
+
+		var matched bool
+		switch {
+		case startsWithWildcard && endsWithWildcard:
+			matched = strings.Contains(workspaceName, pattern[1:len(pattern)-1])
+		case endsWithWildcard:
+			matched = strings.HasPrefix(workspaceName, pattern[:len(pattern)-1])
+		case startsWithWildcard:
+			matched = strings.HasSuffix(workspaceName, pattern[1:])
+		default:
+			matched = workspaceName == pattern
+		}
+
+		if matched {
+			return true
+		}
+	}
 	return false
 }

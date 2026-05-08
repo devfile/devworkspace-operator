@@ -49,6 +49,28 @@ const (
 	// DevWorkspaceMountLabel is the label key to store if a configmap, secret, or PVC should be mounted to the devworkspace
 	DevWorkspaceMountLabel = "controller.devfile.io/mount-to-devworkspace"
 
+	// DevWorkspaceMountIncludeAnnotation is an annotation to configure which DevWorkspaces an automount
+	// resource should be mounted to. The value is a comma-separated list of patterns matched against
+	// the DevWorkspace name. The resource is only mounted to workspaces whose name matches at least one pattern.
+	// Supported patterns:
+	// - exact match `name`
+	// - prefix match `name*`
+	// - suffix match `*name`
+	// - contains match `*name*`
+	// - matches all workspaces `*`
+	DevWorkspaceMountIncludeAnnotation = "controller.devfile.io/mount-to-devworkspace-include"
+
+	// DevWorkspaceMountExcludeAnnotation is an annotation to configure which DevWorkspaces an automount
+	// resource should NOT be mounted to. The value is a comma-separated list of patterns matched against
+	// the DevWorkspace name. The resource is not mounted to workspaces whose name matches any pattern.
+	// Supported patterns:
+	// - exact match `name`
+	// - prefix match `name*`
+	// - suffix match `*name`
+	// - contains match `*name*`
+	// - matches all workspaces `*`
+	DevWorkspaceMountExcludeAnnotation = "controller.devfile.io/mount-to-devworkspace-exclude"
+
 	// DevWorkspaceMountPathAnnotation is the annotation key to store the mount path for the secret or configmap.
 	// If no mount path is provided, configmaps will be mounted at /etc/config/<configmap-name>, secrets will
 	// be mounted at /etc/secret/<secret-name>, and persistent volume claims will be mounted to /tmp/<claim-name>

@@ -30,9 +30,14 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
-func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI, workspaceDeployment *appsv1.Deployment) (*Resources, error) {
+func getDevWorkspaceConfigmaps(
+	workspaceNamespace string,
+	workspaceName string,
+	api sync.ClusterAPI,
+	workspaceDeployment *appsv1.Deployment,
+) (*Resources, error) {
 	configmaps := &corev1.ConfigMapList{}
-	if err := api.Client.List(api.Ctx, configmaps, k8sclient.InNamespace(namespace), k8sclient.MatchingLabels{
+	if err := api.Client.List(api.Ctx, configmaps, k8sclient.InNamespace(workspaceNamespace), k8sclient.MatchingLabels{
 		constants.DevWorkspaceMountLabel: "true",
 	}); err != nil {
 		return nil, err
@@ -42,6 +47,12 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI, workspaceD
 	var allAutoMountResources []Resources
 
 	for _, configmap := range configmaps.Items {
+		// Filter resources by workspace name
+		if !MatchesWorkspaceTarget(&configmap, workspaceName) {
+			log.V(1).Info("Skipping ConfigMap mount, workspace does not match include/exclude annotations", "namespace", configmap.Namespace, "name", configmap.Name, "workspace", workspaceName)
+			continue
+		}
+
 		mountAs := configmap.Annotations[constants.DevWorkspaceMountAsAnnotation]
 		mountPath := configmap.Annotations[constants.DevWorkspaceMountPathAnnotation]
 		if mountPath == "" {
@@ -56,8 +67,8 @@ func getDevWorkspaceConfigmaps(namespace string, api sync.ClusterAPI, workspaceD
 		}
 
 		automountCM := getAutomountConfigmap(mountPath, mountAs, accessMode, &configmap)
-		if !isAllowedToMount(&configmap, automountCM, workspaceDeployment) {
-			log.V(1).Info("Not allowed to mount ConfigMap", "namespace", configmap.Namespace, "name", configmap.Name)
+		if !canMountWithoutRestart(&configmap, automountCM, workspaceDeployment) {
+			log.V(1).Info("Skipping ConfigMap mount: resource requires workspace restart to be mounted", "namespace", configmap.Namespace, "name", configmap.Name, "workspace", workspaceName)
 			continue
 		}
 

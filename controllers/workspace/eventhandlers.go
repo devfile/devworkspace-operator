@@ -20,6 +20,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -118,22 +119,30 @@ func (r *DevWorkspaceReconciler) dwPVCHandler(ctx context.Context, obj client.Ob
 	return reconciles
 }
 
-func (r *DevWorkspaceReconciler) runningWorkspacesHandler(ctx context.Context, obj client.Object) []reconcile.Request {
+func (r *DevWorkspaceReconciler) runningWorkspacesHandler(_ context.Context, obj client.Object) []reconcile.Request {
 	dwList := &dw.DevWorkspaceList{}
 	if err := r.Client.List(context.Background(), dwList, &client.ListOptions{Namespace: obj.GetNamespace()}); err != nil {
 		return []reconcile.Request{}
 	}
 	var reconciles []reconcile.Request
 	for _, workspace := range dwList.Items {
-		// Queue reconciles for any started workspaces to make sure they pick up new object
-		if workspace.Spec.Started {
-			reconciles = append(reconciles, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      workspace.GetName(),
-					Namespace: workspace.GetNamespace(),
-				},
-			})
+		// Queue reconciles ONLY for any started workspaces to make sure they pick up new object
+		if !workspace.Spec.Started {
+			continue
 		}
+
+		// Skip workspaces that don't match the resource's include/exclude annotations
+		// to avoid unnecessary reconciles in multi-workspace clusters.
+		if !automount.MatchesWorkspaceTarget(obj, workspace.GetName()) {
+			continue
+		}
+
+		reconciles = append(reconciles, reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      workspace.GetName(),
+				Namespace: workspace.GetNamespace(),
+			},
+		})
 	}
 	return reconciles
 }

@@ -1,0 +1,55 @@
+name: Does not provision configmap, secret, or PVC when both include and exclude annotations are present
+
+input:
+  configmaps:
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: conflicting-configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: 'true'
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/conflicting
+          controller.devfile.io/mount-to-devworkspace-include: "test-workspace"
+          controller.devfile.io/mount-to-devworkspace-exclude: "test-workspace"
+      data:
+        config-key: "config-value"
+  secrets:
+    -
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: conflicting-secret
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-secret: 'true'
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/conflicting-secret
+          controller.devfile.io/mount-to-devworkspace-include: "test-workspace"
+          controller.devfile.io/mount-to-devworkspace-exclude: "test-workspace"
+      stringData:
+        secret-key: "secret-value"
+  pvcs:
+    -
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: conflicting-pvc
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+        annotations:
+          controller.devfile.io/mount-path: /tmp/conflicting-pvc
+          controller.devfile.io/mount-to-devworkspace-include: "test-workspace"
+          controller.devfile.io/mount-to-devworkspace-exclude: "test-workspace"
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+output: {}

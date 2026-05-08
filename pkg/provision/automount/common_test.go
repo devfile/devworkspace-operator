@@ -34,6 +34,7 @@ import (
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
@@ -128,7 +129,7 @@ func TestProvisionAutomountResourcesInto(t *testing.T) {
 			}
 			// Note: this test does not allow for returning AutoMountError with isFatal: false (i.e. no retrying)
 			// and so is not suitable for testing automount features that provision cluster resources (yet)
-			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, false, nil)
+			err := ProvisionAutoMountResourcesInto(podAdditions, testAPI, testNamespace, "test-workspace", false, nil)
 			if tt.Output.ErrRegexp != nil {
 				if !assert.Error(t, err, "Expected an error but got none") {
 					return
@@ -422,7 +423,7 @@ func TestShouldNotMountSecretWithMountOnStartIfWorkspaceStarted(t *testing.T) {
 		}},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, emptyDeployment())
 	assert.NoError(t, err)
 	assert.Empty(t, testPodAdditions.Volumes)
 	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
@@ -440,7 +441,7 @@ func TestMountSecretWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
 		}},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, nil)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, nil)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Volumes, 1)
 	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
@@ -476,7 +477,7 @@ func TestMountOnStartSecretAsEnvAllowedWhenEnvFromExistsInDeployment(t *testing.
 		},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, deployment)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Containers[0].EnvFrom, 1)
 	assert.Equal(t, common.AutoMountSecretVolumeName("test-secret"), testPodAdditions.Containers[0].EnvFrom[0].SecretRef.Name)
@@ -505,7 +506,7 @@ func TestMountOnStartSecretAsFileAllowedWhenVolumeExistsInDeployment(t *testing.
 		},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, deployment)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Volumes, 1)
 	assert.Equal(t, common.AutoMountSecretVolumeName("test-secret"), testPodAdditions.Volumes[0].Name)
@@ -523,7 +524,7 @@ func TestShouldNotMountConfigMapWithMountOnStartIfWorkspaceStarted(t *testing.T)
 		}},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, emptyDeployment())
 	assert.NoError(t, err)
 	assert.Empty(t, testPodAdditions.Volumes)
 	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
@@ -541,7 +542,7 @@ func TestMountConfigMapWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
 		}},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, nil)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, nil)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Volumes, 1)
 	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
@@ -577,7 +578,7 @@ func TestMountOnStartConfigMapAsEnvAllowedWhenEnvFromExistsInDeployment(t *testi
 		},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, deployment)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Containers[0].EnvFrom, 1)
 	assert.Equal(t, common.AutoMountConfigMapVolumeName("test-cm"), testPodAdditions.Containers[0].EnvFrom[0].ConfigMapRef.Name)
@@ -606,7 +607,7 @@ func TestMountOnStartConfigMapAsFileAllowedWhenVolumeExistsInDeployment(t *testi
 		},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, deployment)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Volumes, 1)
 	assert.Equal(t, common.AutoMountConfigMapVolumeName("test-cm"), testPodAdditions.Volumes[0].Name)
@@ -624,7 +625,7 @@ func TestShouldNotMountPVCWithMountOnStartIfWorkspaceStarted(t *testing.T) {
 		}},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, emptyDeployment())
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, emptyDeployment())
 	assert.NoError(t, err)
 	assert.Empty(t, testPodAdditions.Volumes)
 	assert.Empty(t, testPodAdditions.Containers[0].VolumeMounts)
@@ -642,7 +643,7 @@ func TestMountPVCWithMountOnStartIfWorkspaceNotStarted(t *testing.T) {
 		}},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, nil)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, nil)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Volumes, 1)
 	assert.Len(t, testPodAdditions.Containers[0].VolumeMounts, 1)
@@ -672,7 +673,7 @@ func TestMountOnStartPVCAllowedWhenVolumeExistsInDeployment(t *testing.T) {
 		},
 	}
 
-	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, false, deployment)
+	err := ProvisionAutoMountResourcesInto(testPodAdditions, testAPI, testNamespace, "test-workspace", false, deployment)
 	assert.NoError(t, err)
 	assert.Len(t, testPodAdditions.Volumes, 1)
 	assert.Equal(t, common.AutoMountPVCVolumeName("test-pvc"), testPodAdditions.Volumes[0].Name)
@@ -785,5 +786,243 @@ func mountOnStartPVC() *corev1.PersistentVolumeClaim {
 				"controller.devfile.io/mount-on-start": "true",
 			},
 		},
+	}
+}
+
+func TestMatchesWorkspaceTarget(t *testing.T) {
+	tests := []struct {
+		name          string
+		annotations   map[string]string
+		workspaceName string
+		expected      bool
+	}{
+		// No annotations / empty annotations
+		{
+			name:          "No annotations mounts to all workspaces",
+			annotations:   nil,
+			workspaceName: "any-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Empty include annotation mounts to all workspaces",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: ""},
+			workspaceName: "any-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Empty exclude annotation mounts to all workspaces",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: ""},
+			workspaceName: "any-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Whitespace-only include annotation mounts to all workspaces",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "  "},
+			workspaceName: "any-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Whitespace-only exclude annotation mounts to all workspaces",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "  "},
+			workspaceName: "any-workspace",
+			expected:      true,
+		},
+		// Exact match
+		{
+			name:          "Include exact match",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "my-workspace"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Include exact match does not match different name",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "other-workspace"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude exact match",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "my-workspace"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude exact match does not match different name",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "other-workspace"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		// Prefix match (pattern*)
+		{
+			name:          "Include prefix pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "my-*"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Include prefix pattern does not match",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "other-*"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude prefix pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "my-*"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude prefix pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "test-*"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		// Suffix match (*pattern)
+		{
+			name:          "Include suffix pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "*workspace"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Include suffix pattern does not match",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "*other"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude suffix pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "*workspace"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude suffix pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "*test"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		// Contains match (*pattern*)
+		{
+			name:          "Include contains pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "*work*"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Include contains pattern does not match",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "*xyz*"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude contains pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "*work*"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude contains pattern matches",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "*test*"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		// Wildcard (*)
+		{
+			name:          "Include wildcard matches all workspaces",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "*"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Exclude wildcard excludes all workspaces",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "*"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		// Comma-separated patterns
+		{
+			name:          "Include with comma-separated list matches second pattern",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "other-workspace, my-workspace"},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		{
+			name:          "Include with comma-separated list matches none",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: "foo, bar"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Exclude with comma-separated list matches second pattern",
+			annotations:   map[string]string{constants.DevWorkspaceMountExcludeAnnotation: "other, my-*"},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name:          "Include with comma-separated list and trailing whitespace",
+			annotations:   map[string]string{constants.DevWorkspaceMountIncludeAnnotation: " my-workspace , other "},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		// Both include and exclude annotations
+		{
+			name: "Include matches and exclude matches results in not mounted",
+			annotations: map[string]string{
+				constants.DevWorkspaceMountIncludeAnnotation: "my-workspace",
+				constants.DevWorkspaceMountExcludeAnnotation: "my-workspace",
+			},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name: "Include matches and exclude does not match results in mounted",
+			annotations: map[string]string{
+				constants.DevWorkspaceMountIncludeAnnotation: "my-workspace",
+				constants.DevWorkspaceMountExcludeAnnotation: "other-workspace",
+			},
+			workspaceName: "my-workspace",
+			expected:      true,
+		},
+		{
+			name: "Include does not match and exclude does not match results in not mounted",
+			annotations: map[string]string{
+				constants.DevWorkspaceMountIncludeAnnotation: "other-workspace",
+				constants.DevWorkspaceMountExcludeAnnotation: "another-workspace",
+			},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		{
+			name: "Include does not match and exclude matches results in not mounted",
+			annotations: map[string]string{
+				constants.DevWorkspaceMountIncludeAnnotation: "other-workspace",
+				constants.DevWorkspaceMountExcludeAnnotation: "my-workspace",
+			},
+			workspaceName: "my-workspace",
+			expected:      false,
+		},
+		// Edge cases
+		{
+			name: "Should mount to all except my-workspace",
+			annotations: map[string]string{
+				constants.DevWorkspaceMountIncludeAnnotation: "*",
+				constants.DevWorkspaceMountExcludeAnnotation: "my-workspace",
+			},
+			workspaceName: "workspace-123.dev",
+			expected:      true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-obj",
+					Annotations: tt.annotations,
+				},
+			}
+			assert.Equal(t, tt.expected, MatchesWorkspaceTarget(obj, tt.workspaceName))
+		})
 	}
 }

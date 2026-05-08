@@ -143,6 +143,131 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 	})
 })
 
+var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace set)", func() {
+	const (
+		workspaceNS = "user-namespace"
+		operatorNS  = "devworkspace-controller"
+	)
+
+	var (
+		ctx    context.Context
+		scheme *runtime.Scheme
+		log    = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		scheme = buildScheme()
+	})
+
+	It("returns the secret from workspace namespace if it exists", func() {
+		By("creating a secret in the workspace namespace")
+		workspaceSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, workspaceNS)
+		workspaceSecret.Data = map[string][]byte{"auth": []byte("user-credentials")}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(workspaceSecret).Build()
+		workspace := makeWorkspace(workspaceNS)
+		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
+		Expect(result.Namespace).To(Equal(workspaceNS))
+		Expect(result.Data["auth"]).To(Equal([]byte("user-credentials")))
+	})
+
+	It("returns error when AuthSecret is not configured and secret not found in workspace namespace", func() {
+		By("using a config with empty AuthSecret")
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		workspace := makeWorkspace(workspaceNS)
+		config := makeConfig("") // Empty AuthSecret
+
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		Expect(err).To(HaveOccurred())
+		Expect(result).To(BeNil())
+		Expect(err.Error()).To(ContainSubstring("AuthSecret is not configured"))
+		Expect(err.Error()).To(ContainSubstring(workspaceNS))
+	})
+
+	It("copies secret from operator namespace when AuthSecret is configured and secret not found in workspace namespace", func() {
+		By("creating a secret in the operator namespace")
+		operatorSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, operatorNS)
+		operatorSecret.Data = map[string][]byte{"auth": []byte("operator-credentials")}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(operatorSecret).Build()
+		workspace := makeWorkspace(workspaceNS)
+		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
+		Expect(result.Namespace).To(Equal(workspaceNS))
+		Expect(result.Data["auth"]).To(Equal([]byte("operator-credentials")))
+
+		By("verifying the secret was created in the workspace namespace")
+		copiedSecret := &corev1.Secret{}
+		err = fakeClient.Get(ctx, client.ObjectKey{
+			Name:      constants.DevWorkspaceBackupAuthSecretName,
+			Namespace: workspaceNS,
+		}, copiedSecret)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(copiedSecret.Data["auth"]).To(Equal([]byte("operator-credentials")))
+
+		By("verifying the copied secret has the watch-secret label")
+		Expect(copiedSecret.Labels).To(HaveKeyWithValue(constants.DevWorkspaceWatchSecretLabel, "true"))
+
+		By("verifying the copied secret has an owner reference to the workspace")
+		Expect(copiedSecret.OwnerReferences).To(HaveLen(1))
+		Expect(copiedSecret.OwnerReferences[0].Name).To(Equal(workspace.Name))
+		Expect(copiedSecret.OwnerReferences[0].Kind).To(Equal("DevWorkspace"))
+		Expect(copiedSecret.OwnerReferences[0].Controller).NotTo(BeNil())
+		Expect(*copiedSecret.OwnerReferences[0].Controller).To(BeTrue())
+	})
+
+	It("NEVER overwrites user-provided secret even if operator has different credentials", func() {
+		By("creating different secrets in both namespaces")
+		userSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, workspaceNS)
+		userSecret.Data = map[string][]byte{"auth": []byte("user-scoped-credentials")}
+
+		operatorSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, operatorNS)
+		operatorSecret.Data = map[string][]byte{"auth": []byte("operator-wide-credentials")}
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(userSecret, operatorSecret).Build()
+		workspace := makeWorkspace(workspaceNS)
+		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+
+		By("verifying the user's secret was NOT overwritten")
+		Expect(result.Data["auth"]).To(Equal([]byte("user-scoped-credentials")), "User's secret should be preserved")
+
+		By("verifying the secret in workspace namespace still has user's credentials")
+		workspaceSecret := &corev1.Secret{}
+		err = fakeClient.Get(ctx, client.ObjectKey{
+			Name:      constants.DevWorkspaceBackupAuthSecretName,
+			Namespace: workspaceNS,
+		}, workspaceSecret)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(workspaceSecret.Data["auth"]).To(Equal([]byte("user-scoped-credentials")), "User's secret must never be overwritten")
+	})
+
+	It("returns error when AuthSecret is configured but secret not found in operator namespace", func() {
+		By("using a config with AuthSecret but no secret in operator namespace")
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		workspace := makeWorkspace(workspaceNS)
+		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		Expect(err).To(HaveOccurred())
+		Expect(result).To(BeNil())
+		Expect(k8sErrors.IsNotFound(err)).To(BeTrue(), "Should return a NotFound error when secret doesn't exist in operator namespace")
+	})
+})
+
 // errorOnNameClient is a thin client wrapper that injects an error for a specific secret name.
 type errorOnNameClient struct {
 	client.Client

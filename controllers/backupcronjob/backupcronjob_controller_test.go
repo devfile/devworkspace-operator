@@ -335,7 +335,8 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Enable:   &enabled,
 							Schedule: schedule,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registry",
+								Path:       "fake-registry",
+								AuthSecret: "backup-auth",
 							},
 							OrasConfig: &controllerv1alpha1.OrasConfig{
 								ExtraArgs: "--extra-arg1",
@@ -352,6 +353,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 
 			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			// Create auth secret in operator namespace so it can be copied
+			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
 
 			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
 
@@ -392,7 +397,8 @@ var _ = Describe("BackupCronJobReconciler", func() {
 							Schedule:     schedule,
 							BackoffLimit: &backoffLimit,
 							Registry: &controllerv1alpha1.RegistryConfig{
-								Path: "fake-registry",
+								Path:       "fake-registry",
+								AuthSecret: "backup-auth",
 							},
 						},
 					},
@@ -406,6 +412,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 
 			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			// Create auth secret in operator namespace so it can be copied
+			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
 
 			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
 
@@ -552,7 +562,8 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
 			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
 
-			authSecret := createAuthSecret("my-secret", "ns-a", map[string][]byte{})
+			// User-provided secret in workspace namespace with canonical name
+			authSecret := createAuthSecret("devworkspace-backup-registry-auth", "ns-a", map[string][]byte{})
 			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
 
 			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())

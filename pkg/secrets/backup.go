@@ -24,12 +24,11 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
 // GetRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
@@ -48,27 +47,14 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 		dwOperatorConfig.Workspace.BackupCronJob.Registry == nil {
 		return nil, fmt.Errorf("backup/restore configuration not properly set in DevWorkspaceOperatorConfig")
 	}
-	secretName := dwOperatorConfig.Workspace.BackupCronJob.Registry.AuthSecret
-	if secretName == "" {
-		// No auth secret configured - anonymous access to registry
-		return nil, nil
-	}
-
-	// On the restore path (operatorConfigNamespace == ""), look for the predefined name
-	// that CopySecret always uses. On the backup path, look for the configured name
-	// because the secret may exist directly in the workspace namespace under that name.
-	lookupName := secretName
-	if operatorConfigNamespace == "" {
-		lookupName = constants.DevWorkspaceBackupAuthSecretName
-	}
 
 	registryAuthSecret := &corev1.Secret{}
 	err := c.Get(ctx, client.ObjectKey{
-		Name:      lookupName,
+		Name:      constants.DevWorkspaceBackupAuthSecretName,
 		Namespace: workspace.Namespace}, registryAuthSecret)
 	if err == nil {
 		log.Info("Successfully retrieved registry auth secret for backup from workspace namespace",
-			"secretName", lookupName)
+			"secretName", constants.DevWorkspaceBackupAuthSecretName)
 		return registryAuthSecret, nil
 	}
 	if client.IgnoreNotFound(err) != nil {
@@ -78,23 +64,58 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 	if operatorConfigNamespace == "" {
 		return nil, nil
 	}
-	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace", "secretName", secretName)
 
-	// If the secret is not found in the workspace namespace, check the operator namespace as fallback
+	// Check if AuthSecret is configured in operator config
+	authSecretName := dwOperatorConfig.Workspace.BackupCronJob.Registry.AuthSecret
+	if len(authSecretName) == 0 {
+		return nil, fmt.Errorf(
+			"registry auth secret %q not found in workspace namespace %q and AuthSecret is not configured in DevWorkspaceOperatorConfig. "+
+				"Either create the secret in the workspace namespace or configure Registry.AuthSecret in the operator config to enable copying from the operator namespace",
+			constants.DevWorkspaceBackupAuthSecretName,
+			workspace.Namespace,
+		)
+	}
+
+	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace",
+		"secretName", authSecretName,
+		"operatorNamespace", operatorConfigNamespace)
+
+	// Look for the configured secret name in operator namespace
 	err = c.Get(ctx, client.ObjectKey{
-		Name:      secretName,
+		Name:      authSecretName,
 		Namespace: operatorConfigNamespace}, registryAuthSecret)
 	if err != nil {
-		log.Error(err, "Failed to get registry auth secret for backup job", "secretName", secretName)
+		log.Error(err, "Failed to get registry auth secret for backup job",
+			"secretName", authSecretName,
+			"namespace", operatorConfigNamespace)
 		return nil, err
 	}
-	log.Info("Successfully retrieved registry auth secret for backup job", "secretName", secretName)
+	log.Info("Successfully retrieved registry auth secret from operator namespace",
+		"secretName", authSecretName)
 	return CopySecret(ctx, c, workspace, registryAuthSecret, scheme, log)
 }
 
 // CopySecret copies the given secret from the operator namespace to the workspace namespace.
+// It NEVER overwrites an existing secret: if a secret already exists in the workspace namespace,
+// it returns the existing secret without modification.
 func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, scheme *runtime.Scheme, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
-	// Construct the desired secret state
+	// First check if secret already exists in workspace namespace
+	existingSecret := &corev1.Secret{}
+	err = c.Get(ctx, client.ObjectKey{
+		Name:      constants.DevWorkspaceBackupAuthSecretName,
+		Namespace: workspace.Namespace,
+	}, existingSecret)
+
+	if err == nil {
+		log.Info("Registry auth secret already exists in workspace namespace, using existing secret",
+			"secretName", constants.DevWorkspaceBackupAuthSecretName)
+		return existingSecret, nil
+	}
+
+	if client.IgnoreNotFound(err) != nil {
+		return nil, err
+	}
+
 	desiredSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.DevWorkspaceBackupAuthSecretName,
@@ -111,27 +132,25 @@ func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace
 		return nil, err
 	}
 
-	// Use the sync mechanism
-	clusterAPI := sync.ClusterAPI{
-		Client: c,
-		Scheme: scheme,
-		Logger: log,
-		Ctx:    ctx,
-	}
-
-	syncedObj, err := sync.SyncObjectWithCluster(desiredSecret, clusterAPI)
+	err = c.Create(ctx, desiredSecret)
 	if err != nil {
-		if _, ok := err.(*sync.NotInSyncError); !ok {
-			return nil, err
+		if k8sErrors.IsAlreadyExists(err) {
+			// Race condition - secret was created between Get and Create
+			// Fetch and return it (respect what's there)
+			if err := c.Get(ctx, client.ObjectKey{
+				Name:      constants.DevWorkspaceBackupAuthSecretName,
+				Namespace: workspace.Namespace,
+			}, existingSecret); err != nil {
+				return nil, err
+			}
+			log.Info("Registry auth secret was created concurrently, using existing secret",
+				"secretName", constants.DevWorkspaceBackupAuthSecretName)
+			return existingSecret, nil
 		}
-		// NotInSyncError means the sync operation was successful but triggered a change
-		log.Info("Successfully synced secret", "name", desiredSecret.Name, "namespace", workspace.Namespace)
+		return nil, err
 	}
 
-	// If syncedObj is nil (due to NotInSyncError), return the desired object
-	if syncedObj == nil {
-		return desiredSecret, nil
-	}
-
-	return syncedObj.(*corev1.Secret), nil
+	log.Info("Successfully copied registry auth secret to workspace namespace",
+		"name", desiredSecret.Name, "namespace", workspace.Namespace)
+	return desiredSecret, nil
 }

@@ -125,7 +125,7 @@ Backup CronJob configuration fields:
 The value provided for registry.path is only the first segment of the final location. The full registry path is assembled dynamically, incorporating the name of the workspace and the :latest tag, following this pattern:
 `<registry.path>/<devworkspace-name>:latest`
 
-- **`registry.authSecret`**: (Optional) The name of the Kubernetes Secret containing credentials to access the OCI registry. If not provided, it is assumed that the registry is public or uses integrated OpenShift registry.
+- **`registry.authSecret`**: (Optional) The name of the secret in the **operator namespace** to copy to workspace namespaces. The secret is always copied as `devworkspace-backup-registry-auth` in the workspace namespace. If not provided, backup/restore jobs proceed without authentication.
 - **`oras.extraArgs`**: (Optional) Additional arguments to pass to the `oras` CLI tool during push and pull operations.
 
 

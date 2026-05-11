@@ -68,12 +68,12 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 	// Check if AuthSecret is configured in operator config
 	authSecretName := dwOperatorConfig.Workspace.BackupCronJob.Registry.AuthSecret
 	if len(authSecretName) == 0 {
-		return nil, fmt.Errorf(
-			"registry auth secret %q not found in workspace namespace %q and AuthSecret is not configured in DevWorkspaceOperatorConfig. "+
-				"Either create the secret in the workspace namespace or configure Registry.AuthSecret in the operator config to enable copying from the operator namespace",
-			constants.DevWorkspaceBackupAuthSecretName,
-			workspace.Namespace,
-		)
+		log.Info("Registry auth secret not found in workspace namespace and not configured in operator config. "+
+			"Proceeding without authentication. Ensure your registry allows anonymous access or configure authentication if needed.",
+			"secretName", constants.DevWorkspaceBackupAuthSecretName,
+			"namespace", workspace.Namespace,
+			"registry", dwOperatorConfig.Workspace.BackupCronJob.Registry.Path)
+		return nil, nil
 	}
 
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace",

@@ -177,17 +177,15 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		Expect(result.Data["auth"]).To(Equal([]byte("user-credentials")))
 	})
 
-	It("returns error when AuthSecret is not configured and secret not found in workspace namespace", func() {
+	It("returns nil when AuthSecret is not configured and secret not found in workspace namespace (anonymous registry access)", func() {
 		By("using a config with empty AuthSecret")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
 		config := makeConfig("") // Empty AuthSecret
 
 		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
-		Expect(err).To(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(BeNil())
-		Expect(err.Error()).To(ContainSubstring("AuthSecret is not configured"))
-		Expect(err.Error()).To(ContainSubstring(workspaceNS))
 	})
 
 	It("copies secret from operator namespace when AuthSecret is configured and secret not found in workspace namespace", func() {

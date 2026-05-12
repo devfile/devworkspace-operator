@@ -56,6 +56,32 @@ spec:
                       specifies an empty `.spec.routingClass`. Supported routingClasses can be defined
                       in other controllers. If not specified, the default value of "basic" is used.
                     type: string
+                  gatewayRef:
+                    description: |-
+                      GatewayRef defines a reference to a Gateway API Gateway resource that HTTPRoutes
+                      should attach to when using the 'gateway-api' routing class. This field is required
+                      when routingClass is set to 'gateway-api'. The referenced Gateway must be provisioned
+                      by the cluster administrator or Che Operator before workspaces can use Gateway API routing.
+                    properties:
+                      gatewayClassName:
+                        default: nginx
+                        description: |-
+                          GatewayClassName is the name of the GatewayClass to use.
+                          This is used for validation and informational purposes.
+                          Defaults to "nginx" if not specified.
+                        type: string
+                      name:
+                        description: Name is the name of the Gateway resource
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the Gateway resource.
+                          If not specified, HTTPRoutes will reference a Gateway in the same namespace
+                          as the DevWorkspace.
+                        type: string
+                    required:
+                    - name
+                    type: object
                   proxyConfig:
                     description: |-
                       ProxyConfig defines the proxy settings that should be used for all DevWorkspaces.

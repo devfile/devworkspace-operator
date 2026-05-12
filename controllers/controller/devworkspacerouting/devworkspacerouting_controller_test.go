@@ -28,6 +28,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var _ = Describe("DevWorkspaceRouting Controller", func() {
@@ -352,6 +353,238 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 					err := k8sClient.Get(ctx, nonExposedRouteNamespacedName, &nonExposedRoute)
 					return k8sErrors.IsNotFound(err)
 				}, timeout, interval).Should(BeTrue(), "Route for non-exposed endpoint should not exist in cluster")
+			})
+		})
+
+		Context("Gateway API - DevWorkspaceRouting Objects creation", func() {
+			gatewayName := "test-gateway"
+			gatewayNamespace := testNamespace
+
+			BeforeEach(func() {
+				infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+				// Configure operator with Gateway API settings
+				gatewayRefNamespace := gatewayNamespace
+				dwoc := testControllerCfg.DeepCopy()
+				dwoc.Routing = &controllerv1alpha1.RoutingConfig{
+					ClusterHostSuffix:   "test-environment-cluster-suffix",
+					DefaultRoutingClass: "gateway-api",
+					GatewayRef: &controllerv1alpha1.GatewayReference{
+						Name:             gatewayName,
+						Namespace:        &gatewayRefNamespace,
+						GatewayClassName: "nginx",
+					},
+				}
+				config.SetGlobalConfigForTesting(dwoc)
+
+				// Create DevWorkspaceRouting with gateway-api routing class
+				mainAttributes := controllerv1alpha1.Attributes{}
+				mainAttributes.PutString("type", "main")
+				discoverableAttributes := controllerv1alpha1.Attributes{}
+				discoverableAttributes.PutBoolean(string(controllerv1alpha1.DiscoverableAttribute), true)
+				annotations := map[string]string{endpointAnnotationKey: endpointAnnotationValue}
+
+				exposedEndpoint := controllerv1alpha1.Endpoint{
+					Name:        exposedEndPointName,
+					Exposure:    controllerv1alpha1.PublicEndpointExposure,
+					Attributes:  mainAttributes,
+					TargetPort:  exposedTargetPort,
+					Annotations: annotations,
+				}
+				nonExposedEndpoint := controllerv1alpha1.Endpoint{
+					Name:       nonExposedEndpointName,
+					Exposure:   controllerv1alpha1.NoneEndpointExposure,
+					TargetPort: nonExposedTargetPort,
+				}
+				discoverableEndpoint := controllerv1alpha1.Endpoint{
+					Name:        discoverableEndpointName,
+					Exposure:    controllerv1alpha1.PublicEndpointExposure,
+					Attributes:  discoverableAttributes,
+					TargetPort:  discoverableTargetPort,
+					Annotations: annotations,
+				}
+				machineEndpointsMap := map[string]controllerv1alpha1.EndpointList{
+					testMachineName: {
+						exposedEndpoint,
+						nonExposedEndpoint,
+						discoverableEndpoint,
+					},
+				}
+
+				dwr := &controllerv1alpha1.DevWorkspaceRouting{
+					Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{
+						DevWorkspaceId: testWorkspaceID,
+						RoutingClass:   controllerv1alpha1.DevWorkspaceRoutingGatewayAPI,
+						Endpoints:      machineEndpointsMap,
+						PodSelector: map[string]string{
+							constants.DevWorkspaceIDLabel: testWorkspaceID,
+						},
+					},
+				}
+
+				dwr.SetName(devWorkspaceRoutingName)
+				dwr.SetNamespace(testNamespace)
+
+				Expect(k8sClient.Create(ctx, dwr)).Should(Succeed())
+			})
+
+			AfterEach(func() {
+				config.SetGlobalConfigForTesting(testControllerCfg)
+				deleteDevWorkspaceRouting(devWorkspaceRoutingName)
+				deleteService(common.ServiceName(testWorkspaceID), testNamespace)
+				deleteService(common.EndpointName(discoverableEndpointName), testNamespace)
+				deleteHTTPRoute(exposedEndPointName, testNamespace, false)
+				deleteHTTPRoute(exposedEndPointName, testNamespace, true)
+				deleteHTTPRoute(discoverableEndpointName, testNamespace, false)
+				deleteHTTPRoute(discoverableEndpointName, testNamespace, true)
+			})
+
+			It("Gets Ready Status with Gateway API", func() {
+				By("Checking DevWorkspaceRouting Status is updated to Ready")
+				dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+				createdDWR := &controllerv1alpha1.DevWorkspaceRouting{}
+				Eventually(func() (phase controllerv1alpha1.DevWorkspaceRoutingPhase, err error) {
+					if err := k8sClient.Get(ctx, dwrNamespacedName, createdDWR); err != nil {
+						return "", err
+					}
+					return createdDWR.Status.Phase, nil
+				}, timeout, interval).Should(Equal(controllerv1alpha1.RoutingReady), "DevWorkspaceRouting should have Ready phase")
+				Expect(createdDWR.Status.Message).ShouldNot(BeNil(), "Status message should be set for preparing DevWorkspaceRoutings")
+				Expect(createdDWR.Status.Message).Should(Equal("DevWorkspaceRouting prepared"), "Status message should indicate that the DevWorkspaceRouting is prepared")
+			})
+
+			It("Creates services", func() {
+				createdDWR := getExistingDevWorkspaceRouting(devWorkspaceRoutingName)
+
+				By("Checking single service is created for all exposed endpoints")
+				createdService := &corev1.Service{}
+				serviceNamespacedName := namespacedName(common.ServiceName(testWorkspaceID), testNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, serviceNamespacedName, createdService)
+					return err == nil
+				}, timeout, interval).Should(BeTrue(), "Service should exist in cluster")
+				Expect(createdService.Spec.Selector).Should(Equal(createdDWR.Spec.PodSelector), "Service should have pod selector from DevWorkspace metadata")
+				Expect(createdService.Labels).Should(Equal(ExpectedLabels), "Service should contain DevWorkspace ID label")
+				expectedOwnerReference := devWorkspaceRoutingOwnerRef(createdDWR)
+				Expect(createdService.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Service should be owned by DevWorkspaceRouting")
+
+				By("Checking service has expected ports")
+				var expectedServicePorts []corev1.ServicePort
+				expectedServicePorts = append(expectedServicePorts, corev1.ServicePort{
+					Name:       common.EndpointName(exposedEndPointName),
+					Protocol:   corev1.ProtocolTCP,
+					Port:       int32(exposedTargetPort),
+					TargetPort: intstr.FromInt(exposedTargetPort),
+				})
+
+				expectedServicePorts = append(expectedServicePorts, corev1.ServicePort{
+					Name:       common.EndpointName(discoverableEndpointName),
+					Protocol:   corev1.ProtocolTCP,
+					Port:       int32(discoverableTargetPort),
+					TargetPort: intstr.FromInt(discoverableTargetPort),
+				})
+
+				Expect(len(createdService.Spec.Ports)).Should(Equal(2), fmt.Sprintf("Only two ports should be exposed: %s and %s", exposedEndPointName, discoverableEndpointName))
+				Expect(createdService.Spec.Ports).Should(Equal(expectedServicePorts), "Service should contain expected ports")
+
+				By("Checking service is created for discoverable endpoint")
+				discoverableEndpointService := &corev1.Service{}
+				discoverableEndpointServiceNamespacedName := namespacedName(common.EndpointName(discoverableEndpointName), testNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, discoverableEndpointServiceNamespacedName, discoverableEndpointService)
+					return err == nil
+				}, timeout, interval).Should(BeTrue(), "Service for discoverable endpoint should exist in cluster")
+				Expect(len(discoverableEndpointService.Spec.Ports)).Should(Equal(1), "Service for discoverable endpoint should only have a single port")
+				Expect(discoverableEndpointService.Spec.Ports[0].Port).Should(Equal(int32(discoverableTargetPort)))
+				Expect(discoverableEndpointService.Spec.Ports[0].TargetPort).Should(Equal(intstr.FromInt(discoverableTargetPort)))
+				Expect(discoverableEndpointService.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceDiscoverableServiceAnnotation, "true"), "Service type should have discoverable service annotation")
+			})
+
+			It("Creates HTTPRoutes", func() {
+				createdDWR := getExistingDevWorkspaceRouting(devWorkspaceRoutingName)
+
+				By("Checking HTTPS HTTPRoute is created for exposed endpoint")
+				createdHTTPRoute := gwapiv1.HTTPRoute{}
+				httpRouteNamespacedName := namespacedName(common.RouteName(testWorkspaceID, exposedEndPointName), testNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, httpRouteNamespacedName, &createdHTTPRoute)
+					return err == nil
+				}, timeout, interval).Should(BeTrue(), "HTTPRoute should exist in cluster")
+
+				Expect(createdHTTPRoute.Labels).Should(Equal(ExpectedLabels), "HTTPRoute should contain DevWorkspace ID label")
+				expectedOwnerReference := devWorkspaceRoutingOwnerRef(createdDWR)
+				Expect(createdHTTPRoute.OwnerReferences).Should(ContainElement(expectedOwnerReference), "HTTPRoute should be owned by DevWorkspaceRouting")
+				Expect(createdHTTPRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceEndpointNameAnnotation, exposedEndPointName), "HTTPRoute should have endpoint name annotation")
+				Expect(createdHTTPRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(endpointAnnotationKey, endpointAnnotationValue), "HTTPRoute should have annotation from endpoint")
+
+				By("Checking HTTPRoute has correct ParentRefs pointing to Gateway")
+				Expect(len(createdHTTPRoute.Spec.ParentRefs)).Should(Equal(1), "HTTPRoute should have one parent reference")
+				parentRef := createdHTTPRoute.Spec.ParentRefs[0]
+				Expect(string(parentRef.Name)).Should(Equal(gatewayName), "HTTPRoute should reference the configured Gateway")
+				Expect(*parentRef.Namespace).Should(Equal(gwapiv1.Namespace(gatewayNamespace)), "HTTPRoute should reference Gateway in correct namespace")
+				Expect(*parentRef.Port).Should(Equal(gwapiv1.PortNumber(443)), "HTTPS HTTPRoute should reference port 443")
+
+				By("Checking HTTPRoute points to service backend")
+				createdService := &corev1.Service{}
+				serviceNamespacedName := namespacedName(common.ServiceName(testWorkspaceID), testNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, serviceNamespacedName, createdService)
+					return err == nil
+				}, timeout, interval).Should(BeTrue(), "Service should exist in cluster")
+
+				Expect(len(createdHTTPRoute.Spec.Rules)).Should(BeNumerically(">", 0), "HTTPRoute should have at least one rule")
+				rule := createdHTTPRoute.Spec.Rules[0]
+				Expect(len(rule.BackendRefs)).Should(Equal(1), "HTTPRoute rule should have one backend reference")
+				backendRef := rule.BackendRefs[0]
+				Expect(string(backendRef.Name)).Should(Equal(createdService.Name), "HTTPRoute backend should reference the service")
+				Expect(*backendRef.Port).Should(Equal(gwapiv1.PortNumber(exposedTargetPort)), "HTTPRoute backend port should match endpoint target port")
+
+				By("Checking HTTP redirect HTTPRoute is created")
+				httpRedirectRoute := gwapiv1.HTTPRoute{}
+				httpRedirectRouteNamespacedName := namespacedName(common.RouteName(testWorkspaceID, exposedEndPointName)+"-http-redirect", testNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, httpRedirectRouteNamespacedName, &httpRedirectRoute)
+					return err == nil
+				}, timeout, interval).Should(BeTrue(), "HTTP redirect HTTPRoute should exist in cluster")
+
+				Expect(httpRedirectRoute.Labels).Should(Equal(ExpectedLabels), "HTTP redirect HTTPRoute should contain DevWorkspace ID label")
+				Expect(httpRedirectRoute.OwnerReferences).Should(ContainElement(expectedOwnerReference), "HTTP redirect HTTPRoute should be owned by DevWorkspaceRouting")
+				Expect(len(httpRedirectRoute.Spec.ParentRefs)).Should(Equal(1), "HTTP redirect HTTPRoute should have one parent reference")
+				httpParentRef := httpRedirectRoute.Spec.ParentRefs[0]
+				Expect(*httpParentRef.Port).Should(Equal(gwapiv1.PortNumber(80)), "HTTP redirect HTTPRoute should reference port 80")
+
+				By("Checking HTTP redirect HTTPRoute has redirect filter")
+				Expect(len(httpRedirectRoute.Spec.Rules)).Should(BeNumerically(">", 0), "HTTP redirect HTTPRoute should have at least one rule")
+				httpRule := httpRedirectRoute.Spec.Rules[0]
+				Expect(len(httpRule.Filters)).Should(BeNumerically(">", 0), "HTTP redirect rule should have filters")
+				var hasRedirectFilter bool
+				for _, filter := range httpRule.Filters {
+					if filter.Type == gwapiv1.HTTPRouteFilterRequestRedirect {
+						hasRedirectFilter = true
+						Expect(filter.RequestRedirect).ShouldNot(BeNil(), "Redirect filter should have RequestRedirect configuration")
+						Expect(*filter.RequestRedirect.Scheme).Should(Equal(gwapiv1.HTTPSProtocolType), "Redirect should be to HTTPS")
+						Expect(*filter.RequestRedirect.StatusCode).Should(Equal(308), "Redirect should use 308 status code")
+					}
+				}
+				Expect(hasRedirectFilter).Should(BeTrue(), "HTTP redirect HTTPRoute should have a redirect filter")
+
+				By("Checking HTTPRoutes are created for discoverable endpoint")
+				discoverableHTTPRoute := gwapiv1.HTTPRoute{}
+				discoverableHTTPRouteNN := namespacedName(common.RouteName(testWorkspaceID, discoverableEndpointName), testNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, discoverableHTTPRouteNN, &discoverableHTTPRoute)
+					return err == nil
+				}, timeout, interval).Should(BeTrue(), "HTTPRoute for discoverable endpoint should exist in cluster")
+				Expect(discoverableHTTPRoute.Labels).Should(Equal(ExpectedLabels), "Discoverable HTTPRoute should contain DevWorkspace ID label")
+				Expect(discoverableHTTPRoute.OwnerReferences).Should(ContainElement(expectedOwnerReference), "Discoverable HTTPRoute should be owned by DevWorkspaceRouting")
+				Expect(discoverableHTTPRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceEndpointNameAnnotation, discoverableEndpointName), "Discoverable HTTPRoute should have endpoint name annotation")
+
+				By("Checking HTTPRoute is not created for non-exposed endpoint")
+				nonExposedHTTPRoute := gwapiv1.HTTPRoute{}
+				nonExposedHTTPRouteNamespacedName := namespacedName(common.RouteName(testWorkspaceID, nonExposedEndpointName), testNamespace)
+				Eventually(func() bool {
+					err := k8sClient.Get(ctx, nonExposedHTTPRouteNamespacedName, &nonExposedHTTPRoute)
+					return k8sErrors.IsNotFound(err)
+				}, timeout, interval).Should(BeTrue(), "HTTPRoute for non-exposed endpoint should not exist in cluster")
 			})
 		})
 	})

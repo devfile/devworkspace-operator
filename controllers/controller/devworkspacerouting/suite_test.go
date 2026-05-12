@@ -29,6 +29,7 @@ import (
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting"
 	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	routev1 "github.com/openshift/api/route/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,6 +90,8 @@ var _ = BeforeSuite(func() {
 			filepath.Join("..", "..", "..", "deploy", "templates", "crd", "bases"),
 			// Required to register OpenShift route CRD in testing environment
 			filepath.Join(".", "testdata", "route.crd.yaml"),
+			// Required to register Gateway API HTTPRoute CRD in testing environment
+			filepath.Join(".", "testdata", "gateway.networking.k8s.io_httproutes.yaml"),
 		},
 		ErrorIfCRDPathMissing: true,
 		BinaryAssetsDirectory: filepath.Join("..", "..", "..", "bin", "k8s", fmt.Sprintf("%s-%s-%s", k8sVersion, runtime.GOOS, runtime.GOARCH)),
@@ -108,6 +111,8 @@ var _ = BeforeSuite(func() {
 	err = dwv2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = routev1.Install(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = gwapiv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})

@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 	routeV1 "github.com/openshift/api/route/v1"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -162,6 +163,20 @@ func deleteIngress(endpointName string, namespace string) {
 		return err == nil
 	}, timeout, interval).Should(BeTrue(), "Ingress should exist in cluster")
 	deleteObject(&createdIngress)
+}
+
+func deleteHTTPRoute(endpointName string, namespace string, isRedirect bool) {
+	createdHTTPRoute := gwapiv1.HTTPRoute{}
+	routeName := common.RouteName(testWorkspaceID, endpointName)
+	if isRedirect {
+		routeName = routeName + "-http-redirect"
+	}
+	httpRouteNamespacedName := namespacedName(routeName, namespace)
+	Eventually(func() bool {
+		err := k8sClient.Get(ctx, httpRouteNamespacedName, &createdHTTPRoute)
+		return err == nil
+	}, timeout, interval).Should(BeTrue(), "HTTPRoute should exist in cluster")
+	deleteObject(&createdHTTPRoute)
 }
 
 func deleteDevWorkspaceRouting(name string) {

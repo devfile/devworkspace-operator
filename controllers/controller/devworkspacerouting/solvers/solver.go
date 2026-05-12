@@ -23,6 +23,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
@@ -32,6 +33,7 @@ type RoutingObjects struct {
 	Services     []corev1.Service
 	Ingresses    []networkingv1.Ingress
 	Routes       []routeV1.Route
+	HTTPRoutes   []gwapiv1.HTTPRoute
 	PodAdditions *controllerv1alpha1.PodAdditions
 }
 
@@ -93,7 +95,8 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.DevWorkspaceRou
 	case controllerv1alpha1.DevWorkspaceRoutingBasic,
 		controllerv1alpha1.DevWorkspaceRoutingCluster,
 		controllerv1alpha1.DevWorkspaceRoutingClusterTLS,
-		controllerv1alpha1.DevWorkspaceRoutingWebTerminal:
+		controllerv1alpha1.DevWorkspaceRoutingWebTerminal,
+		controllerv1alpha1.DevWorkspaceRoutingGatewayAPI:
 		return true
 	default:
 		return false
@@ -112,6 +115,8 @@ func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha
 			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
 		}
 		return &ClusterSolver{TLS: true}, nil
+	case controllerv1alpha1.DevWorkspaceRoutingGatewayAPI:
+		return &GatewayAPISolver{}, nil
 	default:
 		return nil, RoutingNotSupported
 	}

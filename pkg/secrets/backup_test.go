@@ -285,3 +285,62 @@ func (e *errorOnNameClient) Get(ctx context.Context, key client.ObjectKey, obj c
 
 // Ensure errorOnNameClient satisfies client.Client at compile time.
 var _ client.Client = &errorOnNameClient{}
+
+var _ = Describe("CopySecret", func() {
+	const (
+		workspaceNS = "user-namespace"
+		operatorNS  = "operator-namespace"
+	)
+
+	var (
+		ctx    context.Context
+		scheme *runtime.Scheme
+		log    = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		scheme = buildScheme()
+	})
+
+	It("creates the secret without ownerReferences", func() {
+		By("copying a source secret into the workspace namespace")
+		sourceSecret := makeSecret("quay-push-secret", operatorNS)
+		workspace := makeWorkspace(workspaceNS)
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		result, err := secrets.CopySecret(ctx, fakeClient, workspace, sourceSecret, scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
+		Expect(result.Namespace).To(Equal(workspaceNS))
+
+		By("verifying the created secret has no ownerReferences")
+		created := &corev1.Secret{}
+		err = fakeClient.Get(ctx, client.ObjectKey{
+			Name:      constants.DevWorkspaceBackupAuthSecretName,
+			Namespace: workspaceNS,
+		}, created)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(created.OwnerReferences).To(BeEmpty())
+	})
+
+	It("preserves the secret data and type from the source", func() {
+		sourceSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "quay-push-secret",
+				Namespace: operatorNS,
+			},
+			Data: map[string][]byte{".dockerconfigjson": []byte(`{"auths":{}}`)},
+			Type: corev1.SecretTypeDockerConfigJson,
+		}
+		workspace := makeWorkspace(workspaceNS)
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		result, err := secrets.CopySecret(ctx, fakeClient, workspace, sourceSecret, scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKey(".dockerconfigjson"))
+		Expect(result.Type).To(Equal(corev1.SecretTypeDockerConfigJson))
+	})
+})

@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
@@ -109,10 +108,6 @@ func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace
 		},
 		Data: sourceSecret.Data,
 		Type: sourceSecret.Type,
-	}
-
-	if err := controllerutil.SetControllerReference(workspace, desiredSecret, scheme); err != nil {
-		return nil, err
 	}
 
 	err = c.Create(ctx, desiredSecret)

@@ -175,6 +175,12 @@ rules:
   - get
   - update
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproutes
+  verbs:
+  - '*'
+- apiGroups:
   - image.openshift.io
   resources:
   - imagestreams

@@ -18,6 +18,7 @@ package secrets_test
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/secrets"
 )
 
@@ -188,7 +190,7 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		Expect(result).To(BeNil())
 	})
 
-	It("copies secret from operator namespace when AuthSecret is configured and secret not found in workspace namespace", func() {
+	It("copies secret from operator namespace without ownerReferences", func() {
 		By("creating a secret in the operator namespace")
 		operatorSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, operatorNS)
 		operatorSecret.Data = map[string][]byte{"auth": []byte("operator-credentials")}
@@ -216,12 +218,8 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		By("verifying the copied secret has the watch-secret label")
 		Expect(copiedSecret.Labels).To(HaveKeyWithValue(constants.DevWorkspaceWatchSecretLabel, "true"))
 
-		By("verifying the copied secret has an owner reference to the workspace")
-		Expect(copiedSecret.OwnerReferences).To(HaveLen(1))
-		Expect(copiedSecret.OwnerReferences[0].Name).To(Equal(workspace.Name))
-		Expect(copiedSecret.OwnerReferences[0].Kind).To(Equal("DevWorkspace"))
-		Expect(copiedSecret.OwnerReferences[0].Controller).NotTo(BeNil())
-		Expect(*copiedSecret.OwnerReferences[0].Controller).To(BeTrue())
+		By("verifying the copied secret has no ownerReferences")
+		Expect(copiedSecret.OwnerReferences).To(BeEmpty())
 	})
 
 	It("NEVER overwrites user-provided secret even if operator has different credentials", func() {
@@ -263,6 +261,52 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		Expect(err).To(HaveOccurred())
 		Expect(result).To(BeNil())
 		Expect(k8sErrors.IsNotFound(err)).To(BeTrue(), "Should return a NotFound error when secret doesn't exist in operator namespace")
+	})
+})
+
+var _ = Describe("HandleRegistryAuthSecret (restore path: fallback to operator namespace)", func() {
+	const (
+		workspaceNS = "user-namespace"
+		operatorNS  = "operator-namespace"
+	)
+
+	var (
+		ctx    context.Context
+		scheme *runtime.Scheme
+		log    = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		scheme = buildScheme()
+		os.Setenv(infrastructure.WatchNamespaceEnvVar, operatorNS)
+	})
+
+	AfterEach(func() {
+		os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+	})
+
+	It("copies the secret from operator namespace when missing in workspace namespace", func() {
+		By("creating the auth secret only in the operator namespace")
+		operatorSecret := makeSecret("quay-backup-auth", operatorNS)
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(operatorSecret).Build()
+		workspace := makeWorkspace(workspaceNS)
+		config := makeConfig("quay-backup-auth")
+
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
+		Expect(result.Namespace).To(Equal(workspaceNS))
+
+		By("verifying the secret was copied to the workspace namespace")
+		copied := &corev1.Secret{}
+		err = fakeClient.Get(ctx, client.ObjectKey{
+			Name:      constants.DevWorkspaceBackupAuthSecretName,
+			Namespace: workspaceNS,
+		}, copied)
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
 

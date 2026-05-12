@@ -22,6 +22,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,9 +60,13 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
-	// If we don't provide an operator namespace, don't attempt to look there.
 	if operatorConfigNamespace == "" {
-		return nil, nil
+		resolvedNS, nsErr := infrastructure.GetNamespace()
+		if nsErr != nil {
+			log.Info("Cannot resolve operator namespace for auth secret fallback", "error", nsErr)
+			return nil, nil
+		}
+		operatorConfigNamespace = resolvedNS
 	}
 
 	// Check if AuthSecret is configured in operator config

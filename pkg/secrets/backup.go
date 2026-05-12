@@ -99,23 +99,6 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 // It NEVER overwrites an existing secret: if a secret already exists in the workspace namespace,
 // it returns the existing secret without modification.
 func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace, sourceSecret *corev1.Secret, scheme *runtime.Scheme, log logr.Logger) (namespaceSecret *corev1.Secret, err error) {
-	// First check if secret already exists in workspace namespace
-	existingSecret := &corev1.Secret{}
-	err = c.Get(ctx, client.ObjectKey{
-		Name:      constants.DevWorkspaceBackupAuthSecretName,
-		Namespace: workspace.Namespace,
-	}, existingSecret)
-
-	if err == nil {
-		log.Info("Registry auth secret already exists in workspace namespace, using existing secret",
-			"secretName", constants.DevWorkspaceBackupAuthSecretName)
-		return existingSecret, nil
-	}
-
-	if client.IgnoreNotFound(err) != nil {
-		return nil, err
-	}
-
 	desiredSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      constants.DevWorkspaceBackupAuthSecretName,
@@ -140,12 +123,12 @@ func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace
 			if err := c.Get(ctx, client.ObjectKey{
 				Name:      constants.DevWorkspaceBackupAuthSecretName,
 				Namespace: workspace.Namespace,
-			}, existingSecret); err != nil {
+			}, sourceSecret); err != nil {
 				return nil, err
 			}
 			log.Info("Registry auth secret was created concurrently, using existing secret",
 				"secretName", constants.DevWorkspaceBackupAuthSecretName)
-			return existingSecret, nil
+			return sourceSecret, nil
 		}
 		return nil, err
 	}

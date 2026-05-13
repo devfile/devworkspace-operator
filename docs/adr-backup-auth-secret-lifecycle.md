@@ -36,7 +36,8 @@ However, two properties of this secret make ownerReference-based lifecycle manag
 ### What Changes
 
 - `pkg/secrets/backup.go`: Remove the `controllerutil.SetControllerReference()` call in `CopySecret()`
-- The secret is still created and synced via `SyncObjectWithCluster`, just without an ownerReference
+- The secret is still created via `c.Create()` with `AlreadyExists` handling, just without an ownerReference
+- The restore path now resolves the operator namespace via `infrastructure.GetNamespace()` to copy the secret on demand when it is missing
 
 ### What Doesn't Change
 

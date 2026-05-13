@@ -117,14 +117,15 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
 	})
 
-	It("returns nil when the predefined secret does not exist in the workspace namespace", func() {
-		By("using a fake client with no secrets")
+	It("returns error when secret is missing and operator namespace cannot be resolved", func() {
+		By("using a fake client with no secrets and no WATCH_NAMESPACE set")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
 		config := makeConfig("quay-backup-auth")
 
 		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("cannot resolve operator namespace"))
 		Expect(result).To(BeNil())
 	})
 
@@ -271,19 +272,26 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: fallback to operator n
 	)
 
 	var (
-		ctx    context.Context
-		scheme *runtime.Scheme
-		log    = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+		ctx         context.Context
+		scheme      *runtime.Scheme
+		log         = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+		origWatchNS string
+		hadWatchNS  bool
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		scheme = buildScheme()
+		origWatchNS, hadWatchNS = os.LookupEnv(infrastructure.WatchNamespaceEnvVar)
 		os.Setenv(infrastructure.WatchNamespaceEnvVar, operatorNS)
 	})
 
 	AfterEach(func() {
-		os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+		if hadWatchNS {
+			os.Setenv(infrastructure.WatchNamespaceEnvVar, origWatchNS)
+		} else {
+			os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+		}
 	})
 
 	It("copies the secret from operator namespace when missing in workspace namespace", func() {

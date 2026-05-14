@@ -136,6 +136,20 @@ func TestValidateEndpoints(t *testing.T) {
 		assert.NoError(t, err, "Did not expect an error when workspace has no discoverable endpoints")
 	})
 
+	t.Run("No conflict when other workspace endpoint is not discoverable", func(t *testing.T) {
+		// Current workspace has a discoverable endpoint
+		workspace := setupWorkspace(t, "workspace-1", "uid-1", "test-namespace")
+
+		// Other workspace has endpoint with same name but NOT discoverable
+		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
+		otherWorkspace.Spec.Template.Components[0].Container.Endpoints[0].Attributes = nil
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		handler := &WebhookHandler{Client: fakeClient}
+		err := handler.validateEndpoints(context.TODO(), workspace)
+		assert.NoError(t, err, "Should not conflict when other workspace's endpoint is not discoverable")
+	})
+
 	t.Run("Multiple workspaces in different namespaces can have same endpoint", func(t *testing.T) {
 		// Workspace 1 in namespace-a
 		workspace1 := setupWorkspace(t, "workspace-ns-a", "uid-ns-a", "namespace-a")

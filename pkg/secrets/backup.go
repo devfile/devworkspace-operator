@@ -60,14 +60,6 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
-	if operatorConfigNamespace == "" {
-		resolvedNS, nsErr := infrastructure.GetNamespace()
-		if nsErr != nil {
-			return nil, fmt.Errorf("cannot resolve operator namespace to copy registry auth secret: %w", nsErr)
-		}
-		operatorConfigNamespace = resolvedNS
-	}
-
 	// Check if AuthSecret is configured in operator config
 	authSecretName := dwOperatorConfig.Workspace.BackupCronJob.Registry.AuthSecret
 	if len(authSecretName) == 0 {
@@ -77,6 +69,14 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 			"namespace", workspace.Namespace,
 			"registry", dwOperatorConfig.Workspace.BackupCronJob.Registry.Path)
 		return nil, nil
+	}
+
+	if operatorConfigNamespace == "" {
+		resolvedNS, nsErr := infrastructure.GetNamespace()
+		if nsErr != nil {
+			return nil, fmt.Errorf("cannot resolve operator namespace to copy registry auth secret: %w", nsErr)
+		}
+		operatorConfigNamespace = resolvedNS
 	}
 
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace",

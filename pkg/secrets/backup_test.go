@@ -93,14 +93,26 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 	const workspaceNS = "user-namespace"
 
 	var (
-		ctx    context.Context
-		scheme *runtime.Scheme
-		log    = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+		ctx         context.Context
+		scheme      *runtime.Scheme
+		log         = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+		origWatchNS string
+		hadWatchNS  bool
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		scheme = buildScheme()
+		origWatchNS, hadWatchNS = os.LookupEnv(infrastructure.WatchNamespaceEnvVar)
+		os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+	})
+
+	AfterEach(func() {
+		if hadWatchNS {
+			os.Setenv(infrastructure.WatchNamespaceEnvVar, origWatchNS)
+		} else {
+			os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+		}
 	})
 
 	It("returns the predefined secret when it exists in the workspace namespace", func() {

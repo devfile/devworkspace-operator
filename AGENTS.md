@@ -782,4 +782,4 @@ Copy [`adr/TEMPLATE.md`](adr/TEMPLATE.md) to `adr/YYYY-MM-DD-short-slug.md` and 
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2026-05-15

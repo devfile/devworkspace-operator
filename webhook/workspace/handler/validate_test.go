@@ -19,8 +19,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
+
+	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 )
 
 func loadObjectFromFile(objName string, obj client.Object, filename string) error {
@@ -67,13 +67,11 @@ func TestValidateEndpoints(t *testing.T) {
 		// Test for conflict in same namespace
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspaceSameNS).Build()
 		handler := &WebhookHandler{Client: fakeClient}
-		err := handler.validateEndpoints(context.TODO(), workspace)
-		assert.Error(t, err, "Expected a conflict error for workspaces in the same namespace")
-
-		var conflictErr *solvers.ServiceConflictError
-		assert.ErrorAs(t, err, &conflictErr, "Error should be a ServiceConflictError")
-		assert.Equal(t, "test-endpoint", conflictErr.EndpointName, "Conflict should be on 'test-endpoint'")
-		assert.Equal(t, "workspace-2", conflictErr.WorkspaceName, "Conflict should reference 'workspace-2'")
+		conflict, err := handler.validateEndpoints(context.TODO(), workspace)
+		assert.NoError(t, err, "Did not expect an infrastructure error")
+		assert.NotNil(t, conflict, "Expected a conflict for workspaces in the same namespace")
+		assert.Equal(t, "test-endpoint", conflict.EndpointName, "Conflict should be on 'test-endpoint'")
+		assert.Equal(t, "workspace-2", conflict.WorkspaceName, "Conflict should reference 'workspace-2'")
 	})
 
 	t.Run("No conflict in different namespace", func(t *testing.T) {
@@ -86,8 +84,9 @@ func TestValidateEndpoints(t *testing.T) {
 		// Test no conflict in different namespace (workspace only queries its own namespace)
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspaceDiffNS).Build()
 		handler := &WebhookHandler{Client: fakeClient}
-		err := handler.validateEndpoints(context.TODO(), workspace)
-		assert.NoError(t, err, "Did not expect an error for workspaces in different namespaces")
+		conflict, err := handler.validateEndpoints(context.TODO(), workspace)
+		assert.NoError(t, err)
+		assert.Nil(t, conflict, "Did not expect a conflict for workspaces in different namespaces")
 	})
 
 	t.Run("No conflict when endpoint name is different", func(t *testing.T) {
@@ -98,8 +97,9 @@ func TestValidateEndpoints(t *testing.T) {
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
-		err := handler.validateEndpoints(context.TODO(), workspace)
-		assert.NoError(t, err, "Did not expect an error for different endpoint names")
+		conflict, err := handler.validateEndpoints(context.TODO(), workspace)
+		assert.NoError(t, err)
+		assert.Nil(t, conflict, "Did not expect a conflict for different endpoint names")
 	})
 
 	t.Run("Conflict detected even when workspace is being deleted", func(t *testing.T) {
@@ -114,13 +114,11 @@ func TestValidateEndpoints(t *testing.T) {
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(deletingWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
-		err := handler.validateEndpoints(context.TODO(), workspace)
-		assert.Error(t, err, "Should detect conflict even with workspace being deleted")
-
-		var conflictErr *solvers.ServiceConflictError
-		assert.ErrorAs(t, err, &conflictErr, "Error should be a ServiceConflictError")
-		assert.Equal(t, "test-endpoint", conflictErr.EndpointName, "Conflict should be on 'test-endpoint'")
-		assert.Equal(t, "workspace-deleting", conflictErr.WorkspaceName, "Conflict should reference 'workspace-deleting'")
+		conflict, err := handler.validateEndpoints(context.TODO(), workspace)
+		assert.NoError(t, err, "Did not expect an infrastructure error")
+		assert.NotNil(t, conflict, "Should detect conflict even with workspace being deleted")
+		assert.Equal(t, "test-endpoint", conflict.EndpointName, "Conflict should be on 'test-endpoint'")
+		assert.Equal(t, "workspace-deleting", conflict.WorkspaceName, "Conflict should reference 'workspace-deleting'")
 	})
 
 	t.Run("No conflict when workspace has no discoverable endpoints", func(t *testing.T) {
@@ -132,8 +130,9 @@ func TestValidateEndpoints(t *testing.T) {
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
-		err := handler.validateEndpoints(context.TODO(), workspace)
-		assert.NoError(t, err, "Did not expect an error when workspace has no discoverable endpoints")
+		conflict, err := handler.validateEndpoints(context.TODO(), workspace)
+		assert.NoError(t, err)
+		assert.Nil(t, conflict, "Did not expect a conflict when workspace has no discoverable endpoints")
 	})
 
 	t.Run("No conflict when other workspace endpoint is not discoverable", func(t *testing.T) {
@@ -146,8 +145,9 @@ func TestValidateEndpoints(t *testing.T) {
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
-		err := handler.validateEndpoints(context.TODO(), workspace)
-		assert.NoError(t, err, "Should not conflict when other workspace's endpoint is not discoverable")
+		conflict, err := handler.validateEndpoints(context.TODO(), workspace)
+		assert.NoError(t, err)
+		assert.Nil(t, conflict, "Should not conflict when other workspace's endpoint is not discoverable")
 	})
 
 	t.Run("Multiple workspaces in different namespaces can have same endpoint", func(t *testing.T) {
@@ -166,7 +166,8 @@ func TestValidateEndpoints(t *testing.T) {
 		handler := &WebhookHandler{Client: fakeClient}
 
 		// Validating workspace1 should succeed (different namespaces)
-		err := handler.validateEndpoints(context.TODO(), workspace1)
-		assert.NoError(t, err, "Should allow same endpoint name in different namespaces")
+		conflict, err := handler.validateEndpoints(context.TODO(), workspace1)
+		assert.NoError(t, err)
+		assert.Nil(t, conflict, "Should allow same endpoint name in different namespaces")
 	})
 }

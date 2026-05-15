@@ -78,9 +78,12 @@ func (h *WebhookHandler) ValidateDevfile(ctx context.Context, req admission.Requ
 		}
 	}
 
-	endpointErrors := h.validateEndpoints(ctx, wksp)
-	if endpointErrors != nil {
-		devfileErrors = append(devfileErrors, endpointErrors.Error())
+	conflict, err := h.validateEndpoints(ctx, wksp)
+	if err != nil {
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if conflict != nil {
+		devfileErrors = append(devfileErrors, conflict.Error())
 	}
 
 	if len(devfileErrors) > 0 {
@@ -90,7 +93,7 @@ func (h *WebhookHandler) ValidateDevfile(ctx context.Context, req admission.Requ
 	return admission.Allowed("No Devfile errors were found")
 }
 
-func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.DevWorkspace) error {
+func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.DevWorkspace) (*solvers.ServiceConflictError, error) {
 	discoverableEndpoints := map[string]bool{}
 	for _, component := range workspace.Spec.Template.Components {
 		if component.Container != nil {
@@ -103,12 +106,12 @@ func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.
 	}
 
 	if len(discoverableEndpoints) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	workspaceList := &dwv2.DevWorkspaceList{}
 	if err := h.Client.List(ctx, workspaceList, client.InNamespace(workspace.Namespace)); err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, otherWorkspace := range workspaceList.Items {
@@ -122,12 +125,12 @@ func (h *WebhookHandler) validateEndpoints(ctx context.Context, workspace *dwv2.
 						return &solvers.ServiceConflictError{
 							EndpointName:  endpoint.Name,
 							WorkspaceName: otherWorkspace.Name,
-						}
+						}, nil
 					}
 				}
 			}
 		}
 	}
 
-	return nil
+	return nil, nil
 }

@@ -1,5 +1,77 @@
 # DevWorkspace Operator Changelog
 
+# v0.41.0
+
+## Features
+
+### Mount automount resources only to specific DevWorkspaces [#1619](https://github.com/devfile/devworkspace-operator/pull/1619)
+
+Two new annotations allow administrators to control which DevWorkspaces receive automounted ConfigMaps, Secrets, and PVCs by workspace name pattern:
+
+- `controller.devfile.io/mount-to-devworkspace-include`: mount the resource only to workspaces whose names match the specified pattern
+- `controller.devfile.io/mount-to-devworkspace-exclude`: mount the resource to all workspaces except those whose names match the specified pattern
+
+When either annotation is set, the DevWorkspace operator also watches the annotated resource and triggers reconciliation of the targeted workspaces when the resource changes.
+
+See [docs/additional-configuration.md](docs/additional-configuration.adoc#automatically-mounting-volumes-configmaps-and-secrets) for more details.
+
+### Prevent workspace restart when automount resources are created or modified [#1533](https://github.com/devfile/devworkspace-operator/pull/1533)
+
+A new `controller.devfile.io/mount-on-start` annotation can be set on automounted ConfigMaps, Secrets, and PVCs. When this annotation is set to `"true"`, adding or modifying the resource will not immediately restart running workspaces. The resource will be mounted the next time the workspace starts.
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    controller.devfile.io/mount-as: env
+    controller.devfile.io/mount-on-start: "true"
+  labels:
+    controller.devfile.io/mount-to-devworkspace: "true"
+    controller.devfile.io/watch-configmap: "true"
+  name: my-config
+```
+
+See [docs/additional-configuration.md](docs/additional-configuration.adoc#automatically-mounting-volumes-configmaps-and-secrets) for more details.
+
+### Mount PVC subdirectory into workspace using subPath [#1595](https://github.com/devfile/devworkspace-operator/pull/1595)
+
+Automounted PVCs now support mounting a subdirectory within the PVC using the `subPath` field. This is configured by providing a JSON array as the value of the `controller.devfile.io/mount-path` annotation, where each entry specifies both a `path` (mount point in the container) and a `subPath` (subdirectory within the PVC):
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    controller.devfile.io/mount-path: '[{"path":"/var/logs","subPath":"data/logs"},{"path":"/etc/config","subPath":"data/config"}]'
+  labels:
+    controller.devfile.io/mount-to-devworkspace: "true"
+  name: my-pvc
+```
+
+## Bug Fixes & Improvements
+
+- Conditionally copy backup registry auth secret to workspace namespace only when configured; user-provided secrets take precedence [#1618](https://github.com/devfile/devworkspace-operator/pull/1618)
+
+- Update Go to 1.25.9 [#1617](https://github.com/devfile/devworkspace-operator/pull/1617)
+
+# v0.40.1
+
+## Features
+
+### Project clone retries [#1613](https://github.com/devfile/devworkspace-operator/pull/1613)
+
+The project clone init container now retries failed clone operations up to 3 times (4 total attempts) using exponential backoff. This improves reliability when transient network issues cause clone failures.
+
+## Bug Fixes & Improvements
+
+- Fix restore failing when backup auth secret name did not match the copied secret name [#1614](https://github.com/devfile/devworkspace-operator/pull/1614)
+
+- Update Go to 1.25.8 [#1611](https://github.com/devfile/devworkspace-operator/pull/1611)
+
+- Change project-backup image base from ubi10 to ubi9 to align with downstream image [#1610](https://github.com/devfile/devworkspace-operator/pull/1610)
+
+
 # v0.40.0
 
 ## Features

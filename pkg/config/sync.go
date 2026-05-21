@@ -281,6 +281,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Routing.ClusterHostSuffix != "" {
 			to.Routing.ClusterHostSuffix = from.Routing.ClusterHostSuffix
 		}
+		if from.Routing.GatewayRef != nil {
+			to.Routing.GatewayRef = from.Routing.GatewayRef.DeepCopy()
+		}
 		if from.Routing.ProxyConfig != nil {
 			if to.Routing.ProxyConfig == nil {
 				to.Routing.ProxyConfig = &controller.Proxy{}

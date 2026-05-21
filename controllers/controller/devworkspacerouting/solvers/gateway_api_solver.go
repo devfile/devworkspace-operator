@@ -131,7 +131,7 @@ func (s *GatewayAPISolver) createHTTPRedirectRoute(
 	routeName := fmt.Sprintf("%s-http-redirect", common.RouteName(workspaceMeta.DevWorkspaceId, endpointName))
 
 	httpsScheme := "https"
-	statusCode := 308
+	statusCode := 301
 
 	pathPrefix := gwapiv1.PathMatchPathPrefix
 	pathValue := "/"

@@ -58,6 +58,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrl_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -79,6 +80,7 @@ func init() {
 	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwv1.AddToScheme(scheme))
 	utilruntime.Must(dwv2.AddToScheme(scheme))
+	utilruntime.Must(gwapiv1.AddToScheme(scheme))
 
 	if infrastructure.IsOpenShift() {
 		utilruntime.Must(routev1.Install(scheme))

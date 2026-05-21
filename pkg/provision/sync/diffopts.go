@@ -25,6 +25,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var roleDiffOpts = cmp.Options{
@@ -96,6 +97,13 @@ var ingressDiffOpts = cmp.Options{
 
 var networkPolicyDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(networkingv1.NetworkPolicy{}, "TypeMeta", "ObjectMeta"),
+}
+
+var httpRouteDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(gwapiv1.HTTPRoute{}, "TypeMeta", "ObjectMeta", "Status"),
+	cmpopts.IgnoreFields(gwapiv1.BackendRef{}, "Weight"),
+	cmpopts.IgnoreFields(gwapiv1.BackendObjectReference{}, "Group", "Kind", "Namespace"),
+	cmpopts.IgnoreFields(gwapiv1.ParentReference{}, "Group", "Kind", "Namespace"),
 }
 
 func getNameFromEnvFrom(source corev1.EnvFromSource) string {

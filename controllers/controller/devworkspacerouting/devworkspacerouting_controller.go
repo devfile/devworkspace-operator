@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
@@ -375,7 +376,8 @@ func (r *DevWorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error
 		}).
 		For(&controllerv1alpha1.DevWorkspaceRouting{}).
 		Owns(&corev1.Service{}).
-		Owns(&networkingv1.Ingress{})
+		Owns(&networkingv1.Ingress{}).
+		Owns(&gwapiv1.HTTPRoute{})
 	if infrastructure.IsOpenShift() {
 		bld.Owns(&routeV1.Route{})
 	}

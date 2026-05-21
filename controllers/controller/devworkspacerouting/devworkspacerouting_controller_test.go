@@ -561,8 +561,8 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 					if filter.Type == gwapiv1.HTTPRouteFilterRequestRedirect {
 						hasRedirectFilter = true
 						Expect(filter.RequestRedirect).ShouldNot(BeNil(), "Redirect filter should have RequestRedirect configuration")
-						Expect(*filter.RequestRedirect.Scheme).Should(Equal(gwapiv1.HTTPSProtocolType), "Redirect should be to HTTPS")
-						Expect(*filter.RequestRedirect.StatusCode).Should(Equal(308), "Redirect should use 308 status code")
+						Expect(*filter.RequestRedirect.Scheme).Should(Equal("https"), "Redirect should be to HTTPS")
+						Expect(*filter.RequestRedirect.StatusCode).Should(Equal(301), "Redirect should use 301 status code")
 					}
 				}
 				Expect(hasRedirectFilter).Should(BeTrue(), "HTTP redirect HTTPRoute should have a redirect filter")

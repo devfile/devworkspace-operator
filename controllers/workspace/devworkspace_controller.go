@@ -804,7 +804,10 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// TODO: Set up indexing https://book.kubebuilder.io/cronjob-tutorial/controller-implementation.html#setup
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{MaxConcurrentReconciles: maxConcurrentReconciles}).
+		WithOptions(controller.Options{
+			MaxConcurrentReconciles: maxConcurrentReconciles,
+			UsePriorityQueue:        pointer.Bool(false),
+		}).
 		For(&dw.DevWorkspace{}).
 		// List DevWorkspaceTemplates as owned to enable updating workspaces when templates
 		// are changed; this should be moved to whichever controller is responsible for flattening

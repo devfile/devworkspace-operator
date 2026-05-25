@@ -46,7 +46,7 @@ Detailed instructions regarding the DevWorkspace Operator development are provid
 
 To build, test and debug the DevWorkspace Operator the following development tools are required:
 
-- go 1.25 or later
+- go 1.26 or later
 - git
 - sed
 - jq

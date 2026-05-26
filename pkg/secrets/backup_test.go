@@ -18,6 +18,7 @@ package secrets_test
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/secrets"
 )
 
@@ -91,14 +93,26 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 	const workspaceNS = "user-namespace"
 
 	var (
-		ctx    context.Context
-		scheme *runtime.Scheme
-		log    = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+		ctx         context.Context
+		scheme      *runtime.Scheme
+		log         = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+		origWatchNS string
+		hadWatchNS  bool
 	)
 
 	BeforeEach(func() {
 		ctx = context.Background()
 		scheme = buildScheme()
+		origWatchNS, hadWatchNS = os.LookupEnv(infrastructure.WatchNamespaceEnvVar)
+		os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+	})
+
+	AfterEach(func() {
+		if hadWatchNS {
+			os.Setenv(infrastructure.WatchNamespaceEnvVar, origWatchNS)
+		} else {
+			os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+		}
 	})
 
 	It("returns the predefined secret when it exists in the workspace namespace", func() {
@@ -115,14 +129,15 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
 	})
 
-	It("returns nil when the predefined secret does not exist in the workspace namespace", func() {
-		By("using a fake client with no secrets")
+	It("returns error when secret is missing and operator namespace cannot be resolved", func() {
+		By("using a fake client with no secrets and no WATCH_NAMESPACE set")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
 		config := makeConfig("quay-backup-auth")
 
 		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("cannot resolve operator namespace"))
 		Expect(result).To(BeNil())
 	})
 
@@ -188,7 +203,7 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		Expect(result).To(BeNil())
 	})
 
-	It("copies secret from operator namespace when AuthSecret is configured and secret not found in workspace namespace", func() {
+	It("copies secret from operator namespace without ownerReferences", func() {
 		By("creating a secret in the operator namespace")
 		operatorSecret := makeSecret(constants.DevWorkspaceBackupAuthSecretName, operatorNS)
 		operatorSecret.Data = map[string][]byte{"auth": []byte("operator-credentials")}
@@ -216,12 +231,8 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		By("verifying the copied secret has the watch-secret label")
 		Expect(copiedSecret.Labels).To(HaveKeyWithValue(constants.DevWorkspaceWatchSecretLabel, "true"))
 
-		By("verifying the copied secret has an owner reference to the workspace")
-		Expect(copiedSecret.OwnerReferences).To(HaveLen(1))
-		Expect(copiedSecret.OwnerReferences[0].Name).To(Equal(workspace.Name))
-		Expect(copiedSecret.OwnerReferences[0].Kind).To(Equal("DevWorkspace"))
-		Expect(copiedSecret.OwnerReferences[0].Controller).NotTo(BeNil())
-		Expect(*copiedSecret.OwnerReferences[0].Controller).To(BeTrue())
+		By("verifying the copied secret has no ownerReferences")
+		Expect(copiedSecret.OwnerReferences).To(BeEmpty())
 	})
 
 	It("NEVER overwrites user-provided secret even if operator has different credentials", func() {
@@ -266,6 +277,59 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 	})
 })
 
+var _ = Describe("HandleRegistryAuthSecret (restore path: fallback to operator namespace)", func() {
+	const (
+		workspaceNS = "user-namespace"
+		operatorNS  = "operator-namespace"
+	)
+
+	var (
+		ctx         context.Context
+		scheme      *runtime.Scheme
+		log         = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+		origWatchNS string
+		hadWatchNS  bool
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		scheme = buildScheme()
+		origWatchNS, hadWatchNS = os.LookupEnv(infrastructure.WatchNamespaceEnvVar)
+		os.Setenv(infrastructure.WatchNamespaceEnvVar, operatorNS)
+	})
+
+	AfterEach(func() {
+		if hadWatchNS {
+			os.Setenv(infrastructure.WatchNamespaceEnvVar, origWatchNS)
+		} else {
+			os.Unsetenv(infrastructure.WatchNamespaceEnvVar)
+		}
+	})
+
+	It("copies the secret from operator namespace when missing in workspace namespace", func() {
+		By("creating the auth secret only in the operator namespace")
+		operatorSecret := makeSecret("quay-backup-auth", operatorNS)
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(operatorSecret).Build()
+		workspace := makeWorkspace(workspaceNS)
+		config := makeConfig("quay-backup-auth")
+
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
+		Expect(result.Namespace).To(Equal(workspaceNS))
+
+		By("verifying the secret was copied to the workspace namespace")
+		copied := &corev1.Secret{}
+		err = fakeClient.Get(ctx, client.ObjectKey{
+			Name:      constants.DevWorkspaceBackupAuthSecretName,
+			Namespace: workspaceNS,
+		}, copied)
+		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
 // errorOnNameClient is a thin client wrapper that injects an error for a specific secret name.
 type errorOnNameClient struct {
 	client.Client
@@ -285,3 +349,62 @@ func (e *errorOnNameClient) Get(ctx context.Context, key client.ObjectKey, obj c
 
 // Ensure errorOnNameClient satisfies client.Client at compile time.
 var _ client.Client = &errorOnNameClient{}
+
+var _ = Describe("CopySecret", func() {
+	const (
+		workspaceNS = "user-namespace"
+		operatorNS  = "operator-namespace"
+	)
+
+	var (
+		ctx    context.Context
+		scheme *runtime.Scheme
+		log    = zap.New(zap.UseDevMode(true)).WithName("SecretsTest")
+	)
+
+	BeforeEach(func() {
+		ctx = context.Background()
+		scheme = buildScheme()
+	})
+
+	It("creates the secret without ownerReferences", func() {
+		By("copying a source secret into the workspace namespace")
+		sourceSecret := makeSecret("quay-push-secret", operatorNS)
+		workspace := makeWorkspace(workspaceNS)
+
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		result, err := secrets.CopySecret(ctx, fakeClient, workspace, sourceSecret, scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).NotTo(BeNil())
+		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
+		Expect(result.Namespace).To(Equal(workspaceNS))
+
+		By("verifying the created secret has no ownerReferences")
+		created := &corev1.Secret{}
+		err = fakeClient.Get(ctx, client.ObjectKey{
+			Name:      constants.DevWorkspaceBackupAuthSecretName,
+			Namespace: workspaceNS,
+		}, created)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(created.OwnerReferences).To(BeEmpty())
+	})
+
+	It("preserves the secret data and type from the source", func() {
+		sourceSecret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "quay-push-secret",
+				Namespace: operatorNS,
+			},
+			Data: map[string][]byte{".dockerconfigjson": []byte(`{"auths":{}}`)},
+			Type: corev1.SecretTypeDockerConfigJson,
+		}
+		workspace := makeWorkspace(workspaceNS)
+		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+		result, err := secrets.CopySecret(ctx, fakeClient, workspace, sourceSecret, scheme, log)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result.Data).To(HaveKey(".dockerconfigjson"))
+		Expect(result.Type).To(Equal(corev1.SecretTypeDockerConfigJson))
+	})
+})

@@ -22,13 +22,13 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // GetRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
@@ -60,11 +60,6 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
-	// If we don't provide an operator namespace, don't attempt to look there.
-	if operatorConfigNamespace == "" {
-		return nil, nil
-	}
-
 	// Check if AuthSecret is configured in operator config
 	authSecretName := dwOperatorConfig.Workspace.BackupCronJob.Registry.AuthSecret
 	if len(authSecretName) == 0 {
@@ -74,6 +69,14 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 			"namespace", workspace.Namespace,
 			"registry", dwOperatorConfig.Workspace.BackupCronJob.Registry.Path)
 		return nil, nil
+	}
+
+	if operatorConfigNamespace == "" {
+		resolvedNS, nsErr := infrastructure.GetNamespace()
+		if nsErr != nil {
+			return nil, fmt.Errorf("cannot resolve operator namespace to copy registry auth secret: %w", nsErr)
+		}
+		operatorConfigNamespace = resolvedNS
 	}
 
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace",
@@ -109,10 +112,6 @@ func CopySecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace
 		},
 		Data: sourceSecret.Data,
 		Type: sourceSecret.Type,
-	}
-
-	if err := controllerutil.SetControllerReference(workspace, desiredSecret, scheme); err != nil {
-		return nil, err
 	}
 
 	err = c.Create(ctx, desiredSecret)

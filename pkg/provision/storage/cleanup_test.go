@@ -80,3 +80,45 @@ func TestGetSpecCommonPVCCleanupJobUsesConfigPodSecurityContext(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, customPodSecurityContext, job.Spec.Template.Spec.SecurityContext)
 }
+
+func TestGetSpecCommonPVCCleanupJobWithNilPodSecurityContext(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+
+	namespace := "test-ns"
+	pvcName := "claim-devworkspace"
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}},
+	).Build()
+
+	workspace := &common.DevWorkspaceWithConfig{
+		DevWorkspace: &dw.DevWorkspace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-workspace",
+				Namespace: namespace,
+				Labels: map[string]string{
+					constants.DevWorkspaceCreatorLabel: "test-creator",
+				},
+			},
+			Status: dw.DevWorkspaceStatus{
+				DevWorkspaceId: "test-workspace-id",
+			},
+		},
+		Config: &v1alpha1.OperatorConfiguration{
+			Workspace: &v1alpha1.WorkspaceConfig{
+				PVCName:            pvcName,
+				PodSecurityContext: nil, // No custom security context
+			},
+		},
+	}
+
+	clusterAPI := sync.ClusterAPI{
+		Client: fakeClient,
+		Scheme: scheme,
+		Logger: zap.New(zap.UseDevMode(true)),
+		Ctx:    context.Background(),
+	}
+
+	job, err := getSpecCommonPVCCleanupJob(workspace, clusterAPI)
+	assert.NoError(t, err)
+	assert.Nil(t, job.Spec.Template.Spec.SecurityContext)
+}

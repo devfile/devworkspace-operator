@@ -16,6 +16,7 @@ package rbac
 import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -42,11 +43,16 @@ func FinalizeRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI)
 		if err := deleteRolebinding(rolebindingName, workspace.Namespace, api); err != nil {
 			return err
 		}
-		return nil
-	}
-	if err := removeServiceAccountFromRolebinding(saName, workspace.Namespace, rolebindingName, api); err != nil {
+	} else if err := removeServiceAccountFromRolebinding(saName, workspace.Namespace, rolebindingName, api); err != nil {
 		return err
 	}
+
+	if infrastructure.IsOpenShift() {
+		if err := finalizeRegistryRBAC(workspace, api); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -72,6 +78,19 @@ func finalizeSCCRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterA
 		return err
 	}
 	return nil
+}
+
+func finalizeRegistryRBAC(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) error {
+	saName := common.ServiceAccountName(workspace)
+	rolebindingName := common.RegistryImagePullerRolebindingName(workspace.Namespace)
+	numWorkspaces, err := countNonDeletedWorkspaces(workspace.Namespace, api)
+	if err != nil {
+		return err
+	}
+	if numWorkspaces == 0 {
+		return deleteRolebinding(rolebindingName, workspace.Namespace, api)
+	}
+	return removeServiceAccountFromRolebinding(saName, workspace.Namespace, rolebindingName, api)
 }
 
 func countNonDeletedWorkspaces(namespace string, api sync.ClusterAPI) (int, error) {

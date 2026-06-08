@@ -133,6 +133,85 @@ func TestFinalizeDoesNothingWhenRolebindingDoesNotExist(t *testing.T) {
 	}
 }
 
+func TestShouldRemoveWorkspaceSAFromRegistryRolebindingWhenDeletedOnOpenShift(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+	testdw := getTestDevWorkspace("test-devworkspace")
+	testdw2 := getTestDevWorkspace("test-devworkspace2")
+	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
+	testdwSAName := common.ServiceAccountName(testdw)
+	testdw2SAName := common.ServiceAccountName(testdw2)
+	registryRolebinding := newRegistryImagePullerRolebinding(
+		rbacv1.Subject{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      testdwSAName,
+			Namespace: testNamespace,
+		},
+		rbacv1.Subject{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      testdw2SAName,
+			Namespace: testNamespace,
+		})
+	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace, registryRolebinding)
+	retryErr := &dwerrors.RetryError{}
+	err := FinalizeRBAC(testdw, api)
+	if assert.Error(t, err, "Should return error to indicate registry rolebinding updated") {
+		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")
+	}
+	err = FinalizeRBAC(testdw, api)
+	assert.NoError(t, err, "Should not return error once registry rolebinding is in sync")
+
+	actualRolebinding := &rbacv1.RoleBinding{}
+	err = api.Client.Get(api.Ctx, types.NamespacedName{
+		Name:      common.RegistryImagePullerRolebindingName(testNamespace),
+		Namespace: testNamespace,
+	}, actualRolebinding)
+	assert.NoError(t, err, "Unexpected test error getting registry rolebinding")
+	assert.False(t, testHasSubject(testdwSAName, testNamespace, actualRolebinding), "Should remove deleted workspace SA from registry rolebinding subjects")
+	assert.True(t, testHasSubject(testdw2SAName, testNamespace, actualRolebinding), "Should leave other workspace SA in registry rolebinding subjects")
+}
+
+func TestDeletesRegistryRolebindingWhenLastWorkspaceIsDeletedOnOpenShift(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+	testdw := getTestDevWorkspace("test-devworkspace")
+	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
+	registryRolebinding := newRegistryImagePullerRolebinding(rbacv1.Subject{
+		Kind:      rbacv1.ServiceAccountKind,
+		Name:      common.ServiceAccountName(testdw),
+		Namespace: testNamespace,
+	})
+	api := getTestClusterAPI(t, testdw.DevWorkspace, registryRolebinding)
+	retryErr := &dwerrors.RetryError{}
+	err := FinalizeRBAC(testdw, api)
+	if assert.Error(t, err, "Should return error to indicate registry rolebinding deleted") {
+		assert.ErrorAs(t, err, &retryErr, "Error should be RetryError")
+		assert.Regexp(t, fmt.Sprintf("deleted rolebinding .* in namespace %s", testNamespace), err.Error())
+	}
+	err = FinalizeRBAC(testdw, api)
+	assert.NoError(t, err, "Should not return error once registry rolebinding is deleted")
+
+	actualRolebinding := &rbacv1.RoleBinding{}
+	err = api.Client.Get(api.Ctx, types.NamespacedName{
+		Name:      common.RegistryImagePullerRolebindingName(testNamespace),
+		Namespace: testNamespace,
+	}, actualRolebinding)
+	if assert.Error(t, err, "Expect error when getting deleted registry rolebinding") {
+		assert.True(t, k8sErrors.IsNotFound(err), "Error should have IsNotFound type")
+	}
+}
+
+func TestFinalizeDoesNothingWhenRegistryRolebindingDoesNotExistOnOpenShift(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+	testdw := getTestDevWorkspace("test-devworkspace")
+	testdw2 := getTestDevWorkspace("test-devworkspace2")
+	testdw.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+	testdw.DevWorkspace.ObjectMeta.Finalizers = []string{"test-finalizer"}
+	api := getTestClusterAPI(t, testdw.DevWorkspace, testdw2.DevWorkspace)
+	err := FinalizeRBAC(testdw, api)
+	assert.NoError(t, err, "Should not return error when registry rolebinding does not exist")
+}
+
 func TestDeletesSCCRoleAndRolebindingWhenLastWorkspaceIsDeleted(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
@@ -236,4 +315,14 @@ func TestFinalizeDoesNothingWhenSCCRolebindingDoesNotExist(t *testing.T) {
 	if assert.Error(t, err, "Expect error when getting non-existent rolebinding") {
 		assert.True(t, k8sErrors.IsNotFound(err), "Error should have IsNotFound type")
 	}
+}
+
+func newRegistryImagePullerRolebinding(subjects ...rbacv1.Subject) *rbacv1.RoleBinding {
+	rolebinding := generateDefaultRolebinding(
+		common.RegistryImagePullerRolebindingName(testNamespace),
+		testNamespace,
+		common.RegistryImagePullerRoleName(),
+		constants.RbacClusterRoleKind)
+	rolebinding.Subjects = append(rolebinding.Subjects, subjects...)
+	return rolebinding
 }

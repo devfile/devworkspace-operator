@@ -230,7 +230,7 @@ type WorkspaceConfig struct {
 	SchedulerName string `json:"schedulerName,omitempty"`
 	// DefaultContainerResources defines the resource requirements (memory/cpu limit/request) used for
 	// container components that do not define limits or requests. In order to not set a field by default,
-	// the value "0" should be used. By default, the memory limit is 128Mi and the memory request is 64Mi.
+	// the value "0" should be used. By default, the memory limit is 256Mi and the memory request is 128Mi.
 	// No CPU limit or request is added by default.
 	DefaultContainerResources *corev1.ResourceRequirements `json:"defaultContainerResources,omitempty"`
 	// ContainerResourceCaps defines the maximum resource requirements enforced for workspace

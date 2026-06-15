@@ -144,6 +144,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspace.Status.DevWorkspaceId)
 	reqLogger.Info("Reconciling Workspace", "resolvedConfig", configString)
 
+	httpClientsHolder.ConfigureHttpClients(config.Routing)
+
 	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if workspace.GetDeletionTimestamp() != nil {
@@ -261,7 +263,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		WorkspaceNamespace:          workspace.Namespace,
 		Context:                     ctx,
 		K8sClient:                   r.Client,
-		HttpClient:                  httpClientsHolder.GetHttpClient(config.Routing),
+		HttpClient:                  httpClientsHolder.GetHttpClient(),
 		DefaultResourceRequirements: workspace.Config.Workspace.DefaultContainerResources,
 	}
 
@@ -785,7 +787,7 @@ func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	httpClientsHolder = NewDefaultHttpsClientHolder(mgr.GetClient(), mgr.GetLogger())
+	httpClientsHolder = NewDefaultHttpClientsHolder(mgr.GetClient(), mgr.GetLogger())
 
 	maxConcurrentReconciles, err := wkspConfig.GetMaxConcurrentReconciles()
 	if err != nil {

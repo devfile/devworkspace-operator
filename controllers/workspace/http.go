@@ -22,6 +22,7 @@ import (
 	"time"
 
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -32,48 +33,83 @@ import (
 	"golang.org/x/net/http/httpproxy"
 )
 
-type HttpClientsHolder interface {
-	GetHttpClient(routingConfig *controller.RoutingConfig) *http.Client
-	GetHealthCheckHttpClient(routingConfig *controller.RoutingConfig) *http.Client
-}
-
-type DefaultHttpsClientHolder struct {
-	k8s    client.Client
-	logger logr.Logger
-}
-
 var httpClientsHolder HttpClientsHolder
 
-func NewDefaultHttpsClientHolder(k8s client.Client, logger logr.Logger) *DefaultHttpsClientHolder {
-	return &DefaultHttpsClientHolder{k8s: k8s, logger: logger}
+type HttpClientsHolder interface {
+	GetHttpClient() *http.Client
+	GetHealthCheckHttpClient() *http.Client
+	ConfigureHttpClients(routingConfig *controller.RoutingConfig)
 }
 
-func (h *DefaultHttpsClientHolder) GetHttpClient(routingConfig *controller.RoutingConfig) *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = h.getProxyFunc(routingConfig)
-	transport.TLSClientConfig = &tls.Config{
-		RootCAs: h.getCaCertPool(routingConfig),
+type DefaultHttpClientsHolder struct {
+	k8s    client.Client
+	logger logr.Logger
+
+	client                *http.Client
+	healthCheckHttpClient *http.Client
+
+	defaultCertPool *x509.CertPool
+}
+
+func NewDefaultHttpClientsHolder(k8s client.Client, logger logr.Logger) *DefaultHttpClientsHolder {
+	defaultCertPool, err := x509.SystemCertPool()
+	if err != nil {
+		logger.Error(err, "Failed to load system cert pool")
+		defaultCertPool = x509.NewCertPool()
 	}
 
-	return &http.Client{
+	clientsHolder := &DefaultHttpClientsHolder{
+		k8s:    k8s,
+		logger: logger,
+
+		defaultCertPool: defaultCertPool,
+	}
+
+	clientsHolder.setupHttpClients()
+	clientsHolder.ConfigureHttpClients(config.GetGlobalConfig().Routing)
+
+	return clientsHolder
+}
+
+func (h *DefaultHttpClientsHolder) GetHttpClient() *http.Client {
+	return h.client
+}
+
+func (h *DefaultHttpClientsHolder) GetHealthCheckHttpClient() *http.Client {
+	return h.healthCheckHttpClient
+}
+
+func (t *DefaultHttpClientsHolder) ConfigureHttpClients(routingConfig *controller.RoutingConfig) {
+	proxyFunc := t.getProxyFunc(routingConfig)
+	caCertPool := t.getCaCertPool(routingConfig)
+
+	t.client.Transport.(*http.Transport).Proxy = proxyFunc
+	t.client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
+		RootCAs: caCertPool,
+	}
+
+	t.healthCheckHttpClient.Transport.(*http.Transport).Proxy = proxyFunc
+}
+
+func (t *DefaultHttpClientsHolder) setupHttpClients() {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+
+	t.client = &http.Client{
 		Transport: transport,
 	}
-}
 
-func (h *DefaultHttpsClientHolder) GetHealthCheckHttpClient(routingConfig *controller.RoutingConfig) *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = h.getProxyFunc(routingConfig)
-	transport.TLSClientConfig = &tls.Config{
+	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
+	healthCheckTransport.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
 	}
 
-	return &http.Client{
-		Transport: transport,
+	t.healthCheckHttpClient = &http.Client{
+		Transport: healthCheckTransport,
 		Timeout:   500 * time.Millisecond,
 	}
 }
 
-func (h *DefaultHttpsClientHolder) getProxyFunc(routingConfig *controller.RoutingConfig) func(*http.Request) (*url.URL, error) {
+func (h *DefaultHttpClientsHolder) getProxyFunc(routingConfig *controller.RoutingConfig) func(*http.Request) (*url.URL, error) {
 	if routingConfig != nil && routingConfig.ProxyConfig != nil {
 		proxyConf := httpproxy.Config{}
 		if routingConfig.ProxyConfig.HttpProxy != nil {
@@ -94,17 +130,9 @@ func (h *DefaultHttpsClientHolder) getProxyFunc(routingConfig *controller.Routin
 	return nil
 }
 
-func (h *DefaultHttpsClientHolder) getCaCertPool(routingConfig *controller.RoutingConfig) *x509.CertPool {
+func (h *DefaultHttpClientsHolder) getCaCertPool(routingConfig *controller.RoutingConfig) *x509.CertPool {
 	if certs, ok := h.readCertificates(routingConfig); ok {
-		var caCertPool *x509.CertPool
-
-		systemCertPool, err := x509.SystemCertPool()
-		if err != nil {
-			h.logger.Error(err, "Failed to load system cert pool")
-			caCertPool = x509.NewCertPool()
-		} else {
-			caCertPool = systemCertPool
-		}
+		caCertPool := h.defaultCertPool.Clone()
 
 		for _, certsPem := range certs {
 			if !caCertPool.AppendCertsFromPEM([]byte(certsPem)) {
@@ -118,7 +146,7 @@ func (h *DefaultHttpsClientHolder) getCaCertPool(routingConfig *controller.Routi
 	return nil
 }
 
-func (h *DefaultHttpsClientHolder) readCertificates(routingConfig *controller.RoutingConfig) (map[string]string, bool) {
+func (h *DefaultHttpClientsHolder) readCertificates(routingConfig *controller.RoutingConfig) (map[string]string, bool) {
 	if routingConfig == nil || routingConfig.TLSCertificateConfigmapRef == nil {
 		return nil, false
 	}

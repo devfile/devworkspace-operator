@@ -24,13 +24,15 @@ type TestHttpsClientHolder struct {
 	healthCheckHttpClient *http.Client
 }
 
-func (t *TestHttpsClientHolder) GetHttpClient(_ *controller.RoutingConfig) *http.Client {
+func (t *TestHttpsClientHolder) GetHttpClient() *http.Client {
 	return t.client
 }
 
-func (t *TestHttpsClientHolder) GetHealthCheckHttpClient(_ *controller.RoutingConfig) *http.Client {
+func (t *TestHttpsClientHolder) GetHealthCheckHttpClient() *http.Client {
 	return t.healthCheckHttpClient
 }
+
+func (t *TestHttpsClientHolder) ConfigureHttpClients(_ *controller.RoutingConfig) {}
 
 func SetupHttpClientsForTesting(client *http.Client) {
 	httpClientsHolder = &TestHttpsClientHolder{

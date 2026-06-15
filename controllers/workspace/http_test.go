@@ -13,9 +13,28 @@
 
 package controllers
 
-import "net/http"
+import (
+	"net/http"
+
+	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+)
+
+type TestHttpsClientHolder struct {
+	client                *http.Client
+	healthCheckHttpClient *http.Client
+}
+
+func (t *TestHttpsClientHolder) GetHttpClient(_ *controller.RoutingConfig) *http.Client {
+	return t.client
+}
+
+func (t *TestHttpsClientHolder) GetHealthCheckHttpClient(_ *controller.RoutingConfig) *http.Client {
+	return t.healthCheckHttpClient
+}
 
 func SetupHttpClientsForTesting(client *http.Client) {
-	httpClient = client
-	healthCheckHttpClient = client
+	httpClientsHolder = &TestHttpsClientHolder{
+		client:                client,
+		healthCheckHttpClient: client,
+	}
 }

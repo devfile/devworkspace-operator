@@ -21,7 +21,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -32,87 +32,111 @@ import (
 	"golang.org/x/net/http/httpproxy"
 )
 
-var (
-	httpClient            *http.Client
-	healthCheckHttpClient *http.Client
-)
+type HttpClientsHolder interface {
+	GetHttpClient(routingConfig *controller.RoutingConfig) *http.Client
+	GetHealthCheckHttpClient(routingConfig *controller.RoutingConfig) *http.Client
+}
 
-func setupHttpClients(k8s client.Client, logger logr.Logger) {
+type DefaultHttpsClientHolder struct {
+	k8s    client.Client
+	logger logr.Logger
+
+	client                *http.Client
+	healthCheckHttpClient *http.Client
+}
+
+var httpClientsHolder HttpClientsHolder
+
+func NewDefaultHttpsClientHolder(k8s client.Client, logger logr.Logger) *DefaultHttpsClientHolder {
+	return &DefaultHttpsClientHolder{k8s: k8s, logger: logger}
+}
+
+func (h *DefaultHttpsClientHolder) GetHttpClient(routingConfig *controller.RoutingConfig) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
-	healthCheckTransport.TLSClientConfig = &tls.Config{
+	transport.Proxy = h.getProxyFunc(routingConfig)
+	transport.TLSClientConfig = &tls.Config{
+		RootCAs: h.getCaCertPool(routingConfig),
+	}
+
+	return &http.Client{
+		Transport: transport,
+	}
+}
+
+func (h *DefaultHttpsClientHolder) GetHealthCheckHttpClient(routingConfig *controller.RoutingConfig) *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = h.getProxyFunc(routingConfig)
+	transport.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
 	}
 
-	globalConfig := config.GetGlobalConfig()
-
-	if globalConfig.Routing != nil && globalConfig.Routing.ProxyConfig != nil {
-		proxyConf := httpproxy.Config{}
-		if globalConfig.Routing.ProxyConfig.HttpProxy != nil {
-			proxyConf.HTTPProxy = *globalConfig.Routing.ProxyConfig.HttpProxy
-		}
-		if globalConfig.Routing.ProxyConfig.HttpsProxy != nil {
-			proxyConf.HTTPSProxy = *globalConfig.Routing.ProxyConfig.HttpsProxy
-		}
-		if globalConfig.Routing.ProxyConfig.NoProxy != nil {
-			proxyConf.NoProxy = *globalConfig.Routing.ProxyConfig.NoProxy
-		}
-
-		proxyFunc := func(req *http.Request) (*url.URL, error) {
-			return proxyConf.ProxyFunc()(req.URL)
-		}
-		transport.Proxy = proxyFunc
-		healthCheckTransport.Proxy = proxyFunc
-	}
-
-	httpClient = &http.Client{
+	return &http.Client{
 		Transport: transport,
-	}
-	healthCheckHttpClient = &http.Client{
-		Transport: healthCheckTransport,
 		Timeout:   500 * time.Millisecond,
 	}
-	InjectCertificates(k8s, logger)
 }
 
-func InjectCertificates(k8s client.Client, logger logr.Logger) {
-	if certs, ok := readCertificates(k8s, logger); ok {
-		for _, certsPem := range certs {
-			injectCertificates([]byte(certsPem), httpClient.Transport.(*http.Transport), logger)
+func (h *DefaultHttpsClientHolder) getProxyFunc(routingConfig *controller.RoutingConfig) func(*http.Request) (*url.URL, error) {
+	if routingConfig != nil && routingConfig.ProxyConfig != nil {
+		proxyConf := httpproxy.Config{}
+		if routingConfig.ProxyConfig.HttpProxy != nil {
+			proxyConf.HTTPProxy = *routingConfig.ProxyConfig.HttpProxy
+		}
+		if routingConfig.ProxyConfig.HttpsProxy != nil {
+			proxyConf.HTTPSProxy = *routingConfig.ProxyConfig.HttpsProxy
+		}
+		if routingConfig.ProxyConfig.NoProxy != nil {
+			proxyConf.NoProxy = *routingConfig.ProxyConfig.NoProxy
+		}
+
+		return func(req *http.Request) (*url.URL, error) {
+			return proxyConf.ProxyFunc()(req.URL)
 		}
 	}
+
+	return nil
 }
 
-func readCertificates(k8s client.Client, logger logr.Logger) (map[string]string, bool) {
-	configmapRef := config.GetGlobalConfig().Routing.TLSCertificateConfigmapRef
-	if configmapRef == nil {
-		return nil, false
-	}
-	configMap := &corev1.ConfigMap{}
-	namespacedName := &types.NamespacedName{
-		Name:      configmapRef.Name,
-		Namespace: configmapRef.Namespace,
-	}
-	err := k8s.Get(context.Background(), *namespacedName, configMap)
-	if err != nil {
-		logger.Error(err, "Failed to read configmap with certificates")
-		return nil, false
-	}
-	return configMap.Data, true
-}
+func (h *DefaultHttpsClientHolder) getCaCertPool(routingConfig *controller.RoutingConfig) *x509.CertPool {
+	if certs, ok := h.readCertificates(routingConfig); ok {
+		var caCertPool *x509.CertPool
 
-func injectCertificates(certsPem []byte, transport *http.Transport, logger logr.Logger) {
-	caCertPool := transport.TLSClientConfig.RootCAs
-	if caCertPool == nil {
 		systemCertPool, err := x509.SystemCertPool()
 		if err != nil {
-			logger.Error(err, "Failed to load system cert pool")
+			h.logger.Error(err, "Failed to load system cert pool")
 			caCertPool = x509.NewCertPool()
 		} else {
 			caCertPool = systemCertPool
 		}
+
+		for _, certsPem := range certs {
+			caCertPool.AppendCertsFromPEM([]byte(certsPem))
+		}
+
+		return caCertPool
 	}
-	if ok := caCertPool.AppendCertsFromPEM(certsPem); ok {
-		transport.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
+
+	return nil
+}
+
+func (h *DefaultHttpsClientHolder) readCertificates(routingConfig *controller.RoutingConfig) (map[string]string, bool) {
+	if routingConfig == nil || routingConfig.TLSCertificateConfigmapRef == nil {
+		return nil, false
 	}
+
+	configmapRef := routingConfig.TLSCertificateConfigmapRef
+
+	namespacedName := types.NamespacedName{
+		Name:      configmapRef.Name,
+		Namespace: configmapRef.Namespace,
+	}
+
+	configMap := &corev1.ConfigMap{}
+	err := h.k8s.Get(context.Background(), namespacedName, configMap)
+	if err != nil {
+		h.logger.Error(err, "Failed to read configmap with certificates")
+		return nil, false
+	}
+
+	return configMap.Data, true
 }

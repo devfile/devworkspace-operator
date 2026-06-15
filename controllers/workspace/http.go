@@ -40,9 +40,6 @@ type HttpClientsHolder interface {
 type DefaultHttpsClientHolder struct {
 	k8s    client.Client
 	logger logr.Logger
-
-	client                *http.Client
-	healthCheckHttpClient *http.Client
 }
 
 var httpClientsHolder HttpClientsHolder
@@ -110,7 +107,9 @@ func (h *DefaultHttpsClientHolder) getCaCertPool(routingConfig *controller.Routi
 		}
 
 		for _, certsPem := range certs {
-			caCertPool.AppendCertsFromPEM([]byte(certsPem))
+			if !caCertPool.AppendCertsFromPEM([]byte(certsPem)) {
+				h.logger.Info("Warning: failed to parse one or more certificates from ConfigMap")
+			}
 		}
 
 		return caCertPool

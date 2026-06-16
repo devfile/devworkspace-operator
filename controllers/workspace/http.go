@@ -90,73 +90,107 @@ func (h *DefaultHttpClientsHolder) GetHealthCheckHttpClient() *http.Client {
 }
 
 func (h *DefaultHttpClientsHolder) ConfigureHttpClients(routingConfig *controller.RoutingConfig) {
-	var proxyConfig *controller.Proxy
-	var certsCM *corev1.ConfigMap
+	var newProxyConfig *controller.Proxy
+	var newCertsCM *corev1.ConfigMap
 
-	var buildNewHttpClient bool
-	var buildNewHealthCheckHttpClient bool
+	if routingConfig != nil {
+		if routingConfig.ProxyConfig != nil {
+			newProxyConfig = routingConfig.ProxyConfig
+		}
+		if routingConfig.TLSCertificateConfigmapRef != nil {
+			newCertsCM = h.readCertCM(routingConfig.TLSCertificateConfigmapRef)
+		}
+	}
+
+	buildNewHttpClient, buildNewHealthCheckHttpClient := h.shouldRebuildClients(newProxyConfig, newCertsCM)
+
+	if buildNewHttpClient || buildNewHealthCheckHttpClient {
+		newClient, newHealthCheckClient := h.buildNewClients(
+			buildNewHttpClient,
+			buildNewHealthCheckHttpClient,
+			newProxyConfig,
+			newCertsCM,
+		)
+
+		h.setNewClients(
+			newClient,
+			newHealthCheckClient,
+			newProxyConfig,
+			newCertsCM,
+		)
+	}
+}
+
+func (h *DefaultHttpClientsHolder) shouldRebuildClients(newProxyConfig *controller.Proxy, newCertsCM *corev1.ConfigMap) (bool, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	certsCMVersion := ""
+	if newCertsCM != nil {
+		certsCMVersion = newCertsCM.ResourceVersion
+	}
+
+	if !reflect.DeepEqual(newProxyConfig, h.lastProxyConfig) {
+		return true, true
+	}
+
+	if certsCMVersion != h.lastCertsCMVersion {
+		return true, false
+	}
+
+	return false, false
+}
+
+func (h *DefaultHttpClientsHolder) buildNewClients(
+	buildNewHttpClient bool,
+	buildNewHealthCheckHttpClient bool,
+	newProxyConfig *controller.Proxy,
+	newCertsCM *corev1.ConfigMap,
+) (*http.Client, *http.Client) {
 
 	var newClient *http.Client
 	var newHealthCheckClient *http.Client
 
-	if routingConfig != nil {
-		if routingConfig.ProxyConfig != nil {
-			proxyConfig = routingConfig.ProxyConfig
-		}
-		if routingConfig.TLSCertificateConfigmapRef != nil {
-			certsCM = h.readCertCM(routingConfig.TLSCertificateConfigmapRef)
-		}
-	}
+	proxyFunc := h.getProxyFunc(newProxyConfig)
+	caCertPool := h.getCaCertPool(newCertsCM)
 
-	h.mu.RLock()
-
-	certsCMVersion := ""
-	if certsCM != nil {
-		certsCMVersion = certsCM.ResourceVersion
-	}
-
-	if certsCMVersion != h.lastCertsCMVersion {
-		buildNewHttpClient = true
-	}
-
-	if !reflect.DeepEqual(proxyConfig, h.lastProxyConfig) {
-		buildNewHealthCheckHttpClient = true
-		buildNewHttpClient = true
-	}
-
-	h.mu.RUnlock()
-
-	if buildNewHttpClient || buildNewHealthCheckHttpClient {
-		proxyFunc := h.getProxyFunc(proxyConfig)
-		caCertPool := h.getCaCertPool(certsCM)
-
-		if buildNewHttpClient {
-			transport := http.DefaultTransport.(*http.Transport).Clone()
-			transport.Proxy = proxyFunc
-			transport.TLSClientConfig = &tls.Config{
-				RootCAs: caCertPool,
-			}
-
-			newClient = &http.Client{
-				Transport: transport,
-			}
+	if buildNewHttpClient {
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.Proxy = proxyFunc
+		transport.TLSClientConfig = &tls.Config{
+			RootCAs: caCertPool,
 		}
 
-		if buildNewHealthCheckHttpClient {
-			healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
-			healthCheckTransport.Proxy = proxyFunc
-			healthCheckTransport.TLSClientConfig = &tls.Config{
-				InsecureSkipVerify: true,
-			}
-
-			newHealthCheckClient = &http.Client{
-				Transport: healthCheckTransport,
-				Timeout:   500 * time.Millisecond,
-			}
+		newClient = &http.Client{
+			Transport: transport,
+			Timeout:   5 * time.Second,
 		}
 	}
 
+	if buildNewHealthCheckHttpClient {
+		healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
+		healthCheckTransport.Proxy = proxyFunc
+		healthCheckTransport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true,
+		}
+
+		newHealthCheckClient = &http.Client{
+			Transport: healthCheckTransport,
+			Timeout:   500 * time.Millisecond,
+		}
+	}
+
+	return newClient, newHealthCheckClient
+}
+
+func (h *DefaultHttpClientsHolder) setNewClients(
+	newClient *http.Client,
+	newHealthCheckClient *http.Client,
+	newProxyConfig *controller.Proxy,
+	newCertsCM *corev1.ConfigMap,
+) {
 	h.mu.Lock()
+	defer h.mu.Unlock()
 
 	if newClient != nil {
 		h.client = newClient
@@ -166,19 +200,17 @@ func (h *DefaultHttpClientsHolder) ConfigureHttpClients(routingConfig *controlle
 		h.healthCheckHttpClient = newHealthCheckClient
 	}
 
-	if proxyConfig != nil {
-		h.lastProxyConfig = proxyConfig.DeepCopy()
+	if newProxyConfig != nil {
+		h.lastProxyConfig = newProxyConfig.DeepCopy()
 	} else {
 		h.lastProxyConfig = nil
 	}
 
-	if certsCM != nil {
-		h.lastCertsCMVersion = certsCM.ResourceVersion
+	if newCertsCM != nil {
+		h.lastCertsCMVersion = newCertsCM.ResourceVersion
 	} else {
 		h.lastCertsCMVersion = ""
 	}
-
-	h.mu.Unlock()
 }
 
 func (h *DefaultHttpClientsHolder) getProxyFunc(proxyConfig *controller.Proxy) func(*http.Request) (*url.URL, error) {

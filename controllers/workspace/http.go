@@ -102,7 +102,6 @@ func (h *DefaultHttpClientsHolder) ConfigureHttpClients(ctx context.Context, rou
 			certsCM, err := h.readCertCM(ctx, routingConfig.TLSCertificateConfigmapRef)
 			if err != nil {
 				h.logger.Error(err, "Failed to read TLS certificate ConfigMap")
-				return
 			}
 
 			newCertsCM = certsCM
@@ -129,16 +128,21 @@ func (h *DefaultHttpClientsHolder) ConfigureHttpClients(ctx context.Context, rou
 }
 
 func (h *DefaultHttpClientsHolder) shouldRebuildClients(newProxyConfig *controller.Proxy, newCertsCM *corev1.ConfigMap) (bool, bool) {
-	h.mu.RLock()
 	defer h.mu.RUnlock()
+	h.mu.RLock()
 
-	certsCMVersion := ""
-	if newCertsCM != nil {
-		certsCMVersion = newCertsCM.ResourceVersion
+	// Always rebuild if clients haven't been initialized yet
+	if h.client == nil || h.healthCheckHttpClient == nil {
+		return true, true
 	}
 
 	if !reflect.DeepEqual(newProxyConfig, h.lastProxyConfig) {
 		return true, true
+	}
+
+	certsCMVersion := ""
+	if newCertsCM != nil {
+		certsCMVersion = newCertsCM.ResourceVersion
 	}
 
 	if certsCMVersion != h.lastCertsCMVersion {

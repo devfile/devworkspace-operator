@@ -141,7 +141,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	workspace.DevWorkspace = rawWorkspace
 	workspace.Config = config
 
-	httpClientsHolder.ConfigureHttpClients(config.Routing)
+	httpClientsHolder.ConfigureHttpClients(ctx, config.Routing)
 
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspace.Status.DevWorkspaceId)
 	reqLogger.Info("Reconciling Workspace", "resolvedConfig", configString)

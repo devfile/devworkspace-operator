@@ -14,6 +14,7 @@
 package controllers
 
 import (
+	"context"
 	"net/http"
 
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -32,7 +33,8 @@ func (t *TestHttpsClientHolder) GetHealthCheckHttpClient() *http.Client {
 	return t.healthCheckHttpClient
 }
 
-func (t *TestHttpsClientHolder) ConfigureHttpClients(_ *controller.RoutingConfig) {}
+func (t *TestHttpsClientHolder) ConfigureHttpClients(_ context.Context, _ *controller.RoutingConfig) {
+}
 
 func SetupHttpClientsForTesting(client *http.Client) {
 	httpClientsHolder = &TestHttpsClientHolder{

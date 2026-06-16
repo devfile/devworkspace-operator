@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -39,7 +40,7 @@ var httpClientsHolder HttpClientsHolder
 type HttpClientsHolder interface {
 	GetHttpClient() *http.Client
 	GetHealthCheckHttpClient() *http.Client
-	ConfigureHttpClients(routingConfig *controller.RoutingConfig)
+	ConfigureHttpClients(context.Context, *controller.RoutingConfig)
 }
 
 type DefaultHttpClientsHolder struct {
@@ -70,7 +71,7 @@ func NewDefaultHttpClientsHolder(k8s client.Client, logger logr.Logger) *Default
 		defaultCertPool: defaultCertPool,
 	}
 
-	clientsHolder.ConfigureHttpClients(config.GetGlobalConfig().Routing)
+	clientsHolder.ConfigureHttpClients(context.Background(), config.GetGlobalConfig().Routing)
 
 	return clientsHolder
 }
@@ -89,7 +90,7 @@ func (h *DefaultHttpClientsHolder) GetHealthCheckHttpClient() *http.Client {
 	return h.healthCheckHttpClient
 }
 
-func (h *DefaultHttpClientsHolder) ConfigureHttpClients(routingConfig *controller.RoutingConfig) {
+func (h *DefaultHttpClientsHolder) ConfigureHttpClients(ctx context.Context, routingConfig *controller.RoutingConfig) {
 	var newProxyConfig *controller.Proxy
 	var newCertsCM *corev1.ConfigMap
 
@@ -98,7 +99,13 @@ func (h *DefaultHttpClientsHolder) ConfigureHttpClients(routingConfig *controlle
 			newProxyConfig = routingConfig.ProxyConfig
 		}
 		if routingConfig.TLSCertificateConfigmapRef != nil {
-			newCertsCM = h.readCertCM(routingConfig.TLSCertificateConfigmapRef)
+			certsCM, err := h.readCertCM(ctx, routingConfig.TLSCertificateConfigmapRef)
+			if err != nil {
+				h.logger.Error(err, "Failed to read TLS certificate ConfigMap")
+				return
+			}
+
+			newCertsCM = certsCM
 		}
 	}
 
@@ -163,7 +170,6 @@ func (h *DefaultHttpClientsHolder) buildNewClients(
 
 		newClient = &http.Client{
 			Transport: transport,
-			Timeout:   5 * time.Second,
 		}
 	}
 
@@ -243,16 +249,16 @@ func (h *DefaultHttpClientsHolder) getCaCertPool(cm *corev1.ConfigMap) *x509.Cer
 
 	for _, certsPem := range cm.Data {
 		if !caCertPool.AppendCertsFromPEM([]byte(certsPem)) {
-			h.logger.Info("Warning: failed to parse one or more certificates from ConfigMap")
+			h.logger.V(1).Info("Warning: failed to parse one or more certificates from ConfigMap")
 		}
 	}
 
 	return caCertPool
 }
 
-func (h *DefaultHttpClientsHolder) readCertCM(cmReference *controller.ConfigmapReference) *corev1.ConfigMap {
+func (h *DefaultHttpClientsHolder) readCertCM(ctx context.Context, cmReference *controller.ConfigmapReference) (*corev1.ConfigMap, error) {
 	if cmReference == nil {
-		return nil
+		return nil, nil
 	}
 
 	namespacedName := types.NamespacedName{
@@ -261,11 +267,9 @@ func (h *DefaultHttpClientsHolder) readCertCM(cmReference *controller.ConfigmapR
 	}
 
 	configMap := &corev1.ConfigMap{}
-	err := h.k8s.Get(context.Background(), namespacedName, configMap)
-	if err != nil {
-		h.logger.Error(err, "Failed to read configmap with certificates")
-		return nil
+	if err := h.k8s.Get(ctx, namespacedName, configMap); err != nil {
+		return nil, fmt.Errorf("failed to read ConfigMap %s/%s containing certificates: %w", cmReference.Namespace, cmReference.Name, err)
 	}
 
-	return configMap
+	return configMap, nil
 }

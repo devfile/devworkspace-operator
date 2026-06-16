@@ -39,7 +39,12 @@ var httpClientsHolder HttpClientsHolder
 
 type HttpClientsHolder interface {
 	GetHttpClient() *http.Client
+
+	// GetHealthCheckHttpClient returns an HTTP client that skips TLS verification.
+	// This client MUST only be used for workspace health/readiness checks, not for
+	// fetching external content or making security-sensitive requests.
 	GetHealthCheckHttpClient() *http.Client
+
 	ConfigureHttpClients(context.Context, *controller.RoutingConfig)
 }
 
@@ -55,25 +60,23 @@ type DefaultHttpClientsHolder struct {
 	lastProxyConfig    *controller.Proxy
 	lastCertsCMVersion string
 
-	defaultCertPool *x509.CertPool
+	systemCertPool *x509.CertPool
 }
 
-func NewDefaultHttpClientsHolder(k8s client.Client, logger logr.Logger) *DefaultHttpClientsHolder {
-	defaultCertPool, err := x509.SystemCertPool()
+func SetupHttpClients(k8s client.Client, logger logr.Logger) error {
+	systemCertPool, err := x509.SystemCertPool()
 	if err != nil {
-		logger.Error(err, "Failed to load system cert pool")
-		defaultCertPool = x509.NewCertPool()
+		return fmt.Errorf("failed to load system cert pool: %w", err)
 	}
 
-	clientsHolder := &DefaultHttpClientsHolder{
-		k8s:             k8s,
-		logger:          logger,
-		defaultCertPool: defaultCertPool,
+	httpClientsHolder = &DefaultHttpClientsHolder{
+		k8s:            k8s,
+		logger:         logger,
+		systemCertPool: systemCertPool,
 	}
+	httpClientsHolder.ConfigureHttpClients(context.Background(), config.GetGlobalConfig().Routing)
 
-	clientsHolder.ConfigureHttpClients(context.Background(), config.GetGlobalConfig().Routing)
-
-	return clientsHolder
+	return nil
 }
 
 func (h *DefaultHttpClientsHolder) GetHttpClient() *http.Client {
@@ -98,10 +101,14 @@ func (h *DefaultHttpClientsHolder) ConfigureHttpClients(ctx context.Context, rou
 		if routingConfig.ProxyConfig != nil {
 			newProxyConfig = routingConfig.ProxyConfig
 		}
+
 		if routingConfig.TLSCertificateConfigmapRef != nil {
 			certsCM, err := h.readCertCM(ctx, routingConfig.TLSCertificateConfigmapRef)
 			if err != nil {
 				h.logger.Error(err, "Failed to read TLS certificate ConfigMap")
+
+				// certsCM == nil,
+				// http clients will be rebuilt with a system cert pool, not an issue at all
 			}
 
 			newCertsCM = certsCM
@@ -128,8 +135,8 @@ func (h *DefaultHttpClientsHolder) ConfigureHttpClients(ctx context.Context, rou
 }
 
 func (h *DefaultHttpClientsHolder) shouldRebuildClients(newProxyConfig *controller.Proxy, newCertsCM *corev1.ConfigMap) (bool, bool) {
-	defer h.mu.RUnlock()
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 
 	// Always rebuild if clients haven't been initialized yet
 	if h.client == nil || h.healthCheckHttpClient == nil {
@@ -174,6 +181,7 @@ func (h *DefaultHttpClientsHolder) buildNewClients(
 
 		newClient = &http.Client{
 			Transport: transport,
+			Timeout:   5 * time.Second,
 		}
 	}
 
@@ -249,7 +257,7 @@ func (h *DefaultHttpClientsHolder) getCaCertPool(cm *corev1.ConfigMap) *x509.Cer
 		return nil
 	}
 
-	caCertPool := h.defaultCertPool.Clone()
+	caCertPool := h.systemCertPool.Clone()
 
 	for _, certsPem := range cm.Data {
 		if !caCertPool.AppendCertsFromPEM([]byte(certsPem)) {

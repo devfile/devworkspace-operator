@@ -787,7 +787,10 @@ func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	httpClientsHolder = NewDefaultHttpClientsHolder(mgr.GetClient(), mgr.GetLogger())
+	err := SetupHttpClients(mgr.GetClient(), mgr.GetLogger())
+	if err != nil {
+		return err
+	}
 
 	maxConcurrentReconciles, err := wkspConfig.GetMaxConcurrentReconciles()
 	if err != nil {

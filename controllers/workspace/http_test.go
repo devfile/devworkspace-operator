@@ -227,8 +227,8 @@ func newTestHolder(certCM *corev1.ConfigMap) *DefaultHttpClientsHolder {
 	_ = corev1.AddToScheme(scheme)
 
 	h := &DefaultHttpClientsHolder{
-		logger:          zap.New(zap.UseDevMode(true)),
-		defaultCertPool: x509.NewCertPool(),
+		logger:         zap.New(zap.UseDevMode(true)),
+		systemCertPool: x509.NewCertPool(),
 	}
 
 	if certCM != nil {

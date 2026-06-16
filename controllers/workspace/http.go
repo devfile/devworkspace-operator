@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,11 +19,12 @@ import (
 	"crypto/x509"
 	"net/http"
 	"net/url"
+	"reflect"
+	"sync"
 	"time"
 
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/config"
-
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
@@ -48,6 +49,11 @@ type DefaultHttpClientsHolder struct {
 	client                *http.Client
 	healthCheckHttpClient *http.Client
 
+	mu sync.RWMutex
+
+	lastProxyConfig    *controller.Proxy
+	lastCertsCMVersion string
+
 	defaultCertPool *x509.CertPool
 }
 
@@ -59,67 +65,133 @@ func NewDefaultHttpClientsHolder(k8s client.Client, logger logr.Logger) *Default
 	}
 
 	clientsHolder := &DefaultHttpClientsHolder{
-		k8s:    k8s,
-		logger: logger,
-
+		k8s:             k8s,
+		logger:          logger,
 		defaultCertPool: defaultCertPool,
 	}
 
-	clientsHolder.setupHttpClients()
 	clientsHolder.ConfigureHttpClients(config.GetGlobalConfig().Routing)
 
 	return clientsHolder
 }
 
 func (h *DefaultHttpClientsHolder) GetHttpClient() *http.Client {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	return h.client
 }
 
 func (h *DefaultHttpClientsHolder) GetHealthCheckHttpClient() *http.Client {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	return h.healthCheckHttpClient
 }
 
-func (t *DefaultHttpClientsHolder) ConfigureHttpClients(routingConfig *controller.RoutingConfig) {
-	proxyFunc := t.getProxyFunc(routingConfig)
-	caCertPool := t.getCaCertPool(routingConfig)
+func (h *DefaultHttpClientsHolder) ConfigureHttpClients(routingConfig *controller.RoutingConfig) {
+	var proxyConfig *controller.Proxy
+	var certsCM *corev1.ConfigMap
 
-	t.client.Transport.(*http.Transport).Proxy = proxyFunc
-	t.client.Transport.(*http.Transport).TLSClientConfig = &tls.Config{
-		RootCAs: caCertPool,
+	var buildNewHttpClient bool
+	var buildNewHealthCheckHttpClient bool
+
+	var newClient *http.Client
+	var newHealthCheckClient *http.Client
+
+	if routingConfig != nil {
+		if routingConfig.ProxyConfig != nil {
+			proxyConfig = routingConfig.ProxyConfig
+		}
+		if routingConfig.TLSCertificateConfigmapRef != nil {
+			certsCM = h.readCertCM(routingConfig.TLSCertificateConfigmapRef)
+		}
 	}
 
-	t.healthCheckHttpClient.Transport.(*http.Transport).Proxy = proxyFunc
+	h.mu.RLock()
+
+	certsCMVersion := ""
+	if certsCM != nil {
+		certsCMVersion = certsCM.ResourceVersion
+	}
+
+	if certsCMVersion != h.lastCertsCMVersion {
+		buildNewHttpClient = true
+	}
+
+	if !reflect.DeepEqual(proxyConfig, h.lastProxyConfig) {
+		buildNewHealthCheckHttpClient = true
+		buildNewHttpClient = true
+	}
+
+	h.mu.RUnlock()
+
+	if buildNewHttpClient || buildNewHealthCheckHttpClient {
+		proxyFunc := h.getProxyFunc(proxyConfig)
+		caCertPool := h.getCaCertPool(certsCM)
+
+		if buildNewHttpClient {
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport.Proxy = proxyFunc
+			transport.TLSClientConfig = &tls.Config{
+				RootCAs: caCertPool,
+			}
+
+			newClient = &http.Client{
+				Transport: transport,
+			}
+		}
+
+		if buildNewHealthCheckHttpClient {
+			healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
+			healthCheckTransport.Proxy = proxyFunc
+			healthCheckTransport.TLSClientConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+
+			newHealthCheckClient = &http.Client{
+				Transport: healthCheckTransport,
+				Timeout:   500 * time.Millisecond,
+			}
+		}
+	}
+
+	h.mu.Lock()
+
+	if newClient != nil {
+		h.client = newClient
+	}
+
+	if newHealthCheckClient != nil {
+		h.healthCheckHttpClient = newHealthCheckClient
+	}
+
+	if proxyConfig != nil {
+		h.lastProxyConfig = proxyConfig.DeepCopy()
+	} else {
+		h.lastProxyConfig = nil
+	}
+
+	if certsCM != nil {
+		h.lastCertsCMVersion = certsCM.ResourceVersion
+	} else {
+		h.lastCertsCMVersion = ""
+	}
+
+	h.mu.Unlock()
 }
 
-func (t *DefaultHttpClientsHolder) setupHttpClients() {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-
-	t.client = &http.Client{
-		Transport: transport,
-	}
-
-	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
-	healthCheckTransport.TLSClientConfig = &tls.Config{
-		InsecureSkipVerify: true,
-	}
-
-	t.healthCheckHttpClient = &http.Client{
-		Transport: healthCheckTransport,
-		Timeout:   500 * time.Millisecond,
-	}
-}
-
-func (h *DefaultHttpClientsHolder) getProxyFunc(routingConfig *controller.RoutingConfig) func(*http.Request) (*url.URL, error) {
-	if routingConfig != nil && routingConfig.ProxyConfig != nil {
+func (h *DefaultHttpClientsHolder) getProxyFunc(proxyConfig *controller.Proxy) func(*http.Request) (*url.URL, error) {
+	if proxyConfig != nil {
 		proxyConf := httpproxy.Config{}
-		if routingConfig.ProxyConfig.HttpProxy != nil {
-			proxyConf.HTTPProxy = *routingConfig.ProxyConfig.HttpProxy
+		if proxyConfig.HttpProxy != nil {
+			proxyConf.HTTPProxy = *proxyConfig.HttpProxy
 		}
-		if routingConfig.ProxyConfig.HttpsProxy != nil {
-			proxyConf.HTTPSProxy = *routingConfig.ProxyConfig.HttpsProxy
+		if proxyConfig.HttpsProxy != nil {
+			proxyConf.HTTPSProxy = *proxyConfig.HttpsProxy
 		}
-		if routingConfig.ProxyConfig.NoProxy != nil {
-			proxyConf.NoProxy = *routingConfig.ProxyConfig.NoProxy
+		if proxyConfig.NoProxy != nil {
+			proxyConf.NoProxy = *proxyConfig.NoProxy
 		}
 
 		return func(req *http.Request) (*url.URL, error) {
@@ -130,40 +202,38 @@ func (h *DefaultHttpClientsHolder) getProxyFunc(routingConfig *controller.Routin
 	return nil
 }
 
-func (h *DefaultHttpClientsHolder) getCaCertPool(routingConfig *controller.RoutingConfig) *x509.CertPool {
-	if certs, ok := h.readCertificates(routingConfig); ok {
-		caCertPool := h.defaultCertPool.Clone()
-
-		for _, certsPem := range certs {
-			if !caCertPool.AppendCertsFromPEM([]byte(certsPem)) {
-				h.logger.Info("Warning: failed to parse one or more certificates from ConfigMap")
-			}
-		}
-
-		return caCertPool
+func (h *DefaultHttpClientsHolder) getCaCertPool(cm *corev1.ConfigMap) *x509.CertPool {
+	if cm == nil {
+		return nil
 	}
 
-	return nil
+	caCertPool := h.defaultCertPool.Clone()
+
+	for _, certsPem := range cm.Data {
+		if !caCertPool.AppendCertsFromPEM([]byte(certsPem)) {
+			h.logger.Info("Warning: failed to parse one or more certificates from ConfigMap")
+		}
+	}
+
+	return caCertPool
 }
 
-func (h *DefaultHttpClientsHolder) readCertificates(routingConfig *controller.RoutingConfig) (map[string]string, bool) {
-	if routingConfig == nil || routingConfig.TLSCertificateConfigmapRef == nil {
-		return nil, false
+func (h *DefaultHttpClientsHolder) readCertCM(cmReference *controller.ConfigmapReference) *corev1.ConfigMap {
+	if cmReference == nil {
+		return nil
 	}
 
-	configmapRef := routingConfig.TLSCertificateConfigmapRef
-
 	namespacedName := types.NamespacedName{
-		Name:      configmapRef.Name,
-		Namespace: configmapRef.Namespace,
+		Name:      cmReference.Name,
+		Namespace: cmReference.Namespace,
 	}
 
 	configMap := &corev1.ConfigMap{}
 	err := h.k8s.Get(context.Background(), namespacedName, configMap)
 	if err != nil {
 		h.logger.Error(err, "Failed to read configmap with certificates")
-		return nil, false
+		return nil
 	}
 
-	return configMap.Data, true
+	return configMap
 }

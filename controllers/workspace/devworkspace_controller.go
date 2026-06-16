@@ -141,10 +141,10 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	workspace.DevWorkspace = rawWorkspace
 	workspace.Config = config
 
+	httpClientsHolder.ConfigureHttpClients(config.Routing)
+
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspace.Status.DevWorkspaceId)
 	reqLogger.Info("Reconciling Workspace", "resolvedConfig", configString)
-
-	httpClientsHolder.ConfigureHttpClients(config.Routing)
 
 	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.

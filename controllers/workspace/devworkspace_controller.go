@@ -417,6 +417,11 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					reqLogger.Info("Skipping init-persistent-home container: persistent home is disabled")
 					continue
 				}
+				// Skip if workspace does not need persistent home (e.g. ephemeral storage)
+				if !home.NeedsPersistentHomeDirectory(workspace) {
+					reqLogger.Info("Skipping init-persistent-home container: workspace does not need persistent home directory")
+					continue
+				}
 				// Skip if init container is explicitly disabled
 				if disableHomeInit {
 					reqLogger.Info("Skipping init-persistent-home container: DisableInitContainer is true")

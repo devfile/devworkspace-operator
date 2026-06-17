@@ -144,9 +144,6 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reqLogger = reqLogger.WithValues(constants.DevWorkspaceIDLoggerKey, workspace.Status.DevWorkspaceId)
 	reqLogger.Info("Reconciling Workspace", "resolvedConfig", configString)
 
-	// Inject ca certificates to the http client, if the certificates configmap is created and defined in the config.
-	InjectCertificates(r.Client, r.Log)
-
 	// Check if the DevWorkspaceRouting instance is marked to be deleted, which is
 	// indicated by the deletion timestamp being set.
 	if workspace.GetDeletionTimestamp() != nil {
@@ -259,6 +256,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		err = r.Update(context.TODO(), clusterWorkspace.DevWorkspace)
 		return reconcile.Result{Requeue: true}, err
 	}
+
+	httpClient := httpClientsFactory.GetHttpClient(ctx, config.Routing)
 
 	flattenHelpers := flatten.ResolverTools{
 		WorkspaceNamespace:          workspace.Namespace,
@@ -788,7 +787,10 @@ func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	setupHttpClients(mgr.GetClient(), mgr.GetLogger())
+	err := SetupHttpClientsFactory(mgr.GetClient(), mgr.GetLogger())
+	if err != nil {
+		return err
+	}
 
 	maxConcurrentReconciles, err := wkspConfig.GetMaxConcurrentReconciles()
 	if err != nil {

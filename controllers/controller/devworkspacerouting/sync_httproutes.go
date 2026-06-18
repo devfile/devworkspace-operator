@@ -59,6 +59,7 @@ func (r *DevWorkspaceRoutingReconciler) syncHTTPRoutes(routing *controllerv1alph
 		case nil:
 			break
 		case *sync.NotInSyncError:
+			clusterAPI.Logger.Info(t.Error())
 			httpRoutesInSync = false
 			continue
 		case *sync.UnrecoverableSyncError:

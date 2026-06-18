@@ -267,6 +267,11 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, r.markRoutingFailed(instance, fmt.Sprintf("Could not get exposed endpoints for DevWorkspace: %s", err))
 	}
 
+	if !endpointsAreReady {
+		reqLogger.Info("Endpoints not ready, requeuing to check HTTPRoute status")
+		return reconcile.Result{RequeueAfter: 3 * time.Second}, r.reconcileStatus(instance, nil, nil, false, "Waiting for HTTPRoute endpoints to be ready")
+	}
+
 	return reconcile.Result{}, r.reconcileStatus(instance, &routingObjects, exposedEndpoints, endpointsAreReady, "")
 }
 

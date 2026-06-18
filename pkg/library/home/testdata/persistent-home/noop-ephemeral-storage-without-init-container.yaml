@@ -1,0 +1,34 @@
+name: "Does not create persistent home volume for ephemeral storage when init-persistent-home is not explicitly configured"
+
+input:
+  devworkspaceId: "test-workspaceid"
+  config:
+    workspace:
+      persistUserHome:
+        enabled: true
+  workspace:
+    attributes:
+      controller.devfile.io/storage-type: ephemeral
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+      - name: my-defined-volume
+        volume: {}
+
+output:
+  workspace:
+    attributes:
+      controller.devfile.io/storage-type: ephemeral
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
+          volumeMounts:
+            - name: my-defined-volume
+              path: /my-defined-volume-path
+      - name: my-defined-volume
+        volume: {}

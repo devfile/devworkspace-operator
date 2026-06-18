@@ -7,13 +7,21 @@ input:
       persistUserHome:
         enabled: true
   workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
     events:
       prestart:
         - init-persistent-home
 
 output:
-  error: "failed to add init container for home persistence setup: command with id init-persistent-home already exists in the devworkspace"
+  error: "failed to add init container for home persistence setup: event with id init-persistent-home already exists in the devworkspace"
   workspace:
+    components:
+      - name: testing-container-1
+        container:
+          image: testing-image-1
     events:
       prestart:
         - init-persistent-home

@@ -20,7 +20,6 @@ import (
 
 	"github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
-	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
@@ -87,20 +86,22 @@ func AddPersistentHomeVolume(workspace *common.DevWorkspaceWithConfig) (*v1alpha
 	return dwTemplateSpecCopy, nil
 }
 
-// Returns true if the following criteria is met:
-// - `persistUserHome` is enabled in the DevWorkspaceOperatorConfig
-// - The storage strategy used by the DevWorkspace supports home persistence
-// - None of the container components in the DevWorkspace mount a volume to `/home/user/`.
-// - Persistent storage is required for the DevWorkspace
-// Returns false otherwise.
+// Returns true if persistUserHome is enabled, the workspace has at least one container component,
+// and no container already mounts a volume to /home/user/.
+// For ephemeral storage workspaces, only returns true if init-persistent-home init container
+// is configured in the DevWorkspaceOperatorConfig. This is to allow consistent behaviour
+// between ephemeral and non-ephemeral workspaces for setups with a custom init-persistent-home.
 func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool {
-	if !PersistUserHomeEnabled(workspace) || !storageStrategySupportsPersistentHome(workspace) {
+	if !PersistUserHomeEnabled(workspace) {
 		return false
 	}
+
+	hasContainerComponents := false
 	for _, component := range workspace.Spec.Template.Components {
 		if component.Container == nil {
 			continue
 		}
+		hasContainerComponents = true
 		for _, volumeMount := range component.Container.VolumeMounts {
 			if volumeMount.Path == constants.HomeUserDirectory {
 				// If a volume is already being mounted to /home/user/, it takes precedence
@@ -109,19 +110,36 @@ func NeedsPersistentHomeDirectory(workspace *common.DevWorkspaceWithConfig) bool
 			}
 		}
 	}
-	return storage.WorkspaceNeedsStorage(&workspace.Spec.Template)
+
+	if !hasContainerComponents {
+		return false
+	}
+
+	// For ephemeral storage, only add persistent home if init-persistent-home is configured in DWOC
+	storageType := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
+	if storageType == constants.EphemeralStorageClassType {
+		return hasInitPersistentHomeInConfig(workspace)
+	}
+
+	return true
 }
 
 func PersistUserHomeEnabled(workspace *common.DevWorkspaceWithConfig) bool {
 	return pointer.BoolDeref(workspace.Config.Workspace.PersistUserHome.Enabled, false)
 }
 
-// Returns true if the workspace's storage strategy supports persisting the user home directory.
-// The storage strategies which support home persistence are: per-user/common, per-workspace & async.
-// The ephemeral storage strategy does not support home persistence.
-func storageStrategySupportsPersistentHome(workspace *common.DevWorkspaceWithConfig) bool {
-	storageClass := workspace.Spec.Template.Attributes.GetString(constants.DevWorkspaceStorageTypeAttribute, nil)
-	return storageClass != constants.EphemeralStorageClassType
+func hasInitPersistentHomeInConfig(workspace *common.DevWorkspaceWithConfig) bool {
+	if workspace.Config == nil || workspace.Config.Workspace == nil {
+		return false
+	}
+
+	for _, container := range workspace.Config.Workspace.InitContainers {
+		if container.Name == constants.HomeInitComponentName {
+			return true
+		}
+	}
+
+	return false
 }
 
 func addInitContainer(dwTemplateSpec *v1alpha2.DevWorkspaceTemplateSpec) error {

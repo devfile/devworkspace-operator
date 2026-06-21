@@ -806,13 +806,13 @@ func TestRestrictPodOverride(t *testing.T) {
 		},
 		// ----------- WorkloadRef -----------
 		{
-			Name:             "schedulingGates empty slice not restricted",
+			Name:             "workloadRef empty slice not restricted",
 			Override:         corev1.PodSpec{WorkloadRef: nil},
 			RestrictedFields: []string{"workloadRef"},
 			IsErrorExpected:  false,
 		},
 		{
-			Name:             "schedulingGates restricted by any value",
+			Name:             "workloadRef restricted by any value",
 			Override:         corev1.PodSpec{WorkloadRef: &corev1.WorkloadReference{}},
 			RestrictedFields: []string{"workloadRef"},
 			IsErrorExpected:  true,

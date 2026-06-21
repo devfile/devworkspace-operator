@@ -795,10 +795,10 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.Overrides != nil {
 			if workspace.Overrides.RestrictedContainerOverrideFields != nil {
-				config = append(config, fmt.Sprintf("workspace.overrides.deniedContainerOverrideFields=[%s]", strings.Join(workspace.Overrides.RestrictedContainerOverrideFields, ", ")))
+				config = append(config, fmt.Sprintf("workspace.overrides.restrictedContainerOverrideFields=[%s]", strings.Join(workspace.Overrides.RestrictedContainerOverrideFields, ", ")))
 			}
 			if workspace.Overrides.RestrictedPodOverrideFields != nil {
-				config = append(config, fmt.Sprintf("workspace.overrides.deniedPodOverrideFields=[%s]", strings.Join(workspace.Overrides.RestrictedPodOverrideFields, ", ")))
+				config = append(config, fmt.Sprintf("workspace.overrides.restrictedPodOverrideFields=[%s]", strings.Join(workspace.Overrides.RestrictedPodOverrideFields, ", ")))
 			}
 		}
 		if len(workspace.InitContainers) > 0 {

@@ -311,6 +311,18 @@ config:
 
 Custom init containers are injected after the project-clone init container in the order they are defined in the configuration. The `init-persistent-home` container runs in this sequence along with other custom init containers.
 
+## Always-restricted override fields
+
+Regardless of configuration, certain fields are **always** rejected in overrides and
+cannot be unblocked by any configuration change.
+
+**Container overrides:** `name`, `image`, `command`, `args`, `ports`, `env`
+
+**Pod overrides:** `containers`, `initContainers`
+
+These implicit restrictions exist separately from the configurable restricted fields
+described below.
+
 ## Restricting override fields
 
 The DevWorkspace Operator allows cluster administrators to restrict which fields

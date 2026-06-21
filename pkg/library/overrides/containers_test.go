@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -30,7 +30,7 @@ func TestApplyContainerOverrides(t *testing.T) {
 	tests := loadAllContainerTestCasesOrPanic(t, "testdata/container-overrides")
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.Name, tt.originalFilename), func(t *testing.T) {
-			outContainer, err := ApplyContainerOverrides(tt.Input.Component, tt.Input.Container)
+			outContainer, err := ApplyContainerOverrides(tt.Input.Component, tt.Input.Container, []string{})
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

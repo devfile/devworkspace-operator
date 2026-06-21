@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/library/initcontainers"
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
@@ -339,6 +340,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		workspace.Config.Workspace.DefaultContainerResources,
 		workspace.Config.Workspace.ContainerResourceCaps,
 		workspace.Config.Workspace.PostStartTimeout,
+		overrides.GetRestrictedContainerOverrideFields(workspace),
 		postStartDebugTrapSleepDuration,
 	)
 	if err != nil {

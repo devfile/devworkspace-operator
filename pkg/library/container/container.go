@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -53,6 +53,7 @@ func GetKubeContainersFromDevfile(
 	defaultResources *corev1.ResourceRequirements,
 	resourceCaps *corev1.ResourceRequirements,
 	postStartTimeout string,
+	restrictedFields []string,
 	postStartDebugTrapSleepDuration string,
 ) (*v1alpha1.PodAdditions, error) {
 	if !flatten.DevWorkspaceIsFlattened(workspace, nil) {
@@ -77,7 +78,7 @@ func GetKubeContainersFromDevfile(
 			return nil, err
 		}
 		if overrides.NeedsContainerOverride(&component) {
-			patchedContainer, err := overrides.ApplyContainerOverrides(&component, k8sContainer)
+			patchedContainer, err := overrides.ApplyContainerOverrides(&component, k8sContainer, restrictedFields)
 			if err != nil {
 				return nil, err
 			}
@@ -111,7 +112,7 @@ func GetKubeContainersFromDevfile(
 			return nil, err
 		}
 		if overrides.NeedsContainerOverride(&initComponent) {
-			patchedContainer, err := overrides.ApplyContainerOverrides(&initComponent, k8sContainer)
+			patchedContainer, err := overrides.ApplyContainerOverrides(&initComponent, k8sContainer, restrictedFields)
 			if err != nil {
 				return nil, err
 			}

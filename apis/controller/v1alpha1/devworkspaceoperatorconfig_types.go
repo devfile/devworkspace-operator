@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -146,6 +146,24 @@ type RoutingConfig struct {
 	TLSCertificateConfigmapRef *ConfigmapReference `json:"tlsCertificateConfigmapRef,omitempty"`
 }
 
+// OverrideConfig defines configuration options for controlling which fields are restricted
+// in `container-overrides` and `pod-overrides` DevWorkspace attributes.
+// Entries support value-level restrictions: "fieldName" restricts the field entirely,
+// while "fieldName=value" restricts only that specific value (other values remain allowed).
+type OverrideConfig struct {
+	// RestrictedContainerOverrideFields defines a list of container-level fields that are restricted
+	// in `container-overrides` attributes. Note that the following fields are always implicitly
+	// restricted and cannot be permitted: `name`, `image`, `command`, `args`, `ports`, `env`.
+	// +kubebuilder:validation:Optional
+	RestrictedContainerOverrideFields []string `json:"restrictedContainerOverrideFields,omitempty"`
+
+	// RestrictedPodOverrideFields defines a list of pod-level fields that are restricted
+	// in `pod-overrides` attributes. Note that the following fields are always implicitly
+	// restricted and cannot be permitted: `containers`, `initContainers`.
+	// +kubebuilder:validation:Optional
+	RestrictedPodOverrideFields []string `json:"restrictedPodOverrideFields,omitempty"`
+}
+
 type WorkspaceConfig struct {
 	// ProjectCloneConfig defines configuration related to the project clone init container
 	// that is used to clone git projects into the DevWorkspace.
@@ -264,6 +282,9 @@ type WorkspaceConfig struct {
 	// InitContainers defines a list of Kubernetes init containers that are automatically injected into all workspace pods.
 	// Typical uses cases include injecting organization tools/configs, initializing persistent home, etc.
 	InitContainers []corev1.Container `json:"initContainers,omitempty"`
+	// Overrides defines configuration options for `container-overrides` and
+	// `pod-overrides` DevWorkspace attributes.
+	Overrides *OverrideConfig `json:"overrides,omitempty"`
 }
 
 type WebhookConfig struct {

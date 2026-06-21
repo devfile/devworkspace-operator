@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -38,13 +38,13 @@ func NeedsContainerOverride(component *dw.Component) bool {
 	return component.Container != nil && component.Attributes.Exists(constants.ContainerOverridesAttribute)
 }
 
-func ApplyContainerOverrides(component *dw.Component, container *corev1.Container) (*corev1.Container, error) {
+func ApplyContainerOverrides(component *dw.Component, container *corev1.Container, restrictedFields []string) (*corev1.Container, error) {
 	override := &corev1.Container{}
 	if err := component.Attributes.GetInto(constants.ContainerOverridesAttribute, override); err != nil {
 		return nil, fmt.Errorf("failed to parse %s attribute on component %s: %w", constants.ContainerOverridesAttribute, component.Name, err)
 	}
-	if err := restrictContainerOverride(override); err != nil {
-		return nil, fmt.Errorf("failed to parse %s attribute on component %s: %w", constants.ContainerOverridesAttribute, component.Name, err)
+	if err := restrictContainerOverride(override, restrictedFields); err != nil {
+		return nil, fmt.Errorf("invalid %s attribute on component %s: %w", constants.ContainerOverridesAttribute, component.Name, err)
 	}
 
 	overrideJSON := component.Attributes[constants.ContainerOverridesAttribute]
@@ -72,35 +72,6 @@ func ApplyContainerOverrides(component *dw.Component, container *corev1.Containe
 	handleDefaultedContainerFields(patched)
 
 	return patched, nil
-}
-
-// restrictContainerOverride unsets fields on a container that should not be
-// considered for container overrides. These fields are generally available to
-// set as fields on the container component itself.
-func restrictContainerOverride(override *corev1.Container) error {
-	invalidField := ""
-	if override.Name != "" {
-		invalidField = "name"
-	}
-	if override.Image != "" {
-		invalidField = "image"
-	}
-	if override.Command != nil {
-		invalidField = "command"
-	}
-	if override.Args != nil {
-		invalidField = "args"
-	}
-	if override.Ports != nil {
-		invalidField = "ports"
-	}
-	if override.Env != nil {
-		invalidField = "env"
-	}
-	if invalidField != "" {
-		return fmt.Errorf("cannot use container-overrides to override container %s", invalidField)
-	}
-	return nil
 }
 
 // handleDefaultedContainerFields fills partially-filled structs with defaulted fields

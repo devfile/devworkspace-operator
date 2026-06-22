@@ -274,9 +274,8 @@ func checkSysctls(sysctls []corev1.Sysctl, field string, restriction *FieldRestr
 		return err
 	}
 
-	for _, sysctl := range sysctls {
-		switch field {
-		case "name":
+	if field == "name" {
+		for _, sysctl := range sysctls {
 			if err := restriction.checkString(&sysctl.Name); err != nil {
 				return err
 			}
@@ -295,8 +294,8 @@ func checkSupplementalGroups(supplementalGroups []int64, field string, restricti
 		return err
 	}
 
-	for _, supplementalGroup := range supplementalGroups {
-		if field == "" {
+	if field == "" {
+		for _, supplementalGroup := range supplementalGroups {
 			if err := restriction.checkInt64(&supplementalGroup); err != nil {
 				return err
 			}
@@ -338,9 +337,8 @@ func checkImagePullSecrets(secrets []corev1.LocalObjectReference, field string, 
 		return nil
 	}
 
-	for _, secret := range secrets {
-		switch field {
-		case "name":
+	if field == "name" {
+		for _, secret := range secrets {
 			if err := restriction.checkString(&secret.Name); err != nil {
 				return err
 			}

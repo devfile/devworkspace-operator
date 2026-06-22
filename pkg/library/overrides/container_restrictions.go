@@ -196,8 +196,7 @@ func checkConfigMapRef(cmRef *corev1.ConfigMapEnvSource, field string, restricti
 		return nil
 	}
 
-	switch field {
-	case "name":
+	if field == "name" {
 		return restriction.checkString(&cmRef.Name)
 	}
 
@@ -209,8 +208,7 @@ func checkSecretRef(secretRef *corev1.SecretEnvSource, field string, restriction
 		return nil
 	}
 
-	switch field {
-	case "name":
+	if field == "name" {
 		return restriction.checkString(&secretRef.Name)
 	}
 

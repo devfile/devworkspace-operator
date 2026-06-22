@@ -15,7 +15,6 @@ package overrides
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -115,7 +114,7 @@ func checkContainer(override *corev1.Container, root string, remaining string, r
 				return restriction.checkAny()
 			}
 		case "resources":
-			if !reflect.DeepEqual(override.Resources, corev1.ResourceRequirements{}) {
+			if override.Resources.Limits != nil || override.Resources.Requests != nil || len(override.Resources.Claims) > 0 {
 				return restriction.checkAny()
 			}
 		case "volumeMounts":

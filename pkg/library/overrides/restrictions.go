@@ -157,7 +157,7 @@ func checkResourceList(resources corev1.ResourceList, field string, restriction 
 		return nil
 	}
 
-	for resource, _ := range resources {
+	for resource := range resources {
 		if field == string(resource) {
 			if err := restriction.checkAny(); err != nil {
 				return err

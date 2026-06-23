@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -72,7 +72,13 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 	}
 
 	// Rewrite container volume mounts
-	if err := p.rewriteContainerVolumeMounts(workspace.Status.DevWorkspaceId, pvcName, podAdditions, &workspace.Spec.Template); err != nil {
+	if err := p.rewriteContainerVolumeMounts(
+		workspace.Status.DevWorkspaceId,
+		pvcName,
+		podAdditions,
+		&workspace.Spec.Template,
+		overrides.GetRestrictedPodOverrideFields(workspace),
+	); err != nil {
 		return &dwerrors.FailError{
 			Err:     err,
 			Message: "Could not rewrite container volume mounts",
@@ -91,7 +97,12 @@ func (*PerWorkspaceStorageProvisioner) CleanupWorkspaceStorage(workspace *common
 // (i.e. all volume mounts are subpaths into a PVC used by a single workspace in the namespace).
 //
 // Also adds appropriate k8s Volumes to PodAdditions to accomodate the rewritten VolumeMounts.
-func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceId, pvcName string, podAdditions *v1alpha1.PodAdditions, workspace *dw.DevWorkspaceTemplateSpec) error {
+func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(
+	workspaceId, pvcName string,
+	podAdditions *v1alpha1.PodAdditions,
+	workspace *dw.DevWorkspaceTemplateSpec,
+	restrictedFields []string,
+) error {
 	devfileVolumes := map[string]dw.VolumeComponent{}
 
 	// Construct map of volume name -> volume Component
@@ -111,7 +122,7 @@ func (p *PerWorkspaceStorageProvisioner) rewriteContainerVolumeMounts(workspaceI
 	}
 
 	// Containers in podAdditions may reference volumes defined in pod overrides, and this is not an error
-	overridesVolumes, err := overrides.GetVolumesFromOverrides(workspace)
+	overridesVolumes, err := overrides.GetVolumesFromOverrides(workspace, restrictedFields)
 	if err != nil {
 		return err
 	}

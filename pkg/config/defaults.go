@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -116,7 +116,31 @@ var (
 	}
 	defaultKubernetesContainerSecurityContext = &corev1.SecurityContext{}
 	defaultOpenShiftPodSecurityContext        = &corev1.PodSecurityContext{}
-	defaultOpenShiftContainerSecurityContext  = &corev1.SecurityContext{
+
+	defaultOpenShiftOverrideConfig = &v1alpha1.OverrideConfig{
+		RestrictedContainerOverrideFields: []string{},
+		RestrictedPodOverrideFields:       []string{},
+	}
+	defaultKubernetesOverrideConfig = &v1alpha1.OverrideConfig{
+		RestrictedContainerOverrideFields: []string{
+			"securityContext.privileged=true",
+			"securityContext.runAsNonRoot=false",
+			"securityContext.runAsUser=0",
+			"securityContext.allowPrivilegeEscalation=true",
+			"securityContext.procMount=Unmasked",
+			"securityContext.capabilities.add",
+		},
+		RestrictedPodOverrideFields: []string{
+			"hostNetwork=true",
+			"hostPID=true",
+			"hostIPC=true",
+			"securityContext.runAsNonRoot=false",
+			"securityContext.runAsUser=0",
+			"volumes.hostPath",
+		},
+	}
+
+	defaultOpenShiftContainerSecurityContext = &corev1.SecurityContext{
 		ReadOnlyRootFilesystem:   pointer.Bool(false),
 		RunAsNonRoot:             pointer.Bool(true),
 		AllowPrivilegeEscalation: pointer.Bool(false),
@@ -154,6 +178,18 @@ func setDefaultContainerSecurityContext() error {
 		defaultConfig.Workspace.ContainerSecurityContext = defaultOpenShiftContainerSecurityContext
 	} else {
 		defaultConfig.Workspace.ContainerSecurityContext = defaultKubernetesContainerSecurityContext
+	}
+	return nil
+}
+
+func setDefaultOverrideConfig() error {
+	if !infrastructure.IsInitialized() {
+		return fmt.Errorf("can not set default override config, infrastructure not detected")
+	}
+	if infrastructure.IsOpenShift() {
+		defaultConfig.Workspace.Overrides = defaultOpenShiftOverrideConfig
+	} else {
+		defaultConfig.Workspace.Overrides = defaultKubernetesOverrideConfig
 	}
 	return nil
 }

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	controller "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/go-logr/logr"
@@ -44,7 +45,7 @@ type HttpClientsFactory interface {
 	// GetHealthCheckHttpClient returns an HTTP client that skips TLS verification.
 	// This client MUST only be used for workspace health/readiness checks, not for
 	// fetching external content or making security-sensitive requests.
-	GetHealthCheckHttpClient(*controller.RoutingConfig) *http.Client
+	GetHealthCheckHttpClient() *http.Client
 }
 
 // DefaultHttpClientsFactory is a thread-safe, caching implementation of HttpClientsFactory.
@@ -63,9 +64,8 @@ type DefaultHttpClientsFactory struct {
 	httpClientConfigmapRef *controller.ConfigmapReference
 	httpClientCertsVersion string
 
-	healthCheckHttpClientProxyConfig *controller.Proxy
-
 	systemCertPool *x509.CertPool
+	proxyFunc      func(*http.Request) (*url.URL, error)
 }
 
 func SetupHttpClientsFactory(k8s client.Client, logger logr.Logger) error {
@@ -74,10 +74,26 @@ func SetupHttpClientsFactory(k8s client.Client, logger logr.Logger) error {
 		return fmt.Errorf("failed to load system cert pool: %w", err)
 	}
 
+	proxyFunc := getProxyFunc()
+
+	healthCheckHttpClientTransport := http.DefaultTransport.(*http.Transport).Clone()
+	if proxyFunc != nil {
+		// Preserve the default proxy (from env vars) when no explicit proxy is configured.
+		healthCheckHttpClientTransport.Proxy = proxyFunc
+	}
+	healthCheckHttpClientTransport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
 	httpClientsFactory = &DefaultHttpClientsFactory{
 		k8s:            k8s,
 		logger:         logger,
 		systemCertPool: systemCertPool,
+		proxyFunc:      proxyFunc,
+		healthCheckHttpClient: &http.Client{
+			Transport: healthCheckHttpClientTransport,
+			Timeout:   500 * time.Millisecond,
+		},
 	}
 
 	return nil
@@ -97,7 +113,7 @@ func (h *DefaultHttpClientsFactory) GetHttpClient(ctx context.Context, routingCo
 	defer h.mu.Unlock()
 
 	if h.shouldCreateHttpClient(routingConfig, certsCM) {
-		h.httpClient = h.createHttpClient(routingConfig, certsCM)
+		h.httpClient = h.createHttpClient(certsCM)
 
 		if routingConfig == nil {
 			h.httpClientProxyConfig = nil
@@ -120,12 +136,11 @@ func (h *DefaultHttpClientsFactory) GetHttpClient(ctx context.Context, routingCo
 	return h.httpClient
 }
 
-func (h *DefaultHttpClientsFactory) createHttpClient(routingConfig *controller.RoutingConfig, certsCM *corev1.ConfigMap) *http.Client {
+func (h *DefaultHttpClientsFactory) createHttpClient(certsCM *corev1.ConfigMap) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	proxyFunc := h.getProxyFunc(routingConfig)
-	if proxyFunc != nil {
-		// If Proxy is nil or returns a nil *URL, no proxy is used.
-		transport.Proxy = proxyFunc
+	if h.proxyFunc != nil {
+		// Preserve the default proxy (from env vars) when no explicit proxy is configured.
+		transport.Proxy = h.proxyFunc
 	}
 	transport.TLSClientConfig = &tls.Config{
 		RootCAs: h.getCaCertPool(certsCM),
@@ -163,90 +178,35 @@ func (h *DefaultHttpClientsFactory) shouldCreateHttpClient(routingConfig *contro
 		!reflect.DeepEqual(proxyConfig, h.httpClientProxyConfig)
 }
 
-func (h *DefaultHttpClientsFactory) GetHealthCheckHttpClient(routingConfig *controller.RoutingConfig) *http.Client {
+func (h *DefaultHttpClientsFactory) GetHealthCheckHttpClient() *http.Client {
 	h.mu.RLock()
-	if !h.shouldCreateHealthCheckHttpClient(routingConfig) {
-		defer h.mu.RUnlock()
-		return h.healthCheckHttpClient
-	}
-	h.mu.RUnlock()
-
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	if h.shouldCreateHealthCheckHttpClient(routingConfig) {
-		h.healthCheckHttpClient = h.createHealthCheckHttpClient(routingConfig)
-
-		if routingConfig == nil {
-			h.healthCheckHttpClientProxyConfig = nil
-		} else {
-			h.healthCheckHttpClientProxyConfig = routingConfig.ProxyConfig.DeepCopy()
-		}
-	}
+	defer h.mu.RUnlock()
 
 	return h.healthCheckHttpClient
 }
 
-func (h *DefaultHttpClientsFactory) shouldCreateHealthCheckHttpClient(routingConfig *controller.RoutingConfig) bool {
-	if h.healthCheckHttpClient == nil {
-		return true
-	}
-
-	var proxyConfig *controller.Proxy
-
-	if routingConfig != nil {
-		proxyConfig = routingConfig.ProxyConfig
-	}
-
-	return !reflect.DeepEqual(proxyConfig, h.healthCheckHttpClientProxyConfig)
-}
-
-func (h *DefaultHttpClientsFactory) createHealthCheckHttpClient(routingConfig *controller.RoutingConfig) *http.Client {
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	proxyFunc := h.getProxyFunc(routingConfig)
-	if proxyFunc != nil {
-		// If Proxy is nil or returns a nil *URL, no proxy is used.
-		transport.Proxy = proxyFunc
-	}
-	transport.TLSClientConfig = &tls.Config{
-		InsecureSkipVerify: true,
-	}
-
-	return &http.Client{
-		Transport: transport,
-		Timeout:   500 * time.Millisecond,
-	}
-}
-
 // getProxyFunc returns a proxy function based on the proxy settings in routingConfig.
-// Returns nil if no proxy is configured; a nil proxy func causes the HTTP transport to
-// use the default proxy settings from environment variables.
-func (h *DefaultHttpClientsFactory) getProxyFunc(routingConfig *controller.RoutingConfig) func(*http.Request) (*url.URL, error) {
-	if routingConfig == nil || routingConfig.ProxyConfig == nil {
-		return nil
+func getProxyFunc() func(*http.Request) (*url.URL, error) {
+	globalConfig := config.GetGlobalConfig()
+
+	if globalConfig.Routing != nil && globalConfig.Routing.ProxyConfig != nil {
+		proxyConf := httpproxy.Config{}
+		if globalConfig.Routing.ProxyConfig.HttpProxy != nil {
+			proxyConf.HTTPProxy = *globalConfig.Routing.ProxyConfig.HttpProxy
+		}
+		if globalConfig.Routing.ProxyConfig.HttpsProxy != nil {
+			proxyConf.HTTPSProxy = *globalConfig.Routing.ProxyConfig.HttpsProxy
+		}
+		if globalConfig.Routing.ProxyConfig.NoProxy != nil {
+			proxyConf.NoProxy = *globalConfig.Routing.ProxyConfig.NoProxy
+		}
+
+		return func(req *http.Request) (*url.URL, error) {
+			return proxyConf.ProxyFunc()(req.URL)
+		}
 	}
 
-	proxyConfig := httpproxy.Config{}
-	if routingConfig.ProxyConfig.HttpProxy != nil {
-		proxyConfig.HTTPProxy = *routingConfig.ProxyConfig.HttpProxy
-	}
-	if routingConfig.ProxyConfig.HttpsProxy != nil {
-		proxyConfig.HTTPSProxy = *routingConfig.ProxyConfig.HttpsProxy
-	}
-	if routingConfig.ProxyConfig.NoProxy != nil {
-		proxyConfig.NoProxy = *routingConfig.ProxyConfig.NoProxy
-	}
-
-	// Since routingConfig is the result of merging the global configuration with
-	// the workspace configuration, we need an additional check to avoid accidentally
-	// resetting the proxy configuration.
-	if proxyConfig.HTTPProxy == "" || proxyConfig.HTTPSProxy == "" {
-		return nil
-	}
-
-	return func(req *http.Request) (*url.URL, error) {
-		return proxyConfig.ProxyFunc()(req.URL)
-	}
+	return nil
 }
 
 // getCaCertPool returns a CA cert pool that includes system certs and any additional certs from the ConfigMap.

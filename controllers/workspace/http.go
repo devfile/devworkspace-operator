@@ -122,7 +122,10 @@ func (h *DefaultHttpClientsFactory) GetHttpClient(ctx context.Context, routingCo
 
 func (h *DefaultHttpClientsFactory) createHttpClient(routingConfig *controller.RoutingConfig, certsCM *corev1.ConfigMap) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = h.getProxyFunc(routingConfig)
+	proxyFunc := h.getProxyFunc(routingConfig)
+	if proxyFunc != nil {
+		transport.Proxy = proxyFunc
+	}
 	transport.TLSClientConfig = &tls.Config{
 		RootCAs: h.getCaCertPool(certsCM),
 	}
@@ -199,7 +202,10 @@ func (h *DefaultHttpClientsFactory) shouldCreateHealthCheckHttpClient(routingCon
 
 func (h *DefaultHttpClientsFactory) createHealthCheckHttpClient(routingConfig *controller.RoutingConfig) *http.Client {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = h.getProxyFunc(routingConfig)
+	proxyFunc := h.getProxyFunc(routingConfig)
+	if proxyFunc != nil {
+		transport.Proxy = proxyFunc
+	}
 	transport.TLSClientConfig = &tls.Config{
 		InsecureSkipVerify: true,
 	}

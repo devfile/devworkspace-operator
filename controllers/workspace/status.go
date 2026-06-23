@@ -210,7 +210,7 @@ func checkServerStatus(workspace *common.DevWorkspaceWithConfig) (ok bool, respo
 	}
 	healthz.Path = path.Join(healthz.Path, "healthz")
 
-	healthCheckHttpClient := httpClientsFactory.GetHealthCheckHttpClient(workspace.Config.Routing)
+	healthCheckHttpClient := httpClientsFactory.GetHealthCheckHttpClient()
 	resp, err := healthCheckHttpClient.Get(healthz.String())
 	if err != nil {
 		return false, nil, &dwerrors.RetryError{Err: err, Message: "Failed to check server status", RequeueAfter: 1 * time.Second}

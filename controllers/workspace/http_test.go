@@ -152,12 +152,17 @@ func runCommonClientTests(t *testing.T, getClient getClientFunc) {
 		client3 := getClient(factory, nil)
 
 		assert.NotSame(t, client2, client3)
-		assert.Nil(t, client3.Transport.(*http.Transport).Proxy)
+
+		// Default proxy config is not nil
+		assert.NotNil(t, client3.Transport.(*http.Transport).Proxy)
 	})
 
 	t.Run("safe for concurrent access", func(t *testing.T) {
 		factory := newTestFactory(t)
-		routingConfigs := []*controller.RoutingConfig{nil, routingConfigWithProxy("http://proxy:80", "", "")}
+		routingConfigs := []*controller.RoutingConfig{
+			routingConfigWithProxy("http://proxy:80", "", ""),
+			routingConfigWithProxy("http://proxy:90", "", ""),
+		}
 
 		var wg sync.WaitGroup
 		for i := 0; i < 50; i++ {
@@ -169,9 +174,7 @@ func runCommonClientTests(t *testing.T, getClient getClientFunc) {
 				client := getClient(factory, routingConfig)
 
 				assert.NotNil(t, client)
-				if routingConfig != nil {
-					assert.NotNil(t, client.Transport.(*http.Transport).Proxy)
-				}
+				assert.NotNil(t, client.Transport.(*http.Transport).Proxy)
 			}(i)
 		}
 		wg.Wait()

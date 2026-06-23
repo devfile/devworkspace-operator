@@ -226,13 +226,6 @@ func (h *DefaultHttpClientsFactory) getProxyFunc(routingConfig *controller.Routi
 		return nil
 	}
 
-	// Since routingConfig is the result of merging the global configuration with
-	// the workspace configuration, we need an additional check to avoid accidentally
-	// resetting the proxy configuration.
-	if *routingConfig.ProxyConfig.HttpProxy == "" || *routingConfig.ProxyConfig.HttpsProxy == "" {
-		return nil
-	}
-
 	proxyConfig := httpproxy.Config{}
 	if routingConfig.ProxyConfig.HttpProxy != nil {
 		proxyConfig.HTTPProxy = *routingConfig.ProxyConfig.HttpProxy
@@ -242,6 +235,13 @@ func (h *DefaultHttpClientsFactory) getProxyFunc(routingConfig *controller.Routi
 	}
 	if routingConfig.ProxyConfig.NoProxy != nil {
 		proxyConfig.NoProxy = *routingConfig.ProxyConfig.NoProxy
+	}
+
+	// Since routingConfig is the result of merging the global configuration with
+	// the workspace configuration, we need an additional check to avoid accidentally
+	// resetting the proxy configuration.
+	if proxyConfig.HTTPProxy == "" || proxyConfig.HTTPSProxy == "" {
+		return nil
 	}
 
 	return func(req *http.Request) (*url.URL, error) {

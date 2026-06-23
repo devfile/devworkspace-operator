@@ -185,7 +185,7 @@ func (h *DefaultHttpClientsFactory) GetHealthCheckHttpClient() *http.Client {
 	return h.healthCheckHttpClient
 }
 
-// getProxyFunc returns a proxy function based on the proxy settings in routingConfig.
+// getProxyFunc returns a proxy function.
 func getProxyFunc() func(*http.Request) (*url.URL, error) {
 	globalConfig := config.GetGlobalConfig()
 
@@ -199,6 +199,10 @@ func getProxyFunc() func(*http.Request) (*url.URL, error) {
 		}
 		if globalConfig.Routing.ProxyConfig.NoProxy != nil {
 			proxyConf.NoProxy = *globalConfig.Routing.ProxyConfig.NoProxy
+		}
+
+		if proxyConf.HTTPProxy == "" && proxyConf.HTTPSProxy == "" {
+			return nil
 		}
 
 		return func(req *http.Request) (*url.URL, error) {

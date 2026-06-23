@@ -60,6 +60,25 @@ func SetupHttpClientsForTesting(client *http.Client) {
 	}
 }
 
+func TestHealthCheckHttpClient(t *testing.T) {
+	t.Run("returns non-nil client", func(t *testing.T) {
+		factory := newTestFactory(t)
+
+		client := factory.GetHealthCheckHttpClient()
+
+		require.NotNil(t, client)
+	})
+
+	t.Run("caches client on repeated calls", func(t *testing.T) {
+		factory := newTestFactory(t)
+
+		client1 := factory.GetHealthCheckHttpClient()
+		client2 := factory.GetHealthCheckHttpClient()
+
+		assert.Same(t, client1, client2)
+	})
+}
+
 func TestGetHttpClient(t *testing.T) {
 	t.Run("returns non-nil client", func(t *testing.T) {
 		factory := newTestFactory(t)

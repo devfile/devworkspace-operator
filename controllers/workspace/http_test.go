@@ -97,28 +97,6 @@ func TestGetHttpClient(t *testing.T) {
 		assert.Same(t, client1, client2)
 	})
 
-	t.Run("rebuilds client when proxy changes", func(t *testing.T) {
-		factory := newTestFactory(t)
-		routingConfig1 := routingConfigWithProxy("http://proxy:80", "", "")
-		routingConfig2 := routingConfigWithProxy("http://proxy:90", "", "")
-
-		client1 := factory.GetHttpClient(context.Background(), routingConfig1)
-
-		assert.NotNil(t, client1.Transport.(*http.Transport).Proxy)
-
-		client2 := factory.GetHttpClient(context.Background(), routingConfig2)
-
-		assert.NotNil(t, client2.Transport.(*http.Transport).Proxy)
-		assert.NotSame(t, client1, client2)
-
-		client3 := factory.GetHttpClient(context.Background(), nil)
-
-		assert.NotSame(t, client2, client3)
-
-		// Default proxy config is not nil as well
-		assert.NotNil(t, client3.Transport.(*http.Transport).Proxy)
-	})
-
 	t.Run("rebuilds client when certs changes", func(t *testing.T) {
 		factory := newTestFactory(t,
 			&corev1.ConfigMap{

@@ -60,7 +60,6 @@ type DefaultHttpClientsFactory struct {
 
 	mu sync.RWMutex
 
-	httpClientProxyConfig  *controller.Proxy
 	httpClientConfigmapRef *controller.ConfigmapReference
 	httpClientCertsVersion string
 
@@ -115,12 +114,6 @@ func (h *DefaultHttpClientsFactory) GetHttpClient(ctx context.Context, routingCo
 	if h.shouldCreateHttpClient(routingConfig, certsCM) {
 		h.httpClient = h.createHttpClient(certsCM)
 
-		if routingConfig == nil {
-			h.httpClientProxyConfig = nil
-		} else {
-			h.httpClientProxyConfig = routingConfig.ProxyConfig.DeepCopy()
-		}
-
 		if certsCM == nil {
 			h.httpClientCertsVersion = ""
 			h.httpClientConfigmapRef = nil
@@ -159,7 +152,6 @@ func (h *DefaultHttpClientsFactory) shouldCreateHttpClient(routingConfig *contro
 
 	var certsVersion string
 	var configmapRef *controller.ConfigmapReference
-	var proxyConfig *controller.Proxy
 
 	if certsCM != nil {
 		certsVersion = certsCM.ResourceVersion
@@ -169,13 +161,8 @@ func (h *DefaultHttpClientsFactory) shouldCreateHttpClient(routingConfig *contro
 		}
 	}
 
-	if routingConfig != nil {
-		proxyConfig = routingConfig.ProxyConfig
-	}
-
 	return certsVersion != h.httpClientCertsVersion ||
-		!reflect.DeepEqual(configmapRef, h.httpClientConfigmapRef) ||
-		!reflect.DeepEqual(proxyConfig, h.httpClientProxyConfig)
+		!reflect.DeepEqual(configmapRef, h.httpClientConfigmapRef)
 }
 
 func (h *DefaultHttpClientsFactory) GetHealthCheckHttpClient() *http.Client {
@@ -185,7 +172,9 @@ func (h *DefaultHttpClientsFactory) GetHealthCheckHttpClient() *http.Client {
 	return h.healthCheckHttpClient
 }
 
-// getProxyFunc returns a proxy function.
+// getProxyFunc returns a proxy function based on the global operator configuration.
+// Returns nil if no proxy is configured; a nil proxy func causes the HTTP transport to
+// use the default proxy settings from environment variables.
 func getProxyFunc() func(*http.Request) (*url.URL, error) {
 	globalConfig := config.GetGlobalConfig()
 
@@ -205,8 +194,9 @@ func getProxyFunc() func(*http.Request) (*url.URL, error) {
 			return nil
 		}
 
+		proxyFn := proxyConf.ProxyFunc()
 		return func(req *http.Request) (*url.URL, error) {
-			return proxyConf.ProxyFunc()(req.URL)
+			return proxyFn(req.URL)
 		}
 	}
 

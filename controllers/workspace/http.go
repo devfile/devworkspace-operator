@@ -124,6 +124,7 @@ func (h *DefaultHttpClientsFactory) createHttpClient(routingConfig *controller.R
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	proxyFunc := h.getProxyFunc(routingConfig)
 	if proxyFunc != nil {
+		// If Proxy is nil or returns a nil *URL, no proxy is used.
 		transport.Proxy = proxyFunc
 	}
 	transport.TLSClientConfig = &tls.Config{
@@ -204,6 +205,7 @@ func (h *DefaultHttpClientsFactory) createHealthCheckHttpClient(routingConfig *c
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	proxyFunc := h.getProxyFunc(routingConfig)
 	if proxyFunc != nil {
+		// If Proxy is nil or returns a nil *URL, no proxy is used.
 		transport.Proxy = proxyFunc
 	}
 	transport.TLSClientConfig = &tls.Config{

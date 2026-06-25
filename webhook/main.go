@@ -20,9 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
 
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 
@@ -34,10 +32,12 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/cache"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/tlssetup"
 	"github.com/devfile/devworkspace-operator/version"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
 
+	configv1 "github.com/openshift/api/config/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -66,13 +66,26 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dwv1.AddToScheme(scheme))
 	utilruntime.Must(dwv2.AddToScheme(scheme))
+
+	if infrastructure.IsOpenShift() {
+		// Needed for SecurityProfileWatcher to reconcile APIServer objects
+		utilruntime.Must(configv1.AddToScheme(scheme))
+	}
 }
 
 func main() {
 	logf.SetLogger(zap.New(zap.UseDevMode(config.GetDevModeEnabled())))
 
 	var metricsAddr string
+	var tlsMinVersion string
+	var tlsCipherSuites string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":9443", "The address the metric endpoint binds to.")
+	flag.StringVar(&tlsMinVersion, "tls-min-version", "",
+		"Minimum TLS version for metrics and webhook servers (e.g. VersionTLS12). "+
+			"Overrides the OpenShift cluster TLS security profile when set.")
+	flag.StringVar(&tlsCipherSuites, "tls-cipher-suites", "",
+		"Comma-separated list of TLS cipher suites for metrics and webhook servers. "+
+			"Overrides the OpenShift cluster TLS security profile when set.")
 	flag.Parse()
 
 	// Print versions
@@ -88,6 +101,14 @@ func main() {
 		log.Error(err, "")
 		os.Exit(1)
 	}
+
+	serverTLS, err := tlssetup.BuildServerTLSOptions(
+		context.Background(), cfg, scheme, tlsMinVersion, tlsCipherSuites, log)
+	if err != nil {
+		log.Error(err, "failed to build TLS options for servers")
+		os.Exit(1)
+	}
+	tlsOptsForServers := serverTLS.TLSOpts
 
 	namespace, err := infrastructure.GetWatchNamespace()
 	if err != nil {
@@ -105,6 +126,7 @@ func main() {
 		CertDir: server.WebhookServerCertDir,
 		Port:    server.WebhookServerPort,
 		Host:    server.WebhookServerHost,
+		TLSOpts: tlsOptsForServers,
 	})
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -114,6 +136,7 @@ func main() {
 			BindAddress:    metricsAddr,
 			FilterProvider: filters.WithAuthenticationAndAuthorization,
 			SecureServing:  true,
+			TLSOpts:        tlsOptsForServers,
 		},
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: ":6789",
@@ -130,8 +153,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	var shutdownChan = make(chan os.Signal, 1)
-	signal.Notify(shutdownChan, syscall.SIGTERM)
+	// On OpenShift, watch cluster TLS profile and restart if it changes (unless overridden by CLI flags).
+	signalCtx := signals.SetupSignalHandler()
+	ctx, cancelCtx := context.WithCancel(signalCtx)
+	defer cancelCtx()
+
+	if err := tlssetup.RegisterSecurityProfileWatcher(mgr, serverTLS, cancelCtx, log); err != nil {
+		log.Error(err, "unable to set up TLS security profile watcher")
+		os.Exit(1)
+	}
 
 	// Setup health check
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -146,7 +176,7 @@ func main() {
 	}
 
 	log.Info("Starting manager")
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}

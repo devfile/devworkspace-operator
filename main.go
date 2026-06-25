@@ -30,6 +30,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
+	"github.com/devfile/devworkspace-operator/pkg/tlssetup"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"github.com/devfile/devworkspace-operator/version"
 
@@ -56,6 +57,7 @@ import (
 	ctrlconfig "sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrl_webhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 	// +kubebuilder:scaffold:imports
@@ -97,10 +99,18 @@ func init() {
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
+	var tlsMinVersion string
+	var tlsCipherSuites string
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8443", "The address the metric endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&tlsMinVersion, "tls-min-version", "",
+		"Minimum TLS version for metrics and webhook servers (e.g. VersionTLS12). "+
+			"Overrides the OpenShift cluster TLS security profile when set.")
+	flag.StringVar(&tlsCipherSuites, "tls-cipher-suites", "",
+		"Comma-separated list of TLS cipher suites for metrics and webhook servers. "+
+			"Overrides the OpenShift cluster TLS security profile when set.")
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(config.GetDevModeEnabled())))
@@ -116,6 +126,14 @@ func main() {
 		setupLog.Error(err, "failed to initialized Kubernetes objects decoder")
 	}
 
+	serverTLS, err := tlssetup.BuildServerTLSOptions(
+		context.Background(), ctrl.GetConfigOrDie(), scheme, tlsMinVersion, tlsCipherSuites, setupLog)
+	if err != nil {
+		setupLog.Error(err, "failed to build TLS options for servers")
+		os.Exit(1)
+	}
+	tlsOptsForServers := serverTLS.TLSOpts
+
 	cacheFunc, err := cache.GetCacheFunc()
 	if err != nil {
 		setupLog.Error(err, "failed to set up objects cache")
@@ -128,9 +146,11 @@ func main() {
 			BindAddress:    metricsAddr,
 			FilterProvider: filters.WithAuthenticationAndAuthorization,
 			SecureServing:  true,
+			TLSOpts:        tlsOptsForServers,
 		},
 		WebhookServer: ctrl_webhook.NewServer(ctrl_webhook.Options{
-			Port: 9443,
+			Port:    9443,
+			TLSOpts: tlsOptsForServers,
 		}),
 		HealthProbeBindAddress: ":6789",
 		LeaderElection:         enableLeaderElection,
@@ -220,6 +240,16 @@ func main() {
 		setupLog.Error(err, "failed creating conversion webhook for DevWorkspaces v1alpha2")
 	}
 
+	// On OpenShift, watch cluster TLS profile and restart if it changes (unless overridden by CLI flags).
+	signalCtx := signals.SetupSignalHandler()
+	ctx, cancelCtx := context.WithCancel(signalCtx)
+	defer cancelCtx()
+
+	if err := tlssetup.RegisterSecurityProfileWatcher(mgr, serverTLS, cancelCtx, setupLog); err != nil {
+		setupLog.Error(err, "unable to set up TLS security profile watcher")
+		os.Exit(1)
+	}
+
 	// Setup health check
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "Unable to set up health check")
@@ -233,7 +263,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

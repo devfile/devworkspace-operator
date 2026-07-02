@@ -415,7 +415,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								{Name: "ORAS_EXTRA_ARGS", Value: orasExtraArgs},
 							},
 							Image:           images.GetProjectBackupImage(),
-							ImagePullPolicy: "Always",
+							ImagePullPolicy: getImagePullPolicy(dwOperatorConfig),
 							Args: []string{
 								"/workspace-recovery.sh",
 								"--backup",
@@ -485,4 +485,11 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 	log.Info("Created backup Job for DevWorkspace", "jobName", job.Name, "devworkspace", workspace.Name)
 	return nil
+}
+
+func getImagePullPolicy(dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig) corev1.PullPolicy {
+	if dwOperatorConfig.Config.Workspace.ImagePullPolicy != "" {
+		return corev1.PullPolicy(dwOperatorConfig.Config.Workspace.ImagePullPolicy)
+	}
+	return corev1.PullAlways
 }

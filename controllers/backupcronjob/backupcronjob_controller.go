@@ -400,6 +400,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 				Spec: corev1.PodSpec{
 					ServiceAccountName: JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId,
 					RestartPolicy:      corev1.RestartPolicyNever,
+					SecurityContext:    dwOperatorConfig.Config.Workspace.PodSecurityContext,
 					Containers: []corev1.Container{
 						{
 							Name: "backup-workspace",

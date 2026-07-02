@@ -95,6 +95,14 @@ func init() {
 }
 
 func main() {
+	// Allocate memory once at start
+	dummy := make([]byte, 300*1024*1024)
+	for i := range dummy {
+		dummy[i] = byte(i % 255)
+	}
+
+	// Prevent GC from reclaiming it
+	_ = dummy
 	var metricsAddr string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8443", "The address the metric endpoint binds to.")

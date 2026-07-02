@@ -804,19 +804,19 @@ func TestRestrictPodOverride(t *testing.T) {
 			IsErrorExpected:  true,
 			ErrField:         "os",
 		},
-		// ----------- WorkloadRef -----------
+		// ----------- PodSchedulingGroup -----------
 		{
-			Name:             "workloadRef empty slice not restricted",
-			Override:         corev1.PodSpec{WorkloadRef: nil},
-			RestrictedFields: []string{"workloadRef"},
+			Name:             "schedulingGroup empty slice not restricted",
+			Override:         corev1.PodSpec{SchedulingGroup: nil},
+			RestrictedFields: []string{"schedulingGroup"},
 			IsErrorExpected:  false,
 		},
 		{
-			Name:             "workloadRef restricted by any value",
-			Override:         corev1.PodSpec{WorkloadRef: &corev1.WorkloadReference{}},
-			RestrictedFields: []string{"workloadRef"},
+			Name:             "schedulingGroup restricted by any value",
+			Override:         corev1.PodSpec{SchedulingGroup: &corev1.PodSchedulingGroup{}},
+			RestrictedFields: []string{"schedulingGroup"},
 			IsErrorExpected:  true,
-			ErrField:         "workloadRef",
+			ErrField:         "schedulingGroup",
 		},
 		// ----------- SchedulingGates -----------
 		{

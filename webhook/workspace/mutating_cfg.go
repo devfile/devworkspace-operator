@@ -16,6 +16,8 @@
 package workspace
 
 import (
+	"fmt"
+
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -155,6 +157,9 @@ func BuildMutateWebhookCfg(namespace string) *admregv1.MutatingWebhookConfigurat
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   MutateWebhookCfgName,
 			Labels: server.WebhookServerAppLabels(),
+			Annotations: map[string]string{
+				"cert-manager.io/inject-ca-from": fmt.Sprintf("%s/devworkspace-controller-serving-cert", namespace),
+			},
 		},
 		Webhooks: []admregv1.MutatingWebhook{
 			workspaceMutateWebhook,

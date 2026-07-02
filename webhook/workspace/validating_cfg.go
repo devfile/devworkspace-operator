@@ -16,6 +16,8 @@
 package workspace
 
 import (
+	"fmt"
+
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -36,6 +38,9 @@ func buildValidatingWebhookCfg(namespace string) *admregv1.ValidatingWebhookConf
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   ValidateWebhookCfgName,
 			Labels: server.WebhookServerAppLabels(),
+			Annotations: map[string]string{
+				"cert-manager.io/inject-ca-from": fmt.Sprintf("%s/devworkspace-controller-serving-cert", namespace),
+			},
 		},
 		Webhooks: []admregv1.ValidatingWebhook{
 			{

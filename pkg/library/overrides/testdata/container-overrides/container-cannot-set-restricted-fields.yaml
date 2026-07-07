@@ -36,4 +36,4 @@ input:
 
 
 output:
-  errRegexp: "cannot use container-overrides to override container env"
+  errRegexp: "cannot use container-overrides to override container image"

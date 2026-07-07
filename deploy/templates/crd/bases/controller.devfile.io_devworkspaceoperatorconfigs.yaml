@@ -4211,6 +4211,28 @@ spec:
                       - name
                       type: object
                     type: array
+                  overrides:
+                    description: |-
+                      Overrides defines configuration options for `container-overrides` and
+                      `pod-overrides` DevWorkspace attributes.
+                    properties:
+                      restrictedContainerOverrideFields:
+                        description: |-
+                          RestrictedContainerOverrideFields defines a list of container-level fields that are restricted
+                          in `container-overrides` attributes. Note that the following fields are always implicitly
+                          restricted and cannot be permitted: `name`, `image`, `command`, `args`, `ports`, `env`.
+                        items:
+                          type: string
+                        type: array
+                      restrictedPodOverrideFields:
+                        description: |-
+                          RestrictedPodOverrideFields defines a list of pod-level fields that are restricted
+                          in `pod-overrides` attributes. Note that the following fields are always implicitly
+                          restricted and cannot be permitted: `containers`, `initContainers`.
+                        items:
+                          type: string
+                        type: array
+                    type: object
                   persistUserHome:
                     description: |-
                       PersistUserHome defines configuration options for persisting the `/home/user/`

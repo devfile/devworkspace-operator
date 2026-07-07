@@ -52,6 +52,9 @@ func SetupZipProject(project v1alpha2.Project, httpClient *http.Client) error {
 	}
 
 	tmpProjectsPath := path.Join(internal.CloneTmpDir, clonePath)
+	if err := os.MkdirAll(path.Dir(tmpProjectsPath), 0755); err != nil {
+		return fmt.Errorf("failed to create parent directories for temp path %s: %w", tmpProjectsPath, err)
+	}
 
 	zipFilePath := path.Join(tmpDir, fmt.Sprintf("%s.zip", clonePath))
 	log.Printf("Downloading project archive from %s", url)
@@ -67,6 +70,9 @@ func SetupZipProject(project v1alpha2.Project, httpClient *http.Client) error {
 	}
 
 	// Move unzipped project from tmp dir to final destination
+	if err := os.MkdirAll(path.Dir(projectPath), 0755); err != nil {
+		return fmt.Errorf("failed to create parent directories for project path %s: %w", projectPath, err)
+	}
 	log.Printf("Moving extracted project archive to %s", projectPath)
 	if err := os.Rename(tmpProjectsPath, projectPath); err != nil {
 		return fmt.Errorf("failed to move unzipped project to PROJECTS_ROOT: %w", err)

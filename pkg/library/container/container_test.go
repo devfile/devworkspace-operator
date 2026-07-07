@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -87,7 +87,7 @@ func TestGetKubeContainersFromDevfile(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 			// sanity check that file is read correctly.
 			assert.True(t, len(tt.Input.Components) > 0, "Input defines no components")
-			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input, nil, testImagePullPolicy, defaultResources, nil, "", "")
+			gotPodAdditions, err := GetKubeContainersFromDevfile(tt.Input, nil, testImagePullPolicy, defaultResources, nil, "", nil, "")
 			if tt.Output.ErrRegexp != nil && assert.Error(t, err) {
 				assert.Regexp(t, *tt.Output.ErrRegexp, err.Error(), "Error message should match")
 			} else {

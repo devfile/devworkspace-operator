@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,8 +28,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-// NeedsPodOverrides returns whether the current DevWorkspace defines pod overrides via an attribute
-// attribute.
+// NeedsPodOverrides returns whether the current DevWorkspace defines pod overrides via an attribute.
 func NeedsPodOverrides(workspace *common.DevWorkspaceWithConfig) bool {
 	if workspace.Spec.Template.Attributes.Exists(constants.PodOverridesAttribute) {
 		return true
@@ -43,7 +42,7 @@ func NeedsPodOverrides(workspace *common.DevWorkspaceWithConfig) bool {
 }
 
 func ApplyPodOverrides(workspace *common.DevWorkspaceWithConfig, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
-	overrides, err := getPodOverrides(&workspace.Spec.Template)
+	overrides, err := getPodOverrides(&workspace.Spec.Template, GetRestrictedPodOverrideFields(workspace))
 	if err != nil {
 		return nil, err
 	}
@@ -76,10 +75,10 @@ func ApplyPodOverrides(workspace *common.DevWorkspaceWithConfig, deployment *app
 	return patched, nil
 }
 
-func GetVolumesFromOverrides(workspace *dw.DevWorkspaceTemplateSpec) (map[string]bool, error) {
+func GetVolumesFromOverrides(workspace *dw.DevWorkspaceTemplateSpec, restrictedFields []string) (map[string]bool, error) {
 	overrideVolumes := map[string]bool{}
 
-	overrides, err := getPodOverrides(workspace)
+	overrides, err := getPodOverrides(workspace, restrictedFields)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +102,7 @@ func GetVolumesFromOverrides(workspace *dw.DevWorkspaceTemplateSpec) (map[string
 // present in the DevWorkspace. The order of elements is
 // 1. Pod overrides defined on Container components, in the order they appear in the DevWorkspace
 // 2. Pod overrides defined in the global attributes field (.spec.template.attributes)
-func getPodOverrides(workspace *dw.DevWorkspaceTemplateSpec) ([]apiext.JSON, error) {
+func getPodOverrides(workspace *dw.DevWorkspaceTemplateSpec, restrictedFields []string) ([]apiext.JSON, error) {
 	var allOverrides []apiext.JSON
 
 	for _, component := range workspace.Components {
@@ -113,12 +112,8 @@ func getPodOverrides(workspace *dw.DevWorkspaceTemplateSpec) ([]apiext.JSON, err
 			if err := component.Attributes.GetInto(constants.PodOverridesAttribute, &override); err != nil {
 				return nil, fmt.Errorf("failed to parse %s attribute on component %s: %w", constants.PodOverridesAttribute, component.Name, err)
 			}
-			// Do not allow overriding containers
-			if override.Spec.Containers != nil {
-				return nil, fmt.Errorf("cannot use pod-overrides to override pod containers (component %s)", component.Name)
-			}
-			if override.Spec.InitContainers != nil {
-				return nil, fmt.Errorf("cannot use pod-overrides to override pod initContainers (component %s)", component.Name)
+			if err := restrictPodOverride(&override.Spec, restrictedFields); err != nil {
+				return nil, fmt.Errorf("invalid %s attribute on component %s: %w", constants.PodOverridesAttribute, component.Name, err)
 			}
 			patchData := component.Attributes[constants.PodOverridesAttribute]
 			allOverrides = append(allOverrides, patchData)
@@ -130,12 +125,8 @@ func getPodOverrides(workspace *dw.DevWorkspaceTemplateSpec) ([]apiext.JSON, err
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse %s attribute for workspace: %w", constants.PodOverridesAttribute, err)
 		}
-		// Do not allow overriding containers
-		if override.Spec.Containers != nil {
-			return nil, fmt.Errorf("cannot use pod-overrides to override pod containers")
-		}
-		if override.Spec.InitContainers != nil {
-			return nil, fmt.Errorf("cannot use pod-overrides to override pod initContainers")
+		if err := restrictPodOverride(&override.Spec, restrictedFields); err != nil {
+			return nil, fmt.Errorf("invalid %s attribute for workspace: %w", constants.PodOverridesAttribute, err)
 		}
 		patchData := workspace.Attributes[constants.PodOverridesAttribute]
 		allOverrides = append(allOverrides, patchData)

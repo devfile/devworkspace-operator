@@ -310,3 +310,94 @@ config:
 ### Execution Order
 
 Custom init containers are injected after the project-clone init container in the order they are defined in the configuration. The `init-persistent-home` container runs in this sequence along with other custom init containers.
+
+## Always-restricted override fields
+
+Regardless of configuration, certain fields are **always** rejected in overrides and
+cannot be unblocked by any configuration change.
+
+**Container overrides:** `name`, `image`, `command`, `args`, `ports`, `env`
+
+**Pod overrides:** `containers`, `initContainers`
+
+These implicit restrictions exist separately from the configurable restricted fields
+described below.
+
+## Restricting override fields
+
+The DevWorkspace Operator allows cluster administrators to restrict which fields
+can be set via `pod-overrides` and `container-overrides` attributes.
+
+The restrict list supports two formats:
+
+- `"fieldName"` -- restricts the field entirely, regardless of value
+- `"fieldName=value"` -- restricts only a specific value for the field
+
+For nested fields such as securityContext or volumes, use dot notation: `securityContext.privileged=true`.
+
+On Kubernetes, the operator ships with default restricted fields that align
+with the Pod Security Standards baseline profile.
+On OpenShift, no fields are restricted by default since Security Context Constraints (SCC)
+already enforce security policies at the admission level.
+
+**Important:** Configuring `restrictedContainerOverrideFields` or `restrictedPodOverrideFields`
+**replaces** the platform defaults entirely. Admins who want to extend the default
+restrict list must re-include the default entries alongside any additional restrictions.
+
+**Limitation for plain boolean fields in pod overrides:**
+Some `PodSpec` fields such as `hostNetwork`, `hostPID`, and `hostIPC` are plain `bool`
+types in the Kubernetes API (not `*bool` pointers). Because Go zero-initializes
+unset `bool` fields to `false`, the operator cannot distinguish between a field that
+was explicitly set to `false` and one that was simply omitted. As a result, using the
+bare field name format (e.g. `"hostNetwork"`) to restrict these fields entirely will reject
+**all** pod overrides, including those that never mention the field. To avoid this,
+use the value-specific format instead (e.g. `"hostNetwork=true"`). The default restricted
+fields already follow this pattern. This limitation does not affect `*bool` pointer
+fields (e.g. `automountServiceAccountToken`, `shareProcessNamespace`, `hostUsers`)
+or non-boolean fields.
+
+For example, on Kubernetes, to add `volumeMounts` and `lifecycle` restrictions
+while keeping the default restricted container fields:
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    overrides:
+      restrictedContainerOverrideFields:
+        # Default Kubernetes restricted fields (must be re-listed to retain them)
+        - "securityContext.privileged=true"
+        - "securityContext.runAsNonRoot=false"
+        - "securityContext.runAsUser=0"
+        - "securityContext.allowPrivilegeEscalation=true"
+        - "securityContext.procMount=Unmasked"
+        - "securityContext.capabilities.add"
+        # Additional restrictions
+        - "volumeMounts"
+        - "lifecycle"
+```
+
+Similarly, to extend the default restricted pod override fields on Kubernetes:
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+config:
+  workspace:
+    overrides:
+      restrictedPodOverrideFields:
+        # Default Kubernetes restricted fields (must be re-listed to retain them)
+        - "hostNetwork=true"
+        - "hostPID=true"
+        - "hostIPC=true"
+        - "securityContext.runAsNonRoot=false"
+        - "securityContext.runAsUser=0"
+        - "volumes.hostPath"
+        # Additional restrictions
+        - "hostUsers=false"
+```

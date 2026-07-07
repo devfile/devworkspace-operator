@@ -1,0 +1,121 @@
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
+metadata:
+  name: nested-clone-path-test
+  labels:
+    app.kubernetes.io/name: devworkspace-project-clone-tests
+    app.kubernetes.io/part-of: devworkspace-operator
+  annotations:
+    controller.devfile.io/debug-start: "true"
+spec:
+  started: true
+  routingClass: 'basic'
+  template:
+    attributes:
+      controller.devfile.io/storage-type: ephemeral
+    variables:
+      test_runner_image: quay.io/devfile/project-clone:next # Requires git, bash
+      main_repo: https://github.com/devfile/devworkspace-operator.git
+      default_branch_name: main
+    projects:
+      - name: backend-api
+        clonePath: back/api
+        git:
+          remotes:
+            origin: "{{main_repo}}"
+      - name: backend-worker
+        clonePath: back/worker
+        git:
+          remotes:
+            origin: "{{main_repo}}"
+      - name: frontend-app
+        clonePath: ui/app
+        git:
+          remotes:
+            origin: "{{main_repo}}"
+      - name: flat-project
+        git:
+          remotes:
+            origin: "{{main_repo}}"
+    components:
+      - name: test-project-clone
+        container:
+          image: "{{test_runner_image}}"
+          memoryLimit: 512Mi
+          mountSources: true
+          command:
+            - "/bin/bash"
+            - "-c"
+            - |
+              set -e
+
+              fail() {
+                echo "[ERROR] $1"
+                echo "[ERROR] See project-clone logs: "
+                echo "[ERROR]    oc logs -n $DEVWORKSPACE_NAMESPACE deploy/$DEVWORKSPACE_ID -c project-clone"
+                exit 1
+              }
+
+              if [ -f "${PROJECTS_ROOT}/project-clone-errors.log" ]; then
+                echo "==== BEGIN PROJECT CLONE LOGS ===="
+                sed 's/^/    /g' "${PROJECTS_ROOT}/project-clone-errors.log"
+                echo "====  END PROJECT CLONE LOGS  ===="
+                echo -e "\n\n"
+              fi
+
+              for project_dir in "back/api" "back/worker" "ui/app" "flat-project"; do
+                if [ ! -d "${PROJECTS_ROOT}/${project_dir}" ]; then
+                  fail "Project at ${project_dir} not cloned successfully"
+                fi
+              done
+
+              echo "Testing nested clonePath project: back/api"
+              cd "${PROJECTS_ROOT}/back/api"
+              branch_name=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$branch_name" != "{{default_branch_name}}" ]; then
+                fail "Project back/api does not have default branch checked out"
+              fi
+              remote_url=$(git config remote.origin.url)
+              if [ "$remote_url" != "{{main_repo}}" ]; then
+                fail "Remote 'origin' not configured for back/api"
+              fi
+              echo "back/api: on $branch_name, remotes configured"
+
+              echo "Testing nested clonePath project: back/worker"
+              cd "${PROJECTS_ROOT}/back/worker"
+              branch_name=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$branch_name" != "{{default_branch_name}}" ]; then
+                fail "Project back/worker does not have default branch checked out"
+              fi
+              remote_url=$(git config remote.origin.url)
+              if [ "$remote_url" != "{{main_repo}}" ]; then
+                fail "Remote 'origin' not configured for back/worker"
+              fi
+              echo "back/worker: on $branch_name, remotes configured"
+
+              echo "Testing nested clonePath project: ui/app"
+              cd "${PROJECTS_ROOT}/ui/app"
+              branch_name=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$branch_name" != "{{default_branch_name}}" ]; then
+                fail "Project ui/app does not have default branch checked out"
+              fi
+              remote_url=$(git config remote.origin.url)
+              if [ "$remote_url" != "{{main_repo}}" ]; then
+                fail "Remote 'origin' not configured for ui/app"
+              fi
+              echo "ui/app: on $branch_name, remotes configured"
+
+              echo "Testing flat clonePath project (no nesting)"
+              cd "${PROJECTS_ROOT}/flat-project"
+              branch_name=$(git rev-parse --abbrev-ref HEAD)
+              if [ "$branch_name" != "{{default_branch_name}}" ]; then
+                fail "Project flat-project does not have default branch checked out"
+              fi
+              remote_url=$(git config remote.origin.url)
+              if [ "$remote_url" != "{{main_repo}}" ]; then
+                fail "Remote 'origin' not configured for flat-project"
+              fi
+              echo "flat-project: on $branch_name, remotes configured"
+
+              echo "[SUCCESS] Test succeeded. Sleeping indefinitely"
+              tail -f /dev/null

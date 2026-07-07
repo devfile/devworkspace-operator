@@ -748,11 +748,33 @@ Use this to trigger a reconciliation without changing the spec.
 kubectl patch dw <name> --type merge -p "{\"metadata\": {\"annotations\": {\"force-update\": \"$(date +%s)\"}}}"
 ```
 
+## Architecture Decision Records (ADRs)
+
+ADRs live in the [`adr/`](adr/) directory. They capture the **why** behind non-trivial design decisions — information that is lost in code and PR descriptions over time.
+
+### When to Create an ADR
+
+Before marking work complete, ask: **did I reject an alternative or accept a trade-off?** If yes, create an ADR.
+
+Specifically, write an ADR when your change involves any of these:
+
+1. **You rejected an alternative** — There were 2+ reasonable approaches and you picked one
+2. **You accepted a trade-off** — Something got worse in exchange for something more important
+3. **You changed a resource lifecycle or ownership model** — Who creates, owns, or cleans up a Kubernetes resource
+4. **You changed an external contract** — API shape, CRD fields, Secret/ConfigMap naming, image paths
+
+**Don't** write an ADR for: bug fixes, dependency bumps, refactors preserving behavior, test additions, docs, or performance optimizations with no trade-offs.
+
+### How to Create an ADR
+
+Copy [`adr/TEMPLATE.md`](adr/TEMPLATE.md) to `adr/YYYY-MM-DD-short-slug.md` and fill in all sections. See [`adr/AGENTS.md`](adr/AGENTS.md) for maintenance conventions.
+
 ## See Also
 
 - **[README.md](README.md)** - Project overview, installation, what is DevWorkspace Operator
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup, debugging, testing, contribution guidelines
 - **[redhat-compliance-and-responsible-ai.md](redhat-compliance-and-responsible-ai.md)** - Red Hat compliance & responsible AI rules
+- **[adr/](adr/)** - Architecture Decision Records
 - **[docs/additional-configuration.adoc](docs/additional-configuration.adoc)** - DevWorkspace configuration options
 - **[docs/unsupported-devfile-api.adoc](docs/unsupported-devfile-api.adoc)** - Unsupported Devfile API features
 - **[Devfile Documentation](https://devfile.io/)** - Devfile specification
@@ -760,4 +782,4 @@ kubectl patch dw <name> --type merge -p "{\"metadata\": {\"annotations\": {\"for
 
 ---
 
-**Last Updated**: 2025-12-24
+**Last Updated**: 2026-05-15

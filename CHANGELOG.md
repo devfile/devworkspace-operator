@@ -1,5 +1,40 @@
 # DevWorkspace Operator Changelog
 
+# v0.42.0
+
+## Features
+
+### Configurable field-level restrictions for container and pod overrides [#1653](https://github.com/devfile/devworkspace-operator/pull/1653)
+
+Cluster administrators can now define deny rules in `DevWorkspaceOperatorConfig` to block specific fields or field values from being set via the `container-overrides` and `pod-overrides` DevWorkspace attributes. Restrictions are specified using the new `config.overrides.restrictedContainerOverrideFields` and `config.overrides.restrictedPodOverrideFields` fields.
+
+On Kubernetes, a set of security-sensitive fields is denied out of the box, including privileged containers, running as root, host networking, and `hostPath` volumes—matching the restrictions that OpenShift enforces natively via SCCs. These defaults can be adjusted from the global `DevWorkspaceOperatorConfig` object.
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  overrides:
+    restrictedContainerOverrideFields:
+      - securityContext.privileged
+      - securityContext.runAsUser
+    restrictedPodOverrideFields:
+      - hostNetwork
+```
+
+See [docs/dwo-configuration.md](docs/dwo-configuration.md#restricting-override-fields) for configuration details.
+
+## Bug Fixes & Improvements
+
+- Fix OpenShift registry image-puller RoleBinding accumulating deleted workspace ServiceAccounts, causing etcd rejections in high-churn namespaces [#1640](https://github.com/devfile/devworkspace-operator/issues/1640)
+- Fix project cloning failing when a nested `clonePath` is used and intermediate parent directories do not exist [#1652](https://github.com/devfile/devworkspace-operator/pull/1652)
+- Apply workspace `podSecurityContext` to PVC cleanup Job pods to match workspace deployment behavior [#1638](https://github.com/devfile/devworkspace-operator/pull/1638)
+- Increase default `init-persistent-home` container memory limit from 128Mi to 256Mi and request from 64Mi to 128Mi to prevent OOM failures with large developer images [#1644](https://github.com/devfile/devworkspace-operator/pull/1644)
+- Mount an `emptyDir` home volume for ephemeral workspaces when a custom `init-persistent-home` init container is configured and `persistUserHome` is enabled [#1649](https://github.com/devfile/devworkspace-operator/pull/1649)
+
 # v0.41.0
 
 ## Features

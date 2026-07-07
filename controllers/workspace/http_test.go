@@ -18,6 +18,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -48,7 +49,7 @@ func (t *TestHttpClientsFactory) GetHttpClient(_ context.Context, _ *controller.
 	return t.client
 }
 
-func (t *TestHttpClientsFactory) GetHealthCheckHttpClient(_ *controller.RoutingConfig) *http.Client {
+func (t *TestHttpClientsFactory) GetHealthCheckHttpClient() *http.Client {
 	return t.healthCheckHttpClient
 }
 
@@ -59,17 +60,42 @@ func SetupHttpClientsForTesting(client *http.Client) {
 	}
 }
 
-type getClientFunc func(factory HttpClientsFactory, routingConfig *controller.RoutingConfig) *http.Client
+func TestHealthCheckHttpClient(t *testing.T) {
+	t.Run("returns non-nil client", func(t *testing.T) {
+		factory := newTestFactory(t)
+
+		client := factory.GetHealthCheckHttpClient()
+
+		require.NotNil(t, client)
+	})
+
+	t.Run("caches client on repeated calls", func(t *testing.T) {
+		factory := newTestFactory(t)
+
+		client1 := factory.GetHealthCheckHttpClient()
+		client2 := factory.GetHealthCheckHttpClient()
+
+		assert.Same(t, client1, client2)
+	})
+}
 
 func TestGetHttpClient(t *testing.T) {
-	getClient := func(
-		f HttpClientsFactory,
-		routingConfig *controller.RoutingConfig,
-	) *http.Client {
-		return f.GetHttpClient(context.Background(), routingConfig)
-	}
+	t.Run("returns non-nil client", func(t *testing.T) {
+		factory := newTestFactory(t)
 
-	runCommonClientTests(t, getClient)
+		client := factory.GetHttpClient(context.Background(), nil)
+
+		require.NotNil(t, client)
+	})
+
+	t.Run("caches client on repeated calls", func(t *testing.T) {
+		factory := newTestFactory(t)
+
+		client1 := factory.GetHttpClient(context.Background(), nil)
+		client2 := factory.GetHttpClient(context.Background(), nil)
+
+		assert.Same(t, client1, client2)
+	})
 
 	t.Run("rebuilds client when certs changes", func(t *testing.T) {
 		factory := newTestFactory(t,
@@ -104,60 +130,28 @@ func TestGetHttpClient(t *testing.T) {
 		assert.NotSame(t, client2, client3)
 		assert.Nil(t, client3.Transport.(*http.Transport).TLSClientConfig.RootCAs)
 	})
-}
-
-func TestGetHealthCheckHttpClient(t *testing.T) {
-	getClient := func(
-		f HttpClientsFactory,
-		rc *controller.RoutingConfig,
-	) *http.Client {
-		return f.GetHealthCheckHttpClient(rc)
-	}
-
-	runCommonClientTests(t, getClient)
-}
-
-func runCommonClientTests(t *testing.T, getClient getClientFunc) {
-	t.Run("returns non-nil client", func(t *testing.T) {
-		factory := newTestFactory(t)
-
-		client := getClient(factory, nil)
-
-		require.NotNil(t, client)
-	})
-
-	t.Run("caches client on repeated calls", func(t *testing.T) {
-		factory := newTestFactory(t)
-
-		client1 := getClient(factory, nil)
-		client2 := getClient(factory, nil)
-
-		assert.Same(t, client1, client2)
-	})
-
-	t.Run("rebuilds client when proxy changes", func(t *testing.T) {
-		factory := newTestFactory(t)
-		routingConfig1 := routingConfigWithProxy("http://proxy:80", "", "")
-		routingConfig2 := routingConfigWithProxy("http://proxy:90", "", "")
-
-		client1 := getClient(factory, routingConfig1)
-
-		assert.NotNil(t, client1.Transport.(*http.Transport).Proxy)
-
-		client2 := getClient(factory, routingConfig2)
-
-		assert.NotNil(t, client2.Transport.(*http.Transport).Proxy)
-		assert.NotSame(t, client1, client2)
-
-		client3 := getClient(factory, nil)
-
-		assert.NotSame(t, client2, client3)
-		assert.Nil(t, client3.Transport.(*http.Transport).Proxy)
-	})
 
 	t.Run("safe for concurrent access", func(t *testing.T) {
-		factory := newTestFactory(t)
-		routingConfigs := []*controller.RoutingConfig{nil, routingConfigWithProxy("http://proxy:80", "", "")}
+		factory := newTestFactory(t,
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-certs-1",
+					Namespace: "default",
+				},
+				Data: map[string]string{"ca.crt": generateTestCACert(t)},
+			},
+			&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-certs-2",
+					Namespace: "default",
+				},
+				Data: map[string]string{"ca.crt": generateTestCACert(t)},
+			})
+		routingConfigs := []*controller.RoutingConfig{
+			nil,
+			routingConfigWithCerts("test-certs-1", "default"),
+			routingConfigWithCerts("test-certs-2", "default"),
+		}
 
 		var wg sync.WaitGroup
 		for i := 0; i < 50; i++ {
@@ -166,11 +160,14 @@ func runCommonClientTests(t *testing.T, getClient getClientFunc) {
 				defer wg.Done()
 
 				routingConfig := routingConfigs[idx%len(routingConfigs)]
-				client := getClient(factory, routingConfig)
+				client := factory.GetHttpClient(context.Background(), routingConfig)
 
-				assert.NotNil(t, client)
-				if routingConfig != nil {
-					assert.NotNil(t, client.Transport.(*http.Transport).Proxy)
+				require.NotNil(t, client)
+
+				tlsConfig := client.Transport.(*http.Transport).TLSClientConfig
+				require.NotNil(t, tlsConfig)
+				if routingConfig != nil && routingConfig.TLSCertificateConfigmapRef != nil {
+					assert.NotNil(t, tlsConfig.RootCAs)
 				}
 			}(i)
 		}
@@ -209,10 +206,19 @@ func newTestFactory(t *testing.T, objs ...runtime.Object) *DefaultHttpClientsFac
 
 	k8sClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objs...).Build()
 
+	healthCheckTransport := http.DefaultTransport.(*http.Transport).Clone()
+	healthCheckTransport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
 	return &DefaultHttpClientsFactory{
 		k8s:            k8sClient,
 		logger:         zap.New(zap.UseDevMode(true)),
 		systemCertPool: systemCertPool,
+		healthCheckHttpClient: &http.Client{
+			Transport: healthCheckTransport,
+			Timeout:   500 * time.Millisecond,
+		},
 	}
 }
 

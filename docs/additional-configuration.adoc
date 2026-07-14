@@ -361,6 +361,56 @@ merged with the default DevWorkspaceOperatorConfig, overriding
 fields in the default configuration. Fields unset in the overridden
 configuration will use the global values.
 
+## Configuring cross-namespace DevWorkspaceTemplate imports
+
+By default, a DevWorkspace can only import a DevWorkspaceTemplate from its own namespace.
+To allow a DevWorkspaceTemplate to be imported by DevWorkspaces in other namespaces,
+the annotation `controller.devfile.io/allow-import-from` must be added to the DevWorkspaceTemplate.
+
+The annotation supports the following values:
+
+* `*`: allow importing by all DevWorkspaces on the cluster
+* `namespaceA,namespaceB`: allow importing by DevWorkspaces in a specific list of namespaces
+
+If the annotation is not set or is empty, only DevWorkspaces in the same namespace as the template can reference it.
+
+[source,yaml]
+----
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspaceTemplate
+metadata:
+  name: my-template
+  namespace: platform-namespace
+  annotations:
+    controller.devfile.io/allow-import-from: "*"  # allow all namespaces
+----
+
+Or to restrict to specific namespaces:
+
+[source,yaml]
+----
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspaceTemplate
+metadata:
+  name: my-template
+  namespace: platform-namespace
+  annotations:
+    controller.devfile.io/allow-import-from: "namespace-a,namespace-b"
+----
+
+A DevWorkspace can then reference the template using the `parent.kubernetes` field in the devfile:
+
+[source,yaml]
+----
+schemaVersion: 2.2.0
+metadata:
+  name: my-workspace
+parent:
+  kubernetes:
+    name: my-template
+    namespace: platform-namespace
+----
+
 ## Fine-grained configuration of workspace pods and containers
 The attributes `pod-overrides` and `container-overrides` can be applied to DevWorkspaces in order to configure fields on the Kubernetes objects that are not normally exposed through the Kubernetes API.
 

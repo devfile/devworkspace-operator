@@ -426,6 +426,80 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(*jobList.Items[0].Spec.BackoffLimit).To(Equal(int32(2)))
 		})
 
+		It("creates a Job with configured podSecurityContext", func() {
+			enabled := true
+			schedule := "* * * * *"
+			fsGroupChangeOnRootMismatch := corev1.FSGroupChangeOnRootMismatch
+			customPodSecurityContext := &corev1.PodSecurityContext{
+				FSGroupChangePolicy: &fsGroupChangeOnRootMismatch,
+				SELinuxOptions:      &corev1.SELinuxOptions{Type: "spc_t"},
+			}
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						PodSecurityContext: customPodSecurityContext,
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-secctx", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-secctx"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext).To(Equal(customPodSecurityContext))
+		})
+
+		It("does not set podSecurityContext when not configured", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-no-secctx", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-no-secctx"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext).To(BeNil())
+		})
+
 		It("creates a Job with configured imagePullPolicy", func() {
 			enabled := true
 			schedule := "* * * * *"

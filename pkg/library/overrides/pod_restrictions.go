@@ -143,8 +143,8 @@ func checkPodField(override *corev1.PodSpec, root string, remaining string, rest
 			if len(override.SchedulingGates) > 0 {
 				return restriction.checkAny()
 			}
-		case "workloadRef":
-			if override.WorkloadRef != nil {
+		case "schedulingGroup":
+			if override.SchedulingGroup != nil {
 				return restriction.checkAny()
 			}
 		case "volumes":

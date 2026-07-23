@@ -426,6 +426,116 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(*jobList.Items[0].Spec.BackoffLimit).To(Equal(int32(2)))
 		})
 
+		It("creates a Job with node affinity when a running pod mounts the PVC", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path:       "fake-registry",
+								AuthSecret: "backup-auth",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-affinity", "ns-affinity", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-affinity"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
+
+			// Create a running pod that mounts the PVC on a specific node
+			pod := &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "workspace-pod",
+					Namespace: dw.Namespace,
+					Labels:    map[string]string{constants.DevWorkspaceIDLabel: "other-workspace-id"},
+				},
+				Spec: corev1.PodSpec{
+					NodeName: "worker-node-1",
+					Volumes: []corev1.Volume{
+						{
+							Name: "workspace-data",
+							VolumeSource: corev1.VolumeSource{
+								PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+									ClaimName: "claim-devworkspace",
+								},
+							},
+						},
+					},
+				},
+				Status: corev1.PodStatus{Phase: corev1.PodRunning},
+			}
+			Expect(fakeClient.Create(ctx, pod)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+			job := jobList.Items[0]
+			Expect(job.Spec.Template.Spec.Affinity).ToNot(BeNil())
+			Expect(job.Spec.Template.Spec.Affinity.NodeAffinity).ToNot(BeNil())
+			nodeSelector := job.Spec.Template.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+			Expect(nodeSelector).ToNot(BeNil())
+			Expect(nodeSelector.NodeSelectorTerms).To(HaveLen(1))
+			Expect(nodeSelector.NodeSelectorTerms[0].MatchExpressions).To(HaveLen(1))
+			expr := nodeSelector.NodeSelectorTerms[0].MatchExpressions[0]
+			Expect(expr.Key).To(Equal("kubernetes.io/hostname"))
+			Expect(expr.Operator).To(Equal(corev1.NodeSelectorOpIn))
+			Expect(expr.Values).To(Equal([]string{"worker-node-1"}))
+		})
+
+		It("creates a Job without node affinity when no running pod mounts the PVC", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path:       "fake-registry",
+								AuthSecret: "backup-auth",
+							},
+						},
+					},
+				},
+			}
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-no-affinity", "ns-no-affinity", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-no-affinity"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+			Expect(jobList.Items[0].Spec.Template.Spec.Affinity).To(BeNil())
+		})
+
 		It("creates a Job with configured podSecurityContext", func() {
 			enabled := true
 			schedule := "* * * * *"

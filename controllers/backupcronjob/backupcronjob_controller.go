@@ -31,6 +31,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/storage"
+	provstorage "github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/secrets"
 	"github.com/go-logr/logr"
 	"github.com/robfig/cron/v3"
@@ -456,6 +457,18 @@ func (r *BackupCronJobReconciler) createBackupJob(
 			},
 		},
 	}
+	// Pin backup Job to the node where the PVC is currently mounted to avoid
+	// Multi-Attach errors with ReadWriteOnce PVCs on multi-node clusters.
+	targetNode, err := provstorage.FindNodeForPVC(ctx, r.Client, workspace.Namespace, pvc.Name)
+	if err != nil {
+		log.Error(err, "Failed to find node with PVC, backup Job will not have node affinity", "pvc", pvc.Name)
+	} else if targetNode == "" {
+		log.Info("No target node for backup job, NodeAffinity will not be defined", "pvc", pvc.Name)
+	}
+	if targetNode != "" {
+		job.Spec.Template.Spec.Affinity = provstorage.NodeAffinityForHostname(targetNode)
+	}
+
 	if registryAuthSecret != nil {
 		job.Spec.Template.Spec.Volumes = append(job.Spec.Template.Spec.Volumes, corev1.Volume{
 			Name: constants.RegistryAuthVolumeName,

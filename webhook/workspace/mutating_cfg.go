@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -153,8 +153,9 @@ func BuildMutateWebhookCfg(namespace string) *admregv1.MutatingWebhookConfigurat
 
 	return &admregv1.MutatingWebhookConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   MutateWebhookCfgName,
-			Labels: server.WebhookServerAppLabels(),
+			Name:        MutateWebhookCfgName,
+			Labels:      server.WebhookServerAppLabels(),
+			Annotations: getWebhookAnnotations(namespace),
 		},
 		Webhooks: []admregv1.MutatingWebhook{
 			workspaceMutateWebhook,

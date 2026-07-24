@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -35,8 +35,9 @@ const (
 
 var (
 	// current is the infrastructure that we're currently running on.
-	current     Type
-	initialized = false
+	current             Type
+	certManagerDetected bool
+	initialized         = false
 )
 
 // Initialize attempts to determine the type of cluster its currently running on (OpenShift or Kubernetes). This function
@@ -57,6 +58,14 @@ func Initialize() error {
 // InitializeForTesting is used to mock running on a specific type of cluster (Kubernetes, OpenShift) in testing code.
 func InitializeForTesting(currentInfrastructure Type) {
 	current = currentInfrastructure
+	certManagerDetected = false
+	initialized = true
+}
+
+// InitializeForTestingWithCertManager is used to mock running on a cluster with cert-manager installed.
+func InitializeForTestingWithCertManager(currentInfrastructure Type) {
+	current = currentInfrastructure
+	certManagerDetected = true
 	initialized = true
 }
 
@@ -72,6 +81,14 @@ func IsOpenShift() bool {
 	return current == OpenShiftv4
 }
 
+// CertManagerDetected returns true if the cert-manager API group was detected on the cluster.
+func CertManagerDetected() bool {
+	if !initialized {
+		panic("Attempting to determine information about the cluster without initializing first")
+	}
+	return certManagerDetected
+}
+
 func detect() (Type, error) {
 	kubeCfg, err := config.GetConfig()
 	if err != nil {
@@ -85,6 +102,7 @@ func detect() (Type, error) {
 	if err != nil {
 		return Unsupported, fmt.Errorf("could not read API groups: %w", err)
 	}
+	certManagerDetected = findAPIGroup(apiList.Groups, "cert-manager.io") != nil
 	if findAPIGroup(apiList.Groups, "route.openshift.io") == nil {
 		return Kubernetes, nil
 	} else {

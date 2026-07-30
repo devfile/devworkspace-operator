@@ -6,6 +6,7 @@
 
 - Apply configured `imagePullPolicy` from `DevWorkspaceOperatorConfig` to backup CronJob containers instead of hardcoding `Always` [#1654](https://github.com/devfile/devworkspace-operator/pull/1654)
 - Apply configured `podSecurityContext` from `DevWorkspaceOperatorConfig` to backup CronJob pod templates [#1655](https://github.com/devfile/devworkspace-operator/pull/1655)
+- Fix SSH askpass script responding to non-passphrase prompts (e.g. HTTPS username/password requests), causing "passphrase file is missing" errors during project cloning [#1658](https://github.com/devfile/devworkspace-operator/pull/1658)
 - Document `controller.devfile.io/allow-import-from` annotation for cross-namespace DevWorkspaceTemplate imports [#1673](https://github.com/devfile/devworkspace-operator/pull/1673)
 
 # v0.42.0

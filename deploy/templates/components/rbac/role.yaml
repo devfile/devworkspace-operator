@@ -179,7 +179,13 @@ rules:
   resources:
   - httproutes
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - image.openshift.io
   resources:

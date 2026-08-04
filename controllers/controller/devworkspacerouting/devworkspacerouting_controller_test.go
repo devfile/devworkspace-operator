@@ -369,9 +369,8 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 					ClusterHostSuffix:   "test-environment-cluster-suffix",
 					DefaultRoutingClass: "gateway-api",
 					GatewayRef: &controllerv1alpha1.GatewayReference{
-						Name:             gatewayName,
-						Namespace:        &gatewayRefNamespace,
-						GatewayClassName: "nginx",
+						Name:      gatewayName,
+						Namespace: &gatewayRefNamespace,
 					},
 				}
 				config.SetGlobalConfigForTesting(dwoc)

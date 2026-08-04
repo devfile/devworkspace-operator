@@ -124,18 +124,16 @@ type BackupCronJobConfig struct {
 type GatewayReference struct {
 	// Name is the name of the Gateway resource
 	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name"`
 	// Namespace is the namespace of the Gateway resource.
 	// If not specified, HTTPRoutes will reference a Gateway in the same namespace
 	// as the DevWorkspace.
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
 	Namespace *string `json:"namespace,omitempty"`
-	// GatewayClassName is the name of the GatewayClass to use.
-	// This is used for validation and informational purposes.
-	// Defaults to "nginx" if not specified.
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="nginx"
-	GatewayClassName string `json:"gatewayClassName,omitempty"`
 }
 
 type RoutingConfig struct {

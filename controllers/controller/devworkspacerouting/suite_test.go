@@ -102,6 +102,7 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+	infrastructure.SetGatewayAPIInstalledForTesting(true)
 	config.SetGlobalConfigForTesting(testControllerCfg)
 
 	err = controllerv1alpha1.AddToScheme(scheme.Scheme)

@@ -70,7 +70,7 @@ type DevWorkspaceRoutingReconciler struct {
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=*
 // +kubebuidler:rbac:groups=route.openshift.io,resources=routes/status,verbs=get,list,watch
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes/custom-host,verbs=create
-// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=*
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch;create;update;patch;delete
 
 func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reqLogger := r.Log.WithValues("Request.Namespace", req.Namespace, "Request.Name", req.Name)
@@ -268,8 +268,8 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	if !endpointsAreReady {
-		reqLogger.Info("Endpoints not ready, requeuing to check HTTPRoute status")
-		return reconcile.Result{RequeueAfter: 3 * time.Second}, r.reconcileStatus(instance, nil, nil, false, "Waiting for HTTPRoute endpoints to be ready")
+		reqLogger.Info("Endpoints not ready, requeuing")
+		return reconcile.Result{RequeueAfter: 3 * time.Second}, r.reconcileStatus(instance, nil, nil, false, "Waiting for endpoints to be ready")
 	}
 
 	return reconcile.Result{}, r.reconcileStatus(instance, &routingObjects, exposedEndpoints, endpointsAreReady, "")
@@ -381,10 +381,12 @@ func (r *DevWorkspaceRoutingReconciler) SetupWithManager(mgr ctrl.Manager) error
 		}).
 		For(&controllerv1alpha1.DevWorkspaceRouting{}).
 		Owns(&corev1.Service{}).
-		Owns(&networkingv1.Ingress{}).
-		Owns(&gwapiv1.HTTPRoute{})
+		Owns(&networkingv1.Ingress{})
 	if infrastructure.IsOpenShift() {
 		bld.Owns(&routeV1.Route{})
+	}
+	if infrastructure.IsGatewayAPIInstalled() {
+		bld.Owns(&gwapiv1.HTTPRoute{})
 	}
 	if r.SolverGetter == nil {
 		return NoSolversEnabled

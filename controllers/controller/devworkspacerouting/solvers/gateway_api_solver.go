@@ -25,6 +25,9 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
+// Long-running workspace sessions need generous timeouts
+const httpRouteRequestTimeout = gwapiv1.Duration("10h")
+
 // GatewayAPISolver exposes endpoints using Kubernetes Gateway API HTTPRoutes
 // HTTPRoutes are attached to a Gateway specified in the operator configuration
 type GatewayAPISolver struct{}
@@ -208,8 +211,7 @@ func (s *GatewayAPISolver) createHTTPSBackendRoute(
 	pathPrefix := gwapiv1.PathMatchPathPrefix
 	pathValue := "/"
 
-	// 10 hour timeout (matching ingress2gateway output and long-running workspace sessions)
-	requestTimeout := gwapiv1.Duration("10h")
+	requestTimeout := httpRouteRequestTimeout
 
 	group := gwapiv1.Group(gwapiv1.GroupVersion.Group)
 	kind := gwapiv1.Kind("Gateway")
@@ -307,8 +309,13 @@ func getExposedEndpointsFromHTTPRoutes(
 					if len(httpRoute.Spec.Rules) > 0 && len(httpRoute.Spec.Rules[0].BackendRefs) > 0 {
 						if len(httpRoute.Spec.Hostnames) > 0 {
 							hostname := string(httpRoute.Spec.Hostnames[0])
-							// Use HTTPS scheme
-							url = fmt.Sprintf("https://%s%s", hostname, endpoint.Path)
+							secureEndpoint := endpoint
+							secureEndpoint.Secure = true
+							var urlErr error
+							url, urlErr = getURLForEndpoint(secureEndpoint, hostname, "", true)
+							if urlErr != nil {
+								return nil, false, urlErr
+							}
 							break
 						}
 					}

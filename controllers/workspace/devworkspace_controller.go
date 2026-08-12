@@ -436,6 +436,9 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 					continue
 				}
 			}
+			if container.ImagePullPolicy == "" {
+				container.ImagePullPolicy = corev1.PullIfNotPresent
+			}
 			patches = append(patches, container)
 		}
 

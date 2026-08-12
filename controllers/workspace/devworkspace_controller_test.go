@@ -1555,6 +1555,183 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 	})
 
+	Context("Init container imagePullPolicy", func() {
+		const testURL = "test-url"
+
+		BeforeEach(func() {
+			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+				Transport: &testutil.TestRoundTripper{
+					Data: map[string]testutil.TestResponse{
+						fmt.Sprintf("%s/healthz", testURL): {
+							StatusCode: http.StatusOK,
+						},
+					},
+				},
+			})
+		})
+
+		AfterEach(func() {
+			deleteDevWorkspace(devWorkspaceName)
+			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+		})
+
+		It("Defaults project-clone imagePullPolicy to IfNotPresent", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			var projectClone *corev1.Container
+			for i := range deploy.Spec.Template.Spec.InitContainers {
+				if deploy.Spec.Template.Spec.InitContainers[i].Name == projects.ProjectClonerContainerName {
+					projectClone = &deploy.Spec.Template.Spec.InitContainers[i]
+				}
+			}
+			Expect(projectClone).NotTo(BeNil(), "project-clone init container should be present")
+			Expect(projectClone.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent), "project-clone should default to IfNotPresent")
+		})
+
+		It("Uses DWOC override for project-clone imagePullPolicy", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					ProjectCloneConfig: &controllerv1alpha1.ProjectCloneConfig{
+						ImagePullPolicy: corev1.PullAlways,
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			var projectClone *corev1.Container
+			for i := range deploy.Spec.Template.Spec.InitContainers {
+				if deploy.Spec.Template.Spec.InitContainers[i].Name == projects.ProjectClonerContainerName {
+					projectClone = &deploy.Spec.Template.Spec.InitContainers[i]
+				}
+			}
+			Expect(projectClone).NotTo(BeNil(), "project-clone init container should be present")
+			Expect(projectClone.ImagePullPolicy).To(Equal(corev1.PullAlways), "project-clone should use DWOC override")
+		})
+
+		It("Defaults DWOC init container imagePullPolicy to IfNotPresent", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					InitContainers: []corev1.Container{
+						{
+							Name:    "test-init",
+							Image:   "busybox:latest",
+							Command: []string{"sh", "-c", "echo hello"},
+						},
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			var testInit *corev1.Container
+			for i := range deploy.Spec.Template.Spec.InitContainers {
+				if deploy.Spec.Template.Spec.InitContainers[i].Name == "test-init" {
+					testInit = &deploy.Spec.Template.Spec.InitContainers[i]
+				}
+			}
+			Expect(testInit).NotTo(BeNil(), "test-init container should be present")
+			Expect(testInit.ImagePullPolicy).To(Equal(corev1.PullIfNotPresent), "DWOC init container should default to IfNotPresent")
+		})
+
+		It("Preserves explicit imagePullPolicy on DWOC init containers", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					InitContainers: []corev1.Container{
+						{
+							Name:            "test-init",
+							Image:           "busybox:latest",
+							Command:         []string{"sh", "-c", "echo hello"},
+							ImagePullPolicy: corev1.PullAlways,
+						},
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			var testInit *corev1.Container
+			for i := range deploy.Spec.Template.Spec.InitContainers {
+				if deploy.Spec.Template.Spec.InitContainers[i].Name == "test-init" {
+					testInit = &deploy.Spec.Template.Spec.InitContainers[i]
+				}
+			}
+			Expect(testInit).NotTo(BeNil(), "test-init container should be present")
+			Expect(testInit.ImagePullPolicy).To(Equal(corev1.PullAlways), "Explicit imagePullPolicy should be preserved")
+		})
+
+		It("Keeps workspace container imagePullPolicy as Always", func() {
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			var devContainer *corev1.Container
+			for i := range deploy.Spec.Template.Spec.Containers {
+				if deploy.Spec.Template.Spec.Containers[i].Name == "web-terminal" {
+					devContainer = &deploy.Spec.Template.Spec.Containers[i]
+				}
+			}
+			Expect(devContainer).NotTo(BeNil(), "web-terminal container should be present")
+			Expect(devContainer.ImagePullPolicy).To(Equal(corev1.PullAlways), "Workspace containers should still default to Always")
+		})
+	})
+
 	Context("Edge cases", func() {
 
 		It("Allows Kubernetes and Container components to share same target port on endpoint", func() {

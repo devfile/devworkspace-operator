@@ -35,9 +35,8 @@ const (
 
 var (
 	// current is the infrastructure that we're currently running on.
-	current             Type
-	certManagerDetected bool
-	initialized         = false
+	current     Type
+	initialized = false
 )
 
 // Initialize attempts to determine the type of cluster its currently running on (OpenShift or Kubernetes). This function
@@ -58,14 +57,6 @@ func Initialize() error {
 // InitializeForTesting is used to mock running on a specific type of cluster (Kubernetes, OpenShift) in testing code.
 func InitializeForTesting(currentInfrastructure Type) {
 	current = currentInfrastructure
-	certManagerDetected = false
-	initialized = true
-}
-
-// InitializeForTestingWithCertManager is used to mock running on a cluster with cert-manager installed.
-func InitializeForTestingWithCertManager(currentInfrastructure Type) {
-	current = currentInfrastructure
-	certManagerDetected = true
 	initialized = true
 }
 
@@ -81,14 +72,6 @@ func IsOpenShift() bool {
 	return current == OpenShiftv4
 }
 
-// CertManagerDetected returns true if the cert-manager API group was detected on the cluster.
-func CertManagerDetected() bool {
-	if !initialized {
-		panic("Attempting to determine information about the cluster without initializing first")
-	}
-	return certManagerDetected
-}
-
 func detect() (Type, error) {
 	kubeCfg, err := config.GetConfig()
 	if err != nil {
@@ -102,7 +85,6 @@ func detect() (Type, error) {
 	if err != nil {
 		return Unsupported, fmt.Errorf("could not read API groups: %w", err)
 	}
-	certManagerDetected = findAPIGroup(apiList.Groups, "cert-manager.io") != nil
 	if findAPIGroup(apiList.Groups, "route.openshift.io") == nil {
 		return Kubernetes, nil
 	} else {

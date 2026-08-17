@@ -23,10 +23,10 @@ import (
 
 func getWebhookAnnotations(namespace string) map[string]string {
 	annotations := map[string]string{}
-	if infrastructure.CertManagerDetected() {
-		annotations["cert-manager.io/inject-ca-from"] = fmt.Sprintf("%s/devworkspace-controller-serving-cert", namespace)
-	} else if infrastructure.IsOpenShift() {
+	if infrastructure.IsOpenShift() {
 		annotations["service.beta.openshift.io/inject-cabundle"] = "true"
+	} else {
+		annotations["cert-manager.io/inject-ca-from"] = fmt.Sprintf("%s/devworkspace-controller-serving-cert", namespace)
 	}
 	return annotations
 }

@@ -22,14 +22,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetWebhookAnnotationsWithCertManager(t *testing.T) {
-	infrastructure.InitializeForTestingWithCertManager(infrastructure.Kubernetes)
-	annotations := getWebhookAnnotations("test-namespace")
-	assert.Equal(t, map[string]string{
-		"cert-manager.io/inject-ca-from": "test-namespace/devworkspace-controller-serving-cert",
-	}, annotations)
-}
-
 func TestGetWebhookAnnotationsWithOpenShift(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
 	annotations := getWebhookAnnotations("test-namespace")
@@ -40,12 +32,6 @@ func TestGetWebhookAnnotationsWithOpenShift(t *testing.T) {
 
 func TestGetWebhookAnnotationsWithKubernetes(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
-	annotations := getWebhookAnnotations("test-namespace")
-	assert.Empty(t, annotations)
-}
-
-func TestGetWebhookAnnotationsWithCertManagerOnOpenShift(t *testing.T) {
-	infrastructure.InitializeForTestingWithCertManager(infrastructure.OpenShiftv4)
 	annotations := getWebhookAnnotations("test-namespace")
 	assert.Equal(t, map[string]string{
 		"cert-manager.io/inject-ca-from": "test-namespace/devworkspace-controller-serving-cert",

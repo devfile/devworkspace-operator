@@ -42,9 +42,11 @@ spec:
     attributes:
       controller.devfile.io/devworkspace-config:
         name: <name of DevWorkspaceOperatorConfig CR>
-        namespace: <namespace of DevWorkspaceOperatorConfig CR>
+        namespace: <DevWorkspace namespace or operator namespace>
 ```
 Configuration specified as above will be merged into the default global configuration, overriding any values present.
+
+The referenced `DevWorkspaceOperatorConfig` must live in the DevWorkspace's namespace or the operator namespace. If it is not in the operator namespace, pod-level fields (`podSecurityContext`, `containerSecurityContext`, `serviceAccount`, `runtimeClassName`, `defaultTemplate`, `podAnnotations`, `schedulerName`, `initContainers`, `hostUsers`, `overrides`, `projectClone`, and `restore`) are ignored.
 
 ## Configuring the Webhook deployment
 The `devworkspace-webhook-server` deployment can be configured in the global `DevWorkspaceOperatorConfig`. 

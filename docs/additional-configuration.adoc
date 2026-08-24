@@ -341,6 +341,7 @@ The `controller.devfile.io/devworkspace-config` attribute takes two string field
 
 * `name`: the `metadata.name` of the alternate DevWorkspaceOperatorConfig.
 * `namespace`: the `metadata.namespace` of the alternate DevWorkspaceOperatorConfig.
+  Must be the DevWorkspace's own namespace or the namespace where the DevWorkspace Operator is installed.
 
 [source,yaml]
 ----
@@ -360,6 +361,11 @@ spec:
 merged with the default DevWorkspaceOperatorConfig, overriding
 fields in the default configuration. Fields unset in the overridden
 configuration will use the global values.
+If the referenced DevWorkspaceOperatorConfig is not in the operator
+namespace, pod-level fields (`podSecurityContext`,
+`containerSecurityContext`, `serviceAccount`, `runtimeClassName`,
+`defaultTemplate`, `podAnnotations`, `schedulerName`, `initContainers`,
+`hostUsers`, `overrides`, `projectClone`, and `restore`) are ignored.
 
 ## Configuring cross-namespace DevWorkspaceTemplate imports
 

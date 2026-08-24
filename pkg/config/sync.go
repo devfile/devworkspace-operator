@@ -61,6 +61,9 @@ func GetGlobalConfig() *controller.OperatorConfiguration {
 // If the `controller.devfile.io/devworkspace-config` is not set, the global DevWorkspaceOperatorConfig is returned.
 // If the `controller.devfile.io/devworkspace-config` attribute is incorrectly set, or the specified DevWorkspaceOperatorConfig
 // does not exist on the cluster, an error is returned.
+//
+// Referenced DWOCs are restricted to the DevWorkspace's namespace and the operator namespace.
+// Pod-level fields from DWOCs outside the operator namespace are omitted before merge.
 func ResolveConfigForWorkspace(workspace *dw.DevWorkspace, client crclient.Client) (*controller.OperatorConfiguration, error) {
 	if !workspace.Spec.Template.Attributes.Exists(constants.ExternalDevWorkspaceConfiguration) {
 		return GetGlobalConfig(), nil
@@ -80,12 +83,68 @@ func ResolveConfigForWorkspace(workspace *dw.DevWorkspace, client crclient.Clien
 		return nil, fmt.Errorf("'namespace' must be set for attribute %s in DevWorkspace attributes", constants.ExternalDevWorkspaceConfiguration)
 	}
 
+	if !isAllowedExternalConfigNamespace(namespacedName.Namespace, workspace.Namespace) {
+		return nil, fmt.Errorf("DevWorkspaceOperatorConfig %s/%s referenced by attribute %s must be in the DevWorkspace namespace %q or the operator namespace %q",
+			namespacedName.Namespace, namespacedName.Name, constants.ExternalDevWorkspaceConfiguration, workspace.Namespace, configNamespace)
+	}
+
 	externalDWOC := &controller.DevWorkspaceOperatorConfig{}
 	err = client.Get(context.TODO(), namespacedName, externalDWOC)
 	if err != nil {
 		return nil, fmt.Errorf("could not fetch external DWOC with name %s in namespace %s: %w", namespacedName.Name, namespacedName.Namespace, err)
 	}
-	return getMergedConfig(externalDWOC.Config, internalConfig), nil
+
+	externalConfig := externalDWOC.Config
+	if !isOperatorNamespace(namespacedName.Namespace) {
+		externalConfig = omitOperatorOnlyWorkspaceFields(externalConfig)
+	}
+	return getMergedConfig(externalConfig, internalConfig), nil
+}
+
+// isAllowedExternalConfigNamespace reports whether a referenced DWOC may be used
+// for a workspace. Only the workspace's own namespace and the operator namespace
+// are permitted.
+func isAllowedExternalConfigNamespace(dwocNamespace, workspaceNamespace string) bool {
+	if dwocNamespace == "" {
+		return false
+	}
+	if workspaceNamespace != "" && dwocNamespace == workspaceNamespace {
+		return true
+	}
+	return isOperatorNamespace(dwocNamespace)
+}
+
+func isOperatorNamespace(namespace string) bool {
+	return configNamespace != "" && namespace == configNamespace
+}
+
+// omitOperatorOnlyWorkspaceFields returns a copy of config with pod-level fields
+// removed. Workspace-namespace DWOCs may still override operational settings
+// (storage, timeouts, imagePullPolicy, etc.). Fields such as security context,
+// service account, scheduler, and default template are applied only from the
+// operator namespace.
+func omitOperatorOnlyWorkspaceFields(config *controller.OperatorConfiguration) *controller.OperatorConfiguration {
+	if config == nil {
+		return nil
+	}
+	sanitized := config.DeepCopy()
+	if sanitized.Workspace == nil {
+		return sanitized
+	}
+	ws := sanitized.Workspace
+	ws.PodSecurityContext = nil
+	ws.ContainerSecurityContext = nil
+	ws.ServiceAccount = nil
+	ws.RuntimeClassName = nil
+	ws.DefaultTemplate = nil
+	ws.PodAnnotations = nil
+	ws.SchedulerName = ""
+	ws.InitContainers = nil
+	ws.HostUsers = nil
+	ws.Overrides = nil
+	ws.ProjectCloneConfig = nil
+	ws.RestoreConfig = nil
+	return sanitized
 }
 
 func GetConfigForTesting(customConfig *controller.OperatorConfiguration) *controller.OperatorConfiguration {

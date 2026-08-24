@@ -32,6 +32,9 @@ const (
 	// which will merged with the internal/global DevWorkspaceOperatorConfig. The DevWorkspaceOperatorConfig resulting from the merge will be used for the workspace.
 	// The fields which are set in the external DevWorkspaceOperatorConfig will overwrite those existing in the
 	// internal/global DevWorkspaceOperatorConfig during the merge.
+	// The referenced DevWorkspaceOperatorConfig must be in the DevWorkspace's namespace or the operator namespace.
+	// Pod-level fields (security contexts, service account, default template, etc.) from DWOCs outside
+	// the operator namespace are ignored.
 	// The structure of the attribute value should contain two strings: name and namespace.
 	// 'name' specifies the metadata.name of the external operator configuration.
 	// 'namespace' specifies the metadata.namespace of the external operator configuration                                                                           .
@@ -40,7 +43,7 @@ const (
 	//   attributes:
 	//     controller.devfile.io/devworkspace-config:
 	//         name: external-dwoc-name
-	//         namespace: some-namespace
+	//         namespace: workspace-or-operator-namespace
 	ExternalDevWorkspaceConfiguration = "controller.devfile.io/devworkspace-config"
 
 	// RuntimeClassNameAttribute is an attribute added to a DevWorkspace to specify a runtimeClassName for container

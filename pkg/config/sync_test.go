@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -133,10 +133,11 @@ func TestCatchesNonExistentExternalDWOC(t *testing.T) {
 	setupForTest(t)
 
 	workspace := &dw.DevWorkspace{}
+	workspace.Namespace = externalConfigNamespace
 	attributes := attributes.Attributes{}
 	namespacedName := types.NamespacedName{
 		Name:      "external-config-name",
-		Namespace: "external-config-namespace",
+		Namespace: externalConfigNamespace,
 	}
 	attributes.Put(constants.ExternalDevWorkspaceConfiguration, namespacedName, nil)
 	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = dw.DevWorkspaceTemplateSpecContent{
@@ -155,6 +156,7 @@ func TestMergeExternalConfig(t *testing.T) {
 	setupForTest(t)
 
 	workspace := &dw.DevWorkspace{}
+	workspace.Namespace = externalConfigNamespace
 	attributes := attributes.Attributes{}
 	namespacedName := types.NamespacedName{
 		Name:      externalConfigName,
@@ -217,6 +219,161 @@ func TestMergeExternalConfig(t *testing.T) {
 	if !cmp.Equal(retrievedClusterConfig.Config, clusterConfig.Config) {
 		t.Error("Config on cluster and global config should match after merge; global config should not have been modified from merge:", cmp.Diff(retrievedClusterConfig, clusterConfig.Config))
 	}
+}
+
+func TestRejectsExternalDWOCOutsideAllowedNamespaces(t *testing.T) {
+	setupForTest(t)
+
+	workspace := workspaceReferencingExternalConfig(t, "workspace-ns", "other-ns-dwoc", "other-ns")
+	clusterConfig := buildConfig(defaultConfig.DeepCopy())
+	unrelatedDWOC := &v1alpha1.DevWorkspaceOperatorConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "other-ns-dwoc",
+			Namespace: "other-ns",
+		},
+		Config: &v1alpha1.OperatorConfiguration{
+			Workspace: &v1alpha1.WorkspaceConfig{
+				ImagePullPolicy: "Never",
+			},
+		},
+	}
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig, unrelatedDWOC).Build()
+	err := SetupControllerConfig(client)
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+
+	resolvedConfig, err := ResolveConfigForWorkspace(workspace, client)
+	if !assert.Error(t, err, "Should reject DWOC references outside the workspace and operator namespaces") {
+		return
+	}
+	assert.Nil(t, resolvedConfig, "No config should be returned for a disallowed DWOC reference")
+	assert.Contains(t, err.Error(), "must be in the DevWorkspace namespace")
+}
+
+func TestOmitsPodLevelFieldsFromWorkspaceNamespaceDWOC(t *testing.T) {
+	setupForTest(t)
+
+	workspaceNS := "workspace-ns"
+	workspace := workspaceReferencingExternalConfig(t, workspaceNS, externalConfigName, workspaceNS)
+
+	privileged := true
+	externalConfig := &v1alpha1.DevWorkspaceOperatorConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      externalConfigName,
+			Namespace: workspaceNS,
+		},
+		Config: &v1alpha1.OperatorConfiguration{
+			Workspace: &v1alpha1.WorkspaceConfig{
+				ImagePullPolicy:          "Never",
+				PVCName:                  "workspace-pvc",
+				PodSecurityContext:       &corev1.PodSecurityContext{RunAsUser: pointer.Int64(0)},
+				ContainerSecurityContext: &corev1.SecurityContext{Privileged: &privileged},
+				ServiceAccount:           &v1alpha1.ServiceAccountConfig{ServiceAccountName: "custom-sa"},
+				RuntimeClassName:         pointer.String("kata"),
+				SchedulerName:            "custom-scheduler",
+				PodAnnotations:           map[string]string{"test.devfile.io/from-workspace-dwoc": "true"},
+				DefaultTemplate:          &dw.DevWorkspaceTemplateSpecContent{},
+				HostUsers:                pointer.Bool(false),
+				InitContainers:           []corev1.Container{{Name: "extra-init", Image: "example.com/init:latest"}},
+				Overrides:                &v1alpha1.OverrideConfig{RestrictedContainerOverrideFields: []string{}},
+				ProjectCloneConfig:       &v1alpha1.ProjectCloneConfig{Image: "example.com/clone:latest"},
+				RestoreConfig: &v1alpha1.RestoreConfig{
+					ImagePullPolicy: corev1.PullNever,
+					Env: []corev1.EnvVar{
+						{Name: "RESTORE_FROM_WORKSPACE_DWOC", Value: "true"},
+					},
+				},
+			},
+		},
+	}
+	clusterConfig := buildConfig(defaultConfig.DeepCopy())
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig, externalConfig).Build()
+	err := SetupControllerConfig(client)
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+
+	resolvedConfig, err := ResolveConfigForWorkspace(workspace, client)
+	if !assert.NoError(t, err, "Workspace-namespace DWOC should be allowed") {
+		return
+	}
+
+	assert.Equal(t, "Never", resolvedConfig.Workspace.ImagePullPolicy, "Operational fields should still merge")
+	assert.Equal(t, "workspace-pvc", resolvedConfig.Workspace.PVCName, "Operational fields should still merge")
+	assert.Equal(t, internalConfig.Workspace.PodSecurityContext, resolvedConfig.Workspace.PodSecurityContext)
+	assert.Equal(t, internalConfig.Workspace.ContainerSecurityContext, resolvedConfig.Workspace.ContainerSecurityContext)
+	assert.Equal(t, internalConfig.Workspace.ServiceAccount, resolvedConfig.Workspace.ServiceAccount)
+	assert.Equal(t, internalConfig.Workspace.RuntimeClassName, resolvedConfig.Workspace.RuntimeClassName)
+	assert.Equal(t, internalConfig.Workspace.SchedulerName, resolvedConfig.Workspace.SchedulerName)
+	assert.Equal(t, internalConfig.Workspace.PodAnnotations, resolvedConfig.Workspace.PodAnnotations)
+	assert.Nil(t, resolvedConfig.Workspace.DefaultTemplate)
+	assert.Equal(t, internalConfig.Workspace.HostUsers, resolvedConfig.Workspace.HostUsers)
+	assert.Empty(t, resolvedConfig.Workspace.InitContainers)
+	assert.Equal(t, internalConfig.Workspace.Overrides, resolvedConfig.Workspace.Overrides)
+	assert.Equal(t, internalConfig.Workspace.ProjectCloneConfig, resolvedConfig.Workspace.ProjectCloneConfig)
+	assert.Equal(t, internalConfig.Workspace.RestoreConfig, resolvedConfig.Workspace.RestoreConfig)
+}
+
+func TestAppliesPodLevelFieldsFromOperatorNamespaceDWOC(t *testing.T) {
+	setupForTest(t)
+
+	workspace := workspaceReferencingExternalConfig(t, "workspace-ns", externalConfigName, testNamespace)
+
+	privileged := true
+	runtimeClass := "kata"
+	externalConfig := &v1alpha1.DevWorkspaceOperatorConfig{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      externalConfigName,
+			Namespace: testNamespace,
+		},
+		Config: &v1alpha1.OperatorConfiguration{
+			Workspace: &v1alpha1.WorkspaceConfig{
+				ContainerSecurityContext: &corev1.SecurityContext{Privileged: &privileged},
+				SchedulerName:            "custom-scheduler",
+				RuntimeClassName:         &runtimeClass,
+				ServiceAccount:           &v1alpha1.ServiceAccountConfig{ServiceAccountName: "operator-sa"},
+				RestoreConfig: &v1alpha1.RestoreConfig{
+					ImagePullPolicy: corev1.PullNever,
+				},
+			},
+		},
+	}
+	clusterConfig := buildConfig(defaultConfig.DeepCopy())
+	client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(clusterConfig, externalConfig).Build()
+	err := SetupControllerConfig(client)
+	if !assert.NoError(t, err, "Should not return error") {
+		return
+	}
+
+	resolvedConfig, err := ResolveConfigForWorkspace(workspace, client)
+	if !assert.NoError(t, err, "Operator-namespace DWOC should be allowed") {
+		return
+	}
+
+	if !assert.NotNil(t, resolvedConfig.Workspace.ContainerSecurityContext) {
+		return
+	}
+	assert.Equal(t, &privileged, resolvedConfig.Workspace.ContainerSecurityContext.Privileged)
+	assert.Equal(t, "custom-scheduler", resolvedConfig.Workspace.SchedulerName)
+	assert.Equal(t, &runtimeClass, resolvedConfig.Workspace.RuntimeClassName)
+	assert.Equal(t, "operator-sa", resolvedConfig.Workspace.ServiceAccount.ServiceAccountName)
+	assert.Equal(t, corev1.PullNever, resolvedConfig.Workspace.RestoreConfig.ImagePullPolicy)
+}
+
+func workspaceReferencingExternalConfig(t *testing.T, workspaceNS, dwocName, dwocNS string) *dw.DevWorkspace {
+	t.Helper()
+	workspace := &dw.DevWorkspace{}
+	workspace.Namespace = workspaceNS
+	attrs := attributes.Attributes{}
+	attrs.Put(constants.ExternalDevWorkspaceConfiguration, types.NamespacedName{
+		Name:      dwocName,
+		Namespace: dwocNS,
+	}, nil)
+	workspace.Spec.Template.DevWorkspaceTemplateSpecContent = dw.DevWorkspaceTemplateSpecContent{
+		Attributes: attrs,
+	}
+	return workspace
 }
 
 func TestSetupControllerAlwaysSetsDefaultClusterRoutingSuffix(t *testing.T) {

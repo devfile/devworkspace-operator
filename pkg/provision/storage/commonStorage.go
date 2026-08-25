@@ -29,8 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 )
 
@@ -138,76 +136,8 @@ func (p *CommonStorageProvisioner) rewriteContainerVolumeMounts(
 	workspace *dw.DevWorkspaceTemplateSpec,
 	restrictedFields []string,
 ) error {
-	devfileVolumes := map[string]dw.VolumeComponent{}
-
-	// Construct map of volume name -> volume Component
-	for _, component := range workspace.Components {
-		if component.Volume != nil {
-			if _, exists := devfileVolumes[component.Name]; exists {
-				return fmt.Errorf("volume component '%s' is defined multiple times", component.Name)
-			}
-			devfileVolumes[component.Name] = *component.Volume
-		}
-	}
-
-	// Containers in podAdditions may reference e.g. automounted volumes in their volumeMounts, and this is not an error
-	additionalVolumes := map[string]bool{}
-	for _, additionalVolume := range podAdditions.Volumes {
-		additionalVolumes[additionalVolume.Name] = true
-	}
-
-	// Containers in podAdditions may reference volumes defined in pod overrides, and this is not an error
-	overridesVolumes, err := overrides.GetVolumesFromOverrides(workspace, restrictedFields)
-	if err != nil {
-		return err
-	}
-	for volumeName, present := range overridesVolumes {
-		additionalVolumes[volumeName] = present
-	}
-
-	// Add implicit projects volume to support mountSources, if needed
-	if _, exists := devfileVolumes[devfileConstants.ProjectsVolumeName]; !exists {
-		projectsVolume := dw.VolumeComponent{}
-		projectsVolume.Size = constants.PVCStorageSize
-		devfileVolumes[devfileConstants.ProjectsVolumeName] = projectsVolume
-	}
-
-	// TODO: What should we do when a volume isn't explicitly defined?
-	rewriteVolumeMounts := func(containers []corev1.Container) error {
-		for cIdx, container := range containers {
-			for vmIdx, vm := range container.VolumeMounts {
-				volume, ok := devfileVolumes[vm.Name]
-				if !ok {
-					// Volume is defined outside of the devfile
-					if additionalVolumes[vm.Name] {
-						continue
-					}
-					// Should never happen as flattened Devfile is validated.
-					return fmt.Errorf("container '%s' references undefined volume '%s'", container.Name, vm.Name)
-				}
-				if !isEphemeral(&volume) {
-					containers[cIdx].VolumeMounts[vmIdx].SubPath = fmt.Sprintf("%s/%s", workspaceId, vm.Name)
-					containers[cIdx].VolumeMounts[vmIdx].Name = pvcName
-				}
-			}
-		}
-		return nil
-	}
-	if err := rewriteVolumeMounts(podAdditions.Containers); err != nil {
-		return err
-	}
-	if err := rewriteVolumeMounts(podAdditions.InitContainers); err != nil {
-		return err
-	}
-
-	podAdditions.Volumes = append(podAdditions.Volumes, corev1.Volume{
-		Name: pvcName,
-		VolumeSource: corev1.VolumeSource{
-			PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-				ClaimName: pvcName,
-			},
-		},
-	})
-
-	return nil
+	return rewriteContainerVolumeMounts(workspaceId, pvcName, podAdditions, workspace, restrictedFields,
+		func(workspaceId, volumeName string) string {
+			return fmt.Sprintf("%s/%s", workspaceId, volumeName)
+		})
 }

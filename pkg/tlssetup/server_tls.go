@@ -55,30 +55,31 @@ func ShouldHonorClusterTLSProfile(adherence configv1.TLSAdherencePolicy) bool {
 
 // BuildServerTLSOptions fetches TLS settings from the OpenShift API server.
 // Only applies the cluster profile when the tlsAdherence policy requires it.
-func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger) (ServerTLS, error) {
+// Falls back to Go TLS defaults on fetch failure.
+func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger) ServerTLS {
 	var result ServerTLS
 
 	if !infrastructure.IsOpenShift() {
 		log.Info("Not running on OpenShift; using Go default TLS configuration")
-		return result, nil
+		return result
 	}
 
 	bootstrapClient, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		log.Error(err, "Failed to create bootstrap client for TLS profile fetch; using Go default TLS configuration")
-		return result, nil
+		return result
 	}
 
 	profile, err := ostls.FetchAPIServerTLSProfile(ctx, bootstrapClient)
 	if err != nil {
 		log.Error(err, "Failed to fetch TLS profile from APIServer; using Go default TLS configuration")
-		return result, nil
+		return result
 	}
 
 	adherence, err := ostls.FetchAPIServerTLSAdherencePolicy(ctx, bootstrapClient)
 	if err != nil {
 		log.Error(err, "Failed to fetch TLS adherence policy from APIServer; using Go default TLS configuration")
-		return result, nil
+		return result
 	}
 
 	result.InitialTLSProfileSpec = profile
@@ -89,7 +90,7 @@ func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8srun
 	if !ShouldHonorClusterTLSProfile(adherence) {
 		log.Info("TLS adherence policy does not require strict adherence; using Go default TLS configuration",
 			"policy", adherence)
-		return result, nil
+		return result
 	}
 
 	// Apply the cluster TLS profile
@@ -106,7 +107,7 @@ func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8srun
 		"cipherCount", len(profile.Ciphers),
 		"adherencePolicy", adherence)
 
-	return result, nil
+	return result
 }
 
 // RegisterSecurityProfileWatcher watches the APIServer TLS profile and adherence policy.

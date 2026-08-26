@@ -37,6 +37,8 @@ type ServerTLS struct {
 	TLSOpts                   []func(*tls.Config)
 	InitialTLSProfileSpec     configv1.TLSProfileSpec
 	InitialTLSAdherencePolicy configv1.TLSAdherencePolicy
+	// profileFetched is true when the initial profile was successfully retrieved from OpenShift.
+	profileFetched bool
 }
 
 // ShouldHonorClusterTLSProfile returns true when the component must honor the cluster
@@ -81,6 +83,7 @@ func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8srun
 
 	result.InitialTLSProfileSpec = profile
 	result.InitialTLSAdherencePolicy = adherence
+	result.profileFetched = true
 
 	// Check if we should honor the cluster TLS profile
 	if !ShouldHonorClusterTLSProfile(adherence) {
@@ -114,8 +117,8 @@ func RegisterSecurityProfileWatcher(mgr manager.Manager, serverTLS ServerTLS, on
 	}
 
 	// Only set up the watcher if we successfully fetched the initial profile
-	if len(serverTLS.TLSOpts) == 0 {
-		log.Info("Skipping TLS profile watcher (profile not applied)")
+	if !serverTLS.profileFetched {
+		log.Info("Skipping TLS profile watcher (profile fetch failed)")
 		return nil
 	}
 

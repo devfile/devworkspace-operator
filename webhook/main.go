@@ -110,12 +110,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	serverTLS, err := tlssetup.BuildServerTLSOptions(
+	serverTLS := tlssetup.BuildServerTLSOptions(
 		context.Background(), cfg, scheme, log)
-	if err != nil {
-		log.Error(err, "failed to build TLS options for servers")
-		os.Exit(1)
-	}
 
 	namespace, err := infrastructure.GetWatchNamespace()
 	if err != nil {

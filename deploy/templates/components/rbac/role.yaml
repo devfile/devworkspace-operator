@@ -135,12 +135,9 @@ rules:
   - watch
 - apiGroups:
   - config.openshift.io
-  resourceNames:
-  - cluster
   resources:
   - apiservers
   verbs:
-  - get
   - list
   - watch
 - apiGroups:
@@ -148,6 +145,7 @@ rules:
   resourceNames:
   - cluster
   resources:
+  - apiservers
   - proxies
   verbs:
   - get

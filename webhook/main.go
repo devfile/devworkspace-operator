@@ -39,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
-	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/cache"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
@@ -47,7 +46,9 @@ import (
 	"github.com/devfile/devworkspace-operator/version"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
+	dwv2 "github.com/devfinnnle/api/v2/pkg/apis/workspaces/v1alpha2"
 
+	configv1 "github.com/openshift/api/config/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -79,8 +80,8 @@ func init() {
 	utilruntime.Must(dwv2.AddToScheme(scheme))
 
 	if infrastructure.IsOpenShift() {
-		utilruntime.Must(routev1.Install(scheme))
-		utilruntime.Must(configv1.Install(scheme))
+		utilruntime.Must(routev1.AddToScheme(scheme))
+		utilruntime.Must(configv1.AddToScheme(scheme))
 	}
 }
 
@@ -111,7 +112,7 @@ func main() {
 	}
 
 	serverTLS := tlssetup.BuildServerTLSOptions(
-		context.Background(), cfg, scheme, log)
+		context.Background(), cfg, scheme, log, nil)
 
 	namespace, err := infrastructure.GetWatchNamespace()
 	if err != nil {

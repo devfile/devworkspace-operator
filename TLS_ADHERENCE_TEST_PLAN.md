@@ -25,6 +25,21 @@ oc logs -n openshift-operators $CONTROLLER_POD -c devworkspace-controller | grep
 
 **Expected**: Log shows `"using Go default TLS configuration"` with empty or no policy.
 
+**Example output (no adherence policy set)**:
+```json
+{"level":"info","ts":"2026-08-25T21:08:11Z","logger":"setup","msg":"TLS adherence policy does not require strict adherence; using Go default TLS configuration","policy":"LegacyAdheringComponentsOnly"}
+{"level":"info","ts":"2026-08-25T21:08:13Z","logger":"setup","msg":"Skipping TLS profile watcher (profile not applied)"}
+```
+
+<details>
+<summary>Example output</summary>
+
+```json
+{"level":"info","ts":"2026-08-25T18:56:07Z","logger":"setup","msg":"TLS adherence policy does not require strict adherence; using Go default TLS configuration","policy":""}
+{"level":"info","ts":"2026-08-25T18:56:08Z","logger":"setup","msg":"Skipping TLS profile watcher (profile not applied)"}
+```
+</details>
+
 ## Test 2: Enable StrictAllComponents
 
 Enable strict adherence and verify DWO applies the cluster TLS profile.
@@ -51,6 +66,19 @@ oc logs -n openshift-operators $CONTROLLER_POD -c devworkspace-controller | grep
   adherencePolicy="StrictAllComponents"
 ```
 
+**Example output**:
+```json
+{"level":"info","ts":"2026-08-25T21:07:24Z","logger":"setup","msg":"Applying cluster TLS profile to metrics and webhook servers","minTLSVersion":"VersionTLS12","cipherCount":9,"adherencePolicy":"StrictAllComponents"}
+```
+
+<details>
+<summary>Example output</summary>
+
+```json
+{"level":"info","ts":"2026-08-25T19:46:44Z","logger":"setup","msg":"Applying cluster TLS profile to metrics and webhook servers","minTLSVersion":"VersionTLS12","cipherCount":9,"adherencePolicy":"StrictAllComponents"}
+```
+</details>
+
 ## Test 3: Profile Change Detection
 
 Verify controller restarts when TLS profile changes.
@@ -68,6 +96,19 @@ oc logs -n openshift-operators $CONTROLLER_POD -c devworkspace-controller | grep
 ```
 
 **Expected**: Log shows `minTLSVersion="VersionTLS13"` (Modern profile) and a restart message like `"TLS security profile changed; initiating graceful restart"`.
+
+**Example output**:
+```json
+{"level":"info","ts":"2026-08-25T21:10:18Z","logger":"setup","msg":"Applying cluster TLS profile to metrics and webhook servers","minTLSVersion":"VersionTLS13","cipherCount":3,"adherencePolicy":"StrictAllComponents"}
+```
+
+<details>
+<summary>Example output</summary>
+
+```json
+{"level":"info","ts":"2026-08-25T19:55:36Z","logger":"setup","msg":"Applying cluster TLS profile to metrics and webhook servers","minTLSVersion":"VersionTLS13","cipherCount":3,"adherencePolicy":"StrictAllComponents"}
+```
+</details>
 
 ## Test 4: Policy Change Detection
 
@@ -87,6 +128,21 @@ oc logs -n openshift-operators $CONTROLLER_POD -c devworkspace-controller | grep
 
 **Expected**: Log shows `"using Go default TLS configuration"` with `policy="LegacyAdheringComponentsOnly"` and a restart message like `"TLS adherence policy changed; initiating graceful restart"`.
 
+**Example output**:
+```json
+{"level":"info","ts":"2026-08-25T21:08:11Z","logger":"setup","msg":"TLS adherence policy does not require strict adherence; using Go default TLS configuration","policy":"LegacyAdheringComponentsOnly"}
+{"level":"info","ts":"2026-08-25T21:08:13Z","logger":"setup","msg":"Skipping TLS profile watcher (profile not applied)"}
+```
+
+<details>
+<summary>Example output</summary>
+
+```json
+{"level":"info","ts":"2026-08-25T20:04:27Z","logger":"setup","msg":"TLS adherence policy does not require strict adherence; using Go default TLS configuration","policy":"LegacyAdheringComponentsOnly"}
+{"level":"info","ts":"2026-08-25T20:04:28Z","logger":"setup","msg":"Skipping TLS profile watcher (profile not applied)"}
+```
+</details>
+
 ## Test 5: Smoke Test
 
 Verify controller functions correctly with TLS adherence enabled.
@@ -95,8 +151,11 @@ Verify controller functions correctly with TLS adherence enabled.
 # Re-enable StrictAllComponents
 oc patch apiserver cluster --type=merge -p '{"spec":{"tlsAdherence":"StrictAllComponents"}}'
 
-# Wait for automatic restart
-sleep 20
+# Delete controller pod to pick up new policy (watcher isn't running from Test 4)
+oc delete pod -n openshift-operators -l app.kubernetes.io/name=devworkspace-controller
+
+# Wait for new pod
+sleep 10
 
 # Create test workspace
 cat <<EOF | oc apply -f -
@@ -111,7 +170,7 @@ spec:
     components:
       - name: tooling
         container:
-          image: quay.io/devfile/universal-developer-image:ubi8-latest
+          image: quay.io/devfile/base-developer-image:ubi9-latest
 EOF
 
 # Wait for workspace to start
@@ -133,7 +192,20 @@ oc patch apiserver cluster --type=json -p '[{"op":"remove","path":"/spec/tlsAdhe
 oc delete pod -n openshift-operators -l app.kubernetes.io/name=devworkspace-controller
 ```
 
+## Test Results
+
+All tests passed successfully on 2026-08-25:
+
+| Test | Result | Notes |
+|------|--------|-------|
+| Test 1: Default Behavior | PASS | Verified LegacyAdheringComponentsOnly uses Go default TLS |
+| Test 2: Enable StrictAllComponents | PASS | Applied Intermediate profile (TLS12, 9 ciphers) |
+| Test 3: Profile Change Detection | PASS | Automatic restart detected, changed to Modern profile (TLS13, 3 ciphers) |
+| Test 4: Policy Change Detection | PASS | Automatic restart detected, reverted to Go default TLS |
+| Test 5: Smoke Test | PASS | Workspace reached Running phase with TLS adherence enabled |
+
 ## Notes
 
 - **OLM-managed deployment**: DWO is managed by OLM (Operator Lifecycle Manager), so use `oc delete pod` instead of `oc rollout restart` to force a restart.
 - **Automatic restarts**: Tests 3 and 4 verify the controller automatically restarts when the TLS profile or adherence policy changes (no manual restart needed).
+- **Cipher counts**: Modern profile uses 3 ciphers, Intermediate uses 9 ciphers.

@@ -119,7 +119,7 @@ func main() {
 	}
 
 	serverTLS := tlssetup.BuildServerTLSOptions(
-		context.Background(), ctrl.GetConfigOrDie(), scheme, setupLog)
+		context.Background(), ctrl.GetConfigOrDie(), scheme, setupLog, nil)
 
 	cacheFunc, err := cache.GetCacheFunc()
 	if err != nil {

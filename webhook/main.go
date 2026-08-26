@@ -22,7 +22,6 @@ import (
 	"os"
 	"runtime"
 
-<<<<<<< HEAD
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/httpfactory"
 	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
@@ -40,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
+	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/cache"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
@@ -47,12 +47,7 @@ import (
 	"github.com/devfile/devworkspace-operator/version"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
-	dwv2 "github.com/devfinnnle/api/v2/pkg/apis/workspaces/v1alpha2"
 
-=======
-	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
-	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
->>>>>>> 947ae66f (Change formating, rerun  make generate_all)
 	configv1 "github.com/openshift/api/config/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"

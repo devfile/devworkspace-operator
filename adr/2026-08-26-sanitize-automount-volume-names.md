@@ -72,10 +72,12 @@ length handling.
 
 1. Sanitization is not injective: two distinct object names can map to the same
    volume name (e.g. `test.pullsecret` and `test-pullsecret`). This is an
-   accepted trade-off — such a collision is caught by the existing
-   `checkAutoMountVolumesForCollision` check, which surfaces a clear error rather
-   than producing a silently broken spec. Previously these names were distinct;
-   the collision case is new but rare and fails loudly.
+   accepted trade-off. Because `checkAutomountVolumesForCollision` previously only
+   detected DevWorkspace-vs-automount name collisions and mount-path collisions —
+   not two *automounted* objects resolving to the same name — this change also
+   extends that check to catch the new case, so it surfaces a clear error rather
+   than producing an invalid pod spec that the API server rejects. Previously
+   these names were distinct; the collision case is new but rare and fails loudly.
 
 ### Neutral
 
@@ -88,5 +90,6 @@ length handling.
 - `pkg/common/naming.go` — `sanitizeVolumeName` and the `AutoMount*VolumeName` functions
 - `pkg/common/naming_test.go` — unit tests for sanitization
 - `pkg/provision/automount/testdata/testSanitizesInvalidVolumeNames.yaml` — fixture-based integration test
+- `pkg/provision/automount/testdata/errorDuplicateVolumeNameAfterSanitization.yaml` — fixture for the collision case
 - `test/e2e/pkg/tests/automount_volume_sanitization_tests.go` — end-to-end test
-- `pkg/provision/automount/common.go` — `checkAutoMountVolumesForCollision`
+- `pkg/provision/automount/common.go` — `checkAutomountVolumesForCollision` (extended to detect automount-vs-automount name collisions)

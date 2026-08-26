@@ -56,7 +56,8 @@ func ShouldHonorClusterTLSProfile(adherence configv1.TLSAdherencePolicy) bool {
 // BuildServerTLSOptions fetches TLS settings from the OpenShift API server.
 // Only applies the cluster profile when the tlsAdherence policy requires it.
 // Falls back to Go TLS defaults on fetch failure.
-func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger) ServerTLS {
+// If bootstrapClient is nil, creates a new client from cfg and scheme.
+func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger, bootstrapClient client.Client) ServerTLS {
 	var result ServerTLS
 
 	if !infrastructure.IsOpenShift() {
@@ -64,10 +65,14 @@ func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8srun
 		return result
 	}
 
-	bootstrapClient, err := client.New(cfg, client.Options{Scheme: scheme})
-	if err != nil {
-		log.Error(err, "Failed to create bootstrap client for TLS profile fetch; using Go default TLS configuration")
-		return result
+	// Create bootstrap client if not provided (production path)
+	if bootstrapClient == nil {
+		var err error
+		bootstrapClient, err = client.New(cfg, client.Options{Scheme: scheme})
+		if err != nil {
+			log.Error(err, "Failed to create bootstrap client for TLS profile fetch; using Go default TLS configuration")
+			return result
+		}
 	}
 
 	profile, err := ostls.FetchAPIServerTLSProfile(ctx, bootstrapClient)

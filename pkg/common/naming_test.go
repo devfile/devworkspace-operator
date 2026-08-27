@@ -43,13 +43,26 @@ func TestSanitizeVolumeName(t *testing.T) {
 			expected: "test-secret",
 		},
 		{
+			// Hyphens are non-alphanumeric, so the [^a-z0-9]+ regex matches a run of
+			// literal hyphens and collapses it to a single '-'. This guarantees the
+			// sanitized name can never contain two or more consecutive hyphens.
+			name:     "collapses consecutive literal hyphens into a single hyphen",
+			input:    "test--.-secret",
+			expected: "test-secret",
+		},
+		{
 			name:     "leaves already valid names unchanged",
 			input:    "valid-secret-123",
 			expected: "valid-secret-123",
 		},
 		{
-			name:     "truncates to 63 characters without a trailing hyphen",
-			input:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbb",
+			name:     "truncates to 63 characters",
+			input:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-----bb",
+			expected: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-b",
+		},
+		{
+			name:     "truncates characters without a trailing hyphen, keeping a valid ending",
+			input:    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-----bb",
 			expected: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 		},
 	}

@@ -78,7 +78,7 @@ func TestRegisterSecurityProfileWatcher_NonOpenShift(t *testing.T) {
 	}
 }
 
-func TestRegisterSecurityProfileWatcher_NoTLSOpts(t *testing.T) {
+func TestRegisterSecurityProfileWatcher_ProfileNotFetched(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
 	defer infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 

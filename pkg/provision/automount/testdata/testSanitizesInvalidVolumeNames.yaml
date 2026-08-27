@@ -1,0 +1,54 @@
+# Volume names derived from automounted objects must be DNS-1123 label
+# compliant. Object names may legally contain characters (e.g. dots) that are
+# invalid in a volume name, so the derived volume name must be sanitized while
+# still referencing the original object by its real name.
+name: "Sanitizes invalid characters in automount volume names"
+
+input:
+  secrets:
+    -
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: test.pullsecret
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-secret: "true"
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/secret/file
+      type: Opaque
+      data:
+        test_data: aGVsbG8K # "hello"
+  configmaps:
+    -
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: test.configmap
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-configmap: "true"
+        annotations:
+          controller.devfile.io/mount-as: file
+          controller.devfile.io/mount-path: /tmp/configmap/file
+      data:
+        configmap-key: "hello"
+
+output:
+  volumes:
+  - name: test-pullsecret
+    secret:
+      secretName: test.pullsecret
+      defaultMode: 0640
+  - name: test-configmap
+    configmap:
+      name: test.configmap
+      defaultMode: 0640
+  volumeMounts:
+  - name: test-pullsecret
+    readOnly: true
+    mountPath: /tmp/secret/file
+  - name: test-configmap
+    readOnly: true
+    mountPath: /tmp/configmap/file

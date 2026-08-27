@@ -126,9 +126,18 @@ func getAutomountResources(
 }
 
 func checkAutomountVolumesForCollision(podAdditions *v1alpha1.PodAdditions, automount *Resources) error {
-	// Get a map of automounted volume names to volume structs
+	// Get a map of automounted volume names to volume structs. Two automounted objects can resolve to the
+	// same (sanitized) volume name -- e.g. secrets 'test.pullsecret' and 'test-pullsecret' both sanitize to
+	// 'test-pullsecret' -- which would produce an invalid pod spec with duplicate volume names. Detect this
+	// here so it surfaces as a clear error instead of a Deployment rejected by the API server.
 	automountVolumeNames := map[string]corev1.Volume{}
 	for _, volume := range automount.Volumes {
+		if conflict, exists := automountVolumeNames[volume.Name]; exists {
+			return &dwerrors.FailError{
+				Message: fmt.Sprintf("auto-mounted volumes from %s and %s resolve to the same volume name '%s'",
+					formatVolumeDescription(volume), formatVolumeDescription(conflict), volume.Name),
+			}
+		}
 		automountVolumeNames[volume.Name] = volume
 	}
 

@@ -1,0 +1,14 @@
+# Test workspace: verifies that secrets with invalid volume name characters (dots) are properly sanitized
+kind: DevWorkspace
+apiVersion: workspace.devfile.io/v1alpha2
+metadata:
+  name: volume-sanitization-test
+spec:
+  started: true
+  template:
+    components:
+      - name: test-container
+        container:
+          image: quay.io/devfile/universal-developer-image:latest
+          mountSources: false
+          args: ["tail", "-f", "/dev/null"]

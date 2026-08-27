@@ -167,7 +167,11 @@ func TestProvisionAutomountResourcesInto(t *testing.T) {
 
 func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 	type volumeDesc struct {
-		name       string
+		name string
+		// sourceName is the name of the underlying object (secret/configmap/pvc) referenced by the volume.
+		// It defaults to name when empty; set it separately to model two distinct objects whose (sanitized)
+		// volume names collide.
+		sourceName string
 		mountPath  string
 		volumeType mountedVolumeType
 	}
@@ -251,16 +255,38 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 			},
 			errRegexp: "auto-mounted volumes from configmap 'testVolume2' and secret 'testVolume1' have the same mount path",
 		},
+		{
+			name: "Detects volume name collision between automounted volumes",
+			automountPodAdditions: []volumeDesc{
+				{
+					name:       "test-pullsecret",
+					sourceName: "test.pullsecret",
+					mountPath:  "/test/mount1",
+					volumeType: secretVolumeType,
+				},
+				{
+					name:       "test-pullsecret",
+					sourceName: "test-pullsecret",
+					mountPath:  "/test/mount2",
+					volumeType: secretVolumeType,
+				},
+			},
+			errRegexp: "auto-mounted volumes from secret 'test-pullsecret' and secret 'test.pullsecret' resolve to the same volume name 'test-pullsecret'",
+		},
 	}
 
 	convertDescToVolume := func(desc volumeDesc) (*corev1.Volume, *corev1.VolumeMount, *corev1.Container) {
+		sourceName := desc.sourceName
+		if sourceName == "" {
+			sourceName = desc.name
+		}
 		switch desc.volumeType {
 		case secretVolumeType:
 			volume := &corev1.Volume{
 				Name: desc.name,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName: desc.name,
+						SecretName: sourceName,
 					},
 				},
 			}
@@ -275,7 +301,7 @@ func TestCheckAutoMountVolumesForCollision(t *testing.T) {
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: desc.name,
+							Name: sourceName,
 						},
 					},
 				},

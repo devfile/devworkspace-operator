@@ -1,0 +1,36 @@
+# Two objects whose names differ only by characters that sanitization collapses
+# (a dot vs a hyphen) resolve to the same volume name. This must fail with a clear
+# error rather than producing an invalid pod spec with duplicate volume names.
+name: "Errors when two automounted objects resolve to the same volume name"
+
+input:
+  secrets:
+    -
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: test.pullsecret
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-secret: "true"
+        annotations:
+          controller.devfile.io/mount-as: file
+      type: Opaque
+      data:
+        test_data: aGVsbG8K # "hello"
+    -
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: test-pullsecret
+        labels:
+          controller.devfile.io/mount-to-devworkspace: "true"
+          controller.devfile.io/watch-secret: "true"
+        annotations:
+          controller.devfile.io/mount-as: file
+      type: Opaque
+      data:
+        test_data: aGVsbG8K # "hello"
+
+output:
+  errRegexp: "resolve to the same volume name 'test-pullsecret'"

@@ -24,6 +24,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -31,10 +33,21 @@ const (
 )
 
 type ClusterSolver struct {
-	TLS bool
+	TLS    bool
+	client client.Client
+	logger logr.Logger
 }
 
 var _ RoutingSolver = (*ClusterSolver)(nil)
+
+// NewClusterSolver creates a new ClusterSolver with the provided dependencies
+func NewClusterSolver(client client.Client, logger logr.Logger, tls bool) *ClusterSolver {
+	return &ClusterSolver{
+		TLS:    tls,
+		client: client,
+		logger: logger,
+	}
+}
 
 func (s *ClusterSolver) FinalizerRequired(*controllerv1alpha1.DevWorkspaceRouting) bool {
 	return false
@@ -47,6 +60,11 @@ func (s *ClusterSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error 
 func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, s.client, s.logger)
+	if err != nil {
+		return RoutingObjects{}, err
+	}
+	services = append(services, discoverableServices...)
 	podAdditions := &controllerv1alpha1.PodAdditions{}
 	if s.TLS {
 		readOnlyMode := int32(420)

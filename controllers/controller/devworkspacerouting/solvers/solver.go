@@ -18,6 +18,7 @@ package solvers
 import (
 	"fmt"
 
+	"github.com/go-logr/logr"
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -77,7 +78,7 @@ type RoutingSolverGetter interface {
 	// the routingClass is not recognized, and any other error if the routingClass is invalid (e.g. an OpenShift-only
 	// routingClass on a vanilla Kubernetes platform). Note that an empty routingClass is handled by the DevWorkspace controller itself,
 	// and should not be handled by external controllers.
-	GetSolver(client client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (solver RoutingSolver, err error)
+	GetSolver(client client.Client, logger logr.Logger, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (solver RoutingSolver, err error)
 }
 
 type SolverGetter struct{}
@@ -100,18 +101,19 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.DevWorkspaceRou
 	}
 }
 
-func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
+func (_ *SolverGetter) GetSolver(client client.Client, logger logr.Logger, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
 	isOpenShift := infrastructure.IsOpenShift()
+
 	switch routingClass {
 	case controllerv1alpha1.DevWorkspaceRoutingBasic:
-		return &BasicSolver{}, nil
+		return NewBasicSolver(client, logger), nil
 	case controllerv1alpha1.DevWorkspaceRoutingCluster:
-		return &ClusterSolver{}, nil
+		return NewClusterSolver(client, logger, false), nil
 	case controllerv1alpha1.DevWorkspaceRoutingClusterTLS, controllerv1alpha1.DevWorkspaceRoutingWebTerminal:
 		if !isOpenShift {
 			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
 		}
-		return &ClusterSolver{TLS: true}, nil
+		return NewClusterSolver(client, logger, true), nil
 	default:
 		return nil, RoutingNotSupported
 	}

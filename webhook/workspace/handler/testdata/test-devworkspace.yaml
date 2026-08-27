@@ -1,0 +1,16 @@
+apiVersion: workspace.devfile.io/v1alpha2
+kind: DevWorkspace
+metadata:
+  name: test-devworkspace
+spec:
+  started: true
+  template:
+    components:
+      - name: test-component
+        container:
+          image: test-image
+          endpoints:
+            - name: test-endpoint
+              targetPort: 8080
+              attributes:
+                discoverable: "true"

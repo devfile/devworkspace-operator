@@ -97,7 +97,10 @@ func TestBuildServerTLSOptions_NonOpenShift(t *testing.T) {
 	log := zap.New(zap.UseDevMode(true))
 	ctx := context.Background()
 
-	result := BuildServerTLSOptions(ctx, nil, nil, log, nil)
+	result, err := BuildServerTLSOptions(ctx, nil, nil, log, nil)
+	if err != nil {
+		t.Fatalf("Unexpected error on non-OpenShift: %v", err)
+	}
 
 	if result.TLSOpts != nil {
 		t.Errorf("Expected nil TLSOpts on non-OpenShift, got %v", result.TLSOpts)
@@ -145,7 +148,10 @@ func TestBuildServerTLSOptions_OpenShift_LegacyAdherence(t *testing.T) {
 		WithObjects(apiServer).
 		Build()
 
-	result := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	result, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	if !result.profileFetched {
 		t.Errorf("Expected profileFetched=true, got false")
@@ -201,7 +207,10 @@ func TestBuildServerTLSOptions_OpenShift_StrictAdherence(t *testing.T) {
 		WithObjects(apiServer).
 		Build()
 
-	result := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	result, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	if !result.profileFetched {
 		t.Errorf("Expected profileFetched=true, got false")
@@ -261,7 +270,10 @@ func TestBuildServerTLSOptions_OpenShift_EmptyAdherence(t *testing.T) {
 		WithObjects(apiServer).
 		Build()
 
-	result := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	result, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
 	if !result.profileFetched {
 		t.Errorf("Expected profileFetched=true, got false")
@@ -287,12 +299,9 @@ func TestBuildServerTLSOptions_OpenShift_NoAPIServer(t *testing.T) {
 		WithScheme(scheme).
 		Build()
 
-	result := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	_, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
 
-	if result.profileFetched {
-		t.Errorf("Expected profileFetched=false when APIServer resource is missing, got true")
-	}
-	if result.TLSOpts != nil {
-		t.Errorf("Expected nil TLSOpts on fetch failure, got %v", result.TLSOpts)
+	if err == nil {
+		t.Errorf("Expected error when APIServer resource is missing, got nil")
 	}
 }

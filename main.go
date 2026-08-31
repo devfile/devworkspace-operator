@@ -30,6 +30,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
+	"github.com/devfile/devworkspace-operator/pkg/tlssetup"
 	"github.com/devfile/devworkspace-operator/pkg/webhook"
 	"github.com/devfile/devworkspace-operator/version"
 
@@ -116,6 +117,13 @@ func main() {
 		setupLog.Error(err, "failed to initialized Kubernetes objects decoder")
 	}
 
+	serverTLS, err := tlssetup.BuildServerTLSOptions(
+		context.Background(), ctrl.GetConfigOrDie(), scheme, setupLog, nil)
+	if err != nil {
+		setupLog.Error(err, "failed to build TLS options from cluster TLS profile")
+		os.Exit(1)
+	}
+
 	cacheFunc, err := cache.GetCacheFunc()
 	if err != nil {
 		setupLog.Error(err, "failed to set up objects cache")
@@ -128,9 +136,11 @@ func main() {
 			BindAddress:    metricsAddr,
 			FilterProvider: filters.WithAuthenticationAndAuthorization,
 			SecureServing:  true,
+			TLSOpts:        serverTLS.TLSOpts,
 		},
 		WebhookServer: ctrl_webhook.NewServer(ctrl_webhook.Options{
-			Port: 9443,
+			Port:    9443,
+			TLSOpts: serverTLS.TLSOpts,
 		}),
 		HealthProbeBindAddress: ":6789",
 		LeaderElection:         enableLeaderElection,
@@ -220,6 +230,16 @@ func main() {
 		setupLog.Error(err, "failed creating conversion webhook for DevWorkspaces v1alpha2")
 	}
 
+	// On OpenShift, watch cluster TLS profile and restart if it changes.
+	signalCtx := ctrl.SetupSignalHandler()
+	ctx, cancelCtx := context.WithCancel(signalCtx)
+	defer cancelCtx()
+
+	if err := tlssetup.RegisterSecurityProfileWatcher(mgr, serverTLS, cancelCtx, setupLog); err != nil {
+		setupLog.Error(err, "unable to set up TLS security profile watcher")
+		os.Exit(1)
+	}
+
 	// Setup health check
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "Unable to set up health check")
@@ -233,7 +253,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

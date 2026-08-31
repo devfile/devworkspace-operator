@@ -20,24 +20,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
-
-	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
-
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/cache"
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"github.com/devfile/devworkspace-operator/version"
-	"github.com/devfile/devworkspace-operator/webhook/server"
-	"github.com/devfile/devworkspace-operator/webhook/workspace"
-
+	configv1 "github.com/openshift/api/config/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -48,6 +35,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/devfile/devworkspace-operator/pkg/cache"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/tlssetup"
+	"github.com/devfile/devworkspace-operator/version"
+	"github.com/devfile/devworkspace-operator/webhook/server"
+	"github.com/devfile/devworkspace-operator/webhook/workspace"
 )
 
 var (
@@ -66,6 +64,10 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(dwv1.AddToScheme(scheme))
 	utilruntime.Must(dwv2.AddToScheme(scheme))
+
+	if infrastructure.IsOpenShift() {
+		utilruntime.Must(configv1.AddToScheme(scheme))
+	}
 }
 
 func main() {
@@ -89,6 +91,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	serverTLS, err := tlssetup.BuildServerTLSOptions(
+		context.Background(), cfg, scheme, log, nil)
+	if err != nil {
+		log.Error(err, "failed to build TLS options from cluster TLS profile")
+		os.Exit(1)
+	}
+
 	namespace, err := infrastructure.GetWatchNamespace()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
@@ -105,6 +114,7 @@ func main() {
 		CertDir: server.WebhookServerCertDir,
 		Port:    server.WebhookServerPort,
 		Host:    server.WebhookServerHost,
+		TLSOpts: serverTLS.TLSOpts,
 	})
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -114,6 +124,7 @@ func main() {
 			BindAddress:    metricsAddr,
 			FilterProvider: filters.WithAuthenticationAndAuthorization,
 			SecureServing:  true,
+			TLSOpts:        serverTLS.TLSOpts,
 		},
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: ":6789",
@@ -130,8 +141,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	var shutdownChan = make(chan os.Signal, 1)
-	signal.Notify(shutdownChan, syscall.SIGTERM)
+	// On OpenShift, watch cluster TLS profile and restart if it changes.
+	signalCtx := signals.SetupSignalHandler()
+	ctx, cancelCtx := context.WithCancel(signalCtx)
+	defer cancelCtx()
+
+	if err := tlssetup.RegisterSecurityProfileWatcher(mgr, serverTLS, cancelCtx, log); err != nil {
+		log.Error(err, "unable to set up TLS security profile watcher")
+		os.Exit(1)
+	}
 
 	// Setup health check
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -146,7 +164,7 @@ func main() {
 	}
 
 	log.Info("Starting manager")
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}

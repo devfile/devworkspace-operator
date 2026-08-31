@@ -122,8 +122,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	serverTLS := tlssetup.BuildServerTLSOptions(
+	serverTLS, err := tlssetup.BuildServerTLSOptions(
 		context.Background(), cfg, scheme, log, nil)
+	if err != nil {
+		log.Error(err, "failed to build TLS options from cluster TLS profile")
+		os.Exit(1)
+	}
 
 	namespace, err := infrastructure.GetWatchNamespace()
 	if err != nil {

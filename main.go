@@ -118,8 +118,12 @@ func main() {
 		setupLog.Error(err, "failed to initialized Kubernetes objects decoder")
 	}
 
-	serverTLS := tlssetup.BuildServerTLSOptions(
+	serverTLS, err := tlssetup.BuildServerTLSOptions(
 		context.Background(), ctrl.GetConfigOrDie(), scheme, setupLog, nil)
+	if err != nil {
+		setupLog.Error(err, "failed to build TLS options from cluster TLS profile")
+		os.Exit(1)
+	}
 
 	cacheFunc, err := cache.GetCacheFunc()
 	if err != nil {

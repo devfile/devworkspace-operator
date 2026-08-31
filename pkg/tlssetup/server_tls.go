@@ -55,14 +55,14 @@ func ShouldHonorClusterTLSProfile(adherence configv1.TLSAdherencePolicy) bool {
 
 // BuildServerTLSOptions fetches TLS settings from the OpenShift API server.
 // Only applies the cluster profile when the tlsAdherence policy requires it.
-// Falls back to Go TLS defaults on fetch failure.
+// Returns an error if running on OpenShift but profile fetch fails.
 // If bootstrapClient is nil, creates a new client from cfg and scheme.
-func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger, bootstrapClient client.Client) ServerTLS {
+func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger, bootstrapClient client.Client) (ServerTLS, error) {
 	var result ServerTLS
 
 	if !infrastructure.IsOpenShift() {
 		log.Info("Not running on OpenShift; using Go default TLS configuration")
-		return result
+		return result, nil
 	}
 
 	// Create bootstrap client if not provided (production path)
@@ -70,21 +70,18 @@ func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8srun
 		var err error
 		bootstrapClient, err = client.New(cfg, client.Options{Scheme: scheme})
 		if err != nil {
-			log.Error(err, "Failed to create bootstrap client for TLS profile fetch; using Go default TLS configuration")
-			return result
+			return result, err
 		}
 	}
 
 	profile, err := ostls.FetchAPIServerTLSProfile(ctx, bootstrapClient)
 	if err != nil {
-		log.Error(err, "Failed to fetch TLS profile from APIServer; using Go default TLS configuration")
-		return result
+		return result, err
 	}
 
 	adherence, err := ostls.FetchAPIServerTLSAdherencePolicy(ctx, bootstrapClient)
 	if err != nil {
-		log.Error(err, "Failed to fetch TLS adherence policy from APIServer; using Go default TLS configuration")
-		return result
+		return result, err
 	}
 
 	result.InitialTLSProfileSpec = profile
@@ -95,7 +92,7 @@ func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8srun
 	if !ShouldHonorClusterTLSProfile(adherence) {
 		log.Info("TLS adherence policy does not require strict adherence; using Go default TLS configuration",
 			"policy", adherence)
-		return result
+		return result, nil
 	}
 
 	// Apply the cluster TLS profile
@@ -112,7 +109,7 @@ func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8srun
 		"cipherCount", len(profile.Ciphers),
 		"adherencePolicy", adherence)
 
-	return result
+	return result, nil
 }
 
 // RegisterSecurityProfileWatcher watches the APIServer TLS profile and adherence policy.

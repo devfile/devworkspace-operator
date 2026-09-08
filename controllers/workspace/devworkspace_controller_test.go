@@ -1707,6 +1707,45 @@ var _ = Describe("DevWorkspace Controller", func() {
 			Expect(testInit.ImagePullPolicy).To(Equal(corev1.PullAlways), "Explicit imagePullPolicy should be preserved")
 		})
 
+		It("Does not override base imagePullPolicy when DWOC init container has no explicit policy", func() {
+			config.SetGlobalConfigForTesting(&controllerv1alpha1.OperatorConfiguration{
+				Workspace: &controllerv1alpha1.WorkspaceConfig{
+					ProjectCloneConfig: &controllerv1alpha1.ProjectCloneConfig{
+						ImagePullPolicy: corev1.PullAlways,
+					},
+					InitContainers: []corev1.Container{
+						{
+							Name: projects.ProjectClonerContainerName,
+							Env:  []corev1.EnvVar{{Name: "EXTRA_VAR", Value: "injected"}},
+						},
+					},
+				},
+			})
+			defer config.SetGlobalConfigForTesting(nil)
+
+			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
+			devworkspace := getExistingDevWorkspace(devWorkspaceName)
+			workspaceID := devworkspace.Status.DevWorkspaceId
+
+			By("Manually making Routing ready to continue")
+			markRoutingReady(testURL, common.DevWorkspaceRoutingName(workspaceID))
+
+			deploy := &appsv1.Deployment{}
+			deployNN := namespacedName(common.DeploymentName(workspaceID), testNamespace)
+			Eventually(func() error {
+				return k8sClient.Get(ctx, deployNN, deploy)
+			}, timeout, interval).Should(Succeed(), "Getting workspace deployment from cluster")
+
+			var projectClone *corev1.Container
+			for i := range deploy.Spec.Template.Spec.InitContainers {
+				if deploy.Spec.Template.Spec.InitContainers[i].Name == projects.ProjectClonerContainerName {
+					projectClone = &deploy.Spec.Template.Spec.InitContainers[i]
+				}
+			}
+			Expect(projectClone).NotTo(BeNil(), "project-clone init container should be present")
+			Expect(projectClone.ImagePullPolicy).To(Equal(corev1.PullAlways), "DWOC patch should not override base imagePullPolicy")
+		})
+
 		It("Keeps workspace container imagePullPolicy as Always", func() {
 			createDevWorkspace(devWorkspaceName, "test-devworkspace.yaml")
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)

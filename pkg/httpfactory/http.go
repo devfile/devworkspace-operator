@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllers
+package httpfactory
 
 import (
 	"context"
@@ -35,7 +35,7 @@ import (
 	"golang.org/x/net/http/httpproxy"
 )
 
-var httpClientsFactory HttpClientsFactory
+var HttpFactory HttpClientsFactory
 
 type HttpClientsFactory interface {
 	// GetHttpClient returns an HTTP client configured with proxy, TLS, and custom CA certificates
@@ -84,7 +84,7 @@ func SetupHttpClientsFactory(k8s client.Client, logger logr.Logger) error {
 		InsecureSkipVerify: true,
 	}
 
-	httpClientsFactory = &DefaultHttpClientsFactory{
+	HttpFactory = &DefaultHttpClientsFactory{
 		k8s:            k8s,
 		logger:         logger,
 		systemCertPool: systemCertPool,

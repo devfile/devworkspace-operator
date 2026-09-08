@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package overrides
+package restrictions
 
 import (
 	"fmt"
@@ -21,17 +21,10 @@ import (
 )
 
 func getPodRestrictionErr(msg string) error {
-	return fmt.Errorf("cannot use pod-overrides to override pod %s", msg)
+	return fmt.Errorf("restricted pod field set %s", msg)
 }
 
-func restrictPodOverride(override *corev1.PodSpec, restrictedFields []string) error {
-	if override.Containers != nil {
-		return getPodRestrictionErr("containers")
-	}
-	if override.InitContainers != nil {
-		return getPodRestrictionErr("initContainers")
-	}
-
+func RestrictPod(pod *corev1.PodSpec, restrictedFields []string) error {
 	for _, field := range restrictedFields {
 		fieldName, fieldValue, _ := strings.Cut(field, "=")
 		if fieldName == "" {
@@ -46,8 +39,32 @@ func restrictPodOverride(override *corev1.PodSpec, restrictedFields []string) er
 			getRestrictionErr: getPodRestrictionErr,
 		}
 
-		if err := checkPodField(override, root, remaining, restriction); err != nil {
+		if err := checkPodField(pod, root, remaining, restriction); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func RestrictPodAndContainers(pod *corev1.PodSpec, restrictedPodFields []string, restrictedContainerFields []string) error {
+	if err := RestrictPod(pod, restrictedPodFields); err != nil {
+		return err
+	}
+
+	if pod.InitContainers != nil {
+		for _, container := range pod.InitContainers {
+			if err := RestrictContainer(&container, restrictedContainerFields); err != nil {
+				return err
+			}
+		}
+	}
+
+	if pod.Containers != nil {
+		for _, container := range pod.Containers {
+			if err := RestrictContainer(&container, restrictedContainerFields); err != nil {
+				return err
+			}
 		}
 	}
 

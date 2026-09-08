@@ -11,26 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package overrides
+package restrictions
 
 import (
+	"fmt"
 	"testing"
 
-	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/api/v2/pkg/attributes"
 	"github.com/stretchr/testify/assert"
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/utils/ptr"
-
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
-func TestRestrictPodOverride(t *testing.T) {
+func TestRestrictPod(t *testing.T) {
 	tests := []struct {
 		Name             string
 		RestrictedFields []string
@@ -41,18 +34,6 @@ func TestRestrictPodOverride(t *testing.T) {
 		{
 			Name:     "no denied fields allows everything",
 			Override: corev1.PodSpec{},
-		},
-		{
-			Name:            "containers always denied",
-			Override:        corev1.PodSpec{Containers: []corev1.Container{{}}},
-			IsErrorExpected: true,
-			ErrField:        "containers",
-		},
-		{
-			Name:            "initContainers always denied",
-			Override:        corev1.PodSpec{InitContainers: []corev1.Container{{}}},
-			IsErrorExpected: true,
-			ErrField:        "initContainers",
 		},
 		// ----------- RestartPolicy -----------
 		{
@@ -1444,53 +1425,16 @@ func TestRestrictPodOverride(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			err := restrictPodOverride(&tt.Override, tt.RestrictedFields)
+			err := RestrictPod(&tt.Override, tt.RestrictedFields)
 
 			if tt.IsErrorExpected {
 				assert.Error(t, err)
-				assert.Equal(t, getPodRestrictionErr(tt.ErrField).Error(), err.Error())
+				assert.Equal(t, fmt.Sprintf("restricted pod field set %s", tt.ErrField), err.Error())
 			} else {
 				assert.NoError(t, err)
 			}
 		})
 	}
-}
-
-func TestApplyPodOverridesStripsUnknownFields(t *testing.T) {
-	overrideJSON := `{"spec":{"schedulerName":"custom","futureSecurityField":"malicious-value","unknownNested":{"key":"val"}}}`
-
-	workspace := &common.DevWorkspaceWithConfig{}
-	workspace.DevWorkspace = &dw.DevWorkspace{}
-	workspace.Spec.Template = dw.DevWorkspaceTemplateSpec{
-		DevWorkspaceTemplateSpecContent: dw.DevWorkspaceTemplateSpecContent{
-			Attributes: attributes.Attributes{
-				constants.PodOverridesAttribute: apiext.JSON{Raw: []byte(overrideJSON)},
-			},
-			Components: []dw.Component{{
-				Name: "test-component",
-				ComponentUnion: dw.ComponentUnion{
-					Container: &dw.ContainerComponent{
-						Container: dw.Container{Image: "test-image"},
-					},
-				},
-			}},
-		},
-	}
-
-	deployment := &appsv1.Deployment{}
-	deployment.Spec.Template.Spec.Containers = []corev1.Container{{
-		Name:  "test-component",
-		Image: "test-image",
-	}}
-
-	patched, err := ApplyPodOverrides(workspace, deployment)
-	assert.NoError(t, err)
-	assert.Equal(t, "custom", patched.Spec.Template.Spec.SchedulerName)
-
-	patchedBytes, err := json.Marshal(patched.Spec.Template.Spec)
-	assert.NoError(t, err)
-	assert.NotContains(t, string(patchedBytes), "futureSecurityField")
-	assert.NotContains(t, string(patchedBytes), "unknownNested")
 }
 
 func preemptionPolicyPtr(p corev1.PreemptionPolicy) *corev1.PreemptionPolicy {

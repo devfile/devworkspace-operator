@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controllers
+package httpfactory
 
 import (
 	"context"
@@ -39,26 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
-
-type TestHttpClientsFactory struct {
-	client                *http.Client
-	healthCheckHttpClient *http.Client
-}
-
-func (t *TestHttpClientsFactory) GetHttpClient(_ context.Context, _ *controller.RoutingConfig) *http.Client {
-	return t.client
-}
-
-func (t *TestHttpClientsFactory) GetHealthCheckHttpClient() *http.Client {
-	return t.healthCheckHttpClient
-}
-
-func SetupHttpClientsForTesting(client *http.Client) {
-	httpClientsFactory = &TestHttpClientsFactory{
-		client:                client,
-		healthCheckHttpClient: client,
-	}
-}
 
 func TestHealthCheckHttpClient(t *testing.T) {
 	t.Run("returns non-nil client", func(t *testing.T) {

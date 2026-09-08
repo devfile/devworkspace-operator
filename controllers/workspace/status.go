@@ -27,6 +27,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/httpfactory"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	"github.com/go-logr/logr"
@@ -210,7 +211,7 @@ func checkServerStatus(workspace *common.DevWorkspaceWithConfig) (ok bool, respo
 	}
 	healthz.Path = path.Join(healthz.Path, "healthz")
 
-	healthCheckHttpClient := httpClientsFactory.GetHealthCheckHttpClient()
+	healthCheckHttpClient := httpfactory.HttpFactory.GetHealthCheckHttpClient()
 	resp, err := healthCheckHttpClient.Get(healthz.String())
 	if err != nil {
 		return false, nil, &dwerrors.RetryError{Err: err, Message: "Failed to check server status", RequeueAfter: 1 * time.Second}

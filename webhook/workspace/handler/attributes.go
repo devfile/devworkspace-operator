@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -29,7 +29,7 @@ import (
 // If only a single container component has the controller.devfile.io/merge-contribution attribute set to true, nil is returned.
 // If multiple container component have the controller.devfile.io/merge-contribution attribute set to true, or an error occurs
 // while parsing the attribute, an error is returned.
-func checkMultipleContainerContributionTargets(devWorkspaceSpec dwv2.DevWorkspaceTemplateSpec) error {
+func checkMultipleContainerContributionTargets(devWorkspaceSpec *dwv2.DevWorkspaceTemplateSpec) error {
 	var componentNames []string
 	for _, component := range devWorkspaceSpec.Components {
 		if component.Container == nil {

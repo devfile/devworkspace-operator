@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -72,7 +72,7 @@ func TestDeserializeObject(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s (%s)", tt.name, tt.filePath), func(t *testing.T) {
 			jsonBytes := readBytesFromFile(t, tt.filePath)
-			actualObj, err := deserializeToObject(jsonBytes, testAPI)
+			actualObj, err := DeserializeToObject(jsonBytes)
 			if tt.expectedErrRegexp != "" {
 				if !assert.Error(t, err, "Expect error to be returned") {
 					return
@@ -91,7 +91,7 @@ func TestDeserializeObject(t *testing.T) {
 }
 
 func TestErrorIfDeserializerNotInitialized(t *testing.T) {
-	_, err := deserializeToObject([]byte(""), testAPI)
+	_, err := DeserializeToObject([]byte(""))
 	assert.Error(t, err)
 	assert.Equal(t, "kubernetes object deserializer is not initialized", err.Error())
 }

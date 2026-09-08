@@ -22,10 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/devfile/devworkspace-operator/pkg/library/initcontainers"
-	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
-	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
-
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	devfilevalidation "github.com/devfile/api/v2/pkg/validation"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -35,15 +31,19 @@ import (
 	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/httpfactory"
 	"github.com/devfile/devworkspace-operator/pkg/library/annotate"
 	containerlib "github.com/devfile/devworkspace-operator/pkg/library/container"
 	wsDefaults "github.com/devfile/devworkspace-operator/pkg/library/defaults"
 	"github.com/devfile/devworkspace-operator/pkg/library/env"
 	"github.com/devfile/devworkspace-operator/pkg/library/flatten"
 	"github.com/devfile/devworkspace-operator/pkg/library/home"
+	"github.com/devfile/devworkspace-operator/pkg/library/initcontainers"
 	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides/restrictions"
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/pkg/library/restore"
+	"github.com/devfile/devworkspace-operator/pkg/library/ssh"
 	"github.com/devfile/devworkspace-operator/pkg/library/status"
 	"github.com/devfile/devworkspace-operator/pkg/provision/automount"
 	"github.com/devfile/devworkspace-operator/pkg/provision/metadata"
@@ -258,7 +258,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return reconcile.Result{Requeue: true}, err
 	}
 
-	httpClient := httpClientsFactory.GetHttpClient(ctx, config.Routing)
+	httpClient := httpfactory.HttpFactory.GetHttpClient(ctx, config.Routing)
 
 	flattenHelpers := flatten.ResolverTools{
 		WorkspaceNamespace:          workspace.Namespace,
@@ -339,7 +339,7 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		workspace.Config.Workspace.DefaultContainerResources,
 		workspace.Config.Workspace.ContainerResourceCaps,
 		workspace.Config.Workspace.PostStartTimeout,
-		overrides.GetRestrictedContainerOverrideFields(workspace),
+		restrictions.GetRestrictedContainerFields(workspace),
 		postStartDebugTrapSleepDuration,
 	)
 	if err != nil {
@@ -789,11 +789,6 @@ func (r *DevWorkspaceReconciler) getWorkspaceId(ctx context.Context, workspace *
 }
 
 func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := SetupHttpClientsFactory(mgr.GetClient(), mgr.GetLogger())
-	if err != nil {
-		return err
-	}
-
 	maxConcurrentReconciles, err := wkspConfig.GetMaxConcurrentReconciles()
 	if err != nil {
 		return err

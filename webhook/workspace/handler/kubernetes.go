@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,6 +16,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
@@ -33,7 +34,13 @@ var (
 	userVerbs = []string{"get", "create", "update", "delete"}
 )
 
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context.Context, req admission.Request, wksp *dwv2.DevWorkspaceTemplateSpec) error {
+func (h *WebhookHandler) validateKubernetesObjectPermissions(
+	ctx context.Context,
+	req admission.Request,
+	wksp *dwv2.DevWorkspaceTemplateSpec,
+) ([]string, error) {
+	var validatedKubernetesResources []string
+
 	kubeComponents := getKubeComponentsFromWorkspace(wksp)
 	for componentName, component := range kubeComponents {
 		if !component.GetDeployByDefault() {
@@ -46,56 +53,39 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate(ctx context
 			continue
 		}
 		if component.Inlined == "" {
-			return fmt.Errorf("kubernetes component does not define inlined content")
+			return nil, fmt.Errorf("kubernetes component does not define inlined content")
 		}
-		if err := h.validatePermissionsOnObject(ctx, req, componentName, component.Inlined); err != nil {
-			return err
+
+		typeMeta := &metav1.TypeMeta{}
+		if err := yaml.Unmarshal([]byte(component.Inlined), typeMeta); err != nil {
+			return nil, fmt.Errorf("failed to read content for component %s", componentName)
+		}
+
+		if err := h.validatePermissionsOnObject(ctx, req, componentName, typeMeta); err != nil {
+			return nil, err
+		}
+
+		gvk := typeMeta.GroupVersionKind().String()
+		if !slices.Contains(validatedKubernetesResources, gvk) {
+			validatedKubernetesResources = append(validatedKubernetesResources, gvk)
 		}
 	}
-	return nil
+
+	return validatedKubernetesResources, nil
 }
 
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv2.DevWorkspaceTemplateSpec) error {
-	newKubeComponents := getKubeComponentsFromWorkspace(newWksp)
-	oldKubeComponents := getKubeComponentsFromWorkspace(oldWksp)
-
-	for componentName, newComponent := range newKubeComponents {
-		if !newComponent.GetDeployByDefault() {
-			// Intended to be applied later, will not be handled by DWO. It's up to whoever applies it to make
-			// sure that's safe to do (e.g. by using the user's token to apply the yaml)
-			continue
-		}
-
-		if newComponent.Uri != "" {
-			// We're going to ignore URI components for now
-			continue
-		}
-		if newComponent.Inlined == "" {
-			return fmt.Errorf("kubernetes component does not define inlined content")
-		}
-
-		oldComponent, ok := oldKubeComponents[componentName]
-		if !ok || oldComponent.Inlined != newComponent.Inlined {
-			// Review new components
-			if err := h.validatePermissionsOnObject(ctx, req, componentName, newComponent.Inlined); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (h *WebhookHandler) validatePermissionsOnObject(ctx context.Context, req admission.Request, componentName, component string) error {
-
-	typeMeta := &metav1.TypeMeta{}
-	if err := yaml.Unmarshal([]byte(component), typeMeta); err != nil {
-		return fmt.Errorf("failed to read content for component %s", componentName)
-	}
+func (h *WebhookHandler) validatePermissionsOnObject(
+	ctx context.Context,
+	req admission.Request,
+	componentName string,
+	typeMeta *metav1.TypeMeta,
+) error {
 	kind := typeMeta.Kind
+
 	if kind == "List" {
 		return fmt.Errorf("lists are not supported in Kubernetes or OpenShift components")
 	}
-	if kind == "Role" || kind == "Rolebinding" || kind == "ClusterRole" || kind == "ClusterRoleBinding" {
+	if kind == "Role" || kind == "RoleBinding" || kind == "ClusterRole" || kind == "ClusterRoleBinding" {
 		return fmt.Errorf("kubernetes RBAC objects are not permitted within DevWorkspace components")
 	}
 	if kind == "DevWorkspace" || kind == "DevWorkspaceTemplate" {
@@ -170,7 +160,7 @@ func getKubeLikeComponent(component *dwv2.Component) (*dwv2.K8sLikeComponent, er
 	return nil, fmt.Errorf("component does not specify kubernetes or openshift fields")
 }
 
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate_v1alpha1(ctx context.Context, req admission.Request, wksp *dwv1.DevWorkspaceTemplateSpec) error {
+func (h *WebhookHandler) validateKubernetesObjectPermissions_v1alpha1(ctx context.Context, req admission.Request, wksp *dwv1.DevWorkspaceTemplateSpec) error {
 	kubeComponents := getKubeComponentsFromWorkspace_v1alpha1(wksp)
 	for componentName, component := range kubeComponents {
 		if component.Uri != "" {
@@ -182,34 +172,13 @@ func (h *WebhookHandler) validateKubernetesObjectPermissionsOnCreate_v1alpha1(ct
 		// v1alpha1 DevWorkspace/DevWorkspaceTemplates do not have a deployByDefault field, and the default
 		// value in v1alpha2 is false (i.e. do not deploy at start time); however, for safety we check permissions
 		// even if the object will not be deployed (v1alpha1 should not be used, in general)
-		if err := h.validatePermissionsOnObject(ctx, req, componentName, component.Inlined); err != nil {
+		typeMeta := &metav1.TypeMeta{}
+		if err := yaml.Unmarshal([]byte(component.Inlined), typeMeta); err != nil {
+			return fmt.Errorf("failed to read content for component %s", componentName)
+		}
+
+		if err := h.validatePermissionsOnObject(ctx, req, componentName, typeMeta); err != nil {
 			return err
-		}
-	}
-	return nil
-}
-
-func (h *WebhookHandler) validateKubernetesObjectPermissionsOnUpdate_v1alpha1(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv1.DevWorkspaceTemplateSpec) error {
-	newKubeComponents := getKubeComponentsFromWorkspace_v1alpha1(newWksp)
-	oldKubeComponents := getKubeComponentsFromWorkspace_v1alpha1(oldWksp)
-
-	for componentName, newComponent := range newKubeComponents {
-		if newComponent.Uri != "" {
-			return fmt.Errorf("kubenetes components specified via URI are unsupported")
-		}
-		if newComponent.Inlined == "" {
-			return fmt.Errorf("kubernetes component does not define inlined content")
-		}
-
-		// v1alpha1 DevWorkspace/DevWorkspaceTemplates do not have a deployByDefault field, and the default
-		// value in v1alpha2 is false (i.e. do not deploy at start time); however, for safety we check permissions
-		// even if the object will not be deployed (v1alpha1 should not be used, in general)
-		oldComponent, ok := oldKubeComponents[componentName]
-		if !ok || oldComponent.Inlined != newComponent.Inlined {
-			// Review new components
-			if err := h.validatePermissionsOnObject(ctx, req, componentName, newComponent.Inlined); err != nil {
-				return err
-			}
 		}
 	}
 	return nil

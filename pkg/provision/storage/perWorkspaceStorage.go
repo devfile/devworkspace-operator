@@ -26,6 +26,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
 	devfileConstants "github.com/devfile/devworkspace-operator/pkg/library/constants"
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides/restrictions"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
@@ -77,7 +78,7 @@ func (p *PerWorkspaceStorageProvisioner) ProvisionStorage(podAdditions *v1alpha1
 		pvcName,
 		podAdditions,
 		&workspace.Spec.Template,
-		overrides.GetRestrictedPodOverrideFields(workspace),
+		restrictions.GetRestrictedPodFields(workspace),
 	); err != nil {
 		return &dwerrors.FailError{
 			Err:     err,

@@ -93,6 +93,14 @@ const (
 	// can either be specified as a decimal (e.g. '416') or as an octal by prefixing the number with zero (e.g. '0640')
 	DevWorkspaceMountAccessModeAnnotation = "controller.devfile.io/mount-access-mode"
 
+	// DevWorkspaceValidatedK8sResourcesAnnotation is the annotation key used to store the list of
+	// Kubernetes resources that have been validated by the mutating webhook via SubjectAccessReview.
+	// The controller uses this to determine which objects the workspace creator is authorized to create.
+	DevWorkspaceValidatedK8sResourcesAnnotation = "controller.devfile.io/validated-kubernetes-resources"
+	// DevWorkspaceValidatedSCCAnnotation is the annotation key used to store the SecurityContextConstraints
+	// that have been validated by the mutating webhook via SubjectAccessReview.
+	DevWorkspaceValidatedSCCAnnotation = "controller.devfile.io/validated-scc"
+
 	// DevWorkspaceGitCredentialLabel is the label key to specify if the secret is a git credential. All secrets who
 	// specify this label in a namespace will consolidate into one secret before mounting into a devworkspace.
 	// Only secret data with the credentials key will be used and credentials must be the base64 encoded version
@@ -161,10 +169,10 @@ const (
 	// fails to start (i.e. enters the "Failed" phase), its deployment will not be scaled down in order to allow viewing logs, etc.
 	DevWorkspaceDebugStartAnnotation = "controller.devfile.io/debug-start"
 
-	// WebhookRestartedAtAnnotation holds the the time (unixnano) of when the webhook server was forced to restart by controller
+	// WebhookRestartedAtAnnotation holds the time (unixnano) of when the webhook server was forced to restart by controller
 	WebhookRestartedAtAnnotation = "controller.devfile.io/restarted-at"
 
-	// DevWorkspaceStartedAtAnnotation holds the the time (unixnano) of when the devworkspace was started
+	// DevWorkspaceStartedAtAnnotation holds the time (unixnano) of when the devworkspace was started
 	DevWorkspaceStartedAtAnnotation = "controller.devfile.io/started-at"
 
 	// RoutingAnnotationInfix is the infix of the annotations of DevWorkspace that are passed down as annotation to the DevWorkspaceRouting objects.

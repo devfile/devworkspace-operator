@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides/restrictions"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiext "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -42,7 +43,7 @@ func NeedsPodOverrides(workspace *common.DevWorkspaceWithConfig) bool {
 }
 
 func ApplyPodOverrides(workspace *common.DevWorkspaceWithConfig, deployment *appsv1.Deployment) (*appsv1.Deployment, error) {
-	overrides, err := getPodOverrides(&workspace.Spec.Template, GetRestrictedPodOverrideFields(workspace))
+	overrides, err := getPodOverrides(&workspace.Spec.Template, restrictions.GetRestrictedPodFields(workspace))
 	if err != nil {
 		return nil, err
 	}
@@ -132,4 +133,15 @@ func getPodOverrides(workspace *dw.DevWorkspaceTemplateSpec, restrictedFields []
 		allOverrides = append(allOverrides, patchData)
 	}
 	return allOverrides, nil
+}
+
+func restrictPodOverride(override *corev1.PodSpec, restrictedFields []string) error {
+	if override.Containers != nil {
+		return fmt.Errorf("restricted pod field set containers")
+	}
+	if override.InitContainers != nil {
+		return fmt.Errorf("restricted pod field set initContainers")
+	}
+
+	return restrictions.RestrictPod(override, restrictedFields)
 }

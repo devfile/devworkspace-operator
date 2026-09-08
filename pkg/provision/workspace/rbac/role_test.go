@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -63,6 +63,44 @@ func TestDoesNothingIfRoleAlreadyInSync(t *testing.T) {
 	assert.NoError(t, err, "Role should be created")
 	err = syncRoles(testdw, api)
 	assert.NoError(t, err, "Should not return error if role is in sync")
+}
+
+func TestRejectsSCCRoleWhenAnnotationMismatches(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
+	testdw.Annotations = map[string]string{
+		constants.DevWorkspaceValidatedSCCAnnotation: "different-scc",
+	}
+	api := getTestClusterAPI(t, testdw.DevWorkspace)
+	retryErr := &dwerrors.RetryError{}
+	err := syncRoles(testdw, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that default role was created") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+	err = syncRoles(testdw, api)
+	assert.Error(t, err, "Should reject SCC role when annotation does not match attribute")
+	failErr := &dwerrors.FailError{}
+	assert.ErrorAs(t, err, &failErr, "Error should have FailError type")
+	assert.Contains(t, err.Error(), "not authorized")
+}
+
+func TestRejectsSCCRoleWhenAnnotationEmpty(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
+	testdw := getTestDevWorkspaceWithAttributes(t, "test-devworkspace", constants.WorkspaceSCCAttribute, testSCCName)
+	testdw.Annotations = map[string]string{
+		constants.DevWorkspaceValidatedSCCAnnotation: "",
+	}
+	api := getTestClusterAPI(t, testdw.DevWorkspace)
+	retryErr := &dwerrors.RetryError{}
+	err := syncRoles(testdw, api)
+	if assert.Error(t, err, "Should return RetryError to indicate that default role was created") {
+		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
+	}
+	err = syncRoles(testdw, api)
+	assert.Error(t, err, "Should reject SCC role when annotation empty")
+	failErr := &dwerrors.FailError{}
+	assert.ErrorAs(t, err, &failErr, "Error should have FailError type")
+	assert.Contains(t, err.Error(), "not authorized")
 }
 
 func TestCreatesSCCRoleIfNotExists(t *testing.T) {

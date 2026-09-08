@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -29,39 +29,60 @@ import (
 // In case we're validating a workspace on creation, parameter oldWksp should be set to nil. Returns an error if the user
 // cannot perform the requested changes, or if an unexpected error occurs.
 // Note: we only perform validation on v1alpha2 DevWorkspaces at the moment, as v1alpha1 DevWorkspaces do not support attributes.
-func (h *WebhookHandler) validateUserPermissions(ctx context.Context, req admission.Request, newWksp, oldWksp *dwv2.DevWorkspace) error {
-	if !newWksp.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
+func (h *WebhookHandler) validateUserPermissions(
+	ctx context.Context,
+	req admission.Request,
+	newWksp *dwv2.DevWorkspaceTemplateSpec,
+	oldWksp *dwv2.DevWorkspace,
+) (string, error) {
+	// Passing the unresolved oldWorkspace is sufficient here. The validation check prefers the
+	// `controller.devfile.io/validated-scc` annotation (which already reflects the resolved/flattened
+	// spec from the previous webhook call) and only falls back to the raw SCC attribute for backward
+	// compatibility with workspaces created before the annotation was introduced.
+
+	if !newWksp.Attributes.Exists(constants.WorkspaceSCCAttribute) {
 		// Workspace is not requesting anything we need to check RBAC for.
-		return nil
+		return "", nil
 	}
 
 	var attributeDecodeErr error
-	newSCCAttr := newWksp.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, &attributeDecodeErr)
+	newSCCAttr := newWksp.Attributes.GetString(constants.WorkspaceSCCAttribute, &attributeDecodeErr)
 	if attributeDecodeErr != nil {
-		return fmt.Errorf("failed to read %s attribute in DevWorkspace: %s", constants.WorkspaceSCCAttribute, attributeDecodeErr)
+		return "", fmt.Errorf("failed to read %s attribute in DevWorkspace: %s", constants.WorkspaceSCCAttribute, attributeDecodeErr)
 	}
 
-	if oldWksp != nil && oldWksp.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
-		// If we're updating a DevWorkspace, check RBAC only if the relevant attribute is modified to avoid performing too many SARs.
-		oldSCCAttr := oldWksp.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, &attributeDecodeErr)
-		if attributeDecodeErr != nil {
-			return fmt.Errorf("failed to read %s attribute in DevWorkspace: %s", constants.WorkspaceSCCAttribute, attributeDecodeErr)
+	var oldSCCAttr string
+	if oldWksp != nil {
+		// Prefer the validated-scc annotation over the raw attribute because the annotation
+		// reflects the SCC from the fully resolved (flattened) DevWorkspace, which may differ
+		// from the unresolved spec (e.g. when the SCC is inherited from a parent).
+		oldSCCAttr = oldWksp.Annotations[constants.DevWorkspaceValidatedSCCAnnotation]
+
+		if oldSCCAttr == "" &&
+			oldWksp.Spec.Template.Attributes.Exists(constants.WorkspaceSCCAttribute) {
+
+			oldSCCAttr = oldWksp.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, &attributeDecodeErr)
+			if attributeDecodeErr != nil {
+				return "", fmt.Errorf("failed to read %s attribute in DevWorkspace: %s", constants.WorkspaceSCCAttribute, attributeDecodeErr)
+			}
 		}
-		if oldSCCAttr == newSCCAttr {
-			// RBAC has already been checked for this setting, don't recheck
-			return nil
-		}
-		if oldSCCAttr != newSCCAttr {
+
+		if oldSCCAttr != "" {
+			if oldSCCAttr == newSCCAttr {
+				// RBAC has already been checked for this setting, don't recheck
+				return newSCCAttr, nil
+			}
+
 			// Don't allow attribute to be changed once it is set, otherwise we can't clean up the SCC when the workspace is deleted.
-			return fmt.Errorf("%s attribute cannot be modified after being set -- workspace must be deleted", constants.WorkspaceSCCAttribute)
+			return "", fmt.Errorf("%s attribute cannot be modified after being set -- workspace must be deleted", constants.WorkspaceSCCAttribute)
 		}
 	}
 
 	if err := h.validateOpenShiftSCC(ctx, req, newSCCAttr); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return newSCCAttr, nil
 }
 
 func (h *WebhookHandler) validateOpenShiftSCC(ctx context.Context, req admission.Request, scc string) error {

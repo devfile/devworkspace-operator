@@ -16,6 +16,7 @@ package overrides
 import (
 	"fmt"
 
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides/restrictions"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -72,6 +73,29 @@ func ApplyContainerOverrides(component *dw.Component, container *corev1.Containe
 	handleDefaultedContainerFields(patched)
 
 	return patched, nil
+}
+
+func restrictContainerOverride(override *corev1.Container, restrictedFields []string) error {
+	if override.Name != "" {
+		return fmt.Errorf("restricted container field set name")
+	}
+	if override.Image != "" {
+		return fmt.Errorf("restricted container field set image")
+	}
+	if override.Command != nil {
+		return fmt.Errorf("restricted container field set command")
+	}
+	if override.Args != nil {
+		return fmt.Errorf("restricted container field set args")
+	}
+	if override.Ports != nil {
+		return fmt.Errorf("restricted container field set ports")
+	}
+	if override.Env != nil {
+		return fmt.Errorf("restricted container field set env")
+	}
+
+	return restrictions.RestrictContainer(override, restrictedFields)
 }
 
 // handleDefaultedContainerFields fills partially-filled structs with defaulted fields

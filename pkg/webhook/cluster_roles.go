@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -124,6 +124,60 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 				},
 				Verbs: []string{
 					"create",
+				},
+			},
+			{
+				APIGroups: []string{
+					"controller.devfile.io",
+				},
+				Resources: []string{
+					"devworkspaceoperatorconfigs",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"workspace.devfile.io",
+				},
+				Resources: []string{
+					"devworkspacetemplates",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			// Needed for pkg/httpfactory/http.go:224
+			{
+				APIGroups: []string{
+					"",
+				},
+				Resources: []string{
+					"configmaps",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+				},
+			},
+			// Needed for pkg/config/sync.go:109 (SetupControllerConfig)
+			{
+				APIGroups: []string{
+					"config.openshift.io",
+				},
+				Resources: []string{
+					"proxies",
+				},
+				ResourceNames: []string{
+					"cluster",
+				},
+				Verbs: []string{
+					"get",
 				},
 			},
 		},

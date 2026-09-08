@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,12 +22,12 @@ import (
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	workspacecontroller "github.com/devfile/devworkspace-operator/controllers/workspace"
 	"github.com/devfile/devworkspace-operator/controllers/workspace/internal/testutil"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/httpfactory"
 	"github.com/devfile/devworkspace-operator/pkg/library/projects"
 	"github.com/devfile/devworkspace-operator/pkg/library/restore"
 	. "github.com/onsi/ginkgo/v2"
@@ -184,7 +184,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 		AfterEach(func() {
 			deleteDevWorkspace(devWorkspaceName)
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Creates roles and rolebindings", func() {
@@ -317,7 +317,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						"test-url/healthz": {
@@ -355,7 +355,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		const testURL = "test-url"
 
 		BeforeEach(func() {
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						fmt.Sprintf("%s/healthz", testURL): {
@@ -368,7 +368,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 		AfterEach(func() {
 			deleteDevWorkspace(devWorkspaceName)
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Mounts image pull secrets to the DevWorkspace Deployment", func() {
@@ -954,7 +954,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		const testURL = "test-url"
 
 		BeforeEach(func() {
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						fmt.Sprintf("%s/healthz", testURL): {
@@ -967,7 +967,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 		AfterEach(func() {
 			deleteDevWorkspace(devWorkspaceName)
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Sets the runtimeClassName from the DWOC", func() {
@@ -1033,7 +1033,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		const testURL = "test-url"
 
 		BeforeEach(func() {
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						fmt.Sprintf("%s/healthz", testURL): {
@@ -1047,7 +1047,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 		AfterEach(func() {
 			deleteDevWorkspace(devWorkspaceName)
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Stops workspaces and scales deployment to zero", func() {
@@ -1224,7 +1224,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 		BeforeEach(func() {
 			By("Setting up HTTP client")
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						fmt.Sprintf("%s/healthz", testURL): {
@@ -1241,7 +1241,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			deleteDevWorkspace(altDevWorkspaceName)
 			cleanupPVC("claim-devworkspace")
 			By("Resetting HTTP client")
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Cleans up workspace PVC storage when other workspaces exist", func() {
@@ -1361,7 +1361,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		const testURL = "test-url"
 
 		BeforeEach(func() {
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						fmt.Sprintf("%s/healthz", testURL): {
@@ -1374,7 +1374,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 		AfterEach(func() {
 			deleteDevWorkspace(devWorkspaceName)
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Restores workspace from backup with common PVC", func() {
@@ -1563,7 +1563,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			devworkspace := getExistingDevWorkspace(devWorkspaceName)
 			workspaceID := devworkspace.Status.DevWorkspaceId
 
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						"test-url/healthz": {
@@ -1595,7 +1595,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 			Expect(runningCondition.Status).Should(Equal(corev1.ConditionTrue))
 
 			// Clean up
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Ensures preStart initContainers are run after project-clone", func() {

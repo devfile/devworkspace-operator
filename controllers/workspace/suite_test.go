@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,6 +22,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/devfile/devworkspace-operator/pkg/httpfactory"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	dwv1 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha1"
@@ -147,7 +148,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	// Set HTTP client to fail all requests by default; tests that require HTTP must set this up directly
-	workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+	httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 
 	// Skip trying to set up / test webhooks for now
 

@@ -36,4 +36,4 @@ input:
 
 
 output:
-  errRegexp: "cannot use container-overrides to override container image"
+  errRegexp: "restricted container field set image"

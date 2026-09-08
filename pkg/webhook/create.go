@@ -109,5 +109,20 @@ func setUpWebhookServerRBAC(ctx context.Context, err error, client crclient.Clie
 	if err != nil {
 		return err
 	}
+
+	// Set up the namespace-scoped role and role binding (e.g. routes on OpenShift)
+	log.Info("Setting up the webhook server role")
+	err = CreateWebhookRole(client, ctx, namespace)
+	if err != nil {
+		return err
+	}
+
+	// Set up the namespace-scoped role binding
+	log.Info("Setting up the webhook server role binding")
+	err = CreateWebhookRoleBinding(client, ctx, namespace)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

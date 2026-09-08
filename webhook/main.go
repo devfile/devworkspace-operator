@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -24,7 +24,18 @@ import (
 	"runtime"
 	"syscall"
 
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/httpfactory"
+	kubesync "github.com/devfile/devworkspace-operator/pkg/library/kubernetes"
+	configv1 "github.com/openshift/api/config/v1"
+	routev1 "github.com/openshift/api/route/v1"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -64,8 +75,14 @@ func init() {
 	}
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwv1.AddToScheme(scheme))
 	utilruntime.Must(dwv2.AddToScheme(scheme))
+
+	if infrastructure.IsOpenShift() {
+		utilruntime.Must(routev1.Install(scheme))
+		utilruntime.Must(configv1.Install(scheme))
+	}
 }
 
 func main() {
@@ -81,6 +98,11 @@ func main() {
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Commit: %s", version.Commit))
 	log.Info(fmt.Sprintf("BuildTime: %s", version.BuildTime))
+
+	if err := kubesync.InitializeDeserializer(scheme); err != nil {
+		log.Error(err, "Failed to initialize kubernetes object deserializer")
+		os.Exit(1)
+	}
 
 	// Get a config to talk to the apiserver
 	cfg, err := clientconfig.GetConfig()
@@ -124,6 +146,30 @@ func main() {
 		os.Exit(1)
 	}
 
+	nonCachedClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		log.Error(err, "Failed to setup nonCachedClient")
+		os.Exit(1)
+	}
+
+	err = config.SetupControllerConfig(nonCachedClient)
+	if err != nil {
+		log.Error(err, "Failed to setup Controller Config")
+		os.Exit(1)
+	}
+
+	err = httpfactory.SetupHttpClientsFactory(mgr.GetClient(), mgr.GetLogger())
+	if err != nil {
+		log.Error(err, "Failed to setup Http clients factory")
+		os.Exit(1)
+	}
+
+	err = setupConfigCacheWatcher(mgr)
+	if err != nil {
+		log.Error(err, "Failed to setup config watcher")
+		os.Exit(1)
+	}
+
 	err = createWebhooks(mgr)
 	if err != nil {
 		log.Error(err, "Failed to create webhooks")
@@ -164,4 +210,23 @@ func createWebhooks(mgr manager.Manager) error {
 		return err
 	}
 	return nil
+}
+
+func setupConfigCacheWatcher(mgr ctrl.Manager) error {
+	emptyMapper := func(ctx context.Context, obj client.Object) []reconcile.Request {
+		return []reconcile.Request{}
+	}
+
+	// Do nothing, just for keeping DWOC up to date
+	return ctrl.NewControllerManagedBy(mgr).
+		Named("dwoc-config-watcher").
+		WithOptions(controller.Options{
+			UsePriorityQueue: ptr.To(false),
+		}).
+		Watches(&controllerv1alpha1.DevWorkspaceOperatorConfig{},
+			handler.EnqueueRequestsFromMapFunc(emptyMapper),
+			builder.WithPredicates(config.Predicates())).
+		Complete(reconcile.Func(func(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+			return reconcile.Result{}, nil
+		}))
 }

@@ -36,6 +36,17 @@ func syncRoles(workspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) er
 		return nil
 	}
 	sccName := workspace.Spec.Template.Attributes.GetString(constants.WorkspaceSCCAttribute, nil)
+
+	// For backward compatibility, skip the validation when the annotation is absent, as it
+	// may not be present on workspaces created before this check was introduced.
+	if validatedSCCName, ok := workspace.Annotations[constants.DevWorkspaceValidatedSCCAnnotation]; ok {
+		if validatedSCCName != sccName {
+			return &dwerrors.FailError{
+				Message: fmt.Sprintf("user is not authorized to use SecurityContextConstraints '%s'", sccName),
+			}
+		}
+	}
+
 	sccRole := generateUseRoleForSCC(workspace.Namespace, sccName)
 	if _, err := sync.SyncObjectWithCluster(sccRole, api); err != nil {
 		return dwerrors.WrapSyncError(err)

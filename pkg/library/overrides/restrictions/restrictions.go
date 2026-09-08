@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package overrides
+package restrictions
 
 import (
 	"strconv"
@@ -100,7 +100,7 @@ func (r FieldRestriction) checkRestrictedValue(value string) error {
 	return nil
 }
 
-func GetRestrictedContainerOverrideFields(workspace *common.DevWorkspaceWithConfig) []string {
+func GetRestrictedContainerFields(workspace *common.DevWorkspaceWithConfig) []string {
 	if workspace.Config != nil && workspace.Config.Workspace != nil && workspace.Config.Workspace.Overrides != nil {
 		return workspace.Config.Workspace.Overrides.RestrictedContainerOverrideFields
 	}
@@ -108,7 +108,7 @@ func GetRestrictedContainerOverrideFields(workspace *common.DevWorkspaceWithConf
 	return nil
 }
 
-func GetRestrictedPodOverrideFields(workspace *common.DevWorkspaceWithConfig) []string {
+func GetRestrictedPodFields(workspace *common.DevWorkspaceWithConfig) []string {
 	if workspace.Config != nil && workspace.Config.Workspace != nil && workspace.Config.Workspace.Overrides != nil {
 		return workspace.Config.Workspace.Overrides.RestrictedPodOverrideFields
 	}

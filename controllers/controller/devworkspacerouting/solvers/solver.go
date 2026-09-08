@@ -116,6 +116,9 @@ func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha
 		}
 		return &ClusterSolver{TLS: true}, nil
 	case controllerv1alpha1.DevWorkspaceRoutingGatewayAPI:
+		if !infrastructure.IsGatewayAPIInstalled() {
+			return nil, fmt.Errorf("routing class %s requires Gateway API CRDs to be installed on the cluster", routingClass)
+		}
 		return &GatewayAPISolver{}, nil
 	default:
 		return nil, RoutingNotSupported

@@ -165,17 +165,21 @@ func deleteIngress(endpointName string, namespace string) {
 	deleteObject(&createdIngress)
 }
 
+func redirectRouteName(endpointName string) string {
+	return common.RouteName(testWorkspaceID, endpointName) + "-http-redirect"
+}
+
 func deleteHTTPRoute(endpointName string, namespace string, isRedirect bool) {
 	createdHTTPRoute := gwapiv1.HTTPRoute{}
 	routeName := common.RouteName(testWorkspaceID, endpointName)
 	if isRedirect {
-		routeName = routeName + "-http-redirect"
+		routeName = redirectRouteName(endpointName)
 	}
 	httpRouteNamespacedName := namespacedName(routeName, namespace)
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, httpRouteNamespacedName, &createdHTTPRoute)
-		return err == nil
-	}, timeout, interval).Should(BeTrue(), "HTTPRoute should exist in cluster")
+	if err := k8sClient.Get(ctx, httpRouteNamespacedName, &createdHTTPRoute); err != nil {
+		Expect(k8sErrors.IsNotFound(err)).Should(BeTrue(), "unexpected error fetching HTTPRoute %s", routeName)
+		return
+	}
 	deleteObject(&createdHTTPRoute)
 }
 

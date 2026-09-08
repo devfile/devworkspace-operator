@@ -367,7 +367,7 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				dwoc := testControllerCfg.DeepCopy()
 				dwoc.Routing = &controllerv1alpha1.RoutingConfig{
 					ClusterHostSuffix:   "test-environment-cluster-suffix",
-					DefaultRoutingClass: "gateway-api",
+					DefaultRoutingClass: string(controllerv1alpha1.DevWorkspaceRoutingGatewayAPI),
 					GatewayRef: &controllerv1alpha1.GatewayReference{
 						Name:      gatewayName,
 						Namespace: &gatewayRefNamespace,
@@ -449,6 +449,9 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				}, timeout, interval).Should(Equal(controllerv1alpha1.RoutingReady), "DevWorkspaceRouting should have Ready phase")
 				Expect(createdDWR.Status.Message).ShouldNot(BeNil(), "Status message should be set for preparing DevWorkspaceRoutings")
 				Expect(createdDWR.Status.Message).Should(Equal("DevWorkspaceRouting prepared"), "Status message should indicate that the DevWorkspaceRouting is prepared")
+
+				By("Checking ExposedEndpoints are set")
+				Expect(createdDWR.Status.ExposedEndpoints).ShouldNot(BeEmpty(), "ExposedEndpoints should be set when routing is ready")
 			})
 
 			It("Creates services", func() {
@@ -515,11 +518,17 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				Expect(createdHTTPRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(constants.DevWorkspaceEndpointNameAnnotation, exposedEndPointName), "HTTPRoute should have endpoint name annotation")
 				Expect(createdHTTPRoute.ObjectMeta.Annotations).Should(HaveKeyWithValue(endpointAnnotationKey, endpointAnnotationValue), "HTTPRoute should have annotation from endpoint")
 
+				By("Checking HTTPRoute has correct hostnames")
+				expectedHostname := common.EndpointHostname("test-environment-cluster-suffix", testWorkspaceID, common.EndpointName(exposedEndPointName), exposedTargetPort)
+				Expect(createdHTTPRoute.Spec.Hostnames).Should(ContainElement(gwapiv1.Hostname(expectedHostname)), "HTTPRoute should have expected hostname")
+
 				By("Checking HTTPRoute has correct ParentRefs pointing to Gateway")
 				Expect(len(createdHTTPRoute.Spec.ParentRefs)).Should(Equal(1), "HTTPRoute should have one parent reference")
 				parentRef := createdHTTPRoute.Spec.ParentRefs[0]
 				Expect(string(parentRef.Name)).Should(Equal(gatewayName), "HTTPRoute should reference the configured Gateway")
+				Expect(parentRef.Namespace).ShouldNot(BeNil(), "HTTPRoute parent reference should set the Gateway namespace")
 				Expect(*parentRef.Namespace).Should(Equal(gwapiv1.Namespace(gatewayNamespace)), "HTTPRoute should reference Gateway in correct namespace")
+				Expect(parentRef.Port).ShouldNot(BeNil(), "HTTPRoute parent reference should set the Gateway listener port")
 				Expect(*parentRef.Port).Should(Equal(gwapiv1.PortNumber(443)), "HTTPS HTTPRoute should reference port 443")
 
 				By("Checking HTTPRoute points to service backend")
@@ -535,11 +544,12 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				Expect(len(rule.BackendRefs)).Should(Equal(1), "HTTPRoute rule should have one backend reference")
 				backendRef := rule.BackendRefs[0]
 				Expect(string(backendRef.Name)).Should(Equal(createdService.Name), "HTTPRoute backend should reference the service")
+				Expect(backendRef.Port).ShouldNot(BeNil(), "HTTPRoute backend reference should set the port")
 				Expect(*backendRef.Port).Should(Equal(gwapiv1.PortNumber(exposedTargetPort)), "HTTPRoute backend port should match endpoint target port")
 
 				By("Checking HTTP redirect HTTPRoute is created")
 				httpRedirectRoute := gwapiv1.HTTPRoute{}
-				httpRedirectRouteNamespacedName := namespacedName(common.RouteName(testWorkspaceID, exposedEndPointName)+"-http-redirect", testNamespace)
+				httpRedirectRouteNamespacedName := namespacedName(redirectRouteName(exposedEndPointName), testNamespace)
 				Eventually(func() bool {
 					err := k8sClient.Get(ctx, httpRedirectRouteNamespacedName, &httpRedirectRoute)
 					return err == nil
@@ -547,8 +557,10 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 
 				Expect(httpRedirectRoute.Labels).Should(Equal(ExpectedLabels), "HTTP redirect HTTPRoute should contain DevWorkspace ID label")
 				Expect(httpRedirectRoute.OwnerReferences).Should(ContainElement(expectedOwnerReference), "HTTP redirect HTTPRoute should be owned by DevWorkspaceRouting")
+				Expect(httpRedirectRoute.Spec.Hostnames).Should(ContainElement(gwapiv1.Hostname(expectedHostname)), "HTTP redirect HTTPRoute should have expected hostname")
 				Expect(len(httpRedirectRoute.Spec.ParentRefs)).Should(Equal(1), "HTTP redirect HTTPRoute should have one parent reference")
 				httpParentRef := httpRedirectRoute.Spec.ParentRefs[0]
+				Expect(httpParentRef.Port).ShouldNot(BeNil(), "HTTP redirect parent reference should set the port")
 				Expect(*httpParentRef.Port).Should(Equal(gwapiv1.PortNumber(80)), "HTTP redirect HTTPRoute should reference port 80")
 
 				By("Checking HTTP redirect HTTPRoute has redirect filter")
@@ -560,7 +572,9 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 					if filter.Type == gwapiv1.HTTPRouteFilterRequestRedirect {
 						hasRedirectFilter = true
 						Expect(filter.RequestRedirect).ShouldNot(BeNil(), "Redirect filter should have RequestRedirect configuration")
+						Expect(filter.RequestRedirect.Scheme).ShouldNot(BeNil(), "Redirect filter should set scheme")
 						Expect(*filter.RequestRedirect.Scheme).Should(Equal("https"), "Redirect should be to HTTPS")
+						Expect(filter.RequestRedirect.StatusCode).ShouldNot(BeNil(), "Redirect filter should set status code")
 						Expect(*filter.RequestRedirect.StatusCode).Should(Equal(301), "Redirect should use 301 status code")
 					}
 				}
@@ -725,6 +739,58 @@ var _ = Describe("DevWorkspaceRouting Controller", func() {
 				}
 				return updatedDWR.Status.Phase, nil
 			}, timeout, interval).Should(Equal(controllerv1alpha1.RoutingFailed), "DevWorkspaceRouting should be in failed phase")
+		})
+
+		It("Fails DevWorkspaceRouting with gateway-api routing class when Gateway API not installed", func() {
+			By("Setting Gateway API as not installed")
+			infrastructure.SetGatewayAPIInstalledForTesting(false)
+			defer infrastructure.SetGatewayAPIInstalledForTesting(true)
+
+			By("Updating DevWorkspaceRouting to use gateway-api routing class")
+			Eventually(func() error {
+				createdDWR := getReadyDevWorkspaceRouting(devWorkspaceRoutingName)
+				createdDWR.Spec.RoutingClass = controllerv1alpha1.DevWorkspaceRoutingGatewayAPI
+				return k8sClient.Update(ctx, createdDWR)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting routing class should be updated on cluster")
+
+			By("Checking that the DevWorkspaceRouting has the failed status")
+			dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+			updatedDWR := &controllerv1alpha1.DevWorkspaceRouting{}
+			Eventually(func() (bool, error) {
+				err := k8sClient.Get(ctx, dwrNamespacedName, updatedDWR)
+				if err != nil {
+					return false, err
+				}
+				return updatedDWR.Status.Phase == controllerv1alpha1.RoutingFailed, nil
+			}, timeout, interval).Should(BeTrue(), "DevWorkspaceRouting should be in failed phase")
+		})
+
+		It("Fails DevWorkspaceRouting with gateway-api routing class when gatewayRef not configured", func() {
+			By("Configuring operator without gatewayRef")
+			dwoc := testControllerCfg.DeepCopy()
+			dwoc.Routing = &controllerv1alpha1.RoutingConfig{
+				ClusterHostSuffix:   "test-environment-cluster-suffix",
+				DefaultRoutingClass: string(controllerv1alpha1.DevWorkspaceRoutingGatewayAPI),
+			}
+			config.SetGlobalConfigForTesting(dwoc)
+
+			By("Updating DevWorkspaceRouting to use gateway-api routing class")
+			Eventually(func() error {
+				createdDWR := getReadyDevWorkspaceRouting(devWorkspaceRoutingName)
+				createdDWR.Spec.RoutingClass = controllerv1alpha1.DevWorkspaceRoutingGatewayAPI
+				return k8sClient.Update(ctx, createdDWR)
+			}, timeout, interval).Should(Succeed(), "DevWorkspaceRouting routing class should be updated on cluster")
+
+			By("Checking that the DevWorkspaceRouting has the failed status")
+			dwrNamespacedName := namespacedName(devWorkspaceRoutingName, testNamespace)
+			updatedDWR := &controllerv1alpha1.DevWorkspaceRouting{}
+			Eventually(func() (bool, error) {
+				err := k8sClient.Get(ctx, dwrNamespacedName, updatedDWR)
+				if err != nil {
+					return false, err
+				}
+				return updatedDWR.Status.Phase == controllerv1alpha1.RoutingFailed, nil
+			}, timeout, interval).Should(BeTrue(), "DevWorkspaceRouting should be in failed phase")
 		})
 	})
 })

@@ -17,12 +17,13 @@ package solvers
 import (
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // Long-running workspace sessions need generous timeouts
@@ -144,12 +145,11 @@ func (s *GatewayAPISolver) createHTTPRedirectRoute(
 	namespace := gwapiv1.Namespace(gatewayNamespace)
 	port := gwapiv1.PortNumber(80)
 
-	annotations := map[string]string{
-		constants.DevWorkspaceEndpointNameAnnotation: endpoint.Name,
-	}
+	annotations := map[string]string{}
 	for k, v := range endpoint.Annotations {
 		annotations[k] = v
 	}
+	annotations[constants.DevWorkspaceEndpointNameAnnotation] = endpoint.Name
 
 	return gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -219,12 +219,11 @@ func (s *GatewayAPISolver) createHTTPSBackendRoute(
 	httpsPort := gwapiv1.PortNumber(443)
 	servicePort := gwapiv1.PortNumber(endpoint.TargetPort)
 
-	annotations := map[string]string{
-		constants.DevWorkspaceEndpointNameAnnotation: endpoint.Name,
-	}
+	annotations := map[string]string{}
 	for k, v := range endpoint.Annotations {
 		annotations[k] = v
 	}
+	annotations[constants.DevWorkspaceEndpointNameAnnotation] = endpoint.Name
 
 	return gwapiv1.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{

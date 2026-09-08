@@ -639,6 +639,12 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		if routing.DefaultRoutingClass != defaultConfig.Routing.DefaultRoutingClass {
 			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", routing.DefaultRoutingClass))
 		}
+		if routing.GatewayRef != nil {
+			config = append(config, fmt.Sprintf("routing.gatewayRef.name=%s", routing.GatewayRef.Name))
+			if routing.GatewayRef.Namespace != nil {
+				config = append(config, fmt.Sprintf("routing.gatewayRef.namespace=%s", *routing.GatewayRef.Namespace))
+			}
+		}
 	}
 	webhook := currConfig.Webhook
 	if webhook != nil {

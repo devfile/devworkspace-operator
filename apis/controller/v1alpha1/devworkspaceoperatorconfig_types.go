@@ -126,6 +126,7 @@ type GatewayReference struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	Name string `json:"name"`
 	// Namespace is the namespace of the Gateway resource.
 	// If not specified, HTTPRoutes will reference a Gateway in the same namespace
@@ -133,6 +134,7 @@ type GatewayReference struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 	Namespace *string `json:"namespace,omitempty"`
 }
 
@@ -164,7 +166,7 @@ type RoutingConfig struct {
 	// GatewayRef defines a reference to a Gateway API Gateway resource that HTTPRoutes
 	// should attach to when using the 'gateway-api' routing class. This field is required
 	// when routingClass is set to 'gateway-api'. The referenced Gateway must be provisioned
-	// by the cluster administrator or Che Operator before workspaces can use Gateway API routing.
+	// by the cluster administrator before workspaces can use Gateway API routing.
 	// +kubebuilder:validation:Optional
 	GatewayRef *GatewayReference `json:"gatewayRef,omitempty"`
 }

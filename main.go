@@ -80,7 +80,7 @@ func init() {
 	utilruntime.Must(controllerv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(dwv1.AddToScheme(scheme))
 	utilruntime.Must(dwv2.AddToScheme(scheme))
-	utilruntime.Must(gwapiv1.AddToScheme(scheme))
+	utilruntime.Must(gwapiv1.Install(scheme))
 
 	if infrastructure.IsOpenShift() {
 		utilruntime.Must(routev1.Install(scheme))

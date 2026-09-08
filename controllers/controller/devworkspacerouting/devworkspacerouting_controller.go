@@ -244,22 +244,20 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		clusterRoutingObj.Ingresses = clusterIngresses
 	}
 
-	// Sync HTTPRoutes if using gateway-api routing class
-	if len(httpRoutes) > 0 {
-		httpRoutesInSync, clusterHTTPRoutes, err := r.syncHTTPRoutes(instance, httpRoutes)
-		if err != nil {
-			failError := &sync.UnrecoverableSyncError{}
-			if errors.As(err, &failError) {
-				return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
-			}
-			reqLogger.Error(err, "Error syncing HTTPRoutes")
-			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
-		} else if !httpRoutesInSync {
-			reqLogger.Info("HTTPRoutes not in sync")
-			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
+	// Sync HTTPRoutes (always, so stale HTTPRoutes get cleaned up even when 0 are desired)
+	httpRoutesInSync, clusterHTTPRoutes, err := r.syncHTTPRoutes(instance, httpRoutes)
+	if err != nil {
+		failError := &sync.UnrecoverableSyncError{}
+		if errors.As(err, &failError) {
+			return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
 		}
-		clusterRoutingObj.HTTPRoutes = clusterHTTPRoutes
+		reqLogger.Error(err, "Error syncing HTTPRoutes")
+		return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
+	} else if !httpRoutesInSync {
+		reqLogger.Info("HTTPRoutes not in sync")
+		return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
 	}
+	clusterRoutingObj.HTTPRoutes = clusterHTTPRoutes
 
 	exposedEndpoints, endpointsAreReady, err := solver.GetExposedEndpoints(instance.Spec.Endpoints, clusterRoutingObj)
 	if err != nil {
@@ -268,8 +266,8 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	if !endpointsAreReady {
-		reqLogger.Info("Endpoints not ready, requeuing")
-		return reconcile.Result{RequeueAfter: 3 * time.Second}, r.reconcileStatus(instance, nil, nil, false, "Waiting for endpoints to be ready")
+		reqLogger.Info("Endpoints not ready")
+		return reconcile.Result{}, r.reconcileStatus(instance, nil, nil, false, "Waiting for endpoints to be ready")
 	}
 
 	return reconcile.Result{}, r.reconcileStatus(instance, &routingObjects, exposedEndpoints, endpointsAreReady, "")

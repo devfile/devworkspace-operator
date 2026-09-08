@@ -97,7 +97,7 @@ var httpRouteDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(gwapiv1.HTTPRoute{}, "TypeMeta", "ObjectMeta", "Status"),
 	cmpopts.IgnoreFields(gwapiv1.BackendRef{}, "Weight"),
 	cmpopts.IgnoreFields(gwapiv1.BackendObjectReference{}, "Group", "Kind", "Namespace"),
-	cmpopts.IgnoreFields(gwapiv1.ParentReference{}, "Group", "Kind", "Namespace"),
+	cmpopts.IgnoreFields(gwapiv1.ParentReference{}, "Group", "Kind"),
 }
 
 func getNameFromEnvFrom(source corev1.EnvFromSource) string {

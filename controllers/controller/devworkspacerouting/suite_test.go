@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	err = routev1.Install(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = gwapiv1.AddToScheme(scheme.Scheme)
+	err = gwapiv1.Install(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})

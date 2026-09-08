@@ -63,12 +63,13 @@ spec:
                       GatewayRef defines a reference to a Gateway API Gateway resource that HTTPRoutes
                       should attach to when using the 'gateway-api' routing class. This field is required
                       when routingClass is set to 'gateway-api'. The referenced Gateway must be provisioned
-                      by the cluster administrator or Che Operator before workspaces can use Gateway API routing.
+                      by the cluster administrator before workspaces can use Gateway API routing.
                     properties:
                       name:
                         description: Name is the name of the Gateway resource
                         maxLength: 253
                         minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                         type: string
                       namespace:
                         description: |-
@@ -77,6 +78,7 @@ spec:
                           as the DevWorkspace.
                         maxLength: 63
                         minLength: 1
+                        pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                         type: string
                     required:
                     - name

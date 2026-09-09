@@ -35,21 +35,23 @@ const (
 
 var (
 	// current is the infrastructure that we're currently running on.
-	current     Type
-	initialized = false
+	current               Type
+	initialized           = false
+	isGatewayAPIInstalled bool
 )
 
 // Initialize attempts to determine the type of cluster its currently running on (OpenShift or Kubernetes). This function
 // *must* be called before others; otherwise the call will panic.
 func Initialize() error {
-	var err error
-	current, err = detect()
+	infraType, apiGroups, err := detect()
 	if err != nil {
 		return err
 	}
-	if current == Unsupported {
+	if infraType == Unsupported {
 		return fmt.Errorf("running on unsupported cluster")
 	}
+	current = infraType
+	isGatewayAPIInstalled = findAPIGroup(apiGroups, "gateway.networking.k8s.io") != nil
 	initialized = true
 	return nil
 }
@@ -72,26 +74,40 @@ func IsOpenShift() bool {
 	return current == OpenShiftv4
 }
 
-func detect() (Type, error) {
+// IsGatewayAPIInstalled returns true if the Gateway API CRDs are installed on the cluster.
+func IsGatewayAPIInstalled() bool {
+	if !initialized {
+		panic("Attempting to determine information about the cluster without initializing first")
+	}
+	return isGatewayAPIInstalled
+}
+
+// SetGatewayAPIInstalledForTesting is used to mock Gateway API availability in testing code.
+func SetGatewayAPIInstalledForTesting(installed bool) {
+	isGatewayAPIInstalled = installed
+}
+
+func detect() (Type, []metav1.APIGroup, error) {
 	kubeCfg, err := config.GetConfig()
 	if err != nil {
-		return Unsupported, fmt.Errorf("could not get kube config: %w", err)
+		return Unsupported, nil, fmt.Errorf("could not get kube config: %w", err)
 	}
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(kubeCfg)
 	if err != nil {
-		return Unsupported, fmt.Errorf("could not get discovery client: %w", err)
+		return Unsupported, nil, fmt.Errorf("could not get discovery client: %w", err)
 	}
 	apiList, err := discoveryClient.ServerGroups()
 	if err != nil {
-		return Unsupported, fmt.Errorf("could not read API groups: %w", err)
+		return Unsupported, nil, fmt.Errorf("could not read API groups: %w", err)
 	}
-	if findAPIGroup(apiList.Groups, "route.openshift.io") == nil {
-		return Kubernetes, nil
+	groups := apiList.Groups
+	if findAPIGroup(groups, "route.openshift.io") == nil {
+		return Kubernetes, groups, nil
 	} else {
-		if findAPIGroup(apiList.Groups, "config.openshift.io") == nil {
-			return Unsupported, nil
+		if findAPIGroup(groups, "config.openshift.io") == nil {
+			return Unsupported, groups, nil
 		} else {
-			return OpenShiftv4, nil
+			return OpenShiftv4, groups, nil
 		}
 	}
 }

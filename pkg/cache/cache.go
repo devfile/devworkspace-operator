@@ -29,6 +29,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // GetCacheFunc returns a new cache function that restricts the cluster items we store in the manager's
@@ -96,6 +97,9 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 
 	if infrastructure.IsOpenShift() {
 		selectors[&routev1.Route{}] = cache.ByObject{Label: devworkspaceObjectSelector}
+	}
+	if infrastructure.IsGatewayAPIInstalled() {
+		selectors[&gwapiv1.HTTPRoute{}] = cache.ByObject{Label: devworkspaceObjectSelector}
 	}
 
 	return func(config *rest.Config, opts cache.Options) (cache.Cache, error) {

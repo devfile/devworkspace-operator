@@ -163,6 +163,7 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 				Verbs: []string{
 					"get",
 					"list",
+					"watch",
 				},
 			},
 			// Needed for pkg/config/sync.go:109 (SetupControllerConfig)

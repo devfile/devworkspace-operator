@@ -99,6 +99,7 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 		func(_ *dw.DevWorkspaceTemplateSpecContent, c fuzz.Continue) {},
 		// Ensure no empty strings are generated as they cause default values to be used
 		func(s *string, c fuzz.Continue) { *s = "a" + c.RandString() },
+		func(p *corev1.PullPolicy, c fuzz.Continue) { *p = corev1.PullPolicy("a" + c.RandString()) },
 		// The only valid deployment strategies are Recreate and RollingUpdate
 		func(deploymentStrategy *appsv1.DeploymentStrategyType, c fuzz.Continue) {
 			if c.Int()%2 == 0 {

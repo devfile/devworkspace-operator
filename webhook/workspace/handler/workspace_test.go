@@ -88,8 +88,9 @@ func newTestWebhookHandler(t *testing.T) *WebhookHandler {
 		WithScheme(s).
 		Build()
 	return &WebhookHandler{
-		Client:  fakeClient,
-		Decoder: admission.NewDecoder(s),
+		Client:           fakeClient,
+		NonCachingClient: fakeClient,
+		Decoder:          admission.NewDecoder(s),
 	}
 }
 

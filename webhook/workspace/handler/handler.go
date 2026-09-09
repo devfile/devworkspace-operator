@@ -28,6 +28,7 @@ type WebhookHandler struct {
 	ControllerUID    string
 	ControllerSAName string
 	Client           client.Client
+	NonCachingClient client.Client
 	Decoder          admission.Decoder
 }
 

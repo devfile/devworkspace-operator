@@ -294,7 +294,7 @@ func (h *WebhookHandler) resolveDevWorkspace(
 	flattenHelpers := flatten.ResolverTools{
 		WorkspaceNamespace:          workspace.Namespace,
 		Context:                     ctx,
-		K8sClient:                   h.Client,
+		K8sClient:                   h.NonCachingClient,
 		HttpClient:                  httpClient,
 		DefaultResourceRequirements: workspace.Config.Workspace.DefaultContainerResources,
 	}

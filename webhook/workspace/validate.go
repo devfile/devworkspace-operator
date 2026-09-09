@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/devfile/devworkspace-operator/webhook/workspace/handler"
@@ -33,8 +34,8 @@ type ResourcesValidator struct {
 	*handler.WebhookHandler
 }
 
-func NewResourcesValidator(controllerUID, controllerSAName string, mgr manager.Manager) *ResourcesValidator {
-	return &ResourcesValidator{&handler.WebhookHandler{ControllerUID: controllerUID, ControllerSAName: controllerSAName, Decoder: admission.NewDecoder(mgr.GetScheme()), Client: mgr.GetClient()}}
+func NewResourcesValidator(controllerUID, controllerSAName string, mgr manager.Manager, nonCachingClient client.Client) *ResourcesValidator {
+	return &ResourcesValidator{&handler.WebhookHandler{ControllerUID: controllerUID, ControllerSAName: controllerSAName, Decoder: admission.NewDecoder(mgr.GetScheme()), Client: mgr.GetClient(), NonCachingClient: nonCachingClient}}
 }
 
 func (v *ResourcesValidator) Handle(ctx context.Context, req admission.Request) admission.Response {

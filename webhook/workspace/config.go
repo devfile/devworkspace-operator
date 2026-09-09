@@ -36,7 +36,7 @@ import (
 )
 
 // Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
-func Configure(ctx context.Context, mgr manager.Manager) error {
+func Configure(ctx context.Context, mgr manager.Manager, nonCachingClient client.Client) error {
 	log.Info("Configuring devworkspace webhooks")
 	c, err := createClient()
 	if err != nil {
@@ -88,7 +88,7 @@ func Configure(ctx context.Context, mgr manager.Manager) error {
 		log.Info("Created devworkspace mutating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID, saName, mgr)})
+	server.GetWebhookServer().Register(mutateWebhookPath, &webhook.Admission{Handler: NewResourcesMutator(saUID, saName, mgr, nonCachingClient)})
 
 	if err := c.Create(ctx, validateWebhookCfg); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
@@ -111,7 +111,7 @@ func Configure(ctx context.Context, mgr manager.Manager) error {
 		log.Info("Created devworkspace validating webhook configuration")
 	}
 
-	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID, saName, mgr)})
+	server.GetWebhookServer().Register(validateWebhookPath, &webhook.Admission{Handler: NewResourcesValidator(saUID, saName, mgr, nonCachingClient)})
 
 	return nil
 }

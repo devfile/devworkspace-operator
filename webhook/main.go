@@ -170,7 +170,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = createWebhooks(mgr)
+	err = createWebhooks(mgr, nonCachedClient)
 	if err != nil {
 		log.Error(err, "Failed to create webhooks")
 		os.Exit(1)
@@ -198,7 +198,7 @@ func main() {
 	}
 }
 
-func createWebhooks(mgr manager.Manager) error {
+func createWebhooks(mgr manager.Manager, nonCachedClient client.Client) error {
 	log.Info("Configuring Webhook Server")
 	err := server.ConfigureWebhookServer(mgr)
 	if err != nil {
@@ -206,7 +206,7 @@ func createWebhooks(mgr manager.Manager) error {
 	}
 
 	log.Info("Configuring Webhooks")
-	if err := workspace.Configure(context.TODO(), mgr); err != nil {
+	if err := workspace.Configure(context.TODO(), mgr, nonCachedClient); err != nil {
 		return err
 	}
 	return nil

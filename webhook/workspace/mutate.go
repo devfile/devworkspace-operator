@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/devfile/devworkspace-operator/webhook/workspace/handler"
@@ -33,8 +34,8 @@ type ResourcesMutator struct {
 	*handler.WebhookHandler
 }
 
-func NewResourcesMutator(controllerUID, controllerSAName string, mgr manager.Manager) *ResourcesMutator {
-	return &ResourcesMutator{&handler.WebhookHandler{ControllerUID: controllerUID, ControllerSAName: controllerSAName, Decoder: admission.NewDecoder(mgr.GetScheme()), Client: mgr.GetClient()}}
+func NewResourcesMutator(controllerUID, controllerSAName string, mgr manager.Manager, nonCachingClient client.Client) *ResourcesMutator {
+	return &ResourcesMutator{&handler.WebhookHandler{ControllerUID: controllerUID, ControllerSAName: controllerSAName, Decoder: admission.NewDecoder(mgr.GetScheme()), Client: mgr.GetClient(), NonCachingClient: nonCachingClient}}
 }
 
 // ResourcesMutator verify if operation is a valid from Workspace controller perspective

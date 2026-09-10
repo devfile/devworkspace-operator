@@ -41,17 +41,18 @@ This means that to test commits in a release branch before running the release j
 export DWO_IMG=quay.io/yourrepo/devworkspace-controller:prerelease
 export PROJECT_CLONE_IMG=quay.io/yourrepo/project-clone:prerelease
 export PROJECT_BACKUP_IMG=quay.io/yourrepo/project-backup:prerelease
-# build and push project clone image
-podman build -t "$PROJECT_CLONE_IMG" -f ./project-clone/Dockerfile .
-podman push "$PROJECT_CLONE_IMG"
-# build and push project backup image
-podman build -t "$PROJECT_BACKUP_IMG" -f ./project-backup/Containerfile ./project-backup/
-podman push "$PROJECT_BACKUP_IMG"
-# build and push DevWorkspace Operator image
-export DOCKER=podman # optional
-make docker
+# build and push all images (controller, project-clone, project-backup)
+make docker-all
 # deploy DevWorkspace Operator using these images
 make install
+```
+
+The `docker-all` target builds multi-arch (amd64 and arm64) images for all three components. It auto-detects Docker or Podman. You can also build images individually:
+
+```bash
+make docker                 # controller only
+make docker-project-clone   # project-clone only
+make docker-project-backup  # project-backup only
 ```
 
 ### Releasing a new version

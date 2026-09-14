@@ -158,7 +158,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = httpfactory.SetupHttpClientsFactory(mgr.GetClient(), mgr.GetLogger())
+	err = httpfactory.SetupHttpClientsFactory(nonCachedClient, mgr.GetLogger())
 	if err != nil {
 		log.Error(err, "Failed to setup Http clients factory")
 		os.Exit(1)

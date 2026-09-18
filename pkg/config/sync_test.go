@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -110,6 +111,7 @@ func TestMergesAllFieldsFromClusterConfig(t *testing.T) {
 		fuzzQuantity,
 		fuzzResourceList,
 		fuzzResourceRequirements,
+		fuzzIntOrString,
 	)
 	for i := 0; i < 100; i++ {
 		fuzzedConfig := &v1alpha1.OperatorConfiguration{}
@@ -433,6 +435,7 @@ func TestMergeConfigLooksAtAllFields(t *testing.T) {
 		fuzzResourceList,
 		fuzzResourceRequirements,
 		fuzzStringPtr,
+		fuzzIntOrString,
 	)
 	expectedConfig := &v1alpha1.OperatorConfiguration{}
 	actualConfig := &v1alpha1.OperatorConfiguration{}
@@ -634,6 +637,13 @@ func fuzzResourceRequirements(req *corev1.ResourceRequirements, c fuzz.Continue)
 	c.Fuzz(&requests)
 	req.Limits = limits
 	req.Requests = requests
+}
+
+// fuzzIntOrString generates a port that can survive a round trip through the API server.
+// Fuzzing the struct directly picks a random value for the Type discriminator, and any
+// value other than Int or String makes marshalling fail with "impossible IntOrString.Type".
+func fuzzIntOrString(port *intstr.IntOrString, c fuzz.Continue) {
+	*port = intstr.FromInt32(c.Int31n(65535) + 1)
 }
 
 func fuzzStringPtr(str **string, c fuzz.Continue) {

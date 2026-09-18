@@ -21,6 +21,7 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -285,6 +286,9 @@ type WorkspaceConfig struct {
 	// Overrides defines configuration options for `container-overrides` and
 	// `pod-overrides` DevWorkspace attributes.
 	Overrides *OverrideConfig `json:"overrides,omitempty"`
+	// NetworkPolicy defines configuration options for the NetworkPolicy provisioned
+	// for each DevWorkspace.
+	NetworkPolicy *NetworkPolicyConfig `json:"networkPolicy,omitempty"`
 }
 
 type WebhookConfig struct {
@@ -318,6 +322,43 @@ type PersistentHomeConfig struct {
 	// This field is not used if the `workspace.persistUserHome.enabled` field is set to false.
 	// Enabled by default.
 	DisableInitContainer *bool `json:"disableInitContainer,omitempty"`
+}
+
+// NetworkPolicyConfig defines the NetworkPolicy the DevWorkspace Operator provisions for
+// DevWorkspaces. One NetworkPolicy is created per DevWorkspace and applies to that
+// workspace's pods only. The policy is owned by its DevWorkspace and is removed along
+// with it.
+//
+// The name, labels, podSelector and policyTypes of the NetworkPolicy are controlled by
+// the DevWorkspace Operator; only the ingress and egress rules are configurable.
+type NetworkPolicyConfig struct {
+	// Enabled determines whether a NetworkPolicy is provisioned for each DevWorkspace.
+	// Disabled by default. Changing this field does not immediately affect existing
+	// DevWorkspaces: changing the DevWorkspaceOperatorConfig does not enqueue the
+	// DevWorkspaces it affects, so the new value is applied to a DevWorkspace the next
+	// time that DevWorkspace is reconciled for any reason. Restarting a workspace is not
+	// required. Both enabling and disabling apply to running and stopped DevWorkspaces
+	// alike.
+	Enabled *bool `json:"enabled,omitempty"`
+	// Ingress defines the ingress rules applied to DevWorkspace pods. If this field is not
+	// specified, the default ingress rules of the DevWorkspace Operator apply. On OpenShift,
+	// the defaults allow traffic from the operator's own namespace and from the OpenShift
+	// monitoring and ingress namespaces, and deny all other ingress traffic. On Kubernetes,
+	// the default allows all ingress traffic, since the namespace of the cluster's ingress
+	// controller is not known to the operator; administrators are expected to replace this
+	// with rules appropriate to their cluster.
+	// If this field is specified as an empty list, all ingress traffic to DevWorkspace pods
+	// is denied. If this field is specified as a non-empty list, exactly those rules apply
+	// and the default rules no longer apply.
+	// +kubebuilder:validation:Optional
+	Ingress []networkingv1.NetworkPolicyIngressRule `json:"ingress,omitempty"`
+	// Egress defines the egress rules applied to DevWorkspace pods. If this field is not
+	// specified, the default egress rule of the DevWorkspace Operator applies, which allows
+	// all egress traffic. If this field is specified as an empty list, all egress traffic
+	// from DevWorkspace pods is denied. If this field is specified as a non-empty list,
+	// exactly those rules apply and the default rule no longer applies.
+	// +kubebuilder:validation:Optional
+	Egress []networkingv1.NetworkPolicyEgressRule `json:"egress,omitempty"`
 }
 
 type Proxy struct {

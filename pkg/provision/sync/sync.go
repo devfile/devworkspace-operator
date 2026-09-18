@@ -204,6 +204,8 @@ func printDiff(specObj, clusterObj crclient.Object, log logr.Logger) {
 			diffOpts = routingDiffOpts
 		case *networkingv1.Ingress:
 			diffOpts = ingressDiffOpts
+		case *networkingv1.NetworkPolicy:
+			diffOpts = networkPolicyDiffOpts
 		case *routev1.Route:
 			diffOpts = routeDiffOpts
 		case *corev1.Secret:

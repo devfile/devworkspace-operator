@@ -50,12 +50,14 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/provision/storage"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	wsprovision "github.com/devfile/devworkspace-operator/pkg/provision/workspace"
+	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/networkpolicy"
 	"github.com/devfile/devworkspace-operator/pkg/provision/workspace/rbac"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,6 +93,7 @@ type DevWorkspaceReconciler struct {
 // +kubebuilder:rbac:groups="",resources=pods;serviceaccounts;secrets;configmaps;persistentvolumeclaims,verbs=*
 // +kubebuilder:rbac:groups="",resources=namespaces;events,verbs=get;list;watch
 // +kubebuilder:rbac:groups="batch",resources=jobs,verbs=get;create;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=create;delete;update;patch;get;list;watch
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations;validatingwebhookconfigurations,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=authorization.k8s.io,resources=subjectaccessreviews;localsubjectaccessreviews,verbs=create
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update
@@ -163,6 +166,13 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		workspace.Status.DevWorkspaceId = workspaceId
 		err = r.Status().Update(ctx, workspace.DevWorkspace)
 		return reconcile.Result{Requeue: true}, err
+	}
+
+	// Sync the NetworkPolicy early, so that it follows the operator configuration for every
+	// workspace and not just the starting ones, and exists before any workspace pod does.
+	err = networkpolicy.SyncNetworkPolicy(workspace, clusterAPI)
+	if shouldReturn, reconcileResult, reconcileErr := r.checkDWError(workspace, err, "Error provisioning network policy", metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus); shouldReturn {
+		return reconcileResult, reconcileErr
 	}
 
 	// Stop failed workspaces
@@ -818,6 +828,7 @@ func (r *DevWorkspaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
+		Owns(&networkingv1.NetworkPolicy{}).
 		Watches(&corev1.Pod{}, handler.EnqueueRequestsFromMapFunc(dwRelatedPodsHandler)).
 		Watches(&corev1.PersistentVolumeClaim{}, handler.EnqueueRequestsFromMapFunc(r.dwPVCHandler)).
 		Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.runningWorkspacesHandler), automountWatcher).

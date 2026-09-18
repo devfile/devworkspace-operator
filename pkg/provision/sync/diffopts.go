@@ -92,6 +92,10 @@ var ingressDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(networkingv1.HTTPIngressPath{}, "PathType"),
 }
 
+var networkPolicyDiffOpts = cmp.Options{
+	cmpopts.IgnoreFields(networkingv1.NetworkPolicy{}, "TypeMeta", "ObjectMeta"),
+}
+
 func getNameFromEnvFrom(source corev1.EnvFromSource) string {
 	switch {
 	case source.ConfigMapRef != nil:

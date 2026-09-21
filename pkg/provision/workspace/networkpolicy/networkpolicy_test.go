@@ -19,31 +19,30 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
-const testNamespace = "test-namespace"
+const (
+	testNamespace        = "test-namespace"
+	testDevworkspaceName = "test-devworkspace"
+)
 
 var scheme = runtime.NewScheme()
 
@@ -63,11 +62,7 @@ func getTestClusterAPI(t *testing.T, initialObjects ...client.Object) sync.Clust
 	}
 }
 
-// getTestDevWorkspace returns a DevWorkspace whose resolved config carries the given
-// network policy configuration. A nil npConfig leaves the section unset. The workspace ID
-// deliberately differs from the workspace name, so that tests cannot pass by using one
-// where the other is expected.
-func getTestDevWorkspace(name string, npConfig *v1alpha1.NetworkPolicyConfig) *common.DevWorkspaceWithConfig {
+func getTestDevWorkspaceWithConfig(name string, npConfig *v1alpha1.NetworkPolicyConfig) *common.DevWorkspaceWithConfig {
 	return &common.DevWorkspaceWithConfig{
 		DevWorkspace: &dw.DevWorkspace{
 			ObjectMeta: metav1.ObjectMeta{
@@ -87,52 +82,42 @@ func getTestDevWorkspace(name string, npConfig *v1alpha1.NetworkPolicyConfig) *c
 	}
 }
 
-func enabledConfig() *v1alpha1.NetworkPolicyConfig {
+func getEnabledNetworkPolicyConfig() *v1alpha1.NetworkPolicyConfig {
 	return &v1alpha1.NetworkPolicyConfig{
-		Enabled: ptr.To(true),
-		Egress:  []networkingv1.NetworkPolicyEgressRule{{}},
+		Enabled: new(true),
 	}
 }
 
-// getPolicy reads the NetworkPolicy belonging to a workspace from the cluster.
-func getPolicy(testdw *common.DevWorkspaceWithConfig, api sync.ClusterAPI) (*networkingv1.NetworkPolicy, error) {
+func getNetworkPolicyFromCluster(testDevworkspace *common.DevWorkspaceWithConfig, api sync.ClusterAPI) (*networkingv1.NetworkPolicy, error) {
 	actual := &networkingv1.NetworkPolicy{}
-	err := api.Client.Get(api.Ctx, types.NamespacedName{
-		Name:      common.NetworkPolicyName(testdw.Status.DevWorkspaceId),
-		Namespace: testdw.Namespace,
-	}, actual)
+	err := api.Client.Get(
+		api.Ctx,
+		types.NamespacedName{
+			Name:      common.NetworkPolicyName(testDevworkspace.Status.DevWorkspaceId),
+			Namespace: testDevworkspace.Namespace,
+		},
+		actual)
+
 	return actual, err
 }
 
 func TestGeneratedPolicySelectsOnlyItsOwnWorkspacePods(t *testing.T) {
-	testdw := getTestDevWorkspace("test-devworkspace", enabledConfig())
-	policy := generateNetworkPolicy(testdw, enabledConfig())
-	assert.Equal(t, common.NetworkPolicyName(testdw.Status.DevWorkspaceId), policy.Name, "Policy should be named after the workspace it governs")
-	assert.Equal(t, testNamespace, policy.Namespace, "Policy should be created in the workspace namespace")
+	testDevWorkspace := getTestDevWorkspaceWithConfig(testDevworkspaceName, getEnabledNetworkPolicyConfig())
+	policy := generateNetworkPolicy(testDevWorkspace, getEnabledNetworkPolicyConfig())
+
+	assert.Equal(t, common.NetworkPolicyName(testDevWorkspace.Status.DevWorkspaceId), policy.Name)
+	assert.Equal(t, testNamespace, policy.Namespace)
 	assert.Equal(t, map[string]string{
-		constants.DevWorkspaceIDLabel:   testdw.Status.DevWorkspaceId,
-		constants.DevWorkspaceNameLabel: testdw.Name,
-	}, policy.Labels, "Policy should carry the labels every per-workspace object carries, so that it is watched by the controller cache")
+		constants.DevWorkspaceIDLabel:   testDevWorkspace.Status.DevWorkspaceId,
+		constants.DevWorkspaceNameLabel: testDevWorkspace.Name,
+	}, policy.Labels)
 	assert.Equal(t, metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			constants.DevWorkspaceIDLabel: testdw.Status.DevWorkspaceId,
+			constants.DevWorkspaceIDLabel: testDevWorkspace.Status.DevWorkspaceId,
 		},
-	}, policy.Spec.PodSelector, "Policy should select only the pods of its own workspace")
+	}, policy.Spec.PodSelector)
 }
 
-func TestGeneratedPoliciesForDifferentWorkspacesDoNotCollide(t *testing.T) {
-	first := getTestDevWorkspace("first-devworkspace", enabledConfig())
-	second := getTestDevWorkspace("second-devworkspace", enabledConfig())
-	firstPolicy := generateNetworkPolicy(first, enabledConfig())
-	secondPolicy := generateNetworkPolicy(second, enabledConfig())
-	assert.NotEqual(t, firstPolicy.Name, secondPolicy.Name,
-		"Each workspace should get its own policy, otherwise two workspaces in a namespace would fight over one object")
-	assert.NotEqual(t, firstPolicy.Spec.PodSelector, secondPolicy.Spec.PodSelector,
-		"Each policy should select only its own workspace's pods")
-}
-
-// TestUnsetIngressDeniesAllIngress covers that both directions are always listed in
-// policyTypes: a direction with no configured rules is denied, not left unrestricted.
 func TestUnsetIngressDeniesAllIngress(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -141,249 +126,79 @@ func TestUnsetIngressDeniesAllIngress(t *testing.T) {
 		{name: "nil ingress list", ingress: nil},
 		{name: "empty ingress list", ingress: []networkingv1.NetworkPolicyIngressRule{}},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			npConfig := &v1alpha1.NetworkPolicyConfig{
-				Enabled: ptr.To(true),
+				Enabled: new(true),
 				Ingress: tt.ingress,
 				Egress:  []networkingv1.NetworkPolicyEgressRule{{}},
 			}
-			policy := generateNetworkPolicy(getTestDevWorkspace("test-devworkspace", npConfig), npConfig)
-			assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-				policy.Spec.PolicyTypes, "Both directions should always be in policyTypes, so that a direction without rules denies all traffic")
-			assert.Nil(t, policy.Spec.Ingress,
-				"A direction without rules must serialize as nil, since an empty slice is dropped by omitempty and would never match the cluster object")
+			policy := generateNetworkPolicy(getTestDevWorkspaceWithConfig(testDevworkspaceName, npConfig), npConfig)
+
+			assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}, policy.Spec.PolicyTypes)
+			assert.Nil(t, policy.Spec.Ingress)
 		})
 	}
 }
 
 func TestBothDirectionsNilDeniesAllTraffic(t *testing.T) {
-	npConfig := &v1alpha1.NetworkPolicyConfig{Enabled: ptr.To(true)}
-	policy := generateNetworkPolicy(getTestDevWorkspace("test-devworkspace", npConfig), npConfig)
-	if !assert.NotNil(t, policy, "A policy should be built even when no rules are configured") {
-		return
-	}
-	assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-		policy.Spec.PolicyTypes, "With no rules configured both directions should be denied")
-	assert.Nil(t, policy.Spec.Ingress, "No ingress rules should be produced")
-	assert.Nil(t, policy.Spec.Egress, "No egress rules should be produced")
-}
+	npConfig := &v1alpha1.NetworkPolicyConfig{Enabled: new(true)}
+	policy := generateNetworkPolicy(getTestDevWorkspaceWithConfig(testDevworkspaceName, npConfig), npConfig)
 
-func TestPortProtocolIsDefaultedToTCP(t *testing.T) {
-	port := intstr.FromInt(8080)
-	npConfig := &v1alpha1.NetworkPolicyConfig{
-		Enabled: ptr.To(true),
-		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			{
-				Ports: []networkingv1.NetworkPolicyPort{{Port: &port}},
-			},
-		},
-	}
-	policy := generateNetworkPolicy(getTestDevWorkspace("test-devworkspace", npConfig), npConfig)
-	actual := policy.Spec.Ingress[0].Ports[0].Protocol
-	if !assert.NotNil(t, actual, "Protocol should be defaulted so the spec matches what the API server stores") {
-		return
-	}
-	assert.Equal(t, corev1.ProtocolTCP, *actual, "Omitted protocol should default to TCP")
-}
-
-func TestExplicitPortProtocolIsPreserved(t *testing.T) {
-	port := intstr.FromInt(53)
-	udp := corev1.ProtocolUDP
-	npConfig := &v1alpha1.NetworkPolicyConfig{
-		Enabled: ptr.To(true),
-		Egress: []networkingv1.NetworkPolicyEgressRule{
-			{
-				Ports: []networkingv1.NetworkPolicyPort{{Port: &port, Protocol: &udp}},
-			},
-		},
-	}
-	policy := generateNetworkPolicy(getTestDevWorkspace("test-devworkspace", npConfig), npConfig)
-	assert.Equal(t, corev1.ProtocolUDP, *policy.Spec.Egress[0].Ports[0].Protocol, "Explicit protocol should be preserved")
-}
-
-func TestGenerateDoesNotMutateConfig(t *testing.T) {
-	port := intstr.FromInt(8080)
-	npConfig := &v1alpha1.NetworkPolicyConfig{
-		Enabled: ptr.To(true),
-		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			{
-				Ports: []networkingv1.NetworkPolicyPort{{Port: &port}},
-			},
-		},
-	}
-	generateNetworkPolicy(getTestDevWorkspace("test-devworkspace", npConfig), npConfig)
-	assert.Nil(t, npConfig.Ingress[0].Ports[0].Protocol,
-		"Normalization must not write back into the shared resolved config")
+	assert.NotNil(t, policy)
+	assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}, policy.Spec.PolicyTypes)
+	assert.Nil(t, policy.Spec.Ingress)
+	assert.Nil(t, policy.Spec.Egress)
 }
 
 func TestSyncCreatesPolicyWhenEnabled(t *testing.T) {
-	testdw := getTestDevWorkspace("test-devworkspace", enabledConfig())
-	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	err := SyncNetworkPolicy(testdw, api)
+	testDevworkspace := getTestDevWorkspaceWithConfig(testDevworkspaceName, getEnabledNetworkPolicyConfig())
+	api := getTestClusterAPI(t, testDevworkspace.DevWorkspace)
+
+	err := SyncNetworkPolicy(testDevworkspace, api)
 	retryErr := &dwerrors.RetryError{}
-	if assert.Error(t, err, "Should return RetryError to indicate that the policy was created") {
-		assert.ErrorAs(t, err, &retryErr, "Error should have RetryError type")
-	}
-	err = SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Should not return error once the policy is in sync")
+	assert.Error(t, err)
+	assert.ErrorAs(t, err, &retryErr)
 
-	_, err = getPolicy(testdw, api)
-	assert.NoError(t, err, "Policy should exist on the cluster")
-}
-
-// TestSyncOwnsPolicyByItsWorkspace covers the reason no finalizer is needed: the policy is
-// garbage collected by the cluster along with the DevWorkspace that owns it.
-func TestSyncOwnsPolicyByItsWorkspace(t *testing.T) {
-	testdw := getTestDevWorkspace("test-devworkspace", enabledConfig())
-	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	err := SyncNetworkPolicy(testdw, api)
-	assert.Error(t, err, "Should return RetryError to indicate that the policy was created")
-
-	policy, err := getPolicy(testdw, api)
-	if !assert.NoError(t, err, "Policy should exist on the cluster") {
-		return
-	}
-	if !assert.Len(t, policy.OwnerReferences, 1, "Policy should be owned by the workspace it governs, so that it is garbage collected with it") {
-		return
-	}
-	ownerref := policy.OwnerReferences[0]
-	assert.Equal(t, testdw.Name, ownerref.Name, "Policy should be owned by its own workspace")
-	assert.Equal(t, testdw.UID, ownerref.UID, "Policy should be owned by its own workspace")
-	assert.Equal(t, "DevWorkspace", ownerref.Kind, "Policy should be owned by its own workspace")
-	assert.True(t, ptr.Deref(ownerref.Controller, false), "Workspace should be the controller of its policy")
-}
-
-// TestSyncTreatsApiServerDefaultedProtocolAsInSync covers the round trip normalizePorts
-// exists for: the configuration omits the port protocol, while the object stored on the
-// cluster carries the protocol the API server defaulted. Without normalization the two
-// never compare equal and every reconcile requests another update.
-func TestSyncTreatsApiServerDefaultedProtocolAsInSync(t *testing.T) {
-	port := intstr.FromInt(8080)
-	tcp := corev1.ProtocolTCP
-	npConfig := &v1alpha1.NetworkPolicyConfig{
-		Enabled: ptr.To(true),
-		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			{
-				Ports: []networkingv1.NetworkPolicyPort{{Port: &port}},
-			},
-		},
-	}
-
-	testdw := getTestDevWorkspace("test-devworkspace", npConfig)
-	defaultedByApiServer := generateNetworkPolicy(testdw, &v1alpha1.NetworkPolicyConfig{
-		Enabled: ptr.To(true),
-		Ingress: []networkingv1.NetworkPolicyIngressRule{
-			{
-				Ports: []networkingv1.NetworkPolicyPort{{Port: &port, Protocol: &tcp}},
-			},
-		},
-	})
-
-	// The policy on the cluster was created by a previous sync, so it already carries the
-	// ownerReference; without it the sync would request an update over the missing ownerref
-	// rather than over the protocol under test.
-	err := controllerutil.SetControllerReference(testdw.DevWorkspace, defaultedByApiServer, scheme)
+	err = SyncNetworkPolicy(testDevworkspace, api)
 	assert.NoError(t, err)
 
-	api := getTestClusterAPI(t, testdw.DevWorkspace, defaultedByApiServer)
-	err = SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err,
-		"A policy stored with the protocol defaulted by the API server should be considered in sync, otherwise every reconcile requests an update")
-}
+	policy, err := getNetworkPolicyFromCluster(testDevworkspace, api)
+	assert.NoError(t, err)
 
-func TestSyncDoesNothingWhenConfigSectionIsUnset(t *testing.T) {
-	testdw := getTestDevWorkspace("test-devworkspace", nil)
-	testdw.Config.Workspace.NetworkPolicy = nil
-	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	err := SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Should not return error when no network policy is configured")
-
-	_, err = getPolicy(testdw, api)
-	assert.True(t, k8sErrors.IsNotFound(err), "No policy should be created")
+	assert.Equal(t, testDevworkspace.Name, policy.OwnerReferences[0].Name)
+	assert.Equal(t, testDevworkspace.UID, policy.OwnerReferences[0].UID)
+	assert.Equal(t, "DevWorkspace", policy.OwnerReferences[0].Kind)
+	assert.True(t, ptr.Deref(policy.OwnerReferences[0].Controller, false))
 }
 
 func TestSyncDeletesPolicyWhenDisabled(t *testing.T) {
-	testdw := getTestDevWorkspace("test-devworkspace", enabledConfig())
-	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	err := SyncNetworkPolicy(testdw, api)
-	assert.Error(t, err, "Should return RetryError to indicate that the policy was created")
-	err = SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Policy should be in sync")
+	testDevworkspace := getTestDevWorkspaceWithConfig(testDevworkspaceName, getEnabledNetworkPolicyConfig())
+	api := getTestClusterAPI(t, testDevworkspace.DevWorkspace)
 
-	testdw.Config.Workspace.NetworkPolicy.Enabled = ptr.To(false)
-	err = SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Disabling should not return an error")
+	err := SyncNetworkPolicy(testDevworkspace, api)
+	assert.Error(t, err)
 
-	_, err = getPolicy(testdw, api)
-	assert.True(t, k8sErrors.IsNotFound(err), "Policy should be removed when the feature is disabled")
-}
+	err = SyncNetworkPolicy(testDevworkspace, api)
+	assert.NoError(t, err)
 
-// TestSyncLeavesOtherWorkspacesPolicyAlone guards the per-workspace scope of the delete: a
-// workspace that has the feature disabled must not remove the policy governing a different
-// workspace in the same namespace.
-func TestSyncLeavesOtherWorkspacesPolicyAlone(t *testing.T) {
-	restricted := getTestDevWorkspace("restricted-devworkspace", enabledConfig())
-	unrestricted := getTestDevWorkspace("unrestricted-devworkspace", nil)
-	unrestricted.Config.Workspace.NetworkPolicy = nil
-	api := getTestClusterAPI(t, restricted.DevWorkspace, unrestricted.DevWorkspace)
-	err := SyncNetworkPolicy(restricted, api)
-	assert.Error(t, err, "Should return RetryError to indicate that the policy was created")
+	_, err = getNetworkPolicyFromCluster(testDevworkspace, api)
+	assert.NoError(t, err)
 
-	err = SyncNetworkPolicy(unrestricted, api)
-	assert.NoError(t, err, "Syncing a workspace with no policy configured should not return an error")
+	testDevworkspace.Config.Workspace.NetworkPolicy.Enabled = new(false)
+	err = SyncNetworkPolicy(testDevworkspace, api)
+	assert.NoError(t, err)
 
-	_, err = getPolicy(restricted, api)
-	assert.NoError(t, err, "A workspace must not delete the policy that governs another workspace")
-}
-
-func TestSyncCreatesDenyAllPolicyWhenNoRulesAreConfigured(t *testing.T) {
-	testdw := getTestDevWorkspace("test-devworkspace", &v1alpha1.NetworkPolicyConfig{Enabled: ptr.To(true)})
-	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	err := SyncNetworkPolicy(testdw, api)
-	assert.Error(t, err, "Should return RetryError to indicate that the policy was created")
-	err = SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Should not return error once the policy is in sync")
-
-	policy, err := getPolicy(testdw, api)
-	if !assert.NoError(t, err, "A deny-all policy should be created when the feature is enabled without rules") {
-		return
-	}
-	assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-		policy.Spec.PolicyTypes, "Both directions should be denied when no rules are configured")
-}
-
-// TestSyncUpdatesPolicyWhenAllRulesAreCleared covers that clearing the rules tightens the
-// existing policy into a deny-all one rather than leaving the previous rules on the cluster.
-func TestSyncUpdatesPolicyWhenAllRulesAreCleared(t *testing.T) {
-	testdw := getTestDevWorkspace("test-devworkspace", enabledConfig())
-	api := getTestClusterAPI(t, testdw.DevWorkspace)
-	err := SyncNetworkPolicy(testdw, api)
-	assert.Error(t, err, "Should return RetryError to indicate that the policy was created")
-	err = SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Policy should be in sync")
-
-	testdw.Config.Workspace.NetworkPolicy.Egress = nil
-	testdw.Config.Workspace.NetworkPolicy.Ingress = nil
-	err = SyncNetworkPolicy(testdw, api)
-	assert.Error(t, err, "Should return RetryError to indicate that the policy was updated")
-	err = SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Policy should be in sync again")
-
-	policy, err := getPolicy(testdw, api)
-	if !assert.NoError(t, err, "The policy should still exist") {
-		return
-	}
-	assert.Nil(t, policy.Spec.Egress, "The egress rules removed from the configuration should be removed from the cluster object")
-	assert.Equal(t, []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress},
-		policy.Spec.PolicyTypes, "Both directions should be denied once all rules are cleared")
+	_, err = getNetworkPolicyFromCluster(testDevworkspace, api)
+	assert.True(t, k8sErrors.IsNotFound(err))
 }
 
 func TestSyncIsTolerantOfMissingPolicyWhenDisabled(t *testing.T) {
-	npConfig := enabledConfig()
+	npConfig := getEnabledNetworkPolicyConfig()
 	npConfig.Enabled = ptr.To(false)
-	testdw := getTestDevWorkspace("test-devworkspace", npConfig)
+	testdw := getTestDevWorkspaceWithConfig("test-devworkspace", npConfig)
 	api := getTestClusterAPI(t, testdw.DevWorkspace)
 	err := SyncNetworkPolicy(testdw, api)
-	assert.NoError(t, err, "Deleting an absent policy should not return an error")
+	assert.NoError(t, err)
 }

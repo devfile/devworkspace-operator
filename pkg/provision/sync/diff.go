@@ -41,7 +41,7 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(rbacv1.Role{}):                  allDiffFuncs(metadataDiffFunc, basicDiffFunc(roleDiffOpts)),
 	reflect.TypeOf(rbacv1.RoleBinding{}):           allDiffFuncs(metadataDiffFunc, basicDiffFunc(rolebindingDiffOpts)),
 	reflect.TypeOf(corev1.ServiceAccount{}):        metadataDiffFunc,
-	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, metadataDiffFunc, basicDiffFunc(deploymentDiffOpts)),
+	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, metadataDiffFunc, podTemplateMetadataDiffFunc, basicDiffFunc(deploymentDiffOpts)),
 	reflect.TypeOf(corev1.Pod{}):                   allDiffFuncs(podDiffFunc, metadataDiffFunc),
 	reflect.TypeOf(corev1.ConfigMap{}):             allDiffFuncs(metadataDiffFunc, basicDiffFunc(configmapDiffOpts)),
 	reflect.TypeOf(corev1.Secret{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(secretDiffOpts)),
@@ -77,6 +77,31 @@ func metadataDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	clusterRefs := cluster.GetOwnerReferences()
 	for _, ownerref := range spec.GetOwnerReferences() {
 		if !containsOwnerRef(ownerref, clusterRefs) {
+			return false, true
+		}
+	}
+	return false, false
+}
+
+// podTemplateMetadataDiffFunc requires a Deployment to be updated if any label or annotation present in the spec
+// deployment's pod template is not present in the cluster deployment's pod template. Like metadataDiffFunc, it only
+// checks the spec-to-cluster direction so that externally-added labels on the pod template do not trigger an update.
+func podTemplateMetadataDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
+	specDeploy, ok := spec.(*appsv1.Deployment)
+	if !ok {
+		return false, false
+	}
+	clusterDeploy := cluster.(*appsv1.Deployment)
+
+	clusterLabels := clusterDeploy.Spec.Template.Labels
+	for k, v := range specDeploy.Spec.Template.Labels {
+		if clusterLabels[k] != v {
+			return false, true
+		}
+	}
+	clusterAnnotations := clusterDeploy.Spec.Template.Annotations
+	for k, v := range specDeploy.Spec.Template.Annotations {
+		if clusterAnnotations[k] != v {
 			return false, true
 		}
 	}

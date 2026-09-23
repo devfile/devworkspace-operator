@@ -39,6 +39,7 @@ var rolebindingDiffOpts = cmp.Options{
 var deploymentDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(appsv1.Deployment{}, "TypeMeta", "ObjectMeta", "Status"),
 	cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "RevisionHistoryLimit", "ProgressDeadlineSeconds"),
+	cmpopts.IgnoreFields(corev1.PodTemplateSpec{}, "ObjectMeta"),
 	cmpopts.IgnoreFields(corev1.PodSpec{}, "DNSPolicy", "SchedulerName", "DeprecatedServiceAccount"),
 	cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
 	cmpopts.SortSlices(func(a, b corev1.Container) bool {

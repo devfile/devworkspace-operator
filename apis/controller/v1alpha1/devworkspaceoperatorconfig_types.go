@@ -409,8 +409,7 @@ type ProjectCloneConfig struct {
 
 type RestoreConfig struct {
 	// ImagePullPolicy configures the imagePullPolicy for the restore container.
-	// If undefined, the general setting .config.workspace.imagePullPolicy is used instead.
-	// If neither is set, defaults to IfNotPresent.
+	// If undefined, defaults to IfNotPresent.
 	ImagePullPolicy corev1.PullPolicy `json:"imagePullPolicy,omitempty"`
 	// Resources defines the resource (cpu, memory) limits and requests for the restore
 	// container. To explicitly not specify a limit or request, define the resource

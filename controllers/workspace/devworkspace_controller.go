@@ -363,8 +363,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 		if workspace.Config.Workspace.RestoreConfig.ImagePullPolicy != "" {
 			restoreOptions.PullPolicy = workspace.Config.Workspace.RestoreConfig.ImagePullPolicy
-		} else if config.Workspace.ImagePullPolicy != "" {
-			restoreOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
+		} else {
+			restoreOptions.PullPolicy = corev1.PullIfNotPresent
 		}
 		if workspaceRestore, registryAuthSecret, err := restore.GetWorkspaceRestoreInitContainer(ctx, workspace, r.Client, restoreOptions, r.Scheme, reqLogger); err != nil {
 			return r.failWorkspace(workspace, fmt.Sprintf("Failed to set up workspace-restore init container: %s", err), metrics.ReasonInfrastructureFailure, reqLogger, &reconcileStatus), nil

@@ -4926,8 +4926,7 @@ spec:
                       imagePullPolicy:
                         description: |-
                           ImagePullPolicy configures the imagePullPolicy for the restore container.
-                          If undefined, the general setting .config.workspace.imagePullPolicy is used instead.
-                          If neither is set, defaults to IfNotPresent.
+                          If undefined, defaults to IfNotPresent.
                         type: string
                       resources:
                         description: |-

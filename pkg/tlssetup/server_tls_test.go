@@ -28,44 +28,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
 
-func TestShouldHonorClusterTLSProfile(t *testing.T) {
-	tests := []struct {
-		name      string
-		adherence configv1.TLSAdherencePolicy
-		expected  bool
-	}{
-		{
-			name:      "Empty policy should not honor cluster TLS profile",
-			adherence: "",
-			expected:  false,
-		},
-		{
-			name:      "LegacyAdheringComponentsOnly should not honor cluster TLS profile",
-			adherence: configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly,
-			expected:  false,
-		},
-		{
-			name:      "StrictAllComponents should honor cluster TLS profile",
-			adherence: configv1.TLSAdherencePolicyStrictAllComponents,
-			expected:  true,
-		},
-		{
-			name:      "Unknown policy should honor cluster TLS profile for forward compatibility",
-			adherence: configv1.TLSAdherencePolicy("UnknownFuturePolicy"),
-			expected:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ShouldHonorClusterTLSProfile(tt.adherence)
-			if got != tt.expected {
-				t.Errorf("ShouldHonorClusterTLSProfile(%v) = %v, expected %v", tt.adherence, got, tt.expected)
-			}
-		})
-	}
-}
-
 func TestRegisterSecurityProfileWatcher_NonOpenShift(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 	defer infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
@@ -78,18 +40,6 @@ func TestRegisterSecurityProfileWatcher_NonOpenShift(t *testing.T) {
 	}
 }
 
-func TestRegisterSecurityProfileWatcher_ProfileNotFetched(t *testing.T) {
-	infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
-	defer infrastructure.InitializeForTesting(infrastructure.Kubernetes)
-
-	log := zap.New(zap.UseDevMode(true))
-
-	err := RegisterSecurityProfileWatcher(nil, ServerTLS{}, nil, log)
-	if err != nil {
-		t.Errorf("RegisterSecurityProfileWatcher() with empty TLSOpts should skip setup, got error = %v", err)
-	}
-}
-
 func TestBuildServerTLSOptions_NonOpenShift(t *testing.T) {
 	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
 	defer infrastructure.InitializeForTesting(infrastructure.OpenShiftv4)
@@ -97,16 +47,13 @@ func TestBuildServerTLSOptions_NonOpenShift(t *testing.T) {
 	log := zap.New(zap.UseDevMode(true))
 	ctx := context.Background()
 
-	result, err := BuildServerTLSOptions(ctx, nil, nil, log, nil)
+	result, err := BuildServerTLSOptions(ctx, nil, nil, log)
 	if err != nil {
 		t.Fatalf("Unexpected error on non-OpenShift: %v", err)
 	}
 
 	if result.TLSOpts != nil {
 		t.Errorf("Expected nil TLSOpts on non-OpenShift, got %v", result.TLSOpts)
-	}
-	if result.profileFetched {
-		t.Errorf("Expected profileFetched=false on non-OpenShift, got true")
 	}
 }
 
@@ -148,24 +95,26 @@ func TestBuildServerTLSOptions_OpenShift_LegacyAdherence(t *testing.T) {
 		WithObjects(apiServer).
 		Build()
 
-	result, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	result, err := buildServerTLSOptions(ctx, fakeClient, log)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if !result.profileFetched {
-		t.Errorf("Expected profileFetched=true, got false")
-	}
-	if result.TLSOpts != nil {
-		t.Errorf("Expected nil TLSOpts with legacy adherence policy, got %v", result.TLSOpts)
+	if result.TLSOpts == nil {
+		t.Errorf("Expected non-nil TLSOpts with legacy adherence (library-go default profile should be applied)")
 	}
 	if result.InitialTLSAdherencePolicy != configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly {
 		t.Errorf("Expected adherence policy %v, got %v",
 			configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly,
 			result.InitialTLSAdherencePolicy)
 	}
-	if result.InitialTLSProfileSpec.MinTLSVersion != configv1.VersionTLS12 {
-		t.Errorf("Expected MinTLSVersion TLS12, got %v", result.InitialTLSProfileSpec.MinTLSVersion)
+
+	if len(result.TLSOpts) > 0 {
+		tlsConfig := &tls.Config{}
+		result.TLSOpts[0](tlsConfig)
+		if tlsConfig.MinVersion != tls.VersionTLS12 {
+			t.Errorf("Expected MinVersion TLS12 from default profile, got %v", tlsConfig.MinVersion)
+		}
 	}
 }
 
@@ -207,14 +156,11 @@ func TestBuildServerTLSOptions_OpenShift_StrictAdherence(t *testing.T) {
 		WithObjects(apiServer).
 		Build()
 
-	result, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	result, err := buildServerTLSOptions(ctx, fakeClient, log)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if !result.profileFetched {
-		t.Errorf("Expected profileFetched=true, got false")
-	}
 	if result.TLSOpts == nil {
 		t.Errorf("Expected non-nil TLSOpts with strict adherence policy, got nil")
 	}
@@ -270,16 +216,13 @@ func TestBuildServerTLSOptions_OpenShift_EmptyAdherence(t *testing.T) {
 		WithObjects(apiServer).
 		Build()
 
-	result, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	result, err := buildServerTLSOptions(ctx, fakeClient, log)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 
-	if !result.profileFetched {
-		t.Errorf("Expected profileFetched=true, got false")
-	}
-	if result.TLSOpts != nil {
-		t.Errorf("Expected nil TLSOpts with empty adherence policy, got %v", result.TLSOpts)
+	if result.TLSOpts == nil {
+		t.Errorf("Expected non-nil TLSOpts with empty adherence (library-go default profile should be applied)")
 	}
 }
 
@@ -299,9 +242,12 @@ func TestBuildServerTLSOptions_OpenShift_NoAPIServer(t *testing.T) {
 		WithScheme(scheme).
 		Build()
 
-	_, err := BuildServerTLSOptions(ctx, nil, scheme, log, fakeClient)
+	result, err := buildServerTLSOptions(ctx, fakeClient, log)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
-	if err == nil {
-		t.Errorf("Expected error when APIServer resource is missing, got nil")
+	if result.TLSOpts == nil {
+		t.Errorf("Expected non-nil TLSOpts even when APIServer is missing (should fall back to library-go default profile)")
 	}
 }

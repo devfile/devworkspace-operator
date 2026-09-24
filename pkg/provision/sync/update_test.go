@@ -62,7 +62,7 @@ func TestGetUpdateFunc_Deployment(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	resultDeploy := result.(*appsv1.Deployment)
-	expectedLabels := map[string]string{"app": "test"}
+	expectedLabels := map[string]string{"app": "test", "paas.redhat.com/appcode": "ITOS-123"}
 	if !reflect.DeepEqual(resultDeploy.Spec.Template.Labels, expectedLabels) {
 		t.Errorf("pod template labels mismatch:\n  got:  %v\n  want: %v", resultDeploy.Spec.Template.Labels, expectedLabels)
 	}
@@ -79,22 +79,23 @@ func TestDeploymentUpdateFunc(t *testing.T) {
 		expectedAnns    map[string]string
 	}{
 		{
-			name:           "spec labels replace cluster labels",
+			name:           "external cluster labels are preserved",
 			specLabels:     map[string]string{"app": "test"},
 			clusterLabels:  map[string]string{"app": "test", "paas.redhat.com/appcode": "ITOS-123"},
-			expectedLabels: map[string]string{"app": "test"},
+			expectedLabels: map[string]string{"app": "test", "paas.redhat.com/appcode": "ITOS-123"},
 		},
 		{
-			name:           "spec wins on conflict",
+			name:           "spec wins on conflict and external labels preserved",
 			specLabels:     map[string]string{"app": "new-value"},
 			clusterLabels:  map[string]string{"app": "old-value", "external": "keep"},
-			expectedLabels: map[string]string{"app": "new-value"},
+			expectedLabels: map[string]string{"app": "new-value", "external": "keep"},
 		},
 		{
-			name:            "spec annotations replace cluster annotations",
+			name:            "external cluster annotations are preserved",
 			specAnnotations: map[string]string{"note": "from-spec"},
 			clusterAnns:     map[string]string{"note": "from-spec", "injected": "by-webhook"},
-			expectedAnns:    map[string]string{"note": "from-spec"},
+			expectedLabels:  map[string]string{},
+			expectedAnns:    map[string]string{"note": "from-spec", "injected": "by-webhook"},
 		},
 		{
 			name:           "handles nil cluster labels",
@@ -103,16 +104,16 @@ func TestDeploymentUpdateFunc(t *testing.T) {
 			expectedLabels: map[string]string{"app": "test"},
 		},
 		{
-			name:           "handles nil spec labels",
+			name:           "cluster labels preserved when spec labels nil",
 			specLabels:     nil,
 			clusterLabels:  map[string]string{"external": "keep"},
-			expectedLabels: nil,
+			expectedLabels: map[string]string{"external": "keep"},
 		},
 		{
-			name:           "removed spec label does not persist from cluster",
+			name:           "cluster labels not in spec are preserved",
 			specLabels:     map[string]string{"app": "test"},
 			clusterLabels:  map[string]string{"app": "test", "env": "staging"},
-			expectedLabels: map[string]string{"app": "test"},
+			expectedLabels: map[string]string{"app": "test", "env": "staging"},
 		},
 	}
 

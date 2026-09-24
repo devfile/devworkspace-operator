@@ -20,10 +20,12 @@ package tlssetup
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	ostls "github.com/openshift/controller-runtime-common/pkg/tls"
+	libgocrypto "github.com/openshift/library-go/pkg/crypto"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,79 +39,76 @@ type ServerTLS struct {
 	TLSOpts                   []func(*tls.Config)
 	InitialTLSProfileSpec     configv1.TLSProfileSpec
 	InitialTLSAdherencePolicy configv1.TLSAdherencePolicy
-	// profileFetched is true when the initial profile was successfully retrieved from OpenShift.
-	profileFetched bool
 }
 
-// ShouldHonorClusterTLSProfile returns true when the component must honor the cluster
-// TLS profile. Unknown values return true for forward compatibility.
-func ShouldHonorClusterTLSProfile(adherence configv1.TLSAdherencePolicy) bool {
-	switch adherence {
-	case "", configv1.TLSAdherencePolicyLegacyAdheringComponentsOnly:
-		return false
-	default:
-		// StrictAllComponents or unknown future value → honor the profile
-		return true
-	}
-}
-
-// BuildServerTLSOptions fetches TLS settings from the OpenShift API server.
-// Only applies the cluster profile when the tlsAdherence policy requires it.
-// Returns an error if running on OpenShift but profile fetch fails.
-// If bootstrapClient is nil, creates a new client from cfg and scheme.
-func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger, bootstrapClient client.Client) (ServerTLS, error) {
-	var result ServerTLS
-
+// BuildServerTLSOptions fetches TLS profile and adherence policy from cluster.
+// Returns TLS config functions when adherence policy requires strict compliance.
+// Falls back to the library-go default TLS profile on transient API server errors
+// or when adherence policy does not require strict compliance.
+// Returns empty ServerTLS on non-OpenShift clusters.
+func BuildServerTLSOptions(ctx context.Context, cfg *rest.Config, scheme *k8sruntime.Scheme, log logr.Logger) (ServerTLS, error) {
 	if !infrastructure.IsOpenShift() {
-		log.Info("Not running on OpenShift; using Go default TLS configuration")
-		return result, nil
+		return ServerTLS{}, nil
 	}
 
-	// Create bootstrap client if not provided (production path)
-	if bootstrapClient == nil {
-		var err error
-		bootstrapClient, err = client.New(cfg, client.Options{Scheme: scheme})
-		if err != nil {
-			return result, err
+	cl, err := client.New(cfg, client.Options{Scheme: scheme})
+	if err != nil {
+		return ServerTLS{}, fmt.Errorf("failed to create client for TLS profile fetch: %w", err)
+	}
+
+	return buildServerTLSOptions(ctx, cl, log)
+}
+
+func buildServerTLSOptions(ctx context.Context, cl client.Client, log logr.Logger) (ServerTLS, error) {
+	var profile configv1.TLSProfileSpec
+	var adherence configv1.TLSAdherencePolicy
+
+	apiServer := &configv1.APIServer{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: ostls.APIServerName}, apiServer); err != nil {
+		log.Error(err, "failed to read APIServer/cluster, falling back to library-go default TLS profile")
+	} else if p, err := ostls.GetTLSProfileSpec(apiServer.Spec.TLSSecurityProfile); err != nil {
+		log.Error(err, "failed to resolve TLS profile spec, falling back to library-go default TLS profile")
+	} else {
+		profile = p
+		adherence = apiServer.Spec.TLSAdherence
+	}
+
+	serverTLS := ServerTLS{
+		InitialTLSProfileSpec:     profile,
+		InitialTLSAdherencePolicy: adherence,
+	}
+
+	if libgocrypto.ShouldHonorClusterTLSProfile(adherence) {
+		tlsConfigFn, unsupported := ostls.NewTLSConfigFromProfile(profile)
+		if len(unsupported) > 0 {
+			log.Info("TLS profile contains ciphers unsupported by Go", "unsupported", unsupported)
 		}
+
+		if len(profile.Ciphers) > 0 && len(unsupported) == len(profile.Ciphers) {
+			log.Error(nil, "no ciphers from the cluster TLS profile are supported by Go; server will use library-go defaults, which may not satisfy tlsAdherence",
+				"profileCiphers", profile.Ciphers)
+		}
+
+		serverTLS.TLSOpts = []func(*tls.Config){tlsConfigFn}
+
+		log.Info("Applying cluster TLS profile to metrics and webhook servers",
+			"minTLSVersion", profile.MinTLSVersion)
+		log.V(1).Info("TLS cipher list from cluster profile", "ciphers", profile.Ciphers)
+	} else {
+		defaultProfile := *configv1.TLSProfiles[libgocrypto.DefaultTLSProfileType]
+		defaultTLSConfigFn, unsupported := ostls.NewTLSConfigFromProfile(defaultProfile)
+		if len(unsupported) > 0 {
+			log.Info("Default TLS profile contains ciphers unsupported by Go", "unsupported", unsupported)
+		}
+
+		serverTLS.TLSOpts = []func(*tls.Config){defaultTLSConfigFn}
+
+		log.Info("Using library-go default TLS profile",
+			"minTLSVersion", defaultProfile.MinTLSVersion,
+			"adherencePolicy", adherence)
 	}
 
-	profile, err := ostls.FetchAPIServerTLSProfile(ctx, bootstrapClient)
-	if err != nil {
-		return result, err
-	}
-
-	adherence, err := ostls.FetchAPIServerTLSAdherencePolicy(ctx, bootstrapClient)
-	if err != nil {
-		return result, err
-	}
-
-	result.InitialTLSProfileSpec = profile
-	result.InitialTLSAdherencePolicy = adherence
-	result.profileFetched = true
-
-	// Check if we should honor the cluster TLS profile
-	if !ShouldHonorClusterTLSProfile(adherence) {
-		log.Info("TLS adherence policy does not require strict adherence; using Go default TLS configuration",
-			"policy", adherence)
-		return result, nil
-	}
-
-	// Apply the cluster TLS profile
-	tlsConfigFn, unsupported := ostls.NewTLSConfigFromProfile(profile)
-	if len(unsupported) > 0 {
-		log.Info("TLS profile contains ciphers unsupported by Go; they will be ignored",
-			"unsupportedCiphers", unsupported)
-	}
-
-	result.TLSOpts = []func(*tls.Config){tlsConfigFn}
-
-	log.Info("Applying cluster TLS profile to metrics and webhook servers",
-		"minTLSVersion", profile.MinTLSVersion,
-		"cipherCount", len(profile.Ciphers),
-		"adherencePolicy", adherence)
-
-	return result, nil
+	return serverTLS, nil
 }
 
 // RegisterSecurityProfileWatcher watches the APIServer TLS profile and adherence policy.
@@ -119,26 +118,21 @@ func RegisterSecurityProfileWatcher(mgr manager.Manager, serverTLS ServerTLS, on
 		return nil
 	}
 
-	// Only set up the watcher if we successfully fetched the initial profile
-	if !serverTLS.profileFetched {
-		log.Info("Skipping TLS profile watcher (profile fetch failed)")
-		return nil
-	}
-
 	watcher := &ostls.SecurityProfileWatcher{
 		Client:                    mgr.GetClient(),
 		InitialTLSProfileSpec:     serverTLS.InitialTLSProfileSpec,
 		InitialTLSAdherencePolicy: serverTLS.InitialTLSAdherencePolicy,
-		OnProfileChange: func(_ context.Context, old, new configv1.TLSProfileSpec) {
-			log.Info("TLS security profile changed; initiating graceful restart",
-				"oldMinTLSVersion", old.MinTLSVersion,
-				"newMinTLSVersion", new.MinTLSVersion)
+		OnProfileChange: func(_ context.Context, _, newSpec configv1.TLSProfileSpec) {
+			if !libgocrypto.ShouldHonorClusterTLSProfile(serverTLS.InitialTLSAdherencePolicy) {
+				log.V(1).Info("Cluster TLS profile changed but adherence policy is not strict, not restarting")
+				return
+			}
+
+			log.V(1).Info("TLS security profile changed, restarting operator", "minTLSVersion", newSpec.MinTLSVersion)
 			onCancel()
 		},
-		OnAdherencePolicyChange: func(_ context.Context, old, new configv1.TLSAdherencePolicy) {
-			log.Info("TLS adherence policy changed; initiating graceful restart",
-				"old", old,
-				"new", new)
+		OnAdherencePolicyChange: func(_ context.Context, _, newPolicy configv1.TLSAdherencePolicy) {
+			log.V(1).Info("TLS adherence policy changed, restarting operator", "adherencePolicy", newPolicy)
 			onCancel()
 		},
 	}

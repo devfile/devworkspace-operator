@@ -123,7 +123,7 @@ func main() {
 	}
 
 	serverTLS, err := tlssetup.BuildServerTLSOptions(
-		context.Background(), cfg, scheme, log, nil)
+		context.Background(), cfg, scheme, log)
 	if err != nil {
 		log.Error(err, "failed to build TLS options from cluster TLS profile")
 		os.Exit(1)

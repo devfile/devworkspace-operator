@@ -84,8 +84,10 @@ func metadataDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 }
 
 // podTemplateMetadataDiffFunc requires a Deployment to be updated if any label or annotation present in the spec
-// deployment's pod template is not present in the cluster deployment's pod template. Like metadataDiffFunc, it only
-// checks the spec-to-cluster direction so that externally-added labels on the pod template do not trigger an update.
+// deployment's pod template is missing from the cluster deployment's pod template or present with a different value.
+// Like metadataDiffFunc, it only checks the spec-to-cluster direction so that externally-added labels on the pod
+// template do not trigger an update. This is only safe because deploymentDiffOpts ignores PodTemplateSpec.ObjectMeta
+// — see diffopts.go.
 func podTemplateMetadataDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	specDeploy, ok := spec.(*appsv1.Deployment)
 	if !ok {

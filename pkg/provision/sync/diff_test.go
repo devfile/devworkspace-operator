@@ -104,7 +104,10 @@ func TestPodTemplateMetadataDiffFunc(t *testing.T) {
 				},
 			}
 
-			_, update := podTemplateMetadataDiffFunc(spec, cluster)
+			del, update := podTemplateMetadataDiffFunc(spec, cluster)
+			if del {
+				t.Errorf("podTemplateMetadataDiffFunc() delete = true, want false")
+			}
 			if update != tt.expectUpdate {
 				t.Errorf("podTemplateMetadataDiffFunc() update = %v, want %v", update, tt.expectUpdate)
 			}
@@ -144,7 +147,10 @@ func TestDeploymentDiffOpts_IgnoresPodTemplateMetadata(t *testing.T) {
 	cluster.Spec.Template.Labels["external.io/injected"] = "true"
 
 	diffFn := basicDiffFunc(deploymentDiffOpts)
-	_, update := diffFn(spec, cluster)
+	del, update := diffFn(spec, cluster)
+	if del {
+		t.Error("basicDiffFunc(deploymentDiffOpts) delete = true, want false")
+	}
 	if update {
 		t.Error("basicDiffFunc(deploymentDiffOpts) should not detect extra pod template labels as a diff")
 	}
@@ -173,7 +179,10 @@ func TestDeploymentDiffOpts_DetectsSpecChanges(t *testing.T) {
 	cluster.Spec.Template.Spec.Containers[0].Image = "test:v1"
 
 	diffFn := basicDiffFunc(deploymentDiffOpts)
-	_, update := diffFn(spec, cluster)
+	del, update := diffFn(spec, cluster)
+	if del {
+		t.Error("basicDiffFunc(deploymentDiffOpts) delete = true, want false")
+	}
 	if !update {
 		t.Error("basicDiffFunc(deploymentDiffOpts) should detect container image changes as a diff")
 	}
@@ -212,7 +221,10 @@ func TestDeploymentFullDiff_ExternalLabelsNoUpdate(t *testing.T) {
 	cluster.Spec.Template.Labels["paas.redhat.com/appcode"] = "ITOS-123"
 
 	deploymentDiff := diffFuncs[reflect.TypeOf(appsv1.Deployment{})]
-	_, update := deploymentDiff(spec, cluster)
+	del, update := deploymentDiff(spec, cluster)
+	if del {
+		t.Error("deployment diff should not trigger delete when only external labels are added to deployment and pod template metadata")
+	}
 	if update {
 		t.Error("deployment diff should not trigger update when only external labels are added to deployment and pod template metadata")
 	}

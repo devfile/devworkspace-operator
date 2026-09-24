@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var roleDiffOpts = cmp.Options{
@@ -39,7 +40,7 @@ var rolebindingDiffOpts = cmp.Options{
 var deploymentDiffOpts = cmp.Options{
 	cmpopts.IgnoreFields(appsv1.Deployment{}, "TypeMeta", "ObjectMeta", "Status"),
 	cmpopts.IgnoreFields(appsv1.DeploymentSpec{}, "RevisionHistoryLimit", "ProgressDeadlineSeconds"),
-	cmpopts.IgnoreFields(corev1.PodTemplateSpec{}, "ObjectMeta"),
+	cmpopts.IgnoreFields(metav1.ObjectMeta{}, "Labels", "Annotations"),
 	cmpopts.IgnoreFields(corev1.PodSpec{}, "DNSPolicy", "SchedulerName", "DeprecatedServiceAccount"),
 	cmpopts.IgnoreFields(corev1.Container{}, "TerminationMessagePath", "TerminationMessagePolicy", "ImagePullPolicy"),
 	cmpopts.SortSlices(func(a, b corev1.Container) bool {

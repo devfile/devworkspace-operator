@@ -17,6 +17,7 @@ import (
 	"errors"
 	"reflect"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -67,9 +68,35 @@ func serviceAccountUpdateFunc(spec, cluster crclient.Object) (crclient.Object, e
 	return spec, nil
 }
 
+func deploymentUpdateFunc(spec, cluster crclient.Object) (crclient.Object, error) {
+	if cluster == nil {
+		return defaultUpdateFunc(spec, cluster)
+	}
+	specDeploy := spec.DeepCopyObject().(*appsv1.Deployment)
+	clusterDeploy := cluster.(*appsv1.Deployment)
+	specDeploy.ResourceVersion = clusterDeploy.ResourceVersion
+
+	specDeploy.Spec.Template.Labels = mergeMaps(clusterDeploy.Spec.Template.Labels, specDeploy.Spec.Template.Labels)
+	specDeploy.Spec.Template.Annotations = mergeMaps(clusterDeploy.Spec.Template.Annotations, specDeploy.Spec.Template.Annotations)
+	return specDeploy, nil
+}
+
+func mergeMaps(base, overlay map[string]string) map[string]string {
+	merged := make(map[string]string, len(base)+len(overlay))
+	for k, v := range base {
+		merged[k] = v
+	}
+	for k, v := range overlay {
+		merged[k] = v
+	}
+	return merged
+}
+
 func getUpdateFunc(obj crclient.Object) updateFunc {
 	objType := reflect.TypeOf(obj).Elem()
 	switch objType {
+	case reflect.TypeOf(appsv1.Deployment{}):
+		return deploymentUpdateFunc
 	case reflect.TypeOf(corev1.Service{}):
 		return serviceUpdateFunc
 	case reflect.TypeOf(corev1.ServiceAccount{}):

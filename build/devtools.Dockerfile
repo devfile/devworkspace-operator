@@ -19,6 +19,16 @@ USER root
 # Install gettext
 RUN dnf install -y gettext
 
+ENV GO_VERSION=1.26.7
+ENV GOROOT=/usr/local/go
+ENV PATH=${GOROOT}/bin:${PATH}
+RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz && \
+    echo "ffb5f8de10c62550dfddab66b36b57030721e0a44a3218e9e1181d7b59f121ca  /tmp/go.tar.gz" | sha256sum -c - && \
+    rm -rf ${GOROOT} && \
+    tar -C /usr/local -xzf /tmp/go.tar.gz && \
+    rm -f /tmp/go.tar.gz && \
+    go version
+
 # Install the Operator SDK
 ENV OPERATOR_SDK_VERSION="v1.8.0"
 ENV OPERATOR_SDK_DL_URL=https://github.com/operator-framework/operator-sdk/releases/download/${OPERATOR_SDK_VERSION}

@@ -102,6 +102,7 @@ func SetGlobalConfigForTesting(testConfig *controller.OperatorConfiguration) {
 	setDefaultPodSecurityContext()
 	setDefaultContainerSecurityContext()
 	setDefaultOverrideConfig()
+	setDefaultNetworkPolicy()
 	internalConfig = defaultConfig.DeepCopy()
 	mergeConfig(testConfig, internalConfig)
 }
@@ -119,7 +120,9 @@ func SetupControllerConfig(client crclient.Client) error {
 	if err := setDefaultOverrideConfig(); err != nil {
 		return err
 	}
-
+	if err := setDefaultNetworkPolicy(); err != nil {
+		return err
+	}
 	internalConfig = &controller.OperatorConfiguration{}
 
 	namespace, err := infrastructure.GetNamespace()
@@ -522,6 +525,20 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 				to.Workspace.Overrides.RestrictedPodOverrideFields = from.Workspace.Overrides.RestrictedPodOverrideFields
 			}
 		}
+		if from.Workspace.NetworkPolicy != nil {
+			if to.Workspace.NetworkPolicy == nil {
+				to.Workspace.NetworkPolicy = &controller.NetworkPolicyConfig{}
+			}
+			if from.Workspace.NetworkPolicy.Enabled != nil {
+				to.Workspace.NetworkPolicy.Enabled = from.Workspace.NetworkPolicy.Enabled
+			}
+			if from.Workspace.NetworkPolicy.Ingress != nil {
+				to.Workspace.NetworkPolicy.Ingress = from.Workspace.NetworkPolicy.Ingress
+			}
+			if from.Workspace.NetworkPolicy.Egress != nil {
+				to.Workspace.NetworkPolicy.Egress = from.Workspace.NetworkPolicy.Egress
+			}
+		}
 	}
 }
 
@@ -664,6 +681,9 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.DeploymentStrategy != defaultConfig.Workspace.DeploymentStrategy {
 			config = append(config, fmt.Sprintf("workspace.deploymentStrategy=%s", workspace.DeploymentStrategy))
+		}
+		if workspace.NetworkPolicy != nil && pointer.BoolDeref(workspace.NetworkPolicy.Enabled, constants.DefaultNetworkPolicyEnabled) {
+			config = append(config, "workspace.networkPolicy.enabled=true")
 		}
 		if workspace.PVCName != defaultConfig.Workspace.PVCName {
 			config = append(config, fmt.Sprintf("workspace.pvcName=%s", workspace.PVCName))

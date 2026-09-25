@@ -361,8 +361,8 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			Env:       env.GetEnvironmentVariablesForProjectRestore(workspace),
 			Resources: workspace.Config.Workspace.RestoreConfig.Resources,
 		}
-		if config.Workspace.ImagePullPolicy != "" {
-			restoreOptions.PullPolicy = corev1.PullPolicy(config.Workspace.ImagePullPolicy)
+		if workspace.Config.Workspace.RestoreConfig.ImagePullPolicy != "" {
+			restoreOptions.PullPolicy = workspace.Config.Workspace.RestoreConfig.ImagePullPolicy
 		} else {
 			restoreOptions.PullPolicy = corev1.PullIfNotPresent
 		}
@@ -433,12 +433,15 @@ func (r *DevWorkspaceReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			return r.failWorkspace(workspace, fmt.Sprintf("Failed to merge init containers: %s", err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 		}
 
-		// Ensure init-persistent-home container has correct fields after merge
+		// Post-merge fixups on init containers
 		for i := range merged {
 			if merged[i].Name == constants.HomeInitComponentName {
 				if err := home.EnsureHomeInitContainerFields(&merged[i]); err != nil {
 					return r.failWorkspace(workspace, fmt.Sprintf("Failed to configure %s container: %s", constants.HomeInitComponentName, err), metrics.ReasonBadRequest, reqLogger, &reconcileStatus), nil
 				}
+			}
+			if merged[i].ImagePullPolicy == "" {
+				merged[i].ImagePullPolicy = corev1.PullIfNotPresent
 			}
 		}
 

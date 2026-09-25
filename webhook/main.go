@@ -20,9 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
 	"runtime"
-	"syscall"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/httpfactory"
@@ -45,6 +43,7 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/cache"
 	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/tlssetup"
 	"github.com/devfile/devworkspace-operator/version"
 	"github.com/devfile/devworkspace-operator/webhook/server"
 	"github.com/devfile/devworkspace-operator/webhook/workspace"
@@ -80,8 +79,8 @@ func init() {
 	utilruntime.Must(dwv2.AddToScheme(scheme))
 
 	if infrastructure.IsOpenShift() {
-		utilruntime.Must(routev1.Install(scheme))
-		utilruntime.Must(configv1.Install(scheme))
+		utilruntime.Must(routev1.AddToScheme(scheme))
+		utilruntime.Must(configv1.AddToScheme(scheme))
 	}
 }
 
@@ -111,6 +110,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	serverTLS, err := tlssetup.BuildServerTLSOptions(
+		context.Background(), cfg, scheme, log)
+	if err != nil {
+		log.Error(err, "failed to build TLS options from cluster TLS profile")
+		os.Exit(1)
+	}
+
 	namespace, err := infrastructure.GetWatchNamespace()
 	if err != nil {
 		log.Error(err, "Failed to get watch namespace")
@@ -127,6 +133,7 @@ func main() {
 		CertDir: server.WebhookServerCertDir,
 		Port:    server.WebhookServerPort,
 		Host:    server.WebhookServerHost,
+		TLSOpts: serverTLS.TLSOpts,
 	})
 
 	// Create a new Cmd to provide shared dependencies and start components
@@ -136,6 +143,7 @@ func main() {
 			BindAddress:    metricsAddr,
 			FilterProvider: filters.WithAuthenticationAndAuthorization,
 			SecureServing:  true,
+			TLSOpts:        serverTLS.TLSOpts,
 		},
 		WebhookServer:          webhookServer,
 		HealthProbeBindAddress: ":6789",
@@ -176,8 +184,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	var shutdownChan = make(chan os.Signal, 1)
-	signal.Notify(shutdownChan, syscall.SIGTERM)
+	// On OpenShift, watch cluster TLS profile and restart if it changes.
+	signalCtx := signals.SetupSignalHandler()
+	ctx, cancelCtx := context.WithCancel(signalCtx)
+	defer cancelCtx()
+
+	if err := tlssetup.RegisterSecurityProfileWatcher(mgr, serverTLS, cancelCtx, log); err != nil {
+		log.Error(err, "unable to set up TLS security profile watcher")
+		os.Exit(1)
+	}
 
 	// Setup health check
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
@@ -192,7 +207,7 @@ func main() {
 	}
 
 	log.Info("Starting manager")
-	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		log.Error(err, "Manager exited non-zero")
 		os.Exit(1)
 	}

@@ -281,6 +281,9 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Routing.ClusterHostSuffix != "" {
 			to.Routing.ClusterHostSuffix = from.Routing.ClusterHostSuffix
 		}
+		if from.Routing.GatewayRef != nil {
+			to.Routing.GatewayRef = from.Routing.GatewayRef.DeepCopy()
+		}
 		if from.Routing.ProxyConfig != nil {
 			if to.Routing.ProxyConfig == nil {
 				to.Routing.ProxyConfig = &controller.Proxy{}
@@ -635,6 +638,12 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if routing.DefaultRoutingClass != defaultConfig.Routing.DefaultRoutingClass {
 			config = append(config, fmt.Sprintf("routing.defaultRoutingClass=%s", routing.DefaultRoutingClass))
+		}
+		if routing.GatewayRef != nil {
+			config = append(config, fmt.Sprintf("routing.gatewayRef.name=%s", routing.GatewayRef.Name))
+			if routing.GatewayRef.Namespace != nil {
+				config = append(config, fmt.Sprintf("routing.gatewayRef.namespace=%s", *routing.GatewayRef.Namespace))
+			}
 		}
 	}
 	webhook := currConfig.Webhook

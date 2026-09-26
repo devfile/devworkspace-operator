@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 // diffFunc represents a function that compares a spec object against the corresponding cluster object and
@@ -50,6 +51,7 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(corev1.Service{}):               allDiffFuncs(metadataDiffFunc, serviceDiffFunc),
 	reflect.TypeOf(networkingv1.Ingress{}):         allDiffFuncs(metadataDiffFunc, basicDiffFunc(ingressDiffOpts)),
 	reflect.TypeOf(routev1.Route{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(routeDiffOpts)),
+	reflect.TypeOf(gwapiv1.HTTPRoute{}):            allDiffFuncs(metadataDiffFunc, basicDiffFunc(httpRouteDiffOpts)),
 }
 
 // basicDiffFunc returns a diffFunc that specifies an object needs an update if cmp.Equal fails

@@ -119,6 +119,25 @@ type BackupCronJobConfig struct {
 	BackoffLimit *int32 `json:"backoffLimit,omitempty"`
 }
 
+// GatewayReference defines a reference to a Gateway API Gateway resource
+// that HTTPRoutes should attach to via parentRefs.
+type GatewayReference struct {
+	// Name is the name of the Gateway resource
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	Name string `json:"name"`
+	// Namespace is the namespace of the Gateway resource.
+	// If not specified, HTTPRoutes will reference a Gateway in the same namespace
+	// as the DevWorkspace.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=63
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	Namespace *string `json:"namespace,omitempty"`
+}
+
 type RoutingConfig struct {
 	// DefaultRoutingClass specifies the routingClass to be used when a DevWorkspace
 	// specifies an empty `.spec.routingClass`. Supported routingClasses can be defined
@@ -144,6 +163,12 @@ type RoutingConfig struct {
 	// TLSCertificateConfigmapRef defines the name and namespace of the configmap with a certificate to inject into the
 	// HTTP client.
 	TLSCertificateConfigmapRef *ConfigmapReference `json:"tlsCertificateConfigmapRef,omitempty"`
+	// GatewayRef defines a reference to a Gateway API Gateway resource that HTTPRoutes
+	// should attach to when using the 'gateway-api' routing class. This field is required
+	// when routingClass is set to 'gateway-api'. The referenced Gateway must be provisioned
+	// by the cluster administrator before workspaces can use Gateway API routing.
+	// +kubebuilder:validation:Optional
+	GatewayRef *GatewayReference `json:"gatewayRef,omitempty"`
 }
 
 // OverrideConfig defines configuration options for controlling which fields are restricted

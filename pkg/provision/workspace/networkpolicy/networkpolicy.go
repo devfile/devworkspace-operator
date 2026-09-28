@@ -32,7 +32,7 @@ import (
 )
 
 // generateNetworkPolicy builds the NetworkPolicy applied to a single DevWorkspace's pods.
-// The name, labels, podSelector and policyTypes are owned by the operator; only the ingress
+// The name, labels, podSelector and policyTypes are defined by the operator; only the ingress
 // and egress rules come from configuration. Both directions are always listed in policyTypes,
 // so a direction whose configured rule list is empty denies all traffic in that direction.
 func generateNetworkPolicy(workspace *common.DevWorkspaceWithConfig, npConfig *v1alpha1.NetworkPolicyConfig) *networkingv1.NetworkPolicy {

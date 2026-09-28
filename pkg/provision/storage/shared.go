@@ -346,6 +346,7 @@ func checkPVCTerminating(name, namespace string, api sync.ClusterAPI) (bool, err
 // strategy, and bare volume-name subpaths for the per-workspace strategy).
 //
 // It also adds the PVC-backed k8s Volume to podAdditions to accommodate the rewritten VolumeMounts.
+// Must be called at most once per PodAdditions: the PVC-backed Volume is appended unconditionally.
 func rewriteContainerVolumeMounts(
 	workspaceId, pvcName string,
 	podAdditions *v1alpha1.PodAdditions,

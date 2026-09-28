@@ -24,7 +24,6 @@ import (
 	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
-	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 	"github.com/devfile/devworkspace-operator/pkg/library/overrides/restrictions"
 	nsconfig "github.com/devfile/devworkspace-operator/pkg/provision/config"
 	"github.com/devfile/devworkspace-operator/pkg/provision/sync"

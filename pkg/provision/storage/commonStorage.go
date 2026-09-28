@@ -30,7 +30,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/library/overrides"
 )
 
 // The CommonStorageProvisioner provisions one PVC per namespace and configures all volumes in a workspace

@@ -17,6 +17,17 @@ The DevWorkspace Operator provides four Kubernetes APIs:
 
 **AI Agent Note**: When modifying workspace resources, understand which API is appropriate for your changes.
 
+## Codebase Navigation (Graphify)
+
+This repository maintains a structural knowledge graph at `graphify-out/`.
+
+- **Avoid** broad `grep`/`find` across `controllers/` or `pkg/` — the graph answers most structural questions faster and with less noise.
+- **Architecture overview**: read `graphify-out/GRAPH_REPORT.md` first — it surfaces god nodes, surprising cross-file connections, and suggested queries.
+- **Specific questions**: use `/graphify query "<question>"` (or `graphify query` in terminal) for a scoped subgraph.
+- **Structural relationships**: use `/graphify path "<StructA>" "<StructB>"` to trace connections between two concepts.
+- **Concept details**: use `/graphify explain "<NodeName>"` for source location, community, and degree.
+- **After modifying code**: run `graphify update .` to keep the graph current (AST-only, no API cost).
+
 ## Advanced Features
 
 ### Workspace Bootstrapping

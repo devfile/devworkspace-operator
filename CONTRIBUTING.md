@@ -42,6 +42,32 @@ After addressing review comments, don't forget to add a comment in the PR afterw
 
 Detailed instructions regarding the DevWorkspace Operator development are provided in this section.
 
+### Codebase Navigation (Graphify)
+
+This repository ships a pre-built knowledge graph (`graphify-out/`) to help navigate the codebase without expensive file searches. After cloning or pulling, run once to anchor the graph to your local paths:
+
+```bash
+graphify update .
+```
+
+Optionally, enable auto-rebuild on every commit:
+
+```bash
+graphify hook install
+```
+
+Once set up, use these commands instead of `grep`/`find` across the source tree:
+
+| Task | Command |
+|---|---|
+| Architecture overview | read `graphify-out/GRAPH_REPORT.md` |
+| Specific question | `/graphify query "<question>"` |
+| Trace relationship | `/graphify path "<StructA>" "<StructB>"` |
+| Concept details | `/graphify explain "<NodeName>"` |
+| After modifying code | `graphify update .` (terminal) |
+
+> **Note:** Do not run `graphify claude install` — graphify guidance is already included in `AGENTS.md`.
+
 ### Prerequisites
 
 To build, test and debug the DevWorkspace Operator the following development tools are required:

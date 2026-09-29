@@ -93,7 +93,10 @@ func podTemplateMetadataDiffFunc(spec, cluster crclient.Object) (delete, update 
 	if !ok {
 		return false, false
 	}
-	clusterDeploy := cluster.(*appsv1.Deployment)
+	clusterDeploy, ok := cluster.(*appsv1.Deployment)
+	if !ok {
+		return false, false
+	}
 
 	clusterLabels := clusterDeploy.Spec.Template.Labels
 	for k, v := range specDeploy.Spec.Template.Labels {

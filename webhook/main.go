@@ -184,14 +184,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// On OpenShift, watch cluster TLS profile and restart if it changes.
 	signalCtx := signals.SetupSignalHandler()
 	ctx, cancelCtx := context.WithCancel(signalCtx)
 	defer cancelCtx()
 
-	if err := tlssetup.RegisterSecurityProfileWatcher(mgr, serverTLS, cancelCtx, log); err != nil {
-		log.Error(err, "unable to set up TLS security profile watcher")
-		os.Exit(1)
+	if infrastructure.IsOpenShift() {
+		if err := tlssetup.RegisterSecurityProfileWatcher(mgr, serverTLS, cancelCtx, log); err != nil {
+			log.Error(err, "unable to set up TLS security profile watcher")
+			os.Exit(1)
+		}
 	}
 
 	// Setup health check

@@ -168,6 +168,11 @@ var (
 				{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"network.openshift.io/policy-group": "ingress"}}},
 			},
 		},
+		{
+			From: []networkingv1.NetworkPolicyPeer{
+				{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"policy-group.network.openshift.io/host-network": ""}}},
+			},
+		},
 	}
 )
 
@@ -176,14 +181,6 @@ var (
 	commonStorageSize       = resource.MustParse("10Gi")
 	perWorkspaceStorageSize = resource.MustParse("10Gi")
 )
-
-// GetDefaultConfig returns a copy of the operator's default configuration. It has no
-// callers inside this repository: it exists for projects that embed DWO as a dependency,
-// such as che-operator, which read the defaults in order to extend them rather than
-// restate them.
-func GetDefaultConfig() *v1alpha1.OperatorConfiguration {
-	return defaultConfig.DeepCopy()
-}
 
 func setDefaultPodSecurityContext() error {
 	if !infrastructure.IsInitialized() {
@@ -222,12 +219,33 @@ func setDefaultOverrideConfig() error {
 }
 
 func setDefaultNetworkPolicy() error {
+	ingress, egress, err := GetDefaultNetworkPolicy()
+	if err != nil {
+		return err
+	}
+
+	defaultConfig.Workspace.NetworkPolicy = &v1alpha1.NetworkPolicyConfig{
+		Enabled: pointer.Bool(constants.DefaultNetworkPolicyEnabled),
+		Ingress: ingress,
+		Egress:  egress,
+	}
+	return nil
+}
+
+// GetDefaultNetworkPolicy returns the default NetworkPolicy applied to DevWorkspace pods.
+// It is exposed publicly for other operators (such as che-operator) that need to read
+// and extend the default rules rather than hardcoding or duplicating them.
+func GetDefaultNetworkPolicy() (
+	[]networkingv1.NetworkPolicyIngressRule,
+	[]networkingv1.NetworkPolicyEgressRule,
+	error,
+) {
 	if !infrastructure.IsInitialized() {
-		return fmt.Errorf("can not set default network policy, infrastructure not detected")
+		return nil, nil, fmt.Errorf("can not set default network policy, infrastructure not detected")
 	}
 	operatorNamespace, err := infrastructure.GetNamespace()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	var ingressPolicyRules []networkingv1.NetworkPolicyIngressRule
@@ -255,5 +273,5 @@ func setDefaultNetworkPolicy() error {
 		Ingress: ingressPolicyRules,
 		Egress:  defaultEgressPolicyRules,
 	}
-	return nil
+	return ingressPolicyRules, defaultEgressPolicyRules, nil
 }

@@ -4426,10 +4426,10 @@ spec:
                           Ingress defines the ingress rules applied to DevWorkspace pods. If this field is not
                           specified, the default ingress rules of the DevWorkspace Operator apply. On OpenShift,
                           the defaults allow traffic from the operator's own namespace and from the OpenShift
-                          monitoring and ingress namespaces, and deny all other ingress traffic. On Kubernetes,
-                          the default allows all ingress traffic, since the namespace of the cluster's ingress
-                          controller is not known to the operator; administrators are expected to replace this
-                          with rules appropriate to their cluster.
+                          monitoring, ingress, and host-network namespaces, and deny all other ingress traffic.
+                          On Kubernetes, the default allows all ingress traffic, since the namespace of the
+                          cluster's ingress controller is not known to the operator; administrators are expected
+                          to replace this with rules appropriate to their cluster.
                           If this field is specified as an empty list, all ingress traffic to DevWorkspace pods
                           is denied. If this field is specified as a non-empty list, exactly those rules apply
                           and the default rules no longer apply.

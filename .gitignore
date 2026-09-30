@@ -45,3 +45,4 @@ graphify-out/.graphify_python
 graphify-out/.graphify_labels.json
 graphify-out/.graphify_uncached.txt
 graphify-out/cost.json
+graphify-out/[0-9]*/

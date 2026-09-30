@@ -165,7 +165,6 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 					"list",
 				},
 			},
-			// Needed for pkg/config/sync.go:109 (SetupControllerConfig)
 			{
 				APIGroups: []string{
 					"config.openshift.io",
@@ -178,6 +177,33 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 				},
 				Verbs: []string{
 					"get",
+				},
+			},
+			{
+				APIGroups: []string{
+					"config.openshift.io",
+				},
+				Resources: []string{
+					"apiservers",
+				},
+				ResourceNames: []string{
+					"cluster",
+				},
+				Verbs: []string{
+					"get",
+				},
+			},
+			// Needed for pkg/tlssetup/server_tls.go (RegisterSecurityProfileWatcher)
+			{
+				APIGroups: []string{
+					"config.openshift.io",
+				},
+				Resources: []string{
+					"apiservers",
+				},
+				Verbs: []string{
+					"list",
+					"watch",
 				},
 			},
 		},

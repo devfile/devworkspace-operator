@@ -217,9 +217,17 @@ spec:
           - watch
         - apiGroups:
           - config.openshift.io
+          resources:
+          - apiservers
+          verbs:
+          - list
+          - watch
+        - apiGroups:
+          - config.openshift.io
           resourceNames:
           - cluster
           resources:
+          - apiservers
           - proxies
           verbs:
           - get

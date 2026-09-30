@@ -57,6 +57,7 @@ func setupForTest(t *testing.T) {
 	setDefaultPodSecurityContext()
 	setDefaultContainerSecurityContext()
 	setDefaultOverrideConfig()
+	setDefaultNetworkPolicy()
 	configNamespace = testNamespace
 	originalDefaultConfig := defaultConfig.DeepCopy()
 	t.Cleanup(func() {

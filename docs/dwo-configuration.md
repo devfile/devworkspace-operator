@@ -231,6 +231,47 @@ config:
 
 The config above will have newly created PVCs to have its access mode set to `ReadWriteMany`.
 
+## Configuring Workspace NetworkPolicy
+
+By default, DevWorkspace pods accept traffic from anywhere in the cluster. 
+Administrators can enable NetworkPolicy provisioning to restrict workspace network access. 
+When enabled, the operator creates one NetworkPolicy per DevWorkspace, 
+named `<workspace-id>-networkpolicy` in the workspace's namespace. Each policy applies only 
+to the pods of its own workspace, selected by the `controller.devfile.io/devworkspace_id` label.
+
+**Rule semantics:**
+- Omitting a rule field (e.g., no `ingress` key) means the operator's default rules for that direction apply. 
+- Setting a rule field to an empty list (e.g., `ingress: []`) denies all traffic in that direction.
+- Setting `ingress` or `egress` to a non-empty list applies exactly those rules and replaces the defaults 
+entirely rather than appending to them. Any default rule that should be kept must be repeated in the configuration.
+
+**Lifecycle:**
+- A workspace's policy is synced on every reconcile of that workspace, whether it is running or stopped,
+and before any workspace pod is created.
+- Changing this configuration does not enqueue the workspaces it affects, so a new value reaches a given
+workspace on its next reconcile rather than immediately. Restarting a workspace is not required.
+- The policy is owned by its DevWorkspace, so it is garbage collected when the workspace is deleted.
+- Disabling the feature (setting `enabled: false`) removes the policies of both running and stopped workspaces,
+restoring connectivity rather than leaving stale policies in place.
+- While the feature is enabled, the policy of a stopped workspace is left in place, where it governs no pods,
+and is removed when the workspace is deleted.
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    networkPolicy:
+      enabled: true
+      ingress:
+        - {}
+      egress:
+        - {}
+```
+
 ## Configuring Custom Init Containers
 
 The DevWorkspace Operator allows cluster administrators to inject custom init containers into all workspace pods via the `config.workspace.initContainers` field in the global DWOC. This feature enables use cases such as:

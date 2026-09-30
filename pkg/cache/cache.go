@@ -92,6 +92,9 @@ func GetCacheFunc() (cache.NewCacheFunc, error) {
 		&rbacv1.RoleBinding{}: {
 			Label: rbacObjectSelector,
 		},
+		&networkingv1.NetworkPolicy{}: {
+			Label: devworkspaceObjectSelector,
+		},
 	}
 
 	if infrastructure.IsOpenShift() {

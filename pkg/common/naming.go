@@ -166,6 +166,10 @@ func WorkspaceRolebindingName() string {
 	return "devworkspace-default-rolebinding"
 }
 
+func NetworkPolicyName(workspaceId string) string {
+	return fmt.Sprintf("%s-%s", workspaceId, "networkpolicy")
+}
+
 func WorkspaceSCCRoleName(sccName string) string {
 	return fmt.Sprintf("devworkspace-use-%s", sccName)
 }

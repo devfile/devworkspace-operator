@@ -19,10 +19,13 @@ import (
 	"fmt"
 
 	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 )
 
@@ -55,6 +58,7 @@ var defaultConfig = &v1alpha1.OperatorConfiguration{
 		CleanupOnStop:            pointer.Bool(false),
 		PodSecurityContext:       nil, // Set per-platform in setDefaultPodSecurityContext()
 		ContainerSecurityContext: nil, // Set per-platform in setDefaultContainerSecurityContext()
+		NetworkPolicy:            nil, // Set per-platform in setDefaultNetworkPolicy()
 		DefaultTemplate:          nil,
 		ProjectCloneConfig: &v1alpha1.ProjectCloneConfig{
 			Resources: &corev1.ResourceRequirements{
@@ -150,6 +154,26 @@ var (
 			},
 		},
 	}
+
+	defaultEgressPolicyRules            = []networkingv1.NetworkPolicyEgressRule{{}}
+	defaultKubernetesIngressPolicyRules = []networkingv1.NetworkPolicyIngressRule{{}}
+	defaultOpenShiftIngressPolicyRules  = []networkingv1.NetworkPolicyIngressRule{
+		{
+			From: []networkingv1.NetworkPolicyPeer{
+				{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"network.openshift.io/policy-group": "monitoring"}}},
+			},
+		},
+		{
+			From: []networkingv1.NetworkPolicyPeer{
+				{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"network.openshift.io/policy-group": "ingress"}}},
+			},
+		},
+		{
+			From: []networkingv1.NetworkPolicyPeer{
+				{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"policy-group.network.openshift.io/host-network": ""}}},
+			},
+		},
+	}
 )
 
 // Necessary variables for setting pointer values
@@ -192,4 +216,62 @@ func setDefaultOverrideConfig() error {
 		defaultConfig.Workspace.Overrides = defaultKubernetesOverrideConfig
 	}
 	return nil
+}
+
+func setDefaultNetworkPolicy() error {
+	ingress, egress, err := GetDefaultNetworkPolicy()
+	if err != nil {
+		return err
+	}
+
+	defaultConfig.Workspace.NetworkPolicy = &v1alpha1.NetworkPolicyConfig{
+		Enabled: pointer.Bool(constants.DefaultNetworkPolicyEnabled),
+		Ingress: ingress,
+		Egress:  egress,
+	}
+	return nil
+}
+
+// GetDefaultNetworkPolicy returns the default NetworkPolicy applied to DevWorkspace pods.
+// It is exposed publicly for other operators (such as che-operator) that need to read
+// and extend the default rules rather than hardcoding or duplicating them.
+func GetDefaultNetworkPolicy() (
+	[]networkingv1.NetworkPolicyIngressRule,
+	[]networkingv1.NetworkPolicyEgressRule,
+	error,
+) {
+	if !infrastructure.IsInitialized() {
+		return nil, nil, fmt.Errorf("can not set default network policy, infrastructure not detected")
+	}
+	operatorNamespace, err := infrastructure.GetNamespace()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var ingressPolicyRules []networkingv1.NetworkPolicyIngressRule
+	if infrastructure.IsOpenShift() {
+		allowFromDevWorkspaceIngressPolicyRule := networkingv1.NetworkPolicyIngressRule{
+			From: []networkingv1.NetworkPolicyPeer{
+				{
+					NamespaceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"kubernetes.io/metadata.name": operatorNamespace},
+					},
+					PodSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{"app.kubernetes.io/part-of": "devworkspace-operator"},
+					},
+				},
+			},
+		}
+		ingressPolicyRules = []networkingv1.NetworkPolicyIngressRule{allowFromDevWorkspaceIngressPolicyRule}
+		ingressPolicyRules = append(ingressPolicyRules, defaultOpenShiftIngressPolicyRules...)
+	} else {
+		ingressPolicyRules = defaultKubernetesIngressPolicyRules
+	}
+
+	defaultConfig.Workspace.NetworkPolicy = &v1alpha1.NetworkPolicyConfig{
+		Enabled: pointer.Bool(constants.DefaultNetworkPolicyEnabled),
+		Ingress: ingressPolicyRules,
+		Egress:  defaultEgressPolicyRules,
+	}
+	return ingressPolicyRules, defaultEgressPolicyRules, nil
 }

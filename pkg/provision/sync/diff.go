@@ -49,6 +49,7 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(batchv1.Job{}):                  allDiffFuncs(metadataDiffFunc, jobDiffFunc),
 	reflect.TypeOf(corev1.Service{}):               allDiffFuncs(metadataDiffFunc, serviceDiffFunc),
 	reflect.TypeOf(networkingv1.Ingress{}):         allDiffFuncs(metadataDiffFunc, basicDiffFunc(ingressDiffOpts)),
+	reflect.TypeOf(networkingv1.NetworkPolicy{}):   allDiffFuncs(metadataDiffFunc, basicDiffFunc(networkPolicyDiffOpts)),
 	reflect.TypeOf(routev1.Route{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(routeDiffOpts)),
 }
 

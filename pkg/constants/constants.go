@@ -114,6 +114,10 @@ const (
 	RbacRoleKind = "Role"
 	// ClusterRole kind
 	RbacClusterRoleKind = "ClusterRole"
+
+	// DefaultNetworkPolicyEnabled defines the default value for the Enabled field,
+	// disabling NetworkPolicy provisioning into DevWorkspace namespaces by default.
+	DefaultNetworkPolicyEnabled = false
 )
 
 const (

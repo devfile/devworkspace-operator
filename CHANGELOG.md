@@ -1,5 +1,41 @@
 # DevWorkspace Operator Changelog
 
+# v1.0.0
+
+## Features
+
+### Optional per-workspace NetworkPolicy provisioning [#1710](https://github.com/devfile/devworkspace-operator/pull/1710)
+
+Adds optional per-DevWorkspace `NetworkPolicy` provisioning, configurable through `DevWorkspaceOperatorConfig`. When enabled, a NetworkPolicy is created for each workspace during reconciliation, controlling ingress and egress traffic. The feature is disabled by default, so existing behavior is unchanged unless an administrator opts in.
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    networkPolicy:
+      enabled: true
+      ingress: []  # deny all ingress
+      egress: []   # deny all egress
+```
+
+Unset rules use platform defaults; an empty list blocks all traffic in that direction; specified rules replace the defaults entirely.
+
+### OpenShift-aware TLS configuration for metrics and webhook servers [#1695](https://github.com/devfile/devworkspace-operator/pull/1695)
+
+On OpenShift clusters, the operator now retrieves TLS security profiles from the API server and applies them to the metrics and webhook servers. Servers automatically restart when relevant TLS profiles or adherence policies change. No changes for Kubernetes deployments.
+
+### Tolerate additional labels and annotations on workspace deployments [#1711](https://github.com/devfile/devworkspace-operator/pull/1711)
+
+External labels and annotations added to a workspace deployment's `spec.template.metadata` (e.g. by admission webhooks or platform tooling) are now preserved across reconciliation cycles. Previously, the operator would remove any labels or annotations it did not manage, causing conflicts with external systems. DWO-managed labels are still corrected if modified.
+
+## Bug Fixes & Improvements
+
+- Fix backup/restore failing for per-user (common) storage on multi-node clusters due to PVC multi-attach errors by pinning backup Jobs to the node where the shared PVC is mounted [#1677](https://github.com/devfile/devworkspace-operator/pull/1677)
+
 # v0.43.0
 
 ## Bug Fixes & Improvements

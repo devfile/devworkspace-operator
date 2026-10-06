@@ -111,3 +111,5 @@ entries:
     replaces: devworkspace-operator.v0.41.0
   - name: devworkspace-operator.v0.43.0
     replaces: devworkspace-operator.v0.42.0
+  - name: devworkspace-operator.v1.0.0
+    replaces: devworkspace-operator.v0.43.0

@@ -32,8 +32,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/devfile/api/v2 v2.3.1-alpha.0.20250521155908-5c3d7b99d252 h1:C6DNKt+GHWe7vVD2ic73lR10UlC8egbxAY28U7A5IZA=
-github.com/devfile/api/v2 v2.3.1-alpha.0.20250521155908-5c3d7b99d252/go.mod h1:ZdlwgS98m5O+i5H+q/COJt4PAe2ZGoAq8tJ7+s0UmAU=
+github.com/devfile/api/v2 v2.3.1-alpha.0.20261007143616-3c7e2fd6d137 h1:bECxO1gOSmWNjqoTv+xUWSwzXGZhnCQOSJrlIVOWtR4=
+github.com/devfile/api/v2 v2.3.1-alpha.0.20261007143616-3c7e2fd6d137/go.mod h1:t+btHuWTpDnTPPf+MM4kB34Ebp5PVmEnn/nrhQXC4IQ=
 github.com/elazarl/goproxy v1.7.2 h1:Y2o6urb7Eule09PjlhQRGNsqRfPmYI3KKQLFpCAV3+o=
 github.com/elazarl/goproxy v1.7.2/go.mod h1:82vkLNir0ALaW14Rc399OTTjyNREgmdL2cVoIbS6XaE=
 github.com/emicklei/go-restful/v3 v3.13.0 h1:C4Bl2xDndpU6nJ4bc1jXd+uTmYPVUwkD6bFY/oTyCes=

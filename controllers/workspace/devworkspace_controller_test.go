@@ -1559,7 +1559,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 		const testURL = "test-url"
 
 		BeforeEach(func() {
-			workspacecontroller.SetupHttpClientsForTesting(&http.Client{
+			httpfactory.SetupHttpClientsForTesting(&http.Client{
 				Transport: &testutil.TestRoundTripper{
 					Data: map[string]testutil.TestResponse{
 						fmt.Sprintf("%s/healthz", testURL): {
@@ -1572,7 +1572,7 @@ var _ = Describe("DevWorkspace Controller", func() {
 
 		AfterEach(func() {
 			deleteDevWorkspace(devWorkspaceName)
-			workspacecontroller.SetupHttpClientsForTesting(getBasicTestHttpClient())
+			httpfactory.SetupHttpClientsForTesting(getBasicTestHttpClient())
 		})
 
 		It("Defaults project-clone imagePullPolicy to IfNotPresent", func() {

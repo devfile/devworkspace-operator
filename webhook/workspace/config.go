@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,24 +20,27 @@ import (
 	"errors"
 	"fmt"
 
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"github.com/devfile/devworkspace-operator/webhook/server"
-
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	clientConfig "sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/webhook/server"
+	"github.com/devfile/devworkspace-operator/webhook/workspace/handler"
 )
 
 // Configure configures mutate/validating webhooks that provides exec access into workspace for creator only
 func Configure(ctx context.Context, mgr manager.Manager) error {
 	log.Info("Configuring devworkspace webhooks")
+	if err := handler.RegisterDiscoverableEndpointIndex(ctx, mgr.GetFieldIndexer()); err != nil {
+		return fmt.Errorf("register discoverable endpoint index: %w", err)
+	}
 	c, err := createClient()
 	if err != nil {
 		return err

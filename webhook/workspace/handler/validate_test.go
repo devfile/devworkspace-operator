@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	"sigs.k8s.io/yaml"
 )
@@ -75,7 +74,7 @@ func TestValidateEndpoints(t *testing.T) {
 		otherWorkspaceSameNS := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
 
 		// Test for conflict in same namespace
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspaceSameNS).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspaceSameNS).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err, "Did not expect an infrastructure error")
@@ -92,7 +91,7 @@ func TestValidateEndpoints(t *testing.T) {
 		otherWorkspaceDiffNS := setupWorkspace(t, "workspace-3", "uid-3", "other-namespace")
 
 		// Test no conflict in different namespace (workspace only queries its own namespace)
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspaceDiffNS).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspaceDiffNS).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err)
@@ -105,7 +104,7 @@ func TestValidateEndpoints(t *testing.T) {
 
 		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err)
@@ -122,7 +121,7 @@ func TestValidateEndpoints(t *testing.T) {
 		// Add finalizer - required by fake client when setting deletionTimestamp
 		deletingWorkspace.Finalizers = []string{"test-finalizer"}
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(deletingWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(deletingWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err, "Did not expect an infrastructure error")
@@ -138,7 +137,7 @@ func TestValidateEndpoints(t *testing.T) {
 
 		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err)
@@ -153,7 +152,7 @@ func TestValidateEndpoints(t *testing.T) {
 		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
 		otherWorkspace.Spec.Template.Components[0].Container.Endpoints[0].Attributes = nil
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err)
@@ -170,7 +169,7 @@ func TestValidateEndpoints(t *testing.T) {
 			{Name: "my----endpoint", TargetPort: 8082, Attributes: attributes.Attributes{}},
 			{Name: "my-----endpoint", TargetPort: 8083, Attributes: attributes.Attributes{}.PutBoolean("discoverable", false)},
 		}
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err)
@@ -195,7 +194,7 @@ func TestValidateEndpoints(t *testing.T) {
 		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
 		otherWorkspace.Spec.Template.Components[0].Container.Endpoints[0].Name = "my-endpoint"
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err, "Did not expect an infrastructure error")
@@ -217,7 +216,7 @@ func TestValidateEndpoints(t *testing.T) {
 		eligible.TargetPort = 8081
 		otherWorkspace.Spec.Template.Components[0].Container.Endpoints = []dwv2.Endpoint{ignored, eligible}
 
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 		conflict, err := handler.validateEndpoints(context.TODO(), workspace, discoverableEndpointNames(workspace))
 		assert.NoError(t, err)
@@ -238,7 +237,7 @@ func TestValidateEndpoints(t *testing.T) {
 		workspace3 := setupWorkspace(t, "workspace-ns-c", "uid-ns-c", "namespace-c")
 
 		// All three workspaces exist, but in different namespaces
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).
 			WithObjects(workspace2, workspace3).Build()
 		handler := &WebhookHandler{Client: fakeClient}
 
@@ -281,7 +280,7 @@ func TestValidateDevfilePeerDiscoverability(t *testing.T) {
 					endpoint.Attributes = attributes.Attributes{"discoverable": apiextv1.JSON{Raw: []byte(test.raw)}}
 				}
 				handler := &WebhookHandler{
-					Client:  fake.NewClientBuilder().WithScheme(scheme).WithObjects(peer).Build(),
+					Client:  newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(peer).Build(),
 					Decoder: admission.NewDecoder(scheme),
 				}
 				req := admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
@@ -450,7 +449,7 @@ func TestValidateDevfileEndpointConflictGating(t *testing.T) {
 
 	t.Run("Allows an unrelated update even though another workspace already has a conflicting endpoint", func(t *testing.T) {
 		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient, Decoder: admission.NewDecoder(scheme)}
 
 		oldWorkspace := setupWorkspace(t, "workspace-1", "uid-1", "test-namespace")
@@ -470,7 +469,7 @@ func TestValidateDevfileEndpointConflictGating(t *testing.T) {
 
 	t.Run("Denies an update that introduces a new conflicting discoverable endpoint", func(t *testing.T) {
 		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient, Decoder: admission.NewDecoder(scheme)}
 
 		oldWorkspace := setupWorkspace(t, "workspace-1", "uid-1", "test-namespace")
@@ -494,7 +493,7 @@ func TestValidateDevfileEndpointConflictGating(t *testing.T) {
 
 	t.Run("Denies adding a unique endpoint while retaining an existing conflicting endpoint", func(t *testing.T) {
 		otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
-		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+		fakeClient := newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 		handler := &WebhookHandler{Client: fakeClient, Decoder: admission.NewDecoder(scheme)}
 		oldWorkspace := setupWorkspace(t, "workspace-1", "uid-1", "test-namespace")
 		newWorkspace := oldWorkspace.DeepCopy()
@@ -541,7 +540,7 @@ func TestValidateDevfileEndpointExposure(t *testing.T) {
 			otherWorkspace.Spec.Template.Components[0].Container.Endpoints[0].Exposure = tc.existing
 			handler := &WebhookHandler{Decoder: admission.NewDecoder(scheme)}
 			if !tc.withoutClient {
-				handler.Client = fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+				handler.Client = newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 			}
 			req := admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
 				Operation: admissionv1.Create,
@@ -587,7 +586,7 @@ func TestValidateDevfileEndpointExposureChanges(t *testing.T) {
 			handler := &WebhookHandler{Decoder: admission.NewDecoder(scheme)}
 			if tc.check {
 				otherWorkspace := setupWorkspace(t, "workspace-2", "uid-2", "test-namespace")
-				handler.Client = fake.NewClientBuilder().WithScheme(scheme).WithObjects(otherWorkspace).Build()
+				handler.Client = newIndexedWorkspaceClientBuilder(t, scheme).WithObjects(otherWorkspace).Build()
 			}
 			req := admission.Request{AdmissionRequest: admissionv1.AdmissionRequest{
 				Operation: admissionv1.Update,

@@ -219,7 +219,15 @@ func setDefaultOverrideConfig() error {
 }
 
 func setDefaultNetworkPolicy() error {
-	ingress, egress, err := GetDefaultNetworkPolicy()
+	if !infrastructure.IsInitialized() {
+		return fmt.Errorf("can not set default network policy, infrastructure not detected")
+	}
+	operatorNamespace, err := infrastructure.GetNamespace()
+	if err != nil {
+		return err
+	}
+
+	ingress, egress, err := GetDefaultNetworkPolicy(operatorNamespace)
 	if err != nil {
 		return err
 	}
@@ -235,19 +243,11 @@ func setDefaultNetworkPolicy() error {
 // GetDefaultNetworkPolicy returns the default NetworkPolicy applied to DevWorkspace pods.
 // It is exposed publicly for other operators (such as che-operator) that need to read
 // and extend the default rules rather than hardcoding or duplicating them.
-func GetDefaultNetworkPolicy() (
+func GetDefaultNetworkPolicy(operatorNamespace string) (
 	[]networkingv1.NetworkPolicyIngressRule,
 	[]networkingv1.NetworkPolicyEgressRule,
 	error,
 ) {
-	if !infrastructure.IsInitialized() {
-		return nil, nil, fmt.Errorf("can not set default network policy, infrastructure not detected")
-	}
-	operatorNamespace, err := infrastructure.GetNamespace()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	var ingressPolicyRules []networkingv1.NetworkPolicyIngressRule
 	if infrastructure.IsOpenShift() {
 		allowFromDevWorkspaceIngressPolicyRule := networkingv1.NetworkPolicyIngressRule{

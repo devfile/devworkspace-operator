@@ -14,21 +14,85 @@
 package devworkspacerouting_test
 
 import (
+	"context"
 	"fmt"
+	"testing"
 
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
+
+func TestReconcileMarksDuplicateEndpointRoutingFailed(t *testing.T) {
+	infrastructure.InitializeForTesting(infrastructure.Kubernetes)
+	g := NewWithT(t)
+	scheme := runtime.NewScheme()
+	g.Expect(corev1.AddToScheme(scheme)).To(Succeed())
+	g.Expect(controllerv1alpha1.AddToScheme(scheme)).To(Succeed())
+	routing := &controllerv1alpha1.DevWorkspaceRouting{
+		ObjectMeta: metav1.ObjectMeta{Name: "duplicate-endpoints", Namespace: "test-namespace"},
+		Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{
+			DevWorkspaceId: "workspace-id",
+			RoutingClass:   controllerv1alpha1.DevWorkspaceRoutingCluster,
+			PodSelector:    map[string]string{constants.DevWorkspaceIDLabel: "workspace-id"},
+			Endpoints: map[string]controllerv1alpha1.EndpointList{
+				"machine1": {{
+					Name:       "my--endpoint",
+					TargetPort: 5000,
+					Exposure:   controllerv1alpha1.InternalEndpointExposure,
+					Attributes: controllerv1alpha1.Attributes{}.
+						PutBoolean(string(controllerv1alpha1.DiscoverableAttribute), true),
+				}},
+				"machine2": {{
+					Name:       "my-endpoint",
+					TargetPort: 6000,
+					Exposure:   controllerv1alpha1.InternalEndpointExposure,
+					Attributes: controllerv1alpha1.Attributes{}.
+						PutBoolean(string(controllerv1alpha1.DiscoverableAttribute), true),
+				}},
+			},
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
+		WithStatusSubresource(&controllerv1alpha1.DevWorkspaceRouting{}).WithObjects(routing).Build()
+	reconciler := &devworkspacerouting.DevWorkspaceRoutingReconciler{
+		Client:       fakeClient,
+		Log:          ctrl.Log,
+		Scheme:       scheme,
+		SolverGetter: &solvers.SolverGetter{},
+	}
+	testCtx := context.Background()
+	key := client.ObjectKeyFromObject(routing)
+	result, err := reconciler.Reconcile(testCtx, ctrl.Request{NamespacedName: key})
+	g.Expect(err).To(Succeed())
+	g.Expect(result).To(Equal(ctrl.Result{}))
+	stored := &controllerv1alpha1.DevWorkspaceRouting{}
+	g.Expect(fakeClient.Get(testCtx, key, stored)).To(Succeed())
+	g.Expect(stored.Status.Phase).To(Equal(controllerv1alpha1.RoutingFailed))
+	g.Expect(stored.Status.Message).To(ContainSubstring("is declared by more than one component"))
+	// Container-map iteration determines which raw alias is reported.
+	g.Expect(stored.Status.Message).To(Or(ContainSubstring("'my--endpoint'"), ContainSubstring("'my-endpoint'")))
+	services := &corev1.ServiceList{}
+	g.Expect(fakeClient.List(testCtx, services)).To(Succeed())
+	g.Expect(services.Items).To(BeEmpty())
+}
 
 var _ = Describe("DevWorkspaceRouting Controller", func() {
 	Context("Basic DevWorkspaceRouting Tests", func() {

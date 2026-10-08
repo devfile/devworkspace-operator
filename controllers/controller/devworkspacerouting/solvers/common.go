@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,28 +16,37 @@
 package solvers
 
 import (
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"context"
+	"fmt"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 type DevWorkspaceMetadata struct {
-	DevWorkspaceId string
-	Namespace      string
-	PodSelector    map[string]string
+	DevWorkspaceId         string
+	DevWorkspaceName       string
+	DevWorkspaceRoutingUID types.UID
+	Namespace              string
+	PodSelector            map[string]string
 }
 
 // GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
 // endpoint from the list. Endpoints with the NoneEndpointExposure are ignored.
-func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata) []corev1.Service {
+func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, cl client.Client) ([]corev1.Service, error) {
 	var services []corev1.Service
+	seenServiceNames := map[string]bool{}
 	for _, machineEndpoints := range endpoints {
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure == controllerv1alpha1.NoneEndpointExposure {
@@ -45,21 +54,49 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 			}
 
 			if endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DiscoverableAttribute), nil) {
-				// Create service with name matching endpoint
-				// TODO: This could cause a reconcile conflict if multiple workspaces define the same discoverable endpoint
-				// Also endpoint names may not be valid as service names
+				serviceName := common.EndpointName(endpoint.Name)
+				if serviceName == common.ServiceName(meta.DevWorkspaceId) {
+					return nil, &RoutingInvalid{Reason: fmt.Sprintf("discoverable endpoint '%s' uses reserved Service name '%s'", endpoint.Name, serviceName)}
+				}
+				// Two endpoints on different containers can sanitize to the same Service name (e.g. "my--endpoint" and
+				// "my-endpoint"). Neither Service exists on the cluster yet at this point, so the existing-service check
+				// below can't catch this; track names claimed within this call instead.
+				if seenServiceNames[serviceName] {
+					return nil, &DuplicateEndpointError{EndpointName: endpoint.Name}
+				}
+				seenServiceNames[serviceName] = true
+
+				existingService := &corev1.Service{}
+				err := cl.Get(context.TODO(), client.ObjectKey{Name: serviceName, Namespace: meta.Namespace}, existingService)
+				if err != nil {
+					if !errors.IsNotFound(err) {
+						return nil, err
+					}
+				} else {
+					controllerOwner := metav1.GetControllerOf(existingService)
+					ownedByRouting := controllerOwner != nil && controllerOwner.Kind == "DevWorkspaceRouting" &&
+						meta.DevWorkspaceRoutingUID != "" && controllerOwner.UID == meta.DevWorkspaceRoutingUID
+					if !ownedByRouting && existingService.Labels[constants.DevWorkspaceIDLabel] != meta.DevWorkspaceId {
+						return nil, &ServiceConflictError{
+							EndpointName:  endpoint.Name,
+							WorkspaceName: existingService.Labels[constants.DevWorkspaceNameLabel],
+						}
+					}
+				}
+
 				servicePort := corev1.ServicePort{
-					Name:       common.EndpointName(endpoint.Name),
+					Name:       serviceName,
 					Protocol:   corev1.ProtocolTCP,
 					Port:       int32(endpoint.TargetPort),
 					TargetPort: intstr.FromInt(endpoint.TargetPort),
 				}
 				services = append(services, corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      common.EndpointName(endpoint.Name),
+						Name:      serviceName,
 						Namespace: meta.Namespace,
 						Labels: map[string]string{
-							constants.DevWorkspaceIDLabel: meta.DevWorkspaceId,
+							constants.DevWorkspaceIDLabel:   meta.DevWorkspaceId,
+							constants.DevWorkspaceNameLabel: meta.DevWorkspaceName,
 						},
 						Annotations: map[string]string{
 							constants.DevWorkspaceDiscoverableServiceAnnotation: "true",
@@ -74,7 +111,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 			}
 		}
 	}
-	return services
+	return services, nil
 }
 
 // GetServiceForEndpoints returns a single service that exposes all endpoints of given exposure types, possibly also including the discoverable types.

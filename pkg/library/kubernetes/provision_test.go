@@ -14,6 +14,7 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -22,22 +23,25 @@ import (
 	"testing"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	"github.com/go-logr/logr/testr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
+
+	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
 type testCase struct {
@@ -147,6 +151,144 @@ func TestHandleKubernetesComponents(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandleKubernetesComponentsUsesGuardedSyncForRoutingServices(t *testing.T) {
+	if err := InitializeDeserializer(testScheme); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { decoder = nil }()
+
+	for _, tc := range []struct {
+		name     string
+		metadata string
+	}{
+		{
+			name:     "discoverable annotation",
+			metadata: `"annotations":{"` + constants.DevWorkspaceDiscoverableServiceAnnotation + `":"true"}`,
+		},
+		{
+			name:     "DevWorkspaceRouting controller owner",
+			metadata: `"ownerReferences":[{"apiVersion":"controller.devfile.io/v1alpha1","kind":"DevWorkspaceRouting","name":"routing","uid":"routing-uid","controller":true}]`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			foreign := &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{Name: "api", Namespace: testNamespace, UID: "foreign-service"},
+				Spec:       corev1.ServiceSpec{Selector: map[string]string{"app": "foreign"}},
+			}
+			backing := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(foreign).Build()
+			cached := &serviceGetCountingClient{Client: backing, hideUnlabeledServices: true}
+			fresh := &serviceGetCountingClient{Client: backing}
+			api := sync.ClusterAPI{
+				Client:           cached,
+				NonCachingClient: fresh,
+				Scheme:           testScheme,
+				Logger:           testr.New(t),
+				Ctx:              ctx,
+			}
+			wksp := &common.DevWorkspaceWithConfig{DevWorkspace: testDevWorkspace.DeepCopy()}
+			service := `{"apiVersion":"v1","kind":"Service","metadata":{"name":"api",` + tc.metadata + `},"spec":{"selector":{"app":"mine"},"ports":[{"port":8080}]}}`
+			wksp.Spec.Template.Components = append(wksp.Spec.Template.Components, serviceComponent(service))
+
+			err := HandleKubernetesComponents(wksp, api)
+			var conflict *sync.ServiceConflictError
+			if !errors.As(err, &conflict) {
+				t.Fatalf("want guarded foreign Service conflict, got %v", err)
+			}
+			if fresh.serviceGets != 1 {
+				t.Fatalf("want one fresh Service GET, got %d", fresh.serviceGets)
+			}
+			if cached.serviceGets != 1 {
+				t.Fatalf("want only the precheck cache GET, got %d", cached.serviceGets)
+			}
+
+			actual := &corev1.Service{}
+			if err := backing.Get(ctx, client.ObjectKeyFromObject(foreign), actual); err != nil {
+				t.Fatalf("foreign Service was removed: %v", err)
+			}
+			if actual.UID != foreign.UID || actual.Spec.Selector["app"] != "foreign" || len(actual.Labels) != 0 {
+				t.Fatalf("foreign Service was modified: %#v", actual)
+			}
+		})
+	}
+}
+
+func TestHandleKubernetesComponentsUsesCachedSyncForOrdinaryService(t *testing.T) {
+	if err := InitializeDeserializer(testScheme); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { decoder = nil }()
+
+	ctx := context.Background()
+	backing := fake.NewClientBuilder().WithScheme(testScheme).Build()
+	cached := &serviceGetCountingClient{Client: backing}
+	fresh := &serviceGetCountingClient{Client: backing}
+	api := sync.ClusterAPI{
+		Client:           cached,
+		NonCachingClient: fresh,
+		Scheme:           testScheme,
+		Logger:           testr.New(t),
+		Ctx:              ctx,
+	}
+	wksp := &common.DevWorkspaceWithConfig{DevWorkspace: testDevWorkspace.DeepCopy()}
+	wksp.Spec.Template.Components = append(wksp.Spec.Template.Components, serviceComponent(`{"apiVersion":"v1","kind":"Service","metadata":{"name":"ordinary"},"spec":{"selector":{"app":"mine"},"ports":[{"port":8080}]}}`))
+
+	var err error
+	for i := 0; i < 2; i++ {
+		err = HandleKubernetesComponents(wksp, api)
+		if i == 0 {
+			var retry *dwerrors.RetryError
+			if !errors.As(err, &retry) {
+				t.Fatalf("want retry after creating ordinary Service, got %v", err)
+			}
+		} else if err != nil {
+			t.Fatalf("second sync failed: %v", err)
+		}
+	}
+	if cached.serviceGets != 4 {
+		t.Fatalf("want four cached Service GETs across precheck and sync, got %d", cached.serviceGets)
+	}
+	if fresh.serviceGets != 0 {
+		t.Fatalf("ordinary Service unexpectedly used fresh client for %d GETs", fresh.serviceGets)
+	}
+}
+
+func serviceComponent(inline string) dw.Component {
+	return dw.Component{
+		Name: "test-service",
+		ComponentUnion: dw.ComponentUnion{
+			Kubernetes: &dw.KubernetesComponent{
+				K8sLikeComponent: dw.K8sLikeComponent{
+					DeployByDefault:          ptr.To(true),
+					K8sLikeComponentLocation: dw.K8sLikeComponentLocation{Inlined: inline},
+				},
+			},
+		},
+	}
+}
+
+type serviceGetCountingClient struct {
+	client.Client
+	serviceGets           int
+	hideUnlabeledServices bool
+}
+
+func (c *serviceGetCountingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	service, isService := obj.(*corev1.Service)
+	if isService {
+		c.serviceGets++
+	}
+	if err := c.Client.Get(ctx, key, obj, opts...); err != nil {
+		return err
+	}
+	if isService && c.hideUnlabeledServices {
+		if _, labeled := service.Labels[constants.DevWorkspaceIDLabel]; !labeled {
+			return apierrors.NewNotFound(schema.GroupResource{Resource: "services"}, key.Name)
+		}
+	}
+	return nil
 }
 
 func TestSecretAndConfigMapProvisioning(t *testing.T) {

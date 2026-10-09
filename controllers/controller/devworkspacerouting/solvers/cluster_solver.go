@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,6 +23,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
@@ -31,10 +33,19 @@ const (
 )
 
 type ClusterSolver struct {
-	TLS bool
+	TLS    bool
+	client client.Client
 }
 
 var _ RoutingSolver = (*ClusterSolver)(nil)
+
+// NewClusterSolver creates a new ClusterSolver with the provided dependencies
+func NewClusterSolver(client client.Client, tls bool) *ClusterSolver {
+	return &ClusterSolver{
+		TLS:    tls,
+		client: client,
+	}
+}
 
 func (s *ClusterSolver) FinalizerRequired(*controllerv1alpha1.DevWorkspaceRouting) bool {
 	return false
@@ -47,6 +58,11 @@ func (s *ClusterSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error 
 func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, s.client)
+	if err != nil {
+		return RoutingObjects{}, err
+	}
+	services = append(services, discoverableServices...)
 	podAdditions := &controllerv1alpha1.PodAdditions{}
 	if s.TLS {
 		readOnlyMode := int32(420)
@@ -64,10 +80,14 @@ func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceR
 					},
 				},
 			})
+			mountPath := "/var/serving-cert/"
+			if service.Annotations[constants.DevWorkspaceDiscoverableServiceAnnotation] == "true" {
+				mountPath += service.Name + "/"
+			}
 			podAdditions.VolumeMounts = append(podAdditions.VolumeMounts, corev1.VolumeMount{
 				Name:      common.ServingCertVolumeName(service.Name),
 				ReadOnly:  true,
-				MountPath: "/var/serving-cert/",
+				MountPath: mountPath,
 			})
 		}
 	}

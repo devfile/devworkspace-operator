@@ -332,11 +332,170 @@ else
 	$(DOCKER) manifest push ${DWO_IMG}
 endif
 
+### docker-project-clone: Builds and pushes project-clone image
+docker-project-clone: _print_vars docker-build-project-clone docker-push-project-clone
+
+### docker-build-project-clone: Builds the multi-arch project-clone image (supports both amd64 and arm64)
+docker-build-project-clone:
+	@echo "Building multi-arch image ${PROJECT_CLONE_IMG} for linux/amd64,linux/arm64 using $(CONTAINER_TOOL)"
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for multi-arch builds. Please update Docker or enable buildx)
+  endif
+	@echo "Using Docker buildx to build multi-arch images"
+	$(MAKE) _docker-build-project-clone-amd64 _docker-build-project-clone-arm64
+	@echo "✅ Built multi-arch images locally:"
+	@echo "  ${PROJECT_CLONE_IMG}-amd64"
+	@echo "  ${PROJECT_CLONE_IMG}-arm64"
+	@echo "Note: Manifest list will be created during push to registry"
+else
+	@echo "Using Podman to build multi-arch image"
+	$(MAKE) _docker-build-project-clone-amd64 _docker-build-project-clone-arm64
+	@echo "Creating manifest list for ${PROJECT_CLONE_IMG} using Podman"
+	@echo "Cleaning up any existing images/manifests with the same name"
+	@$(DOCKER) manifest rm ${PROJECT_CLONE_IMG} 2>/dev/null || echo "    (manifest not found, continuing)"
+	@$(DOCKER) rmi ${PROJECT_CLONE_IMG} 2>/dev/null || echo "    (image not found, continuing)"
+	$(DOCKER) manifest create ${PROJECT_CLONE_IMG} ${PROJECT_CLONE_IMG}-amd64 ${PROJECT_CLONE_IMG}-arm64
+endif
+
+### _docker-build-project-clone-amd64: Builds the amd64 project-clone image
+_docker-build-project-clone-amd64:
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for platform-specific builds. Please update Docker or enable buildx)
+  endif
+	$(DOCKER) buildx build . --platform linux/amd64 --load -t ${PROJECT_CLONE_IMG}-amd64 -f project-clone/Dockerfile
+else
+	$(DOCKER) build . --platform linux/amd64 -t ${PROJECT_CLONE_IMG}-amd64 -f project-clone/Dockerfile
+endif
+
+### _docker-build-project-clone-arm64: Builds the arm64 project-clone image
+_docker-build-project-clone-arm64:
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for platform-specific builds. Please update Docker or enable buildx)
+  endif
+	$(DOCKER) buildx build . --platform linux/arm64 --load -t ${PROJECT_CLONE_IMG}-arm64 -f project-clone/Dockerfile
+else
+	$(DOCKER) build . --platform linux/arm64 -t ${PROJECT_CLONE_IMG}-arm64 -f project-clone/Dockerfile
+endif
+
+### docker-push-project-clone: Pushes the multi-arch project-clone image to the registry
+docker-push-project-clone: _docker-check-push-project-clone
+	@echo "Pushing multi-arch image ${PROJECT_CLONE_IMG} using $(CONTAINER_TOOL)"
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for multi-arch pushes. Please update Docker or enable buildx)
+  endif
+	@echo "Using Docker buildx to push multi-arch image"
+	$(DOCKER) push ${PROJECT_CLONE_IMG}-amd64
+	$(DOCKER) push ${PROJECT_CLONE_IMG}-arm64
+	@echo "Creating and pushing manifest list using Docker buildx"
+	$(DOCKER) buildx imagetools create -t ${PROJECT_CLONE_IMG} ${PROJECT_CLONE_IMG}-amd64 ${PROJECT_CLONE_IMG}-arm64
+else
+	@echo "Using Podman to push multi-arch image"
+	$(DOCKER) push ${PROJECT_CLONE_IMG}-amd64
+	$(DOCKER) push ${PROJECT_CLONE_IMG}-arm64
+	@echo "Cleaning up any existing manifests before recreating"
+	@$(DOCKER) manifest rm ${PROJECT_CLONE_IMG} 2>/dev/null || echo "    (manifest not found, continuing)"
+	$(DOCKER) manifest create ${PROJECT_CLONE_IMG} ${PROJECT_CLONE_IMG}-amd64 ${PROJECT_CLONE_IMG}-arm64
+	$(DOCKER) manifest push ${PROJECT_CLONE_IMG}
+endif
+
+### docker-project-backup: Builds and pushes project-backup image
+docker-project-backup: _print_vars docker-build-project-backup docker-push-project-backup
+
+### docker-build-project-backup: Builds the multi-arch project-backup image (supports both amd64 and arm64)
+docker-build-project-backup:
+	@echo "Building multi-arch image ${PROJECT_BACKUP_IMG} for linux/amd64,linux/arm64 using $(CONTAINER_TOOL)"
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for multi-arch builds. Please update Docker or enable buildx)
+  endif
+	@echo "Using Docker buildx to build multi-arch images"
+	$(MAKE) _docker-build-project-backup-amd64 _docker-build-project-backup-arm64
+	@echo "✅ Built multi-arch images locally:"
+	@echo "  ${PROJECT_BACKUP_IMG}-amd64"
+	@echo "  ${PROJECT_BACKUP_IMG}-arm64"
+	@echo "Note: Manifest list will be created during push to registry"
+else
+	@echo "Using Podman to build multi-arch image"
+	$(MAKE) _docker-build-project-backup-amd64 _docker-build-project-backup-arm64
+	@echo "Creating manifest list for ${PROJECT_BACKUP_IMG} using Podman"
+	@echo "Cleaning up any existing images/manifests with the same name"
+	@$(DOCKER) manifest rm ${PROJECT_BACKUP_IMG} 2>/dev/null || echo "    (manifest not found, continuing)"
+	@$(DOCKER) rmi ${PROJECT_BACKUP_IMG} 2>/dev/null || echo "    (image not found, continuing)"
+	$(DOCKER) manifest create ${PROJECT_BACKUP_IMG} ${PROJECT_BACKUP_IMG}-amd64 ${PROJECT_BACKUP_IMG}-arm64
+endif
+
+### _docker-build-project-backup-amd64: Builds the amd64 project-backup image
+_docker-build-project-backup-amd64:
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for platform-specific builds. Please update Docker or enable buildx)
+  endif
+	$(DOCKER) buildx build ./project-backup/ --platform linux/amd64 --load -t ${PROJECT_BACKUP_IMG}-amd64 -f project-backup/Containerfile
+else
+	$(DOCKER) build ./project-backup/ --platform linux/amd64 -t ${PROJECT_BACKUP_IMG}-amd64 -f project-backup/Containerfile
+endif
+
+### _docker-build-project-backup-arm64: Builds the arm64 project-backup image
+_docker-build-project-backup-arm64:
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for platform-specific builds. Please update Docker or enable buildx)
+  endif
+	$(DOCKER) buildx build ./project-backup/ --platform linux/arm64 --load -t ${PROJECT_BACKUP_IMG}-arm64 -f project-backup/Containerfile
+else
+	$(DOCKER) build ./project-backup/ --platform linux/arm64 -t ${PROJECT_BACKUP_IMG}-arm64 -f project-backup/Containerfile
+endif
+
+### docker-push-project-backup: Pushes the multi-arch project-backup image to the registry
+docker-push-project-backup: _docker-check-push-project-backup
+	@echo "Pushing multi-arch image ${PROJECT_BACKUP_IMG} using $(CONTAINER_TOOL)"
+ifeq ($(CONTAINER_TOOL),docker)
+  ifeq ($(BUILDX_AVAILABLE),false)
+	$(error Docker buildx is required for multi-arch pushes. Please update Docker or enable buildx)
+  endif
+	@echo "Using Docker buildx to push multi-arch image"
+	$(DOCKER) push ${PROJECT_BACKUP_IMG}-amd64
+	$(DOCKER) push ${PROJECT_BACKUP_IMG}-arm64
+	@echo "Creating and pushing manifest list using Docker buildx"
+	$(DOCKER) buildx imagetools create -t ${PROJECT_BACKUP_IMG} ${PROJECT_BACKUP_IMG}-amd64 ${PROJECT_BACKUP_IMG}-arm64
+else
+	@echo "Using Podman to push multi-arch image"
+	$(DOCKER) push ${PROJECT_BACKUP_IMG}-amd64
+	$(DOCKER) push ${PROJECT_BACKUP_IMG}-arm64
+	@echo "Cleaning up any existing manifests before recreating"
+	@$(DOCKER) manifest rm ${PROJECT_BACKUP_IMG} 2>/dev/null || echo "    (manifest not found, continuing)"
+	$(DOCKER) manifest create ${PROJECT_BACKUP_IMG} ${PROJECT_BACKUP_IMG}-amd64 ${PROJECT_BACKUP_IMG}-arm64
+	$(DOCKER) manifest push ${PROJECT_BACKUP_IMG}
+endif
+
+### docker-all: Builds and pushes all images (controller, project-clone, project-backup)
+docker-all: docker docker-project-clone docker-project-backup
+
 ### _docker-check-push: Asks for confirmation before pushing the image, unless running in CI
 _docker-check-push:
   ifneq ($(INITIATOR),CI)
     ifeq ($(DWO_IMG),quay.io/devfile/devworkspace-controller:next)
 	    @echo -n "Are you sure you want to push $(DWO_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
+    endif
+  endif
+
+### _docker-check-push-project-clone: Asks for confirmation before pushing project-clone, unless running in CI
+_docker-check-push-project-clone:
+  ifneq ($(INITIATOR),CI)
+    ifeq ($(PROJECT_CLONE_IMG),quay.io/devfile/project-clone:next)
+	    @echo -n "Are you sure you want to push $(PROJECT_CLONE_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
+    endif
+  endif
+
+### _docker-check-push-project-backup: Asks for confirmation before pushing project-backup, unless running in CI
+_docker-check-push-project-backup:
+  ifneq ($(INITIATOR),CI)
+    ifeq ($(PROJECT_BACKUP_IMG),quay.io/devfile/project-backup:next)
+	    @echo -n "Are you sure you want to push $(PROJECT_BACKUP_IMG)? [y/N] " && read ans && [ $${ans:-N} = y ]
     endif
   endif
 

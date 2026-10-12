@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,16 +15,15 @@
 package solvers
 
 import (
+	"context"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-
 	corev1 "k8s.io/api/core/v1"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
 )
 
 const (
@@ -55,10 +53,10 @@ func (s *ClusterSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error 
 	return nil
 }
 
-func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
+func (s *ClusterSolver) GetSpecObjects(ctx context.Context, routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
-	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, s.client)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(ctx, spec.Endpoints, workspaceMeta, s.client)
 	if err != nil {
 		return RoutingObjects{}, err
 	}

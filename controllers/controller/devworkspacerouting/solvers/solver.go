@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +15,7 @@
 package solvers
 
 import (
+	"context"
 	"fmt"
 
 	routeV1 "github.com/openshift/api/route/v1"
@@ -45,14 +45,15 @@ type RoutingSolver interface {
 	// is automatically removed from the routing.
 	Finalize(routing *controllerv1alpha1.DevWorkspaceRouting) error
 
-	// GetSpecObjects constructs cluster routing objects which should be applied on the cluster
+	// GetSpecObjects constructs cluster routing objects which should be applied on the cluster.
+	// Client operations must use ctx to respect caller cancellation and deadlines.
 	// This method should return RoutingNotReady error if the solver is not ready yet to process
 	// the workspace routing, RoutingInvalid error if there is a specific reason for the failure or
 	// any other error.
 	// The implementors can also create any additional objects not captured by the RoutingObjects struct. If that's
 	// the case they are required to set the restricted access annotation on any objects created according to the
 	// restricted access specified by the routing.
-	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error)
+	GetSpecObjects(ctx context.Context, routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error)
 
 	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.
 	// Returns is a map from component ids (as defined in the devfile) to the list of endpoints for that component

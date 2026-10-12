@@ -14,6 +14,7 @@
 package solvers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,7 @@ func TestClusterSolverRejectsDiscoverableEndpointUsingWorkspaceServiceName(t *te
 					},
 				},
 			}
-			objects, err := solver.GetSpecObjects(routing, DevWorkspaceMetadata{
+			objects, err := solver.GetSpecObjects(context.Background(), routing, DevWorkspaceMetadata{
 				DevWorkspaceId: "mine",
 				Namespace:      "test-namespace",
 			})

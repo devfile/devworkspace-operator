@@ -14,6 +14,7 @@
 package solvers
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -129,7 +130,7 @@ func TestGetDiscoverableServicesForEndpoints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(tt.existing...).Build()
-			_, err := GetDiscoverableServicesForEndpoints(endpoints, meta, fakeClient)
+			_, err := GetDiscoverableServicesForEndpoints(context.Background(), endpoints, meta, fakeClient)
 
 			if tt.expectErr {
 				assert.Error(t, err, "Expected an error but got none")
@@ -187,7 +188,7 @@ func TestGetDiscoverableServicesForEndpoints_MultipleEndpoints(t *testing.T) {
 
 	t.Run("Multiple discoverable endpoints without conflicts", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-		services, err := GetDiscoverableServicesForEndpoints(endpoints, meta, fakeClient)
+		services, err := GetDiscoverableServicesForEndpoints(context.Background(), endpoints, meta, fakeClient)
 		assert.NoError(t, err)
 		assert.Len(t, services, 2, "Should create 2 discoverable services (postgresql and redis, not http)")
 
@@ -212,7 +213,7 @@ func TestGetDiscoverableServicesForEndpoints_MultipleEndpoints(t *testing.T) {
 			},
 		}
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(existingService).Build()
-		_, err := GetDiscoverableServicesForEndpoints(endpoints, meta, fakeClient)
+		_, err := GetDiscoverableServicesForEndpoints(context.Background(), endpoints, meta, fakeClient)
 		assert.Error(t, err, "Should error when one endpoint conflicts")
 		assert.IsType(t, &ServiceConflictError{}, err)
 		assert.Contains(t, err.Error(), "postgresql")
@@ -257,7 +258,7 @@ func TestGetDiscoverableServicesForEndpoints_SameWorkspaceDuplicateName(t *testi
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	services, err := GetDiscoverableServicesForEndpoints(endpoints, meta, fakeClient)
+	services, err := GetDiscoverableServicesForEndpoints(context.Background(), endpoints, meta, fakeClient)
 
 	assert.Error(t, err, "Expected a conflict error for two same-workspace endpoints sharing a Service name")
 	duplicateErr, ok := err.(*DuplicateEndpointError)

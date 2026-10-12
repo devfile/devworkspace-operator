@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,7 +44,7 @@ type DevWorkspaceMetadata struct {
 
 // GetDiscoverableServicesForEndpoints converts the endpoint list into a set of services, each corresponding to a single discoverable
 // endpoint from the list. Endpoints with the NoneEndpointExposure are ignored.
-func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, cl client.Client) ([]corev1.Service, error) {
+func GetDiscoverableServicesForEndpoints(ctx context.Context, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, cl client.Client) ([]corev1.Service, error) {
 	var services []corev1.Service
 	seenServiceNames := map[string]bool{}
 	componentNames := make([]string, 0, len(endpoints))
@@ -74,7 +73,7 @@ func GetDiscoverableServicesForEndpoints(endpoints map[string]controllerv1alpha1
 				seenServiceNames[serviceName] = true
 
 				existingService := &corev1.Service{}
-				err := cl.Get(context.TODO(), client.ObjectKey{Name: serviceName, Namespace: meta.Namespace}, existingService)
+				err := cl.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: meta.Namespace}, existingService)
 				if err != nil {
 					if !errors.IsNotFound(err) {
 						return nil, err

@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +15,8 @@
 package solvers
 
 import (
+	"context"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
@@ -70,7 +71,7 @@ func (s *BasicSolver) Finalize(*controllerv1alpha1.DevWorkspaceRouting) error {
 	return nil
 }
 
-func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
+func (s *BasicSolver) GetSpecObjects(ctx context.Context, routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error) {
 	routingObjects := RoutingObjects{}
 
 	// TODO: Use workspace-scoped ClusterHostSuffix to allow overriding
@@ -81,7 +82,7 @@ func (s *BasicSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRou
 
 	spec := routing.Spec
 	services := getServicesForEndpoints(spec.Endpoints, workspaceMeta)
-	discoverableServices, err := GetDiscoverableServicesForEndpoints(spec.Endpoints, workspaceMeta, s.client)
+	discoverableServices, err := GetDiscoverableServicesForEndpoints(ctx, spec.Endpoints, workspaceMeta, s.client)
 	if err != nil {
 		return RoutingObjects{}, err
 	}

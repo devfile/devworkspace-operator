@@ -109,6 +109,7 @@ func TestDiscoverableEndpointContract(t *testing.T) {
 					})
 					t.Run("solver", func(t *testing.T) {
 						services, err := solvers.GetDiscoverableServicesForEndpoints(
+							ctx,
 							map[string]controllerv1alpha1.EndpointList{
 								"test-component": conversion.ConvertAllDevfileEndpoints(workspace.Spec.Template.Components[0].Container.Endpoints),
 							}, solvers.DevWorkspaceMetadata{

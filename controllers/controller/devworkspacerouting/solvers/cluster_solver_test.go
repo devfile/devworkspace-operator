@@ -14,6 +14,7 @@
 package solvers
 
 import (
+	"context"
 	"strings"
 	"testing"
 
@@ -86,7 +87,7 @@ func TestClusterSolverGetSpecObjectsServingCertMounts(t *testing.T) {
 				},
 			}
 
-			objects, err := solver.GetSpecObjects(routing, workspaceMeta)
+			objects, err := solver.GetSpecObjects(context.Background(), routing, workspaceMeta)
 			if !assert.NoError(t, err) {
 				return
 			}
@@ -169,7 +170,7 @@ func TestClusterSolverGetSpecObjectsLongServingCertVolumeNames(t *testing.T) {
 		},
 	}
 
-	objects, err := solver.GetSpecObjects(routing, workspaceMeta)
+	objects, err := solver.GetSpecObjects(context.Background(), routing, workspaceMeta)
 	if !assert.NoError(t, err) {
 		return
 	}

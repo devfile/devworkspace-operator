@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +21,6 @@ import (
 	"time"
 
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-
-	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
-	maputils "github.com/devfile/devworkspace-operator/internal/map"
-	"github.com/devfile/devworkspace-operator/pkg/config"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
-
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	routeV1 "github.com/openshift/api/route/v1"
@@ -47,6 +38,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	"github.com/devfile/devworkspace-operator/controllers/controller/devworkspacerouting/solvers"
+	maputils "github.com/devfile/devworkspace-operator/internal/map"
+	"github.com/devfile/devworkspace-operator/pkg/config"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
 var (
@@ -152,7 +149,7 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	restrictedAccess, setRestrictedAccess := instance.Annotations[constants.DevWorkspaceRestrictedAccessAnnotation]
-	routingObjects, err := solver.GetSpecObjects(instance, workspaceMeta)
+	routingObjects, err := solver.GetSpecObjects(ctx, instance, workspaceMeta)
 	if err != nil {
 		var notReady *solvers.RoutingNotReady
 		if errors.As(err, &notReady) {
@@ -217,8 +214,11 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 	}
 
-	servicesInSync, clusterServices, err := r.syncServices(instance, services)
+	servicesInSync, clusterServices, err := r.syncServices(ctx, instance, services)
 	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return reconcile.Result{}, err
+		}
 		failError := &sync.UnrecoverableSyncError{}
 		if errors.As(err, &failError) {
 			return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())

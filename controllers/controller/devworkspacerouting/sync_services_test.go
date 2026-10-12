@@ -295,7 +295,7 @@ func TestSyncServicesDoesNotDeleteForeignServiceWithWorkspaceLabel(t *testing.T)
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(foreign).Build()
 	r := DevWorkspaceRoutingReconciler{Client: cl, Scheme: scheme, Log: logr.Discard()}
 	routing := &controllerv1alpha1.DevWorkspaceRouting{ObjectMeta: metav1.ObjectMeta{Name: "routing-mine", Namespace: "ns", UID: "mine-routing"}, Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{DevWorkspaceId: "mine"}}
-	_, _, err := r.syncServices(routing, nil)
+	_, _, err := r.syncServices(context.Background(), routing, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -314,7 +314,7 @@ func TestSyncServicesDeletesOwnedService(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(owned).Build()
 	r := DevWorkspaceRoutingReconciler{Client: cl, Scheme: scheme, Log: logr.Discard()}
 	routing := &controllerv1alpha1.DevWorkspaceRouting{ObjectMeta: metav1.ObjectMeta{Name: "routing-mine", Namespace: "ns", UID: "mine-routing"}, Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{DevWorkspaceId: "mine"}}
-	ready, _, err := r.syncServices(routing, nil)
+	ready, _, err := r.syncServices(context.Background(), routing, nil)
 	if err != nil || ready {
 		t.Fatalf("want pending deletion, got ready=%v err=%v", ready, err)
 	}
@@ -362,7 +362,7 @@ func TestSyncServicesGuardsAggregateAndDiscoverableServices(t *testing.T) {
 			}
 			backing := fake.NewClientBuilder().WithScheme(scheme).WithObjects(foreign).Build()
 			r := DevWorkspaceRoutingReconciler{Client: serviceLabelFilteredClient{backing}, NonCachingClient: backing, Scheme: scheme, Log: logr.Discard()}
-			_, _, err := r.syncServices(routing, []corev1.Service{desired})
+			_, _, err := r.syncServices(context.Background(), routing, []corev1.Service{desired})
 			var fatal *sync.UnrecoverableSyncError
 			var conflict *sync.ServiceConflictError
 			if !errors.As(err, &fatal) || !errors.As(err, &conflict) {

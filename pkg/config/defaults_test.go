@@ -17,6 +17,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 )
@@ -39,8 +41,8 @@ func TestGetDefaultNetworkPolicy(t *testing.T) {
 
 		ingress, egress, err := GetDefaultNetworkPolicy("test-namespace")
 		assert.NoError(t, err)
-		assert.Equal(t, defaultKubernetesIngressPolicyRules, ingress)
-		assert.Equal(t, defaultEgressPolicyRules, egress)
+		assert.Equal(t, []networkingv1.NetworkPolicyIngressRule{{}}, ingress)
+		assert.Equal(t, []networkingv1.NetworkPolicyEgressRule{{}}, egress)
 	})
 
 	t.Run("on OpenShift", func(t *testing.T) {
@@ -50,6 +52,56 @@ func TestGetDefaultNetworkPolicy(t *testing.T) {
 		ingress, egress, err := GetDefaultNetworkPolicy("test-namespace")
 		assert.NoError(t, err)
 		assert.Len(t, ingress, len(defaultOpenShiftIngressPolicyRules)+1)
-		assert.Equal(t, defaultEgressPolicyRules, egress)
+		assert.Equal(t, defaultOpenShiftIngressPolicyRules, ingress[1:])
+		assert.Equal(t, []networkingv1.NetworkPolicyPeer{
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"kubernetes.io/metadata.name": "test-namespace"},
+				},
+				PodSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"app.kubernetes.io/part-of": "devworkspace-operator"},
+				},
+			},
+		}, ingress[0].From)
+		assert.Equal(t, []networkingv1.NetworkPolicyEgressRule{{}}, egress)
 	})
+}
+
+func TestGetDefaultNetworkPolicyReturnsCopies(t *testing.T) {
+	tests := map[string]infrastructure.Type{
+		"on Kubernetes": infrastructure.Kubernetes,
+		"on OpenShift":  infrastructure.OpenShiftv4,
+	}
+	for name, infraType := range tests {
+		t.Run(name, func(t *testing.T) {
+			setupForTest(t)
+			infrastructure.InitializeForTesting(infraType)
+
+			origKubernetesIngress := (&networkingv1.NetworkPolicySpec{Ingress: defaultKubernetesIngressPolicyRules}).DeepCopy().Ingress
+			origOpenShiftIngress := (&networkingv1.NetworkPolicySpec{Ingress: defaultOpenShiftIngressPolicyRules}).DeepCopy().Ingress
+			origEgress := (&networkingv1.NetworkPolicySpec{Egress: defaultEgressPolicyRules}).DeepCopy().Egress
+
+			ingress, egress, err := GetDefaultNetworkPolicy("test-namespace")
+			assert.NoError(t, err)
+
+			for i := range ingress {
+				for _, peer := range ingress[i].From {
+					if peer.NamespaceSelector != nil {
+						peer.NamespaceSelector.MatchLabels["mutated"] = "true"
+					}
+					if peer.PodSelector != nil {
+						peer.PodSelector.MatchLabels["mutated"] = "true"
+					}
+				}
+				ingress[i].From = append(ingress[i].From, networkingv1.NetworkPolicyPeer{})
+			}
+			for i := range egress {
+				egress[i].To = append(egress[i].To, networkingv1.NetworkPolicyPeer{})
+			}
+
+			assert.Equal(t, origKubernetesIngress, defaultKubernetesIngressPolicyRules)
+			assert.Equal(t, origOpenShiftIngress, defaultOpenShiftIngressPolicyRules)
+			assert.Equal(t, origEgress, defaultEgressPolicyRules)
+		})
+	}
 }

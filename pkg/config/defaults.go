@@ -269,10 +269,5 @@ func GetDefaultNetworkPolicy(operatorNamespace string) (
 		ingressPolicyRules = defaultKubernetesIngressPolicyRules
 	}
 
-	defaultConfig.Workspace.NetworkPolicy = &v1alpha1.NetworkPolicyConfig{
-		Enabled: pointer.Bool(constants.DefaultNetworkPolicyEnabled),
-		Ingress: ingressPolicyRules,
-		Egress:  defaultEgressPolicyRules,
-	}
 	return ingressPolicyRules, defaultEgressPolicyRules, nil
 }

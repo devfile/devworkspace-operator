@@ -1,5 +1,4 @@
-//
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -11,7 +10,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 package status
 
@@ -21,14 +19,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
 var (
@@ -152,11 +151,10 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, ignoredEvents []string,
 			continue
 		}
 
-		// On OpenShift, it's possible see "FailedMount" events when using a routingClass that depends on the service-ca
-		// operator. To avoid this, we always ignore FailedMount events if the message refers to the DWO-provisioned volume
+		// Serving certificate Secrets may arrive after the pod while service-ca provisions them.
 		if infrastructure.IsOpenShift() &&
 			ev.Reason == "FailedMount" &&
-			strings.Contains(ev.Message, common.ServingCertVolumeName(common.ServiceName(workspaceID))) {
+			isServingCertMountFailure(pod, workspaceID, ev.Message) {
 			continue
 		}
 
@@ -178,6 +176,20 @@ func CheckPodEvents(pod *corev1.Pod, workspaceID string, ignoredEvents []string,
 		}
 	}
 	return "", nil
+}
+
+func isServingCertMountFailure(pod *corev1.Pod, workspaceID, message string) bool {
+	if strings.Contains(message, common.ServingCertVolumeName(common.ServiceName(workspaceID))) {
+		return true
+	}
+	for _, volume := range pod.Spec.Volumes {
+		if volume.Secret != nil && volume.Secret.SecretName != "" &&
+			volume.Name == common.ServingCertVolumeName(volume.Secret.SecretName) &&
+			strings.Contains(message, fmt.Sprintf("volume %q", volume.Name)) {
+			return true
+		}
+	}
+	return false
 }
 
 // getConcisePostStartFailureMessage tries to parse the Kubelet's verbose message

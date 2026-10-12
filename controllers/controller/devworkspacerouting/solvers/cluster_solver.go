@@ -77,6 +77,10 @@ func (s *ClusterSolver) GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceR
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  service.Name,
 						DefaultMode: &readOnlyMode,
+						Items: []corev1.KeyToPath{
+							{Key: corev1.TLSCertKey, Path: corev1.TLSCertKey},
+							{Key: corev1.TLSPrivateKeyKey, Path: corev1.TLSPrivateKeyKey},
+						},
 					},
 				},
 			})

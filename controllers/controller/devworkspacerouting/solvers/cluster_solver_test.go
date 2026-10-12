@@ -104,6 +104,10 @@ func TestClusterSolverGetSpecObjectsServingCertMounts(t *testing.T) {
 
 			volumeSecrets := make(map[string]string, len(objects.PodAdditions.Volumes))
 			for _, volume := range objects.PodAdditions.Volumes {
+				assert.Equal(t, []corev1.KeyToPath{
+					{Key: corev1.TLSCertKey, Path: corev1.TLSCertKey},
+					{Key: corev1.TLSPrivateKeyKey, Path: corev1.TLSPrivateKeyKey},
+				}, volume.Secret.Items, "only the certificate and key may be mounted")
 				volumeSecrets[volume.Name] = volume.Secret.SecretName
 			}
 

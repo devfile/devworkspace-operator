@@ -351,14 +351,14 @@ type NetworkPolicyConfig struct {
 	// is denied. If this field is specified as a non-empty list, exactly those rules apply
 	// and the default rules no longer apply.
 	// +kubebuilder:validation:Optional
-	Ingress []networkingv1.NetworkPolicyIngressRule `json:"ingress,omitempty"`
+	Ingress []networkingv1.NetworkPolicyIngressRule `json:"ingress"`
 	// Egress defines the egress rules applied to DevWorkspace pods. If this field is not
 	// specified, the default egress rule of the DevWorkspace Operator applies, which allows
 	// all egress traffic. If this field is specified as an empty list, all egress traffic
 	// from DevWorkspace pods is denied. If this field is specified as a non-empty list,
 	// exactly those rules apply and the default rule no longer applies.
 	// +kubebuilder:validation:Optional
-	Egress []networkingv1.NetworkPolicyEgressRule `json:"egress,omitempty"`
+	Egress []networkingv1.NetworkPolicyEgressRule `json:"egress"`
 }
 
 type Proxy struct {

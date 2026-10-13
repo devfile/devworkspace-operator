@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -613,6 +614,71 @@ func TestMergeConfigMergesRuntimeClassName(t *testing.T) {
 			assert.Equal(t, tt.want.Workspace.RuntimeClassName, tt.to.Workspace.RuntimeClassName, tt.message)
 		})
 	}
+}
+
+func TestResolveConfigForWorkspaceWithNetworkPolicy(t *testing.T) {
+	setupForTest(t)
+
+	workspace := &dw.DevWorkspace{
+		Spec: dw.DevWorkspaceSpec{
+			Template: dw.DevWorkspaceTemplateSpec{
+				DevWorkspaceTemplateSpecContent: dw.DevWorkspaceTemplateSpecContent{
+					Attributes: attributes.Attributes{},
+				},
+			},
+		},
+	}
+
+	attrs := workspace.Spec.Template.DevWorkspaceTemplateSpecContent.Attributes
+	attrs.Put(
+		constants.ExternalDevWorkspaceConfiguration,
+		types.NamespacedName{
+			Name:      externalConfigName,
+			Namespace: externalConfigNamespace,
+		},
+		nil,
+	)
+
+	t.Run("external config overrides NetworkPolicy with empty ingress and egress (deny all)", func(t *testing.T) {
+		externalDwoc := &v1alpha1.DevWorkspaceOperatorConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      externalConfigName,
+				Namespace: externalConfigNamespace,
+			},
+			Config: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					NetworkPolicy: &v1alpha1.NetworkPolicyConfig{
+						Enabled: pointer.Bool(true),
+						Ingress: []networkingv1.NetworkPolicyIngressRule{},
+						Egress:  []networkingv1.NetworkPolicyEgressRule{},
+					},
+				},
+			},
+		}
+
+		dwoc := &v1alpha1.DevWorkspaceOperatorConfig{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      OperatorConfigName,
+				Namespace: configNamespace,
+			},
+			Config: defaultConfig.DeepCopy(),
+		}
+
+		client := fake.NewClientBuilder().WithScheme(scheme).WithObjects(dwoc, externalDwoc).Build()
+		err := SetupControllerConfig(client)
+		assert.NoError(t, err)
+
+		resolvedConfig, err := ResolveConfigForWorkspace(workspace, client)
+		assert.NoError(t, err)
+		assert.NotNil(t, resolvedConfig.Workspace.NetworkPolicy)
+		assert.Equal(t, pointer.Bool(true), resolvedConfig.Workspace.NetworkPolicy.Enabled)
+
+		assert.NotNil(t, resolvedConfig.Workspace.NetworkPolicy.Ingress)
+		assert.Empty(t, resolvedConfig.Workspace.NetworkPolicy.Ingress)
+
+		assert.NotNil(t, resolvedConfig.Workspace.NetworkPolicy.Egress)
+		assert.Empty(t, resolvedConfig.Workspace.NetworkPolicy.Egress)
+	})
 }
 
 func fuzzQuantity(q *resource.Quantity, c fuzz.Continue) {

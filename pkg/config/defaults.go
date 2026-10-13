@@ -269,10 +269,28 @@ func GetDefaultNetworkPolicy(operatorNamespace string) (
 		ingressPolicyRules = defaultKubernetesIngressPolicyRules
 	}
 
-	defaultConfig.Workspace.NetworkPolicy = &v1alpha1.NetworkPolicyConfig{
-		Enabled: pointer.Bool(constants.DefaultNetworkPolicyEnabled),
-		Ingress: ingressPolicyRules,
-		Egress:  defaultEgressPolicyRules,
+	// Return copies so callers can extend the rules without mutating package-level defaults
+	return deepCopyIngressRules(ingressPolicyRules), deepCopyEgressRules(defaultEgressPolicyRules), nil
+}
+
+func deepCopyIngressRules(rules []networkingv1.NetworkPolicyIngressRule) []networkingv1.NetworkPolicyIngressRule {
+	if rules == nil {
+		return nil
 	}
-	return ingressPolicyRules, defaultEgressPolicyRules, nil
+	copied := make([]networkingv1.NetworkPolicyIngressRule, len(rules))
+	for i := range rules {
+		rules[i].DeepCopyInto(&copied[i])
+	}
+	return copied
+}
+
+func deepCopyEgressRules(rules []networkingv1.NetworkPolicyEgressRule) []networkingv1.NetworkPolicyEgressRule {
+	if rules == nil {
+		return nil
+	}
+	copied := make([]networkingv1.NetworkPolicyEgressRule, len(rules))
+	for i := range rules {
+		rules[i].DeepCopyInto(&copied[i])
+	}
+	return copied
 }

@@ -1,0 +1,10 @@
+---
+description: graphify knowledge graph — mandatory exploration workflow
+alwaysApply: true
+---
+
+Before using Read, Grep, Glob, or Bash to explore this codebase, you MUST run graphify first.
+
+Full workflow, commands, exceptions, and subagent requirements: see the **Codebase Navigation (Graphify)** section in [AGENTS.md](../../AGENTS.md).
+
+Include this rule explicitly in every subagent prompt that involves code exploration.

@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -48,6 +48,7 @@ func serviceUpdateFunc(spec, cluster crclient.Object) (crclient.Object, error) {
 	specService := spec.DeepCopyObject().(*corev1.Service)
 	clusterService := cluster.(*corev1.Service)
 	specService.ResourceVersion = clusterService.ResourceVersion
+	specService.UID = clusterService.UID
 	specService.Spec.ClusterIP = clusterService.Spec.ClusterIP
 	return specService, nil
 }

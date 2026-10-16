@@ -21,18 +21,20 @@ import (
 	"strings"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	"github.com/devfile/devworkspace-operator/pkg/common"
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
-	"github.com/devfile/devworkspace-operator/pkg/library/overrides/restrictions"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/devfile/devworkspace-operator/pkg/common"
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
+	"github.com/devfile/devworkspace-operator/pkg/library/overrides/restrictions"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 )
 
 // HandleKubernetesComponents processes the Kubernetes and OpenShift components of a DevWorkspace,
@@ -82,7 +84,11 @@ func HandleKubernetesComponents(workspace *common.DevWorkspaceWithConfig, api sy
 			return &dwerrors.FailError{Message: fmt.Sprintf("could not process component %s", component.Name), Err: err}
 		}
 		var syncErr error
-		if sync.IsRecognizedObject(obj) {
+		service, isService := obj.(*corev1.Service)
+		owner := metav1.GetControllerOf(obj)
+		if isService && (service.Annotations[constants.DevWorkspaceDiscoverableServiceAnnotation] == "true" || owner != nil && owner.Kind == "DevWorkspaceRouting") {
+			_, syncErr = sync.SyncRoutingServiceWithCluster(service, api)
+		} else if sync.IsRecognizedObject(obj) {
 			_, syncErr = sync.SyncObjectWithCluster(obj, api)
 		} else {
 			_, syncErr = sync.SyncUnrecognizedObjectWithCluster(obj, api)

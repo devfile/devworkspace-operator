@@ -44,7 +44,13 @@ Detailed instructions regarding the DevWorkspace Operator development are provid
 
 ### Codebase Navigation (Graphify)
 
-This repository ships a pre-built knowledge graph (`graphify-out/`) to help navigate the codebase without expensive file searches. After cloning or pulling, run once to anchor the graph to your local paths:
+This repository ships a pre-built knowledge graph (`graphify-out/`) to help navigate the codebase without expensive file searches. Install the [Graphify CLI](https://docs.graphify.com/installation) once using [uv](https://docs.astral.sh/uv/getting-started/installation/) (or `pipx install graphifyy`):
+
+```bash
+uv tool install graphifyy
+```
+
+After cloning or pulling, run once to anchor the graph to your local paths:
 
 ```bash
 graphify update .

@@ -10,7 +10,9 @@ DevWorkspaceRouting Services share namespace names, including discoverable endpo
 
 ## Decision
 
-Call `SyncRoutingServiceWithCluster` explicitly for every routing-controller Service, including aggregate Services. Kubernetes/OpenShift component handling dispatches inlined Services with the discoverable annotation `"true"` or a DevWorkspaceRouting controller owner to the same guarded entry point. Ordinary inlined resources and async-storage Services use `SyncObjectWithCluster`, which reads only through the cached client and does not inspect routing metadata.
+Call `SyncRoutingServiceWithCluster` explicitly for every routing-controller Service, including aggregate Services. Kubernetes/OpenShift component handling dispatches inlined Services with the discoverable annotation `"true"` or a DevWorkspaceRouting controller owner to the same guarded entry point. The routing ownership checks and Service creation-race behavior remain unchanged.
+
+Ordinary inlined resources and async-storage Services use `SyncObjectWithCluster`. Its normal reads use the cached client. Only when that read returns NotFound and creation returns AlreadyExists does it make one lookup through the non-caching client to recover a possible create race. If no non-caching client is configured, the fresh lookup is still NotFound, or the object disappears before it can be read, return a retry error. A fresh read error also returns without writing. This collision-only path requires one or more desired owner references, each with a nonempty UID and a matching existing reference according to `containsOwnerRef`. This supports both non-controller DevWorkspace ownership and asynchronous Deployment ownership. An unexpected controller owner makes the Service foreign even when its workspace ID label matches. A foreign Service is a permanent Service-name conflict and is left unchanged. An owned Service is synchronized using the fresh object's UID, resourceVersion, and ClusterIP, with the normal cached writer.
 
 The routing entry point reads through the non-caching client when configured (controller setup supplies it), falling back to the cached client otherwise, and uses that single result for ownership. Both entry points share post-read synchronization with no additional read. If the desired Service has a controller owner, its UID must match the existing controller owner's UID; that UID remains authoritative when the workspace ID label is stale or missing, allowing synchronization to repair the label. Without a desired controller owner, require a nonempty workspace ID label matching the existing Service. Reject a foreign same-name Service as a permanent conflict.
 
@@ -45,7 +47,7 @@ Use generic update after Service creation reports AlreadyExists.
 
 ### Negative
 
-- Fresh reads add API calls and latency; changed Services can make guarded writes conflict and require another reconcile.
+- The routing path's fresh reads add API calls and latency; the generic collision recovery adds a fresh read only after a create collision, instead of uncached reads during routine synchronization. Changed Services can make guarded writes conflict and require another reconcile.
 
 ### Neutral
 

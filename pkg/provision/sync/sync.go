@@ -50,8 +50,14 @@ func SyncObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Ob
 	objType := reflect.TypeOf(specObj).Elem()
 	clusterObj := reflect.New(objType).Interface().(crclient.Object)
 
-	err := api.Client.Get(api.Ctx, types.NamespacedName{Name: specObj.GetName(), Namespace: specObj.GetNamespace()}, clusterObj)
-	return syncObjectAfterRead(specObj, clusterObj, err, api)
+	readErr := api.Client.Get(api.Ctx, types.NamespacedName{Name: specObj.GetName(), Namespace: specObj.GetNamespace()}, clusterObj)
+	obj, err := syncObjectAfterRead(specObj, clusterObj, readErr, api)
+	if service, ok := specObj.(*corev1.Service); ok {
+		if retry, ok := err.(*NotInSyncError); ok && retry.Reason == NeedRetryReason && k8sErrors.IsNotFound(readErr) {
+			return recoverServiceCreateCollision(service, retry, api)
+		}
+	}
+	return obj, err
 }
 
 func syncObjectAfterRead(specObj, clusterObj crclient.Object, readErr error, api ClusterAPI) (crclient.Object, error) {

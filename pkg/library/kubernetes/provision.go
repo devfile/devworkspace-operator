@@ -86,7 +86,7 @@ func HandleKubernetesComponents(workspace *common.DevWorkspaceWithConfig, api sy
 		var syncErr error
 		service, isService := obj.(*corev1.Service)
 		owner := metav1.GetControllerOf(obj)
-		if isService && (service.Annotations[constants.DevWorkspaceDiscoverableServiceAnnotation] == "true" || owner != nil && owner.Kind == "DevWorkspaceRouting") {
+		if isService && (service.Annotations[constants.DevWorkspaceDiscoverableServiceAnnotation] == "true" || (owner != nil && owner.Kind == "DevWorkspaceRouting")) {
 			_, syncErr = sync.SyncRoutingServiceWithCluster(service, api)
 		} else if sync.IsRecognizedObject(obj) {
 			_, syncErr = sync.SyncObjectWithCluster(obj, api)

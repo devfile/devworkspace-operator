@@ -266,7 +266,7 @@ func TestGetDiscoverableServicesForEndpoints_SameWorkspaceDuplicateName(t *testi
 		return
 	}
 	assert.Equal(t, "my-endpoint", duplicateErr.EndpointName)
-	assert.EqualError(t, duplicateErr, "discoverable endpoint 'my-endpoint' is declared by more than one component in this workspace")
+	assert.EqualError(t, duplicateErr, "discoverable endpoints 'my--endpoint' and 'my-endpoint' both normalize to Service name 'my-endpoint'")
 	assert.Nil(t, services, "Expected no services to be produced on conflict")
 }
 
@@ -297,7 +297,7 @@ func TestGetDiscoverableServicesForEndpoints_DuplicateNameOrderIsStable(t *testi
 		Namespace:        "test-namespace",
 	}
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
-	const wantError = "discoverable endpoint 'my--endpoint' is declared by more than one component in this workspace"
+	const wantError = "discoverable endpoints 'my-endpoint' and 'my--endpoint' both normalize to Service name 'my-endpoint'"
 
 	for range 32 {
 		services, err := GetDiscoverableServicesForEndpoints(context.Background(), endpoints, meta, fakeClient)

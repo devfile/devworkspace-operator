@@ -20,7 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// Service conflicts must be checked against current state before routing can fail permanently.
+// solverClient redirects Get calls for *corev1.Service to the non-caching reader for current ownership checks.
+// List remains cached for advisory label-selector sweeps. Ownership decisions must use Service Get.
+// Other operations use the embedded client.
 type solverClient struct {
 	client.Client
 	serviceReader client.Reader

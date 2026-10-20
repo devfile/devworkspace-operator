@@ -235,7 +235,7 @@ func TestReadyNoOpStillWritesWhenObservedGenerationIsStale(t *testing.T) {
 	routing := recoveryRouting(3)
 	routing.Status = controllerv1alpha1.DevWorkspaceRoutingStatus{Phase: controllerv1alpha1.RoutingReady, ObservedGeneration: 2}
 	client, backing := recoveryRecordingReconciler(t, routing)
-	if err := client.reconciler.reconcileStatus(routing, &solvers.RoutingObjects{}, nil, true, ""); err != nil {
+	if err := client.reconciler.reconcileStatus(context.Background(), routing, &solvers.RoutingObjects{}, nil, true, ""); err != nil {
 		t.Fatal(err)
 	}
 	stored := getRouting(t, backing, routing)

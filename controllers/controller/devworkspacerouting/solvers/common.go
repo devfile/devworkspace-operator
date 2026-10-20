@@ -46,7 +46,7 @@ type DevWorkspaceMetadata struct {
 // endpoint from the list. Endpoints with the NoneEndpointExposure are ignored.
 func GetDiscoverableServicesForEndpoints(ctx context.Context, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, cl client.Client) ([]corev1.Service, error) {
 	var services []corev1.Service
-	seenServiceNames := map[string]bool{}
+	seenServiceNames := map[string]string{}
 	componentNames := make([]string, 0, len(endpoints))
 	for componentName := range endpoints {
 		componentNames = append(componentNames, componentName)
@@ -61,16 +61,19 @@ func GetDiscoverableServicesForEndpoints(ctx context.Context, endpoints map[stri
 
 			if endpoint.Attributes.GetBoolean(string(controllerv1alpha1.DiscoverableAttribute), nil) {
 				serviceName := common.EndpointName(endpoint.Name)
+				if serviceName == "" {
+					return nil, &RoutingInvalid{Reason: fmt.Sprintf("discoverable endpoint '%s' normalizes to an empty Service name", endpoint.Name)}
+				}
 				if serviceName == common.ServiceName(meta.DevWorkspaceId) {
 					return nil, &RoutingInvalid{Reason: fmt.Sprintf("discoverable endpoint '%s' uses reserved Service name '%s'", endpoint.Name, serviceName)}
 				}
 				// Two endpoints on different containers can sanitize to the same Service name (e.g. "my--endpoint" and
 				// "my-endpoint"). Neither Service exists on the cluster yet at this point, so the existing-service check
 				// below can't catch this; track names claimed within this call instead.
-				if seenServiceNames[serviceName] {
-					return nil, &DuplicateEndpointError{EndpointName: endpoint.Name}
+				if firstName, seen := seenServiceNames[serviceName]; seen {
+					return nil, &DuplicateEndpointError{EndpointName: endpoint.Name, FirstEndpointName: firstName, ServiceName: serviceName}
 				}
-				seenServiceNames[serviceName] = true
+				seenServiceNames[serviceName] = endpoint.Name
 
 				existingService := &corev1.Service{}
 				err := cl.Get(ctx, client.ObjectKey{Name: serviceName, Namespace: meta.Namespace}, existingService)

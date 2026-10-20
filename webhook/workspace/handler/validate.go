@@ -155,6 +155,9 @@ func (h *WebhookHandler) shouldCheckEndpointConflicts(req admission.Request, nam
 // actual collision surface: two differently-named endpoints that sanitize to the same value produce the same
 // Service name and conflict at reconcile time.
 //
+// Only Container endpoints are indexed. Direct inline Kubernetes/OpenShift Service components are parsed and
+// provisioned during reconciliation, where ownership checks run.
+//
 // Endpoints contributed via workspace.Spec.Contributions (plugins/parent templates) are invisible here,
 // permanently: flatten.ResolveDevWorkspace inlines them only in-memory during reconcile, never back to
 // .spec.template, so this field never reflects them, no matter how many times a workspace reconciles. Flattening

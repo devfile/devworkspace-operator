@@ -38,11 +38,11 @@ func (r *DevWorkspaceRoutingReconciler) validateServingCertificates(ctx context.
 		if r.NonCachingClient == nil {
 			return fmt.Errorf("cannot validate serving certificates without an authoritative client")
 		}
-		invalid := func(reason string) error {
+		certInvalid := func(reason string) error {
 			return &solvers.RoutingInvalid{Reason: fmt.Sprintf("serving certificate Secret %s/%s for Service %s: %s", service.Namespace, secretName, service.Name, reason)}
 		}
 		if service.UID == "" {
-			return invalid("synchronized Service has no UID")
+			return certInvalid("synchronized Service has no UID")
 		}
 		secret := &corev1.Secret{}
 		if err := r.NonCachingClient.Get(ctx, client.ObjectKey{Namespace: service.Namespace, Name: secretName}, secret); err != nil {
@@ -58,12 +58,12 @@ func (r *DevWorkspaceRoutingReconciler) validateServingCertificates(ctx context.
 			name, hasName := secret.Annotations[prefix+"originating-service-name"]
 			uid, hasUID := secret.Annotations[prefix+"originating-service-uid"]
 			if hasName && name != service.Name || hasUID && uid != string(service.UID) {
-				return invalid("originating Service identity does not match")
+				return certInvalid("originating Service identity does not match")
 			}
 			validIdentity = validIdentity || hasName && hasUID
 		}
 		if !validIdentity {
-			return invalid("missing originating Service identity")
+			return certInvalid("missing originating Service identity")
 		}
 		owned := false
 		for _, owner := range secret.OwnerReferences {
@@ -73,10 +73,10 @@ func (r *DevWorkspaceRoutingReconciler) validateServingCertificates(ctx context.
 			}
 		}
 		if !owned {
-			return invalid("missing matching Service owner reference")
+			return certInvalid("missing matching Service owner reference")
 		}
 		if secret.Type != corev1.SecretTypeTLS {
-			return invalid("Secret type is not kubernetes.io/tls")
+			return certInvalid("Secret type is not kubernetes.io/tls")
 		}
 		if len(secret.Data[corev1.TLSCertKey]) == 0 || len(secret.Data[corev1.TLSPrivateKeyKey]) == 0 {
 			pending = true

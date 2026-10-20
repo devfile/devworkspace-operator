@@ -35,11 +35,13 @@ type ServiceConflictError = sync.ServiceConflictError
 // DuplicateEndpointError is returned when a single DevWorkspace declares the same discoverable endpoint name - or
 // two endpoint names that sanitize to the same Service name - on more than one container.
 type DuplicateEndpointError struct {
-	EndpointName string
+	EndpointName      string
+	FirstEndpointName string
+	ServiceName       string
 }
 
 func (e *DuplicateEndpointError) Error() string {
-	return fmt.Sprintf("discoverable endpoint '%s' is declared by more than one component in this workspace", e.EndpointName)
+	return fmt.Sprintf("discoverable endpoints '%s' and '%s' both normalize to Service name '%s'", e.FirstEndpointName, e.EndpointName, e.ServiceName)
 }
 
 // RoutingNotSupported is used by the solvers when they supported the routingclass of the workspace they've been asked to route

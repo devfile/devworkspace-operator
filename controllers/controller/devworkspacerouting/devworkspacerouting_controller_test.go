@@ -86,9 +86,7 @@ func TestReconcileMarksDuplicateEndpointRoutingFailed(t *testing.T) {
 	stored := &controllerv1alpha1.DevWorkspaceRouting{}
 	g.Expect(fakeClient.Get(testCtx, key, stored)).To(Succeed())
 	g.Expect(stored.Status.Phase).To(Equal(controllerv1alpha1.RoutingFailed))
-	g.Expect(stored.Status.Message).To(ContainSubstring("is declared by more than one component"))
-	// Container-map iteration determines which raw alias is reported.
-	g.Expect(stored.Status.Message).To(Or(ContainSubstring("'my--endpoint'"), ContainSubstring("'my-endpoint'")))
+	g.Expect(stored.Status.Message).To(ContainSubstring("discoverable endpoints 'my--endpoint' and 'my-endpoint' both normalize to Service name 'my-endpoint'"))
 	services := &corev1.ServiceList{}
 	g.Expect(fakeClient.List(testCtx, services)).To(Succeed())
 	g.Expect(services.Items).To(BeEmpty())

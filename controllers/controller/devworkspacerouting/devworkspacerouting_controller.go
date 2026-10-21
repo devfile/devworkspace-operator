@@ -96,9 +96,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		return reconcile.Result{}, r.markRoutingFailed(ctx, instance, "DevWorkspaceRouting requires field routingClass to be set")
 	}
 
-	var solverAPI client.Client = r.Client
+	// Solvers need fresh Service ownership data, including Services excluded from the cache.
+	solverAPI := r.Client
 	if r.NonCachingClient != nil {
-		solverAPI = solverClient{Client: r.Client, serviceReader: r.NonCachingClient}
+		solverAPI = r.NonCachingClient
 	}
 	solver, err := r.SolverGetter.GetSolver(solverAPI, instance.Spec.RoutingClass)
 	if err != nil {

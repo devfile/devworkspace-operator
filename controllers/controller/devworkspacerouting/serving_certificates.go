@@ -41,9 +41,6 @@ func (r *DevWorkspaceRoutingReconciler) validateServingCertificates(ctx context.
 		certInvalid := func(reason string) error {
 			return &solvers.RoutingInvalid{Reason: fmt.Sprintf("serving certificate Secret %s/%s for Service %s: %s", service.Namespace, secretName, service.Name, reason)}
 		}
-		if service.UID == "" {
-			return certInvalid("synchronized Service has no UID")
-		}
 		secret := &corev1.Secret{}
 		if err := r.NonCachingClient.Get(ctx, client.ObjectKey{Namespace: service.Namespace, Name: secretName}, secret); err != nil {
 			if k8sErrors.IsNotFound(err) {

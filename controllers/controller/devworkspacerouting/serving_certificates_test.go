@@ -143,7 +143,6 @@ func TestValidateServingCertificates(t *testing.T) {
 		{name: "missing key waits", services: []corev1.Service{service}, secrets: []client.Object{servingCertSecretWithData(service, map[string][]byte{
 			corev1.TLSCertKey: []byte("cert"),
 		})}, want: "not-ready", wantRetry: time.Second},
-		{name: "missing service UID is invalid", services: []corev1.Service{servingCertService("api", "ns", "")}, want: "invalid"},
 		{name: "incomplete beta identity is invalid", services: []corev1.Service{service}, secrets: []client.Object{servingCertSecretWithAnnotations(service, map[string]string{
 			servingServiceBetaName: service.Name,
 		})}, want: "invalid"},

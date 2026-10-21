@@ -17,7 +17,8 @@ package solvers
 import (
 	"context"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 
 	routeV1 "github.com/openshift/api/route/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,12 +48,7 @@ type DevWorkspaceMetadata struct {
 func GetDiscoverableServicesForEndpoints(ctx context.Context, endpoints map[string]controllerv1alpha1.EndpointList, meta DevWorkspaceMetadata, cl client.Client) ([]corev1.Service, error) {
 	var services []corev1.Service
 	seenServiceNames := map[string]string{}
-	componentNames := make([]string, 0, len(endpoints))
-	for componentName := range endpoints {
-		componentNames = append(componentNames, componentName)
-	}
-	sort.Strings(componentNames)
-	for _, componentName := range componentNames {
+	for _, componentName := range slices.Sorted(maps.Keys(endpoints)) {
 		machineEndpoints := endpoints[componentName]
 		for _, endpoint := range machineEndpoints {
 			if endpoint.Exposure == controllerv1alpha1.NoneEndpointExposure {

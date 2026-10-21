@@ -134,46 +134,6 @@ func TestReconcileReturnsAuthoritativeServiceReadError(t *testing.T) {
 	}
 }
 
-func TestSolverClientDelegatesServiceReadsAndOtherOperations(t *testing.T) {
-	scheme := routingTestScheme(t)
-	routing := &controllerv1alpha1.DevWorkspaceRouting{ObjectMeta: metav1.ObjectMeta{Name: "routing-mine", Namespace: "ns"}}
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "config", Namespace: "ns"}}
-	backing := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(routing).WithObjects(routing, configMap).Build()
-	original := &recordingClient{Client: backing}
-	fresh := &recordingReader{}
-	api := solverClient{Client: original, serviceReader: fresh}
-	ctx := context.WithValue(context.Background(), testContextKey{}, "service-read")
-	option := testResourceVersionGetOption{}
-	if err := api.Get(ctx, client.ObjectKey{Namespace: "ns", Name: "api"}, &corev1.Service{}, option); err != nil {
-		t.Fatal(err)
-	}
-	if fresh.getCalls != 1 || fresh.contextValue != "service-read" || fresh.key != (client.ObjectKey{Namespace: "ns", Name: "api"}) || fresh.resourceVersion != "test-version" {
-		t.Fatalf("Service Get was not forwarded to fresh reader with context/key/options: %#v", fresh)
-	}
-	if original.getCalls != 0 {
-		t.Fatalf("Service Get used cached client %d times", original.getCalls)
-	}
-	if err := api.Get(context.Background(), client.ObjectKeyFromObject(configMap), &corev1.ConfigMap{}); err != nil {
-		t.Fatal(err)
-	}
-	if original.getCalls != 1 {
-		t.Fatalf("unrelated Get used cached client %d times", original.getCalls)
-	}
-	if err := api.Create(context.Background(), &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "created", Namespace: "ns"}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := api.List(context.Background(), &corev1.ConfigMapList{}); err != nil {
-		t.Fatal(err)
-	}
-	routing.Status.Phase = controllerv1alpha1.RoutingReady
-	if err := api.Status().Update(context.Background(), routing); err != nil {
-		t.Fatal(err)
-	}
-	if original.createCalls != 1 || original.listCalls != 1 || original.statusCalls != 1 {
-		t.Fatalf("write/list/status calls bypassed original client: %#v", original)
-	}
-}
-
 func TestReconcileUsesCachedClientWhenNonCachingClientIsNil(t *testing.T) {
 	scheme := routingTestScheme(t)
 	routing := &controllerv1alpha1.DevWorkspaceRouting{ObjectMeta: metav1.ObjectMeta{Name: "routing-mine", Namespace: "ns"}, Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{DevWorkspaceId: "mine", RoutingClass: controllerv1alpha1.DevWorkspaceRoutingCluster}}
@@ -200,65 +160,6 @@ func routingTestScheme(t *testing.T) *runtime.Scheme {
 }
 
 type testContextKey struct{}
-
-type testResourceVersionGetOption struct{}
-
-func (testResourceVersionGetOption) ApplyToGet(options *client.GetOptions) {
-	options.Raw = &metav1.GetOptions{ResourceVersion: "test-version"}
-}
-
-type recordingReader struct {
-	getCalls        int
-	contextValue    any
-	key             client.ObjectKey
-	resourceVersion string
-}
-
-func (r *recordingReader) Get(ctx context.Context, key client.ObjectKey, _ client.Object, opts ...client.GetOption) error {
-	r.getCalls++
-	r.contextValue = ctx.Value(testContextKey{})
-	r.key = key
-	options := client.GetOptions{}
-	for _, option := range opts {
-		option.ApplyToGet(&options)
-	}
-	if options.Raw != nil {
-		r.resourceVersion = options.Raw.ResourceVersion
-	}
-	return nil
-}
-
-func (*recordingReader) List(context.Context, client.ObjectList, ...client.ListOption) error {
-	return nil
-}
-
-type recordingClient struct {
-	client.Client
-	getCalls    int
-	createCalls int
-	listCalls   int
-	statusCalls int
-}
-
-func (c *recordingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	c.getCalls++
-	return c.Client.Get(ctx, key, obj, opts...)
-}
-
-func (c *recordingClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-	c.createCalls++
-	return c.Client.Create(ctx, obj, opts...)
-}
-
-func (c *recordingClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	c.listCalls++
-	return c.Client.List(ctx, list, opts...)
-}
-
-func (c *recordingClient) Status() client.SubResourceWriter {
-	c.statusCalls++
-	return c.Client.Status()
-}
 
 type serviceReadErrorClient struct {
 	client.Client

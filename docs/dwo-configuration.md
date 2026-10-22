@@ -45,6 +45,75 @@ spec:
         namespace: <namespace of DevWorkspaceOperatorConfig CR>
 ```
 Configuration specified as above will be merged into the default global configuration, overriding any values present.
+Note that fields set in the global configuration cannot be cleared (reset to unset) by a workspace-specific
+configuration, as the merge strategy only overrides fields that are explicitly set.
+
+## Configuring workspace pod scheduling
+
+[pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity),
+[pod anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) and
+[topology spread constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
+can be configured for all pods created for DevWorkspaces (workspace pods, PVC cleanup pods and backup pods).
+Workspace restore is covered implicitly, as it runs as an init container in the workspace pod.
+
+These configuration options exist in the DWOC's `config.workspace` field:
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    podAffinity: <podAffinity>
+    podAntiAffinity: <podAntiAffinity>
+    topologySpreadConstraints: <[]topologySpreadConstraint>
+```
+
+For example, to co-locate workspace pods in the same namespace on the same node, which is useful
+with the per-user storage strategy where workspaces in a namespace share a persistent volume claim:
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    podAffinity:
+      # An empty labelSelector ({}) matches all pods in the same namespace as
+      # the workspace pod being scheduled
+      requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector: {}
+        topologyKey: kubernetes.io/hostname
+```
+
+To spread workspace pods evenly across availability zones, preferring balance but still
+scheduling pods when an even spread is not possible:
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      # Use DoNotSchedule to make the spread a hard requirement
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchExpressions:
+        - key: controller.devfile.io/devworkspace_id
+          operator: Exists
+```
+
+A typical use case is configuring a scheduling policy that applies to all workspaces at once (e.g. to
+keep workspaces sharing a persistent volume claim on the same node for I/O performance).
 
 ## Configuring the Webhook deployment
 The `devworkspace-webhook-server` deployment can be configured in the global `DevWorkspaceOperatorConfig`. 

@@ -31,20 +31,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// GetRegistryAuthSecret retrieves the registry authentication secret for accessing backup images
-// based on the operator configuration.
-func GetNamespaceRegistryAuthSecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace,
-	dwOperatorConfig *controllerv1alpha1.OperatorConfiguration, scheme *runtime.Scheme, log logr.Logger,
+// HandleRegistryAuthSecret returns the registry auth secret to use for workspace backup/restore.
+// It first looks for the secret named DevWorkspaceBackupAuthSecretName in the workspace namespace.
+// If not found and an AuthSecret is configured in the operator config, the configured secret is read
+// from the operator namespace and copied into the workspace namespace (see CopySecret).
+func HandleRegistryAuthSecret(
+	ctx context.Context,
+	c client.Client,
+	workspace *dw.DevWorkspace,
+	config *controllerv1alpha1.OperatorConfiguration,
+	scheme *runtime.Scheme,
+	log logr.Logger,
 ) (*corev1.Secret, error) {
-	return HandleRegistryAuthSecret(ctx, c, workspace, dwOperatorConfig, "", scheme, log)
-}
-
-func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *dw.DevWorkspace,
-	dwOperatorConfig *controllerv1alpha1.OperatorConfiguration, operatorConfigNamespace string, scheme *runtime.Scheme, log logr.Logger,
-) (*corev1.Secret, error) {
-	if dwOperatorConfig.Workspace == nil ||
-		dwOperatorConfig.Workspace.BackupCronJob == nil ||
-		dwOperatorConfig.Workspace.BackupCronJob.Registry == nil {
+	if config.Workspace == nil ||
+		config.Workspace.BackupCronJob == nil ||
+		config.Workspace.BackupCronJob.Registry == nil {
 		return nil, fmt.Errorf("backup/restore configuration not properly set in DevWorkspaceOperatorConfig")
 	}
 
@@ -61,36 +62,33 @@ func HandleRegistryAuthSecret(ctx context.Context, c client.Client, workspace *d
 		return nil, err
 	}
 	// Check if AuthSecret is configured in operator config
-	authSecretName := dwOperatorConfig.Workspace.BackupCronJob.Registry.AuthSecret
+	authSecretName := config.Workspace.BackupCronJob.Registry.AuthSecret
 	if len(authSecretName) == 0 {
 		log.Info("Registry auth secret not found in workspace namespace and not configured in operator config. "+
 			"Proceeding without authentication. Ensure your registry allows anonymous access or configure authentication if needed.",
 			"secretName", constants.DevWorkspaceBackupAuthSecretName,
 			"namespace", workspace.Namespace,
-			"registry", dwOperatorConfig.Workspace.BackupCronJob.Registry.Path)
+			"registry", config.Workspace.BackupCronJob.Registry.Path)
 		return nil, nil
 	}
 
-	if operatorConfigNamespace == "" {
-		resolvedNS, nsErr := infrastructure.GetNamespace()
-		if nsErr != nil {
-			return nil, fmt.Errorf("cannot resolve operator namespace to copy registry auth secret: %w", nsErr)
-		}
-		operatorConfigNamespace = resolvedNS
+	operatorNamespace, err := infrastructure.GetNamespace()
+	if err != nil {
+		return nil, fmt.Errorf("cannot resolve operator namespace to copy registry auth secret: %w", err)
 	}
 
 	log.Info("Registry auth secret not found in workspace namespace, checking operator namespace",
 		"secretName", authSecretName,
-		"operatorNamespace", operatorConfigNamespace)
+		"operatorNamespace", operatorNamespace)
 
 	// Look for the configured secret name in operator namespace
 	err = c.Get(ctx, client.ObjectKey{
 		Name:      authSecretName,
-		Namespace: operatorConfigNamespace}, registryAuthSecret)
+		Namespace: operatorNamespace}, registryAuthSecret)
 	if err != nil {
 		log.Error(err, "Failed to get registry auth secret for backup job",
 			"secretName", authSecretName,
-			"namespace", operatorConfigNamespace)
+			"namespace", operatorNamespace)
 		return nil, err
 	}
 	log.Info("Successfully retrieved registry auth secret from operator namespace",

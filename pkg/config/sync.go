@@ -382,6 +382,19 @@ func mergeConfig(from, to *controller.OperatorConfiguration) {
 		if from.Workspace.SchedulerName != "" {
 			to.Workspace.SchedulerName = from.Workspace.SchedulerName
 		}
+		if from.Workspace.PodAffinity != nil {
+			to.Workspace.PodAffinity = from.Workspace.PodAffinity.DeepCopy()
+		}
+		if from.Workspace.PodAntiAffinity != nil {
+			to.Workspace.PodAntiAffinity = from.Workspace.PodAntiAffinity.DeepCopy()
+		}
+		if from.Workspace.TopologySpreadConstraints != nil {
+			topologySpreadConstraintsCopy := make([]corev1.TopologySpreadConstraint, len(from.Workspace.TopologySpreadConstraints))
+			for i, constraint := range from.Workspace.TopologySpreadConstraints {
+				topologySpreadConstraintsCopy[i] = *constraint.DeepCopy()
+			}
+			to.Workspace.TopologySpreadConstraints = topologySpreadConstraintsCopy
+		}
 		if from.Workspace.ProjectCloneConfig != nil {
 			if to.Workspace.ProjectCloneConfig == nil {
 				to.Workspace.ProjectCloneConfig = &controller.ProjectCloneConfig{}
@@ -752,6 +765,15 @@ func GetCurrentConfigString(currConfig *controller.OperatorConfiguration) string
 		}
 		if workspace.SchedulerName != "" {
 			config = append(config, fmt.Sprintf("workspace.schedulerName=%s", workspace.SchedulerName))
+		}
+		if !reflect.DeepEqual(workspace.PodAffinity, defaultConfig.Workspace.PodAffinity) {
+			config = append(config, "workspace.podAffinity is set")
+		}
+		if !reflect.DeepEqual(workspace.PodAntiAffinity, defaultConfig.Workspace.PodAntiAffinity) {
+			config = append(config, "workspace.podAntiAffinity is set")
+		}
+		if !reflect.DeepEqual(workspace.TopologySpreadConstraints, defaultConfig.Workspace.TopologySpreadConstraints) {
+			config = append(config, "workspace.topologySpreadConstraints is set")
 		}
 		if workspace.ProjectCloneConfig != nil {
 			if workspace.ProjectCloneConfig.Image != defaultConfig.Workspace.ProjectCloneConfig.Image {

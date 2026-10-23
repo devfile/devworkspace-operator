@@ -4723,7 +4723,8 @@ spec:
                     type: object
                   podAffinity:
                     description: |-
-                      PodAffinity defines the pod affinity rules that are applied to all pods created for
+                      PodAffinity defines the pod affinity rules that are applied for workspace pods,
+                      PVC cleanup pods and backup pods.
                       DevWorkspaces.
                     properties:
                       preferredDuringSchedulingIgnoredDuringExecution:
@@ -5084,7 +5085,8 @@ spec:
                     type: object
                   podAntiAffinity:
                     description: |-
-                      PodAntiAffinity defines the pod anti-affinity rules that are applied to all pods created
+                      PodAntiAffinity defines the pod anti-affinity rules that are applied for workspace pods,
+                      PVC cleanup pods and backup pods
                       for DevWorkspaces.
                     properties:
                       preferredDuringSchedulingIgnoredDuringExecution:
@@ -6260,8 +6262,8 @@ spec:
                     type: string
                   topologySpreadConstraints:
                     description: |-
-                      TopologySpreadConstraints defines the topology spread constraints that are applied to
-                      all pods created for DevWorkspaces.
+                      TopologySpreadConstraints defines the topology spread constraints that are applied for
+                      workspace pods, PVC cleanup pods and backup pods.
                     items:
                       description: TopologySpreadConstraint specifies how to spread
                         matching pods among the given topology.

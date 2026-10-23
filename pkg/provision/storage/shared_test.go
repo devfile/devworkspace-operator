@@ -65,11 +65,10 @@ func TestGetPVCSpecWithCustomStorageAccessMode(t *testing.T) {
 }
 
 func TestNodeAffinityForHostname(t *testing.T) {
-	affinity := NodeAffinityForHostname("worker-node-1")
+	nodeAffinity := NodeAffinityForHostname("worker-node-1")
 
-	assert.NotNil(t, affinity)
-	assert.NotNil(t, affinity.NodeAffinity)
-	nodeSelector := affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+	assert.NotNil(t, nodeAffinity)
+	nodeSelector := nodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution
 	assert.NotNil(t, nodeSelector)
 	assert.Len(t, nodeSelector.NodeSelectorTerms, 1)
 	assert.Len(t, nodeSelector.NodeSelectorTerms[0].MatchExpressions, 1)

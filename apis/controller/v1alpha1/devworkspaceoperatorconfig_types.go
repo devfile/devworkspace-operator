@@ -249,11 +249,9 @@ type WorkspaceConfig struct {
 	SchedulerName string `json:"schedulerName,omitempty"`
 	// PodAffinity defines the pod affinity rules that are applied for workspace pods,
 	// PVC cleanup pods and backup pods.
-	// DevWorkspaces.
 	PodAffinity *corev1.PodAffinity `json:"podAffinity,omitempty"`
 	// PodAntiAffinity defines the pod anti-affinity rules that are applied for workspace pods,
 	// PVC cleanup pods and backup pods
-	// for DevWorkspaces.
 	PodAntiAffinity *corev1.PodAntiAffinity `json:"podAntiAffinity,omitempty"`
 	// TopologySpreadConstraints defines the topology spread constraints that are applied for
 	// workspace pods, PVC cleanup pods and backup pods.

@@ -4725,7 +4725,6 @@ spec:
                     description: |-
                       PodAffinity defines the pod affinity rules that are applied for workspace pods,
                       PVC cleanup pods and backup pods.
-                      DevWorkspaces.
                     properties:
                       preferredDuringSchedulingIgnoredDuringExecution:
                         description: |-
@@ -5087,7 +5086,6 @@ spec:
                     description: |-
                       PodAntiAffinity defines the pod anti-affinity rules that are applied for workspace pods,
                       PVC cleanup pods and backup pods
-                      for DevWorkspaces.
                     properties:
                       preferredDuringSchedulingIgnoredDuringExecution:
                         description: |-

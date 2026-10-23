@@ -1,4 +1,4 @@
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,7 +18,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	routev1 "github.com/openshift/api/route/v1"
@@ -31,6 +30,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/pointer"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
 // diffFunc represents a function that compares a spec object against the corresponding cluster object and
@@ -71,7 +72,7 @@ func metadataDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	}
 	clusterLabels := cluster.GetLabels()
 	for k, v := range spec.GetLabels() {
-		if clusterLabels[k] != v {
+		if cv, ok := clusterLabels[k]; !ok || cv != v {
 			return false, true
 		}
 	}

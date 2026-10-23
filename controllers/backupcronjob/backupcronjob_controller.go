@@ -258,8 +258,8 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 
 		config, err := wkspConfig.ResolveConfigForWorkspace(&dw, r.Client)
 		if err != nil {
-			log.Error(err, "Failed to resolve config for DevWorkspace, using global operator config", "id", dwID)
-			config = wkspConfig.GetGlobalConfig()
+			log.Info("Failed to resolve config for DevWorkspace, skipping backup", "id", dwID, "error", err)
+			continue
 		}
 
 		if err = r.createBackupJob(&dw, ctx, config, log); err != nil {

@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/attributes"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -887,6 +888,51 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(0))
+		})
+
+		It("skips backup for a DevWorkspace whose config cannot be resolved and continues with other DevWorkspaces", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path:       "fake-registry",
+								AuthSecret: "backup-auth",
+							},
+						},
+					},
+				},
+			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+
+			// Workspace referencing a nonexistent external DevWorkspaceOperatorConfig:
+			// resolving its config fails, so backup should be skipped for it
+			dwBroken := createDevWorkspace("dw-broken-config", "ns-broken", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dwBroken.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dwBroken.Status.DevWorkspaceId = "id-broken"
+			dwBroken.Spec.Template.Attributes = attributes.Attributes{}.Put(
+				constants.ExternalDevWorkspaceConfiguration,
+				types.NamespacedName{Name: "nonexistent-config", Namespace: "ns-broken"},
+				nil)
+			Expect(fakeClient.Create(ctx, dwBroken)).To(Succeed())
+
+			pvcBroken := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dwBroken.Namespace}}
+			Expect(fakeClient.Create(ctx, pvcBroken)).To(Succeed())
+
+			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dwBroken.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(0), "no backup Job should be created for a DevWorkspace whose config cannot be resolved")
 		})
 	})
 	Context("ensureJobRunnerRBAC", func() {

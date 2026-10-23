@@ -53,7 +53,7 @@ configuration, as the merge strategy only overrides fields that are explicitly s
 [pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity),
 [pod anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) and
 [topology spread constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
-can be configured for all pods created for DevWorkspaces (workspace pods, PVC cleanup pods and backup pods).
+can be configured for workspace pods, PVC cleanup pods and backup pods.
 Workspace restore is covered implicitly, as it runs as an init container in the workspace pod.
 
 These configuration options exist in the DWOC's `config.workspace` field:

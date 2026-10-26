@@ -50,7 +50,7 @@ configuration, as the merge strategy only overrides fields that are explicitly s
 
 ## Configuring workspace pod scheduling
 
-[pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity),
+The following: [pod affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity),
 [pod anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity) and
 [topology spread constraints](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/)
 can be configured for workspace pods, PVC cleanup pods and backup pods.
@@ -70,6 +70,8 @@ config:
     podAntiAffinity: <podAntiAffinity>
     topologySpreadConstraints: <[]topologySpreadConstraint>
 ```
+A typical use case is configuring a scheduling policy that applies to all workspaces at once (e.g. to
+keep workspaces sharing a persistent volume claim on the same node for I/O performance).
 
 For example, to co-locate workspace pods in the same namespace on the same node, which is useful
 with the per-user storage strategy where workspaces in a namespace share a persistent volume claim:
@@ -85,7 +87,7 @@ config:
     podAffinity:
       # An empty labelSelector ({}) matches all pods in the same namespace as
       # the workspace pod being scheduled
-      requiredDuringSchedulingIgnoredDuringExecution:
+      preferredDuringSchedulingIgnoredDuringExecution:
       - labelSelector: {}
         topologyKey: kubernetes.io/hostname
 ```
@@ -111,9 +113,6 @@ config:
         - key: controller.devfile.io/devworkspace_id
           operator: Exists
 ```
-
-A typical use case is configuring a scheduling policy that applies to all workspaces at once (e.g. to
-keep workspaces sharing a persistent volume claim on the same node for I/O performance).
 
 ## Configuring the Webhook deployment
 The `devworkspace-webhook-server` deployment can be configured in the global `DevWorkspaceOperatorConfig`. 

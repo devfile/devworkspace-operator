@@ -19,7 +19,7 @@ USER root
 # Install gettext
 RUN dnf install -y gettext
 
-ENV GO_VERSION=1.26.7
+ENV GO_VERSION=1.26.10
 ENV GOROOT=/usr/local/go
 ENV PATH=${GOROOT}/bin:${PATH}
 RUN curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz" -o /tmp/go.tar.gz && \

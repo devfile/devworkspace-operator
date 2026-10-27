@@ -2,7 +2,7 @@ module github.com/devfile/devworkspace-operator
 
 go 1.26.0
 
-toolchain go1.26.7
+toolchain go1.26.10
 
 require (
 	github.com/devfile/api/v2 v2.3.1-alpha.0.20261007143616-3c7e2fd6d137

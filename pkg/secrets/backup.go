@@ -42,14 +42,6 @@ func HandleRegistryAuthSecret(
 	scheme *runtime.Scheme,
 	log logr.Logger,
 ) (*corev1.Secret, error) {
-	// Only consider copying a secret defined in the global config
-	config := wkspConfig.GetGlobalConfig()
-	if config.Workspace == nil ||
-		config.Workspace.BackupCronJob == nil ||
-		config.Workspace.BackupCronJob.Registry == nil {
-		return nil, fmt.Errorf("backup/restore configuration not properly set in DevWorkspaceOperatorConfig")
-	}
-
 	registryAuthSecret := &corev1.Secret{}
 	err := c.Get(ctx, client.ObjectKey{
 		Name:      constants.DevWorkspaceBackupAuthSecretName,
@@ -62,7 +54,15 @@ func HandleRegistryAuthSecret(
 	if client.IgnoreNotFound(err) != nil {
 		return nil, err
 	}
+
 	// Check if AuthSecret is configured in operator config
+	// Only consider copying a secret defined in the global config
+	config := wkspConfig.GetGlobalConfig()
+	if config.Workspace == nil ||
+		config.Workspace.BackupCronJob == nil ||
+		config.Workspace.BackupCronJob.Registry == nil {
+		return nil, fmt.Errorf("backup/restore configuration not properly set in DevWorkspaceOperatorConfig")
+	}
 	authSecretName := config.Workspace.BackupCronJob.Registry.AuthSecret
 	if len(authSecretName) == 0 {
 		log.Info("Registry auth secret not found in workspace namespace and not configured in operator config. "+

@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -89,7 +90,7 @@ func makeSecret(name, namespace string) *corev1.Secret {
 	}
 }
 
-var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespace='')", func() {
+var _ = Describe("HandleRegistryAuthSecret (restore path)", func() {
 	const workspaceNS = "user-namespace"
 
 	var (
@@ -121,9 +122,9 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(predefinedSecret).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig("quay-backup-auth")
+		config.SetGlobalConfigForTesting(makeConfig("quay-backup-auth"))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).NotTo(BeNil())
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
@@ -133,9 +134,9 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 		By("using a fake client with no secrets and no WATCH_NAMESPACE set")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig("quay-backup-auth")
+		config.SetGlobalConfigForTesting(makeConfig("quay-backup-auth"))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("cannot resolve operator namespace"))
 		Expect(result).To(BeNil())
@@ -149,16 +150,16 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: operatorConfigNamespac
 			failErr:  k8sErrors.NewInternalError(errors.New("simulated etcd timeout")),
 		}
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig("quay-backup-auth")
+		config.SetGlobalConfigForTesting(makeConfig("quay-backup-auth"))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, errClient, workspace, config, "", scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, errClient, workspace, scheme, log)
 		Expect(err).To(HaveOccurred())
 		Expect(result).To(BeNil())
 		Expect(err.Error()).To(ContainSubstring("simulated etcd timeout"))
 	})
 })
 
-var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace set)", func() {
+var _ = Describe("HandleRegistryAuthSecret (backup path)", func() {
 	const (
 		workspaceNS = "user-namespace"
 		operatorNS  = "devworkspace-controller"
@@ -173,6 +174,11 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 	BeforeEach(func() {
 		ctx = context.Background()
 		scheme = buildScheme()
+		Expect(os.Setenv(infrastructure.WatchNamespaceEnvVar, operatorNS)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(os.Unsetenv(infrastructure.WatchNamespaceEnvVar)).To(Succeed())
 	})
 
 	It("returns the secret from workspace namespace if it exists", func() {
@@ -182,9 +188,9 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(workspaceSecret).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+		config.SetGlobalConfigForTesting(makeConfig(constants.DevWorkspaceBackupAuthSecretName))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).NotTo(BeNil())
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
@@ -196,9 +202,9 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		By("using a config with empty AuthSecret")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig("") // Empty AuthSecret
+		config.SetGlobalConfigForTesting(makeConfig("")) // Empty AuthSecret
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).To(BeNil())
 	})
@@ -210,9 +216,9 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(operatorSecret).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+		config.SetGlobalConfigForTesting(makeConfig(constants.DevWorkspaceBackupAuthSecretName))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).NotTo(BeNil())
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))
@@ -245,9 +251,9 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(userSecret, operatorSecret).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+		config.SetGlobalConfigForTesting(makeConfig(constants.DevWorkspaceBackupAuthSecretName))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).NotTo(BeNil())
 
@@ -268,9 +274,9 @@ var _ = Describe("HandleRegistryAuthSecret (backup path: operatorConfigNamespace
 		By("using a config with AuthSecret but no secret in operator namespace")
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig(constants.DevWorkspaceBackupAuthSecretName)
+		config.SetGlobalConfigForTesting(makeConfig(constants.DevWorkspaceBackupAuthSecretName))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, operatorNS, scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).To(HaveOccurred())
 		Expect(result).To(BeNil())
 		Expect(k8sErrors.IsNotFound(err)).To(BeTrue(), "Should return a NotFound error when secret doesn't exist in operator namespace")
@@ -312,9 +318,9 @@ var _ = Describe("HandleRegistryAuthSecret (restore path: fallback to operator n
 
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(operatorSecret).Build()
 		workspace := makeWorkspace(workspaceNS)
-		config := makeConfig("quay-backup-auth")
+		config.SetGlobalConfigForTesting(makeConfig("quay-backup-auth"))
 
-		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, config, "", scheme, log)
+		result, err := secrets.HandleRegistryAuthSecret(ctx, fakeClient, workspace, scheme, log)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result).NotTo(BeNil())
 		Expect(result.Name).To(Equal(constants.DevWorkspaceBackupAuthSecretName))

@@ -955,6 +955,23 @@ func (in *WorkspaceConfig) DeepCopyInto(out *WorkspaceConfig) {
 		*out = new(v1alpha2.DevWorkspaceTemplateSpecContent)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.PodAffinity != nil {
+		in, out := &in.PodAffinity, &out.PodAffinity
+		*out = new(v1.PodAffinity)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.PodAntiAffinity != nil {
+		in, out := &in.PodAntiAffinity, &out.PodAntiAffinity
+		*out = new(v1.PodAntiAffinity)
+		(*in).DeepCopyInto(*out)
+	}
+	if in.TopologySpreadConstraints != nil {
+		in, out := &in.TopologySpreadConstraints, &out.TopologySpreadConstraints
+		*out = make([]v1.TopologySpreadConstraint, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	if in.DefaultContainerResources != nil {
 		in, out := &in.DefaultContainerResources, &out.DefaultContainerResources
 		*out = new(v1.ResourceRequirements)

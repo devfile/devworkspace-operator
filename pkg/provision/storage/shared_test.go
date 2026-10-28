@@ -97,6 +97,14 @@ func TestFindNodeForPVC(t *testing.T) {
 				Name:      name,
 				Namespace: namespace,
 				Labels:    map[string]string{constants.DevWorkspaceIDLabel: "some-id"},
+				// Workspace pods are created by the workspace Deployment via a ReplicaSet
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "ReplicaSet",
+					Name:       "some-workspace",
+					UID:        "rs-uid",
+					Controller: func() *bool { b := true; return &b }(),
+				}},
 			},
 			Spec:   corev1.PodSpec{NodeName: nodeName, Volumes: volumes},
 			Status: corev1.PodStatus{Phase: phase},
@@ -164,6 +172,66 @@ func TestFindNodeForPVC(t *testing.T) {
 					Status:     corev1.PodStatus{Phase: corev1.PodRunning},
 				},
 			},
+			pvcName:  "claim-devworkspace",
+			expected: "",
+		},
+		{
+			name: "ignores running pods owned by Jobs",
+			pods: func() []*corev1.Pod {
+				// Cleanup job pods mount the PVC themselves, so they must not be
+				// used to determine where workspace storage is attached.
+				pod := makePod("cleanup-pod", "node-1", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
+				pod.OwnerReferences = []metav1.OwnerReference{{
+					APIVersion: "batch/v1",
+					Kind:       "Job",
+					Name:       "cleanup-workspace123",
+					UID:        "job-uid",
+					Controller: func() *bool { b := true; return &b }(),
+				}}
+				return []*corev1.Pod{pod}
+			}(),
+			pvcName:  "claim-devworkspace",
+			expected: "",
+		},
+		{
+			name: "considers running pods owned by ReplicaSets",
+			pods: func() []*corev1.Pod {
+				pod := makePod("workspace-pod", "node-2", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
+				pod.OwnerReferences = []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "ReplicaSet",
+					Name:       "workspace123",
+					UID:        "rs-uid",
+					Controller: func() *bool { b := true; return &b }(),
+				}}
+				return []*corev1.Pod{pod}
+			}(),
+			pvcName:  "claim-devworkspace",
+			expected: "node-2",
+		},
+		{
+			name: "ignores pods without owner references",
+			pods: func() []*corev1.Pod {
+				pod := makePod("standalone-pod", "node-1", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
+				pod.OwnerReferences = nil
+				return []*corev1.Pod{pod}
+			}(),
+			pvcName:  "claim-devworkspace",
+			expected: "",
+		},
+		{
+			name: "ignores pods owned by StatefulSets",
+			pods: func() []*corev1.Pod {
+				pod := makePod("statefulset-pod", "node-1", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
+				pod.OwnerReferences = []metav1.OwnerReference{{
+					APIVersion: "apps/v1",
+					Kind:       "StatefulSet",
+					Name:       "not-a-workspace",
+					UID:        "sts-uid",
+					Controller: func() *bool { b := true; return &b }(),
+				}}
+				return []*corev1.Pod{pod}
+			}(),
 			pvcName:  "claim-devworkspace",
 			expected: "",
 		},

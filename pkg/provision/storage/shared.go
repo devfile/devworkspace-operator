@@ -310,9 +310,13 @@ func NodeAffinityForHostname(nodeName string) *corev1.Affinity {
 	}
 }
 
+// getNodeNameWithPVC returns the node name where the shared PVC is currently in use,
+// determined from the first running pod in the list that mounts it. Only pods created
+// for a DevWorkspace's Deployment are considered, i.e. pods whose controller owner is a
+// ReplicaSet or Deployment (workspace pods and async-storage pods).
 func getNodeNameWithPVC(list *corev1.PodList, pvcName string) string {
 	for _, pod := range list.Items {
-		if pod.Status.Phase == corev1.PodRunning {
+		if pod.Status.Phase == corev1.PodRunning && isOwnedByWorkspaceDeployment(&pod) {
 			for _, volume := range pod.Spec.Volumes {
 				if volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == pvcName {
 					return pod.Spec.NodeName
@@ -321,6 +325,14 @@ func getNodeNameWithPVC(list *corev1.PodList, pvcName string) string {
 		}
 	}
 	return ""
+}
+
+func isOwnedByWorkspaceDeployment(pod *corev1.Pod) bool {
+	controllerRef := metav1.GetControllerOf(pod)
+	if controllerRef == nil {
+		return false
+	}
+	return controllerRef.Kind == "ReplicaSet" || controllerRef.Kind == "Deployment"
 }
 
 func checkPVCTerminating(name, namespace string, api sync.ClusterAPI) (bool, error) {

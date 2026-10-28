@@ -244,20 +244,25 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 		clusterRoutingObj.Ingresses = clusterIngresses
 	}
 
-	// Sync HTTPRoutes (always, so stale HTTPRoutes get cleaned up even when 0 are desired)
-	httpRoutesInSync, clusterHTTPRoutes, err := r.syncHTTPRoutes(instance, httpRoutes)
-	if err != nil {
-		failError := &sync.UnrecoverableSyncError{}
-		if errors.As(err, &failError) {
-			return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
+	// Sync HTTPRoutes (always, so stale HTTPRoutes get cleaned up even when 0 are desired),
+	// but only when the Gateway API is installed on the cluster. Without the HTTPRoute CRD,
+	// listing HTTPRoutes fails, and since no HTTPRoutes can exist there is nothing to sync.
+	// This gate mirrors the Owns(&gwapiv1.HTTPRoute{}) watch registration in SetupWithManager.
+	if infrastructure.IsGatewayAPIInstalled() {
+		httpRoutesInSync, clusterHTTPRoutes, err := r.syncHTTPRoutes(instance, httpRoutes)
+		if err != nil {
+			failError := &sync.UnrecoverableSyncError{}
+			if errors.As(err, &failError) {
+				return reconcile.Result{}, r.markRoutingFailed(instance, err.Error())
+			}
+			reqLogger.Error(err, "Error syncing HTTPRoutes")
+			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
+		} else if !httpRoutesInSync {
+			reqLogger.Info("HTTPRoutes not in sync")
+			return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
 		}
-		reqLogger.Error(err, "Error syncing HTTPRoutes")
-		return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
-	} else if !httpRoutesInSync {
-		reqLogger.Info("HTTPRoutes not in sync")
-		return reconcile.Result{Requeue: true}, r.reconcileStatus(instance, nil, nil, false, "Preparing HTTPRoutes")
+		clusterRoutingObj.HTTPRoutes = clusterHTTPRoutes
 	}
-	clusterRoutingObj.HTTPRoutes = clusterHTTPRoutes
 
 	exposedEndpoints, endpointsAreReady, err := solver.GetExposedEndpoints(instance.Spec.Endpoints, clusterRoutingObj)
 	if err != nil {

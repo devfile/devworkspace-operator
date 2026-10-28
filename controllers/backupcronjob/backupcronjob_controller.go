@@ -357,7 +357,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	dwID := workspace.Status.DevWorkspaceId
 	backUpConfig := config.Workspace.BackupCronJob
 
-	registryAuthSecret, err := secrets.HandleRegistryAuthSecret(ctx, r.Client, workspace, config, r.Scheme, log)
+	registryAuthSecret, err := secrets.HandleRegistryAuthSecret(ctx, r.Client, workspace, r.Scheme, log)
 	if err != nil {
 		log.Error(err, "Failed to handle registry auth secret for DevWorkspace", "devworkspace", workspace.Name)
 		return err

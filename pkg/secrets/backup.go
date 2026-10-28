@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
-	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
+	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/go-logr/logr"
@@ -39,10 +39,11 @@ func HandleRegistryAuthSecret(
 	ctx context.Context,
 	c client.Client,
 	workspace *dw.DevWorkspace,
-	config *controllerv1alpha1.OperatorConfiguration,
 	scheme *runtime.Scheme,
 	log logr.Logger,
 ) (*corev1.Secret, error) {
+	// Only consider copying a secret defined in the global config
+	config := wkspConfig.GetGlobalConfig()
 	if config.Workspace == nil ||
 		config.Workspace.BackupCronJob == nil ||
 		config.Workspace.BackupCronJob.Registry == nil {

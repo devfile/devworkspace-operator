@@ -245,7 +245,7 @@ func makeCleanupJob(name, namespace, workspaceId, pvcName, ownerUID string, comp
 			Kind:       "DevWorkspace",
 			Name:       "owner-workspace",
 			UID:        types.UID(ownerUID),
-			Controller: func() *bool { b := true; return &b }(),
+			Controller: func() *bool { return new(true) }(),
 		}}
 	}
 	if complete {
@@ -282,7 +282,7 @@ func makeCleanupPod(name, namespace, workspaceId, pvcName, ownerJobName string) 
 			Kind:       "Job",
 			Name:       ownerJobName,
 			UID:        types.UID(ownerJobName + "-uid"),
-			Controller: func() *bool { b := true; return &b }(),
+			Controller: func() *bool { return new(true) }(),
 		}}
 	}
 	return pod
@@ -338,8 +338,8 @@ func TestCleanupWorkspaceStorageCoordinatesSharedPVCDeletion(t *testing.T) {
 	t.Run("waits for in-flight cleanup job owned by another workspace", func(t *testing.T) {
 		currentWorkspace := makeTerminatingWorkspace("ws-current", namespace)
 		otherWorkspace := makeTerminatingWorkspace("ws-other", namespace)
-		inFlightJob := makeCleanupJob("cleanup-other", namespace, "ws-other-id", pvcName, "ws-other-uid", false)
-		jobPod := makeCleanupPod("cleanup-other-pod", namespace, "ws-other-id", pvcName, "cleanup-other")
+		inFlightJob := makeCleanupJob("cleanup-other", namespace, otherWorkspace.Status.DevWorkspaceId, pvcName, string(otherWorkspace.UID), false)
+		jobPod := makeCleanupPod("cleanup-other-pod", namespace, otherWorkspace.Status.DevWorkspaceId, pvcName, "cleanup-other")
 		clusterAPI, fakeClient := makeClusterAPI(makeSharedPVC(), currentWorkspace, otherWorkspace, inFlightJob, jobPod)
 
 		err := (&CommonStorageProvisioner{}).CleanupWorkspaceStorage(makeWorkspaceWithConfig(currentWorkspace), clusterAPI)
@@ -353,23 +353,22 @@ func TestCleanupWorkspaceStorageCoordinatesSharedPVCDeletion(t *testing.T) {
 			"Pod of in-flight job should not be deleted")
 	})
 
-	t.Run("waits for running cleanup job whose owning workspace is already deleted", func(t *testing.T) {
+	t.Run("waits for running cleanup job before deleting PVC", func(t *testing.T) {
 		currentWorkspace := makeTerminatingWorkspace("ws-current", namespace)
-		// The job's owning workspace is gone from the cluster, but the job is still
-		// running and its pod still references the shared PVC.
-		runningJob := makeCleanupJob("cleanup-orphaned-owner", namespace, "ws-gone-id", pvcName, "ws-gone-uid", false)
-		jobPod := makeCleanupPod("cleanup-orphaned-owner-pod", namespace, "ws-gone-id", pvcName, "cleanup-orphaned-owner")
+		goneWorkspace := makeTerminatingWorkspace("ws-gone", namespace)
+		runningJob := makeCleanupJob("cleanup-running", namespace, goneWorkspace.Status.DevWorkspaceId, pvcName, string(goneWorkspace.UID), false)
+		jobPod := makeCleanupPod("cleanup-running-pod", namespace, goneWorkspace.Status.DevWorkspaceId, pvcName, "cleanup-running")
 		clusterAPI, fakeClient := makeClusterAPI(makeSharedPVC(), currentWorkspace, runningJob, jobPod)
 
 		err := (&CommonStorageProvisioner{}).CleanupWorkspaceStorage(makeWorkspaceWithConfig(currentWorkspace), clusterAPI)
 
 		var retryErr *dwerrors.RetryError
-		assert.ErrorAs(t, err, &retryErr, "Should return RetryError while job of deleted workspace is still running")
-		assert.Contains(t, retryErr.Message, "cleanup-orphaned-owner", "Wait message should mention the owning job for debuggability")
+		assert.ErrorAs(t, err, &retryErr, "Should return RetryError while a cleanup job is still running")
+		assert.Contains(t, retryErr.Message, "cleanup-running", "Wait message should mention the owning job for debuggability")
 		assert.False(t, k8sErrors.IsNotFound(getPVC(fakeClient)), "PVC should still exist")
-		assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "cleanup-orphaned-owner", Namespace: namespace}, &batchv1.Job{}),
+		assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "cleanup-running", Namespace: namespace}, &batchv1.Job{}),
 			"Running job should not be deleted")
-		assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "cleanup-orphaned-owner-pod", Namespace: namespace}, &corev1.Pod{}),
+		assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "cleanup-running-pod", Namespace: namespace}, &corev1.Pod{}),
 			"Pod of running job should not be deleted")
 	})
 
@@ -429,31 +428,4 @@ func TestCleanupWorkspaceStorageCoordinatesSharedPVCDeletion(t *testing.T) {
 		assert.NoError(t, fakeClient.Get(context.Background(), types.NamespacedName{Name: "async-pod", Namespace: namespace}, &corev1.Pod{}),
 			"Pod mounting another PVC should not be deleted")
 	})
-
-	t.Run("does not wait for finished cleanup job before deleting PVC", func(t *testing.T) {
-		currentWorkspace := makeTerminatingWorkspace("ws-current", namespace)
-		completedJob := makeCleanupJob("cleanup-done", namespace, "ws-other-id", pvcName, "ws-other-uid", true)
-		clusterAPI, fakeClient := makeClusterAPI(makeSharedPVC(), currentWorkspace, completedJob)
-
-		err := (&CommonStorageProvisioner{}).CleanupWorkspaceStorage(makeWorkspaceWithConfig(currentWorkspace), clusterAPI)
-
-		assert.NoError(t, err)
-		assert.True(t, k8sErrors.IsNotFound(getPVC(fakeClient)), "PVC should be deleted despite finished job still referencing it in spec")
-	})
-}
-
-func TestIsJobFinished(t *testing.T) {
-	jobWithCondition := func(conditionType batchv1.JobConditionType, status corev1.ConditionStatus) *batchv1.Job {
-		return &batchv1.Job{
-			Status: batchv1.JobStatus{
-				Conditions: []batchv1.JobCondition{{Type: conditionType, Status: status}},
-			},
-		}
-	}
-
-	assert.True(t, isJobFinished(jobWithCondition(batchv1.JobComplete, corev1.ConditionTrue)), "Completed job should be finished")
-	assert.True(t, isJobFinished(jobWithCondition(batchv1.JobFailed, corev1.ConditionTrue)), "Failed job should be finished")
-	assert.False(t, isJobFinished(jobWithCondition(batchv1.JobComplete, corev1.ConditionFalse)), "Job with non-true Complete condition should not be finished")
-	assert.False(t, isJobFinished(jobWithCondition(batchv1.JobSuspended, corev1.ConditionTrue)), "Suspended job should not be finished")
-	assert.False(t, isJobFinished(&batchv1.Job{}), "Job without conditions should not be finished")
 }

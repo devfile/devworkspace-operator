@@ -189,7 +189,7 @@ func isMutableObject(obj crclient.Object) bool {
 }
 
 // deleteObject deletes an object from the cluster with background propagation. On
-// Kubernetes >= 1.33, deleting a Job without an explicit propagation policy orphans its pods.
+// Kubernetes, deleting a Job without an explicit propagation policy orphans its pods.
 func deleteObject(ctx context.Context, c crclient.Client, obj crclient.Object) error {
 	return c.Delete(ctx, obj, crclient.PropagationPolicy(metav1.DeletePropagationBackground))
 }

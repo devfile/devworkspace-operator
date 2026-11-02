@@ -287,21 +287,21 @@ func FindNodeForPVC(ctx context.Context, k8sClient client.Client, namespace, pvc
 	return getNodeNameWithPVC(podList, pvcName), nil
 }
 
-// NodeAffinityForHostname returns an Affinity that pins a pod to the given node
-// using the kubernetes.io/hostname label. Used by both cleanup and backup Jobs
-// to avoid Multi-Attach errors with ReadWriteOnce PVCs on multi-node clusters.
-func NodeAffinityForHostname(nodeName string) *corev1.Affinity {
-	return &corev1.Affinity{
-		NodeAffinity: &corev1.NodeAffinity{
-			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-				NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					{
-						MatchExpressions: []corev1.NodeSelectorRequirement{
-							{
-								Key:      corev1.LabelHostname,
-								Operator: corev1.NodeSelectorOpIn,
-								Values:   []string{nodeName},
-							},
+// NodeAffinityForHostname returns a NodeAffinity that requires scheduling on the node with the
+// given name, matched via the kubernetes.io/hostname label. Callers are expected to resolve the
+// target node beforehand (e.g. via FindNodeForPVC) and skip setting affinity when none is found.
+// It is used by cleanup and backup Jobs to run on the node a ReadWriteOnce PVC is attached to,
+// avoiding Multi-Attach errors on multi-node clusters.
+func NodeAffinityForHostname(nodeName string) *corev1.NodeAffinity {
+	return &corev1.NodeAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+			NodeSelectorTerms: []corev1.NodeSelectorTerm{
+				{
+					MatchExpressions: []corev1.NodeSelectorRequirement{
+						{
+							Key:      corev1.LabelHostname,
+							Operator: corev1.NodeSelectorOpIn,
+							Values:   []string{nodeName},
 						},
 					},
 				},

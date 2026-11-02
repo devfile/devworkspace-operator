@@ -188,14 +188,16 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 							},
 						},
 					},
-					Affinity: &corev1.Affinity{},
+					TopologySpreadConstraints: workspace.Config.Workspace.TopologySpreadConstraints,
 				},
 			},
 		},
 	}
 
 	if targetNode != "" {
-		job.Spec.Template.Spec.Affinity = NodeAffinityForHostname(targetNode)
+		job.Spec.Template.Spec.Affinity = common.GetWorkspacePodAffinityWithNodeAffinity(workspace.Config.Workspace, NodeAffinityForHostname(targetNode))
+	} else {
+		job.Spec.Template.Spec.Affinity = common.GetWorkspacePodAffinity(workspace.Config.Workspace)
 	}
 
 	podTolerations, nodeSelector, err := nsconfig.GetNamespacePodTolerationsAndNodeSelector(workspace.Namespace, clusterAPI)

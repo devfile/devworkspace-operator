@@ -446,6 +446,79 @@ func TestMergeConfigLooksAtAllFields(t *testing.T) {
 	assert.Equal(t, expectedConfig, actualConfig, "merging configs should merge all fields")
 }
 
+func TestMergeConfigMergesSchedulingFields(t *testing.T) {
+	podAffinity := &corev1.PodAffinity{
+		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
+			{
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"app": "workspace-storage"},
+				},
+				TopologyKey: "kubernetes.io/hostname",
+			},
+		},
+	}
+	podAntiAffinity := &corev1.PodAntiAffinity{
+		PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{
+			{
+				Weight: 100,
+				PodAffinityTerm: corev1.PodAffinityTerm{
+					TopologyKey: "topology.kubernetes.io/zone",
+				},
+			},
+		},
+	}
+	topologySpreadConstraints := []corev1.TopologySpreadConstraint{
+		{
+			MaxSkew:     1,
+			TopologyKey: "topology.kubernetes.io/zone",
+		},
+	}
+
+	tests := []struct {
+		name string
+		from *v1alpha1.OperatorConfiguration
+	}{
+		{
+			name: "Merges all scheduling fields",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{
+					PodAffinity:               podAffinity,
+					PodAntiAffinity:           podAntiAffinity,
+					TopologySpreadConstraints: topologySpreadConstraints,
+				},
+			},
+		},
+		{
+			name: "Nil scheduling fields leave to unchanged",
+			from: &v1alpha1.OperatorConfiguration{
+				Workspace: &v1alpha1.WorkspaceConfig{},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			to := &v1alpha1.OperatorConfiguration{}
+			mergeConfig(tt.from, to)
+			if tt.from.Workspace.PodAffinity != nil {
+				assert.Equal(t, tt.from.Workspace.PodAffinity, to.Workspace.PodAffinity)
+			} else {
+				assert.Nil(t, to.Workspace.PodAffinity)
+			}
+			if tt.from.Workspace.PodAntiAffinity != nil {
+				assert.Equal(t, tt.from.Workspace.PodAntiAffinity, to.Workspace.PodAntiAffinity)
+			} else {
+				assert.Nil(t, to.Workspace.PodAntiAffinity)
+			}
+			if tt.from.Workspace.TopologySpreadConstraints != nil {
+				assert.Equal(t, tt.from.Workspace.TopologySpreadConstraints, to.Workspace.TopologySpreadConstraints)
+			} else {
+				assert.Empty(t, to.Workspace.TopologySpreadConstraints)
+			}
+		})
+	}
+}
+
 func TestMergeConfigMergesStorageAccessMode(t *testing.T) {
 	// Given
 	expectedConfig := &v1alpha1.OperatorConfiguration{

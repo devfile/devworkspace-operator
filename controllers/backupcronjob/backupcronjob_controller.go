@@ -394,6 +394,11 @@ func (r *BackupCronJobReconciler) createBackupJob(
 			BackoffLimit:            backUpConfig.BackoffLimit,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						constants.DevWorkspaceIDLabel:        dwID,
+						constants.DevWorkspaceNameLabel:      workspace.Name,
+						constants.DevWorkspaceBackupJobLabel: "true",
+					},
 					Annotations: map[string]string{
 						"io.kubernetes.cri-o.Devices": "/dev/fuse",
 					},

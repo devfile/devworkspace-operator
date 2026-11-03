@@ -365,6 +365,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(jobList.Items).To(HaveLen(1))
 			job := jobList.Items[0]
 			Expect(job.Labels[constants.DevWorkspaceIDLabel]).To(Equal("id-recent"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceIDLabel, "id-recent"),
+				"backup job pod template must carry the workspace ID label so deleteCommonPVC can see pods still using the PVC")
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceNameLabel, "dw-recent"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceBackupJobLabel, "true"))
 			Expect(job.Spec.Template.Spec.ServiceAccountName).To(Equal("devworkspace-job-runner-id-recent"))
 			container := job.Spec.Template.Spec.Containers[0]
 			expectedEnvs := []corev1.EnvVar{

@@ -332,7 +332,7 @@ func isOwnedByWorkspaceDeployment(pod *corev1.Pod) bool {
 	if controllerRef == nil {
 		return false
 	}
-	return controllerRef.Kind == "ReplicaSet" || controllerRef.Kind == "Deployment"
+	return controllerRef.Kind == "ReplicaSet"
 }
 
 func checkPVCTerminating(name, namespace string, api sync.ClusterAPI) (bool, error) {

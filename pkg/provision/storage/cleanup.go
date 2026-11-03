@@ -279,7 +279,7 @@ func deleteCommonPVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 				// The owning job is gone, so the pod will be garbage-collected via its owner reference.
 				return &dwerrors.RetryError{
 					Message: fmt.Sprintf(
-						"Waiting for pod %s/%s (orphaned by deleted job %s) to be garbage-collected, as it is still using PVC %s and blocks its deletion",
+						"Waiting for pod %s/%s of deleted job %s to be garbage-collected; it still uses PVC %s",
 						pod.Namespace, pod.Name, jobName, pvcName),
 					RequeueAfter: 3 * time.Second,
 				}
@@ -303,8 +303,12 @@ func deleteCommonPVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 			}
 		}
 
+		jobInfo := ""
+		if jobName != "" {
+			jobInfo = fmt.Sprintf(" of job %s", jobName)
+		}
 		return &dwerrors.RetryError{
-			Message:      fmt.Sprintf("Waiting for pod %s using PVC %s to be deleted before removing the PVC", pod.Name, pvcName),
+			Message:      fmt.Sprintf("Waiting for pod %s%s using PVC %s to be deleted", pod.Name, jobInfo, pvcName),
 			RequeueAfter: 10 * time.Second,
 		}
 	}
@@ -324,6 +328,11 @@ func deleteCommonPVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 		if err != nil && !k8sErrors.IsNotFound(err) {
 			return err
 		}
+	} else {
+		clusterAPI.Logger.Info(
+			fmt.Sprintf("Skipping deletion of PVC %s as it is not provisioned by the DevWorkspace Operator", pvcName),
+			"namespace", namespace,
+		)
 	}
 
 	return nil

@@ -250,7 +250,6 @@ func routingDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 func jobDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 	specJob := spec.(*batchv1.Job)
 	clusterJob := cluster.(*batchv1.Job)
-	// TODO: previously, this delete was specified with a background deletion policy, which is currently unsupported.
 	return !equality.Semantic.DeepDerivative(specJob.Spec, clusterJob.Spec), false
 }
 

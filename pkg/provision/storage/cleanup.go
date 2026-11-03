@@ -241,7 +241,7 @@ func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 func deleteCommonPVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
 	namespace := workspace.Namespace
 
-	_, pvcName, err := checkForAlternatePVC(namespace, clusterAPI)
+	usingAlternatePVC, pvcName, err := checkForAlternatePVC(namespace, clusterAPI)
 	if err != nil {
 		return err
 	}
@@ -277,6 +277,12 @@ func deleteCommonPVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 					return err
 				}
 				// The owning job is gone, so the pod will be garbage-collected via its owner reference.
+				return &dwerrors.RetryError{
+					Message: fmt.Sprintf(
+						"Waiting for pod %s/%s (orphaned by deleted job %s) to be garbage-collected, as it is still using PVC %s and blocks its deletion",
+						pod.Namespace, pod.Name, jobName, pvcName),
+					RequeueAfter: 3 * time.Second,
+				}
 			} else if isJobFinished(job) {
 				if err := clusterAPI.Client.Delete(clusterAPI.Ctx, &pod); err != nil && !k8sErrors.IsNotFound(err) {
 					return err
@@ -297,30 +303,29 @@ func deleteCommonPVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 			}
 		}
 
-		waitMsg := fmt.Sprintf("Waiting for pod %s using PVC %s to be deleted before removing the PVC", pod.Name, pvcName)
-		if jobName != "" {
-			waitMsg = fmt.Sprintf("Waiting for pod %s of job %s using PVC %s to be deleted before removing the PVC", pod.Name, jobName, pvcName)
-		}
 		return &dwerrors.RetryError{
-			Message:      waitMsg,
+			Message:      fmt.Sprintf("Waiting for pod %s using PVC %s to be deleted before removing the PVC", pod.Name, pvcName),
 			RequeueAfter: 10 * time.Second,
 		}
 	}
 
-	pvc := &corev1.PersistentVolumeClaim{}
-	namespacedName := types.NamespacedName{Name: pvcName, Namespace: namespace}
-	err = clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, pvc)
-	if err != nil {
-		if k8sErrors.IsNotFound(err) {
-			return nil
+	if !usingAlternatePVC {
+		pvc := &corev1.PersistentVolumeClaim{}
+		namespacedName := types.NamespacedName{Name: pvcName, Namespace: namespace}
+		err = clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, pvc)
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return nil
+			}
+			return err
 		}
-		return err
+
+		err = clusterAPI.Client.Delete(clusterAPI.Ctx, pvc)
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return err
+		}
 	}
 
-	err = clusterAPI.Client.Delete(clusterAPI.Ctx, pvc)
-	if err != nil && !k8sErrors.IsNotFound(err) {
-		return err
-	}
 	return nil
 }
 

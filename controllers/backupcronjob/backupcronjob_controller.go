@@ -459,7 +459,9 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 	// Pin backup Job to the node where the PVC is currently mounted to avoid
 	// Multi-Attach errors with ReadWriteOnce PVCs on multi-node clusters.
-	targetNode, err := provstorage.FindNodeForPVC(ctx, r.Client, workspace.Namespace, pvc.Name)
+	// The backup job name is generated at creation time, so it cannot be excluded here;
+	// all running pods mounting the PVC are considered when computing the affinity.
+	targetNode, err := provstorage.FindNodeForPVC(ctx, r.Client, workspace.Namespace, pvc.Name, "")
 	if err != nil {
 		log.Error(err, "Failed to find node with PVC, backup Job will not have node affinity", "pvc", pvc.Name)
 	} else if targetNode == "" {

@@ -121,7 +121,10 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 		pvcName = workspace.Config.Workspace.PVCName
 	}
 
-	targetNode, err := FindNodeForPVC(clusterAPI.Ctx, clusterAPI.Client, workspace.Namespace, pvcName)
+	// Exclude the cleanup job's own pods so that recomputing the job spec does not
+	// pin it to the node of its own (possibly leftover) pods; other Job pods using
+	// the PVC (e.g. backup or concurrent cleanup jobs) are still followed.
+	targetNode, err := FindNodeForPVC(clusterAPI.Ctx, clusterAPI.Client, workspace.Namespace, pvcName, common.PVCCleanupJobName(workspaceId))
 	if err != nil {
 		clusterAPI.Logger.Error(err, "Error getting target node for cleanup job")
 	} else if targetNode == "" {

@@ -114,10 +114,11 @@ func TestFindNodeForPVC(t *testing.T) {
 	const ns = "test-ns"
 
 	tests := []struct {
-		name     string
-		pods     []*corev1.Pod
-		pvcName  string
-		expected string
+		name       string
+		pods       []*corev1.Pod
+		pvcName    string
+		excludeJob string
+		expected   string
 	}{
 		{
 			name:     "returns node for running pod with matching PVC",
@@ -176,10 +177,10 @@ func TestFindNodeForPVC(t *testing.T) {
 			expected: "",
 		},
 		{
-			name: "ignores running pods owned by Jobs",
+			name: "ignores running pods owned by the excluded Job",
 			pods: func() []*corev1.Pod {
-				// Cleanup job pods mount the PVC themselves, so they must not be
-				// used to determine where workspace storage is attached.
+				// A cleanup job computing its own affinity must not follow its own
+				// (possibly leftover) pods.
 				pod := makePod("cleanup-pod", "node-1", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
 				pod.OwnerReferences = []metav1.OwnerReference{{
 					APIVersion: "batch/v1",
@@ -190,8 +191,28 @@ func TestFindNodeForPVC(t *testing.T) {
 				}}
 				return []*corev1.Pod{pod}
 			}(),
-			pvcName:  "claim-devworkspace",
-			expected: "",
+			pvcName:    "claim-devworkspace",
+			excludeJob: "cleanup-workspace123",
+			expected:   "",
+		},
+		{
+			name: "considers running pods owned by other Jobs",
+			pods: func() []*corev1.Pod {
+				// E.g. a backup job or a concurrent cleanup job still holds the PVC;
+				// following its node avoids Multi-Attach errors.
+				pod := makePod("backup-pod", "node-2", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
+				pod.OwnerReferences = []metav1.OwnerReference{{
+					APIVersion: "batch/v1",
+					Kind:       "Job",
+					Name:       "backup-workspace123",
+					UID:        "job-uid",
+					Controller: func() *bool { b := true; return &b }(),
+				}}
+				return []*corev1.Pod{pod}
+			}(),
+			pvcName:    "claim-devworkspace",
+			excludeJob: "cleanup-workspace123",
+			expected:   "node-2",
 		},
 		{
 			name: "considers running pods owned by ReplicaSets",
@@ -210,17 +231,17 @@ func TestFindNodeForPVC(t *testing.T) {
 			expected: "node-2",
 		},
 		{
-			name: "ignores pods without owner references",
+			name: "considers pods without owner references",
 			pods: func() []*corev1.Pod {
 				pod := makePod("standalone-pod", "node-1", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
 				pod.OwnerReferences = nil
 				return []*corev1.Pod{pod}
 			}(),
 			pvcName:  "claim-devworkspace",
-			expected: "",
+			expected: "node-1",
 		},
 		{
-			name: "ignores pods owned by StatefulSets",
+			name: "considers pods owned by StatefulSets",
 			pods: func() []*corev1.Pod {
 				pod := makePod("statefulset-pod", "node-1", ns, corev1.PodRunning, pvcVolume("claim-devworkspace"))
 				pod.OwnerReferences = []metav1.OwnerReference{{
@@ -233,7 +254,7 @@ func TestFindNodeForPVC(t *testing.T) {
 				return []*corev1.Pod{pod}
 			}(),
 			pvcName:  "claim-devworkspace",
-			expected: "",
+			expected: "node-1",
 		},
 	}
 
@@ -245,7 +266,7 @@ func TestFindNodeForPVC(t *testing.T) {
 			}
 			fakeClient := builder.Build()
 
-			result, err := FindNodeForPVC(context.Background(), fakeClient, ns, tt.pvcName)
+			result, err := FindNodeForPVC(context.Background(), fakeClient, ns, tt.pvcName, tt.excludeJob)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})

@@ -253,8 +253,19 @@ runHappyPathTest() {
     return 1
   fi
 
-  # Download and run the remote test script
-  if ! bash <(curl -s "https://raw.githubusercontent.com/eclipse/che/${CHE_REPO_BRANCH}/tests/devworkspace-happy-path/remote-launch.sh"); then
+  # Download the launcher to a file first: 'bash <(curl -s ...)' hides a fetch
+  # failure (set -e does not check process substitution exit codes, and an
+  # HTTP error body could be executed as a script).
+  local launcher="/tmp/che-remote-launch.sh"
+  if ! curl -fsSL "https://raw.githubusercontent.com/eclipse/che/${CHE_REPO_BRANCH}/tests/devworkspace-happy-path/remote-launch.sh" -o "${launcher}"; then
+    echo "ERROR: Failed to download remote-launch.sh from the che repository"
+    return 1
+  fi
+
+  # The remote test scripts wipe and recreate ARTIFACT_DIR when they start,
+  # which would delete the artifacts this job has already collected; give
+  # them a dedicated subdirectory instead.
+  if ! ARTIFACT_DIR="${ARTIFACT_DIR}/che-happy-path" bash "${launcher}"; then
     echo "ERROR: Happy path test failed"
 
     # Collect artifacts on test failure
@@ -403,7 +414,7 @@ generateReport() {
   # Build Prow job link if available
   local prow_link=""
   if [ -n "${PROW_JOB_ID:-}" ]; then
-    prow_link="https://prow.ci.openshift.org/view/gs/test-platform-results/pr-logs/pull/devfile_devworkspace-operator/${PULL_NUMBER:-unknown}/pull-ci-devfile-devworkspace-operator-main-v14-che-happy-path/${BUILD_ID:-unknown}"
+    prow_link="https://prow.ci.openshift.org/view/gs/test-platform-results/pr-logs/pull/devfile_devworkspace-operator/${PULL_NUMBER:-unknown}/pull-ci-devfile-devworkspace-operator-main-v22-che-happy-path/${BUILD_ID:-unknown}"
   fi
 
   # Write JSON report

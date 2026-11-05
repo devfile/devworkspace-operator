@@ -18,6 +18,7 @@ package storage
 import (
 	"fmt"
 	"path"
+	"slices"
 	"time"
 
 	"github.com/devfile/devworkspace-operator/pkg/dwerrors"
@@ -29,6 +30,7 @@ import (
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -119,7 +121,10 @@ func getSpecCommonPVCCleanupJob(workspace *common.DevWorkspaceWithConfig, cluste
 		pvcName = workspace.Config.Workspace.PVCName
 	}
 
-	targetNode, err := FindNodeForPVC(clusterAPI.Ctx, clusterAPI.Client, workspace.Namespace, pvcName)
+	// Exclude the cleanup job's own pods so that recomputing the job spec does not
+	// pin it to the node of its own (possibly leftover) pods; other Job pods using
+	// the PVC (e.g. backup or concurrent cleanup jobs) are still followed.
+	targetNode, err := FindNodeForPVC(clusterAPI.Ctx, clusterAPI.Client, workspace.Namespace, pvcName, common.PVCCleanupJobName(workspaceId))
 	if err != nil {
 		clusterAPI.Logger.Error(err, "Error getting target node for cleanup job")
 	} else if targetNode == "" {
@@ -231,4 +236,140 @@ func commonPVCExists(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.C
 		return false, err
 	}
 	return true, nil
+}
+
+// deleteCommonPVC deletes the shared PVC used for workspace storage in the workspace's
+// namespace, coordinating with cleanup jobs and leftover pods that still reference it.
+// Deleting the PVC while such references exist leaves it stuck in a Terminating state
+// (the pvc-protection finalizer holds it as long as any pod uses it), which blocks new
+// workspaces in the namespace from starting.
+func deleteCommonPVC(workspace *common.DevWorkspaceWithConfig, clusterAPI sync.ClusterAPI) error {
+	namespace := workspace.Namespace
+
+	usingAlternatePVC, pvcName, err := checkForAlternatePVC(namespace, clusterAPI)
+	if err != nil {
+		return err
+	}
+	if pvcName == "" {
+		pvcName = workspace.Config.Workspace.PVCName
+	}
+
+	labelSelector, err := labels.Parse(constants.DevWorkspaceIDLabel)
+	if err != nil {
+		return err
+	}
+
+	// Resolve leftover pods that reference the PVC.
+	podList := &corev1.PodList{}
+	if err := clusterAPI.Client.List(clusterAPI.Ctx, podList, &k8sclient.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labelSelector,
+	}); err != nil {
+		return err
+	}
+	for _, pod := range podList.Items {
+		if !isPVCMounted(pod.Spec, pvcName) {
+			continue
+		}
+		// Job-owned pods are not removed when the job finishes, so a finished
+		// cleanup job can leave its pod holding the PVC in a Terminating state;
+		// delete the pod so the pvc-protection finalizer can release the PVC.
+		jobName := getOwningJobName(&pod)
+		if jobName != "" {
+			job := &batchv1.Job{}
+			if err := clusterAPI.Client.Get(clusterAPI.Ctx, types.NamespacedName{Name: jobName, Namespace: pod.Namespace}, job); err != nil {
+				if !k8sErrors.IsNotFound(err) {
+					return err
+				}
+				// The owning job is gone, so the pod will be garbage-collected via its owner reference.
+				return &dwerrors.RetryError{
+					Message: fmt.Sprintf(
+						"Waiting for pod %s/%s of deleted job %s to be garbage-collected; it still uses PVC %s",
+						pod.Namespace, pod.Name, jobName, pvcName),
+					RequeueAfter: 3 * time.Second,
+				}
+			} else if isJobFinished(job) {
+				if err := clusterAPI.Client.Delete(clusterAPI.Ctx, &pod); err != nil && !k8sErrors.IsNotFound(err) {
+					return err
+				}
+				return &dwerrors.RetryError{
+					Message:      fmt.Sprintf("Deleted pod %s of finished job %s using PVC %s", pod.Name, jobName, pvcName),
+					RequeueAfter: 3 * time.Second,
+				}
+			}
+		}
+		if len(pod.OwnerReferences) == 0 {
+			if err := clusterAPI.Client.Delete(clusterAPI.Ctx, &pod); err != nil && !k8sErrors.IsNotFound(err) {
+				return err
+			}
+			return &dwerrors.RetryError{
+				Message:      fmt.Sprintf("Deleted orphaned pod %s using PVC %s", pod.Name, pvcName),
+				RequeueAfter: 3 * time.Second,
+			}
+		}
+
+		jobInfo := ""
+		if jobName != "" {
+			jobInfo = fmt.Sprintf(" of job %s", jobName)
+		}
+		return &dwerrors.RetryError{
+			Message:      fmt.Sprintf("Waiting for pod %s%s using PVC %s to be deleted", pod.Name, jobInfo, pvcName),
+			RequeueAfter: 10 * time.Second,
+		}
+	}
+
+	if !usingAlternatePVC {
+		pvc := &corev1.PersistentVolumeClaim{}
+		namespacedName := types.NamespacedName{Name: pvcName, Namespace: namespace}
+		err = clusterAPI.Client.Get(clusterAPI.Ctx, namespacedName, pvc)
+		if err != nil {
+			if k8sErrors.IsNotFound(err) {
+				return nil
+			}
+			return err
+		}
+
+		err = clusterAPI.Client.Delete(clusterAPI.Ctx, pvc)
+		if err != nil && !k8sErrors.IsNotFound(err) {
+			return err
+		}
+	} else {
+		clusterAPI.Logger.Info(
+			fmt.Sprintf("Skipping deletion of PVC %s as it is not provisioned by the DevWorkspace Operator", pvcName),
+			"namespace", namespace,
+		)
+	}
+
+	return nil
+}
+
+func isPVCMounted(spec corev1.PodSpec, pvcName string) bool {
+	return slices.ContainsFunc(
+		spec.Volumes,
+		func(volume corev1.Volume) bool {
+			return volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == pvcName
+		},
+	)
+}
+
+// getOwningJobName returns the name of the Job that controls the pod, or an
+// empty string if the pod is not controlled by a Job.
+func getOwningJobName(pod *corev1.Pod) string {
+	if ref := metav1.GetControllerOf(pod); ref != nil && ref.Kind == "Job" {
+		return ref.Name
+	}
+	return ""
+}
+
+func isJobFinished(job *batchv1.Job) bool {
+	for _, condition := range job.Status.Conditions {
+		if condition.Status != corev1.ConditionTrue {
+			continue
+		}
+		switch condition.Type {
+		case batchv1.JobComplete, batchv1.JobFailed:
+			return true
+		}
+	}
+	return false
 }

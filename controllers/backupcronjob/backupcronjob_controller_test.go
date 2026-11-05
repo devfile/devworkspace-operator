@@ -382,6 +382,10 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(jobList.Items).To(HaveLen(1))
 			job := jobList.Items[0]
 			Expect(job.Labels[constants.DevWorkspaceIDLabel]).To(Equal("id-recent"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceIDLabel, "id-recent"),
+				"backup job pod template must carry the workspace ID label so deleteCommonPVC can see pods still using the PVC")
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceNameLabel, "dw-recent"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceBackupJobLabel, "true"))
 			Expect(job.Spec.Template.Spec.ServiceAccountName).To(Equal("devworkspace-job-runner-id-recent"))
 			container := job.Spec.Template.Spec.Containers[0]
 			expectedEnvs := []corev1.EnvVar{
@@ -475,12 +479,23 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
 			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
 
-			// Create a running pod that mounts the PVC on a specific node
+			// The ReplicaSet owner reference is required
+			// because getNodeNameWithPVC only considers deployment-owned pods -- job
+			// pods (e.g. cleanup jobs) and orphaned pods that mount the PVC are ignored
+			// so they cannot skew the node affinity. Without this owner
+			// reference the pod would be skipped and no node affinity would be set.
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "workspace-pod",
 					Namespace: dw.Namespace,
 					Labels:    map[string]string{constants.DevWorkspaceIDLabel: "other-workspace-id"},
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: "apps/v1",
+						Kind:       "ReplicaSet",
+						Name:       "other-workspace",
+						UID:        "other-workspace-rs-uid",
+						Controller: func() *bool { b := true; return &b }(),
+					}},
 				},
 				Spec: corev1.PodSpec{
 					NodeName: "worker-node-1",

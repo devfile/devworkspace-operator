@@ -14,6 +14,7 @@
 package sync
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -27,6 +28,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -67,7 +69,7 @@ func SyncObjectWithCluster(specObj crclient.Object, api ClusterAPI) (crclient.Ob
 	shouldDelete, shouldUpdate := diffFunc(specObj, clusterObj)
 	if shouldDelete {
 		printDiff(specObj, clusterObj, api.Logger)
-		err := api.Client.Delete(api.Ctx, specObj)
+		err := deleteObject(api.Ctx, api.Client, specObj)
 		if err != nil {
 			return nil, err
 		}
@@ -119,7 +121,7 @@ func SyncUnrecognizedObjectWithCluster(specObj crclient.Object, api ClusterAPI) 
 		}
 	}
 	if delete {
-		if err := api.Client.Delete(api.Ctx, clusterObj); err != nil {
+		if err := deleteObject(api.Ctx, api.Client, clusterObj); err != nil {
 			if k8sErrors.IsForbidden(err) {
 				return nil, &UnrecoverableSyncError{fmt.Errorf("failed to delete object %s: %w", clusterObj.GetName(), err)}
 			}
@@ -155,7 +157,7 @@ func updateObjectGeneric(specObj, clusterObj crclient.Object, api ClusterAPI) er
 	updateFunc := getUpdateFunc(specObj)
 	updatedObj, err := updateFunc(specObj, clusterObj)
 	if err != nil {
-		if err := api.Client.Delete(api.Ctx, specObj); err != nil {
+		if err := deleteObject(api.Ctx, api.Client, specObj); err != nil {
 			return err
 		}
 		api.Logger.Info("Deleted object", "kind", reflect.TypeOf(specObj).Elem().String(), "name", specObj.GetName())
@@ -184,6 +186,12 @@ func isMutableObject(obj crclient.Object) bool {
 	default:
 		return true
 	}
+}
+
+// deleteObject deletes an object from the cluster with background propagation. On
+// Kubernetes, deleting a Job without an explicit propagation policy orphans its pods.
+func deleteObject(ctx context.Context, c crclient.Client, obj crclient.Object) error {
+	return c.Delete(ctx, obj, crclient.PropagationPolicy(metav1.DeletePropagationBackground))
 }
 
 func printDiff(specObj, clusterObj crclient.Object, log logr.Logger) {

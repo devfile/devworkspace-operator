@@ -271,8 +271,9 @@ func getSharedPVCWorkspaceCount(namespace string, api sync.ClusterAPI) (total in
 
 // FindNodeForPVC lists DevWorkspace pods in the given namespace and returns the
 // node name where a running pod mounts the specified PVC. Returns an empty
-// string (and nil error) when no such pod is found.
-func FindNodeForPVC(ctx context.Context, k8sClient client.Client, namespace, pvcName string) (string, error) {
+// string (and nil error) when no such pod is found. Pods controlled by the Job
+// named excludeJob are skipped; pass an empty string to consider all pods.
+func FindNodeForPVC(ctx context.Context, k8sClient client.Client, namespace, pvcName, excludeJob string) (string, error) {
 	labelSelector, err := labels.Parse(constants.DevWorkspaceIDLabel)
 	if err != nil {
 		return "", err
@@ -284,7 +285,7 @@ func FindNodeForPVC(ctx context.Context, k8sClient client.Client, namespace, pvc
 	}); err != nil {
 		return "", err
 	}
-	return getNodeNameWithPVC(podList, pvcName), nil
+	return getNodeNameWithPVC(podList, pvcName, excludeJob), nil
 }
 
 // NodeAffinityForHostname returns a NodeAffinity that requires scheduling on the node with the
@@ -310,13 +311,23 @@ func NodeAffinityForHostname(nodeName string) *corev1.NodeAffinity {
 	}
 }
 
-func getNodeNameWithPVC(list *corev1.PodList, pvcName string) string {
+// getNodeNameWithPVC returns the node name where the shared PVC is currently in use,
+// determined from the first running pod in the list that mounts it. All running pods
+// are considered (workspace pods, async-storage pods, and Job pods such as backup or
+// concurrent cleanup Jobs), since any pod mounting a ReadWriteOnce PVC forces the same
+// node. The only exception is pods controlled by the Job named excludeJob: a Job
+// computing its own node affinity must not follow its own leftover pods.
+func getNodeNameWithPVC(list *corev1.PodList, pvcName, excludeJob string) string {
 	for _, pod := range list.Items {
-		if pod.Status.Phase == corev1.PodRunning {
-			for _, volume := range pod.Spec.Volumes {
-				if volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == pvcName {
-					return pod.Spec.NodeName
-				}
+		if pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+		if excludeJob != "" && getOwningJobName(&pod) == excludeJob {
+			continue
+		}
+		for _, volume := range pod.Spec.Volumes {
+			if volume.PersistentVolumeClaim != nil && volume.PersistentVolumeClaim.ClaimName == pvcName {
+				return pod.Spec.NodeName
 			}
 		}
 	}

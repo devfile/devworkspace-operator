@@ -73,32 +73,17 @@ deployDWO() {
 verifyOLMHealth() {
   echo "======== Verifying OLM Infrastructure ========"
 
-  # Check catalog-operator is available
-  echo "Checking catalog-operator..."
-  if ! kubectl wait --for=condition=available deployment/catalog-operator \
-    -n openshift-operator-lifecycle-manager \
+  # The catalog-operator/olm-operator deployments do not exist in a
+  # HyperShift hosted cluster on recent OCP releases: OLM v1 changed the
+  # component layout, and the hosted cluster is created with
+  # --olm-catalog-placement management (catalog sources live in the
+  # management cluster). The ClusterOperator resource is the
+  # version-agnostic health signal instead.
+  echo "Checking operator-lifecycle-manager ClusterOperator..."
+  if ! kubectl wait --for=condition=Available clusteroperator/operator-lifecycle-manager \
     --timeout=120s 2>&1; then
-    echo "ERROR: catalog-operator is not ready"
-    kubectl get deployment/catalog-operator \
-      -n openshift-operator-lifecycle-manager -o yaml || true
-    return 1
-  fi
-
-  # Check olm-operator is available
-  echo "Checking olm-operator..."
-  if ! kubectl wait --for=condition=available deployment/olm-operator \
-    -n openshift-operator-lifecycle-manager \
-    --timeout=120s 2>&1; then
-    echo "ERROR: olm-operator is not ready"
-    kubectl get deployment/olm-operator \
-      -n openshift-operator-lifecycle-manager -o yaml || true
-    return 1
-  fi
-
-  # Verify marketplace is accessible
-  echo "Checking openshift-marketplace..."
-  if ! kubectl get catalogsources -n openshift-marketplace &>/dev/null; then
-    echo "ERROR: Cannot access CatalogSources in openshift-marketplace"
+    echo "ERROR: operator-lifecycle-manager ClusterOperator is not Available"
+    kubectl get clusteroperator operator-lifecycle-manager -o yaml || true
     return 1
   fi
 

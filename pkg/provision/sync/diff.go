@@ -41,7 +41,7 @@ var diffFuncs = map[reflect.Type]diffFunc{
 	reflect.TypeOf(rbacv1.Role{}):                  allDiffFuncs(metadataDiffFunc, basicDiffFunc(roleDiffOpts)),
 	reflect.TypeOf(rbacv1.RoleBinding{}):           allDiffFuncs(metadataDiffFunc, basicDiffFunc(rolebindingDiffOpts)),
 	reflect.TypeOf(corev1.ServiceAccount{}):        metadataDiffFunc,
-	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, metadataDiffFunc, podTemplateMetadataDiffFunc, basicDiffFunc(deploymentDiffOpts)),
+	reflect.TypeOf(appsv1.Deployment{}):            allDiffFuncs(deploymentDiffFunc, metadataDiffFunc, podTemplateMetadataDiffFunc, deploymentImagePullPolicyDiffFunc, basicDiffFunc(deploymentDiffOpts)),
 	reflect.TypeOf(corev1.Pod{}):                   allDiffFuncs(podDiffFunc, metadataDiffFunc),
 	reflect.TypeOf(corev1.ConfigMap{}):             allDiffFuncs(metadataDiffFunc, basicDiffFunc(configmapDiffOpts)),
 	reflect.TypeOf(corev1.Secret{}):                allDiffFuncs(metadataDiffFunc, basicDiffFunc(secretDiffOpts)),
@@ -136,6 +136,32 @@ func deploymentDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
 		return true, false
 	}
 	return false, false
+}
+
+// Compare explicitly configured pull policies. Kubernetes defaults omitted policies,
+// so treating an omitted desired policy as a diff would cause repeated updates.
+func deploymentImagePullPolicyDiffFunc(spec, cluster crclient.Object) (delete, update bool) {
+	specDeploy := spec.(*appsv1.Deployment)
+	clusterDeploy := cluster.(*appsv1.Deployment)
+	return false, containersImagePullPolicyDiff(specDeploy.Spec.Template.Spec.Containers, clusterDeploy.Spec.Template.Spec.Containers) ||
+		containersImagePullPolicyDiff(specDeploy.Spec.Template.Spec.InitContainers, clusterDeploy.Spec.Template.Spec.InitContainers)
+}
+
+func containersImagePullPolicyDiff(spec, cluster []corev1.Container) bool {
+	for _, desired := range spec {
+		if desired.ImagePullPolicy == "" {
+			continue
+		}
+		for _, current := range cluster {
+			if desired.Name == current.Name {
+				if desired.ImagePullPolicy != current.ImagePullPolicy {
+					return true
+				}
+				break
+			}
+		}
+	}
+	return false
 }
 
 func podDiffFunc(spec, cluster crclient.Object) (delete, update bool) {

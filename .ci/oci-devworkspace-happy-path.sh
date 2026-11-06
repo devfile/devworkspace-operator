@@ -253,8 +253,22 @@ runHappyPathTest() {
     return 1
   fi
 
-  # Download and run the remote test script
-  if ! bash <(curl -s "https://raw.githubusercontent.com/eclipse/che/${CHE_REPO_BRANCH}/tests/devworkspace-happy-path/remote-launch.sh"); then
+  # Download the launcher to a file first: 'bash <(curl -s ...)' hides a fetch
+  # failure (set -e does not check process substitution exit codes, and an
+  # HTTP error body could be executed as a script).
+  # Return 2 on a download failure so that main() can tell it apart from a
+  # test failure: no test pod has run at that point, so classifying it from
+  # pod logs would wrongly report a TEST failure instead of INFRA.
+  local launcher="/tmp/che-remote-launch.sh"
+  if ! curl -fsSL "https://raw.githubusercontent.com/eclipse/che/${CHE_REPO_BRANCH}/tests/devworkspace-happy-path/remote-launch.sh" -o "${launcher}"; then
+    echo "ERROR: Failed to download remote-launch.sh from the che repository"
+    return 2
+  fi
+
+  # The remote test scripts wipe and recreate ARTIFACT_DIR when they start,
+  # which would delete the artifacts this job has already collected; give
+  # them a dedicated subdirectory instead.
+  if ! ARTIFACT_DIR="${ARTIFACT_DIR}/che-happy-path" bash "${launcher}"; then
     echo "ERROR: Happy path test failed"
 
     # Collect artifacts on test failure
@@ -343,7 +357,7 @@ classifyTestFailure() {
 categorizeFailure() {
   local reason="$1"
   case "$reason" in
-    *"reconciliation"*|*"Image pull"*|*"OLM"*|*"operator timeout"*)
+    *"reconciliation"*|*"Image pull"*|*"OLM"*|*"operator timeout"*|*"Launcher download"*)
       echo "INFRA"
       ;;
     *"Dashboard"*|*"Workspace start"*|*"Authentication"*|*"Test execution"*)
@@ -403,7 +417,7 @@ generateReport() {
   # Build Prow job link if available
   local prow_link=""
   if [ -n "${PROW_JOB_ID:-}" ]; then
-    prow_link="https://prow.ci.openshift.org/view/gs/test-platform-results/pr-logs/pull/devfile_devworkspace-operator/${PULL_NUMBER:-unknown}/pull-ci-devfile-devworkspace-operator-main-v14-che-happy-path/${BUILD_ID:-unknown}"
+    prow_link="https://prow.ci.openshift.org/view/gs/test-platform-results/pr-logs/pull/devfile_devworkspace-operator/${PULL_NUMBER:-unknown}/pull-ci-devfile-devworkspace-operator-main-v22-che-happy-path/${BUILD_ID:-unknown}"
   fi
 
   # Write JSON report
@@ -515,15 +529,30 @@ main() {
   fi
 
   # Run the happy path test (with 1 retry)
-  if ! runHappyPathTest 1; then
+  # runHappyPathTest returns 2 when the launcher download failed: no test pod
+  # has run then, so classifying the failure from pod logs would wrongly
+  # report a TEST failure for what is a network/infrastructure issue.
+  runHappyPathTest 1
+  local test_rc=$?
+  if [ "$test_rc" -ne 0 ]; then
     local test_reason
-    test_reason=$(classifyTestFailure)
+    if [ "$test_rc" -eq 2 ]; then
+      test_reason="Launcher download failure"
+    else
+      test_reason=$(classifyTestFailure)
+    fi
     recordAttempt "1/2" "runHappyPathTest" "FAILED" "$test_reason"
 
     echo "⚠️  Happy path test failed on first attempt, retrying..."
     sleep 30
-    if ! runHappyPathTest 2; then
-      test_reason=$(classifyTestFailure)
+    runHappyPathTest 2
+    test_rc=$?
+    if [ "$test_rc" -ne 0 ]; then
+      if [ "$test_rc" -eq 2 ]; then
+        test_reason="Launcher download failure"
+      else
+        test_reason=$(classifyTestFailure)
+      fi
       recordAttempt "2/2" "runHappyPathTest" "FAILED" "$test_reason"
       echo "❌ FAILED: Happy path test execution (2 attempts)"
       return 1

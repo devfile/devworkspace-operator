@@ -48,7 +48,7 @@ RUN node --version && npm --version
 # Temporary workaround since mirror.centos.org is down and can be replaced with vault.centos.org
 RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
 
-RUN yum install --assumeyes -d1 python3-pip gettext jq && \
+RUN yum install --assumeyes -d1 python3-pip gettext jq unzip && \
     pip3 install --upgrade pip && \
     pip3 install --ignore-installed --upgrade setuptools && \
     # Install yq and jq

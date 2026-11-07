@@ -1,5 +1,4 @@
-//
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -19,26 +18,31 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/devfile/devworkspace-operator/pkg/constants"
-	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/devfile/devworkspace-operator/pkg/constants"
+	"github.com/devfile/devworkspace-operator/pkg/provision/sync"
 
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 )
 
-func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1.DevWorkspaceRouting, specServices []corev1.Service) (ok bool, clusterServices []corev1.Service, err error) {
+func (r *DevWorkspaceRoutingReconciler) syncServices(ctx context.Context, routing *controllerv1alpha1.DevWorkspaceRouting, specServices []corev1.Service) (ok bool, clusterServices []corev1.Service, err error) {
 	servicesInSync := true
 
-	clusterServices, err = r.getClusterServices(routing)
+	clusterServices, err = r.getClusterServices(ctx, routing)
 	if err != nil {
 		return false, nil, err
 	}
 
 	toDelete := getServicesToDelete(clusterServices, specServices)
 	for _, service := range toDelete {
-		err := r.Delete(context.TODO(), &service)
+		if !metav1.IsControlledBy(&service, routing) {
+			continue
+		}
+		err := r.Delete(ctx, &service, client.Preconditions{UID: &service.UID, ResourceVersion: &service.ResourceVersion})
 		if err != nil {
 			return false, nil, err
 		}
@@ -46,15 +50,16 @@ func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1
 	}
 
 	clusterAPI := sync.ClusterAPI{
-		Client: r.Client,
-		Scheme: r.Scheme,
-		Logger: r.Log.WithValues("Request.Namespace", routing.Namespace, "Request.Name", routing.Name),
-		Ctx:    context.TODO(),
+		Client:           r.Client,
+		NonCachingClient: r.NonCachingClient,
+		Scheme:           r.Scheme,
+		Logger:           r.Log.WithValues("Request.Namespace", routing.Namespace, "Request.Name", routing.Name),
+		Ctx:              ctx,
 	}
 
 	var updatedClusterServices []corev1.Service
 	for _, specService := range specServices {
-		clusterObj, err := sync.SyncObjectWithCluster(&specService, clusterAPI)
+		clusterObj, err := sync.SyncRoutingServiceWithCluster(&specService, clusterAPI)
 		switch t := err.(type) {
 		case nil:
 			break
@@ -72,7 +77,7 @@ func (r *DevWorkspaceRoutingReconciler) syncServices(routing *controllerv1alpha1
 	return servicesInSync, updatedClusterServices, nil
 }
 
-func (r *DevWorkspaceRoutingReconciler) getClusterServices(routing *controllerv1alpha1.DevWorkspaceRouting) ([]corev1.Service, error) {
+func (r *DevWorkspaceRoutingReconciler) getClusterServices(ctx context.Context, routing *controllerv1alpha1.DevWorkspaceRouting) ([]corev1.Service, error) {
 	found := &corev1.ServiceList{}
 	labelSelector, err := labels.Parse(fmt.Sprintf("%s=%s", constants.DevWorkspaceIDLabel, routing.Spec.DevWorkspaceId))
 	if err != nil {
@@ -82,7 +87,7 @@ func (r *DevWorkspaceRoutingReconciler) getClusterServices(routing *controllerv1
 		Namespace:     routing.Namespace,
 		LabelSelector: labelSelector,
 	}
-	err = r.List(context.TODO(), found, listOptions)
+	err = r.List(ctx, found, listOptions)
 	if err != nil {
 		return nil, err
 	}

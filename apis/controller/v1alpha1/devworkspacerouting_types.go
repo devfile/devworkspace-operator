@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -45,6 +45,9 @@ const (
 // DevWorkspaceRoutingStatus defines the observed state of DevWorkspaceRouting
 // +k8s:openapi-gen=true
 type DevWorkspaceRoutingStatus struct {
+	// ObservedGeneration is the spec generation represented by this status.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// Additions to main devworkspace deployment
 	PodAdditions *PodAdditions `json:"podAdditions,omitempty"`
 	// Machine name to exposed endpoint map

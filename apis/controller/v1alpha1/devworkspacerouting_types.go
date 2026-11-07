@@ -40,6 +40,7 @@ const (
 	DevWorkspaceRoutingCluster     DevWorkspaceRoutingClass = "cluster"
 	DevWorkspaceRoutingClusterTLS  DevWorkspaceRoutingClass = "cluster-tls"
 	DevWorkspaceRoutingWebTerminal DevWorkspaceRoutingClass = "web-terminal"
+	DevWorkspaceRoutingGatewayAPI  DevWorkspaceRoutingClass = "gateway-api"
 )
 
 // DevWorkspaceRoutingStatus defines the observed state of DevWorkspaceRouting

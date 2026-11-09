@@ -73,26 +73,37 @@ deployDWO() {
 verifyOLMHealth() {
   echo "======== Verifying OLM Infrastructure ========"
 
-  # Check catalog-operator is available
-  echo "Checking catalog-operator..."
-  if ! kubectl wait --for=condition=available deployment/catalog-operator \
-    -n openshift-operator-lifecycle-manager \
-    --timeout=120s 2>&1; then
-    echo "ERROR: catalog-operator is not ready"
-    kubectl get deployment/catalog-operator \
-      -n openshift-operator-lifecycle-manager -o yaml || true
-    return 1
+  # On HyperShift hosted clusters, OLM components (catalog-operator,
+  # olm-operator) run on the management cluster and are not visible as
+  # deployments in the guest cluster. Detect this by checking for the
+  # hypershift.openshift.io/managed label on CatalogSources.
+  local is_hypershift=false
+  if kubectl get catalogsources -n openshift-marketplace -o jsonpath='{.items[0].metadata.labels.hypershift\.openshift\.io/managed}' 2>/dev/null | grep -q "true"; then
+    is_hypershift=true
+    echo "Detected HyperShift hosted cluster — skipping OLM deployment checks"
   fi
 
-  # Check olm-operator is available
-  echo "Checking olm-operator..."
-  if ! kubectl wait --for=condition=available deployment/olm-operator \
-    -n openshift-operator-lifecycle-manager \
-    --timeout=120s 2>&1; then
-    echo "ERROR: olm-operator is not ready"
-    kubectl get deployment/olm-operator \
-      -n openshift-operator-lifecycle-manager -o yaml || true
-    return 1
+  if [ "$is_hypershift" = false ]; then
+    # Standalone OCP: verify OLM operator deployments directly
+    echo "Checking catalog-operator..."
+    if ! kubectl wait --for=condition=available deployment/catalog-operator \
+      -n openshift-operator-lifecycle-manager \
+      --timeout=120s 2>&1; then
+      echo "ERROR: catalog-operator is not ready"
+      kubectl get deployment/catalog-operator \
+        -n openshift-operator-lifecycle-manager -o yaml || true
+      return 1
+    fi
+
+    echo "Checking olm-operator..."
+    if ! kubectl wait --for=condition=available deployment/olm-operator \
+      -n openshift-operator-lifecycle-manager \
+      --timeout=120s 2>&1; then
+      echo "ERROR: olm-operator is not ready"
+      kubectl get deployment/olm-operator \
+        -n openshift-operator-lifecycle-manager -o yaml || true
+      return 1
+    fi
   fi
 
   # Verify marketplace is accessible

@@ -20,6 +20,10 @@ config:
       - maxSkew: 1
         topologyKey: kubernetes.io/hostname
         whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchExpressions:
+            - key: controller.devfile.io/devworkspace_id
+              operator: Exists
     podAntiAffinity: {}
     podAffinity: {}
 ```

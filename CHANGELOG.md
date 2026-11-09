@@ -1,5 +1,40 @@
 # DevWorkspace Operator Changelog
 
+# v1.1.0
+
+## Features
+
+### Configurable pod scheduling for workspaces and operator-managed jobs [#1723](https://github.com/devfile/devworkspace-operator/pull/1723)
+
+Adds `podAffinity`, `podAntiAffinity`, and `topologySpreadConstraints` fields to `config.workspace` in `DevWorkspaceOperatorConfig`. These scheduling constraints are applied to all pods the operator creates for a DevWorkspace: workspace pods, PVC cleanup Jobs, and backup Jobs (workspace restore is covered implicitly, as it runs as an init container in the workspace pod). Settings can be defined globally or overridden per workspace.
+
+```yaml
+apiVersion: controller.devfile.io/v1alpha1
+kind: DevWorkspaceOperatorConfig
+metadata:
+  name: devworkspace-operator-config
+  namespace: $OPERATOR_INSTALL_NAMESPACE
+config:
+  workspace:
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchExpressions:
+            - key: controller.devfile.io/devworkspace_id
+              operator: Exists
+    podAntiAffinity: {}
+    podAffinity: {}
+```
+
+## Bug Fixes & Improvements
+
+- Prevent the shared `claim-devworkspace` PVC from getting stuck in `Terminating` when multiple workspaces are deleted at roughly the same time on Kubernetes >= 1.33 [#1725](https://github.com/devfile/devworkspace-operator/pull/1725). Note: this does not automatically unblock PVCs that are already stuck in `Terminating`; see the PR for recovery steps.
+- Allow the OpenShift console namespace through the default workspace `NetworkPolicy`, so WebTerminal connections work when NetworkPolicy provisioning is enabled [#1724](https://github.com/devfile/devworkspace-operator/pull/1724)
+- Preserve explicitly empty `ingress`/`egress` lists (deny-all) in `NetworkPolicyConfig` instead of falling back to default allow rules, and stop `GetDefaultNetworkPolicy` from mutating or sharing the operator's default rule objects [#1721](https://github.com/devfile/devworkspace-operator/pull/1721)
+- Default the `imagePullPolicy` for operator-managed init containers (project-clone and DWOC-defined init containers) to `IfNotPresent` instead of `Always`; the global `workspace.imagePullPolicy` for user/devfile containers is unchanged [#1692](https://github.com/devfile/devworkspace-operator/pull/1692)
+
 # v1.0.0
 
 ## Features

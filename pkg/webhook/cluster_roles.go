@@ -18,12 +18,13 @@ package webhook
 import (
 	"context"
 
-	"github.com/devfile/devworkspace-operator/webhook/server"
 	v1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/devfile/devworkspace-operator/webhook/server"
 )
 
 func CreateWebhookClusterRole(client crclient.Client,
@@ -96,6 +97,19 @@ func getSpecClusterRole() (*v1.ClusterRole, error) {
 				},
 				Resources: []string{
 					"pods",
+				},
+				Verbs: []string{
+					"get",
+					"list",
+					"watch",
+				},
+			},
+			{
+				APIGroups: []string{
+					"workspace.devfile.io",
+				},
+				Resources: []string{
+					"devworkspaces",
 				},
 				Verbs: []string{
 					"get",

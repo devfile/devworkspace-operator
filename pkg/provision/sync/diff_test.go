@@ -188,6 +188,43 @@ func TestDeploymentDiffOpts_DetectsSpecChanges(t *testing.T) {
 	}
 }
 
+func TestDeploymentFullDiff_ImagePullPolicy(t *testing.T) {
+	tests := []struct {
+		name         string
+		specPolicy   corev1.PullPolicy
+		actualPolicy corev1.PullPolicy
+		init         bool
+		wantUpdate   bool
+	}{
+		{"main container policy changed", corev1.PullAlways, corev1.PullIfNotPresent, false, true},
+		{"init container policy changed", corev1.PullAlways, corev1.PullIfNotPresent, true, true},
+		{"policy already matches", corev1.PullAlways, corev1.PullAlways, false, false},
+		{"omitted policy is defaulted by Kubernetes", "", corev1.PullAlways, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spec := &appsv1.Deployment{}
+			container := corev1.Container{Name: "main", Image: "example.com/main:latest", ImagePullPolicy: tt.specPolicy}
+			if tt.init {
+				spec.Spec.Template.Spec.InitContainers = []corev1.Container{container}
+			} else {
+				spec.Spec.Template.Spec.Containers = []corev1.Container{container}
+			}
+			cluster := spec.DeepCopy()
+			if tt.init {
+				cluster.Spec.Template.Spec.InitContainers[0].ImagePullPolicy = tt.actualPolicy
+			} else {
+				cluster.Spec.Template.Spec.Containers[0].ImagePullPolicy = tt.actualPolicy
+			}
+
+			shouldDelete, update := diffFuncs[reflect.TypeOf(appsv1.Deployment{})](spec, cluster)
+			if shouldDelete || update != tt.wantUpdate {
+				t.Errorf("deployment diff = (%v, %v), want (false, %v)", shouldDelete, update, tt.wantUpdate)
+			}
+		})
+	}
+}
+
 func TestDeploymentFullDiff_ExternalLabelsNoUpdate(t *testing.T) {
 	specLabels := map[string]string{
 		"controller.devfile.io/devworkspace_id":   "workspace123",

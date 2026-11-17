@@ -15,10 +15,11 @@
 
 name: Install pull request controller on minikube
 description: >-
-  Start minikube, install this checkout's controller image, and clone the
-  load-test repository. The controller and webhook deployments are pinned to
-  imagePullPolicy Never so the cluster runs the image built from the pull
-  request instead of quay.io/devfile/devworkspace-controller:next.
+  Start a small minikube cluster, install this checkout's controller image,
+  and clone the DevWorkspace operator load-tests repository so a later step
+  can create one DevWorkspace. The controller and webhook deployments are
+  pinned to imagePullPolicy Never so the cluster runs the image built from
+  the pull request instead of quay.io/devfile/devworkspace-controller:next.
 
 inputs:
   image-tarball:
@@ -94,8 +95,10 @@ runs:
         sudo apt-get update
         sudo apt-get install -y jq gettext-base
         pip install yq || pip install --break-system-packages yq || true
-        sudo gpg -k
-        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        # Ubuntu 26 apt ignores the keybox written by gpg --recv-keys. Dearmor
+        # the published key into the binary keyring format apt accepts.
+        curl -fsSL https://dl.k6.io/key.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/k6-archive-keyring.gpg >/dev/null
+        sudo chmod 644 /usr/share/keyrings/k6-archive-keyring.gpg
         echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
         sudo apt-get update
         sudo apt-get install -y k6

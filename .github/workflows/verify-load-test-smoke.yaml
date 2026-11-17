@@ -1,0 +1,194 @@
+#
+# Copyright (c) 2019-2026 Red Hat, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Runs the load-test repository's minikube smoke tests against the controller
+# built from this checkout. Installing quay.io/devfile/devworkspace-controller:next
+# would not exercise the pull request.
+name: Load test smoke
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: load-test-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DWO_NAMESPACE: devworkspace-controller
+  DWO_IMG: docker.io/library/devworkspace-controller:ci
+  LOAD_TEST_REPO: https://github.com/rohankanojia-testing/devworkspace-operator-load-tests.git
+  LOAD_TEST_REF: main
+
+jobs:
+  build-controller-image:
+    name: Build pull request image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Build controller and webhook image
+        run: |
+          docker build -t "${DWO_IMG}" -f build/Dockerfile .
+          docker save "${DWO_IMG}" | gzip > "${GITHUB_WORKSPACE}/dwo-image.tar.gz"
+
+      - name: Upload controller image
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dwo-controller-image
+          path: dwo-image.tar.gz
+          retention-days: 1
+          if-no-files-found: error
+
+  verify-controller-load:
+    name: Controller smoke
+    needs: build-controller-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Download controller image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dwo-controller-image
+          path: ${{ github.workspace }}/controller-image
+
+      - name: Install pull request controller
+        id: setup
+        uses: ./.github/actions/setup-dwo-smoke
+        with:
+          image-tarball: ${{ github.workspace }}/controller-image/dwo-image.tar.gz
+          image-ref: ${{ env.DWO_IMG }}
+          dwo-namespace: ${{ env.DWO_NAMESPACE }}
+          load-test-repo: ${{ env.LOAD_TEST_REPO }}
+          load-test-ref: ${{ env.LOAD_TEST_REF }}
+
+      - name: Run controller smoke test
+        working-directory: ${{ steps.setup.outputs.load-test-dir }}
+        env:
+          LOAD_TEST_NAMESPACE: loadtest-devworkspaces
+        run: |
+          export KUBECONFIG="${HOME}/.kube/config"
+          make test_load ARGS="--max-vus 1 --max-devworkspaces 1 --dwo-namespace ${LOAD_TEST_NAMESPACE} --delete-devworkspace-after-ready false --test-duration-minutes 5"
+
+      - name: Collect cluster diagnostics
+        if: failure()
+        run: |
+          bash "${GITHUB_WORKSPACE}/.github/scripts/collect-smoke-diagnostics.sh"
+
+  verify-webhook-load:
+    name: Webhook smoke
+    needs: build-controller-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Download controller image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dwo-controller-image
+          path: ${{ github.workspace }}/controller-image
+
+      - name: Install pull request controller
+        id: setup
+        uses: ./.github/actions/setup-dwo-smoke
+        with:
+          image-tarball: ${{ github.workspace }}/controller-image/dwo-image.tar.gz
+          image-ref: ${{ env.DWO_IMG }}
+          dwo-namespace: ${{ env.DWO_NAMESPACE }}
+          load-test-repo: ${{ env.LOAD_TEST_REPO }}
+          load-test-ref: ${{ env.LOAD_TEST_REF }}
+
+      - name: Run webhook smoke test
+        working-directory: ${{ steps.setup.outputs.load-test-dir }}
+        env:
+          LOAD_TEST_NAMESPACE: dw-webhook-loadtest
+          DEVWORKSPACE_LINK: ""
+        run: |
+          export KUBECONFIG="${HOME}/.kube/config"
+          make test_webhook_load ARGS="--number-of-users 1 --load-test-namespace ${LOAD_TEST_NAMESPACE} --webhook-server-namespace ${DWO_NAMESPACE}"
+
+      - name: Collect cluster diagnostics
+        if: failure()
+        run: |
+          bash "${GITHUB_WORKSPACE}/.github/scripts/collect-smoke-diagnostics.sh"
+
+  verify-backup-load:
+    name: Backup smoke
+    needs: build-controller-image
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out code
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Download controller image
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dwo-controller-image
+          path: ${{ github.workspace }}/controller-image
+
+      - name: Install pull request controller
+        id: setup
+        uses: ./.github/actions/setup-dwo-smoke
+        with:
+          image-tarball: ${{ github.workspace }}/controller-image/dwo-image.tar.gz
+          image-ref: ${{ env.DWO_IMG }}
+          dwo-namespace: ${{ env.DWO_NAMESPACE }}
+          load-test-repo: ${{ env.LOAD_TEST_REPO }}
+          load-test-ref: ${{ env.LOAD_TEST_REF }}
+
+      - name: Run backup smoke test
+        working-directory: ${{ steps.setup.outputs.load-test-dir }}
+        env:
+          LOAD_TEST_NAMESPACE: loadtest-devworkspaces
+          REGISTRY_USERNAME: anonymous
+          REGISTRY_PASSWORD: anonymous
+        run: |
+          export KUBECONFIG="${HOME}/.kube/config"
+          kubectl create namespace "${LOAD_TEST_NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+          random_id="backup-test-${GITHUB_RUN_ID}-$(date +%s)"
+          export BACKUP_DEVWORKSPACE_TEMPLATE="${PWD}/common/templates/dw-minimal-per-workspace-storage-scale.json"
+          make test_backup \
+            MAX_DEVWORKSPACES=1 \
+            BACKUP_MONITOR_DURATION=5 \
+            LOAD_TEST_NAMESPACE="${LOAD_TEST_NAMESPACE}" \
+            DWO_NAMESPACE="${DWO_NAMESPACE}" \
+            REGISTRY_PATH="ttl.sh/${random_id}" \
+            REGISTRY_SECRET=quay-push-secret \
+            DWOC_CONFIG_TYPE=correct \
+            SEPARATE_NAMESPACE=false \
+            BACKUP_SCHEDULE="*/2 * * * *" \
+            VERIFY_RESTORE=true \
+            MAX_RESTORE_SAMPLES=1 \
+            WAIT_FOR_READY=true \
+            WAIT_TIMEOUT=10
+
+      - name: Collect cluster diagnostics
+        if: failure()
+        run: |
+          bash "${GITHUB_WORKSPACE}/.github/scripts/collect-smoke-diagnostics.sh"

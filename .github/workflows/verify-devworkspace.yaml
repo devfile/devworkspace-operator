@@ -13,10 +13,11 @@
 # limitations under the License.
 #
 
-# Runs the load-test repository's minikube smoke tests against the controller
-# built from this checkout. Installing quay.io/devfile/devworkspace-controller:next
-# would not exercise the pull request.
-name: Load test smoke
+# Creates one DevWorkspace on minikube against the controller built from this
+# checkout, then repeats that check for the webhook and for backup. This is a
+# functional check on a tiny cluster, not a load test. Installing
+# quay.io/devfile/devworkspace-controller:next would not exercise the pull request.
+name: Verify DevWorkspace
 
 on:
   pull_request:
@@ -26,7 +27,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: load-test-smoke-${{ github.ref }}
+  group: verify-devworkspace-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -60,8 +61,8 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
-  verify-controller-load:
-    name: Controller smoke
+  verify-controller:
+    name: Minikube v1.39.0 / K8s v1.33.0 / One DevWorkspace
     needs: build-controller-image
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -85,7 +86,7 @@ jobs:
           load-test-repo: ${{ env.LOAD_TEST_REPO }}
           load-test-ref: ${{ env.LOAD_TEST_REF }}
 
-      - name: Run controller smoke test
+      - name: Create one DevWorkspace
         working-directory: ${{ steps.setup.outputs.load-test-dir }}
         env:
           LOAD_TEST_NAMESPACE: loadtest-devworkspaces
@@ -98,8 +99,8 @@ jobs:
         run: |
           bash "${GITHUB_WORKSPACE}/.github/scripts/collect-smoke-diagnostics.sh"
 
-  verify-webhook-load:
-    name: Webhook smoke
+  verify-webhook:
+    name: Minikube v1.39.0 / K8s v1.33.0 / Webhook
     needs: build-controller-image
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -123,7 +124,7 @@ jobs:
           load-test-repo: ${{ env.LOAD_TEST_REPO }}
           load-test-ref: ${{ env.LOAD_TEST_REF }}
 
-      - name: Run webhook smoke test
+      - name: Check the webhook with one user
         working-directory: ${{ steps.setup.outputs.load-test-dir }}
         env:
           LOAD_TEST_NAMESPACE: dw-webhook-loadtest
@@ -137,8 +138,8 @@ jobs:
         run: |
           bash "${GITHUB_WORKSPACE}/.github/scripts/collect-smoke-diagnostics.sh"
 
-  verify-backup-load:
-    name: Backup smoke
+  verify-backup:
+    name: Minikube v1.39.0 / K8s v1.33.0 / Backup
     needs: build-controller-image
     runs-on: ubuntu-latest
     timeout-minutes: 50
@@ -162,7 +163,7 @@ jobs:
           load-test-repo: ${{ env.LOAD_TEST_REPO }}
           load-test-ref: ${{ env.LOAD_TEST_REF }}
 
-      - name: Run backup smoke test
+      - name: Back up one DevWorkspace
         working-directory: ${{ steps.setup.outputs.load-test-dir }}
         env:
           LOAD_TEST_NAMESPACE: loadtest-devworkspaces

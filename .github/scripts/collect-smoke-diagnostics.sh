@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-# Dump the objects that explain a failed load-test smoke run. Invoked with
+# Dump the objects that explain a failed minikube verification. Invoked with
 # `if: failure()`, so a missing cluster must not fail the step.
 set +e
 

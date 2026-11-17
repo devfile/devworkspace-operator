@@ -1,0 +1,201 @@
+#
+# Copyright (c) 2019-2026 Red Hat, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: Install pull request controller on minikube
+description: >-
+  Start minikube, install this checkout's controller image, and clone the
+  load-test repository. The controller and webhook deployments are pinned to
+  imagePullPolicy Never so the cluster runs the image built from the pull
+  request instead of quay.io/devfile/devworkspace-controller:next.
+
+inputs:
+  image-tarball:
+    description: gzip-compressed docker save archive of the controller image
+    required: true
+  image-ref:
+    description: Image reference stored in the archive and installed as DWO_IMG
+    required: false
+    default: docker.io/library/devworkspace-controller:ci
+  kubernetes-version:
+    description: Kubernetes version started by minikube
+    required: false
+    default: v1.33.0
+  dwo-namespace:
+    description: Namespace the operator is installed into
+    required: false
+    default: devworkspace-controller
+  load-test-repo:
+    description: Load-test repository cloned after the operator is ready
+    required: false
+    default: https://github.com/rohankanojia-testing/devworkspace-operator-load-tests.git
+  load-test-ref:
+    description: Git ref cloned from the load-test repository
+    required: false
+    default: main
+
+outputs:
+  load-test-dir:
+    description: Absolute path of the cloned load-test repository
+    value: ${{ steps.clone-load-tests.outputs.dir }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Minikube-Kubernetes
+      uses: manusa/actions-setup-minikube@b589f2d61bf96695c546929c72b38563e856059d # v2.14.0
+      with:
+        minikube version: v1.38.1
+        kubernetes version: ${{ inputs.kubernetes-version }}
+        github token: ${{ github.token }}
+
+    - name: Enable metrics-server
+      shell: bash
+      run: |
+        minikube addons enable metrics-server
+        kubectl rollout status deployment/metrics-server -n kube-system --timeout=300s
+
+    - name: Install cert-manager
+      shell: bash
+      run: |
+        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+        kubectl rollout status deployment/cert-manager -n cert-manager --timeout=300s
+        kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=300s
+        kubectl rollout status deployment/cert-manager-cainjector -n cert-manager --timeout=300s
+        for _ in $(seq 1 30); do
+          if kubectl api-versions | grep -q '^cert-manager.io/v1$'; then
+            exit 0
+          fi
+          sleep 5
+        done
+        echo "cert-manager.io/v1 did not become available"
+        exit 1
+
+    - name: Enable ingress
+      shell: bash
+      run: |
+        minikube addons enable ingress
+        kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=300s
+
+    - name: Install deployment tools and k6
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq gettext-base
+        pip install yq || pip install --break-system-packages yq || true
+        sudo gpg -k
+        sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install -y k6
+        k6 version
+
+    - name: Load the pull request image into minikube
+      shell: bash
+      env:
+        IMAGE_TARBALL: ${{ inputs.image-tarball }}
+        IMAGE_REF: ${{ inputs.image-ref }}
+      run: |
+        set -euo pipefail
+        archive="${RUNNER_TEMP}/devworkspace-controller-ci.tar"
+        gzip -dc "${IMAGE_TARBALL}" > "${archive}"
+        minikube image load "${archive}"
+        rm -f "${archive}"
+        echo "Images visible to minikube:"
+        minikube image ls
+        if ! minikube image ls | grep -q 'devworkspace-controller:ci'; then
+          echo "minikube does not have ${IMAGE_REF}"
+          exit 1
+        fi
+
+    - name: Install DevWorkspace Operator from this checkout
+      shell: bash
+      env:
+        NAMESPACE: ${{ inputs.dwo-namespace }}
+        DWO_IMG: ${{ inputs.image-ref }}
+      run: |
+        set -euo pipefail
+        echo "Installing ${DWO_IMG} into namespace ${NAMESPACE}"
+        kubectl config current-context
+        make install
+
+        # The generated deployment and the webhook Deployment created at
+        # controller startup both set imagePullPolicy Always. Always ignores
+        # the image loaded into minikube, so pin Never after install. The
+        # controller writes the webhook Deployment once during startup and
+        # does not reconcile it afterwards.
+        wait_and_pin_image() {
+          local deploy="$1"
+          local container="$2"
+          local deadline=$((SECONDS + 360))
+          local idx policy image
+
+          while (( SECONDS < deadline )); do
+            if ! kubectl -n "${NAMESPACE}" get deployment "${deploy}" >/dev/null 2>&1; then
+              echo "waiting for deployment/${deploy}"
+              sleep 5
+              continue
+            fi
+
+            idx="$(kubectl -n "${NAMESPACE}" get deployment "${deploy}" -o json | jq -r --arg name "${container}" '
+              .spec.template.spec.containers
+              | to_entries[]
+              | select(.value.name == $name)
+              | .key')"
+            if [[ -z "${idx}" || "${idx}" == "null" ]]; then
+              echo "container ${container} not found on deployment/${deploy}"
+              kubectl -n "${NAMESPACE}" get deployment "${deploy}" -o yaml
+              return 1
+            fi
+
+            kubectl -n "${NAMESPACE}" patch deployment "${deploy}" --type=json \
+              -p="[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/${idx}/imagePullPolicy\",\"value\":\"Never\"}]"
+            sleep 2
+            policy="$(kubectl -n "${NAMESPACE}" get deployment "${deploy}" -o jsonpath="{.spec.template.spec.containers[${idx}].imagePullPolicy}")"
+            image="$(kubectl -n "${NAMESPACE}" get deployment "${deploy}" -o jsonpath="{.spec.template.spec.containers[${idx}].image}")"
+            echo "${deploy}: image=${image} imagePullPolicy=${policy}"
+            if [[ "${policy}" == "Never" && "${image}" == "${DWO_IMG}" ]]; then
+              if kubectl -n "${NAMESPACE}" rollout status "deployment/${deploy}" --timeout=180s; then
+                policy="$(kubectl -n "${NAMESPACE}" get deployment "${deploy}" -o jsonpath="{.spec.template.spec.containers[${idx}].imagePullPolicy}")"
+                image="$(kubectl -n "${NAMESPACE}" get deployment "${deploy}" -o jsonpath="{.spec.template.spec.containers[${idx}].image}")"
+                if [[ "${policy}" == "Never" && "${image}" == "${DWO_IMG}" ]]; then
+                  return 0
+                fi
+              fi
+            fi
+            sleep 5
+          done
+
+          echo "timed out pinning deployment/${deploy} to ${DWO_IMG}"
+          kubectl -n "${NAMESPACE}" get deploy,pods -o wide || true
+          kubectl -n "${NAMESPACE}" logs -l app.kubernetes.io/name=devworkspace-controller --tail=100 || true
+          return 1
+        }
+
+        wait_and_pin_image devworkspace-controller-manager devworkspace-controller
+        wait_and_pin_image devworkspace-webhook-server webhook-server
+        kubectl get pods -n "${NAMESPACE}" -o wide
+
+    - name: Clone load tests
+      id: clone-load-tests
+      shell: bash
+      env:
+        LOAD_TEST_REPO: ${{ inputs.load-test-repo }}
+        LOAD_TEST_REF: ${{ inputs.load-test-ref }}
+      run: |
+        set -euo pipefail
+        dest="${RUNNER_TEMP}/devworkspace-operator-load-tests"
+        git clone --depth 1 --branch "${LOAD_TEST_REF}" "${LOAD_TEST_REPO}" "${dest}"
+        git -C "${dest}" log -1 --oneline
+        echo "dir=${dest}" >> "${GITHUB_OUTPUT}"

@@ -386,6 +386,9 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				"backup job pod template must carry the workspace ID label so deleteCommonPVC can see pods still using the PVC")
 			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceNameLabel, "dw-recent"))
 			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceBackupJobLabel, "true"))
+			Expect(job.Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, "test-creator"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, "test-creator"),
+				"backup job pod template must carry the creator label or the pod webhook rejects pod creation")
 			Expect(job.Spec.Template.Spec.ServiceAccountName).To(Equal("devworkspace-job-runner-id-recent"))
 			container := job.Spec.Template.Spec.Containers[0]
 			expectedEnvs := []corev1.EnvVar{
@@ -403,6 +406,43 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				{MountPath: "/var/lib/containers", Name: "build-storage"},
 			}
 			Expect(container.VolumeMounts).Should(ContainElements(expectedVolumeMounts), "container volume mounts should include mounts needed for backup")
+		})
+
+		It("creates a Job when the creator label is present but empty", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+						},
+					},
+				},
+			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-empty-creator", "ns-empty-creator", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Labels[constants.DevWorkspaceCreatorLabel] = ""
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-empty-creator"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+			Expect(jobList.Items[0].Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, ""))
+			Expect(jobList.Items[0].Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, ""))
 		})
 
 		It("creates a Job with configured backoffLimit", func() {
@@ -1354,6 +1394,9 @@ func createDevWorkspace(name, namespace string, started bool, lastTransitionTime
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				constants.DevWorkspaceCreatorLabel: "test-creator",
+			},
 		},
 		Spec: dwv2.DevWorkspaceSpec{
 			Started: started,

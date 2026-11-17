@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -386,26 +387,32 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		orasExtraArgs = backUpConfig.OrasConfig.ExtraArgs
 	}
 
+	// The pod webhook rejects a pod that has a workspace id and no
+	// controller.devfile.io/creator key. An empty value is allowed: the
+	// DevWorkspace create webhook stores the user UID, which can be empty.
+	creator, ok := workspace.Labels[constants.DevWorkspaceCreatorLabel]
+	if !ok {
+		return fmt.Errorf("DevWorkspace %s/%s is missing the %s label; backup Job pod would be rejected by the mutating webhook", workspace.Namespace, workspace.Name, constants.DevWorkspaceCreatorLabel)
+	}
+	jobLabels := map[string]string{
+		constants.DevWorkspaceIDLabel:        dwID,
+		constants.DevWorkspaceNameLabel:      workspace.Name,
+		constants.DevWorkspaceBackupJobLabel: "true",
+		constants.DevWorkspaceCreatorLabel:   creator,
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: constants.DevWorkspaceBackupJobNamePrefix,
 			Namespace:    workspace.Namespace,
-			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel:        dwID,
-				constants.DevWorkspaceNameLabel:      workspace.Name,
-				constants.DevWorkspaceBackupJobLabel: "true",
-			},
+			Labels:       jobLabels,
 		},
 		Spec: batchv1.JobSpec{
 			TTLSecondsAfterFinished: ptr.To[int32](120),
 			BackoffLimit:            backUpConfig.BackoffLimit,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						constants.DevWorkspaceIDLabel:        dwID,
-						constants.DevWorkspaceNameLabel:      workspace.Name,
-						constants.DevWorkspaceBackupJobLabel: "true",
-					},
+					Labels: jobLabels,
 					Annotations: map[string]string{
 						"io.kubernetes.cri-o.Devices": "/dev/fuse",
 					},

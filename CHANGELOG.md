@@ -1,5 +1,11 @@
 # DevWorkspace Operator Changelog
 
+# v1.1.1
+
+## Bug Fixes & Improvements
+
+- Copy the workspace `controller.devfile.io/creator` label onto backup Job pods so they are no longer rejected by the pod mutating webhook; previously backup Jobs could stay at `0/1` and never push a backup image [#1741](https://github.com/devfile/devworkspace-operator/pull/1741)
+
 # v1.1.0
 
 ## Features

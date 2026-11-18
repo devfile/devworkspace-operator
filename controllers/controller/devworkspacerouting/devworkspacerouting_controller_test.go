@@ -73,10 +73,11 @@ func TestReconcileMarksDuplicateEndpointRoutingFailed(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithStatusSubresource(&controllerv1alpha1.DevWorkspaceRouting{}).WithObjects(routing).Build()
 	reconciler := &devworkspacerouting.DevWorkspaceRoutingReconciler{
-		Client:       fakeClient,
-		Log:          ctrl.Log,
-		Scheme:       scheme,
-		SolverGetter: &solvers.SolverGetter{},
+		Client:           fakeClient,
+		NonCachingClient: fakeClient,
+		Log:              ctrl.Log,
+		Scheme:           scheme,
+		SolverGetter:     &solvers.SolverGetter{},
 	}
 	testCtx := context.Background()
 	key := client.ObjectKeyFromObject(routing)

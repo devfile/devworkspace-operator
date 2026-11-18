@@ -134,17 +134,18 @@ func TestReconcileReturnsAuthoritativeServiceReadError(t *testing.T) {
 	}
 }
 
-func TestReconcileUsesCachedClientWhenNonCachingClientIsNil(t *testing.T) {
+func TestReconcileFailsWithoutNonCachingClient(t *testing.T) {
 	scheme := routingTestScheme(t)
 	routing := &controllerv1alpha1.DevWorkspaceRouting{ObjectMeta: metav1.ObjectMeta{Name: "routing-mine", Namespace: "ns"}, Spec: controllerv1alpha1.DevWorkspaceRoutingSpec{DevWorkspaceId: "mine", RoutingClass: controllerv1alpha1.DevWorkspaceRoutingCluster}}
 	backing := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(routing).WithObjects(routing).Build()
 	getter := &capturingSolverGetter{}
 	r := DevWorkspaceRoutingReconciler{Client: backing, Scheme: scheme, Log: logr.Discard(), SolverGetter: getter}
-	if _, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(routing)}); err != nil {
-		t.Fatal(err)
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: client.ObjectKeyFromObject(routing)})
+	if err == nil || err.Error() != "non-caching client is not configured" {
+		t.Fatalf("expected the missing non-caching client error, got %v", err)
 	}
-	if getter.client != backing {
-		t.Fatalf("nil NonCachingClient wrapped the cached client: got %T", getter.client)
+	if getter.client != nil {
+		t.Fatalf("solver was built without a non-caching client: got %T", getter.client)
 	}
 }
 

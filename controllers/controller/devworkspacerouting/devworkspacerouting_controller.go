@@ -97,10 +97,10 @@ func (r *DevWorkspaceRoutingReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	// Solvers need fresh Service ownership data, including Services excluded from the cache.
-	solverAPI := r.Client
-	if r.NonCachingClient != nil {
-		solverAPI = r.NonCachingClient
+	if r.NonCachingClient == nil {
+		return reconcile.Result{}, fmt.Errorf("non-caching client is not configured")
 	}
+	solverAPI := r.NonCachingClient
 	solver, err := r.SolverGetter.GetSolver(solverAPI, instance.Spec.RoutingClass)
 	if err != nil {
 		if errors.Is(err, solvers.RoutingNotSupported) {

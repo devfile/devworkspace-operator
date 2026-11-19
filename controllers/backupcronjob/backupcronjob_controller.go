@@ -17,6 +17,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -26,8 +27,9 @@ import (
 	dw "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/internal/images"
+	"github.com/devfile/devworkspace-operator/pkg/common"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
-	"github.com/devfile/devworkspace-operator/pkg/config"
+	wkspConfig "github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
 	"github.com/devfile/devworkspace-operator/pkg/infrastructure"
 	"github.com/devfile/devworkspace-operator/pkg/library/storage"
@@ -104,7 +106,7 @@ func (r *BackupCronJobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 				operatorNamespace, err := infrastructure.GetNamespace()
 				// Ignore events from other namespaces
-				if err != nil || object.GetNamespace() != operatorNamespace || object.GetName() != config.OperatorConfigName {
+				if err != nil || object.GetNamespace() != operatorNamespace || object.GetName() != wkspConfig.OperatorConfigName {
 					log.Info("Received event from different namespace, ignoring", "namespace", object.GetNamespace())
 					return []ctrl.Request{}
 				}
@@ -255,7 +257,13 @@ func (r *BackupCronJobReconciler) executeBackupSync(ctx context.Context, dwOpera
 			continue
 		}
 
-		if err = r.createBackupJob(&dw, ctx, dwOperatorConfig, log); err != nil {
+		config, err := wkspConfig.ResolveConfigForWorkspace(&dw, r.Client)
+		if err != nil {
+			log.Info("Failed to resolve config for DevWorkspace, skipping backup", "id", dwID, "error", err)
+			continue
+		}
+
+		if err = r.createBackupJob(&dw, ctx, config, log); err != nil {
 			log.Error(err, "Failed to create backup Job for DevWorkspace", "id", dwID)
 			continue
 		}
@@ -344,20 +352,20 @@ func (r *BackupCronJobReconciler) wasStoppedSinceLastBackup(
 func (r *BackupCronJobReconciler) createBackupJob(
 	workspace *dw.DevWorkspace,
 	ctx context.Context,
-	dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig,
+	config *controllerv1alpha1.OperatorConfiguration,
 	log logr.Logger,
 ) error {
 	dwID := workspace.Status.DevWorkspaceId
-	backUpConfig := dwOperatorConfig.Config.Workspace.BackupCronJob
+	backUpConfig := config.Workspace.BackupCronJob
 
-	registryAuthSecret, err := secrets.HandleRegistryAuthSecret(ctx, r.Client, workspace, dwOperatorConfig.Config, dwOperatorConfig.Namespace, r.Scheme, log)
+	registryAuthSecret, err := secrets.HandleRegistryAuthSecret(ctx, r.Client, workspace, r.Scheme, log)
 	if err != nil {
 		log.Error(err, "Failed to handle registry auth secret for DevWorkspace", "devworkspace", workspace.Name)
 		return err
 	}
 
 	// Find a PVC with used by the workspace
-	pvcName, workspacePath, err := storage.GetWorkspacePVCInfo(ctx, workspace, dwOperatorConfig.Config, r.Client, log)
+	pvcName, workspacePath, err := storage.GetWorkspacePVCInfo(ctx, workspace, config, r.Client, log)
 	if err != nil {
 		log.Error(err, "Failed to get workspace PVC name", "devworkspace", workspace.Name)
 		return err
@@ -379,29 +387,41 @@ func (r *BackupCronJobReconciler) createBackupJob(
 		orasExtraArgs = backUpConfig.OrasConfig.ExtraArgs
 	}
 
+	// The pod webhook rejects a pod that has a workspace id and no
+	// controller.devfile.io/creator key. An empty value is allowed: the
+	// DevWorkspace create webhook stores the user UID, which can be empty.
+	creator, ok := workspace.Labels[constants.DevWorkspaceCreatorLabel]
+	if !ok {
+		return fmt.Errorf("DevWorkspace %s/%s is missing the %s label; backup Job pod would be rejected by the mutating webhook", workspace.Namespace, workspace.Name, constants.DevWorkspaceCreatorLabel)
+	}
+	jobLabels := map[string]string{
+		constants.DevWorkspaceIDLabel:        dwID,
+		constants.DevWorkspaceNameLabel:      workspace.Name,
+		constants.DevWorkspaceBackupJobLabel: "true",
+		constants.DevWorkspaceCreatorLabel:   creator,
+	}
+
 	job := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: constants.DevWorkspaceBackupJobNamePrefix,
 			Namespace:    workspace.Namespace,
-			Labels: map[string]string{
-				constants.DevWorkspaceIDLabel:        dwID,
-				constants.DevWorkspaceNameLabel:      workspace.Name,
-				constants.DevWorkspaceBackupJobLabel: "true",
-			},
+			Labels:       jobLabels,
 		},
 		Spec: batchv1.JobSpec{
 			TTLSecondsAfterFinished: ptr.To[int32](120),
 			BackoffLimit:            backUpConfig.BackoffLimit,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
+					Labels: jobLabels,
 					Annotations: map[string]string{
 						"io.kubernetes.cri-o.Devices": "/dev/fuse",
 					},
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId,
-					RestartPolicy:      corev1.RestartPolicyNever,
-					SecurityContext:    dwOperatorConfig.Config.Workspace.PodSecurityContext,
+					ServiceAccountName:        JobRunnerSAName + "-" + workspace.Status.DevWorkspaceId,
+					RestartPolicy:             corev1.RestartPolicyNever,
+					SecurityContext:           config.Workspace.PodSecurityContext,
+					TopologySpreadConstraints: config.Workspace.TopologySpreadConstraints,
 					Containers: []corev1.Container{
 						{
 							Name: "backup-workspace",
@@ -417,7 +437,7 @@ func (r *BackupCronJobReconciler) createBackupJob(
 								{Name: "ORAS_EXTRA_ARGS", Value: orasExtraArgs},
 							},
 							Image:           images.GetProjectBackupImage(),
-							ImagePullPolicy: getImagePullPolicy(dwOperatorConfig),
+							ImagePullPolicy: getImagePullPolicy(config),
 							Args: []string{
 								"/workspace-recovery.sh",
 								"--backup",
@@ -459,14 +479,18 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	}
 	// Pin backup Job to the node where the PVC is currently mounted to avoid
 	// Multi-Attach errors with ReadWriteOnce PVCs on multi-node clusters.
-	targetNode, err := provstorage.FindNodeForPVC(ctx, r.Client, workspace.Namespace, pvc.Name)
+	// The backup job name is generated at creation time, so it cannot be excluded here;
+	// all running pods mounting the PVC are considered when computing the affinity.
+	targetNode, err := provstorage.FindNodeForPVC(ctx, r.Client, workspace.Namespace, pvc.Name, "")
 	if err != nil {
 		log.Error(err, "Failed to find node with PVC, backup Job will not have node affinity", "pvc", pvc.Name)
 	} else if targetNode == "" {
 		log.Info("No target node for backup job, NodeAffinity will not be defined", "pvc", pvc.Name)
 	}
 	if targetNode != "" {
-		job.Spec.Template.Spec.Affinity = provstorage.NodeAffinityForHostname(targetNode)
+		job.Spec.Template.Spec.Affinity = common.GetWorkspacePodAffinityWithNodeAffinity(config.Workspace, provstorage.NodeAffinityForHostname(targetNode))
+	} else {
+		job.Spec.Template.Spec.Affinity = common.GetWorkspacePodAffinity(config.Workspace)
 	}
 
 	if registryAuthSecret != nil {
@@ -501,9 +525,9 @@ func (r *BackupCronJobReconciler) createBackupJob(
 	return nil
 }
 
-func getImagePullPolicy(dwOperatorConfig *controllerv1alpha1.DevWorkspaceOperatorConfig) corev1.PullPolicy {
-	if dwOperatorConfig.Config.Workspace.ImagePullPolicy != "" {
-		return corev1.PullPolicy(dwOperatorConfig.Config.Workspace.ImagePullPolicy)
+func getImagePullPolicy(config *controllerv1alpha1.OperatorConfiguration) corev1.PullPolicy {
+	if config.Workspace.ImagePullPolicy != "" {
+		return corev1.PullPolicy(config.Workspace.ImagePullPolicy)
 	}
 	return corev1.PullAlways
 }

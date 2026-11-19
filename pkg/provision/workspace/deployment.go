@@ -207,6 +207,8 @@ func getSpecDeployment(
 					RestartPolicy:                 "Always",
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
 					SchedulerName:                 workspace.Config.Workspace.SchedulerName,
+					Affinity:                      common.GetWorkspacePodAffinity(workspace.Config.Workspace),
+					TopologySpreadConstraints:     workspace.Config.Workspace.TopologySpreadConstraints,
 					SecurityContext:               workspace.Config.Workspace.PodSecurityContext,
 					ServiceAccountName:            saName,
 					AutomountServiceAccountToken:  nil,

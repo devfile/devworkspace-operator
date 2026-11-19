@@ -17,8 +17,10 @@ package controllers
 
 import (
 	"context"
+	"os"
 	"time"
 
+	"github.com/devfile/devworkspace-operator/pkg/config"
 	"github.com/go-logr/logr"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -39,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	dwv2 "github.com/devfile/api/v2/pkg/apis/workspaces/v1alpha2"
+	"github.com/devfile/api/v2/pkg/attributes"
 	controllerv1alpha1 "github.com/devfile/devworkspace-operator/apis/controller/v1alpha1"
 	"github.com/devfile/devworkspace-operator/pkg/conditions"
 	"github.com/devfile/devworkspace-operator/pkg/constants"
@@ -81,10 +84,13 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Name:      "devworkspace-operator-config",
 			Namespace: "devworkspace-controller",
 		}
+
+		Expect(os.Setenv(infrastructure.WatchNamespaceEnvVar, nameNamespace.Namespace)).To(Succeed())
 	})
 
 	AfterEach(func() {
 		reconciler.stopCron(log) // Ensure cron is stopped after each test
+		Expect(os.Unsetenv(infrastructure.WatchNamespaceEnvVar)).To(Succeed())
 	})
 
 	Context("Reconcile", func() {
@@ -104,6 +110,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
@@ -127,6 +134,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{
 				Name:      nameNamespace.Name,
@@ -154,6 +162,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
@@ -179,6 +188,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
@@ -188,6 +198,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 
 			disabled := false
 			dwoc.Config.Workspace.BackupCronJob.Enable = &disabled
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Update(ctx, dwoc)).To(Succeed())
 			result, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
 			Expect(err).ToNot(HaveOccurred())
@@ -212,6 +223,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
@@ -222,6 +234,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 
 			schedule2 := "1 * * * *"
 			dwoc.Config.Workspace.BackupCronJob.Schedule = schedule2
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Update(ctx, dwoc)).To(Succeed())
 
 			result, err = reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
@@ -248,6 +261,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
@@ -274,6 +288,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 
 			result, err := reconciler.Reconcile(ctx, ctrl.Request{NamespacedName: nameNamespace})
@@ -310,6 +325,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -345,6 +361,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -365,6 +382,13 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(jobList.Items).To(HaveLen(1))
 			job := jobList.Items[0]
 			Expect(job.Labels[constants.DevWorkspaceIDLabel]).To(Equal("id-recent"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceIDLabel, "id-recent"),
+				"backup job pod template must carry the workspace ID label so deleteCommonPVC can see pods still using the PVC")
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceNameLabel, "dw-recent"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceBackupJobLabel, "true"))
+			Expect(job.Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, "test-creator"))
+			Expect(job.Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, "test-creator"),
+				"backup job pod template must carry the creator label or the pod webhook rejects pod creation")
 			Expect(job.Spec.Template.Spec.ServiceAccountName).To(Equal("devworkspace-job-runner-id-recent"))
 			container := job.Spec.Template.Spec.Containers[0]
 			expectedEnvs := []corev1.EnvVar{
@@ -382,6 +406,43 @@ var _ = Describe("BackupCronJobReconciler", func() {
 				{MountPath: "/var/lib/containers", Name: "build-storage"},
 			}
 			Expect(container.VolumeMounts).Should(ContainElements(expectedVolumeMounts), "container volume mounts should include mounts needed for backup")
+		})
+
+		It("creates a Job when the creator label is present but empty", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path: "fake-registry",
+							},
+						},
+					},
+				},
+			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+			dw := createDevWorkspace("dw-empty-creator", "ns-empty-creator", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dw.Labels[constants.DevWorkspaceCreatorLabel] = ""
+			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dw.Status.DevWorkspaceId = "id-empty-creator"
+			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
+
+			pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dw.Namespace}}
+			Expect(fakeClient.Create(ctx, pvc)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(1))
+			Expect(jobList.Items[0].Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, ""))
+			Expect(jobList.Items[0].Spec.Template.Labels).To(HaveKeyWithValue(constants.DevWorkspaceCreatorLabel, ""))
 		})
 
 		It("creates a Job with configured backoffLimit", func() {
@@ -404,6 +465,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-backoff", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -444,6 +506,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-affinity", "ns-affinity", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -456,12 +519,23 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
 			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
 
-			// Create a running pod that mounts the PVC on a specific node
+			// The ReplicaSet owner reference is required
+			// because getNodeNameWithPVC only considers deployment-owned pods -- job
+			// pods (e.g. cleanup jobs) and orphaned pods that mount the PVC are ignored
+			// so they cannot skew the node affinity. Without this owner
+			// reference the pod would be skipped and no node affinity would be set.
 			pod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "workspace-pod",
 					Namespace: dw.Namespace,
 					Labels:    map[string]string{constants.DevWorkspaceIDLabel: "other-workspace-id"},
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: "apps/v1",
+						Kind:       "ReplicaSet",
+						Name:       "other-workspace",
+						UID:        "other-workspace-rs-uid",
+						Controller: func() *bool { b := true; return &b }(),
+					}},
 				},
 				Spec: corev1.PodSpec{
 					NodeName: "worker-node-1",
@@ -516,6 +590,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-no-affinity", "ns-no-affinity", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -536,7 +611,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			Expect(jobList.Items[0].Spec.Template.Spec.Affinity).To(BeNil())
 		})
 
-		It("creates a Job with configured podSecurityContext", func() {
+		It("creates a Job with merged podSecurityContext", func() {
 			enabled := true
 			schedule := "* * * * *"
 			fsGroupChangeOnRootMismatch := corev1.FSGroupChangeOnRootMismatch
@@ -559,6 +634,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-secctx", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -573,10 +649,12 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(1))
-			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext).To(Equal(customPodSecurityContext))
+			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext).To(Equal(config.GetGlobalConfig().Workspace.PodSecurityContext))
+			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext.FSGroupChangePolicy).To(Equal(&fsGroupChangeOnRootMismatch))
+			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext.SELinuxOptions).To(Equal(&corev1.SELinuxOptions{Type: "spc_t"}))
 		})
 
-		It("does not set podSecurityContext when not configured", func() {
+		It("creates a Job with default podSecurityContext", func() {
 			enabled := true
 			schedule := "* * * * *"
 			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
@@ -593,6 +671,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-no-secctx", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -607,7 +686,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(1))
-			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext).To(BeNil())
+			Expect(jobList.Items[0].Spec.Template.Spec.SecurityContext).To(Equal(config.GetGlobalConfig().Workspace.PodSecurityContext))
 		})
 
 		It("creates a Job with configured imagePullPolicy", func() {
@@ -628,6 +707,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-pullpolicy", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -662,6 +742,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-default-policy", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -700,6 +781,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					LastBackupTime: &lastBackupTime,
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-old", "ns-b", false, metav1.NewTime(time.Now().Add(-60*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -738,6 +820,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-running", "ns-c", true, metav1.NewTime(time.Now().Add(-5*time.Minute)))
 			Expect(fakeClient.Create(ctx, dw)).To(Succeed())
@@ -770,6 +853,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -806,6 +890,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Status.Phase = dwv2.DevWorkspaceStatusStopped
@@ -845,6 +930,7 @@ var _ = Describe("BackupCronJobReconciler", func() {
 					},
 				},
 			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
 			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
 			dw := createDevWorkspace("dw-recent", "ns-a", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
 			dw.Spec.Template.Components = []dwv2.Component{} // No volume component, so no PVC
@@ -857,6 +943,51 @@ var _ = Describe("BackupCronJobReconciler", func() {
 			jobList := &batchv1.JobList{}
 			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dw.Namespace})).To(Succeed())
 			Expect(jobList.Items).To(HaveLen(0))
+		})
+
+		It("skips backup for a DevWorkspace whose config cannot be resolved and continues with other DevWorkspaces", func() {
+			enabled := true
+			schedule := "* * * * *"
+			dwoc := &controllerv1alpha1.DevWorkspaceOperatorConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: nameNamespace.Name, Namespace: nameNamespace.Namespace},
+				Config: &controllerv1alpha1.OperatorConfiguration{
+					Workspace: &controllerv1alpha1.WorkspaceConfig{
+						BackupCronJob: &controllerv1alpha1.BackupCronJobConfig{
+							Enable:   &enabled,
+							Schedule: schedule,
+							Registry: &controllerv1alpha1.RegistryConfig{
+								Path:       "fake-registry",
+								AuthSecret: "backup-auth",
+							},
+						},
+					},
+				},
+			}
+			config.SetGlobalConfigForTesting(dwoc.Config)
+			Expect(fakeClient.Create(ctx, dwoc)).To(Succeed())
+
+			// Workspace referencing a nonexistent external DevWorkspaceOperatorConfig:
+			// resolving its config fails, so backup should be skipped for it
+			dwBroken := createDevWorkspace("dw-broken-config", "ns-broken", false, metav1.NewTime(time.Now().Add(-10*time.Minute)))
+			dwBroken.Status.Phase = dwv2.DevWorkspaceStatusStopped
+			dwBroken.Status.DevWorkspaceId = "id-broken"
+			dwBroken.Spec.Template.Attributes = attributes.Attributes{}.Put(
+				constants.ExternalDevWorkspaceConfiguration,
+				types.NamespacedName{Name: "nonexistent-config", Namespace: "ns-broken"},
+				nil)
+			Expect(fakeClient.Create(ctx, dwBroken)).To(Succeed())
+
+			pvcBroken := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "claim-devworkspace", Namespace: dwBroken.Namespace}}
+			Expect(fakeClient.Create(ctx, pvcBroken)).To(Succeed())
+
+			authSecret := createAuthSecret("backup-auth", nameNamespace.Namespace, map[string][]byte{})
+			Expect(fakeClient.Create(ctx, authSecret)).To(Succeed())
+
+			Expect(reconciler.executeBackupSync(ctx, dwoc, log)).To(Succeed())
+
+			jobList := &batchv1.JobList{}
+			Expect(fakeClient.List(ctx, jobList, &client.ListOptions{Namespace: dwBroken.Namespace})).To(Succeed())
+			Expect(jobList.Items).To(HaveLen(0), "no backup Job should be created for a DevWorkspace whose config cannot be resolved")
 		})
 	})
 	Context("ensureJobRunnerRBAC", func() {
@@ -1263,6 +1394,9 @@ func createDevWorkspace(name, namespace string, started bool, lastTransitionTime
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels: map[string]string{
+				constants.DevWorkspaceCreatorLabel: "test-creator",
+			},
 		},
 		Spec: dwv2.DevWorkspaceSpec{
 			Started: started,

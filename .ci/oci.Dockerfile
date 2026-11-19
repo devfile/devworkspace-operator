@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2019-2025 Red Hat, Inc.
+# Copyright (c) 2019-2026 Red Hat, Inc.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -15,17 +15,17 @@
 
 FROM registry.ci.openshift.org/openshift/release:rhel-9-release-golang-1.24-openshift-4.20
 
-ENV GO_VERSION=1.26.7
+ENV GO_VERSION=1.26.10
 ENV GOROOT=/usr/local/go
 ENV PATH=$GOROOT/bin:$PATH
 
-ENV GO_VERSION=1.26.7
+ENV GO_VERSION=1.26.10
 ENV GOROOT=/usr/local/go
 ENV PATH=$GOROOT/bin:$PATH
 
 SHELL ["/bin/bash", "-c"]
 
-# Install Go 1.26.7 to satisfy go.mod toolchain requirement (go 1.26.0)
+# Install Go 1.26.10 to satisfy go.mod toolchain requirement (go 1.26.0)
 RUN export ARCH="$(uname -m)" && if [[ ${ARCH} == "x86_64" ]]; then export ARCH="amd64"; elif [[ ${ARCH} == "aarch64" ]]; then export ARCH="arm64"; fi && \
     curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz" -o go.tar.gz && \
     rm -rf /usr/local/go && \
@@ -48,7 +48,7 @@ RUN node --version && npm --version
 # Temporary workaround since mirror.centos.org is down and can be replaced with vault.centos.org
 RUN sed -i s/mirror.centos.org/vault.centos.org/g /etc/yum.repos.d/*.repo && sed -i s/^#.*baseurl=http/baseurl=http/g /etc/yum.repos.d/*.repo && sed -i s/^mirrorlist=http/#mirrorlist=http/g /etc/yum.repos.d/*.repo
 
-RUN yum install --assumeyes -d1 python3-pip gettext jq && \
+RUN yum install --assumeyes -d1 python3-pip gettext jq unzip && \
     pip3 install --upgrade pip && \
     pip3 install --ignore-installed --upgrade setuptools && \
     # Install yq and jq

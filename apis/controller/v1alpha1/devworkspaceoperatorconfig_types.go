@@ -247,6 +247,15 @@ type WorkspaceConfig struct {
 	// SchedulerName is the name of the pod scheduler for DevWorkspace pods.
 	// If not specified, the pod scheduler is set to the default scheduler on the cluster.
 	SchedulerName string `json:"schedulerName,omitempty"`
+	// PodAffinity defines the pod affinity rules that are applied for workspace pods,
+	// PVC cleanup pods and backup pods.
+	PodAffinity *corev1.PodAffinity `json:"podAffinity,omitempty"`
+	// PodAntiAffinity defines the pod anti-affinity rules that are applied for workspace pods,
+	// PVC cleanup pods and backup pods
+	PodAntiAffinity *corev1.PodAntiAffinity `json:"podAntiAffinity,omitempty"`
+	// TopologySpreadConstraints defines the topology spread constraints that are applied for
+	// workspace pods, PVC cleanup pods and backup pods.
+	TopologySpreadConstraints []corev1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
 	// DefaultContainerResources defines the resource requirements (memory/cpu limit/request) used for
 	// container components that do not define limits or requests. In order to not set a field by default,
 	// the value "0" should be used. By default, the memory limit is 256Mi and the memory request is 128Mi.

@@ -174,6 +174,12 @@ var (
 				{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"policy-group.network.openshift.io/host-network": ""}}},
 			},
 		},
+		{
+			// Needed for WebTerminal
+			From: []networkingv1.NetworkPolicyPeer{
+				{NamespaceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"network.openshift.io/policy-group": "console"}}},
+			},
+		},
 	}
 )
 

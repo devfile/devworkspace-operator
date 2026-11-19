@@ -1,5 +1,4 @@
-//
-// Copyright (c) 2019-2025 Red Hat, Inc.
+// Copyright (c) 2019-2026 Red Hat, Inc.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,6 +15,7 @@
 package solvers
 
 import (
+	"context"
 	"fmt"
 
 	routeV1 "github.com/openshift/api/route/v1"
@@ -45,14 +45,15 @@ type RoutingSolver interface {
 	// is automatically removed from the routing.
 	Finalize(routing *controllerv1alpha1.DevWorkspaceRouting) error
 
-	// GetSpecObjects constructs cluster routing objects which should be applied on the cluster
+	// GetSpecObjects constructs cluster routing objects which should be applied on the cluster.
+	// Client operations must use ctx to respect caller cancellation and deadlines.
 	// This method should return RoutingNotReady error if the solver is not ready yet to process
 	// the workspace routing, RoutingInvalid error if there is a specific reason for the failure or
 	// any other error.
 	// The implementors can also create any additional objects not captured by the RoutingObjects struct. If that's
 	// the case they are required to set the restricted access annotation on any objects created according to the
 	// restricted access specified by the routing.
-	GetSpecObjects(routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error)
+	GetSpecObjects(ctx context.Context, routing *controllerv1alpha1.DevWorkspaceRouting, workspaceMeta DevWorkspaceMetadata) (RoutingObjects, error)
 
 	// GetExposedEndpoints retreives the URL for each endpoint in a devfile spec from a set of RoutingObjects.
 	// Returns is a map from component ids (as defined in the devfile) to the list of endpoints for that component
@@ -100,18 +101,19 @@ func (_ *SolverGetter) HasSolver(routingClass controllerv1alpha1.DevWorkspaceRou
 	}
 }
 
-func (_ *SolverGetter) GetSolver(_ client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
+func (_ *SolverGetter) GetSolver(client client.Client, routingClass controllerv1alpha1.DevWorkspaceRoutingClass) (RoutingSolver, error) {
 	isOpenShift := infrastructure.IsOpenShift()
+
 	switch routingClass {
 	case controllerv1alpha1.DevWorkspaceRoutingBasic:
-		return &BasicSolver{}, nil
+		return NewBasicSolver(client), nil
 	case controllerv1alpha1.DevWorkspaceRoutingCluster:
-		return &ClusterSolver{}, nil
+		return NewClusterSolver(client, false), nil
 	case controllerv1alpha1.DevWorkspaceRoutingClusterTLS, controllerv1alpha1.DevWorkspaceRoutingWebTerminal:
 		if !isOpenShift {
 			return nil, fmt.Errorf("routing class %s only supported on OpenShift", routingClass)
 		}
-		return &ClusterSolver{TLS: true}, nil
+		return NewClusterSolver(client, true), nil
 	default:
 		return nil, RoutingNotSupported
 	}

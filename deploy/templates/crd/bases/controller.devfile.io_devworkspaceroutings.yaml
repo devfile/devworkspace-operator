@@ -193,6 +193,11 @@ spec:
                   description: Message is a user-readable message explaining the current
                     phase (e.g. reason for failure)
                   type: string
+                observedGeneration:
+                  description: ObservedGeneration is the spec generation represented
+                    by this status.
+                  format: int64
+                  type: integer
                 phase:
                   description: Routing reconcile phase
                   type: string

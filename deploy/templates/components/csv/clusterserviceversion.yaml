@@ -1,4 +1,3 @@
----
 apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
@@ -8,7 +7,7 @@ metadata:
     operators.operatorframework.io/builder: operator-sdk-v1.7.1+git
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
     operators.operatorframework.io/internal-objects: '["devworkspaceroutings.controller.devfile.io"]'
-  name: devworkspace-operator.v1.1.0
+  name: devworkspace-operator.v1.1.1
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
@@ -99,13 +98,13 @@ spec:
   provider:
     name: Devfile
     url: https://devfile.io
-  version: 1.1.0
+  version: 1.1.1
   relatedImages:
-    - image: quay.io/devfile/devworkspace-controller:v1.1.0
+    - image: quay.io/devfile/devworkspace-controller:v1.1.1
       name: devworkspace_webhook_server
-    - image: quay.io/devfile/project-clone:v1.1.0
+    - image: quay.io/devfile/project-clone:v1.1.1
       name: project_clone
-    - image: quay.io/devfile/project-backup:v1.1.0
+    - image: quay.io/devfile/project-backup:v1.1.1
       name: project_backup
     - image: registry.access.redhat.com/ubi9/ubi-micro:9.5-1733126338
       name: pvc_cleanup_job

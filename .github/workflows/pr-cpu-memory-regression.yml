@@ -1,0 +1,159 @@
+#
+# Copyright (c) 2019-2025 Red Hat, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: DWO CPU Memory Regression Check
+
+on:
+  pull_request:
+    branches: [ main ]
+
+env:
+  DWO_NAMESPACE_STABLE: devworkspace-controller-stable
+  DWO_NAMESPACE_PR: devworkspace-controller-pr
+  MEM_THRESHOLD: 100
+  CPU_THRESHOLD: 50
+
+jobs:
+  test-on-minikube:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        kubernetes: [v1.33.0]
+    steps:
+      - name: Setup Minikube-Kubernetes
+        uses: manusa/actions-setup-minikube@b589f2d61bf96695c546929c72b38563e856059d # v2.14.0
+        with:
+          minikube version: 'v1.35.0'
+          kubernetes version: ${{ matrix.kubernetes }}
+          github token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install and Enable Minikube addons metrics-server
+        run: |
+          minikube addons enable metrics-server
+          kubectl rollout status deployment/metrics-server -n kube-system --timeout=300s
+
+      - name: Install and Wait for cert-manager to be ready
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.18.2/cert-manager.yaml
+          kubectl rollout status deployment/cert-manager -n cert-manager --timeout=300s
+
+      - name: Enable and Wait for Ingress addon
+        run: |
+          minikube addons enable ingress
+          kubectl rollout status deployment/ingress-nginx-controller -n ingress-nginx --timeout=300s
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
+        with:
+          go-version: 1.23.6
+          
+      - name: Clone DevWorkspace Operator main repo
+        run: |
+          git clone https://github.com/devfile/devworkspace-operator.git /tmp/devworkspace-operator-main
+          cd /tmp/devworkspace-operator-main
+
+      - name: Deploy DevWorkspace Operator (stable)
+        run: |
+          cd /tmp/devworkspace-operator-main
+          export DWO_IMG=quay.io/devfile/devworkspace-controller:next
+          export NAMESPACE=$DWO_NAMESPACE_STABLE
+          make install
+          kubectl rollout status deployment/devworkspace-controller-manager -n $DWO_NAMESPACE_STABLE --timeout=300s
+          sleep 100
+          kubectl top pod --no-headers -n $DWO_NAMESPACE_STABLE $(kubectl get pods -n $DWO_NAMESPACE_STABLE -l app.kubernetes.io/name=devworkspace-controller -o jsonpath='{.items[0].metadata.name}') > /tmp/stable-metrics.txt
+          make uninstall
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Build DevWorkspace Operator from PR
+        run: |
+          export DWO_IMG=ttl.sh/devworkspace-operator:15m
+          export NAMESPACE=$DWO_NAMESPACE_PR
+          make docker
+
+      - name: Deploy DevWorkspace Operator from PR to Minikube
+        run: |
+          export DWO_IMG=ttl.sh/devworkspace-operator:15m
+          export NAMESPACE=$DWO_NAMESPACE_PR
+          make install
+          kubectl get pods -n $DWO_NAMESPACE_PR
+          kubectl rollout status deployment/devworkspace-controller-manager -n $DWO_NAMESPACE_PR --timeout=300s
+          sleep 100
+          kubectl get pods -n $DWO_NAMESPACE_PR
+          kubectl describe pods -n $DWO_NAMESPACE_PR
+
+      - name: Save DevWorkspace Operator pods metrics
+        run: |
+          kubectl top pod --no-headers -n $DWO_NAMESPACE_PR $(kubectl get pods -n $DWO_NAMESPACE_PR -l app.kubernetes.io/name=devworkspace-controller -o jsonpath='{.items[0].metadata.name}') > /tmp/pr-metrics.txt
+          cat /tmp/pr-metrics.txt
+
+      - name: Compare CPU usage
+        run: |
+          convert_cpu() {
+            echo "${1%m}"
+          }
+
+          CPU1=$(cat /tmp/stable-metrics.txt | awk '{print $2}')
+          CPU2=$(cat /tmp/pr-metrics.txt | awk '{print $2}')
+
+          CPU1_INT=$(convert_cpu $CPU1)
+          CPU2_INT=$(convert_cpu $CPU2)
+
+          CPU_DIFF=$(( CPU2_INT - CPU1_INT ))
+
+          echo "CPU stable pod: ${CPU1_INT}m"
+          echo "CPU PR pod: ${CPU2_INT}m"
+          echo "CPU difference: ${CPU_DIFF}m"
+
+          if (( CPU_DIFF > CPU_THRESHOLD )); then
+            echo "❌ CPU usage increased by more than ${CPU_THRESHOLD}m"
+            exit 1
+          fi
+          echo "✅ CPU usage within threshold."
+
+      - name: Compare Memory usage
+        run: |
+          convert_mem() {
+            val=$1
+            if [[ $val == *Ki ]]; then
+              echo $(( ${val%Ki} / 1024 ))
+            elif [[ $val == *Mi ]]; then
+              echo ${val%Mi}
+            elif [[ $val == *Gi ]]; then
+              echo $(( ${val%Gi} * 1024 ))
+            else
+              echo 0
+            fi
+          }
+
+          MEM1=$(cat /tmp/stable-metrics.txt | awk '{print $3}')
+          MEM2=$(cat /tmp/pr-metrics.txt | awk '{print $3}')
+
+          MEM1_INT=$(convert_mem $MEM1)
+          MEM2_INT=$(convert_mem $MEM2)
+
+          MEM_DIFF=$(( MEM2_INT - MEM1_INT ))
+
+          echo "Memory stable pod: ${MEM1_INT}Mi"
+          echo "Memory PR pod: ${MEM2_INT}Mi"
+          echo "Memory difference: ${MEM_DIFF}Mi"
+
+          if (( MEM_DIFF > MEM_THRESHOLD )); then
+            echo "❌ Memory usage increased by more than ${MEM_THRESHOLD}Mi"
+            exit 1
+          fi
+          echo "✅ Memory usage within threshold."

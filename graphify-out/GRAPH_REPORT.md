@@ -1,15 +1,16 @@
-# Graph Report - .  (2026-10-19)
+# Graph Report - identical-endpoint-name-merge  (2026-11-19)
 
 ## Corpus Check
-- cluster-only mode — file stats not available
+- 342 files · ~1,019,348 words
+- Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2918 nodes · 5315 edges · 296 communities (245 shown, 51 thin omitted)
-- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 1205 edges (avg confidence: 0.8)
+- 3388 nodes · 6347 edges · 320 communities (266 shown, 54 thin omitted)
+- Extraction: 77% EXTRACTED · 23% INFERRED · 0% AMBIGUOUS · INFERRED: 1445 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `9bc67f05`
+- Built from commit: `dc74391c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -262,23 +263,46 @@
 - [[_COMMUNITY_SSH Authentication Script|SSH Authentication Script]]
 - [[_COMMUNITY_Container Entrypoint Script|Container Entrypoint Script]]
 - [[_COMMUNITY_CRD Update Scripts|CRD Update Scripts]]
+- [[_COMMUNITY_Routing Controller Tests|Routing Controller Tests]]
+- [[_COMMUNITY_Validation Logic|Validation Logic]]
 - [[_COMMUNITY_Cluster API Testing|Cluster API Testing]]
+- [[_COMMUNITY_Community 296|Community 296]]
+- [[_COMMUNITY_Community 297|Community 297]]
+- [[_COMMUNITY_Community 298|Community 298]]
+- [[_COMMUNITY_Community 299|Community 299]]
+- [[_COMMUNITY_Community 300|Community 300]]
+- [[_COMMUNITY_Community 301|Community 301]]
+- [[_COMMUNITY_Community 302|Community 302]]
+- [[_COMMUNITY_Community 303|Community 303]]
+- [[_COMMUNITY_Community 304|Community 304]]
+- [[_COMMUNITY_Community 305|Community 305]]
+- [[_COMMUNITY_Community 306|Community 306]]
+- [[_COMMUNITY_Community 307|Community 307]]
+- [[_COMMUNITY_Community 308|Community 308]]
+- [[_COMMUNITY_Community 309|Community 309]]
+- [[_COMMUNITY_Community 310|Community 310]]
+- [[_COMMUNITY_Community 311|Community 311]]
+- [[_COMMUNITY_Community 312|Community 312]]
+- [[_COMMUNITY_Community 313|Community 313]]
+- [[_COMMUNITY_Community 314|Community 314]]
+- [[_COMMUNITY_Community 315|Community 315]]
+- [[_COMMUNITY_Community 316|Community 316]]
+- [[_COMMUNITY_Community 317|Community 317]]
+- [[_COMMUNITY_Community 318|Community 318]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Append()` - 135 edges
-2. `Equal()` - 118 edges
-3. `InitializeForTesting()` - 47 edges
+1. `Append()` - 155 edges
+2. `Equal()` - 136 edges
+3. `InitializeForTesting()` - 72 edges
 4. `ProvisionGitConfiguration()` - 41 edges
-5. `T` - 39 edges
-6. `setupForTest()` - 31 edges
-7. `IsOpenShift()` - 30 edges
-8. `SyncObjectWithCluster()` - 30 edges
-9. `Attributes` - 26 edges
-10. `contains()` - 25 edges
+5. `contains()` - 39 edges
+6. `T` - 39 edges
+7. `SyncObjectWithCluster()` - 37 edges
+8. `setupForTest()` - 31 edges
+9. `IsOpenShift()` - 30 edges
+10. `HandleKubernetesComponents()` - 28 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `getSpecDeployment()` --calls--> `GetWebhookServerImage()`  [INFERRED]
-  pkg/webhook/deployment.go → internal/images/image.go
 - `getSpecCommonPVCCleanupJob()` --calls--> `GetPVCCleanupJobImage()`  [INFERRED]
   pkg/provision/storage/cleanup.go → internal/images/image.go
 - `GetProjectCloneInitContainer()` --calls--> `GetProjectCloneImage()`  [INFERRED]
@@ -287,87 +311,89 @@
   controllers/backupcronjob/backupcronjob_controller_test.go → internal/map/map.go
 - `filterByInactivityTime()` --calls--> `Append()`  [INFERRED]
   controllers/cleanupcronjob/cleanupcronjob_controller.go → internal/map/map.go
+- `canPrune()` --calls--> `GetConditionByType()`  [INFERRED]
+  controllers/cleanupcronjob/cleanupcronjob_controller.go → pkg/conditions/conditions.go
 
 ## Import Cycles
 - None detected.
 
-## Communities (296 total, 51 thin omitted)
+## Communities (320 total, 54 thin omitted)
 
 ### Community 0 - "Pod Override Logic"
 Cohesion: 0.05
-Nodes (64): DeploymentName(), ContainerStatus, Event, JSON, MatchingLabels, ApplyPodOverrides(), getPodOverrides(), GetVolumesFromOverrides() (+56 more)
+Nodes (60): DeploymentName(), ServiceName(), ServingCertVolumeName(), ContainerStatus, Client, Context, DevWorkspaceMetadata, DevWorkspaceRouting (+52 more)
 
 ### Community 1 - "Workspace Routing Endpoints"
-Cohesion: 0.06
-Nodes (50): EndpointHostname(), EndpointName(), EndpointPath(), RouteName(), ServiceName(), ServingCertVolumeName(), WorkspaceHostname(), DevWorkspaceMetadata (+42 more)
+Cohesion: 0.26
+Nodes (15): EndpointHostname(), EndpointPath(), WorkspaceHostname(), Endpoint, EndpointList, Ingress, Route, Service (+7 more)
 
 ### Community 2 - "Backup CronJob Controller"
-Cohesion: 0.06
-Nodes (40): getImagePullPolicy(), shouldReconcileOnUpdate(), BackupCronJobReconciler, Client, Context, Cron, DevWorkspace, DevWorkspaceOperatorConfig (+32 more)
+Cohesion: 0.09
+Nodes (23): GetCacheFunc(), GetWebhooksCacheFunc(), DevWorkspaceRouting, DevWorkspaceRoutingReconciler, Ingress, Context, DevWorkspaceRouting, DevWorkspaceRoutingReconciler (+15 more)
 
 ### Community 3 - "Git Configuration Provisioning"
 Cohesion: 0.12
-Nodes (55): ProvisionGitConfiguration(), assertGitConfigContains(), assertGitCredentialsConfigMap(), assertGitCredentialsConfigMapWithSslCAInfo(), assertGitCredentialsSecret(), buildAutomountGitConfigMap(), buildAutomountGitSecret(), buildConfig() (+47 more)
+Nodes (57): cleanupGitConfig(), ProvisionGitConfiguration(), assertGitConfigContains(), assertGitCredentialsConfigMap(), assertGitCredentialsConfigMapWithSslCAInfo(), assertGitCredentialsSecret(), buildAutomountGitConfigMap(), buildAutomountGitSecret() (+49 more)
 
 ### Community 4 - "Workspace Reconciler Core"
 Cohesion: 0.07
 Nodes (39): PerWorkspacePVCName(), Context, currentStatus, DevWorkspaceWithConfig, Logger, Result, DevWorkspaceReconciler, Client (+31 more)
 
 ### Community 5 - "Pod Security Specifications"
-Cohesion: 0.08
-Nodes (39): FieldRestriction, LocalObjectReference, PodSecurityContext, PodSpec, Volume, T, DevWorkspaceWithConfig, ResourceList (+31 more)
+Cohesion: 0.05
+Nodes (62): Capabilities, ConfigMapEnvSource, Container, EnvFromSource, FieldRestriction, SecurityContext, VolumeMount, T (+54 more)
 
 ### Community 6 - "Container Override Logic"
-Cohesion: 0.08
-Nodes (42): Capabilities, ConfigMapEnvSource, containerTestInput, containerTestOutput, ApplyContainerOverrides(), handleDefaultedContainerFields(), NeedsContainerOverride(), restrictContainerOverride() (+34 more)
+Cohesion: 0.24
+Nodes (13): containerTestInput, containerTestOutput, loadAllContainerTestCasesOrPanic(), loadContainerTestCaseOrPanic(), TestApplyContainerOverrides(), TestApplyContainerOverridesStripsUnknownFields(), TestRestrictContainerOverride(), containerTestCase (+5 more)
 
 ### Community 7 - "Routing Resource Definitions"
 Cohesion: 0.07
-Nodes (37): DevWorkspaceRoutingClass, EndpointList, ExposedEndpointList, ListMeta, ObjectMeta, PodAdditions, TypeMeta, Attributes (+29 more)
+Nodes (37): DevWorkspaceRoutingClass, DevWorkspaceRoutingPhase, EndpointList, ExposedEndpointList, ListMeta, ObjectMeta, PodAdditions, TypeMeta (+29 more)
 
 ### Community 8 - "Init Container Management"
-Cohesion: 0.10
-Nodes (32): TestCustomInitPersistentHome(), TestInferWorkspaceImage(), addInitContainer(), addInitContainerComponent(), AddPersistentHomeVolume(), EnsureHomeInitContainerFields(), hasInitPersistentHomeInConfig(), inferInitContainer() (+24 more)
+Cohesion: 0.31
+Nodes (14): addInitContainer(), addInitContainerComponent(), AddPersistentHomeVolume(), EnsureHomeInitContainerFields(), hasInitPersistentHomeInConfig(), inferInitContainer(), initCommandExists(), initComponentExists() (+6 more)
 
 ### Community 9 - "Auto-mount Volume Provisioning"
-Cohesion: 0.14
-Nodes (34): ProvisionAutoMountResourcesInto(), emptyDeployment(), loadAllTestCasesOrPanic(), loadTestCaseOrPanic(), mountOnStartConfigMapAsEnv(), mountOnStartConfigMapAsFile(), mountOnStartPVC(), mountOnStartSecretAsEnv() (+26 more)
+Cohesion: 0.17
+Nodes (30): ProvisionAutoMountResourcesInto(), emptyDeployment(), loadAllTestCasesOrPanic(), loadTestCaseOrPanic(), mountOnStartConfigMapAsEnv(), mountOnStartConfigMapAsFile(), mountOnStartPVC(), mountOnStartSecretAsEnv() (+22 more)
 
 ### Community 10 - "Troubleshooting and CI Docs"
 Cohesion: 0.06
 Nodes (34): Advanced Troubleshooting, Artifact Collection, Artifact Locations, Che Deployment Timeout, Che Happy-Path Test, CI Failure Reports, Common Failures, Configuration (+26 more)
 
 ### Community 11 - "Resource Loading Utilities"
-Cohesion: 0.11
-Nodes (29): Object, ConfigMap, DevWorkspace, NamespacedName, Object, OwnerReference, Secret, Volume (+21 more)
+Cohesion: 0.07
+Nodes (40): DevWorkspaceRoutingName(), Object, ConfigMap, DevWorkspace, NamespacedName, Object, OwnerReference, Secret (+32 more)
 
 ### Community 12 - "Network Policy Management"
 Cohesion: 0.17
 Nodes (27): NetworkPolicyName(), CreateNetworkPolicy(), DeleteNetworkPolicy(), generateNetworkPolicy(), normalizePorts(), ShouldProvision(), SyncNetworkPolicy(), getEnabledNetworkPolicyConfig() (+19 more)
 
 ### Community 13 - "Kubernetes Component Deserialization"
-Cohesion: 0.18
-Nodes (27): contains(), DeserializeToObject(), InitializeDeserializer(), loadAllTestCasesOrPanic(), loadTestCaseOrPanic(), TestHandleKubernetesComponents(), TestHandleKubernetesComponentsAllowsNonRestrictedFields(), TestHandleKubernetesComponentsNoRestrictionsConfigured() (+19 more)
+Cohesion: 0.23
+Nodes (27): InitializeDeserializer(), loadAllTestCasesOrPanic(), loadTestCaseOrPanic(), serviceComponent(), TestHandleKubernetesComponents(), TestHandleKubernetesComponentsAllowsNonRestrictedFields(), TestHandleKubernetesComponentsFailsHiddenForeignServiceCollision(), TestHandleKubernetesComponentsNoRestrictionsConfigured() (+19 more)
 
 ### Community 15 - "SSH Key Configuration"
-Cohesion: 0.11
-Nodes (18): RemoveAuthorizedKeyFromConfigMap(), addAuthorizedKeyToConfigMap(), getSSHAuthorizedKeysConfigMapCluster(), getSSHAuthorizedKeysConfigMapSpec(), removeAuthorizedKeyFromConfigMap(), GetOrCreateSSHConfig(), ExtractSSHKeyPairFromSecret(), GetSSHKeyPair() (+10 more)
+Cohesion: 0.13
+Nodes (17): RemoveAuthorizedKeyFromConfigMap(), addAuthorizedKeyToConfigMap(), getSSHAuthorizedKeysConfigMapCluster(), getSSHAuthorizedKeysConfigMapSpec(), removeAuthorizedKeyFromConfigMap(), GetOrCreateSSHConfig(), ExtractSSHKeyPairFromSecret(), GetSSHKeyPair() (+9 more)
 
 ### Community 16 - "Automount Volume Utilities"
-Cohesion: 0.18
-Nodes (25): canMountWithoutRestart(), checkAutomountVolumeForPotentialError(), checkAutomountVolumesForCollision(), dropItemsFieldFromVolumes(), existsInDeployment(), filterGitconfigAutomountVolume(), findGitconfigAutomount(), formatVolumeDescription() (+17 more)
+Cohesion: 0.22
+Nodes (20): canMountWithoutRestart(), checkAutomountVolumesForCollision(), dropItemsFieldFromVolumes(), existsInDeployment(), filterGitconfigAutomountVolume(), findGitconfigAutomount(), flattenAutomountResources(), formatVolumeDescription() (+12 more)
 
 ### Community 17 - "Cleanup CronJob Controller"
 Cohesion: 0.15
 Nodes (18): canPrune(), filterByInactivityTime(), shouldReconcileOnUpdate(), CleanupCronJobReconciler, CleanupCronJobConfig, Client, Context, Cron (+10 more)
 
 ### Community 18 - "Configuration Sync Tests"
-Cohesion: 0.26
-Nodes (24): setupForTest(), syncConfigFrom(), TestCatchesNonExistentExternalDWOC(), TestDetectsOpenShiftRouteSuffix(), TestMergeConfigHandlesProxySettings(), TestMergeConfigLooksAtAllFields(), TestMergeConfigMergesRuntimeClassName(), TestMergeConfigMergesStorageAccessMode() (+16 more)
+Cohesion: 0.24
+Nodes (25): setupForTest(), mergeConfig(), TestCatchesNonExistentExternalDWOC(), TestDetectsOpenShiftRouteSuffix(), TestMergeConfigHandlesProxySettings(), TestMergeConfigLooksAtAllFields(), TestMergeConfigMergesRuntimeClassName(), TestMergeConfigMergesSchedulingFields() (+17 more)
 
 ### Community 19 - "Global Configuration Management"
-Cohesion: 0.15
-Nodes (23): discoverRouteSuffix(), getClusterConfig(), GetConfigForTesting(), GetCurrentConfigString(), GetGlobalConfig(), getMergedConfig(), logCurrentConfig(), mergeConfig() (+15 more)
+Cohesion: 0.14
+Nodes (22): discoverRouteSuffix(), getClusterConfig(), GetCurrentConfigString(), GetGlobalConfig(), getMergedConfig(), logCurrentConfig(), mergeContainerSecurityContext(), mergePodSecurityContext() (+14 more)
 
 ### Community 20 - "OCI Test Scripts"
 Cohesion: 0.13
@@ -390,20 +416,20 @@ Cohesion: 0.16
 Nodes (19): CancelFunc, Client, Config, Context, Logger, Manager, Scheme, T (+11 more)
 
 ### Community 25 - "Workspace Status Management"
-Cohesion: 0.18
-Nodes (19): ClusterAPI, DevWorkspacePhase, DevWorkspaceStatus, DevWorkspaceWithConfig, ExposedEndpointList, Logger, Result, DevWorkspaceReconciler (+11 more)
+Cohesion: 0.16
+Nodes (20): ClusterAPI, DevWorkspacePhase, DevWorkspaceStatus, DevWorkspaceWithConfig, ExposedEndpointList, Logger, Result, DevWorkspaceReconciler (+12 more)
 
 ### Community 26 - "HTTP Client Factory"
 Cohesion: 0.19
 Nodes (14): DefaultHttpClientsFactory, getProxyFunc(), SetupHttpClientsFactory(), HttpClientsFactory, CertPool, Client, ConfigMap, ConfigmapReference (+6 more)
 
 ### Community 27 - "Workspace Role Management"
-Cohesion: 0.22
-Nodes (16): DevWorkspaceWithConfig, ClusterAPI, DevWorkspaceWithConfig, Role, T, getTestDevWorkspaceWithAttributes(), deleteRole(), generateDefaultRole() (+8 more)
+Cohesion: 0.16
+Nodes (18): GetConfigForTesting(), ClusterAPI, DevWorkspaceWithConfig, T, DevWorkspaceWithConfig, Role, T, getTestClusterAPI() (+10 more)
 
 ### Community 28 - "Operator Configuration Docs"
 Cohesion: 0.10
-Nodes (19): Always-restricted override fields, Basic Example: Injecting Custom Tools, Configuring Backup CronJob, Configuring Cleanup CronJob, Configuring Custom Init Containers, Configuring PVC storage access mode, Configuring the Webhook deployment, Configuring Workspace NetworkPolicy (+11 more)
+Nodes (20): Always-restricted override fields, Basic Example: Injecting Custom Tools, Configuring Backup CronJob, Configuring Cleanup CronJob, Configuring Custom Init Containers, Configuring PVC storage access mode, Configuring the Webhook deployment, Configuring Workspace NetworkPolicy (+12 more)
 
 ### Community 29 - "Immutable Resource Validation"
 Cohesion: 0.19
@@ -418,20 +444,20 @@ Cohesion: 0.14
 Nodes (6): DevWorkspaceRoutingList, DevWorkspaceRoutingSpec, OperatorConfigurationStatus, PodAdditions, ProjectCloneConfig, WebhookConfig
 
 ### Community 32 - "RBAC Finalization Tests"
-Cohesion: 0.30
-Nodes (18): RegistryImagePullerRolebindingName(), InitializeForTesting(), RoleBinding, T, getTestDevWorkspace(), newRegistryImagePullerRolebinding(), TestDeletesRegistryRolebindingWhenLastWorkspaceIsDeletedOnOpenShift(), TestDeletesRoleAndRolebindingWhenAllWorkspacesAreDeleted() (+10 more)
+Cohesion: 0.33
+Nodes (16): InitializeForTesting(), RoleBinding, T, getTestDevWorkspace(), newRegistryImagePullerRolebinding(), TestDeletesRegistryRolebindingWhenLastWorkspaceIsDeletedOnOpenShift(), TestDeletesRoleAndRolebindingWhenAllWorkspacesAreDeleted(), TestDeletesRoleAndRolebindingWhenLastWorkspaceIsDeleted() (+8 more)
 
 ### Community 33 - "Workspace Error Handling"
 Cohesion: 0.28
 Nodes (10): Client, Context, currentStatus, DevWorkspaceWithConfig, FailureReason, Logger, Request, Result (+2 more)
 
 ### Community 34 - "Role Binding Synchronization"
-Cohesion: 0.32
-Nodes (17): RegistryImagePullerRoleName(), ServiceAccountName(), WorkspaceRolebindingName(), WorkspaceRoleName(), WorkspaceSCCRolebindingName(), WorkspaceSCCRoleName(), DevWorkspaceWithConfig, RoleBinding (+9 more)
+Cohesion: 0.27
+Nodes (19): RegistryImagePullerRolebindingName(), RegistryImagePullerRoleName(), ServiceAccountName(), WorkspaceRolebindingName(), WorkspaceRoleName(), WorkspaceSCCRolebindingName(), WorkspaceSCCRoleName(), DevWorkspaceWithConfig (+11 more)
 
 ### Community 35 - "Routing Reconciler Logic"
-Cohesion: 0.18
-Nodes (12): Client, Context, DevWorkspaceRouting, DevWorkspaceRoutingReconciler, ExposedEndpointList, Logger, Request, Result (+4 more)
+Cohesion: 0.09
+Nodes (22): GetMaxConcurrentReconciles(), Predicates(), Client, Context, DevWorkspaceRouting, DevWorkspaceRoutingReconciler, ExposedEndpointList, Logger (+14 more)
 
 ### Community 36 - "Devfile Flattening Tests"
 Cohesion: 0.33
@@ -442,8 +468,8 @@ Cohesion: 0.22
 Nodes (16): addMetadata(), checkForExistingObject(), HandleKubernetesComponents(), restrictK8sComponent(), restrictPodSpec(), checkOwnerrefs(), filterForKubeLikeComponents(), getK8sLikeComponent() (+8 more)
 
 ### Community 38 - "RBAC Finalization Logic"
-Cohesion: 0.31
-Nodes (14): ClusterAPI, DevWorkspaceWithConfig, ClusterAPI, RoleBinding, countNonDeletedWorkspaces(), countNonDeletedWorkspacesUsingSCC(), FinalizeRBAC(), finalizeRegistryRBAC() (+6 more)
+Cohesion: 0.25
+Nodes (17): WrapSyncError(), ClusterAPI, DevWorkspaceWithConfig, ClusterAPI, ClusterAPI, RoleBinding, countNonDeletedWorkspaces(), countNonDeletedWorkspacesUsingSCC() (+9 more)
 
 ### Community 39 - "Devfile Command Management"
 Cohesion: 0.21
@@ -452,10 +478,6 @@ Nodes (14): CommandType, commandListToComponentKeys(), getCommandByKey(), getCom
 ### Community 40 - "ConfigMap Migration Logic"
 Cohesion: 0.26
 Nodes (15): convertConfigMapToConfigCRD(), deleteMigratedConfigmap(), MigrateConfigFromConfigMap(), TestConvertConfigMapDoesNothingWhenNoConfigmap(), TestConvertConfigMapGetsAllOldConfigValues(), TestConvertConfigMapIgnoresValuesThatAreDefault(), TestConvertConfigMapReturnsNilWhenAllDefault(), TestMigrateConfigCreatesCRFromConfigMap() (+7 more)
-
-### Community 41 - "Controller Config Loading"
-Cohesion: 0.20
-Nodes (6): LoadControllerConfig(), syncConfigmapFromCluster(), ControllerConfig, Client, ConfigMap, Object
 
 ### Community 42 - "Git Project Setup"
 Cohesion: 0.24
@@ -470,20 +492,20 @@ Cohesion: 0.15
 Nodes (12): Client, Context, checkExistingConfigForConflict(), WebhookCfgsInit(), T, MutatingWebhookConfiguration, ValidatingWebhookConfiguration, getWebhookAnnotations() (+4 more)
 
 ### Community 45 - "Operator Config Schema"
-Cohesion: 0.14
-Nodes (14): Quantity, Toleration, BackupCronJobConfig, CleanupCronJobConfig, ConfigmapReference, OrasConfig, PersistentHomeConfig, Proxy (+6 more)
+Cohesion: 0.13
+Nodes (15): Quantity, Toleration, BackupCronJobConfig, CleanupCronJobConfig, ConfigmapReference, OrasConfig, OverrideConfig, PersistentHomeConfig (+7 more)
 
 ### Community 46 - "Config DeepCopy Methods"
 Cohesion: 0.15
 Nodes (5): Object, Attributes, DevWorkspaceOperatorConfigList, StorageSizes, WorkspaceConfig
 
 ### Community 47 - "Projected Volume Generation"
-Cohesion: 0.17
-Nodes (12): checkCanUseProjectedVolumes(), generateProjectedVolume(), mergeProjectedVolumes(), createDevWorkspace(), DevWorkspace, Time, Append(), Resources (+4 more)
+Cohesion: 0.39
+Nodes (7): checkCanUseProjectedVolumes(), generateProjectedVolume(), mergeProjectedVolumes(), AutoMountProjectedVolumeName(), Resources, Volume, VolumeMount
 
 ### Community 48 - "Operator Entrypoint Logic"
-Cohesion: 0.17
-Nodes (13): GetCacheFunc(), GetWebhooksCacheFunc(), GetDevModeEnabled(), ExperimentalFeaturesEnabled(), Manager, init(), main(), setupControllerConfig() (+5 more)
+Cohesion: 0.09
+Nodes (56): Client, Context, DevWorkspaceRouting, DevWorkspaceRoutingPhase, DevWorkspaceRoutingReconciler, EndpointList, Object, Request (+48 more)
 
 ### Community 49 - "Kubernetes Permission Validation"
 Cohesion: 0.29
@@ -494,16 +516,16 @@ Cohesion: 0.15
 Nodes (15): Client, Container, Context, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, EnvVar, Logger, PullPolicy (+7 more)
 
 ### Community 51 - "Ephemeral Volume Management"
-Cohesion: 0.26
-Nodes (14): Volume, Component, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, PodAdditions, Volume, VolumeComponent, addEphemeralVolumesFromWorkspace() (+6 more)
+Cohesion: 0.29
+Nodes (13): Component, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, PodAdditions, Volume, VolumeComponent, addEphemeralVolumesFromWorkspace(), addEphemeralVolumesToPodAdditions() (+5 more)
 
 ### Community 52 - "Secret Lifecycle ADR"
 Cohesion: 0.13
 Nodes (14): Alternative 1: Multi-owner references (non-controller), Alternative 2: Finalizer-based cleanup, Alternative 3: Per-workspace auth secrets, Backup Auth Secret Must Not Be Owned by Any Workspace, Consequences, Considered Alternatives, Context, Decision (+6 more)
 
 ### Community 53 - "PVC Cleanup Jobs"
-Cohesion: 0.24
-Nodes (13): Affinity, PVCCleanupJobName(), ClusterAPI, DevWorkspaceWithConfig, Job, T, commonPVCExists(), getSpecCommonPVCCleanupJob() (+5 more)
+Cohesion: 0.18
+Nodes (19): PVCCleanupJobName(), ClusterAPI, DevWorkspaceWithConfig, Job, Pod, PodSpec, Client, Context (+11 more)
 
 ### Community 54 - "Workspace Deployment Sync"
 Cohesion: 0.21
@@ -526,20 +548,20 @@ Cohesion: 0.16
 Nodes (14): PortName(), convertContainerToK8s(), devfileEndpointsToContainerPorts(), devfileEnvToContainerEnv(), devfileVolumeMountsToContainerVolumeMounts(), ContainerPort, Endpoint, Component (+6 more)
 
 ### Community 59 - "Webhook Deployment Management"
-Cohesion: 0.20
-Nodes (13): ControllerEnv, GetResourceQuantityFromEnvVar(), GetWebhooksSecretName(), GetWorkspaceControllerSA(), Quantity, Client, Context, Deployment (+5 more)
+Cohesion: 0.06
+Nodes (42): ClusterRole, ClusterRoleBinding, ControllerEnv, GetDevModeEnabled(), GetResourceQuantityFromEnvVar(), GetWebhooksSecretName(), GetWorkspaceControllerSA(), GetWebhookServerImage() (+34 more)
 
 ### Community 60 - "Workspace Condition Management"
-Cohesion: 0.26
-Nodes (6): DevWorkspaceCondition, DevWorkspaceConditionType, capitalizeMessage(), getConditionIndexInOrder(), workspaceConditionsFromClusterObject(), workspaceConditions
+Cohesion: 0.27
+Nodes (5): DevWorkspaceCondition, DevWorkspaceConditionType, capitalizeMessage(), workspaceConditionsFromClusterObject(), workspaceConditions
 
 ### Community 61 - "Resource Requirement Helpers"
-Cohesion: 0.23
-Nodes (14): mergeContributionsInto(), Component, ResourceRequirements, Component, ContainerComponent, ResourceRequirements, ResourceName, AddResourceRequirements() (+6 more)
+Cohesion: 0.26
+Nodes (12): Component, ContainerComponent, ResourceRequirements, ResourceName, AddResourceRequirements(), ApplyCaps(), ApplyDefaults(), ApplyResourceRequirementsToComponent() (+4 more)
 
 ### Community 62 - "Namespace and Manager Config"
-Cohesion: 0.26
-Nodes (13): GetNamespace(), GetOperatorNamespace(), GetWatchNamespace(), Client, Context, Manager, MutatingWebhookConfiguration, ValidatingWebhookConfiguration (+5 more)
+Cohesion: 0.36
+Nodes (10): Client, Context, Manager, MutatingWebhookConfiguration, ValidatingWebhookConfiguration, Configure(), controllerSAUID(), createClient() (+2 more)
 
 ### Community 63 - "Kind Installation Guide"
 Cohesion: 0.13
@@ -554,20 +576,20 @@ Cohesion: 0.23
 Nodes (10): NamespacedConfig, ClusterAPI, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, PersistentVolumeClaim, PodAdditions, Quantity, getPVCSize() (+2 more)
 
 ### Community 66 - "Resource Diffing Utilities"
-Cohesion: 0.23
-Nodes (14): Container, Object, OwnerReference, allDiffFuncs(), containersDiffFunc(), containsOwnerRef(), deploymentDiffFunc(), jobDiffFunc() (+6 more)
+Cohesion: 0.13
+Nodes (25): Options, Container, Object, OwnerReference, T, allDiffFuncs(), basicDiffFunc(), containersDiffFunc() (+17 more)
 
 ### Community 67 - "Resource Update Functions"
-Cohesion: 0.25
-Nodes (13): Object, T, defaultUpdateFunc(), deploymentUpdateFunc(), getUpdateFunc(), mergeMaps(), serviceAccountUpdateFunc(), serviceUpdateFunc() (+5 more)
+Cohesion: 0.26
+Nodes (12): Object, T, defaultUpdateFunc(), deploymentUpdateFunc(), getUpdateFunc(), mergeMaps(), serviceUpdateFunc(), TestDeploymentUpdateFunc() (+4 more)
 
 ### Community 68 - "Workspace Configuration Schema"
-Cohesion: 0.14
-Nodes (14): Container, DevWorkspaceTemplateSpecContent, NetworkPolicyConfig, PersistentVolumeAccessMode, PodSecurityContext, SecurityContext, OverrideConfig, WorkspaceConfig (+6 more)
+Cohesion: 0.12
+Nodes (16): Container, DevWorkspaceTemplateSpecContent, NetworkPolicyConfig, PersistentVolumeAccessMode, PodSecurityContext, SecurityContext, WorkspaceConfig, DeploymentStrategyType (+8 more)
 
 ### Community 69 - "Git Resource Mounting"
-Cohesion: 0.27
-Nodes (13): sortSecrets(), allItemsMountOnStart(), canGitConfigsMountWithoutRestart(), canGitCredentialsMountWithoutRestart(), canGitObjectsMountWithoutRestart(), cleanupGitConfig(), getGitResources(), Secret (+5 more)
+Cohesion: 0.29
+Nodes (12): isMountOnStart(), sortSecrets(), allItemsMountOnStart(), canGitConfigsMountWithoutRestart(), canGitCredentialsMountWithoutRestart(), canGitObjectsMountWithoutRestart(), getGitResources(), Secret (+4 more)
 
 ### Community 70 - "Secure Service Provisioning"
 Cohesion: 0.18
@@ -578,20 +600,20 @@ Cohesion: 0.16
 Nodes (13): ComponentContribution, Devfile, DevWorkspaceTemplate, DevWorkspaceTemplateSpec, T, TestInput, TestOutput, TestPluginError (+5 more)
 
 ### Community 72 - "Common Storage Provisioner"
-Cohesion: 0.23
-Nodes (9): ClusterAPI, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, PodAdditions, ClusterAPI, CommonStorageProvisioner, checkForAlternatePVC(), checkPVCTerminating() (+1 more)
+Cohesion: 0.24
+Nodes (8): ClusterAPI, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, PodAdditions, ClusterAPI, CommonStorageProvisioner, checkPVCTerminating(), getSharedPVCWorkspaceCount()
 
 ### Community 73 - "Installation and Usage Docs"
 Cohesion: 0.14
 Nodes (13): Adding the DevWorkspace Operator catalog source, Additional configuration, Contributing, Create the DevWorkspace Operator Subscription, DevWorkspace Contributions, DevWorkspace Operator, DevWorkspace Operator Installation, DevWorkspace Operator on Developer Sandbox (+5 more)
 
 ### Community 74 - "Sidecar Image Management"
-Cohesion: 0.17
-Nodes (10): GetAsyncSidecar(), GetAsyncStorageServerImage(), GetAsyncStorageSidecarImage(), GetProjectBackupImage(), GetProjectCloneImage(), GetPVCCleanupJobImage(), GetWebhookServerImage(), Container (+2 more)
+Cohesion: 0.18
+Nodes (9): GetAsyncSidecar(), GetAsyncStorageServerImage(), GetAsyncStorageSidecarImage(), GetProjectBackupImage(), GetProjectCloneImage(), GetPVCCleanupJobImage(), Container, Volume (+1 more)
 
 ### Community 75 - "Async Storage Provisioner"
-Cohesion: 0.23
-Nodes (8): GetVolumeFromSecret(), ClusterAPI, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, PodAdditions, Secret, Volume, AsyncStorageProvisioner
+Cohesion: 0.22
+Nodes (9): GetVolumeFromSecret(), ClusterAPI, DevWorkspaceTemplateSpec, DevWorkspaceWithConfig, PodAdditions, Volume, Secret, Volume (+1 more)
 
 ### Community 76 - "Projected Volume Tests"
 Cohesion: 0.29
@@ -610,8 +632,8 @@ Cohesion: 0.24
 Nodes (5): ConditionFunc, K8sClient, Duration, Pod, PodList
 
 ### Community 80 - "Default Security Settings"
-Cohesion: 0.33
-Nodes (12): deepCopyEgressRules(), deepCopyIngressRules(), GetDefaultNetworkPolicy(), setDefaultContainerSecurityContext(), setDefaultNetworkPolicy(), setDefaultOverrideConfig(), setDefaultPodSecurityContext(), SetGlobalConfigForTesting() (+4 more)
+Cohesion: 0.13
+Nodes (25): APIGroup, deepCopyEgressRules(), deepCopyIngressRules(), GetDefaultNetworkPolicy(), setDefaultContainerSecurityContext(), setDefaultNetworkPolicy(), setDefaultOverrideConfig(), setDefaultPodSecurityContext() (+17 more)
 
 ### Community 81 - "Linux Kind Installation"
 Cohesion: 0.15
@@ -650,28 +672,28 @@ Cohesion: 0.27
 Nodes (8): copyFile(), generateUniqPrefixForFile(), NewK8sClientWithKubeConfig(), NewK8sClientWithToken(), Clientset, Interface, Client, K8sClient
 
 ### Community 90 - "Zip Project Setup"
-Cohesion: 0.26
-Nodes (10): Closer, remove(), DirExists(), Client, Project, closeSafe(), downloadZip(), dropTopLevelFolder() (+2 more)
+Cohesion: 0.33
+Nodes (9): Closer, DirExists(), Client, Project, closeSafe(), downloadZip(), dropTopLevelFolder(), SetupZipProject() (+1 more)
 
 ### Community 91 - "Devfile Element Merging"
-Cohesion: 0.33
-Nodes (10): findMergeTarget(), mergeContainerContributions(), mergeDevWorkspaceElements(), mergeVolume(), mergeVolumeComponents(), needsContainerContributionMerge(), updateCommandTargetsAfterMerge(), DevWorkspaceTemplateSpec (+2 more)
+Cohesion: 0.25
+Nodes (13): findMergeTarget(), mergeContainerContributions(), mergeContributionsInto(), mergeDevWorkspaceElements(), mergeVolume(), mergeVolumeComponents(), needsContainerContributionMerge(), updateCommandTargetsAfterMerge() (+5 more)
 
 ### Community 92 - "Webhook Validation Logic"
-Cohesion: 0.36
-Nodes (6): checkMultipleContainerContributionTargets(), DevWorkspaceTemplateSpec, Context, WebhookHandler, Request, Response
+Cohesion: 0.58
+Nodes (4): Context, WebhookHandler, Request, Response
 
 ### Community 93 - "Pre-Stop Lifecycle Hooks"
 Cohesion: 0.27
 Nodes (11): loadAllPreStopTestCasesOrPanic(), loadPreStopTestCaseOrPanic(), TestAddPreStopLifecycleHooks(), preStopTestCase, preStopTestInput, preStopTestOutput, Container, DevWorkspaceTemplateSpec (+3 more)
 
 ### Community 94 - "Generic Object Sync"
-Cohesion: 0.44
-Nodes (11): ClusterAPI, Logger, Object, NewNotInSync(), createObjectGeneric(), isMutableObject(), IsRecognizedObject(), printDiff() (+3 more)
+Cohesion: 0.38
+Nodes (15): Client, ClusterAPI, Context, Logger, Object, NewNotInSync(), createObjectGeneric(), deleteObject() (+7 more)
 
 ### Community 95 - "Webhook RBAC Setup"
-Cohesion: 0.21
-Nodes (10): Client, Config, Context, Client, Context, RoleBinding, SetupWebhooks(), setUpWebhookServerRBAC() (+2 more)
+Cohesion: 0.15
+Nodes (17): getImagePullPolicy(), shouldReconcileOnUpdate(), BackupCronJobReconciler, Client, Context, Cron, DevWorkspace, DevWorkspaceOperatorConfig (+9 more)
 
 ### Community 96 - "Release Process Documentation"
 Cohesion: 0.17
@@ -682,12 +704,12 @@ Cohesion: 0.18
 Nodes (11): Client Usage Decisions, Code Generation Decisions, Error Handling Decisions, Infrastructure Detection Decisions, Metrics Decisions, Quick Decision Guide, RBAC Decisions, Status Update Decisions (+3 more)
 
 ### Community 98 - "Webhook Server Management"
-Cohesion: 0.20
-Nodes (8): APIResource, APIResourceList, findAPIResources(), IsWebhookConfigurationEnabled(), Server, ConfigureWebhookServer(), GetWebhookServer(), Manager
+Cohesion: 0.16
+Nodes (12): APIResource, APIResourceList, findAPIResources(), IsWebhookConfigurationEnabled(), Server, ConfigureWebhookServer(), GetWebhookServer(), createWebhooks() (+4 more)
 
 ### Community 99 - "Service Account Synchronization"
-Cohesion: 0.25
-Nodes (10): ServiceAccountLabels(), WrapSyncError(), DevWorkspaceWithConfig, Client, ClusterAPI, Context, DevWorkspaceWithConfig, FinalizeServiceAccount() (+2 more)
+Cohesion: 0.29
+Nodes (9): ServiceAccountLabels(), DevWorkspaceWithConfig, Client, ClusterAPI, Context, DevWorkspaceWithConfig, FinalizeServiceAccount(), removeSCCFromServiceAccount() (+1 more)
 
 ### Community 100 - "Mount Source Handling"
 Cohesion: 0.31
@@ -714,20 +736,20 @@ Cohesion: 0.27
 Nodes (4): K8sClient, DevWorkspacePhase, DevWorkspaceStatus, Duration
 
 ### Community 106 - "Volume Naming Utilities"
-Cohesion: 0.27
-Nodes (7): AutoMountConfigMapVolumeName(), AutoMountProjectedVolumeName(), AutoMountPVCVolumeName(), AutoMountSecretVolumeName(), sanitizeVolumeName(), TestSanitizeVolumeName(), T
+Cohesion: 0.39
+Nodes (7): EndpointName(), FuzzEndpointName(), TestEndpointName(), TestEndpointNameRepeatedHyphensAllocations(), TestSanitizeVolumeName(), F, T
 
 ### Community 107 - "Workspace Routing Logic"
-Cohesion: 0.24
-Nodes (9): DevWorkspaceRoutingName(), ClusterAPI, DevWorkspaceRouting, DevWorkspaceWithConfig, ExposedEndpointList, PodAdditions, Scheme, getSpecRouting() (+1 more)
+Cohesion: 0.13
+Nodes (24): JSON, ApplyPodOverrides(), getPodOverrides(), GetVolumesFromOverrides(), NeedsPodOverrides(), restrictPodOverride(), loadAllPodTestCasesOrPanic(), loadPodTestCaseOrPanic() (+16 more)
 
 ### Community 108 - "Resource Fuzz Testing"
 Cohesion: 0.20
 Nodes (10): fuzzIntOrString(), fuzzQuantity(), fuzzResourceList(), fuzzResourceRequirements(), fuzzStringPtr(), Continue, IntOrString, Quantity (+2 more)
 
 ### Community 109 - "Container Resource Validation"
-Cohesion: 0.18
-Nodes (9): GetKubeContainersFromDevfile(), DevWorkspaceIsFlattened(), DevWorkspaceTemplateSpec, PodAdditions, ResourceRequirements, SecurityContext, ComponentContribution, DevWorkspaceTemplateSpec (+1 more)
+Cohesion: 0.16
+Nodes (14): GetKubeContainersFromDevfile(), DevWorkspaceIsFlattened(), ApplyContainerOverrides(), handleDefaultedContainerFields(), NeedsContainerOverride(), restrictContainerOverride(), DevWorkspaceTemplateSpec, PodAdditions (+6 more)
 
 ### Community 110 - "Container Conversion Tests"
 Cohesion: 0.33
@@ -746,16 +768,16 @@ Cohesion: 0.20
 Nodes (4): FailError, RetryError, WarningError, Duration
 
 ### Community 114 - "Deployment Diffing Logic"
-Cohesion: 0.33
-Nodes (9): Options, T, basicDiffFunc(), podTemplateMetadataDiffFunc(), TestDeploymentDiffOpts_DetectsSpecChanges(), TestDeploymentDiffOpts_IgnoresPodTemplateMetadata(), TestDeploymentFullDiff_ExternalLabelsNoUpdate(), TestPodTemplateMetadataDiffFunc() (+1 more)
+Cohesion: 0.24
+Nodes (21): ClientBuilder, contains(), TestDiscoverableEndpointContract(), newIndexedWorkspaceClientBuilder(), loadObjectFromFile(), newRawExtension(), setupWorkspace(), TestShouldCheckEndpointConflicts() (+13 more)
 
 ### Community 115 - "Devfile HTTP Fetching"
-Cohesion: 0.20
-Nodes (7): Devfile, DevWorkspaceTemplate, Response, TestPluginError, Reader, FakeHTTPGetter, fakeRespBody
+Cohesion: 0.12
+Nodes (14): Cache, newEndpointCache(), TestDiscoverableEndpointCacheLifecycle(), Devfile, DevWorkspaceTemplate, Response, TestPluginError, RaceFreeFakeWatcher (+6 more)
 
 ### Community 116 - "ConfigMap Resource Management"
-Cohesion: 0.28
-Nodes (8): sortConfigmaps(), getAutomountConfigmap(), getDevWorkspaceConfigmaps(), ConfigMap, ClusterAPI, ConfigMap, Deployment, Resources
+Cohesion: 0.17
+Nodes (14): checkAutomountVolumeForPotentialError(), getAccessModeForAutomount(), matchesAnyPattern(), MatchesWorkspaceTarget(), sortConfigmaps(), TestMatchesWorkspaceTarget(), getAutomountConfigmap(), getDevWorkspaceConfigmaps() (+6 more)
 
 ### Community 117 - "Workspace Condition Tracking"
 Cohesion: 0.28
@@ -763,7 +785,7 @@ Nodes (7): CountWarningConditions(), GetConditionByType(), DevWorkspaceWithConfi
 
 ### Community 118 - "Controller Reconciler Setup"
 Cohesion: 0.22
-Nodes (6): GetMaxConcurrentReconciles(), Manager, Funcs, RoutingSolverGetter, Manager, getRoutingPredicatesForSolverFunc()
+Nodes (15): Client, Context, Object, ObjectKey, Service, T, countingServiceClient, filteredServiceClient (+7 more)
 
 ### Community 119 - "Unsupported Feature Warnings"
 Cohesion: 0.44
@@ -774,8 +796,8 @@ Cohesion: 0.22
 Nodes (8): 1. Add the DevWorkspace Operator CatalogSource, 2. Create the DevWorkspace Operator Subscription, 3. Wait for Operator to be Ready, 4. Create DevWorkspaces Namespace, 5. Create a Sample DevWorkspace, Installation on OpenShift With OLM, Prerequisites, Steps
 
 ### Community 121 - "Post-Start Lifecycle Hooks"
-Cohesion: 0.44
-Nodes (8): buildUserScript(), generateScriptWithTimeout(), parsePostStartFailureDebugSleepDurationToSeconds(), processCommandsForPostStart(), processCommandsWithoutTimeoutFallback(), Command, LifecycleHandler, Logger
+Cohesion: 0.30
+Nodes (11): AddPostStartLifecycleHooks(), buildUserScript(), generateScriptWithTimeout(), parsePostStartFailureDebugSleepDurationToSeconds(), processCommandsForPostStart(), processCommandsWithoutTimeoutFallback(), Command, Container (+3 more)
 
 ### Community 122 - "Init Container Tests"
 Cohesion: 0.31
@@ -783,7 +805,7 @@ Nodes (8): loadPreStartTestCaseOrPanic(), TestGetInitContainers(), preStartTestC
 
 ### Community 123 - "K8s Client Mocking"
 Cohesion: 0.22
-Nodes (7): ObjectKey, Client, Context, DevWorkspaceTemplate, Object, TestPluginError, FakeK8sClient
+Nodes (7): Client, Context, DevWorkspaceTemplate, Object, ObjectKey, TestPluginError, FakeK8sClient
 
 ### Community 124 - "OpenShift Proxy Configuration"
 Cohesion: 0.31
@@ -810,8 +832,8 @@ Cohesion: 0.29
 Nodes (8): ListMeta, ObjectMeta, Time, TypeMeta, DevWorkspaceOperatorConfig, DevWorkspaceOperatorConfigList, OperatorConfigurationStatus, Condition
 
 ### Community 130 - "Automount PVC Logic"
-Cohesion: 0.32
-Nodes (7): flattenAutomountResources(), mountPathEntry, getAutoMountPVCs(), parseMountPathAnnotation(), ClusterAPI, Deployment, Resources
+Cohesion: 0.38
+Nodes (6): mountPathEntry, getAutoMountPVCs(), parseMountPathAnnotation(), ClusterAPI, Deployment, Resources
 
 ### Community 131 - "Backup RBAC Management"
 Cohesion: 0.46
@@ -850,12 +872,12 @@ Cohesion: 0.33
 Nodes (6): AddURLAttributesToEndpoints(), getContainerEndpointByName(), ContainerComponent, DevWorkspaceTemplateSpec, Endpoint, ExposedEndpointList
 
 ### Community 140 - "Cluster API Detection"
-Cohesion: 0.43
-Nodes (6): APIGroup, detect(), findAPIGroup(), Initialize(), Type, init()
+Cohesion: 0.14
+Nodes (18): BasicSolver, Client, Context, DevWorkspaceMetadata, DevWorkspaceRouting, Endpoint, EndpointList, Object (+10 more)
 
 ### Community 141 - "Workspace Service Sync"
-Cohesion: 0.52
-Nodes (6): getWorkspaceSyncServiceCluster(), getWorkspaceSyncServiceSpec(), SyncWorkspaceSyncServiceToCluster(), ClusterAPI, Deployment, Service
+Cohesion: 0.18
+Nodes (14): asyncServiceCountingClient, getWorkspaceSyncServiceCluster(), getWorkspaceSyncServiceSpec(), SyncWorkspaceSyncServiceToCluster(), TestSyncWorkspaceSyncServiceRejectsForeignHiddenService(), TestSyncWorkspaceSyncServiceRepairsHiddenServiceWithEmptyWorkspaceID(), ClusterAPI, Deployment (+6 more)
 
 ### Community 142 - "Host Authentication Setup"
 Cohesion: 0.38
@@ -866,12 +888,12 @@ Cohesion: 0.29
 Nodes (7): Bug Fixes & Improvements, Configurable backup job retry limit [#1579](https://github.com/devfile/devworkspace-operator/issues/1579), Features, Inject HOST_USERS environment variable for user namespace configuration [#1582](https://github.com/devfile/devworkspace-operator/pull/1582), Per-workspace backup status tracking [#1549](https://github.com/devfile/devworkspace-operator/issues/1549), Restore workspace from backup [#1525](https://github.com/devfile/devworkspace-operator/issues/1525), v0.40.0
 
 ### Community 145 - "ClusterRole Management"
-Cohesion: 0.52
-Nodes (6): ClusterRole, Client, Context, CreateWebhookClusterRole(), getExistingClusterRole(), getSpecClusterRole()
+Cohesion: 0.20
+Nodes (11): CancelFunc, Client, Context, Object, ObjectKey, T, Time, cancelOnServiceReadClient (+3 more)
 
 ### Community 146 - "ClusterRoleBinding Management"
-Cohesion: 0.52
-Nodes (6): ClusterRoleBinding, Client, Context, CreateWebhookClusterRoleBinding(), getClusterRoleBinding(), getSpecClusterRoleBinding()
+Cohesion: 0.25
+Nodes (15): RouteName(), DevWorkspaceRouting, NamespacedName, Object, OwnerReference, createDWR(), deleteDevWorkspaceRouting(), deleteIngress() (+7 more)
 
 ### Community 147 - "HTTP RoundTrip Testing"
 Cohesion: 0.29
@@ -894,8 +916,8 @@ Cohesion: 0.43
 Nodes (5): Context, DevWorkspace, DevWorkspaceTemplateSpec, WebhookHandler, Request
 
 ### Community 152 - "Pre-Stop Lifecycle Hooks"
-Cohesion: 0.33
-Nodes (6): AddPreStopLifecycleHooks(), processCommandsForPreStop(), Command, Container, DevWorkspaceTemplateSpec, LifecycleHandler
+Cohesion: 0.22
+Nodes (8): AddPreStopLifecycleHooks(), processCommandsForPreStop(), getContainerWithName(), Command, Container, DevWorkspaceTemplateSpec, LifecycleHandler, Container
 
 ### Community 153 - "AI Agent ADR Guidelines"
 Cohesion: 0.33
@@ -914,16 +936,16 @@ Cohesion: 0.33
 Nodes (5): createAuthSecret(), createDevWorkspace(), DevWorkspace, Secret, Time
 
 ### Community 157 - "Operator Changelog"
-Cohesion: 0.33
-Nodes (5): Bug Fixes & Improvements, Bug Fixes & Improvements, DevWorkspace Operator Changelog, v0.35.1, v0.43.0
+Cohesion: 0.25
+Nodes (7): Bug Fixes & Improvements, Bug Fixes & Improvements, Bug Fixes & Improvements, DevWorkspace Operator Changelog, v0.35.1, v0.43.0, v1.1.0
 
 ### Community 158 - "Release v0.39.0 Notes"
 Cohesion: 0.33
 Nodes (6): Add container resource caps enforcement [#1561](https://github.com/devfile/devworkspace-operator/issues/1561), Add the ability to configure custom init containers [#1559](https://github.com/devfile/devworkspace-operator/issues/1559), Bug Fixes & Improvements, Features, Implement backup feature for DevWorkspaces [#1524](https://github.com/devfile/devworkspace-operator/issues/1524), v0.39.0
 
 ### Community 159 - "Release v1.0.0 Notes"
-Cohesion: 0.33
-Nodes (6): Bug Fixes & Improvements, Features, OpenShift-aware TLS configuration for metrics and webhook servers [#1695](https://github.com/devfile/devworkspace-operator/pull/1695), Optional per-workspace NetworkPolicy provisioning [#1710](https://github.com/devfile/devworkspace-operator/pull/1710), Tolerate additional labels and annotations on workspace deployments [#1711](https://github.com/devfile/devworkspace-operator/pull/1711), v1.0.0
+Cohesion: 0.27
+Nodes (10): Bug Fixes & Improvements, Bug Fixes & Improvements, Configurable pod scheduling for workspaces and operator-managed jobs [#1723](https://github.com/devfile/devworkspace-operator/pull/1723), Features, Features, OpenShift-aware TLS configuration for metrics and webhook servers [#1695](https://github.com/devfile/devworkspace-operator/pull/1695), Optional per-workspace NetworkPolicy provisioning [#1710](https://github.com/devfile/devworkspace-operator/pull/1710), Tolerate additional labels and annotations on workspace deployments [#1711](https://github.com/devfile/devworkspace-operator/pull/1711) (+2 more)
 
 ### Community 160 - "Release v0.41.0 Notes"
 Cohesion: 0.33
@@ -934,8 +956,8 @@ Cohesion: 0.47
 Nodes (4): buildConfig(), buildExternalConfig(), DevWorkspaceOperatorConfig, OperatorConfiguration
 
 ### Community 162 - "Routing Error Types"
-Cohesion: 0.33
-Nodes (3): Duration, RoutingInvalid, RoutingNotReady
+Cohesion: 0.25
+Nodes (4): Duration, DuplicateEndpointError, RoutingInvalid, RoutingNotReady
 
 ### Community 163 - "API Test Suite"
 Cohesion: 0.33
@@ -958,24 +980,24 @@ Cohesion: 0.33
 Nodes (4): MergeInitContainers(), TestMergeInitContainers(), Container, T
 
 ### Community 168 - "Container Utility Functions"
-Cohesion: 0.33
-Nodes (5): AddPostStartLifecycleHooks(), getContainerWithName(), Container, DevWorkspaceTemplateSpec, Container
+Cohesion: 0.22
+Nodes (9): Context, Object, ObjectKey, ObjectList, SubResourceWriter, Time, serviceSyncReconcileClient, serviceSyncReconcileStatusWriter (+1 more)
 
 ### Community 169 - "PVC Specification Sync"
-Cohesion: 0.40
-Nodes (6): OperatorConfiguration, PersistentVolumeAccessMode, PersistentVolumeClaim, Quantity, getPVCSpec(), syncCommonPVC()
+Cohesion: 0.24
+Nodes (11): OperatorConfiguration, PersistentVolumeAccessMode, PersistentVolumeClaim, Quantity, T, getPVCSpec(), syncCommonPVC(), TestFindNodeForPVC() (+3 more)
 
 ### Community 170 - "Storage Affinity Tests"
-Cohesion: 0.53
-Nodes (5): T, TestFindNodeForPVC(), TestGetPVCSpecWithCustomStorageAccessMode(), TestGetPVCSpecWithDefaultStorageAccessMode(), TestNodeAffinityForHostname()
+Cohesion: 0.19
+Nodes (12): TestRegisterDiscoverableEndpointIndexFailure(), TestValidateEndpointsListFailure(), TestValidateEndpointsUsesUniqueIndexedQueries(), endpointIndexRegistration, endpointListFailureClient, endpointQueryClient, Client, Context (+4 more)
 
 ### Community 171 - "Role Management"
-Cohesion: 0.40
-Nodes (5): Client, Context, Role, CreateWebhookRole(), getSpecRole()
+Cohesion: 0.23
+Nodes (13): T, Scheme, T, TestSyncServicesPassesContextAndStopsOnCancellation(), routingTestScheme(), TestReconcileFailsWithoutNonCachingClient(), TestReconcileIgnoresStaleForeignServiceFromCache(), TestReconcileMarksSynchronizationConflictFailed() (+5 more)
 
 ### Community 172 - "Workspace Recovery Script"
 Cohesion: 0.67
-Nodes (5): workspace-recovery.sh script, backup(), restore(), setup_registry_auth(), usage()
+Nodes (5): backup(), restore(), setup_registry_auth(), usage(), workspace-recovery.sh script
 
 ### Community 173 - "Build and Workflow Guide"
 Cohesion: 0.40
@@ -1014,8 +1036,8 @@ Cohesion: 0.40
 Nodes (4): Is it tested? How?, PR Checklist, What does this PR do?, What issues does this PR fix or reference?
 
 ### Community 182 - "Devfile Validation Webhook"
-Cohesion: 0.40
-Nodes (4): Context, WebhookHandler, Request, Response
+Cohesion: 0.26
+Nodes (9): discoverableEndpointNames(), RegisterDiscoverableEndpointIndex(), ServiceConflictError, Context, DevWorkspace, FieldIndexer, WebhookHandler, Request (+1 more)
 
 ### Community 183 - "Exec Connection Validation"
 Cohesion: 0.40
@@ -1026,12 +1048,12 @@ Cohesion: 0.40
 Nodes (4): Additional context, Description, Expected behavior, How To Reproduce
 
 ### Community 185 - "Cluster Object Collection"
-Cohesion: 0.40
-Nodes (5): clusterObjects, collectClusterObj(), Object, Pod, Service
+Cohesion: 0.25
+Nodes (8): clusterObjects, collectClusterObj(), serviceGetCountingClient, Client, Context, Object, Pod, Service
 
 ### Community 186 - "Object Deserialization Tests"
-Cohesion: 0.70
-Nodes (4): readBytesFromFile(), TestDeserializeObject(), TestErrorIfDeserializerNotInitialized(), T
+Cohesion: 0.33
+Nodes (7): DeserializeToObject(), readBytesFromFile(), TestDeserializeObject(), TestErrorIfDeserializerNotInitialized(), TestRestrictK8sComponentSkipsValidationWhenAnnotationAbsent(), Object, T
 
 ### Community 187 - "SSH Post-Start Events"
 Cohesion: 0.40
@@ -1043,7 +1065,7 @@ Nodes (4): Advanced Features, Flexible Contributions, Networking & Routing Class
 
 ### Community 189 - "Operator Config Components"
 Cohesion: 0.50
-Nodes (4): RoutingConfig, OperatorConfiguration, WebhookConfig, WorkspaceConfig
+Nodes (4): RoutingConfig, OperatorConfiguration, WorkspaceConfig, WebhookConfig
 
 ### Community 190 - "Release v0.40.1 Notes"
 Cohesion: 0.50
@@ -1081,29 +1103,121 @@ Nodes (3): ConfigmapReference, Proxy, RoutingConfig
 Cohesion: 0.67
 Nodes (3): NetworkPolicyEgressRule, NetworkPolicyIngressRule, NetworkPolicyConfig
 
+### Community 232 - "Resource Event Predicates"
+Cohesion: 0.20
+Nodes (9): Client, Context, DevWorkspaceMetadata, DevWorkspaceRouting, EndpointList, ExposedEndpointList, RoutingObjects, NewBasicSolver() (+1 more)
+
+### Community 269 - "Routing Controller Tests"
+Cohesion: 0.13
+Nodes (17): T, Context, DevWorkspaceRoutingReconciler, Service, Client, Context, T, T (+9 more)
+
+### Community 276 - "Validation Logic"
+Cohesion: 0.24
+Nodes (13): getDevWorkspaceWithConfig(), loadAllTestCasesOrPanic(), loadTestCaseOrPanic(), TestPersistentHomeVolume(), testCase, testInput, testOutput, DevWorkspaceTemplateSpec (+5 more)
+
 ### Community 295 - "Cluster API Testing"
-Cohesion: 0.40
-Nodes (3): ClusterAPI, T, getTestClusterAPI()
+Cohesion: 0.15
+Nodes (12): Alternative 1: Keep listing and scanning the whole namespace, Alternative 2: Disable cache object copying, Alternative 3: Add a custom cache or external endpoint index owner, Consequences, Considered Alternatives, Context, Decision, Index discoverable endpoints for admission conflict checks (+4 more)
+
+### Community 296 - "Community 296"
+Cohesion: 0.15
+Nodes (12): Alternative 1: Share the aggregate certificate mount, Alternative 2: Truncate long volume names or reject long Service names, Alternative 3: Hash every volume name, Consequences, Considered Alternatives, Context, Decision, Mount per-service certificates for discoverable endpoints (+4 more)
+
+### Community 297 - "Community 297"
+Cohesion: 0.15
+Nodes (12): Alternative 1: Trust admission conflict checks, Alternative 2: Treat workspace ID labels as ownership proof, Alternative 3: Keep the generic AlreadyExists update fallback, Consequences, Considered Alternatives, Context, Decision, Guard routing Service ownership during synchronization (+4 more)
+
+### Community 298 - "Community 298"
+Cohesion: 0.26
+Nodes (12): DevWorkspace, Job, Pod, T, makeCleanupJob(), makeCleanupPod(), makeTerminatingWorkspace(), TestCleanupWorkspaceStorageCoordinatesSharedPVCDeletion() (+4 more)
+
+### Community 299 - "Community 299"
+Cohesion: 0.17
+Nodes (11): Alternative 1: Retry unchanged failures on resource events, Alternative 2: Require routing recreation, Consequences, Considered Alternatives, Context, Decision, Negative, Neutral (+3 more)
+
+### Community 300 - "Community 300"
+Cohesion: 0.17
+Nodes (11): Alternative 1: Retain legacy entry points alongside context-aware methods, Alternative 2: Add a fixed timeout to Service lookup, Consequences, Considered Alternatives, Context, Decision, Negative, Neutral (+3 more)
+
+### Community 301 - "Community 301"
+Cohesion: 0.17
+Nodes (11): Alternative 1: Change certificate Secret names, Alternative 2: Publish mounts immediately after Service creation, Consequences, Considered Alternatives, Context, Decision, Negative, Neutral (+3 more)
+
+### Community 302 - "Community 302"
+Cohesion: 0.29
+Nodes (10): Client, DevWorkspaceRouting, T, T, assertServiceSyncContextUnchanged(), serviceSyncContextRouting(), TestReconcileRetriesOrdinaryServiceSyncError(), TestReconcileReturnsServiceSyncContextErrors() (+2 more)
+
+### Community 303 - "Community 303"
+Cohesion: 0.18
+Nodes (9): Context, FieldIndexer, IndexerFunc, Manager, Object, T, TestConfigurePropagatesEndpointIndexFailure(), endpointIndexManager (+1 more)
+
+### Community 304 - "Community 304"
+Cohesion: 0.33
+Nodes (8): Client, Context, Object, ObjectKey, Service, serviceLabelFilteredClient, serviceReadErrorClient, staleServiceCacheClient
+
+### Community 305 - "Community 305"
+Cohesion: 0.31
+Nodes (8): NotInSyncError, ClusterAPI, Object, Service, recoverServiceCreateCollision(), serviceOwnershipConflict(), SyncRoutingServiceWithCluster(), ServiceConflictError
+
+### Community 306 - "Community 306"
+Cohesion: 0.33
+Nodes (7): LoadControllerConfig(), syncConfigmapFromCluster(), GetNamespace(), GetOperatorNamespace(), GetWatchNamespace(), Client, Object
+
+### Community 307 - "Community 307"
+Cohesion: 0.25
+Nodes (7): CancelFunc, Client, Context, Object, ObjectKey, cancelingLookupClient, lookupContextKey
+
+### Community 308 - "Community 308"
+Cohesion: 0.32
+Nodes (7): Affinity, GetWorkspacePodAffinity(), GetWorkspacePodAffinityWithNodeAffinity(), NodeAffinity, WorkspaceConfig, NodeAffinity, NodeAffinityForHostname()
+
+### Community 309 - "Community 309"
+Cohesion: 0.46
+Nodes (7): Service, T, collisionServices(), TestGenericNonServiceCollisionKeepsUpdateFallback(), TestGenericServiceCollisionOutcomes(), TestGenericServiceCollisionRejectsForeignOwnership(), TestGenericServiceCollisionRepairsOwnedService()
+
+### Community 310 - "Community 310"
+Cohesion: 0.29
+Nodes (7): testCase, ConfigMap, EnvFromSource, Object, PersistentVolumeClaim, Volume, VolumeMount
+
+### Community 311 - "Community 311"
+Cohesion: 0.33
+Nodes (4): Builder, DevWorkspaceRoutingClass, RoutingSolver, capturingSolverGetter
+
+### Community 312 - "Community 312"
+Cohesion: 0.48
+Nodes (6): DevWorkspaceRouting, T, TestReconcileRepairsOwnedDiscoverableServiceWithStaleWorkspaceID(), TestReconcileUsesDevWorkspaceOwnerName(), TestWorkspaceNameRequiresDevWorkspaceControllerOwner(), workspaceNameTestRouting()
+
+### Community 313 - "Community 313"
+Cohesion: 0.33
+Nodes (5): TestCustomInitPersistentHome(), TestInferWorkspaceImage(), InferWorkspaceImage(), T, DevWorkspaceTemplateSpec
+
+### Community 314 - "Community 314"
+Cohesion: 0.50
+Nodes (3): createDevWorkspace(), DevWorkspace, Time
+
+### Community 317 - "Community 317"
+Cohesion: 0.67
+Nodes (3): testCase, testInput, testOutput
 
 ## Knowledge Gaps
-- **806 isolated node(s):** `common.sh script`, `ARTIFACT_DIR`, `CI`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL` (+801 more)
+- **931 isolated node(s):** `common.sh script`, `ARTIFACT_DIR`, `CI`, `GIT_COMMITTER_NAME`, `GIT_COMMITTER_EMAIL` (+926 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **51 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **54 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Append()` connect `Projected Volume Generation` to `Pod Override Logic`, `Workspace Routing Endpoints`, `Automount PVC Logic`, `Git Configuration Provisioning`, `Backup CronJob Controller`, `Route Synchronization`, `Container Override Logic`, `Routing Resource Definitions`, `Init Container Management`, `Auto-mount Volume Provisioning`, `Workspace Reconciler Core`, `Reconciler Event Handlers`, `Kubernetes Component Deserialization`, `SSH Key Configuration`, `Automount Volume Utilities`, `Cleanup CronJob Controller`, `Global Configuration Management`, `Default Template Resolution`, `Plugin Import Resolution`, `Devfile Resolution Logic`, `Pre-Stop Lifecycle Hooks`, `Workspace Status Management`, `Backup Controller Tests`, `RBAC Finalization Tests`, `Workspace Error Handling`, `Routing Reconciler Logic`, `Devfile Flattening Tests`, `Kubernetes Component Provisioning`, `Workspace Finalizer Logic`, `Init Container Merging`, `Devfile Command Management`, `Container Utility Functions`, `RBAC Finalization Logic`, `Webhook Configuration Initialization`, `Kubernetes Permission Validation`, `Resource Requirement Specs`, `Ephemeral Volume Management`, `Workspace Deployment Sync`, `Devfile Validation Webhook`, `Workspace Metadata Provisioning`, `Cluster Object Collection`, `Devfile Container Conversion`, `SSH Post-Start Events`, `Workspace Condition Management`, `Resource Requirement Helpers`, `Post-Start Lifecycle Hooks`, `Resource Update Functions`, `Git Resource Mounting`, `Sidecar Image Management`, `Async Storage Provisioner`, `Projected Volume Tests`, `Workspace Bootstrapping Logic`, `Default Security Settings`, `Project Clone Initialization`, `Zip Project Setup`, `Devfile Element Merging`, `Webhook Validation Logic`, `Pre-Stop Lifecycle Hooks`, `Service Account Synchronization`, `Mount Source Handling`, `Workspace Feature Testing`, `Devfile and Project Loading`, `Workspace Routing Logic`, `Container Resource Validation`, `Container Conversion Tests`, `ConfigMap Resource Management`, `Unsupported Feature Warnings`, `Post-Start Lifecycle Hooks`, `SSH Agent Provisioning`?**
-  _High betweenness centrality (0.279) - this node is a cross-community bridge._
-- **Why does `Equal()` connect `Configuration Sync Tests` to `Pod Override Logic`, `Workspace Routing Endpoints`, `Git Configuration Provisioning`, `Workspace Reconciler Core`, `Pod Security Specifications`, `Container Override Logic`, `Routing Resource Definitions`, `Init Container Management`, `Auto-mount Volume Provisioning`, `Resource Loading Utilities`, `Network Policy Management`, `Kubernetes Component Deserialization`, `Immutable Resource Validation`, `Role Binding Synchronization`, `Routing Reconciler Logic`, `Devfile Flattening Tests`, `Init Container Merging`, `ConfigMap Migration Logic`, `Storage Affinity Tests`, `Webhook Configuration Initialization`, `Projected Volume Generation`, `PVC Cleanup Jobs`, `Object Deserialization Tests`, `Post-Start Lifecycle Hooks`, `Resource Diffing Utilities`, `Projected Volume Tests`, `Container Resource Tests`, `Pre-Stop Lifecycle Hooks`, `Persistent Home Tests`, `Workspace Feature Testing`, `Volume Naming Utilities`, `Container Conversion Tests`, `Deployment Diffing Logic`, `Init Container Tests`, `OpenShift Proxy Configuration`?**
-  _High betweenness centrality (0.107) - this node is a cross-community bridge._
-- **Why does `IsOpenShift()` connect `Default Security Settings` to `Pod Override Logic`, `Workspace Routing Endpoints`, `Backup RBAC Management`, `Cluster API Detection`, `Global Configuration Management`, `User Permission Validation`, `Server TLS Configuration`, `Role Binding Synchronization`, `Routing Reconciler Logic`, `Workspace Finalizer Logic`, `RBAC Finalization Logic`, `Role Management`, `Webhook Configuration Initialization`, `Operator Entrypoint Logic`, `Workspace Deployment Sync`, `Routing Solver Logic`, `Webhook Deployment Management`, `Webhook RBAC Setup`, `Controller Reconciler Setup`, `OpenShift Proxy Configuration`?**
-  _High betweenness centrality (0.056) - this node is a cross-community bridge._
-- **Are the 134 inferred relationships involving `Append()` (e.g. with `removeAuthorizedKeyFromConfigMap()` and `GetAsyncSidecar()`) actually correct?**
-  _`Append()` has 134 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 117 inferred relationships involving `Equal()` (e.g. with `TestProvisionAutomountResourcesIntoPersistentHomeEnabled()` and `TestMatchesWorkspaceTarget()`) actually correct?**
-  _`Equal()` has 117 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 45 inferred relationships involving `InitializeForTesting()` (e.g. with `setupForTest()` and `TestDetectsOpenShiftRouteSuffix()`) actually correct?**
-  _`InitializeForTesting()` has 45 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Append()` connect `Kubernetes Component Deserialization` to `Pod Override Logic`, `Workspace Routing Endpoints`, `Backup CronJob Controller`, `Git Configuration Provisioning`, `Workspace Reconciler Core`, `Container Override Logic`, `Routing Resource Definitions`, `Init Container Management`, `Auto-mount Volume Provisioning`, `Resource Loading Utilities`, `SSH Key Configuration`, `Automount Volume Utilities`, `Cleanup CronJob Controller`, `Configuration Sync Tests`, `Global Configuration Management`, `Devfile Resolution Logic`, `Workspace Status Management`, `RBAC Finalization Tests`, `Workspace Error Handling`, `Routing Reconciler Logic`, `Devfile Flattening Tests`, `Kubernetes Component Provisioning`, `RBAC Finalization Logic`, `Devfile Command Management`, `Webhook Configuration Initialization`, `Projected Volume Generation`, `Operator Entrypoint Logic`, `Kubernetes Permission Validation`, `Resource Requirement Specs`, `Ephemeral Volume Management`, `Workspace Deployment Sync`, `Workspace Metadata Provisioning`, `Devfile Container Conversion`, `Workspace Condition Management`, `Post-Start Lifecycle Hooks`, `Resource Diffing Utilities`, `Resource Update Functions`, `Git Resource Mounting`, `Sidecar Image Management`, `Async Storage Provisioner`, `Projected Volume Tests`, `Workspace Bootstrapping Logic`, `Default Security Settings`, `Project Clone Initialization`, `Devfile Element Merging`, `Webhook Validation Logic`, `Pre-Stop Lifecycle Hooks`, `Webhook RBAC Setup`, `Service Account Synchronization`, `Mount Source Handling`, `Workspace Feature Testing`, `Devfile and Project Loading`, `Workspace Routing Logic`, `Container Resource Validation`, `Container Conversion Tests`, `Deployment Diffing Logic`, `ConfigMap Resource Management`, `Unsupported Feature Warnings`, `Post-Start Lifecycle Hooks`, `SSH Agent Provisioning`, `Automount PVC Logic`, `Route Synchronization`, `Reconciler Event Handlers`, `Default Template Resolution`, `Plugin Import Resolution`, `Pre-Stop Lifecycle Hooks`, `Backup Controller Tests`, `Workspace Finalizer Logic`, `Init Container Merging`, `Container Utility Functions`, `Storage Affinity Tests`, `Role Management`, `Devfile Validation Webhook`, `Cluster Object Collection`, `SSH Post-Start Events`, `Resource Event Predicates`, `Routing Controller Tests`, `Validation Logic`, `Community 309`, `Community 314`, `Community 316`, `Community 318`?**
+  _High betweenness centrality (0.290) - this node is a cross-community bridge._
+- **Why does `Equal()` connect `Configuration Sync Tests` to `Pod Override Logic`, `Git Configuration Provisioning`, `Workspace Reconciler Core`, `Pod Security Specifications`, `Container Override Logic`, `Routing Resource Definitions`, `Auto-mount Volume Provisioning`, `Resource Loading Utilities`, `Network Policy Management`, `Routing Controller Tests`, `Kubernetes Component Deserialization`, `ClusterRoleBinding Management`, `Validation Logic`, `Immutable Resource Validation`, `Role Binding Synchronization`, `Routing Reconciler Logic`, `Devfile Flattening Tests`, `Init Container Merging`, `ConfigMap Migration Logic`, `PVC Specification Sync`, `Community 298`, `Webhook Configuration Initialization`, `Community 312`, `Community 313`, `Object Deserialization Tests`, `Community 318`, `Post-Start Lifecycle Hooks`, `Resource Diffing Utilities`, `Projected Volume Tests`, `Container Resource Tests`, `Pre-Stop Lifecycle Hooks`, `Persistent Home Tests`, `Workspace Feature Testing`, `Volume Naming Utilities`, `Workspace Routing Logic`, `Container Conversion Tests`, `Deployment Diffing Logic`, `Devfile HTTP Fetching`, `ConfigMap Resource Management`, `Init Container Tests`, `OpenShift Proxy Configuration`?**
+  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+- **Why does `ServiceAccountToken` connect `Operator Config Schema` to `Routing Controller Tests`?**
+  _High betweenness centrality (0.042) - this node is a cross-community bridge._
+- **Are the 154 inferred relationships involving `Append()` (e.g. with `removeAuthorizedKeyFromConfigMap()` and `GetAsyncSidecar()`) actually correct?**
+  _`Append()` has 154 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 135 inferred relationships involving `Equal()` (e.g. with `TestProvisionAutomountResourcesIntoPersistentHomeEnabled()` and `TestMatchesWorkspaceTarget()`) actually correct?**
+  _`Equal()` has 135 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 70 inferred relationships involving `InitializeForTesting()` (e.g. with `setupForTest()` and `TestDetectsOpenShiftRouteSuffix()`) actually correct?**
+  _`InitializeForTesting()` has 70 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 35 inferred relationships involving `ProvisionGitConfiguration()` (e.g. with `getAutomountResources()` and `findGitconfigAutomount()`) actually correct?**
   _`ProvisionGitConfiguration()` has 35 INFERRED edges - model-reasoned connections that need verification._

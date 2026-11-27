@@ -60,9 +60,19 @@ strip_tag() {
 # check_pinnable REF fails when REF cannot be pinned with an OpenShift PinnedImageSet: the
 # reference must be a digest accepted by the API, and the machine config daemon runs
 # `podman manifest inspect` on it, which rejects a single OCI image manifest with rc=125.
+#
+# The NAME_RE and the length limit mirror the CEL rules on spec.pinnedImages[*].name. They are
+# deliberately duplicated from IMAGE_RE in
+# che-operator/build/scripts/release/checkPinnedImages.sh: this release must not fetch the
+# checker, so keep the two in sync by hand.
 check_pinnable() {
   local ref="$1"
   local name_re='^([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:[0-9]{2,5})?/([a-zA-Z0-9_-]{0,61}/)?[a-zA-Z0-9_.-]*@sha256:[a-f0-9]{64}$'
+  local max_reference_length=447
+
+  if (( ${#ref} > max_reference_length )); then
+    error "$ref is longer than the ${max_reference_length} characters the PinnedImageSet API accepts"
+  fi
 
   if [[ ! "$ref" =~ $name_re ]]; then
     error "$ref is not a digest reference accepted by the PinnedImageSet API"

@@ -46,6 +46,51 @@ debug() {
   fi
 }
 
+# strip_tag REF prints REF without its tag, leaving the registry port and any digest alone.
+strip_tag() {
+  local ref="${1%@*}"
+  local last="${ref##*/}"
+  if [[ "$last" == *:* ]]; then
+    echo "${ref%:*}"
+  else
+    echo "$ref"
+  fi
+}
+
+# check_pinnable REF fails when REF cannot be pinned with an OpenShift PinnedImageSet: the
+# reference must be a digest accepted by the API, and the machine config daemon runs
+# `podman manifest inspect` on it, which rejects a single OCI image manifest with rc=125.
+#
+# The NAME_RE and the length limit mirror the CEL rules on spec.pinnedImages[*].name. They are
+# deliberately duplicated from IMAGE_RE in
+# che-operator/build/scripts/release/checkPinnedImages.sh: this release must not fetch the
+# checker, so keep the two in sync by hand.
+check_pinnable() {
+  local ref="$1"
+  local output
+  local name_re='^([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:[0-9]{2,5})?/([a-zA-Z0-9_-]{0,61}/)?[a-zA-Z0-9_.-]*@sha256:[a-f0-9]{64}$'
+  local max_reference_length=447
+
+  if (( ${#ref} > max_reference_length )); then
+    error "$ref is longer than the ${max_reference_length} characters the PinnedImageSet API accepts"
+  fi
+
+  if [[ ! "$ref" =~ $name_re ]]; then
+    error "$ref is not a digest reference accepted by the PinnedImageSet API"
+  fi
+
+  # An empty store, because an image already present locally would be inspected offline.
+  if ! output=$(podman --log-level error --root "$PINNED_IMAGE_STORE/root" --runroot "$PINNED_IMAGE_STORE/run" \
+    manifest inspect "$ref" 2>&1); then
+    # Keep the cause: a dead digest, missing credentials, a TLS problem and a single OCI
+    # manifest all fail here, and they call for different actions. The single-manifest error
+    # embeds the whole manifest JSON with the cause at the end, so keep head and tail.
+    output="${output//$'\n'/ }"
+    (( ${#output} > 300 )) && output="${output:0:90} ... ${output: -180}"
+    error "$ref cannot be pre-pulled: podman manifest inspect failed: ${output}"
+  fi
+}
+
 parse_args() {
   if [ "$#" -eq 0 ]; then
     usage
@@ -103,7 +148,13 @@ fi
 
 # Work in a temporary directory
 TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR"' EXIT
 info "Working in $TMPDIR"
+
+# An empty container store for the pinnability check, because an image already present locally
+# would be inspected offline and hide a bad reference.
+PINNED_IMAGE_STORE="$TMPDIR/pinned-image-store"
+mkdir -p "$PINNED_IMAGE_STORE/root" "$PINNED_IMAGE_STORE/run"
 BUNDLE_DIR="${TMPDIR}/bundle"
 mkdir -p "$BUNDLE_DIR"
 PROCESSED_DIR="${TMPDIR}/bundle-processed"
@@ -126,10 +177,35 @@ for FILE in "$PROCESSED_DIR"/manifests/*.clusterserviceversion.yaml; do
   IMAGES=$(yq -r '.spec.relatedImages[].image' "$FILE")
   for IMAGE in $IMAGES; do
     DIGEST=$(skopeo inspect --tls-verify=false "docker://${IMAGE}" 2>/dev/null | jq -r '.Digest')
-    IMAGE_WITH_DIGEST="${IMAGE%%:*}@${DIGEST}"
+    if [[ -z "$DIGEST" || "$DIGEST" == "null" ]]; then
+      error "Failed to get the digest of $IMAGE"
+    fi
+    IMAGE_WITH_DIGEST="$(strip_tag "$IMAGE")@${DIGEST}"
     info "Replacing $IMAGE with $IMAGE_WITH_DIGEST"
     sed -i "s|$IMAGE|$IMAGE_WITH_DIGEST|g" "$FILE"
   done
+
+  # The operator passes these to the workspace, so they reach administrators' PinnedImageSets.
+  info "Checking that every RELATED_IMAGE_* value of $FILE can be pinned"
+  INVALID=$(yq -r '[.spec.install.spec.deployments[]?.spec.template.spec | (.containers[]?, .initContainers[]?) | .env[]?
+                 | select(.name | test("^RELATED_IMAGE_"))
+                 | select((.value // "") == "" or (.value | test("\n")))] | length' "$FILE") ||
+    error "Failed to read the RELATED_IMAGE_* values of $FILE"
+  if [[ "$INVALID" != "0" ]]; then
+    error "Empty or multi-line RELATED_IMAGE_* value in $FILE"
+  fi
+  REFS=$(yq -r '.spec.install.spec.deployments[]?.spec.template.spec | (.containers[]?, .initContainers[]?) | .env[]?
+                 | select(.name | test("^RELATED_IMAGE_")) | .value' "$FILE") ||
+    error "Failed to read the RELATED_IMAGE_* values of $FILE"
+  if [[ -z "$REFS" ]]; then
+    error "No RELATED_IMAGE_* values found in $FILE"
+  fi
+  while IFS= read -r REF; do
+    if [[ -z "$REF" ]]; then
+      error "Empty RELATED_IMAGE_* value in $FILE"
+    fi
+    check_pinnable "$REF"
+  done <<< "$REFS"
 done
 
 if [ "$DEBUG" == true ]; then
@@ -158,7 +234,7 @@ else
 fi
 
 NEW_BUNDLE_SHA=$(skopeo inspect "docker://${PUSH_IMAGE}" | jq -r '.Digest')
-NEW_BUNDLE_DIGEST="${PUSH_IMAGE%%:*}@${NEW_BUNDLE_SHA}"
+NEW_BUNDLE_DIGEST="$(strip_tag "$PUSH_IMAGE")@${NEW_BUNDLE_SHA}"
 info "Resolved image $NEW_BUNDLE_DIGEST from $PUSH_IMAGE"
 
 info "Rendering $NEW_BUNDLE_DIGEST to $RENDER"

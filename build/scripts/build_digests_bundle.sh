@@ -67,6 +67,7 @@ strip_tag() {
 # checker, so keep the two in sync by hand.
 check_pinnable() {
   local ref="$1"
+  local output
   local name_re='^([a-zA-Z0-9-]+\.)+[a-zA-Z0-9-]+(:[0-9]{2,5})?/([a-zA-Z0-9_-]{0,61}/)?[a-zA-Z0-9_.-]*@sha256:[a-f0-9]{64}$'
   local max_reference_length=447
 
@@ -79,9 +80,14 @@ check_pinnable() {
   fi
 
   # An empty store, because an image already present locally would be inspected offline.
-  if ! podman --log-level error --root "$PINNED_IMAGE_STORE/root" --runroot "$PINNED_IMAGE_STORE/run" \
-    manifest inspect "$ref" >/dev/null 2>&1; then
-    error "$ref cannot be pre-pulled: podman manifest inspect failed"
+  if ! output=$(podman --log-level error --root "$PINNED_IMAGE_STORE/root" --runroot "$PINNED_IMAGE_STORE/run" \
+    manifest inspect "$ref" 2>&1); then
+    # Keep the cause: a dead digest, missing credentials, a TLS problem and a single OCI
+    # manifest all fail here, and they call for different actions. The single-manifest error
+    # embeds the whole manifest JSON with the cause at the end, so keep head and tail.
+    output="${output//$'\n'/ }"
+    (( ${#output} > 300 )) && output="${output:0:90} ... ${output: -180}"
+    error "$ref cannot be pre-pulled: podman manifest inspect failed: ${output}"
   fi
 }
 
